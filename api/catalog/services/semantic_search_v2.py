@@ -722,6 +722,8 @@ def _serialize_v2(
     debug: bool,
     entity_context: list[dict] | None = None,
     query_profile: str = "conceptual",
+    contribution_cache=None,
+    access_statuses=None,
 ) -> dict:
     # Classification is a post-ranking description.  Computing these signals
     # here keeps the fast and balanced ablations free of intent-based ranking
@@ -741,7 +743,7 @@ def _serialize_v2(
             str(row["chunk"].original_text or ""),
             intent,
         )
-    payload = _serialize_row(row, rank, total, terms, debug=debug)
+    payload = _serialize_row(row, rank, total, terms, debug=debug, contribution_cache=contribution_cache, access_statuses=access_statuses)
     # V1's serializer deliberately keeps its historical Work.language field.
     # V2 exposes the passage-level value without changing the V1 response.
     payload["language"] = getattr(row["chunk"], "language", "") or payload["language"]
@@ -1093,6 +1095,7 @@ def semantic_search_v2(
     timings["dedup_ms"] = round((time.monotonic() - stage_started) * 1000, 2)
 
     stage_started = time.monotonic()
+    contribution_cache = {}
     results = [
         _serialize_v2(
             row,
@@ -1104,6 +1107,8 @@ def semantic_search_v2(
             debug=debug,
             entity_context=entity_context,
             query_profile=query_profile,
+            contribution_cache=contribution_cache,
+            access_statuses=filters.get("_allowed_access_statuses"),
         )
         for rank, row in enumerate(rows, start=1)
     ]

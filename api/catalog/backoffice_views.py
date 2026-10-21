@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -447,13 +449,33 @@ class AdminKnowledgeObjectPreviewView(APIView):
         response["Cache-Control"] = "private, no-store"
         return response
 
+    @extend_schema(
+        operation_id="admin_knowledge_object_preview",
+        parameters=[
+            OpenApiParameter("object_type", OpenApiTypes.STR, OpenApiParameter.PATH),
+            OpenApiParameter("object_id", OpenApiTypes.UUID, OpenApiParameter.PATH),
+            OpenApiParameter("featured_source_id", {"type": "string", "maxLength": 36},
+                description="Scholar only. UUID of this scholar's saved curation reference; an empty value clears the unsaved choice. Omit to retain the saved draft."),
+            OpenApiParameter("reading_path_ids", {"type": "string", "maxLength": 3699},
+                description="Scholar only. One comma-separated list of at most 100 UUIDs; an empty value clears manual selections. Omit to retain the saved draft. Automatic public associations remain."),
+        ],
+        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+        description="Protected KnowledgePreviewPayload envelope with existing draft/published perspectives and their public serializer data. Optional scholar selections affect only an in-memory draft copy; no data is saved.",
+    )
     def get(self, request, object_type, object_id):
         from catalog.services.knowledge_studio import knowledge_object_preview_payload
 
+        overrides = None
+        if request.query_params:
+            if object_type != "scholar":
+                raise ValidationError("只有学者预览接受未保存的引语与阅读路径选择。")
+            from catalog.services.public_scholars import scholar_preview_overrides
+            overrides = scholar_preview_overrides(request.query_params)
         payload = knowledge_object_preview_payload(
             object_type=object_type,
             object_id=str(object_id),
             reviewer=request.user,
+            scholar_preview_overrides=overrides,
         )
         if payload is None:
             return Response(

@@ -18,6 +18,7 @@ from catalog.services.discovery_inference import DiscoveryInferenceError, embed_
 from catalog.services.discovery_sources import edition_scope_records, iter_edition_metadata_headers, iter_source_headers, source_queryset, fingerprint
 from catalog.services.publication_eligibility import public_editions
 from catalog.services.text import page_text_range
+from catalog.services.contribution_projection import SnapshotAuthorCandidate, contribution_projection
 
 
 class DiscoveryIndexError(RuntimeError):
@@ -50,7 +51,7 @@ def kinds_for(channel):
             ("scholar", "node", "topic", "discipline", "subdiscipline", "concept", "timeline"))
 
 
-def _matches(header, filters):
+def _matches(header, filters, *, edition=None, contribution_cache=None, access_statuses=None):
     """Metadata facets constrain passages, matching the existing Explore filters."""
     if header["channel"] != "passages":
         return True
@@ -62,8 +63,13 @@ def _matches(header, filters):
     filters = dict(filters)
     if filters.get("document_types"):
         filters["document_types"] = ["journal_article" if value == "article" else value for value in filters["document_types"]]
-    simple = {"work_ids": [header.get("work_id")], "authors": header.get("author_ids", []),
+    if filters.get("authors") and edition is not None:
+        if contribution_projection(edition, cache=contribution_cache, access_statuses=access_statuses).matching_ranges(filters["authors"]) == []:
+            return False
+    simple = {"work_ids": [header.get("work_id")],
               "document_types": [header.get("document_type")], "access": [header.get("access_status")]}
+    if edition is None:
+        simple["authors"] = header.get("author_ids", [])
     for key, values in simple.items():
         if filters.get(key) and not set(map(str, filters[key])).intersection(map(str, values)):
             return False
@@ -91,9 +97,19 @@ def _matches(header, filters):
     return True
 
 
-def current_scopes(channel, access_statuses, filters=None):
+def _edition_scope_queryset(access_statuses, filters):
+    rows = source_queryset("edition", access_statuses)
+    if filters.get("_primary_only"):
+        rows = rows.filter(is_primary=True)
+    if filters.get("authors"):
+        rows = rows.filter(SnapshotAuthorCandidate(filters["authors"]))
+    return rows
+
+
+def current_scopes(channel, access_statuses, filters=None, *, author_ranges=None, contribution_cache=None):
     filters = filters or {}
     scopes = []
+    contribution_cache = contribution_cache if contribution_cache is not None else {}
     if channel == "passages" and not any(value for key, value in filters.items() if key != "languages"):
         for _, _, token in edition_scope_records(access_statuses):
             scopes.append(token)
@@ -101,16 +117,18 @@ def current_scopes(channel, access_statuses, filters=None):
                 raise DiscoveryIndexError("scope_limit", "当前可检索来源过多，请缩小馆藏筛选范围。")
         return scopes
     for kind in kinds_for(channel):
-        queryset = source_queryset(kind, access_statuses).filter(is_primary=True) if kind == "edition" and filters.get("_primary_only") else None
+        queryset = _edition_scope_queryset(access_statuses, filters) if kind == "edition" else None
         for row, header in iter_source_headers(kind, access_statuses, queryset=queryset):
-            if _matches(header, filters):
+            if _matches(header, filters, edition=row if kind == "edition" else None, contribution_cache=contribution_cache, access_statuses=access_statuses):
                 scopes.append(header["scope_token"])
+                if kind == "edition" and filters.get("authors") and author_ranges is not None:
+                    author_ranges[header["scope_token"]] = contribution_projection(row, cache=contribution_cache, access_statuses=access_statuses).matching_ranges(filters["authors"])
             if len(scopes) > 20000:
                 raise DiscoveryIndexError("scope_limit", "当前可检索来源过多，请缩小馆藏筛选范围。")
     return scopes
 
 
-def validate_discovery_results(channel, rows, access_statuses):
+def validate_discovery_results(channel, rows, access_statuses, *, filters=None):
     """Hydrate by identity, then recheck source version AND the exact text slice."""
     if channel not in {"passages", "entities", "curation"}:
         return []
@@ -124,7 +142,7 @@ def validate_discovery_results(channel, rows, access_statuses):
                                                   access_status__in=access_statuses))
     # Sessions can retain a retired generation; it is safe only while the same
     # source remains public at the same revision. Its index is not consulted.
-    headers, output = {}, {}
+    headers, editions, output = {}, {}, {}
     source_ids = {}
     for doc in documents:
         source_ids.setdefault(doc.source_type, set()).add(doc.source_id)
@@ -134,11 +152,14 @@ def validate_discovery_results(channel, rows, access_statuses):
         for row, header in iter_source_headers(kind, access_statuses,
                 queryset=source_queryset(kind, access_statuses).filter(pk__in=ids)):
             headers[(kind, str(row.pk))] = header
+            if kind == "edition":
+                editions[str(row.pk)] = row
     span_ids = [doc.payload.get("evidence_span_id") for doc in documents if doc.payload.get("evidence_span_id")]
     page_ids = [doc.payload.get("page_id") for doc in documents if not doc.payload.get("evidence_span_id") and doc.payload.get("page_id")]
     spans = {str(row["id"]): row for row in EvidenceSpan.objects.filter(pk__in=span_ids, is_stale=False).values(
-        "id", "document_revision_id", "page__asset_id", "original_text", "page__text", "start_offset", "end_offset", "section")}
-    pages = {str(row["id"]): row for row in Page.objects.filter(pk__in=page_ids).values("id", "asset_id", "text")}
+        "id", "document_revision_id", "page__asset_id", "page__index", "original_text", "page__text", "start_offset", "end_offset", "section")}
+    pages = {str(row["id"]): row for row in Page.objects.filter(pk__in=page_ids).values("id", "asset_id", "index", "text")}
+    contribution_cache = {}
     for doc in documents:
         ref = refs[str(doc.pk)]
         if ref.get("source_revision") and ref["source_revision"] != doc.source_revision:
@@ -173,6 +194,13 @@ def validate_discovery_results(channel, rows, access_statuses):
         # Do not overwrite the passage's OCR/language/locator metadata with its
         # bibliographic header or expose the full knowledge source on one card.
         payload.update({key: value for key, value in header.items() if key not in {"text", "source_kind", "language"}})
+        if channel == "passages":
+            page_number = unit["page__index"] if span_id else unit["index"]
+            authors = contribution_projection(editions[str(doc.source_id)], cache=contribution_cache, access_statuses=access_statuses).for_range(
+                header["asset_id"], doc.document_revision_id, page_number)
+            if (filters or {}).get("authors") and not set(map(str, filters["authors"])).intersection(authors["author_ids"]):
+                continue
+            payload.update(authors, pdf_page=page_number, page_index=page_number)
         payload.pop("text", None)
         source_start = int(payload.get("source_start_offset") or 0)
         payload.update(id=str(doc.pk), document_id=str(doc.pk), source_revision=doc.source_revision,
@@ -184,7 +212,7 @@ def validate_discovery_results(channel, rows, access_statuses):
     return [output[key] for key in refs if key in output]
 
 
-def _published_coverage(access_statuses, filters, eligible_ids):
+def _published_coverage(access_statuses, filters, eligible_ids, *, contribution_cache=None):
     # Count the actual published metadata scope without admitting unfinished
     # OCR or bibliographic-only records to retrieval. Never inspect draft text.
     rows = public_editions().filter(Q(active_catalog_revision__reader_asset__isnull=True)
@@ -192,8 +220,10 @@ def _published_coverage(access_statuses, filters, eligible_ids):
     if filters.get("_primary_only"):
         rows = rows.filter(is_primary=True)
     totals = {"published_editions": 0, "bibliographic_editions": 0, "text_pending_editions": 0}
+    if filters.get("authors"):
+        rows = rows.filter(SnapshotAuthorCandidate(filters["authors"]))
     for edition, header in iter_edition_metadata_headers(rows):
-        if not _matches(header, filters):
+        if not _matches(header, filters, edition=edition, contribution_cache=contribution_cache, access_statuses=access_statuses):
             continue
         totals["published_editions"] += 1
         if totals["published_editions"] > 20000:
@@ -206,7 +236,8 @@ def _published_coverage(access_statuses, filters, eligible_ids):
     return totals
 
 
-def discovery_coverage(access_statuses, filters=None):
+def discovery_coverage(access_statuses, filters=None, *, contribution_cache=None):
+    contribution_cache = contribution_cache if contribution_cache is not None else {}
     generation = active_generation()
     # Stream snapshot metadata in batches. Coverage uses grouped SQL counts,
     # not one source-state query and two COUNTs for every book on every poll.
@@ -215,15 +246,15 @@ def discovery_coverage(access_statuses, filters=None):
     if not any(value for key, value in filters.items() if key != "languages"):
         records = edition_scope_records(access_statuses)
     else:
-        queryset = source_queryset("edition", access_statuses).filter(is_primary=True) if filters.get("_primary_only") else None
+        queryset = _edition_scope_queryset(access_statuses, filters)
         records = ((str(row.pk), header["source_revision"], header["scope_token"])
-                   for row, header in iter_source_headers("edition", access_statuses, queryset=queryset) if _matches(header, filters))
+                   for row, header in iter_source_headers("edition", access_statuses, queryset=queryset) if _matches(header, filters, edition=row, contribution_cache=contribution_cache, access_statuses=access_statuses))
     for key, revision, token in records:
         current[key] = (revision, token)
         if len(current) > 20000:
             raise DiscoveryIndexError("scope_limit", "当前可检索来源过多，请缩小馆藏筛选范围。")
     total = len(current)
-    published = _published_coverage(access_statuses, filters, current)
+    published = _published_coverage(access_statuses, filters, current, contribution_cache=contribution_cache)
     if not generation:
         return {**published, "eligible_editions": total, "indexed_editions": 0, "vector_editions": 0,
                 "passage_count": 0, "pending_editions": total, "index_pending_editions": total,
@@ -252,6 +283,33 @@ def discovery_coverage(access_statuses, filters=None):
             "partial": bool(published["text_pending_editions"] or ready < total or vector < ready), "generation": str(generation.pk)}
 
 
+def _author_document_filter(generation, author_ranges, access_statuses):
+    """Filter before ranking; a large anthology cannot crowd out its selected chapter."""
+    whole = [scope for scope, ranges in author_ranges.items() if ranges is None]
+    chapter_condition = Q(pk__in=[])
+    branches_count = sum(1 if ranges is None else len(ranges) for ranges in author_ranges.values())
+    if branches_count > 400:
+        raise DiscoveryIndexError("author_scope_limit", "作者范围超过 400 个版本或章节，请缩小馆藏范围后重试。")
+    for scope, ranges in author_ranges.items():
+        for chapter in ranges or []:
+            chapter_condition |= Q(scope_token=scope, document_revision_id=chapter["document_revision_id"],
+                payload__asset_id=chapter["asset_id"], payload__pdf_page__gte=chapter["page_start"],
+                payload__pdf_page__lte=chapter["page_end"])
+    # ponytail: bound the ID predicate to 5,000 documents; narrower filters are
+    # required beyond this instead of silently trimming a chapter's candidates.
+    ids = list(DiscoveryDocument.objects.filter(chapter_condition, generation=generation, channel="passages",
+        keyword_ready=True, access_status__in=access_statuses).values_list("pk", flat=True)[:5001])
+    if len(ids) > 5000:
+        raise DiscoveryIndexError("author_scope_limit", "所选章节超过 5,000 个检索片段，请缩小作品或年份范围后重试。")
+    branches = ([f"scope_token IN {json.dumps(whole)}"] if whole else [])
+    if ids:
+        fields = meili("GET", f"/indexes/{generation.uid}/settings/filterable-attributes")
+        if "id" not in fields and "*" not in fields:
+            raise DiscoveryIndexError("author_scope_index_pending", "当前索引尚未支持准确章节范围，需通过现有索引任务更新后再按章节作者检索。")
+        branches.append(f"id IN {json.dumps(list(map(str, ids)))}")
+    return " OR ".join(f"({branch})" for branch in branches) or None
+
+
 def discovery_candidates(query, channel, filters, access_statuses, limit=120, expanded=False, request_context=None):
     # This dictionary lives only for one Celery query task. Pin its index/model
     # generation across channels and reuse query encoding without shared caches.
@@ -260,15 +318,27 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         context["generation"] = active_generation()
     generation = context["generation"]
     filters = filters or {}
-    coverage = discovery_coverage(access_statuses, filters) if channel == "passages" else {}
+    contribution_cache = context.setdefault("contribution_projections", {})
     warnings = []
+    try:
+        coverage = discovery_coverage(access_statuses, filters, contribution_cache=contribution_cache) if channel == "passages" else {}
+    except DiscoveryIndexError as error:
+        coverage = {}
+        warnings.append({"code": error.code, "message": str(error)})
     empty = {"sparse": [], "dense": [], "version": str(generation.pk) if generation else "",
              "index_uid": str(generation.uid) if generation else "",
              "embedding_artifact": generation.config_snapshot.get("embedding_artifact", "") if generation else "",
              "embedding_dimensions": int(generation.dimensions or generation.config_snapshot.get("dimensions") or 0) if generation else None,
              "reranker_artifact": generation.config_snapshot.get("reranker_artifact", "") if generation else "",
              "warnings": warnings, "coverage": coverage}
-    scopes = current_scopes(channel, access_statuses, filters)
+    if warnings:
+        return empty
+    author_ranges = {}
+    try:
+        scopes = current_scopes(channel, access_statuses, filters, author_ranges=author_ranges, contribution_cache=contribution_cache)
+    except DiscoveryIndexError as error:
+        warnings.append({"code": error.code, "message": str(error)})
+        return empty
     # Only the worker installs this in-memory callback. It observes the exact
     # existing scope; no extra retrieval branch or model request is introduced.
     if channel == "passages" and (observe := context.pop("on_passage_scope", None)):
@@ -293,6 +363,15 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     base = {"limit": limit, "filter": [f"channel = {json.dumps(channel)}",
             f"scope_token IN {json.dumps(scopes)}", f"access_status IN {json.dumps(list(access_statuses))}"],
             "attributesToRetrieve": ["id", "source_revision"]}
+    if author_ranges and any(ranges is not None for ranges in author_ranges.values()):
+        try:
+            author_filter = _author_document_filter(generation, author_ranges, access_statuses)
+        except DiscoveryIndexError as error:
+            warnings.append({"code": error.code, "message": str(error)})
+            return empty
+        if not author_filter:
+            return empty
+        base["filter"].append(f"({author_filter})")
     if channel == "passages" and filters.get("languages"):
         from catalog.services.semantic_search import _language_filter_values
         base["filter"].append(f"language IN {json.dumps(_language_filter_values(filters['languages']))}")
@@ -328,7 +407,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         empty["dense"] = dense.get("hits", [])
     except (DiscoveryIndexError, DiscoveryInferenceError, KeyError):
         warnings.append({"code": "dense_unavailable", "message": "向量检索暂不可用，当前只显示关键词召回的材料。"})
-    hydrated = {row["id"]: row for row in validate_discovery_results(channel, [*empty["sparse"], *empty["dense"]], access_statuses)}
+    hydrated = {row["id"]: row for row in validate_discovery_results(channel, [*empty["sparse"], *empty["dense"]], access_statuses, filters=filters)}
     for branch in ("sparse", "dense"):
         empty[branch] = [hydrated[row["id"]] for row in empty[branch] if row.get("id") in hydrated]
     return empty

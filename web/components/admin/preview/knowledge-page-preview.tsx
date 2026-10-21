@@ -17,8 +17,8 @@ import { TheoryTimelinePublicList } from "@/components/public/theory-timeline-pu
 import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import type { TheorySchool } from "@/lib/data";
-import { adaptApiScholarDetail, adaptApiTopic, adaptApiWork } from "@/lib/public-data-adapters";
-import type { ApiScholar } from "@/lib/api/people.types";
+import { adaptApiTopic, adaptApiWork } from "@/lib/public-data-adapters";
+import type { PublicScholarDetail } from "@/lib/api/scholars.types";
 import type { ApiTopic } from "@/lib/api/topics.types";
 import { adminListHref, safeAdminHref } from "@/lib/admin-route-context";
 import type { Discipline, Subdiscipline } from "@/lib/api/taxonomy.types";
@@ -108,15 +108,11 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
       return <SubdisciplinePublicView preview item={{ ...item, works: (item.works ?? []).map(adaptApiWork) }} footer={footer} />;
     }
     case "scholar": {
-      const item = data as ApiScholar;
-      if (!item.person || typeof item.person !== "object" || !item.slug) {
-        return <p className="admin-list-state is-unavailable">学者预览缺少身份或公开路径，已停止渲染并保留草稿。</p>;
-      }
-      const adapted = adaptApiScholarDetail(item);
-      const theorySchools = payload.secondary_preview?.legacy_theory_schools ?? [];
+      const item = data as PublicScholarDetail;
+      if (!item.person || typeof item.person !== "object") return <p className="admin-list-state is-unavailable">学者预览缺少身份，已保留草稿。</p>;
       return pageId && pageId !== "overview"
-        ? <ScholarSectionPublicView data={adapted} schools={theorySchools} section={pageId} slug={item.slug} />
-        : <ScholarPublicView data={adapted} footer={footer} slug={item.slug} theorySchools={theorySchools} />;
+        ? <ScholarSectionPublicView preview data={item} section={pageId} footer={footer} />
+        : <ScholarPublicView preview data={item} footer={footer} />;
     }
     case "topic": {
       const raw = data as ApiTopic;

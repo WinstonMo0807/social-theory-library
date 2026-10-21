@@ -13,16 +13,17 @@ from django.db.models import Q
 from catalog.models import DerivedClaim, EvidenceSpan, Page, SemanticChunk
 from catalog.services.claims.indexing import search_claim_index, visible_claim_queryset
 from catalog.services.evidence_envelope import evidence_span_envelope
+from catalog.services.contribution_projection import contribution_projection
 from catalog.services.passage_language import detect_passage_language
 from catalog.services.publication_eligibility import (
     active_catalog_snapshot,
-    active_document_q,
+    current_retrieval_source_q,
     active_document_revision_q,
 )
 from catalog.services.query_lexicon.normalization import normalize_term
-from catalog.services.retrieval import unified_retrieve
 from catalog.services.semantic_indexing import active_semantic_index_uid
-from catalog.services.semantic_search import semantic_search  # legacy monkeypatch seam
+from catalog.services.semantic_search import viewer_access_statuses
+from catalog.services.discovery_sessions import PIPELINE_VERSION, retrieve_discovery_channel
 
 from .library_query import (
     LibraryQuery,
@@ -34,7 +35,7 @@ from .library_query import (
 )
 
 
-LIBRARY_RETRIEVAL_VERSION = "library-retrieval-v3"
+LIBRARY_RETRIEVAL_VERSION = "library-discovery-adapter-v1"
 UNIFIED_RETRIEVAL_PROFILE = "reader_qa"
 _CLAIM_FILTER_KEYS = frozenset(
     {
@@ -119,21 +120,36 @@ def _semantic_call(
             "results": [],
             "engine": "scope_empty",
             "fallback_used": False,
-            "search_version": "v2",
+            "search_version": PIPELINE_VERSION,
             "library_requested_profile": retrieval_profile,
             "unified_retrieval_profile": UNIFIED_RETRIEVAL_PROFILE,
         }
-    # ``stable`` and ``experimental_v2`` remain accepted API values during the
-    # migration.  Execution is owned by the shared reader_qa profile so Ask no
-    # longer maintains a second semantic retrieval configuration.
-    response = unified_retrieve(
-        query,
-        profile=UNIFIED_RETRIEVAL_PROFILE,
-        filters=resolved_scope.semantic_filters,
-        limit=limit,
-        max_per_work=max_per_work,
-        debug=True,
-    )
+    filters = dict(resolved_scope.semantic_filters)
+    allowed = filters.pop("_allowed_access_statuses", viewer_access_statuses())
+    filters["_primary_only"] = True
+    if resolved_scope.asset_id:
+        filters["_asset_id"] = resolved_scope.asset_id
+    result = retrieve_discovery_channel(query, "passages", filters, allowed, limit=min(300, max(100, limit * 4)))
+    counts, rows, seen_spans = {}, [], set()
+    for row in result["rows"]:
+        span_id = row.get("evidence_span_id")
+        if span_id and span_id in seen_spans:
+            continue
+        work_id = str(row.get("work_id") or "")
+        if counts.get(work_id, 0) >= max_per_work:
+            continue
+        counts[work_id] = counts.get(work_id, 0) + 1
+        if span_id:
+            seen_spans.add(span_id)
+        rows.append({**row, "page_index": row.get("pdf_page") or row.get("page_index"),
+                     "printed_label": row.get("printed_page", ""), "snippet": row.get("text") or row.get("excerpt", ""),
+                     "_discovery_identity": True})
+        if len(rows) >= limit:
+            break
+    response = {"results": rows, "engine": "discovery", "search_version": PIPELINE_VERSION,
+        "index_uid": result.get("index_uid", ""), "discovery_generation": result["version"], "fallback_used": bool(result["warnings"]),
+        "fallback_reason": ",".join(str(row.get("code", "")) for row in result["warnings"]),
+        "warnings": result["warnings"]}
     return {
         **response,
         "library_requested_profile": retrieval_profile,
@@ -327,6 +343,11 @@ def _matching_span(
 ) -> EvidenceSpan | None:
     if not candidates:
         return None
+    if row.get("evidence_span_id"):
+        return next((span for span in candidates if str(span.id) == str(row["evidence_span_id"])
+            and str(span.document_revision_id) == str(row.get("document_revision_id"))), None)
+    if row.get("_discovery_identity"):
+        return None
     row_hash = str(row.get("content_hash") or "").strip()
     if row_hash:
         hashed = [span for span in candidates if span.content_hash == row_hash]
@@ -361,7 +382,7 @@ def _matching_span(
     return None
 
 
-def _evidence_spans_by_page(rows: list[dict]) -> dict[tuple[str, int], list[EvidenceSpan]]:
+def _evidence_spans_by_page(rows: list[dict], *, access_statuses=None) -> dict[tuple[str, int], list[EvidenceSpan]]:
     lookups = {
         (str(row.get("asset_id") or ""), page_number)
         for row in rows
@@ -374,10 +395,11 @@ def _evidence_spans_by_page(rows: list[dict]) -> dict[tuple[str, int], list[Evid
     spans = (
         EvidenceSpan.objects.filter(
             document_revision__asset_id__in=asset_ids,
-            page_number__in=page_numbers,
+            page__index__in=page_numbers,
             is_stale=False,
         )
-        .filter(active_document_revision_q(revision_prefix="document_revision"))
+        .filter(active_document_revision_q(revision_prefix="document_revision"), current_retrieval_source_q(
+            asset_prefix="document_revision__asset", access_statuses=viewer_access_statuses() if access_statuses is None else access_statuses))
         .select_related(
             "document_revision__asset__edition__work",
             "page",
@@ -387,13 +409,14 @@ def _evidence_spans_by_page(rows: list[dict]) -> dict[tuple[str, int], list[Evid
     )
     output: dict[tuple[str, int], list[EvidenceSpan]] = {}
     for span in spans:
-        key = (str(span.document_revision.asset_id), span.page_number)
+        key = (str(span.document_revision.asset_id), span.page.index)
         if key in lookups:
             output.setdefault(key, []).append(span)
     return output
 
 
-def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[LibraryEvidence]:
+def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str, access_statuses=None) -> list[LibraryEvidence]:
+    allowed_access = viewer_access_statuses() if access_statuses is None else access_statuses
     chunk_ids = []
     for row in rows:
         value = str(row.get("id") or "")
@@ -402,7 +425,7 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
     chunks = {
         str(chunk.id): chunk
         for chunk in SemanticChunk.objects.filter(id__in=chunk_ids)
-        .filter(active_document_q(asset_prefix="asset"))
+        .filter(current_retrieval_source_q(asset_prefix="asset", access_statuses=allowed_access))
         .select_related("asset")
     }
     page_lookups = {
@@ -418,11 +441,12 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
         pages = {
             (str(page.asset_id), page.index): page
             for page in Page.objects.filter(page_query).filter(
-                active_document_q(asset_prefix="asset")
+                current_retrieval_source_q(asset_prefix="asset", access_statuses=allowed_access)
             )
         }
-    spans_by_page = _evidence_spans_by_page(rows)
+    spans_by_page = _evidence_spans_by_page(rows, access_statuses=allowed_access)
     output = []
+    contribution_cache = {}
     for index, row in enumerate(rows, start=1):
         asset_id = str(row.get("asset_id") or "")
         page_index = _row_page_number(row)
@@ -432,8 +456,10 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
         if not passage:
             continue
         span = _matching_span(row, spans_by_page.get((asset_id, page_index or 0), []))
+        if row.get("_discovery_identity") and row.get("evidence_span_id") and span is None:
+            continue
         if span is not None:
-            envelope = evidence_span_envelope(span)
+            envelope = evidence_span_envelope(span, contribution_cache=contribution_cache, access_statuses=access_statuses)
             revision = span.document_revision
             asset = revision.asset
             edition = asset.edition
@@ -441,8 +467,8 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
             passage = span.original_text
             asset_id = str(asset.id)
             page = span.page
-            page_index = span.page_number or span.page.index
-            row_authors = envelope.source.get("authors") or row.get("authors") or []
+            page_index = span.page.index
+            row_authors = envelope.source.get("authors", [])
         else:
             envelope = None
             asset = chunk.asset if chunk is not None else getattr(page, "asset", None)
@@ -453,14 +479,13 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
                 if edition is not None
                 else {}
             )
-            row_authors = [
-                str((item.get("person") or {}).get("preferred_name") or item.get("name") or "")
-                for item in snapshot.get("contributions") or []
-                if isinstance(item, dict)
-                and ((item.get("person") or {}).get("preferred_name") or item.get("name"))
-            ]
-            if not row_authors:
-                row_authors = row.get("authors") or []
+            if not snapshot or asset is None or page is None:
+                continue
+            current_revision = edition.active_catalog_revision.document_revision_id
+            if row.get("document_revision_id") and str(row["document_revision_id"]) != str(current_revision):
+                continue
+            row_authors = contribution_projection(edition, cache=contribution_cache, access_statuses=access_statuses).for_range(asset.pk,
+                current_revision, chunk.page_start if chunk else page.index, chunk.page_end if chunk else page.index)["authors"]
         language = (
             str(span.language if span else "").strip()
             or
@@ -478,7 +503,7 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str) -> list[Libra
             "coverage_entity_label": row.get("_coverage_entity_label", ""),
             "relevance": row.get("relevance", ""),
             "debug": row.get("debug") if isinstance(row.get("debug"), dict) else {},
-            "source_kind": "semantic_chunk",
+            "source_kind": ("discovery_span" if span else "discovery_page") if row.get("_discovery_identity") else "semantic_chunk",
             "locator_validation": "evidence_span" if span else "page_compatibility",
             **(
                 {
@@ -773,8 +798,10 @@ class LibraryRetrievalService:
     ) -> LibraryRetrievalResult:
         started = time.monotonic()
         rows, diagnostics = _result_rows(library_query, resolved_scope)
-        hydrated = _hydrate_evidence(rows, retrieval_profile=library_query.retrieval_profile)
-        claim_evidence, claim_diagnostics = _claim_recall(library_query, resolved_scope)
+        hydrated = _hydrate_evidence(rows, retrieval_profile=library_query.retrieval_profile, access_statuses=resolved_scope.semantic_filters.get("_allowed_access_statuses"))
+        # Claim interpretation belongs to the selected Discovery evidence. Do not
+        # launch the retired second claim-index recall engine for an Ask answer.
+        claim_evidence, claim_diagnostics = [], {"status": "discovery_evidence_only", "validated_count": 0, "rejected_count": 0}
         if resolved_scope.asset_id:
             hydrated = [row for row in hydrated if row.asset_id == resolved_scope.asset_id]
             claim_evidence = [
@@ -825,19 +852,22 @@ class LibraryRetrievalService:
             "implementation_version": LIBRARY_RETRIEVAL_VERSION,
             "retrieval_profile": library_query.retrieval_profile,
             "unified_retrieval_profile": UNIFIED_RETRIEVAL_PROFILE,
-            "semantic_search_version": "v2",
+            "semantic_search_version": PIPELINE_VERSION,
             "semantic_index_uid": next(
                 (
                     item["response"].get("index_uid")
                     for item in diagnostics
                     if item["response"].get("index_uid")
                 ),
-                active_semantic_index_uid(),
+                "",
             ),
             "query_lexicon_revision": library_query.query_lexicon_revision,
             "engines": engines,
             "fallback_used": bool(fallbacks),
             "fallback_reasons": fallbacks,
+            "warnings": list({(warning.get("code"), warning.get("message")): warning
+                for item in diagnostics for warning in item["response"].get("warnings", [])
+                if isinstance(warning, dict)}.values()),
             "raw_candidate_count": len(rows),
             "hydrated_candidate_count": len(hydrated),
             "evidence_span_validated_count": sum(

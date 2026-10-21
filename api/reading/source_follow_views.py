@@ -8,6 +8,13 @@ from . import source_follow
 from .research_views import PrivateResponses
 from .source_models import SourceFollow
 
+OWNER = OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER, required=True)
+
+
+def require_owner(request):
+    if request.headers.get("X-Reader-Owner") != str(request.user.pk):
+        raise PermissionDenied("请核对当前账户后再读取回执或保存操作。")
+
 
 class PublicSourceStatus(serializers.Serializer):
     path = serializers.CharField(allow_blank=True)
@@ -28,12 +35,17 @@ class PublicSourceStatus(serializers.Serializer):
     asset_id = serializers.UUIDField(allow_null=True)
     catalog_revision_id = serializers.UUIDField(allow_null=True)
     document_revision_id = serializers.UUIDField(allow_null=True)
+    scholar_profile_id = serializers.UUIDField(allow_null=True)
+    person_id = serializers.UUIDField(allow_null=True)
+    public_revision = serializers.CharField(allow_blank=True)
+    href = serializers.CharField(allow_blank=True)
+    scope_notice = serializers.CharField(allow_blank=True)
     notice = serializers.CharField()
 
 
 class SourceEventOutput(serializers.Serializer):
     id = serializers.UUIDField()
-    action = serializers.ChoiceField(choices=["subscribe", "unsubscribe", "mark_read", "changed"])
+    action = serializers.ChoiceField(choices=["subscribe", "unsubscribe", "mark_read", "changed", "delete"])
     before_status = serializers.CharField(allow_blank=True)
     after_status = serializers.CharField(allow_blank=True)
     observed_at = serializers.DateTimeField()
@@ -51,6 +63,7 @@ class SourceFollowOutput(serializers.Serializer):
     id = serializers.UUIDField()
     owner_id = serializers.CharField()
     path = serializers.CharField()
+    scholar_profile_id = serializers.UUIDField(allow_null=True)
     active = serializers.BooleanField()
     revision = serializers.IntegerField()
     created_at = serializers.DateTimeField()
@@ -73,11 +86,38 @@ class SourceFollowsPage(serializers.Serializer):
     notice = serializers.CharField()
 
 
-class SourceFollowCommand(serializers.Serializer):
+class SourceCommandInput(serializers.Serializer):
+    def to_internal_value(self, data):
+        if not hasattr(data, "items") or set(data) - set(self.fields):
+            raise serializers.ValidationError("操作包含不支持的字段。")
+        if isinstance(data.get("expected_revision"), bool):
+            raise serializers.ValidationError({"expected_revision": "修订号不能使用布尔值。"})
+        return super().to_internal_value(data)
+
+
+class SourceFollowCommand(SourceCommandInput):
     path = serializers.CharField(max_length=400)
     action = serializers.ChoiceField(choices=["subscribe", "unsubscribe", "mark_read"])
     request_id = serializers.UUIDField()
     expected_revision = serializers.IntegerField(min_value=0)
+    scholar_profile_id = serializers.UUIDField(required=False)
+
+
+class SourceFollowDelete(SourceCommandInput):
+    request_id = serializers.UUIDField()
+    expected_revision = serializers.IntegerField(min_value=1)
+
+
+class SourceCommandReceipt(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    applied_revision = serializers.IntegerField(min_value=1)
+    deleted = serializers.BooleanField()
+
+
+class SourceCommandOutput(serializers.Serializer):
+    owner_id = serializers.CharField()
+    record = SourceFollowOutput(allow_null=True)
+    receipt = SourceCommandReceipt()
 
 
 def positive(value):
@@ -87,20 +127,25 @@ def positive(value):
 class PublicSourceStatusView(PrivateResponses, APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(parameters=[OpenApiParameter("path", str, required=True)], responses=PublicSourceStatus)
+    @extend_schema(parameters=[OpenApiParameter("path", str), OpenApiParameter("scholar_profile_id", str)], responses=PublicSourceStatus)
     def get(self, request):
-        path = serializers.CharField(max_length=400).run_validation(request.query_params.get("path"))
-        return Response(source_follow.resolve_public_source(path))
+        profile = request.query_params.get("scholar_profile_id")
+        if profile is not None:
+            profile = serializers.UUIDField().run_validation(profile)
+        path = serializers.CharField(max_length=400, allow_blank=profile is not None).run_validation(request.query_params.get("path", ""))
+        return Response(source_follow.resolve_public_source(path, scholar_profile_id=profile))
 
 
 class SourceFollowsView(PrivateResponses, APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(operation_id="reading_source_follows_list", parameters=[OpenApiParameter("path", str), OpenApiParameter("page", int)], responses=SourceFollowsPage)
+    @extend_schema(operation_id="reading_source_follows_list", parameters=[OpenApiParameter("path", str), OpenApiParameter("scholar_profile_id", str), OpenApiParameter("page", int)], responses=SourceFollowsPage)
     def get(self, request):
         page = positive(request.query_params.get("page", 1))
         query = SourceFollow.objects.filter(user=request.user)
-        if "path" in request.query_params:
+        if "scholar_profile_id" in request.query_params:
+            query = query.filter(scholar_profile_id=serializers.UUIDField().run_validation(request.query_params["scholar_profile_id"]))
+        elif "path" in request.query_params:
             raw = serializers.CharField(max_length=400).run_validation(request.query_params["path"])
             query = query.filter(path=source_follow.canonical_path(raw))
         count = query.count()
@@ -114,11 +159,9 @@ class SourceFollowsView(PrivateResponses, APIView):
             "page_size": source_follow.PAGE_SIZE, "results": results, "notice": source_follow.NOTICE})
 
     @extend_schema(request=SourceFollowCommand,
-        parameters=[OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER, required=True)],
-        responses=SourceFollowOutput)
+        parameters=[OWNER], responses=SourceCommandOutput)
     def post(self, request):
-        if request.headers.get("X-Reader-Owner") != str(request.user.pk):
-            raise PermissionDenied("登录账户已变化，请重新读取当前账户资料；本次操作尚未保存。")
+        require_owner(request)
         data = SourceFollowCommand(data=request.data)
         data.is_valid(raise_exception=True)
         return Response(source_follow.command(request.user, data.validated_data))
@@ -133,3 +176,19 @@ class SourceFollowDetailView(PrivateResponses, APIView):
         if row is None:
             raise NotFound("本人来源关注记录不存在。")
         return Response(source_follow.output(row, history_page=positive(request.query_params.get("history_page", 1))))
+
+    @extend_schema(parameters=[OWNER], request=SourceFollowDelete, responses=SourceCommandOutput)
+    def delete(self, request, pk):
+        require_owner(request)
+        data = SourceFollowDelete(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(source_follow.delete_follow(request.user, pk, data.validated_data))
+
+
+class SourceFollowReceiptView(PrivateResponses, APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(parameters=[OWNER, OpenApiParameter("request_id", str, required=True)], responses=SourceCommandOutput)
+    def get(self, request):
+        require_owner(request)
+        return Response(source_follow.by_request(request.user, request.query_params.get("request_id")))

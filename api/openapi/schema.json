@@ -2183,6 +2183,106 @@
                 }
             }
         },
+        "/api/catalog/admin/knowledge-preview/{object_type}/{object_id}/": {
+            "get": {
+                "operationId": "admin_knowledge_object_preview",
+                "description": "Protected KnowledgePreviewPayload envelope with existing draft/published perspectives and their public serializer data. Optional scholar selections affect only an in-memory draft copy; no data is saved.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "featured_source_id",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36
+                        },
+                        "description": "Scholar only. UUID of this scholar's saved curation reference; an empty value clears the unsaved choice. Omit to retain the saved draft."
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "reading_path_ids",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 3699
+                        },
+                        "description": "Scholar only. One comma-separated list of at most 100 UUIDs; an empty value clears manual selections. Omit to retain the saved draft. Automatic public associations remain."
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/media/": {
             "get": {
                 "operationId": "catalog_admin_media_list",
@@ -14612,6 +14712,13 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "scholar_profile_id",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "tags": [
@@ -14686,7 +14793,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/SourceFollowOutput"
+                                    "$ref": "#/components/schemas/SourceCommandOutput"
                                 }
                             }
                         },
@@ -14739,6 +14846,90 @@
                         "description": ""
                     }
                 }
+            },
+            "delete": {
+                "operationId": "reading_source_follows_destroy",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/source-follows/by-request/": {
+            "get": {
+                "operationId": "reading_source_follows_by_request_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SourceCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
             }
         },
         "/api/reading/source-status/": {
@@ -14750,8 +14941,14 @@
                         "name": "path",
                         "schema": {
                             "type": "string"
-                        },
-                        "required": true
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "scholar_profile_id",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "tags": [
@@ -29972,21 +30169,27 @@
                         "type": "string",
                         "maxLength": 240
                     },
-                    "aliases": {},
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true
+                    },
                     "authority_status": {
                         "$ref": "#/components/schemas/AuthorityStatusEnum"
                     },
                     "birth_year": {
                         "type": "integer",
                         "maximum": 9223372036854775807,
-                        "minimum": 0,
+                        "minimum": -9223372036854775808,
                         "format": "int64",
                         "nullable": true
                     },
                     "death_year": {
                         "type": "integer",
                         "maximum": 9223372036854775807,
-                        "minimum": 0,
+                        "minimum": -9223372036854775808,
                         "format": "int64",
                         "nullable": true
                     },
@@ -30013,6 +30216,7 @@
                     }
                 },
                 "required": [
+                    "aliases",
                     "id",
                     "portrait",
                     "portrait_media",
@@ -32360,9 +32564,92 @@
                     "usage_type"
                 ]
             },
+            "PublicContributionChapter": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "outline_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "outline_node_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page_start": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "document_revision_id",
+                    "outline_node_id",
+                    "outline_revision_id",
+                    "page_end",
+                    "page_start",
+                    "reader_href",
+                    "title"
+                ]
+            },
+            "PublicContributionScope": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/PublicContributionScopeKindEnum"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PublicTimelineSourceStatusEnum"
+                    },
+                    "chapters": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicContributionChapter"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "chapters",
+                    "kind",
+                    "notice",
+                    "status"
+                ]
+            },
+            "PublicContributionScopeKindEnum": {
+                "enum": [
+                    "edition",
+                    "chapter"
+                ],
+                "type": "string",
+                "description": "* `edition` - edition\n* `chapter` - chapter"
+            },
             "PublicContributionSnapshot": {
                 "type": "object",
                 "properties": {
+                    "scope": {
+                        "$ref": "#/components/schemas/PublicContributionScope"
+                    },
                     "role": {
                         "type": "string"
                     },
@@ -32376,7 +32663,8 @@
                 "required": [
                     "order",
                     "person",
-                    "role"
+                    "role",
+                    "scope"
                 ]
             },
             "PublicCoverMedia": {
@@ -33241,6 +33529,25 @@
                         "format": "uuid",
                         "nullable": true
                     },
+                    "scholar_profile_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "public_revision": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "scope_notice": {
+                        "type": "string"
+                    },
                     "notice": {
                         "type": "string"
                     }
@@ -33255,10 +33562,15 @@
                     "cover_url",
                     "document_revision_id",
                     "edition_id",
+                    "href",
                     "location",
                     "notice",
                     "path",
+                    "person_id",
+                    "public_revision",
                     "reader_url",
+                    "scholar_profile_id",
+                    "scope_notice",
                     "source_type",
                     "status",
                     "title",
@@ -36726,6 +37038,51 @@
                 "type": "string",
                 "description": "* `relevance` - relevance\n* `year_desc` - year_desc\n* `year_asc` - year_asc"
             },
+            "SourceCommandOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "record": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SourceFollowOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "receipt": {
+                        "$ref": "#/components/schemas/SourceCommandReceipt"
+                    }
+                },
+                "required": [
+                    "owner_id",
+                    "receipt",
+                    "record"
+                ]
+            },
+            "SourceCommandReceipt": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "applied_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "deleted": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "applied_revision",
+                    "deleted",
+                    "request_id"
+                ]
+            },
             "SourceEnum": {
                 "enum": [
                     "manual",
@@ -36777,10 +37134,11 @@
                     "subscribe",
                     "unsubscribe",
                     "mark_read",
-                    "changed"
+                    "changed",
+                    "delete"
                 ],
                 "type": "string",
-                "description": "* `subscribe` - subscribe\n* `unsubscribe` - unsubscribe\n* `mark_read` - mark_read\n* `changed` - changed"
+                "description": "* `subscribe` - subscribe\n* `unsubscribe` - unsubscribe\n* `mark_read` - mark_read\n* `changed` - changed\n* `delete` - delete"
             },
             "SourceFollowCommandActionEnum": {
                 "enum": [
@@ -36809,6 +37167,10 @@
                     "expected_revision": {
                         "type": "integer",
                         "minimum": 0
+                    },
+                    "scholar_profile_id": {
+                        "type": "string",
+                        "format": "uuid"
                     }
                 },
                 "required": [
@@ -36830,6 +37192,11 @@
                     },
                     "path": {
                         "type": "string"
+                    },
+                    "scholar_profile_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
                     },
                     "active": {
                         "type": "boolean"
@@ -36880,6 +37247,7 @@
                     "owner_id",
                     "path",
                     "revision",
+                    "scholar_profile_id",
                     "source",
                     "unread_count",
                     "updated_at",

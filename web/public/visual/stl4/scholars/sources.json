@@ -1,0 +1,48 @@
+{
+  "source_pdf": "output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf",
+  "coordinate_system": "Source pixels, left/top inclusive, right/bottom exclusive",
+  "assets": [
+    {
+      "file": "hub-hero.webp",
+      "pdf_page": 62,
+      "extracted_image": "tmp/pdfs/stl4-scholars-20261021/page-62-image-0.png",
+      "source_dimensions": [
+        1672,
+        941
+      ],
+      "crop_box_ltrb": [
+        610,
+        79,
+        1285,
+        425
+      ],
+      "dimensions": [
+        675,
+        346
+      ],
+      "purpose": "Decorative photograph only; no interface text, scholar portrait, quotation or example content included.",
+      "visually_inspected": true
+    },
+    {
+      "file": "directory-hero.webp",
+      "pdf_page": 63,
+      "extracted_image": "tmp/pdfs/stl4-scholars-20261021/page-63-image-0.jpg",
+      "source_dimensions": [
+        1586,
+        992
+      ],
+      "crop_box_ltrb": [
+        620,
+        61,
+        998,
+        245
+      ],
+      "dimensions": [
+        378,
+        184
+      ],
+      "purpose": "Decorative photograph only; no interface text, scholar portrait, quotation or example content included.",
+      "visually_inspected": true
+    }
+  ]
+}

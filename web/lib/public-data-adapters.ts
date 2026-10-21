@@ -7,7 +7,7 @@ import type { PublicCuratedClaimGroups, PublicKnowledgeNodeLink } from "./api/cu
 const coverStyles: Work["cover"][] = ["dark", "paper", "cream", "line"];
 
 export function adaptApiWork(value: ApiWork, index = 0): Work {
-  const authorContributions = value.edition?.contributors.filter((row) => row.role === "author") ?? [];
+  const authorContributions = value.edition?.contributors.filter((row) => row.role === "author" && row.scope?.kind !== "chapter") ?? [];
   return {
     id: value.edition?.readable_asset?.id ?? value.id,
     workId: value.id,
@@ -62,7 +62,7 @@ export function adaptRecommendationWork(value: ApiWork, index = 0): Work {
   } : value, index);
 }
 
-export function adaptApiScholar(value: ApiScholar): Scholar {
+export function adaptApiScholar(value: Pick<ApiScholar, "person" | "slug" | "short_description" | "key_concerns">): Scholar {
   const birth = value.person.birth_year;
   const death = value.person.death_year;
   return {
@@ -76,7 +76,7 @@ export function adaptApiScholar(value: ApiScholar): Scholar {
     years: birth ? `${birth}—${death ?? ""}` : "",
     school: "本馆收录学者",
     concerns: value.key_concerns ?? [],
-    biography: value.person.biography || value.short_description || "本馆已建立该学者与馆藏作品的关系。",
+    biography: value.person.biography || value.short_description || "",
   };
 }
 

@@ -1,4 +1,5 @@
 """Bounded parallel-reading sources over the existing publication and evidence boundary."""
+from catalog.services.contribution_scope import whole_edition_contribution
 from hashlib import sha256
 from urllib.parse import urlencode
 from uuid import UUID
@@ -155,7 +156,7 @@ def _version(edition, source, access):
         "document_revision_id": str(revision.document_revision_id) if available else None,
         "title": work.get("title", ""), "original_title": work.get("original_title", ""),
         "authors": [str((item.get("person") or {}).get("preferred_name") or item.get("name") or "")
-                    for item in snapshot.get("contributions", []) if isinstance(item, dict) and item.get("role") == "author"],
+                    for item in snapshot.get("contributions", []) if isinstance(item, dict) and item.get("role") == "author" and whole_edition_contribution(item)],
         "language": work.get("language", ""), "publication_year": bibliographic.get("publication_year"),
         "version_label": bibliographic.get("version_label", ""), "publisher": bibliographic.get("publisher", ""),
         "cover_url": reverse("public-work-cover", kwargs={"work_id": edition.work_id}) + "?" + urlencode(params)

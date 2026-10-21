@@ -213,6 +213,7 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             },
             "role": row.role,
             "order": row.order,
+            "scope": row.scope,
         }
         for row in edition.contributions.filter(approved=True)
         .select_related("person", "person__scholar_profile")

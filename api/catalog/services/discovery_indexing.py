@@ -20,6 +20,7 @@ from catalog.models import SemanticIndexVersion
 from catalog.services.discovery_inference import chunk_text, embed_texts, inference_health, DiscoveryInferenceError
 from catalog.services.discovery_projection import meili, active_generation, DiscoveryIndexError
 from catalog.services.discovery_sources import SOURCE_TYPES, edition_revision, fingerprint, get_source, iter_source_headers, source_queryset, source_units
+from catalog.services.contribution_projection import contribution_projection
 from ingestion.models import ProcessingJob
 
 logger = logging.getLogger(__name__)
@@ -93,7 +94,7 @@ def ensure_index(generation):
         wait_index_task(meili("POST", "/indexes", {"uid": generation.uid, "primaryKey": "id"}))
     desired = {"searchableAttributes": ["title", "aliases", "authors", "normalized_text"],
         "displayedAttributes": ["*"],
-        "filterableAttributes": ["channel", "source_type", "source_id", "source_revision", "scope_token", "access_status", "input_hash", "language"],
+        "filterableAttributes": ["id", "channel", "source_type", "source_id", "source_revision", "scope_token", "access_status", "input_hash", "language"],
         "pagination": {"maxTotalHits": 10000},
         "embedders": {"discovery": {"source": "userProvided", "dimensions": int(generation.dimensions or 384)}}}
     wait_index_task(meili("PATCH", f"/indexes/{generation.uid}/settings", desired))
@@ -297,12 +298,12 @@ def _is_current(job, generation, header):
     return bool(fresh and fresh["source_revision"] == header["source_revision"])
 
 
-def _write_chunk(job, generation, header, unit, child):
+def _write_chunk(job, generation, header, unit, child, *, contributions=None):
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料或任务已更新，旧任务已停止。")
     identifier = uuid5(generation.pk, f"{header['source_type']}:{header['source_id']}:{header['source_revision']}:{unit['unit_id']}:{child['start']}:{child['end']}")
     existing = DiscoveryDocument.objects.filter(pk=identifier, vector_ready=True, keyword_ready=True).first()
-    if existing:
+    if existing and (header["channel"] != "passages" or existing.payload.get("responsibility_projection") == 1):
         return
     input_hash = fingerprint([generation.config_snapshot["embedding_artifact"], child["embedding_text"]])
     vector = None
@@ -327,6 +328,8 @@ def _write_chunk(job, generation, header, unit, child):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务已停止；新版本会重新排队。")
     payload = {**{key: value for key, value in header.items() if key != "text"}, **unit["metadata"], "unit_id": unit["unit_id"],
                "quality_flags": list(dict.fromkeys([*unit["metadata"].get("quality_flags", []), *child.get("quality_flags", [])]))}
+    if contributions is not None:
+        payload.update(contributions.for_range(header["asset_id"], header["document_revision_id"], unit["metadata"].get("pdf_page")), responsibility_projection=1)
     defaults = {"generation": generation, "channel": header["channel"], "source_type": header["source_type"],
         "source_id": header["source_id"], "source_revision": header["source_revision"], "scope_token": header["scope_token"],
         "edition_id": header.get("edition_id"), "document_revision_id": header.get("document_revision_id"),
@@ -337,7 +340,7 @@ def _write_chunk(job, generation, header, unit, child):
     search_doc = {"id": str(identifier), "channel": header["channel"], "source_type": header["source_type"],
         "source_id": header["source_id"], "source_revision": header["source_revision"], "scope_token": header["scope_token"],
         "access_status": header["access_status"], "input_hash": input_hash, "title": header["title"],
-        "aliases": header.get("aliases", []), "authors": header.get("authors", []),
+        "aliases": header.get("aliases", []), "authors": payload.get("authors", []),
         "normalized_text": child["normalized_text"], "language": payload.get("language") or header.get("language", "unknown"),
         "_vectors": {"discovery": vector}}
     wait_index_task(meili("POST", f"/indexes/{generation.uid}/documents", [search_doc]))
@@ -354,6 +357,7 @@ def process_source(job, generation):
     source, header = get_source(kind, source_id)
     if not header or header["source_revision"] != job.stats["source_revision"]:
         raise DiscoveryIndexError("superseded", "资料已更新或撤下，旧任务已停止。")
+    contributions = contribution_projection(source, access_statuses=[header["access_status"]]) if kind == "edition" else None
     state, _ = DiscoverySourceState.objects.get_or_create(generation=generation, source_type=kind, source_id=source_id)
     deadline = time.monotonic() + 240
     completed_units = int(job.stats.get("completed_units", 0))
@@ -369,7 +373,7 @@ def process_source(job, generation):
                 raise DiscoveryInferenceError("artifact_mismatch", "分块模型与索引版本不一致。")
             for child in children["chunks"]:
                 child = {**child, "start": child["start"] + base, "end": child["end"] + base}
-                _write_chunk(job, generation, header, unit, child)
+                _write_chunk(job, generation, header, unit, child, contributions=contributions)
                 if time.monotonic() > deadline:
                     # Completed children are durable; replay only the current unit.
                     _guard_job(job, stats={**job.stats, "completed_units": unit_index})

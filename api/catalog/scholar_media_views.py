@@ -76,8 +76,13 @@ class PublicPersonPortraitView(APIView):
     @extend_schema(exclude=True)
     def get(self, request, person_id):
         from catalog.views import _public_media_response
+        from catalog.services.public_scholars import _formal_profile
 
-        person = get_object_or_404(Person, pk=person_id, authority_status="verified", scholar_profile__editorial_status="published")
+        profile = get_object_or_404(ScholarProfile.objects.select_related("person"), person_id=person_id,
+            person__authority_status="verified", editorial_status="published")
+        revision = EditorialRevision.objects.filter(target_type="scholar_profile", target_id=profile.pk,
+            status="published").order_by("-revision").only("materialized_preview").first()
+        person = _formal_profile(profile, revision.materialized_preview if revision else {}).person
         media = portrait_media(person)
         if not media:
             return Response({"detail": "没有已发布的媒体肖像。"}, status=404)

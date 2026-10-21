@@ -379,10 +379,11 @@ def _bibliography_identity(entry):
 
 
 def _identity_signals(identity, raw, snapshot):
+    from catalog.services.contribution_scope import whole_edition_contribution
     values = snapshot.get("edition") or {}
     names = []
     for row in snapshot.get("contributions", []):
-        if not isinstance(row, dict) or row.get("role") != "author":
+        if not isinstance(row, dict) or row.get("role") != "author" or not whole_edition_contribution(row):
             continue
         person = row.get("person") or {}
         names.extend(str(name) for name in [row.get("name"), person.get("preferred_name"), person.get("original_name"),
@@ -1287,9 +1288,8 @@ def refresh_bibliography_sources(payload):
             snapshot = edition.active_catalog_revision.snapshot or {}
             work, values = snapshot.get("work") or {}, snapshot.get("edition") or {}
             media = work.get("cover_media") or {}
-            authors = [str(row.get("name") or (row.get("person") or {}).get("preferred_name") or "")
-                for row in (snapshot.get("contributions", snapshot.get("contributors")) or [])
-                if isinstance(row, dict) and row.get("role") == "author"]
+            from catalog.services.contribution_projection import edition_author_projection
+            authors = edition_author_projection(snapshot)["authors"]
             signals = _identity_signals(_bibliography_identity(entry), entry["raw"], snapshot)
             refreshed.append({**candidate, "source_status": "available", "work_id": str(edition.work_id),
                 "title": work.get("title", ""), "authors": [value for value in authors if value],

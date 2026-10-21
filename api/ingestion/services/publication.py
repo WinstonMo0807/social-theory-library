@@ -158,6 +158,15 @@ def publication_preflight(edition: Edition) -> dict[str, Any]:
         warnings.append(f"{label}的相关信息已变化，建议重新检查")
     bundle_check = _publication_bundle_check(edition)
     blockers.extend(bundle_check["blockers"])
+    from catalog.services.contribution_scope import ContributionScopeError, validate_contribution_scope
+    from catalog.services.field_decisions import formal_field_values
+
+    contribution_values, _ = formal_field_values(edition)
+    for row in contribution_values.get("contributor_scopes", []):
+        try:
+            validate_contribution_scope(edition, row.get("scope"))
+        except ContributionScopeError as error:
+            blockers.append(f"责任者章节范围待核对：{error}")
     original = edition.assets.filter(
         kind=Asset.Kind.ORIGINAL,
         status=Asset.Status.READY,

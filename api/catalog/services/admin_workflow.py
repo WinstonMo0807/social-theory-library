@@ -158,6 +158,7 @@ def step_fingerprint(edition: Edition, step_key: str) -> str:
                     "order",
                     "approved",
                     "source",
+                    "scope",
                 )
             ),
             "candidates": list(

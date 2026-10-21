@@ -1,4 +1,3 @@
-/** Generated from DRF/OpenAPI. Do not edit by hand. */
 export interface paths {
     "/api/catalog/admin/assets/{asset_id}/outline/": {
         parameters: {
@@ -522,6 +521,23 @@ export interface paths {
         get: operations["catalog_admin_knowledge_media_retrieve"];
         put?: never;
         post: operations["catalog_admin_knowledge_media_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/knowledge-preview/{object_type}/{object_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Protected KnowledgePreviewPayload envelope with existing draft/published perspectives and their public serializer data. Optional scholar selections affect only an in-memory draft copy; no data is saved. */
+        get: operations["admin_knowledge_object_preview"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3247,6 +3263,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["reading_source_follows_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["reading_source_follows_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/source-follows/by-request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_source_follows_by_request_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7929,7 +7961,7 @@ export interface components {
             readonly id: string;
             preferred_name: string;
             original_name?: string;
-            aliases?: unknown;
+            readonly aliases: string[];
             authority_status?: components["schemas"]["AuthorityStatusEnum"];
             /** Format: int64 */
             birth_year?: number | null;
@@ -8655,7 +8687,34 @@ export interface components {
             author: components["schemas"]["PublicConceptAuthor"] | null;
             source: components["schemas"]["PlacementSource"];
         };
+        PublicContributionChapter: {
+            title: string;
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            /** Format: uuid */
+            outline_revision_id: string;
+            /** Format: uuid */
+            outline_node_id: string;
+            page_start: number;
+            page_end: number;
+            reader_href: string;
+        };
+        PublicContributionScope: {
+            kind: components["schemas"]["PublicContributionScopeKindEnum"];
+            status: components["schemas"]["PublicTimelineSourceStatusEnum"];
+            chapters: components["schemas"]["PublicContributionChapter"][];
+            notice: string;
+        };
+        /**
+         * @description * `edition` - edition
+         *     * `chapter` - chapter
+         * @enum {string}
+         */
+        PublicContributionScopeKindEnum: "edition" | "chapter";
         PublicContributionSnapshot: {
+            scope: components["schemas"]["PublicContributionScope"];
             role: string;
             order: number;
             person: components["schemas"]["PublicPersonSnapshot"];
@@ -8920,6 +8979,13 @@ export interface components {
             catalog_revision_id: string | null;
             /** Format: uuid */
             document_revision_id: string | null;
+            /** Format: uuid */
+            scholar_profile_id: string | null;
+            /** Format: uuid */
+            person_id: string | null;
+            public_revision: string;
+            href: string;
+            scope_notice: string;
             notice: string;
         };
         PublicTheoryAssociation: {
@@ -9955,6 +10021,17 @@ export interface components {
          * @enum {string}
          */
         SortEnum: "relevance" | "year_desc" | "year_asc";
+        SourceCommandOutput: {
+            owner_id: string;
+            record: components["schemas"]["SourceFollowOutput"] | null;
+            receipt: components["schemas"]["SourceCommandReceipt"];
+        };
+        SourceCommandReceipt: {
+            /** Format: uuid */
+            request_id: string;
+            applied_revision: number;
+            deleted: boolean;
+        };
         /**
          * @description * `manual` - manual
          *     * `pdf_page_labels` - pdf_page_labels
@@ -9981,9 +10058,10 @@ export interface components {
          *     * `unsubscribe` - unsubscribe
          *     * `mark_read` - mark_read
          *     * `changed` - changed
+         *     * `delete` - delete
          * @enum {string}
          */
-        SourceEventOutputActionEnum: "subscribe" | "unsubscribe" | "mark_read" | "changed";
+        SourceEventOutputActionEnum: "subscribe" | "unsubscribe" | "mark_read" | "changed" | "delete";
         /**
          * @description * `subscribe` - subscribe
          *     * `unsubscribe` - unsubscribe
@@ -9997,12 +10075,16 @@ export interface components {
             /** Format: uuid */
             request_id: string;
             expected_revision: number;
+            /** Format: uuid */
+            scholar_profile_id?: string;
         };
         SourceFollowOutput: {
             /** Format: uuid */
             id: string;
             owner_id: string;
             path: string;
+            /** Format: uuid */
+            scholar_profile_id: string | null;
             active: boolean;
             revision: number;
             /** Format: date-time */
@@ -12002,6 +12084,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KnowledgeImageState"];
+                };
+            };
+        };
+    };
+    admin_knowledge_object_preview: {
+        parameters: {
+            query?: {
+                /** @description Scholar only. UUID of this scholar's saved curation reference; an empty value clears the unsaved choice. Omit to retain the saved draft. */
+                featured_source_id?: string;
+                /** @description Scholar only. One comma-separated list of at most 100 UUIDs; an empty value clears manual selections. Omit to retain the saved draft. Automatic public associations remain. */
+                reading_path_ids?: string;
+            };
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -18023,6 +18164,7 @@ export interface operations {
             query?: {
                 page?: number;
                 path?: string;
+                scholar_profile_id?: string;
             };
             header?: never;
             path?: never;
@@ -18062,7 +18204,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SourceFollowOutput"];
+                    "application/json": components["schemas"]["SourceCommandOutput"];
                 };
             };
         };
@@ -18090,10 +18232,56 @@ export interface operations {
             };
         };
     };
-    reading_source_status_retrieve: {
+    reading_source_follows_destroy: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_source_follows_by_request_retrieve: {
         parameters: {
             query: {
-                path: string;
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_source_status_retrieve: {
+        parameters: {
+            query?: {
+                path?: string;
+                scholar_profile_id?: string;
             };
             header?: never;
             path?: never;

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import type { PublicSourceStatus, SourceFollow, SourceCommand } from "../lib/api/source-follows.client";
+import type { PublicSourceStatus, SourceFollow, SourceCommand, SourceCommandResult } from "../lib/api/source-follows.client";
 
 // Synthetic contracts only. These scenarios are authored, not run before unified acceptance.
 const assetId = "71000000-0000-4000-8000-000000000001", followId = "71000000-0000-4000-8000-000000000002";
@@ -13,12 +13,13 @@ const follow = (): SourceFollow => ({ id: followId, owner_id: "1", path, active:
   history: { count: 1, page: 1, page_size: 20, results: [{ id: "synthetic-event", action: "changed", before_status: "unavailable", after_status: "available", observed_at: stamp, revision: 1 }] } });
 
 async function setup(page: Page, empty = false) {
-  const state = { owner: 1, row: empty ? null : follow(), posts: [] as SourceCommand[], fail: false, conflict: false };
+  const state = { owner: 1, row: empty ? null : follow(), posts: [] as SourceCommand[], receipts: new Map<string, SourceCommandResult>(), fail: false, conflict: false };
   await page.route("**/api/**", async route => {
     const request = route.request(), url = new URL(request.url());
     const respond = (data: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(data) });
     if (url.pathname === "/api/auth/me/") return respond({ id: state.owner, role: "reader", display_name: "Synthetic", reading_preferences: {} });
     if (url.pathname === "/api/reading/source-status/") return respond(state.row?.source ?? source());
+    if (url.pathname === "/api/reading/source-follows/by-request/") return respond(state.receipts.get(url.searchParams.get("request_id") || "") ?? { detail: "尚未找到回执" }, state.receipts.has(url.searchParams.get("request_id") || "") ? 200 : 404);
     if (url.pathname === "/api/reading/source-follows/") {
       if (request.method() === "POST") {
         expect(request.headers()["x-reader-owner"]).toBe("1");
@@ -29,7 +30,9 @@ async function setup(page: Page, empty = false) {
         state.row ||= follow();
         state.row = { ...state.row, active: body.action === "unsubscribe" ? false : body.action === "subscribe" ? true : state.row.active,
           unread_count: body.action === "mark_read" ? 0 : state.row.unread_count, revision: state.row.revision + 1 };
-        return respond(state.row);
+        const result = { owner_id: "1", record: state.row, receipt: { request_id: body.request_id, applied_revision: state.row.revision, deleted: false } };
+        state.receipts.set(body.request_id, result);
+        return respond(result);
       }
       return respond({ owner_id: "1", count: state.row ? 1 : 0, page: 1, page_size: 20, results: state.row ? [state.row] : [], notice: "仅提供本人站内更新，不发送邮件。" });
     }
@@ -50,9 +53,9 @@ test("uncertain mutation retains same request and revision", async ({ page }) =>
   const state = await setup(page); state.fail = true;
   await page.goto("/account/source-updates");
   await page.getByRole("button", { name: "取消订阅", exact: true }).click();
-  await expect(page.getByRole("button", { name: "重试本次操作" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "核对原操作" })).toBeVisible();
   await expect(page.getByRole("button", { name: "取消订阅", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "重试本次操作" }).click();
+  await page.getByRole("button", { name: "核对原操作" }).click();
   await expect(page.getByText("已取消订阅", { exact: true })).toBeVisible();
   expect(state.posts).toHaveLength(2); expect(state.posts[1]).toEqual(state.posts[0]);
 });

@@ -32,7 +32,7 @@ from .research_views import (CitationAuditViewSet, CitationSourceViewSet, Person
 from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView
 from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 from .shared_citation_views import PublicCitationPreviewView
-from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView
+from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView, SourceFollowReceiptView
 from .search_record_views import ReaderSearchRecordsView
 from .knowledge_save_views import KnowledgeSaveView
 from .graph_views import SavedGraphViewSet
@@ -74,6 +74,7 @@ urlpatterns = [
     path("citation-preview/", PublicCitationPreviewView.as_view(), name="public-citation-preview"),
     path("source-status/", PublicSourceStatusView.as_view(), name="public-source-status"),
     path("source-follows/", SourceFollowsView.as_view(), name="source-follows"),
+    path("source-follows/by-request/", SourceFollowReceiptView.as_view(), name="source-follow-receipt"),
     path("source-follows/<uuid:pk>/", SourceFollowDetailView.as_view(), name="source-follow-detail"),
     path("citation-audits/<uuid:pk>/preview/", CitationPreviewView.as_view(), name="citation-preview"),
     path("citation-audits/<uuid:pk>/preview/file/", CitationPreviewFileView.as_view(), name="citation-preview-file"),

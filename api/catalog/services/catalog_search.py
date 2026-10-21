@@ -45,7 +45,13 @@ def _rows_sql(db, snapshot_sql, kind):
     if kind == "author":
         identifier = f"COALESCE({field('person_id')}, {field('person', 'id')})"
         label = f"COALESCE({field('person', 'preferred_name')}, {field('name')}, '')"
-        predicate = f"{field('role')} = 'author'"
+        if db.vendor == "postgresql":
+            scope = "item.value->'scope'"
+            whole = f"({scope} IS NULL OR {scope} IN ('null'::jsonb, '{{}}'::jsonb) OR (jsonb_typeof({scope}) = 'object' AND {field('scope', 'kind')} = 'edition' AND ({field('scope', 'chapters')} IS NULL OR {field('scope', 'chapters')} = '[]')))"
+        else:
+            scope = "json_extract(item.value, '$.scope')"
+            whole = f"({scope} IS NULL OR {scope} = '{{}}' OR (json_type(item.value, '$.scope') = 'object' AND {field('scope', 'kind')} = 'edition' AND ({field('scope', 'chapters')} IS NULL OR {field('scope', 'chapters')} = '[]')))"
+        predicate = f"{field('role')} = 'author' AND {whole}"
         text = [label, field("person", "original_name"), field("person", "aliases")]
     else:
         identifier, label = field("slug"), field("name")

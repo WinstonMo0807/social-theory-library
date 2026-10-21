@@ -3,6 +3,7 @@
 GETs never create a version. Historical snapshots are rechecked against current
 publication/access; private readers reuse this projection, never draft JSON.
 """
+from catalog.services.contribution_scope import whole_edition_contribution
 from copy import deepcopy
 from hashlib import sha256
 import json
@@ -136,7 +137,7 @@ def _projection(path, raw, selected, versions, *, request=None, preview=False, c
         cover = work.get("cover_media") or {}
         return {"work_id": str(edition.work_id), "edition_id": str(edition.pk), "title": str(work.get("title") or "未题名材料"),
             "version_label": str(data.get("version_label") or ""), "publication_year": data.get("publication_year"),
-            "authors": [str(row.get("name") or (row.get("person") or {}).get("preferred_name") or "") for row in snapshot.get("contributions", []) if isinstance(row, dict) and row.get("role") == "author"],
+            "authors": [str(row.get("name") or (row.get("person") or {}).get("preferred_name") or "") for row in snapshot.get("contributions", []) if isinstance(row, dict) and row.get("role") == "author" and whole_edition_contribution(row)],
             "href": f"/works/{data.get('public_slug') or edition.pk}",
             "cover_url": f"{reverse('public-work-cover', kwargs={'work_id': edition.work_id})}?edition_id={edition.pk}" if cover or work.get("cover") else ""}
 

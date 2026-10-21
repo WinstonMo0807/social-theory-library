@@ -22,7 +22,7 @@ def fixture():
 
 
 def follow(user, path, action="subscribe", revision=0, request_id=None):
-    return sources.command(user, {"path": path, "action": action, "expected_revision": revision, "request_id": request_id or uuid4()})
+    return sources.command(user, {"path": path, "action": action, "expected_revision": revision, "request_id": request_id or uuid4()})["record"]
 
 
 @pytest.mark.parametrize("path", ["https://evil.invalid/reader/a", "//evil.invalid/a", "/account/notes", "/admin/library", "/reader/%2e%2e/account", "/reader/not-an-id"])
@@ -38,7 +38,8 @@ def test_source_metadata_comes_from_active_snapshot_and_known_physical_page():
     edition, asset, span = fixture()
     revision = edition.active_catalog_revision
     revision.snapshot = {"work": {"title": "合成已公开题名"}, "edition": {"version_label": "合成正式版本"},
-                         "contributions": [{"role": "author", "person": {"preferred_name": "合成公开作者"}}]}
+                         "contributions": [{"role": "author", "person": {"preferred_name": "合成公开作者"}},
+                            {"role": "author", "scope": {"kind": "chapter"}, "person": {"preferred_name": "仅一章作者"}}]}
     revision.save(update_fields=["snapshot"])
     span.page.printed_label = "ix"
     span.page.save(update_fields=["printed_label"])
@@ -156,14 +157,17 @@ def test_export_delete_reuse_existing_private_operations(reader_user):
     target = privacy.target_of(row, "source_follows")
     impact = privacy.erase_impact(reader_user, "source_follows", row)
     privacy.erase_item(reader_user, target, row, impact, contexts=[])
-    assert not SourceFollow.objects.exists() and not SourceFollowEvent.objects.exists()
+    assert not SourceFollow.objects.exists()
+    receipt = SourceFollowEvent.objects.get(user=reader_user)
+    assert receipt.follow_id is None and receipt.before_status == receipt.after_status == ""
+    assert sources.by_request(reader_user, receipt.request_id)["receipt"]["deleted"] is True
     assert Asset.objects.filter(pk=asset.pk).exists()
 
 
 def test_task_failure_is_explicit_and_does_not_fake_transition(monkeypatch, reader_user):
     _, asset, _ = fixture()
     created = follow(reader_user, f"/reader/{asset.pk}")
-    monkeypatch.setattr(sources, "resolve_public_source", lambda raw: (_ for _ in ()).throw(RuntimeError("synthetic failure")))
+    monkeypatch.setattr(sources, "resolve_public_source", lambda raw, **kwargs: (_ for _ in ()).throw(RuntimeError("synthetic failure")))
     assert sources.refresh_source_follows() == 1
     row = SourceFollow.objects.get(pk=created["id"])
     assert row.check_error == "status_check_failed" and row.events.count() == 1 and row.last_checked_at <= timezone.now()

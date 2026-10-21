@@ -1,5 +1,19 @@
 # 验收记录
 
+## 2026-10-21 PDF62–66学者静态记录
+
+- 最终冻结后全量TypeScript会话95875/04cd3e退出0，覆盖新增两条预览浏览器定义；110路径精确暂存cd9abd退出0，ingestion/views.py仅3行责任范围保留，其他历史改动仍留工作区。
+- 最终冻结后新增管理预览4函数/8案例，合计40个新后端函数70参数案例；公共/预览浏览器13场景加私人4场景共17场景，均未运行。新增预览测试纳入后110路径白名单、62 Python AST为408c57退出0；预览3目标ESLint ec8d4b退出0无警告。精确白名单不含tmp、原PDF和其他继承脏改。
+- 最终补充：完整109路径白名单中的61个Python文件AST，dce509退出0。检索收口90749a退出0，19文件AST/17模块导入，SQLite/PostgreSQL九种prefix分别按内部None、匿名公开、显式空授权编译，36组SQL及18组EmptyResultSet，实际数据库操作0。独立只读复核确认当前来源门槛、6处session与3处context筛选以及文献回执接线。
+- 管理预览新增只读选择覆盖后，spectacular同上述内存配置cea227退出0，205路径/0错误/10既有提示；e7a0b9同步生成并确认204旧路径全部保留。全量TypeScript最终91501/8e422c退出0。此前204路径与67765结果保留为过程记录，不能代替正式运行验收。
+- 唯一PDF62/63/64/65/66及两张纯照片裁片均实际读取；68–71只作为下一组预审。源码白名单tmp/stl4-scholars-checkpoint.json，Python采用ast.parse，不执行测试函数。
+- 42 Python AST初次21944a退出0。检索13文件最终AST与inspect.signature.bind为4c2c9e退出0，确认allowed_access_statuses关键字一致；完整61文件最终检查另附下方记录。公开学者SQLite/PostgreSQL各7条SQL仅编译；检索12模块导入、两种数据库8条表达式SQL编译e5bfe1退出0，实际查询0，参数数吻合。首次检查误将manager参数假定为1，修正检查程序后通过，未运行数据库查询。
+- web目录node node_modules/eslint/bin/eslint.js对白名单32个TS/TSX：c207c5退出0，0错误/12提示（9条图片优化、3条既有导航）。CSS PostCSS解析288顶层节点、91个直接引用class无缺失（fb4461）；不证明实际视觉。
+- node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false最终会话67765/c57909退出0，较早87917/afdc9d也退出0。未运行build或浏览器。
+- 进程内DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8执行.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-scholars-schema-20261021.json --validate：56d82a退出0，204路径，0错误/10既有Home/Scholar/Topic类型提示。openapi-typescript openapiTS/astToString同步schema/生成类型，724aa5退出0，原203路径保留。
+- 新后端学者8函数10参数案例、scope10函数22案例、关注6函数10案例、检索12函数20案例，管理预览补充定义见后续记录，仅定义。新浏览器11公共/管理预览加4私人关注场景，仅定义；旧source-updates场景同步命令信封。合成fixture接入本地启动器，未执行。
+- 61文件包含既有首推Discovery adapter依赖；api/ingestion/views.py仅部分暂存3行，旧处理中心改动留在工作区。catalog0073/reading0019仅编写未应用，没有测试、服务、模型、OCR、迁移、索引更新、检索质量测评或生产操作。旧索引id能力、真实环境和209视图/B01–B06待全量开发后统一验收。
+
 ## 2026-10-21 PDF58–60阅读路径静态记录
 
 - `ast.parse`精确白名单29个Python文件，3b4135退出0。公共代理另编译10个序列化声明和有界版本历史SQL，私人代理导入模块并分别编译SQLite/PostgreSQL三组owner/计划/回执SQL，均0实际查询、连接为None；没有运行功能用例。

@@ -31,6 +31,7 @@ from catalog.services.semantic_chunks import (
 )
 from catalog.services.passage_language import language_detector_config
 from catalog.services.publication_eligibility import public_taxonomy_snapshot
+from catalog.services.contribution_projection import contribution_projection
 from ingestion.services.indexing import _headers, _wait_task
 
 
@@ -593,14 +594,6 @@ def semantic_documents(
     work = edition.work
     runtime = runtime_config if runtime_config is not None else current_semantic_runtime()
     model_name = str(runtime.get("model_repo_id") or runtime.get("model") or "")
-    authors = list(
-        edition.contributions.filter(approved=True)
-        .order_by("order")
-        .values_list("person__preferred_name", flat=True)
-    )
-    author_ids = list(
-        edition.contributions.filter(approved=True).values_list("person_id", flat=True)
-    )
     relations = _relations(work)
     catalog_revision = None if staging_only else catalog_revision or edition.active_catalog_revision
     snapshot = public_taxonomy_snapshot(catalog_revision.snapshot) if catalog_revision else {}
@@ -611,8 +604,9 @@ def semantic_documents(
     if catalog_revision:
         if catalog_revision.reader_asset_id != asset.pk:
             raise ValueError("语义索引文件与馆藏修订不一致。")
-        authors = [str(row.get("name") or "") for row in snapshot.get("contributions", [])]
-        author_ids = [str(row.get("person_id")) for row in snapshot.get("contributions", [])]
+    contributions = contribution_projection(edition, snapshot=snapshot if catalog_revision else None,
+        public=bool(catalog_revision and catalog_revision.pk == edition.active_catalog_revision_id and catalog_revision.status == "active"), access_statuses=[asset.access_status])
+    document_revision_id = catalog_revision.document_revision_id if catalog_revision else asset.document_revisions.filter(is_active=True).values_list("pk", flat=True).first()
     is_public = bool(
         catalog_revision and edition.state == PublicationState.PUBLISHED
         and catalog_revision.status != CatalogPublicationRevision.Status.WITHDRAWN
@@ -630,8 +624,7 @@ def semantic_documents(
             "edition_slug": edition.public_slug,
             "work_id": str(work.id),
             "title": work_values.get("title", work.title),
-            "authors": authors,
-            "author_ids": [str(value) for value in author_ids],
+            **contributions.for_range(asset.pk, document_revision_id, chunk.page_start, chunk.page_end),
             "document_type": work_values.get("document_type", work.document_type),
             "language": chunk.language or "unknown",
             "access_status": asset.access_status,

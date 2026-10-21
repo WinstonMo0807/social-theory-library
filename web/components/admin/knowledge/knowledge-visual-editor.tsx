@@ -3,6 +3,7 @@
 import { Children, Fragment, cloneElement, isValidElement, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { projectScholar, scholarPreviewQuery } from "./scholar-preview";
 import { projectReadingPath } from "@/components/admin/curation/reading-path-preview";
 import { FixedPageEditor, type PreviewSelection } from "@/components/admin/curation/fixed-page-editor";
 import { PreviewSurface, type KnowledgePreviewPayload } from "@/components/admin/preview/knowledge-page-preview";
@@ -17,7 +18,7 @@ import type { EvidenceCurationType } from "@/lib/api/evidence-curation.types";
 
 type Props = {objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; previewStageId?: string; onPreviewSelect?: (selection: PreviewSelection) => void};
 type FieldProps = {children?: ReactNode; label?: string; className?: string; type?: string; role?: string; disabled?: boolean; style?: {display?: string}; "data-editor-section"?: string};
-const sectionLabels: Record<string, string> = {identity:"基本信息", biography:"传记与机构", questions:"研究问题", history:"形成与发展", dimensions:"研究维度", methods:"研究方法 / 工具", concepts:"关键概念", timeline:"生平与事件", "concept-map":"概念图", network:"学术关系", content:"内容与说明", relations:"人物与馆藏关联", works:"代表作品", paths:"阅读路径", passages:"原文策展", media:"图片", learning:"学习问题与争论", curation:"策划说明与署名", versions:"版本记录", publication:"保存与发布"};
+const sectionLabels: Record<string, string> = {identity:"基本信息", biography:"传记与机构", questions:"研究问题", history:"形成与发展", dimensions:"研究维度", methods:"研究方法 / 工具", concepts:"关键概念", timeline:"生平与事件", "concept-map":"概念图", network:"学术关系", content:"内容与说明", relations:"人物与馆藏关联", works:"代表作品", paths:"阅读路径", passages:"原文策展", media:"图片", learning:"学习问题与争论", curation:"策划说明与署名", versions:"版本记录", sources:"资料来源与路径", publication:"保存与发布"};
 function textOf(node: ReactNode): string { if (typeof node === "string") return node; if (!isValidElement<FieldProps>(node)) return ""; return node.props.label || Children.toArray(node.props.children).map(textOf).join(" "); }
 function flatten(nodes: ReactNode): ReactNode[] {return Children.toArray(nodes).flatMap(node => {
   if (!isValidElement<FieldProps>(node)) return [node];
@@ -63,18 +64,23 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
   const candidateWorks = ((suggestions.works || []) as Row[]).map(row=>({id:row.id,title:row.title || row.name || "",document_type:row.document_type || "book",theories:[],topics:[],language:"",abstract:row.description || "",edition:null}));
   workPool.push(candidateWorks);
   if (type === "reading_path") return projectReadingPath(base, draft);
-  if (type === "scholar") return {...defaults, person:{id: draft.personId || "new", ...(base.person as object || {}), preferred_name: draft.name, original_name:draft.originalName, biography:draft.biography, birth_year:Number(draft.birthYear)||null, death_year:Number(draft.deathYear)||null}, short_description:draft.description, affiliations:lines(draft.affiliations), key_concerns:lines(draft.concerns), timeline:structured(draft.timeline,["year","type","event"]).map(row => [row.year,row.event]), featured_quote:draft.quote, quote_source:draft.quoteSource, curated:{...curated, essential_works:selectRows(draft.essentialWorkIds,...workPool), frequently_read_scholars:selectRows(draft.frequentScholarIds,curated.frequently_read_scholars,suggestions.related_scholars), related_theories:selectRows(draft.relatedTheoryIds,curated.related_theories,suggestions.theories), key_concepts:structured(draft.keyConcepts,["name","description","source"]), concept_map:structured(draft.conceptMap,["source","target","relation","description"]), network:selectRows(draft.networkScholarIds,((curated.network || []) as Row[]).map(row=>row.scholar),suggestions.related_scholars).map(row=>({scholar:{id:row.id,name:row.name || row.title,slug:row.slug || ""},relation:"",source:"",...(draft.networkRelations as Record<string,object> || {})[String(row.id)]}))}};
+  if (type === "scholar") return projectScholar(base, draft);
   if (type === "topic") return {...defaults, name:draft.name, description:draft.description, problem_statement:draft.problemStatement, formation_context:draft.formationContext, core_questions:lines(draft.coreQuestions), research_dimensions:lines(draft.researchDimensions), methods:lines(draft.methods), key_concepts:lines(draft.terms), timeline:structured(draft.timeline,["year","title","description"]).map(row => [row.year,row.title,row.description]), disciplines:base.disciplines || [], subdisciplines:base.subdisciplines || [], theories:base.theories || [], scholars:[...((base.scholars || []) as Row[]), ...selectRows(draft.scholarIds,suggestions.scholars).filter(row=>!((base.scholars || []) as Row[]).some(saved=>saved.id===row.id || (saved.person as Row)?.id===row.id)).map(row=>({id:row.id,slug:row.slug || "",person:{id:row.id,preferred_name:row.name || row.title,original_name:"",biography:row.description || ""},short_description:row.description || "",key_concerns:[]}))], passages:base.passages || [], work_count:base.work_count || 0, curated:{...curated, foundational_works:selectRows(draft.primaryWorkIds,...workPool), recent_works:selectRows(draft.secondaryWorkIds,...workPool), related_scholars:selectRows(draft.scholarIds,curated.related_scholars,suggestions.scholars), linked_theories:selectRows(draft.theoryIds,curated.linked_theories,suggestions.theories), reading_paths:((draft.readingPaths || []) as Row[]).map(path => ({...path,works:selectRows(path.workIds,...workPool)})), hero_caption:draft.heroCaption, featured_passage_id:(draft.featuredPassageIds as string[] || [])[0] || ""}};
   if (["theory", "concept", "debate", "research_problem"].includes(type)) return {...defaults, ...draft, core_questions:lines(draft.core_questions), basic_propositions:lines(draft.basic_propositions), representative_scholars:base.representative_scholars || [], related_disciplines:(draft.related_disciplines as string[] || []).map(id=>reference(id,((base.related_disciplines || []) as Row[]).find(row=>row.id===id))), primary_discipline:reference(draft.primary_discipline,base.primary_discipline), work_groups:base.work_groups || {}, evidence:base.evidence || [], direct_relations:base.direct_relations || [], updated_at:base.updated_at || ""};
   return {...defaults, ...draft, discipline:reference(draft.discipline,base.discipline) || base.discipline || {name:"",slug:""}, theories:base.theories || [], works:base.works || [], disciplines:base.disciplines || [], core_questions:lines(draft.core_questions), research_directions:lines(draft.research_directions), methods:lines(draft.methods), representative_issues:lines(draft.representative_issues), research_questions:lines(draft.research_questions)};
 }
 
-/** One content task at a time; preview uses the same public component and only local form input. */
+/** Public components project local fields and server-verified, unsaved selections. */
 export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, previewStageId, onPreviewSelect}: Props) {
   const searchParams = useSearchParams();
   const [active, setActive] = useState(initialSection || searchParams.get("section") || "identity");
-  const [payload, setPayload] = useState<KnowledgePreviewPayload | null>(null);
-  const [error, setError] = useState("");
+  const [resolved, setResolved] = useState<{ key: string; payload: KnowledgePreviewPayload } | null>(null);
+  const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
+  const [previewRetry, setPreviewRetry] = useState(0);
+  const previewQuery = objectType === "scholar" ? scholarPreviewQuery(draft as Row) : "";
+  const previewKey = JSON.stringify([objectType, objectId, refreshKey, previewQuery, previewRetry]);
+  const payload = resolved?.key === previewKey ? resolved.payload : null;
+  const error = failure?.key === previewKey ? failure.message : "";
   const [evidenceDirty, setEvidenceDirty] = useState(false);
   const canPublish = hasAdminCapability(useAdminSession(),"can_publish_authority");
   const [publishing,setPublishing] = useState(false);
@@ -93,7 +99,15 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   }
   const [localImage, setLocalImage] = useState("");
   useEffect(()=>{let active=true;const url=mediaFile?URL.createObjectURL(mediaFile):"";queueMicrotask(()=>{if(active)setLocalImage(url);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[mediaFile]);
-  useEffect(() => {let current = true; queueMicrotask(()=>{if(current){setPayload(null);setError("");}}); if (!objectId) return()=>{current=false;}; apiRequest<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/`, {}, getServerSessionCredential()).then(value => {if (current) setPayload(value);}).catch(reason => {if (current) setError(reason instanceof Error ? reason.message : "预览读取失败");}); return () => {current = false;};},[objectType, objectId, refreshKey]);
+  useEffect(() => {
+    if (!objectId) return;
+    const controller = new AbortController();
+    queueMicrotask(() => { if (!controller.signal.aborted) { setResolved(null); setFailure(null); } });
+    apiRequest<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/${previewQuery ? `?${previewQuery}` : ""}`, { signal: controller.signal }, getServerSessionCredential())
+      .then(value => { if (!controller.signal.aborted) { setResolved({ key: previewKey, payload: value }); setFailure(null); } })
+      .catch(reason => { if (!controller.signal.aborted) setFailure({ key: previewKey, message: reason instanceof Error ? reason.message : "预览读取失败" }); });
+    return () => controller.abort();
+  }, [objectType, objectId, previewQuery, previewKey]);
   const childList = Children.toArray(children);
   const form = childList.find(node => isValidElement(node) && node.type === "form") as ReactElement<{children:ReactNode}> | undefined;
   const rail = childList.filter(node => node !== form);
@@ -106,7 +120,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const selected = sections.some(row => row.id === active) ? active : "identity";
   const live = useMemo(() => {const projected=project(objectType,payload?.perspective.data,draft as Record<string,unknown>);return localImage ? {...projected,hero_image:localImage,cover_url:localImage,cover_media:null,...(objectType === "scholar" ? {person:{...(projected.person as Row),portrait:localImage,portrait_media:null}} : {})}:projected;},[objectType,payload,draft,localImage]);
   const previewPayload = {...payload, object_type:objectType, object_id:objectId || "new", active_perspective:"draft", perspective:{source:"browser_input", available:true, serializer:payload?.perspective.serializer || "", data:live}} as KnowledgePreviewPayload;
-  const page = objectType === "reading_path" ? selected : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
+  const page = objectType === "reading_path" ? selected : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works","sources","paths"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
   function changeSection(id: string) {
     if (id === selected) return;
     if (selected === "passages" && evidenceDirty && !window.confirm("原文策展尚未保存，确定切换并放弃这些输入吗？")) return;
@@ -116,7 +130,8 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   if (selected === "passages" && evidenceType) return <div className="knowledge-visual-editor">{objectId ? <EvidenceCurationEditor key={`${evidenceType}:${objectId}`} objectType={evidenceType} objectId={objectId} sections={sections} onSectionChange={changeSection} onDirtyChange={setEvidenceDirty} /> : <><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} onClick={() => changeSection(section.id)}>{section.label}</button>)}</nav><p className="admin-panel">请先保存当前对象，再选择馆内原文。当前基本信息输入仍然保留。</p></>}</div>;
   return <div className="knowledge-visual-editor">{objectType === "scholar" && selected === "network" ? <section className="private-preview-label"><strong>规范学术关系</strong><p>两端学者共用同一关系、方向、说明和来源。下方历史关联阅读保持原记录。</p>{objectId ? <Link className="button secondary" href={`/admin/scholars/${objectId}/relations`}>进入学者关系图编辑</Link> : <p>请先保存学者草稿，再建立关系。</p>}</section> : null}<FixedPageEditor sections={sections} activeSection={selected} onSectionChange={changeSection} onPreviewSelect={onPreviewSelect} dirty={dirty} previewHref={objectId ? `/admin/preview/knowledge/${objectType}/${objectId}?page=${page}` : undefined}
     fields={form ? cloneElement(form,{},<fieldset disabled={disabled} style={{display:"contents"}}>{groups.map(({node,section},index) => <div key={index} hidden={section !== selected && !alwaysVisible(node)} data-field-section={section}>{node}</div>)}</fieldset>) : children}
-    preview={error ? <p className="form-message" role="alert">{error}。当前输入仍保留，保存后可重新打开预览。</p> : objectId && !payload ? <p role="status">正在读取当前对象的受控预览…</p> : <div onClickCapture={event => {const target = event.target as HTMLElement; const row = target.closest<HTMLElement>("[data-edit-row]"); if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select",{detail:Number(row.dataset.editRow)})); if (target.closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId={page} previewStageId={previewStageId}/></div>}/>
+    toolbar={error ? <button type="button" className="button secondary" onClick={() => setPreviewRetry(value => value + 1)}>重新核对预览</button> : null}
+    preview={error ? <p className="form-message" role="alert">{error}。当前输入仍保留，本次选择尚未核对，请在左侧重新核对预览。</p> : objectId && !payload ? <p role="status">{objectType === "scholar" ? "正在核对本次选择的原文引语与阅读路径…" : "正在读取当前对象的受控预览…"}</p> : <div onClickCapture={event => {const target = event.target as HTMLElement; const row = target.closest<HTMLElement>("[data-edit-row]"); if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select",{detail:Number(row.dataset.editRow)})); if (target.closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId={page} previewStageId={previewStageId}/></div>}/>
     <details className="knowledge-editor-support" hidden={!["publication","media","relations","versions"].includes(selected)} open><summary>{selected === "media" ? "选择图片" : selected === "relations" ? "管理共享关联" : "已保存草稿、发布与记录"}</summary>{selected === "publication" && objectId && savedRecord ? <section className="knowledge-publish-action"><button type="button" className="button" disabled={dirty || publishing || !canPublish} onClick={()=>void publishSaved()}>{publishing?"正在发布…":"发布已保存内容"}</button><p>{dirty?"当前输入尚未保存，请先保存草稿。":!canPublish?"当前账号没有正式发布权限。":"将已保存的当前对象内容发布给读者。"}</p>{publicationMessage?<p role="status">{publicationMessage}</p>:null}</section>:null}{rail}</details>
   </div>;
 }

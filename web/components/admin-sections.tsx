@@ -1,5 +1,6 @@
 "use client";
 
+import { ScholarProfileFieldsEditor, type ScholarProfileFields } from "./admin/knowledge/scholar-profile-fields";
 import { AdminListPages, useAdminListPage } from "@/components/admin/knowledge/list-pages";
 
 import {
@@ -923,7 +924,7 @@ type AdminScholar = {
   editorial_status: string;
 };
 
-type ScholarDraft = {
+type ScholarDraft = ScholarProfileFields & {
   id: string | null;
   edit_version?: string;
   personId: string | null;
@@ -953,6 +954,7 @@ type ScholarDraft = {
 };
 
 const emptyScholar: ScholarDraft = {
+  profileSources: [], nationalities: [], occupations: [], featuredSourceId: "", readingPathIds: [],
   id: null,
   personId: null,
   slug: "",
@@ -1035,6 +1037,9 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
       id: scholar.id,
       edit_version: scholar.edit_version,
       personId: scholar.person_id,
+      profileSources: (Array.isArray(curation.profile_sources) ? curation.profile_sources : []) as ScholarProfileFields["profileSources"],
+      nationalities: stringArray(curation.nationalities), occupations: stringArray(curation.occupations),
+      featuredSourceId: String(curation.featured_source_id || ""), readingPathIds: stringArray(curation.reading_path_ids),
       slug: scholar.slug,
       name: scholar.preferred_name,
       originalName: scholar.original_name,
@@ -1099,6 +1104,8 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
     const curation = {
       // Suggestions only persist together with this explicit form save.
       ...draft.baseCuration,
+      profile_sources: draft.profileSources, nationalities: draft.nationalities.map(s=>s.trim()).filter(Boolean), occupations: draft.occupations.map(s=>s.trim()).filter(Boolean),
+      featured_source_id: draft.featuredSourceId || null, reading_path_ids: draft.readingPathIds,
       essential_work_ids: draft.essentialWorkIds,
       key_concepts: parseStructuredLines(
         draft.keyConcepts,
@@ -1242,7 +1249,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <p>肖像在右侧媒体面板中选择。新建学者请先保存资料。</p>
           <div className="inline-fields"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
           <label><span>页面简介</span><textarea aria-label="页面简介" aria-describedby="scholar-description-help" rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small id="scholar-description-help">用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
-          <label><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于“完整传记”页面。生平节点和重要发表请在下方逐项维护，避免重复堆在一段文字里。</small></label>
+          <label><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于人物简介与资料来源栏目。正式事件在时间线中绑定学者与准确来源，并单独发布。</small></label>
           <CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="译名或别名"
             targetType="person"
@@ -1290,7 +1297,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" />
           <StructuredRowsEditor focused
             label="生平与重要发表"
-            description="年份可填写具体年份或时期。类型用于区分生平、著作、任职和其他事件，并以兼容格式保存到现有时间线字段。"
+            description="这里保留历史生平笔记，不自动成为公开事件。新版时间线使用已绑定人物、日期与准确来源并正式发布的事件。"
             rowLabel="事件"
             addLabel="添加事件"
             value={editorStructuredRows(draft.timeline, ["year", "type", "event"])}
@@ -1305,6 +1312,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           <div>
             <StructuredRowsEditor focused
               label="关键概念"
+              description="保留旧概念笔记，供编辑核对。公开页使用已确认的规范概念及关系，不从这些文字推断首创或影响。"
               rowLabel="概念"
               addLabel="添加概念"
               value={editorStructuredRows(draft.keyConcepts, ["name", "description", "source"])}
@@ -1334,6 +1342,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           </div>
           <StructuredRowsEditor focused
             label="概念地图"
+            description="历史关系文字继续保存。公开关系图使用规范实体和明确关系，请在知识关系管理中核对发布。"
             rowLabel="关系"
             addLabel="添加关系"
             value={editorStructuredRows(draft.conceptMap, ["source", "target", "relation", "description"])}
@@ -1348,7 +1357,9 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           />
           <fieldset className="curation-fieldset">
             <legend>系统建议与人工编排</legend>
-            <p>系统依据作者贡献和共同流派、主题给出候选，管理员选择后才进入公开学者页。</p>
+            <p>重要文献须有当前正式版本的明确贡献记录才公开。其余历史关联选择保留供编辑核对，不自动成为已确认的学术关系。</p>
+            <section data-editor-section="timeline"><Link href="/admin/theories/timeline">管理正式生平与发表事件</Link></section>
+            <section data-editor-section="concepts"><Link href="/admin/theories/relations">管理规范知识关系</Link></section>
             <CuratedSelector
               label="重要文献"
               options={draft.suggestions.works ?? []}
@@ -1382,8 +1393,10 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
               onChange={(relatedTheoryIds) => setDraft({ ...draft, relatedTheoryIds })}
             />
           </fieldset>
+          <section data-editor-section="sources"><ScholarProfileFieldsEditor profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
+          <section data-editor-section="sources"><details><summary>历史语录文字（保留原记录）</summary><p>这些自由文字继续保存供编辑核对；新版公开页的引语只使用上方绑定的正式原文。</p>
           <label><span>代表语录</span><textarea rows={3} value={draft.quote} onChange={(event) => setDraft({ ...draft, quote: event.target.value })} /></label>
-          <label><span>语录来源</span><input value={draft.quoteSource} onChange={(event) => setDraft({ ...draft, quoteSource: event.target.value })} /></label>
+          <label><span>语录来源</span><input value={draft.quoteSource} onChange={(event) => setDraft({ ...draft, quoteSource: event.target.value })} /></label></details></section>
           <label><span>编辑状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
           <button className="button" type="submit" disabled={saving}><Save size={15} />{saving ? "正在保存…" : "保存学者草稿"}</button>
           {message ? <p className="form-message" role="status">{message}</p> : null}

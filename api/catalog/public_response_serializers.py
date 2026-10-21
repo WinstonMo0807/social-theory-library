@@ -43,7 +43,11 @@ class PublicPersonSnapshotSerializer(serializers.Serializer):
     scholar_slug = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
+from catalog.contribution_serializers import PublicContributionScopeSerializer
+
+
 class PublicContributionSnapshotSerializer(serializers.Serializer):
+    scope = PublicContributionScopeSerializer()
     role = serializers.CharField()
     order = serializers.IntegerField()
     person = PublicPersonSnapshotSerializer()

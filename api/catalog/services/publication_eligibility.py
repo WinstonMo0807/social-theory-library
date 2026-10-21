@@ -157,3 +157,23 @@ def active_document_revision_q(*, revision_prefix: str) -> Q:
             )
         }
     )
+
+
+def current_retrieval_source_q(*, asset_prefix: str, access_statuses) -> Q:
+    """Exact readable source for retrieval; None access is reserved for index workers.
+
+    Metadata-only publication keeps its separate eligibility. An explicit empty
+    access set matches no source, including when restoring an older search.
+    """
+    revision_prefix = _path(asset_prefix, "edition__active_catalog_revision__document_revision")
+    condition = active_document_q(asset_prefix=asset_prefix) & Q(**{
+        _path(asset_prefix, "kind"): "normalized",
+        _path(asset_prefix, "status"): "ready",
+        _path(asset_prefix, "validation_status"): "valid",
+        _path(revision_prefix, "asset_id"): F(_path(asset_prefix, "id")),
+        _path(revision_prefix, "is_active"): True,
+        _path(revision_prefix, "source_checksum"): F(_path(asset_prefix, "sha256")),
+    }) & ~Q(**{_path(asset_prefix, "file"): ""}) & ~Q(**{_path(asset_prefix, "sha256"): ""})
+    if access_statuses is not None:
+        condition &= Q(**{_path(asset_prefix, "access_status__in"): access_statuses})
+    return condition

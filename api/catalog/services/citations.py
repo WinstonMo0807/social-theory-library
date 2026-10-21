@@ -1,4 +1,5 @@
 from catalog.models import Contribution, DocumentType, Edition
+from catalog.services.contribution_scope import whole_edition_contribution
 from catalog.services.publication_places import confirmed_publication_places
 
 
@@ -8,17 +9,11 @@ def _contributors(edition: Edition, snapshot: dict | None = None) -> list[str]:
             str((row.get("person") or {}).get("preferred_name") or row.get("name") or "")
             for row in snapshot.get("contributions") or []
             if isinstance(row, dict)
-            and row.get("role") == Contribution.Role.AUTHOR
+            and row.get("role") == Contribution.Role.AUTHOR and whole_edition_contribution(row)
             and ((row.get("person") or {}).get("preferred_name") or row.get("name"))
         ]
-    return list(
-        edition.contributions.filter(
-            role=Contribution.Role.AUTHOR,
-            approved=True,
-        )
-        .order_by("order")
-        .values_list("person__preferred_name", flat=True)
-    )
+    return [row.person.preferred_name for row in edition.contributions.filter(
+        role=Contribution.Role.AUTHOR, approved=True).select_related("person").order_by("order") if whole_edition_contribution(row)]
 
 
 def _snapshot_values(edition: Edition, snapshot: dict | None):

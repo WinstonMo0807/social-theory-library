@@ -30,10 +30,11 @@ from catalog.models import (
 from catalog.services.semantic_indexing import active_semantic_index_uid, ensure_semantic_index
 from catalog.services.publication_eligibility import (
     active_catalog_snapshot,
-    active_document_q,
+    current_retrieval_source_q,
     public_editions,
 )
 from catalog.services.text import clean_page_label, normalize_search_text
+from catalog.services.contribution_projection import SnapshotAuthorCandidate, author_range_q, contribution_projection
 from ingestion.services.indexing import _headers
 
 
@@ -116,22 +117,20 @@ def _snapshot_filtered_work_ids(filters: dict) -> set | None:
     year_min = filters.get("year_min")
     year_max = filters.get("year_max")
     output = set()
-    for edition in public_editions(require_fulltext=True).filter(is_primary=True):
+    editions = public_editions(require_fulltext=True).filter(is_primary=True)
+    if author_ids:
+        editions = editions.filter(SnapshotAuthorCandidate(author_ids))
+    for edition in editions:
         snapshot = active_catalog_snapshot(edition, require_fulltext=True)
         work = snapshot.get("work") or {}
         values = snapshot.get("edition") or {}
-        contributions = snapshot.get("contributions") or []
         knowledge = snapshot.get("knowledge") or {}
         year = values.get("publication_year")
         if document_types and work.get("document_type") not in document_types:
             continue
         if languages and work.get("language") not in languages:
             continue
-        if author_ids and not author_ids.intersection(
-            str(row.get("person_id") or (row.get("person") or {}).get("id") or "")
-            for row in contributions
-            if isinstance(row, dict)
-        ):
+        if author_ids and contribution_projection(edition, access_statuses=filters.get("_allowed_access_statuses")).matching_ranges(author_ids) == []:
             continue
         if year_ranges and not any(
             year is not None
@@ -531,23 +530,20 @@ def understand_query(query: str) -> dict:
 
 
 def _base_queryset(filters: dict):
+    allowed_access = viewer_access_statuses() if filters.get("_allowed_access_statuses") is None else filters["_allowed_access_statuses"]
     queryset = SemanticChunk.objects.filter(
-        active_document_q(asset_prefix="asset"),
+        current_retrieval_source_q(asset_prefix="asset", access_statuses=allowed_access),
         asset__edition__is_primary=True,
         asset__kind="normalized",
         asset__status="ready",
     ).select_related("asset__edition__work")
-    queryset = queryset.filter(
-        asset__access_status__in=(
-            filters.get("_allowed_access_statuses")
-            or viewer_access_statuses()
-        )
-    )
     if filters.get("work_ids"):
         queryset = queryset.filter(work_id__in=filters["work_ids"])
     snapshot_work_ids = _snapshot_filtered_work_ids(filters)
     if snapshot_work_ids is not None:
         queryset = queryset.filter(work_id__in=snapshot_work_ids)
+    if filters.get("authors"):
+        queryset = queryset.filter(author_range_q(filters["authors"], asset_field="asset_id", page_field="page_start", end_field="page_end", access_statuses=filters.get("_allowed_access_statuses")))
     return queryset.distinct()
 
 
@@ -584,23 +580,20 @@ def _keyword_candidates(query: str, terms: list[str], filters: dict, limit: int 
 
 
 def _passage_base_queryset(filters: dict):
+    allowed_access = viewer_access_statuses() if filters.get("_allowed_access_statuses") is None else filters["_allowed_access_statuses"]
     queryset = Passage.objects.filter(
-        active_document_q(asset_prefix="page__asset"),
+        current_retrieval_source_q(asset_prefix="page__asset", access_statuses=allowed_access),
         page__asset__edition__is_primary=True,
         page__asset__kind="normalized",
         page__asset__status="ready",
     ).select_related("page__asset__edition__work")
-    queryset = queryset.filter(
-        page__asset__access_status__in=(
-            filters.get("_allowed_access_statuses")
-            or viewer_access_statuses()
-        )
-    )
     if filters.get("work_ids"):
         queryset = queryset.filter(page__asset__edition__work_id__in=filters["work_ids"])
     snapshot_work_ids = _snapshot_filtered_work_ids(filters)
     if snapshot_work_ids is not None:
         queryset = queryset.filter(page__asset__edition__work_id__in=snapshot_work_ids)
+    if filters.get("authors"):
+        queryset = queryset.filter(author_range_q(filters["authors"], asset_field="page__asset_id", page_field="page__index", access_statuses=filters.get("_allowed_access_statuses")))
     return queryset.distinct()
 
 
@@ -995,7 +988,7 @@ def _relevance_label(rank: int, total: int) -> str:
     return "可能相关"
 
 
-def _serialize_row(row: dict, rank: int, total: int, terms: list[str], *, debug=False):
+def _serialize_row(row: dict, rank: int, total: int, terms: list[str], *, debug=False, contribution_cache=None, access_statuses=None):
     chunk = row["chunk"]
     asset = chunk.asset
     edition = asset.edition
@@ -1003,12 +996,8 @@ def _serialize_row(row: dict, rank: int, total: int, terms: list[str], *, debug=
     snapshot = active_catalog_snapshot(edition, require_fulltext=True)
     work_values = snapshot.get("work") or {}
     edition_values = snapshot.get("edition") or {}
-    authors = [
-        str((row.get("person") or {}).get("preferred_name") or row.get("name") or "")
-        for row in snapshot.get("contributions") or []
-        if isinstance(row, dict)
-        and ((row.get("person") or {}).get("preferred_name") or row.get("name"))
-    ]
+    authors = contribution_projection(edition, cache=contribution_cache, access_statuses=access_statuses).for_range(asset.pk,
+        edition.active_catalog_revision.document_revision_id, chunk.page_start, chunk.page_end)["authors"]
     matched_terms = [term for term in terms if term in chunk.normalized_text][:5]
     reasons = []
     if row.get("vector_rank"):
@@ -1205,8 +1194,9 @@ def semantic_search_v1(
     effective_max = max_per_work if max_per_work is not None else config["max_results_per_work"]
     rows = _deduplicate_and_limit(rows, limit, max(0, int(effective_max)))
     elapsed_ms = round((time.monotonic() - started) * 1000, 2)
+    contribution_cache = {}
     results = [
-        _serialize_row(row, rank, len(rows), terms, debug=debug)
+        _serialize_row(row, rank, len(rows), terms, debug=debug, contribution_cache=contribution_cache, access_statuses=filters.get("_allowed_access_statuses"))
         for rank, row in enumerate(rows, start=1)
     ]
     return {

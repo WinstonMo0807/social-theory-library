@@ -1,0 +1,41 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { ArrowRight, BookOpen, ChevronDown, LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
+import { scholarHref, scholarQuery, scholarValue, scholarValues } from "@/lib/api/scholars.params";
+import type { PublicScholarDirectory, ScholarSearchParams } from "@/lib/api/scholars.types";
+import { ScholarPagination, ScholarResultCard } from "./scholar-shared";
+import styles from "./scholar.module.css";
+
+export function ScholarDirectory({ result, params, error }: { result: PublicScholarDirectory | null; params: ScholarSearchParams; error: string }) {
+  const [filtersOpen, setFiltersOpen] = useState(false), query = scholarValue(params, "q");
+  const directory = scholarValue(params, "view") === "directory" || !!query || ["field", "school", "period", "sort", "page", "layout"].some(key => !!params[key]);
+  const list = scholarValue(params, "layout") === "list", selected = ["field", "period", "school"].flatMap(key => scholarValues(params, key).map(value => ({ key, value })));
+  const groups = [{ key: "field", title: "研究领域", items: result?.facets.fields || [] }, { key: "period", title: "历史时期", items: result?.facets.periods || [] }, { key: "school", title: "理论流派", items: result?.facets.schools || [] }];
+  const filterFields = (mobile: boolean) => <form key={selected.map(row => `${row.key}:${row.value}`).join("|")} action="/scholars" aria-label={mobile ? "移动学者筛选" : "学者筛选"} className={styles.filterForm}>
+    <input type="hidden" name="view" value="directory" /><input type="hidden" name="q" value={query} /><input type="hidden" name="sort" value={scholarValue(params, "sort") || "relevance"} /><input type="hidden" name="layout" value={list ? "list" : "grid"} />
+    <header><h2>筛选条件</h2><Link href={scholarHref("/scholars", { q: query, view: "directory" })}>清空全部</Link></header>
+    {groups.map(group => <fieldset key={group.key}><legend>{group.title}</legend>{group.items.length ? group.items.map(facet => <label key={facet.value}><input type="checkbox" name={group.key} value={facet.value} defaultChecked={scholarValues(params, group.key).includes(facet.value)} /><span>{facet.label}</span><small>（{facet.count}）</small></label>) : <p className={styles.muted}>暂无可筛选的公开关联。</p>}</fieldset>)}
+    {result?.period_notice ? <p className={styles.filterNote}>{result.period_notice}</p> : null}<button className={styles.primaryButton} type="submit">应用筛选<ArrowRight size={15} /></button>
+  </form>;
+  return <main className={`${styles.page} ${directory ? styles.directoryPage : styles.hubPage}`}>
+    <header className={styles.directoryHero}><img src={`/visual/stl4/scholars/${directory ? "directory" : "hub"}-hero.webp`} alt="" /><div className={styles.heroCopy}><nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><span>学者</span></nav><h1>{directory ? "学者索引" : "学者"}</h1><p>{directory ? "按姓名、异名、时期或研究主题发现学者。" : "思想改变世界，也由具体的人产生。"}</p><form action="/scholars" className={styles.search} role="search"><Search size={21} /><input type="hidden" name="view" value="directory" /><input key={query} type="search" name="q" aria-label="搜索学者姓名、原文名或研究领域" placeholder="搜索学者姓名、原文名或研究领域…" defaultValue={query} maxLength={300} /><button type="submit">搜索</button></form></div></header>
+    {error ? <section className={styles.error} role="alert"><h2>学者目录暂时无法读取</h2><p>{error}</p><button type="button" onClick={() => window.location.reload()}>重试读取</button><Link href="/scholars?view=directory">清除筛选</Link></section> : result ? <>
+      {!directory && result.recommendations.results.length ? <section className={styles.hubSection}><header className={styles.sectionHeading}><h2>{result.recommendations.title || "学者推荐"}</h2><Link href="/scholars?view=directory">查看全部<ArrowRight size={15} /></Link></header><div className={styles.recommendations}>{result.recommendations.results.map(scholar => <ScholarResultCard key={scholar.id} scholar={scholar} compact />)}</div></section> : null}
+      <div className={directory ? styles.directoryLayout : styles.hubSection}>
+        {directory ? <aside className={styles.desktopFilters}>{filterFields(false)}</aside> : null}
+        <section className={styles.directoryResults} aria-label="公开学者结果"><button type="button" className={styles.mobileFilterButton} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={17} />筛选条件（{selected.length}）<ChevronDown size={16} /></button>
+          <div className={styles.resultToolbar}>{directory ? <p>找到 <strong>{result.count}</strong> 位学者</p> : <h2>全部学者</h2>}{directory ? <form action="/scholars" className={styles.sortForm}>{[...scholarQuery(params)].filter(([key]) => !["sort", "page", "section", "view"].includes(key)).map(([key, value], index) => <input type="hidden" name={key} value={value} key={`${key}:${index}`} />)}<input type="hidden" name="view" value="directory" /><label>排序<select key={result.filters.sort} name="sort" defaultValue={result.filters.sort}><option value="relevance">相关性</option><option value="name">姓名</option><option value="birth">出生年份</option><option value="works">作品数量</option></select></label><button type="submit" aria-label="应用学者排序"><ArrowRight size={15} /></button><Link aria-label="网格展示学者" aria-current={!list ? "true" : undefined} href={scholarHref("/scholars", params, { layout: "grid" })}><LayoutGrid size={18} /></Link><Link aria-label="列表展示学者" aria-current={list ? "true" : undefined} href={scholarHref("/scholars", params, { layout: "list" })}><List size={18} /></Link></form> : <Link href="/scholars?view=directory">查看全部 {result.count} 位<ArrowRight size={15} /></Link>}</div>
+          {selected.length ? <div className={styles.filterChips}>{selected.map(({ key, value }) => <Link key={`${key}:${value}`} href={scholarHref("/scholars", params, { [key]: scholarValues(params, key).filter(item => item !== value), page: undefined })}>{groups.find(group => group.key === key)?.items.find(facet => facet.value === value)?.label || "已选择的筛选"}<X size={12} /></Link>)}<Link href={scholarHref("/scholars", { q: query, view: "directory" })}>清空</Link></div> : null}
+          {result.results.some(scholar => scholar.matched_alias) ? <p className={styles.notice}>包含已确认的别名匹配，条目同时展示规范姓名。</p> : null}
+          {result.results.length ? <div className={`${styles.resultGrid} ${!directory ? styles.hubGrid : ""} ${list ? styles.resultList : ""}`}>{result.results.map(scholar => <ScholarResultCard key={scholar.id} scholar={scholar} compact={!directory} />)}</div> : <section className={styles.empty}><Search size={36} /><h2>{query ? `未找到与“${query}”相关的学者` : "没有符合条件的公开学者"}</h2><p>检查姓名拼写，尝试中文译名或常见异名，也可以减少筛选条件。</p><Link className={styles.outlineButton} href="/scholars?view=directory">清空搜索条件</Link></section>}
+          <ScholarPagination page={result} path="/scholars" params={{ ...params, view: "directory" }} />
+        </section>
+        {directory ? <aside className={styles.directoryAside}><h2>策划推荐</h2>{result.curated_topics.length ? result.curated_topics.map(topic => <Link className={styles.curatedCard} href={topic.href} key={topic.id}>{topic.image_url ? <img src={topic.image_url} alt="" loading="lazy" /> : <span className={styles.curatedCover}><BookOpen size={30} strokeWidth={1} /></span>}<div><h3>{topic.title}</h3>{topic.summary ? <p>{topic.summary}</p> : null}<span>进入专题<ArrowRight size={13} /></span></div></Link>) : <p className={styles.muted}>暂无已发布的专题策划推荐。</p>}<section><header className={styles.sectionHeading}><h2>相关主题</h2><Link href="/topics">查看全部<ArrowRight size={13} /></Link></header>{result.related_topics.length ? result.related_topics.map(topic => <Link className={styles.topicLink} key={topic.id} href={topic.href}><strong>{topic.name}</strong><ArrowRight size={15} /></Link>) : <p className={styles.muted}>当前范围暂无明确关联的公开主题。</p>}</section></aside> : null}
+      </div>
+      <Dialog open={filtersOpen} className={styles.filterDialog} aria-labelledby="scholar-filter-heading" onRequestClose={() => setFiltersOpen(false)}><header><h2 id="scholar-filter-heading">筛选学者</h2><button type="button" aria-label="关闭学者筛选" onClick={() => setFiltersOpen(false)}><X size={20} /></button></header>{filtersOpen ? filterFields(true) : null}</Dialog>
+    </> : null}
+  </main>;
+}

@@ -18,7 +18,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from .search_schema import global_search_schema
 from distribution.serializers import ReaderRenditionPolicyInputSerializer, ReaderRenditionPolicyResultSerializer
 from .public_response_serializers import ReaderPageContentSerializer, ReaderFocusSerializer, ReaderDocumentSearchSerializer
@@ -2022,30 +2022,26 @@ class TopicDetailView(generics.RetrieveAPIView):
         return data
 
 
-class ScholarListView(generics.ListAPIView):
+class ScholarListView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = ScholarProfileSerializer
+    from .scholar_serializers import PublicScholarDirectorySerializer as serializer_class
 
-    def get_queryset(self):
-        query = (
-            self.request.query_params.get("q", "").strip()
-            or self.request.query_params.get("search", "").strip()
-        )
-        return SearchService(request=self.request).queryset(
-            SearchContext.SCHOLARS,
-            query,
-        )
+    @extend_schema(responses=serializer_class, parameters=[OpenApiParameter(name, type=str, many=name in {"field", "period", "school"}) for name in ("q", "search", "field", "period", "school", "sort", "page", "page_size")])
+    def get(self, request):
+        from catalog.services.public_scholars import scholar_directory
+        return Response(scholar_directory(request.query_params, request=request))
 
 
-class ScholarDetailView(generics.RetrieveAPIView):
+class ScholarDetailView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = ScholarProfileSerializer
-    lookup_field = "slug"
+    from .scholar_serializers import PublicScholarDetailSerializer as serializer_class
 
-    def get_queryset(self):
-        list_view = ScholarListView()
-        list_view.request = self.request
-        return list_view.get_queryset()
+    @extend_schema(responses=serializer_class, parameters=[OpenApiParameter(name, type=str, many=name in {"role", "relation_type"}) for name in ("section", "page", "page_size", "role", "relation_type", "relation_direction", "include_candidates")])
+    def get(self, request, slug):
+        from catalog.services.public_scholars import public_scholar_detail
+        response = Response(public_scholar_detail(slug, request.query_params, request=request))
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 class GlobalSearchView(APIView):

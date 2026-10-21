@@ -400,6 +400,8 @@ def formal_field_values(edition: Edition, *, include_editorial_draft: bool = Tru
     }
     from catalog.services.journal_issues import journal_contents_snapshot
 
+    values["contributor_scopes"] = [{"person_id": str(row.person_id), "role": row.role, "scope": row.scope or {"kind": "edition"}}
+                                   for row in sorted(edition.contributions.all(), key=lambda row: (row.order, str(row.pk))) if row.approved]
     values["journal_contents"] = (edition._admin_journal_contents if hasattr(edition, "_admin_journal_contents")
                                   else journal_contents_snapshot(edition))
     historical_published = edition.state == PublicationState.PUBLISHED or bool(edition.active_catalog_revision_id)
@@ -451,6 +453,7 @@ def formal_field_values(edition: Edition, *, include_editorial_draft: bool = Tru
             contributors = patch.get("contributors") or {}
             if str(contributors.get("edition_id")) == str(edition.pk) and "contributors" in (contributors.get("values") or {}):
                 values.update({name: [] for name in role_values})
+                values["contributor_scopes"] = [{"person_id": str(row["person_id"]), "role": row["role"], "scope": row.get("scope") or {"kind": "edition"}} for row in contributors["values"]["contributors"]]
                 for row in contributors["values"]["contributors"]:
                     values[role_fields.get(row["role"], "other_contributors")].append(str(row["person_id"]))
             for name, rows in (patch.get("classification") or {}).items():

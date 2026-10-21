@@ -1691,6 +1691,11 @@ class QueryLexiconAuthorityMixin(models.Model):
         )
 
 
+def validate_person_year(value):
+    if value is not None and (value == 0 or not -9999 <= value <= timezone.now().year + 100):
+        raise ValidationError("生卒年须为 -9999 至当前年份后 100 年之间的整数，公元纪年没有 0 年。")
+
+
 class Person(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     class AuthorityStatus(models.TextChoices):
         DRAFT = "draft", "草稿"
@@ -1704,8 +1709,8 @@ class Person(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     sort_name = models.CharField(max_length=240, blank=True)
     original_name = models.CharField(max_length=240, blank=True)
     aliases = models.JSONField(default=list, blank=True)
-    birth_year = models.PositiveSmallIntegerField(null=True, blank=True)
-    death_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    birth_year = models.SmallIntegerField(null=True, blank=True, validators=[validate_person_year])
+    death_year = models.SmallIntegerField(null=True, blank=True, validators=[validate_person_year])
     biography = models.TextField(blank=True)
     portrait = models.ImageField(upload_to="public/people/%Y/%m/", blank=True)
     portrait_rendition = models.ForeignKey(
@@ -1800,6 +1805,10 @@ class Person(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     def prepare_query_lexicon_bulk_object(self):
         from catalog.services.aliases import search_aliases
 
+        validate_person_year(self.birth_year)
+        validate_person_year(self.death_year)
+        if self.birth_year is not None and self.death_year is not None and self.birth_year > self.death_year:
+            raise ValidationError("生年不能晚于卒年。")
         self.validate_query_lexicon_authority_state()
         self.aliases = search_aliases(
             self.preferred_name,
@@ -1944,6 +1953,7 @@ class Contribution(UUIDTimeStampedModel):
     edition = models.ForeignKey(Edition, on_delete=models.CASCADE, related_name="contributions")
     person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="contributions")
     role = models.CharField(max_length=20, choices=Role.choices)
+    scope = models.JSONField(default=dict, blank=True)
     order = models.PositiveSmallIntegerField(default=0)
     source = models.CharField(max_length=120, blank=True)
     confidence = models.FloatField(default=1)

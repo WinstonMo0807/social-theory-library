@@ -24,6 +24,7 @@ from catalog.services.evidence_envelope import evidence_span_envelope
 from catalog.services.publication_eligibility import (
     active_catalog_snapshot,
     active_document_revision_q,
+    current_retrieval_source_q,
     public_editions,
 )
 from catalog.services.semantic_search import YEAR_FILTERS, viewer_access_statuses
@@ -168,27 +169,15 @@ def ensure_claim_index() -> None:
 def _approved_contributors(
     claim: DerivedClaim,
     snapshot: dict | None = None,
+    *, public=True, contribution_cache=None, access_statuses=None,
 ) -> tuple[list[str], list[str]]:
-    if snapshot:
-        rows = [
-            (
-                str(row.get("person_id") or (row.get("person") or {}).get("id") or ""),
-                str((row.get("person") or {}).get("preferred_name") or row.get("name") or ""),
-            )
-            for row in snapshot.get("contributions") or []
-            if isinstance(row, dict)
-            and (row.get("person_id") or (row.get("person") or {}).get("id"))
-        ]
-        return [row[0] for row in rows], [row[1] for row in rows]
-    rows = list(
-        claim.edition.contributions.filter(approved=True)
-        .order_by("order")
-        .values_list("person_id", "person__preferred_name")
-    )
-    return [str(row[0]) for row in rows], [str(row[1]) for row in rows]
+    from catalog.services.contribution_projection import contribution_projection
+    authors = contribution_projection(claim.edition, snapshot=snapshot, public=public, cache=contribution_cache, access_statuses=access_statuses).for_range(
+        claim.document_revision.asset_id, claim.document_revision_id, claim.primary_evidence.page.index)
+    return authors["author_ids"], authors["authors"]
 
 
-def serialize_claim_document(claim: DerivedClaim, *, catalog_revision=None) -> dict:
+def serialize_claim_document(claim: DerivedClaim, *, catalog_revision=None, contribution_cache=None, access_statuses=None) -> dict:
     """Serialize a claim only when its PDF locator is still valid."""
 
     revision = claim.document_revision
@@ -209,8 +198,10 @@ def serialize_claim_document(claim: DerivedClaim, *, catalog_revision=None) -> d
         or catalog_revision.reader_asset_id != asset.pk
     ):
         raise ValueError("观点与捕获的馆藏正文修订不一致。")
-    author_ids, authors = _approved_contributors(claim, snapshot)
-    envelope = evidence_span_envelope(evidence)
+    author_ids, authors = _approved_contributors(claim, snapshot,
+        public=catalog_revision is None or catalog_revision.pk == claim.edition.active_catalog_revision_id and catalog_revision.status == "active",
+        contribution_cache=contribution_cache, access_statuses=access_statuses)
+    envelope = evidence_span_envelope(evidence, contribution_cache=contribution_cache, access_statuses=access_statuses)
     is_public = (
         formal_revision is not None
         and claim.edition.state == "published"
@@ -255,7 +246,7 @@ def serialize_claim_document(claim: DerivedClaim, *, catalog_revision=None) -> d
         "importance_score": claim.importance_score,
         "cluster_key": claim.cluster_key,
         "evidence_text": evidence.original_text,
-        "page_number": evidence.page_number,
+        "page_number": evidence.page.index,
         "printed_page_label": evidence.printed_page_label,
         "reader_url": envelope.reader_url,
         "status": claim.status,
@@ -501,7 +492,8 @@ def index_document_revision_claims(
     # Optional extraction may finish between projection and activation. Bind
     # those derived claims to the newest formally requested matching document
     # namespace, so the later pointer switch does not strand them as private.
-    documents = [serialize_claim_document(claim, catalog_revision=formal_revision) for claim in claims]
+    contribution_cache = {}
+    documents = [serialize_claim_document(claim, catalog_revision=formal_revision, contribution_cache=contribution_cache, access_statuses=[revision.asset.access_status]) for claim in claims]
     captured = _begin_projection(revision, claims) if track_projection else []
     try:
         result = writer(str(revision.id), documents) if writer else _sync_claim_documents(
@@ -539,7 +531,7 @@ def _json_value(value: object) -> str:
 
 
 def _search_filters(filters: dict, *, include_catalog_revision: bool = True) -> list[str]:
-    allowed_access = filters.get("_allowed_access_statuses") or viewer_access_statuses()
+    allowed_access = viewer_access_statuses() if filters.get("_allowed_access_statuses") is None else filters["_allowed_access_statuses"]
     output = [
         'status = "active"',
         "document_revision_active = true",
@@ -593,7 +585,7 @@ def _search_filters(filters: dict, *, include_catalog_revision: bool = True) -> 
 
 def visible_claim_queryset(filters: dict | None = None):
     filters = dict(filters or {})
-    allowed_access = filters.get("_allowed_access_statuses") or viewer_access_statuses()
+    allowed_access = viewer_access_statuses() if filters.get("_allowed_access_statuses") is None else filters["_allowed_access_statuses"]
     rows = DerivedClaim.objects.filter(
         status=DerivedClaim.Status.ACTIVE,
         primary_evidence__is_stale=False,
@@ -601,7 +593,8 @@ def visible_claim_queryset(filters: dict | None = None):
         document_revision__asset__kind=Asset.Kind.NORMALIZED,
         document_revision__asset__status=Asset.Status.READY,
         document_revision__asset__access_status__in=allowed_access,
-    ).filter(active_document_revision_q(revision_prefix="document_revision"))
+    ).filter(active_document_revision_q(revision_prefix="document_revision"),
+        current_retrieval_source_q(asset_prefix="document_revision__asset", access_statuses=allowed_access))
     if filters.get("work_ids"):
         rows = rows.filter(work_id__in=filters["work_ids"])
     if filters.get("document_types"):
@@ -613,15 +606,9 @@ def visible_claim_queryset(filters: dict | None = None):
     if filters.get("languages"):
         rows = rows.filter(Q(primary_evidence__language__in=filters["languages"]) | Q(edition__active_catalog_revision__snapshot__work__language__in=filters["languages"]))
     if filters.get("authors"):
-        # Matching authors must use the same serving snapshot as the result,
-        # not newer canonical rows whose index publication is still pending.
-        author_ids = {str(value) for value in filters["authors"]}
-        matching_editions = [
-            edition.pk for edition in public_editions(require_fulltext=True).filter(is_primary=True)
-            if any(str(item.get("person_id") or "") in author_ids
-                   for item in (edition.active_catalog_revision.snapshot or {}).get("contributions", []))
-        ]
-        rows = rows.filter(edition_id__in=matching_editions)
+        from catalog.services.contribution_projection import author_range_q
+        rows = rows.filter(author_range_q(filters["authors"], asset_field="document_revision__asset_id",
+            revision_field="document_revision_id", page_field="primary_evidence__page__index", access_statuses=allowed_access))
     if filters.get("years"):
         condition = Q()
         for value in filters["years"]:
@@ -658,6 +645,7 @@ def _database_claim_search(query: str, filters: dict, limit: int) -> dict:
         .prefetch_related("edition__contributions__person")[:500]
     )
     ranked = []
+    contribution_cache = {}
     for claim in candidates:
         candidate_text = " ".join(
             (
@@ -673,7 +661,7 @@ def _database_claim_search(query: str, filters: dict, limit: int) -> dict:
         phrase = SequenceMatcher(None, query.casefold()[:600], claim.proposition.casefold()[:1200]).ratio()
         score = overlap * 0.55 + phrase * 0.2 + claim.quality_score * 0.1 + claim.importance_score * 0.15
         if score > 0.01:
-            document = serialize_claim_document(claim)
+            document = serialize_claim_document(claim, contribution_cache=contribution_cache, access_statuses=filters.get("_allowed_access_statuses"))
             document["_rankingScore"] = round(score, 6)
             ranked.append((score, document))
     ranked.sort(key=lambda row: (-row[0], row[1]["id"]))
@@ -682,6 +670,35 @@ def _database_claim_search(query: str, filters: dict, limit: int) -> dict:
         "index_uid": claim_index_uid(),
         "hits": [row[1] for row in ranked[:limit]],
     }
+
+
+def _current_claim_hits(hits, filters):
+    """The index supplies ranks; current source authority supplies every displayed field."""
+    identities = {}
+    for hit in hits:
+        try:
+            identities[str(uuid.UUID(str(hit.get("claim_id") or hit.get("id"))))] = hit
+        except (ValueError, TypeError, AttributeError):
+            continue
+    rows = visible_claim_queryset(filters).filter(pk__in=identities).select_related(
+        "edition__active_catalog_revision__reader_asset", "edition__active_catalog_revision__document_revision",
+        "document_revision__asset__edition__work", "primary_evidence__page__asset",
+        "primary_evidence__document_revision__asset__edition__active_catalog_revision")
+    current = {str(claim.pk): claim for claim in rows}
+    output, contribution_cache = [], {}
+    for identifier, hit in identities.items():
+        claim = current.get(identifier)
+        if (claim is None or str(hit.get("document_revision_id")) != str(claim.document_revision_id)
+                or str(hit.get("evidence_span_id")) != str(claim.primary_evidence_id)
+                or claim.primary_evidence.document_revision_id != claim.document_revision_id
+                or claim.primary_evidence.page.asset_id != claim.document_revision.asset_id):
+            continue
+        document = serialize_claim_document(claim, contribution_cache=contribution_cache, access_statuses=filters.get("_allowed_access_statuses"))
+        if not document["is_public"]:
+            continue
+        document["_rankingScore"] = hit.get("_rankingScore", 0)
+        output.append(document)
+    return output
 
 
 def search_claim_index(
@@ -713,7 +730,7 @@ def search_claim_index(
         return {
             "backend": "meilisearch",
             "index_uid": claim_index_uid(),
-            "hits": payload.get("hits") or [],
+            "hits": _current_claim_hits((payload.get("hits") or [])[:bounded_limit], normalized_filters),
             "estimated_total_hits": payload.get("estimatedTotalHits"),
             "processing_time_ms": payload.get("processingTimeMs"),
         }

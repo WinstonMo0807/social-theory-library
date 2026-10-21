@@ -20,7 +20,7 @@ from catalog.services.claims.indexing import search_claim_index, visible_claim_q
 from catalog.services.claims.stance import ClaimStatement, ClaimStance, classify_stance
 from catalog.services.evidence_envelope import evidence_span_envelope
 from catalog.services.publication_eligibility import (
-    active_asset_q, active_catalog_snapshot, active_document_revision_q, public_editions,
+    active_catalog_snapshot, active_document_revision_q, current_retrieval_source_q, public_editions,
 )
 from catalog.services.retrieval import unified_retrieve
 from catalog.services.scoped_search import public_scholar_queryset
@@ -188,7 +188,9 @@ def _matching_evidence_span(
         page_number = 0
     if not asset_id or page_number <= 0:
         return None
-    allowed_access = (filters or {}).get("_allowed_access_statuses") or viewer_access_statuses()
+    allowed_access = (filters or {}).get("_allowed_access_statuses")
+    if allowed_access is None:
+        allowed_access = viewer_access_statuses()
     work_scope = Q()
     if (filters or {}).get("work_ids"):
         work_scope &= Q(document_revision__asset__edition__work_id__in=filters["work_ids"])
@@ -202,12 +204,12 @@ def _matching_evidence_span(
             document_revision__asset__access_status__in=allowed_access,
             document_revision__asset__edition__is_primary=True,
             page__asset_id=F("document_revision__asset_id"),
-            page_number=page_number,
+            page__index=page_number,
             is_stale=False,
         )
         .filter(
             active_document_revision_q(revision_prefix="document_revision"),
-            active_asset_q(asset_prefix="document_revision__asset"),
+            current_retrieval_source_q(asset_prefix="document_revision__asset", access_statuses=allowed_access),
             work_scope,
         )
         .select_related(
@@ -276,6 +278,7 @@ def _semantic_result(
     total: int,
     filters: dict | None = None,
     eligible_work_ids: set | None = None,
+    contribution_cache=None,
 ) -> dict | None:
     span = _matching_evidence_span(row, filters=filters, eligible_work_ids=eligible_work_ids)
     if span is None:
@@ -286,7 +289,9 @@ def _semantic_result(
     if not statement.proposition:
         return None
     stance = classify_stance(query_statement, statement)
-    envelope = evidence_span_envelope(span).as_dict()
+    envelope = evidence_span_envelope(span, contribution_cache=contribution_cache, access_statuses=(filters or {}).get("_allowed_access_statuses")).as_dict()
+    if (filters or {}).get("authors") and not set(map(str, filters["authors"])).intersection(envelope["source"].get("author_ids", [])):
+        return None
     pdf_url = f"/api/distribution/assets/{envelope['source']['asset_id']}/file/"
     envelope["pdf_url"] = pdf_url
     base_score = max(0.0, 1.0 - ((rank - 1) / max(1, total)))
@@ -320,9 +325,11 @@ def _claim_result(
     query_statement: ClaimStatement,
     rank: int,
     total: int,
+    contribution_cache=None,
+    access_statuses=None,
 ) -> dict:
     stance = classify_stance(query_statement, _claim_statement(claim))
-    envelope = evidence_span_envelope(claim.primary_evidence).as_dict()
+    envelope = evidence_span_envelope(claim.primary_evidence, contribution_cache=contribution_cache, access_statuses=access_statuses).as_dict()
     pdf_url = f"/api/distribution/assets/{envelope['source']['asset_id']}/file/"
     envelope["pdf_url"] = pdf_url
     try:
@@ -387,6 +394,7 @@ def _validated_claim_results(
     claim_map = {str(claim.id): claim for claim in rows}
     output = []
     rejected = 0
+    contribution_cache = {}
     for rank, hit in enumerate(hits, start=1):
         claim_id = _uuid_identifier(hit.get("claim_id") or hit.get("id"))
         claim = claim_map.get(claim_id)
@@ -406,6 +414,8 @@ def _validated_claim_results(
                 query_statement=query_statement,
                 rank=rank,
                 total=len(hits),
+                contribution_cache=contribution_cache,
+                access_statuses=filters.get("_allowed_access_statuses"),
             )
         )
     return output, rejected
@@ -549,10 +559,15 @@ def _viewpoint_facets(rows: list[dict]) -> dict[str, Any]:
             if work_id in work_counts and work_id not in seen_snapshot_works:
                 snapshots.append((work_id, snapshot))
                 seen_snapshot_works.add(work_id)
+    exact_authors = {}
+    for result in rows:
+        source = result.get("evidence", {}).get("source", {})
+        exact_authors.setdefault(str(source.get("work_id") or ""), set()).update(source.get("author_ids") or [])
     author_rows = [
         (work_id, row) for work_id, snapshot in snapshots
         for row in snapshot.get("contributions") or []
         if isinstance(row, dict) and row.get("role") == Contribution.Role.AUTHOR
+        and str(row.get("person_id") or (row.get("person") or {}).get("id") or "") in exact_authors.get(work_id, set())
     ]
     author_ids = {
         str(row.get("person_id") or (row.get("person") or {}).get("id") or "")
@@ -674,6 +689,7 @@ def viewpoint_search(
         semantic_error = exc.__class__.__name__
         baseline_response = {"results": [], "fallback_used": True, "fallback_reason": semantic_error}
     baseline_rows = []
+    contribution_cache = {}
     unvalidated_baseline = 0
     raw_baseline = baseline_response.get("results") if isinstance(baseline_response, dict) else []
     for rank, row in enumerate(raw_baseline or [], start=1):
@@ -684,6 +700,7 @@ def viewpoint_search(
             total=len(raw_baseline or []),
             filters=normalized_filters,
             eligible_work_ids=eligible_work_ids,
+            contribution_cache=contribution_cache,
         )
         if result is None:
             unvalidated_baseline += 1

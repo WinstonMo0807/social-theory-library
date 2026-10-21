@@ -150,22 +150,22 @@ SCHOLAR_MODULES = {
     ),
     "position": _module(
         "scholar-position", "简介与学术位置", "ScholarOverview", EDITORIAL,
-        ("short_description", "affiliations", "key_concerns"), RECOMMENDED,
-        "overview", canonical=("short_description", "affiliations", "key_concerns"),
+        ("short_description", "affiliations", "key_concerns", "nationalities", "occupations"), RECOMMENDED,
+        "overview", canonical=("short_description", "affiliations", "key_concerns"), curated=("curation.nationalities", "curation.occupations"),
     ),
     "biography": _module(
         "scholar-biography", "完整传记", "ScholarBiography", EDITORIAL,
         ("person.biography",), RECOMMENDED, "biography", canonical=("person",),
     ),
     "timeline": _module(
-        "scholar-timeline", "生平时间线", "ScholarTimeline", EDITORIAL,
-        ("timeline",), OPTIONAL, "timeline", canonical=("timeline",),
+        "scholar-timeline", "生平与发表时间线", "ScholarTimeline", RELATION,
+        ("timeline",), OPTIONAL, "timeline", relations=("TheoryTimelineEvent", "TimelineEventRelation"),
         projections=("public", "timeline"),
     ),
     "quote": _module(
-        "scholar-quote", "代表引文与出处", "ScholarQuote", EDITORIAL,
-        ("featured_quote", "quote_source"), OPTIONAL, "overview",
-        canonical=("featured_quote", "quote_source"),
+        "scholar-quote", "代表原文与出处", "ScholarQuote", CURATED,
+        ("featured_quote",), OPTIONAL, "overview", curated=("curation.featured_source_id",),
+        relations=("EvidenceCurationReference",),
     ),
     "works": _module(
         "scholar-works", "全部馆藏作品", "ScholarWorks", COMPUTED,
@@ -174,39 +174,44 @@ SCHOLAR_MODULES = {
     ),
     "representative_works": _module(
         "scholar-representative-works", "代表作品", "ScholarEssentialWorks", CURATED,
-        ("curated.essential_works",), RECOMMENDED, "curation-works", curated=("curation.essential_work_ids",),
+        ("works",), RECOMMENDED, "curation-works", curated=("curation.essential_work_ids",),
         projections=("public", "recommendation"),
     ),
     "concepts": _module(
         "scholar-concepts", "关键概念", "ScholarConcepts", CURATED,
-        ("curated.key_concepts",), RECOMMENDED, "curation-concepts", curated=("curation.key_concepts",),
+        ("concepts",), RECOMMENDED, "knowledge-relations", relations=("PersonNodeRelation",),
     ),
     "concept_map": _module(
         "scholar-concept-map", "概念图", "ScholarConceptMap", CURATED,
-        ("curated.concept_map",), OPTIONAL, "curation-concept-map", curated=("curation.concept_map",),
+        ("graph_href",), OPTIONAL, "relations", relations=("PersonNodeRelation", "ScholarRelation"),
         projections=("public", "knowledge_graph"),
     ),
     "network": _module(
         "scholar-network", "学术关系", "ScholarNetwork", CURATED,
-        ("curated.network",), OPTIONAL, "relations", curated=("curation.network",),
-        relations=("PersonNodeRelation",), projections=("public", "knowledge_graph"),
+        ("relations", "candidate_access"), OPTIONAL, "relations",
+        relations=("ScholarRelation",), projections=("public", "knowledge_graph"),
     ),
     "theories": _module(
         "scholar-theories", "理论传统", "ScholarTheories", RELATION,
-        ("knowledge_nodes",), RECOMMENDED, "knowledge-relations",
+        ("schools",), RECOMMENDED, "knowledge-relations",
         relations=("PersonNodeRelation", "WorkNodeRelation"),
         projections=("public", "knowledge_graph", "recommendation"),
     ),
     "frequent": _module(
         "scholar-frequently-read", "经常连着阅读", "ScholarFrequentlyRead", CURATED,
-        ("curated.frequently_read_scholars",), OPTIONAL, "curation-related", curated=("curation.frequently_read_scholar_ids",),
+        ("relations",), OPTIONAL, "relations", relations=("ScholarRelation",),
         projections=("public", "recommendation"),
     ),
     "claims": _module(
-        "scholar-curated-claims", "核心观点、批评与回应", "CuratedClaimGroups", AI_OPTIONAL,
-        ("curated_claims",), OPTIONAL, "claims", curated=("CuratedClaim",),
+        "scholar-questions", "核心问题、批评与回应", "ScholarQuestions", RELATION,
+        ("questions", "evidence"), OPTIONAL, "claims", curated=("CuratedClaim",),
         projections=("public", "claim_index"),
     ),
+    "sources": _module("scholar-sources", "人物资料来源", "ScholarSources", CURATED,
+        ("sources",), RECOMMENDED, "sources", curated=("curation.profile_sources",)),
+    "paths": _module("scholar-paths", "相关阅读路径", "ScholarPaths", CURATED,
+        ("paths", "topics"), OPTIONAL, "reading", curated=("curation.reading_path_ids",),
+        relations=("ReadingPathItem", "PersonTopicRelation")),
 }
 
 THEORY_MODULES = {
@@ -362,7 +367,7 @@ def _page(
     preview_support: bool = True,
 ) -> PublicPageContract:
     serializers = {
-        "scholar": ("ScholarProfileSerializer", "/api/catalog/scholars/{slug}/"),
+        "scholar": ("PublicScholarDetailSerializer", "/api/catalog/scholars/{slug}/"),
         "theory": (
             "KnowledgeNodeDetailSerializer",
             "/api/catalog/theory-system/nodes/{slug}/",
@@ -410,7 +415,7 @@ PUBLIC_PAGE_CONTRACTS: tuple[PublicPageContract, ...] = (
                 ("source_scholar", "target_scholar", "relation_type", "direction", "summary", "source"), OPTIONAL, "network",
                 curated=("ScholarRelation", "EditorialRevision"), note="两端共用同一关系身份；只有显式发布快照且两位学者仍公开时提供，旧network JSON保留为历史策展。"),
     ), "/admin/scholars/{id}/relations"),
-    _page("scholar", "overview", "概览", "/scholars/{slug}", "ScholarPublicView", (SCHOLAR_MODULES["identity"], SCHOLAR_MODULES["position"], SCHOLAR_MODULES["quote"], SCHOLAR_MODULES["representative_works"], SCHOLAR_MODULES["claims"]), "/admin/scholars/{id}"),
+    _page("scholar", "overview", "概览", "/scholars/{slug}", "ScholarPublicView", (SCHOLAR_MODULES["identity"], SCHOLAR_MODULES["position"], SCHOLAR_MODULES["quote"], SCHOLAR_MODULES["representative_works"], SCHOLAR_MODULES["claims"], SCHOLAR_MODULES["sources"], SCHOLAR_MODULES["paths"]), "/admin/scholars/{id}"),
     _page("scholar", "biography", "完整传记", "/scholars/{slug}/biography", "ScholarSectionPublicView", (SCHOLAR_MODULES["biography"],), "/admin/scholars/{id}?section=biography"),
     _page("scholar", "timeline", "生平时间线", "/scholars/{slug}/timeline", "ScholarSectionPublicView", (SCHOLAR_MODULES["timeline"],), "/admin/scholars/{id}?section=timeline"),
     _page("scholar", "works", "重要文献与全部作品", "/scholars/{slug}/works", "ScholarSectionPublicView", (SCHOLAR_MODULES["works"], SCHOLAR_MODULES["representative_works"]), "/admin/scholars/{id}?section=works"),
@@ -423,7 +428,7 @@ PUBLIC_PAGE_CONTRACTS: tuple[PublicPageContract, ...] = (
     _page("theory", "graph", "理论图谱中的本理论", "/theories/graph?center={slug}", "TheoryGraph", (THEORY_MODULES["relations"], THEORY_MODULES["scholars"]), "/admin/theories/{id}?section=relations", serializer="PublicTheoryGraphSerializer", api="/api/catalog/theory-system/graph/?center={slug}"),
     _page("theory", "timeline", "时间线", "/theories/timeline?node={slug}", "TheoryTimeline", (THEORY_MODULES["development"],), "/admin/theories/{id}?section=timeline", serializer="NormalizedTimelineEventSerializer", api="/api/catalog/theory-system/timeline/?node={slug}"),
     _page("theory", "discipline-entry", "学科中的理论入口", "/theories/disciplines/{discipline_slug}", "DisciplineTheoryView", (THEORY_MODULES["disciplines"],), "/admin/theories/{id}?section=disciplines", serializer="TheoryDisciplinePageSerializer", api="/api/catalog/theory-system/disciplines/{discipline_slug}/", preview_support=False),
-    _page("theory", "scholar-entry", "学者中的理论入口", "/scholars/{scholar_slug}/theories", "ScholarSectionPublicView", (THEORY_MODULES["scholars"],), "/admin/theories/{id}?section=scholars", serializer="ScholarProfileSerializer", api="/api/catalog/scholars/{scholar_slug}/", preview_support=False),
+    _page("theory", "scholar-entry", "学者中的理论入口", "/scholars/{scholar_slug}/theories", "ScholarSectionPublicView", (SCHOLAR_MODULES["theories"],), "/admin/theories/{id}?section=scholars", serializer="PublicScholarDetailSerializer", api="/api/catalog/scholars/{scholar_slug}/", preview_support=False),
     _page("theory", "topic-entry", "主题中的理论入口", "/topics/{topic_slug}/theory-schools", "TopicSectionPublicView", (THEORY_MODULES["topics"],), "/admin/theories/{id}?section=topics", serializer="TopicSerializer", api="/api/catalog/topics/{topic_slug}/", preview_support=False),
     _page("theory", "reading-path", "Reading Path", "/theories/reading-paths/{path_slug}", "ReadingPathPublicView", (THEORY_MODULES["reading_paths"],), "/admin/theories/{id}?section=reading", serializer="PublicReadingPathSerializer", api="/api/catalog/theory-system/reading-paths/{path_slug}/"),
     _page("topic", "overview", "概览", "/topics/{slug}", "TopicPublicView", (TOPIC_MODULES["identity"], TOPIC_MODULES["problem"], TOPIC_MODULES["framework"], TOPIC_MODULES["evidence"], TOPIC_MODULES["claims"]), "/admin/topics/{id}"),

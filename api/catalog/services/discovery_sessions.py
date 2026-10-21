@@ -493,7 +493,7 @@ def retrieve_discovery_channel(query, channel, filters, access_statuses, *, limi
             branches.extend([(branch.get("sparse", []), 0.2 / len(aliases[:4])),
                              (branch.get("dense", []), 0.2 / len(aliases[:4]))])
             warnings.extend(branch.get("warnings", []))
-    rows = validate_discovery_results(channel, _rrf(branches)[:MAX_MATERIALIZED], access_statuses)
+    rows = validate_discovery_results(channel, _rrf(branches)[:MAX_MATERIALIZED], access_statuses, filters=filters)
     if channel == "passages":
         rows = _deduplicate(rows)
         if is_current and not is_current():
@@ -506,7 +506,7 @@ def retrieve_discovery_channel(query, channel, filters, access_statuses, *, limi
         if not any(warning.get("code") == "reranker_unavailable" for warning in rerank_warnings):
             rows = _diverse_prefix(rows, eligible_count=rerank_count)
     # Model calls may outlive a publication change. Recheck after them as well.
-    rows = validate_discovery_results(channel, rows, access_statuses)
+    rows = validate_discovery_results(channel, rows, access_statuses, filters=filters)
     return {"rows": rows, "warnings": warnings, "version": str(result.get("version") or ""),
             "index_uid": str(result.get("index_uid") or getattr(request_context.get("generation"), "uid", "")),
             "embedding_artifact": str(result.get("embedding_artifact") or ""),
@@ -530,7 +530,7 @@ def _deep_reference_rows(session, access_statuses) -> list[dict]:
     from catalog.services.discovery_projection import validate_discovery_results
 
     refs = (session.results or {}).get("passages", [])[:MAX_MATERIALIZED]
-    rows = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses))
+    rows = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses, filters=effective_filters(session)))
     by_key = {(_identity(row), str(row.get("source_revision") or "")): row for row in rows}
     return [
         row
@@ -582,7 +582,7 @@ def execute_deep_session(session_id, generation: int, task_id: str) -> None:
             }
             for row in rows
         }
-        rows = allowed_rows(session, validate_discovery_results("passages", rows, access_statuses))
+        rows = allowed_rows(session, validate_discovery_results("passages", rows, access_statuses, filters=effective_filters(session)))
         for row in rows:
             row.update(annotations.get(_identity(row), {}))
         refs = [_deep_reference(row) for row in rows[:MAX_MATERIALIZED] if _identity(row)]
@@ -882,7 +882,7 @@ def _rehydrate(session, access_statuses) -> dict[str, list[dict]]:
     output = {}
     for channel in CHANNELS:
         refs = (session.results or {}).get(channel, [])[:MAX_MATERIALIZED]
-        fresh = validate_discovery_results(channel, refs, access_statuses)
+        fresh = validate_discovery_results(channel, refs, access_statuses, filters=effective_filters(session))
         if channel == "passages":
             fresh = allowed_rows(session, fresh)
         by_id = {(_identity(row), str(row.get("source_revision") or "")): row for row in fresh}
@@ -902,7 +902,7 @@ def _rehydrate_deep(session, access_statuses) -> list[dict]:
     from catalog.services.discovery_projection import validate_discovery_results
 
     refs = (session.results or {}).get(DEEP_RESULTS_KEY, [])[:MAX_MATERIALIZED]
-    fresh = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses))
+    fresh = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses, filters=effective_filters(session)))
     by_key = {(_identity(row), str(row.get("source_revision") or "")): row for row in fresh}
     output = []
     for position, ref in enumerate(refs):

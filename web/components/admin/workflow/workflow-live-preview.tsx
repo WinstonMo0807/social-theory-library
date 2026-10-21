@@ -23,7 +23,7 @@ export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, re
       .catch(() => { if (active) setCoverError("封面暂时无法读取，请刷新重试。"); });
     return () => { active = false; window.clearTimeout(reset); controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [editionId, token, savedAt]);
-  const authorRows = asArray(drafts.contributors.items).map(asRecord).filter(row => row.role === "author");
+  const authorRows = asArray(drafts.contributors.items).map(asRecord).filter(row => row.role === "author" && asRecord(row.scope).kind !== "chapter");
   const title = asString(drafts.work.title, "未填写题名");
   const assets = asArray(drafts.file.assets).map(asRecord);
   const currentAsset = assets.find(asset => asset.is_current && asset.kind === "normalized") ?? assets.find(asset => asset.is_current);
@@ -54,6 +54,9 @@ export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, re
       language: asString(drafts.work.language), availability: "metadata", readable_asset: null, journal_contents: [],
       contributors: asArray(drafts.contributors.items).map(asRecord).map((row, order) => ({
         role: asString(row.role), order, person: { id: null, preferred_name: asString(row.display_name || row.name) },
+        scope: asRecord(row.scope).kind === "chapter"
+          ? { kind: "chapter", status: "unavailable", chapters: [], notice: "章节责任已指定；原文入口将在保存、校验并正式发布后提供。" }
+          : { kind: "edition", status: "available", chapters: [], notice: "" },
       })),
     },
   };

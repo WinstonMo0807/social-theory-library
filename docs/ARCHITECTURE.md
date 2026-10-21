@@ -1,5 +1,13 @@
 # Social Theory Library 架构
 
+## 2026-10-21 正式学者档案与章节责任
+
+ScholarProfile/Person继续唯一身份，公开展示读取正式EditorialRevision及当前公开关联，别名限人工核验。Contribution.scope在原责任关系内区分整版与准确章节，catalog0073不建第二份馆藏；工作流、发布快照/指纹、人工合并撤销同步保存。正式章节来源须同时匹配活动正文、活动目录、文件哈希与真实页。
+
+contribution_projection按每个请求/任务及授权集合复用。整书书目仅整版责任；片段须完整落入明确章节。Discovery第一推荐链按准确当前文档ID限定召回，兼容semantic/claim/观点/问书库沿同一责任投影，索引不能替代正式作者身份。继承的library_retrieval Discovery adapter本轮一起保存；其余旧检索实验未启用。
+
+SourceFollow增加学者档案UUID，SourceFollowEvent最少请求回执在记录删除后SET_NULL保留，固定nonce/owner/版本保护用于未知结果查回及防复活。隐私沿原数据组。catalog0073/reading0019未应用，正式验收未运行。
+
 ## 2026-10-21 阅读路径稳定材料与私人副本
 
 ReadingPath/Stage/Item增加明确版本、文件、修订、页码和策划字段，不建第二套馆藏或版本库。稳定UUID穿过草稿、发布和私人副本，公开历史沿EditorialRevision.materialized_preview，GET不补写版本。公开路径只读取当前可公开的节点/出版版本和准确原文，隐私跟读也不能绕过来源边界。

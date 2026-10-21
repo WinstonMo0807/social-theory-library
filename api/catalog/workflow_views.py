@@ -94,6 +94,7 @@ def _section_input(step_key: str, request_data) -> dict:
                 "person_id": row.get("person_id"),
                 "role": row.get("role", "author"),
                 "order": row.get("order", index),
+                **({"scope": row["scope"]} if "scope" in row else {}),
             }
             for index, row in enumerate(values.get("items") or [])
             if row.get("person_id")

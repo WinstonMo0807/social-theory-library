@@ -388,6 +388,7 @@ def _contributors_data(edition: Edition) -> dict[str, Any]:
             "role": contribution.role,
             "order": contribution.order,
             "approved": contribution.approved,
+            "scope": contribution.scope,
             "resolution_state": "confirmed" if contribution.approved else "candidate",
             "candidate_count": 0,
         }

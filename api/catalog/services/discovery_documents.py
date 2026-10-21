@@ -37,6 +37,7 @@ def begin_document_query(session_id, generation, task_id, scopes, index):
     chapter was read or that a top-k miss establishes low relevance.
     """
     from catalog.services.discovery_projection import _matches
+    from catalog.services.contribution_projection import SnapshotAuthorCandidate
     session = DiscoverySearchSession.objects.filter(pk=session_id, generation=generation,
         task_id=task_id, status__in=("queued", "running"), expires_at__gt=timezone.now()).first()
     if session is None:
@@ -45,8 +46,12 @@ def begin_document_query(session_id, generation, task_id, scopes, index):
     scope_ids = {token.split(":")[1]: token for token in scopes if token.startswith("edition:")}
     receipts = []
     total = 0
-    for edition, header in iter_edition_metadata_headers(public_editions().order_by("id")):
-        if not _matches(header, filters):
+    contribution_cache = {}
+    editions = public_editions().order_by("id")
+    if filters.get("authors"):
+        editions = editions.filter(SnapshotAuthorCandidate(filters["authors"]))
+    for edition, header in iter_edition_metadata_headers(editions):
+        if not _matches(header, filters, edition=edition, access_statuses=session.access_statuses, contribution_cache=contribution_cache):
             continue
         total += 1
         if len(receipts) >= MAX_DOCUMENTS:

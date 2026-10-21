@@ -260,7 +260,14 @@ def _save_contributors(edition: Edition, values: dict[str, Any], actor) -> None:
         return
     rows = values["contributors"]
     people = _require_all(Person, [row["person_id"] for row in rows], "作者或贡献者")
-    edition.contributions.select_for_update().all().delete()
+    from catalog.services.contribution_scope import ContributionScopeError, validate_contribution_scope
+    old_scopes = {(row.person_id, row.role): row.scope for row in edition.contributions.select_for_update()}
+    try:
+        for row in rows:
+            row["scope"] = validate_contribution_scope(edition, row.get("scope", old_scopes.get((row["person_id"], row["role"]), {})))
+    except ContributionScopeError as error:
+        raise WorkflowEditError(str(error)) from error
+    edition.contributions.all().delete()
     Contribution.objects.bulk_create(
         [
             Contribution(
@@ -268,6 +275,7 @@ def _save_contributors(edition: Edition, values: dict[str, Any], actor) -> None:
                 person=people[row["person_id"]],
                 role=row["role"],
                 order=row.get("order", index),
+                scope=row["scope"],
                 source="workflow_section_confirmation",
                 confidence=1,
                 approved=True,

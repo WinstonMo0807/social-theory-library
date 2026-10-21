@@ -447,6 +447,7 @@ def _contribution_snapshot(candidate: EntityResolutionCandidate, target_id: str)
         "source": contribution.source,
         "confidence": contribution.confidence,
         "approved": contribution.approved,
+        "scope": contribution.scope,
     }
 
 
@@ -700,20 +701,24 @@ def _restore_contribution(before: dict | None, after: dict | None) -> None:
             "source": contribution.source,
             "confidence": contribution.confidence,
             "approved": contribution.approved,
+            "scope": contribution.scope,
         }
-        if current != after:
+        if current != {**after, "scope": after.get("scope", {})}:
             raise ResolutionDecisionError("责任者关系已被后续修改，不能自动撤销。")
         contribution.delete()
         return
     contribution = Contribution.objects.select_for_update().filter(pk=before["id"]).first()
     if contribution is None:
         raise ResolutionDecisionError("原责任者关系已经不存在，不能自动恢复。")
+    if after is None or contribution.scope != after.get("scope", {}):
+        raise ResolutionDecisionError("责任者章节范围已被后续修改，不能自动撤销。")
     contribution.person_id = before["person_id"]
     contribution.role = before["role"]
     contribution.order = before["order"]
     contribution.source = before["source"]
     contribution.confidence = before["confidence"]
     contribution.approved = before["approved"]
+    contribution.scope = before.get("scope", {})
     contribution.save()
 
 

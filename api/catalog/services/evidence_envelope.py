@@ -13,9 +13,11 @@ from catalog.models import (
 )
 from catalog.services.semantic_search import viewer_access_statuses
 from catalog.services.text import page_text_range
+from catalog.services.contribution_projection import contribution_projection
 from catalog.services.publication_eligibility import (
     active_catalog_snapshot,
     active_document_revision_q,
+    current_retrieval_source_q,
     public_editions,
 )
 
@@ -40,35 +42,23 @@ def evidence_span_envelope(
     span: EvidenceSpan,
     *,
     public_metadata: bool = True,
+    contribution_cache: dict | None = None,
+    access_statuses=None,
 ) -> EvidenceEnvelope:
     revision = span.document_revision
     asset = revision.asset
     edition = asset.edition
     work = edition.work
-    page = span.page_number or span.page.index
+    if span.page.asset_id != asset.pk:
+        raise ValueError("证据页与正文修订的来源文件不一致。")
+    page = span.page.index
     snapshot = (
         active_catalog_snapshot(edition, require_fulltext=True)
         if public_metadata
         else {}
     )
-    if snapshot:
-        authors = [
-            str((row.get("person") or {}).get("preferred_name") or row.get("name") or "")
-            for row in snapshot.get("contributions") or []
-            if isinstance(row, dict)
-            and row.get("role") == "author"
-            and ((row.get("person") or {}).get("preferred_name") or row.get("name"))
-        ]
-        work_title = str((snapshot.get("work") or {}).get("title") or "未题名")
-    else:
-        authors = [
-            contribution.person.preferred_name
-            for contribution in edition.contributions.all()
-            if contribution.approved
-            and contribution.role == "author"
-            and contribution.person_id
-        ]
-        work_title = work.title
+    authors = contribution_projection(edition, cache=contribution_cache, public=public_metadata, access_statuses=access_statuses).for_range(asset.pk, revision.pk, page)
+    work_title = str((snapshot.get("work") or {}).get("title") or "未题名") if public_metadata else work.title
     focus_id = span.passage_id or span.id
     return EvidenceEnvelope(
         id=str(span.id),
@@ -78,7 +68,7 @@ def evidence_span_envelope(
             "work_title": work_title,
             "edition_id": str(edition.id),
             "asset_id": str(asset.id),
-            "authors": authors,
+            **authors,
             "document_revision_id": str(revision.id),
             "document_revision": revision.revision,
         },
@@ -133,6 +123,7 @@ def _serialize_curated_claim_groups(
         ClaimEvidence.Role.OPPOSES: "oppose",
         ClaimEvidence.Role.QUALIFIES: "qualify",
     }
+    contribution_cache = {}
     for claim in claims:
         evidence = []
         positions: list[str] = []
@@ -140,6 +131,7 @@ def _serialize_curated_claim_groups(
             envelope = evidence_span_envelope(
                 link.evidence_span,
                 public_metadata=public_metadata,
+                contribution_cache=contribution_cache,
             ).as_dict()
             envelope.update(
                 {
@@ -190,7 +182,7 @@ def public_curated_claim_groups(
         .filter(
             active_document_revision_q(
                 revision_prefix="evidence_span__document_revision"
-            )
+            ), current_retrieval_source_q(asset_prefix="evidence_span__document_revision__asset", access_statuses=viewer_access_statuses())
         )
         .select_related(
             "evidence_span__page",

@@ -14,7 +14,7 @@ VERIFIED_NAMES = {
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
     "knowledge-entry-citation", "theory-system-overview", "knowledge-node-list", "knowledge-node-detail",
     "normalized-theory-timeline", "normalized-theory-timeline-detail", "reading-path-list", "reading-path-detail",
-    "admin-reading-path-list", "admin-reading-path-detail",
+    "admin-reading-path-list", "admin-reading-path-detail", "admin-knowledge-object-preview",
     "theory-timeline", "admin-theory-timeline-list", "admin-theory-timeline-detail",
     "local-theory-graph",
     "parallel-versions", "parallel-segments", "parallel-candidates",
@@ -64,6 +64,6 @@ urlpatterns = [
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
         "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
         "citation-source-preview", "citation-source-preview-file",
-        "public-citation-preview", "public-source-status", "source-follows", "source-follow-detail", "saved-knowledge-node",
+        "public-citation-preview", "public-source-status", "source-follows", "source-follow-detail", "source-follow-receipt", "saved-knowledge-node",
     }])),
 ]

@@ -353,6 +353,7 @@ def _structured_entries(value, key):
 
 class PersonCompactSerializer(serializers.ModelSerializer):
     scholar_slug = serializers.SerializerMethodField()
+    aliases = serializers.SerializerMethodField()
     portrait = serializers.SerializerMethodField()
     portrait_media = serializers.SerializerMethodField()
 
@@ -372,6 +373,13 @@ class PersonCompactSerializer(serializers.ModelSerializer):
             "scholar_slug",
         )
 
+    def get_aliases(self, obj) -> list[str]:
+        from catalog.services.query_lexicon.registry import FORMAL_PERSON_VARIANT_SOURCES
+        if hasattr(obj, "public_variants"):
+            return [row.name for row in obj.public_variants]
+        return list(obj.name_variants.filter(is_verified=True, displayable=True,
+            source_kind__in=FORMAL_PERSON_VARIANT_SOURCES).order_by("normalized_name", "pk").values_list("name", flat=True))
+
     def get_scholar_slug(self, obj) -> str | None:
         profile = getattr(obj, "scholar_profile", None)
         if (
@@ -382,25 +390,48 @@ class PersonCompactSerializer(serializers.ModelSerializer):
             return profile.slug
         return None
 
+    def _portrait_person(self, obj):
+        if getattr(obj, "_public_portrait_bound", False):
+            return obj
+        if not hasattr(obj, "_public_portrait_person"):
+            from catalog.models import EditorialRevision
+            from catalog.services.public_scholars import _formal_profile
+            profile = getattr(obj, "scholar_profile", None)
+            revision = EditorialRevision.objects.filter(target_type="scholar_profile", target_id=profile.pk,
+                status="published").order_by("-revision").only("materialized_preview").first() if profile else None
+            obj._public_portrait_person = _formal_profile(profile, revision.materialized_preview).person if revision else obj
+        return obj._public_portrait_person
+
     def get_portrait(self, obj) -> str:
+        obj = self._portrait_person(obj)
         if obj.portrait_rendition_id:
             return f"/api/catalog/people/{obj.pk}/portrait/?rendition={obj.portrait_rendition_id}" if self.get_scholar_slug(obj) else ""
         return obj.portrait.url if obj.portrait else ""
 
     @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_portrait_media(self, obj):
+        obj = self._portrait_person(obj)
         if not obj.portrait_rendition_id or not self.get_scholar_slug(obj):
             return None
         from catalog.services.scholar_media import portrait_media
         return portrait_media(obj)
 
 
+from catalog.contribution_serializers import PublicContributionScopeSerializer
+
+
 class ContributionSerializer(serializers.ModelSerializer):
     person = PersonCompactSerializer()
+    scope = serializers.SerializerMethodField()
+
+    @extend_schema_field(PublicContributionScopeSerializer())
+    def get_scope(self, obj):
+        from catalog.services.contribution_scope import public_contribution_scope
+        return public_contribution_scope(obj.edition, obj.scope)
 
     class Meta:
         model = Contribution
-        fields = ("role", "order", "person")
+        fields = ("role", "order", "person", "scope")
 
 
 class AssetCompactSerializer(serializers.ModelSerializer):
@@ -509,10 +540,12 @@ class EditionCompactSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(PublicContributionSnapshotSerializer(many=True))
     def get_contributors(self, obj):
+        from catalog.services.contribution_scope import public_contribution_scope
         snapshot = active_catalog_snapshot(obj)
         if snapshot:
             return [
                 {
+                    "scope": public_contribution_scope(obj, row.get("scope")),
                     "role": row.get("role", Contribution.Role.OTHER),
                     "order": row.get("order", index),
                     "person": row.get("person")
@@ -1101,6 +1134,7 @@ class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
             )
         }
         contributors = []
+        from catalog.services.contribution_scope import public_contribution_scope
         for index, row in enumerate(rows):
             person = people.get(str(row["person_id"]))
             if person is None:
@@ -1110,6 +1144,7 @@ class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
                     "role": row.get("role") or Contribution.Role.AUTHOR,
                     "order": row.get("order", index),
                     "person": PersonCompactSerializer(person, context=self.context).data,
+                    "scope": public_contribution_scope(self._preview_edition(), row.get("scope")),
                 }
             )
         for edition_data in [data.get("edition"), *(data.get("editions") or [])]:
@@ -1664,10 +1699,8 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
         )
 
     def get_works(self, obj):
-        works = public_work_queryset().filter(
-            editions__contributions__person=obj.person,
-            editions__contributions__approved=True,
-        ).distinct()[:24]
+        from catalog.services.public_scholars import scholar_editions
+        works = public_work_queryset().filter(pk__in=scholar_editions(obj.person_id).values("work_id"))[:24]
         return WorkCardSerializer(works, many=True, context=self.context).data
 
     def get_curated(self, obj):
@@ -1770,20 +1803,8 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
                     "relation_source": "person_relation",
                 }
             )
-        work_relations = (
-            WorkNodeRelation.objects.filter(
-                work__editions__contributions__person=obj.person,
-                work__editions__contributions__role=Contribution.Role.AUTHOR,
-                work__editions__contributions__approved=True,
-                status=KnowledgePublicationStatus.PUBLISHED,
-                node__status=KnowledgePublicationStatus.PUBLISHED,
-            )
-            .filter(public_edition_q(prefix="work__editions"))
-            .select_related("node")
-            .distinct()
-        )
-        for relation in work_relations:
-            node = relation.node
+        from catalog.services.public_scholars import _knowledge, scholar_editions
+        for node in _knowledge(obj, scholar_editions(obj.person_id)):
             if node.id in seen:
                 continue
             seen.add(node.id)
@@ -1795,7 +1816,7 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
                     "foreign_name": node.canonical_name_en,
                     "slug": node.slug,
                     "summary": node.summary,
-                    "relation_label": relation.get_role_display(),
+                    "relation_label": "相关著作中的知识条目",
                     "is_representative": False,
                     "relation_source": "published_work_relation",
                 }
@@ -3112,8 +3133,8 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     preferred_name = serializers.CharField(source="person.preferred_name", max_length=240)
     original_name = serializers.CharField(source="person.original_name", max_length=240, required=False, allow_blank=True)
     aliases = serializers.ListField(source="person.aliases", child=serializers.CharField(max_length=240), required=False)
-    birth_year = serializers.IntegerField(source="person.birth_year", min_value=1000, max_value=2100, required=False, allow_null=True)
-    death_year = serializers.IntegerField(source="person.death_year", min_value=1000, max_value=2100, required=False, allow_null=True)
+    birth_year = serializers.IntegerField(source="person.birth_year", min_value=-9999, max_value=9999, required=False, allow_null=True)
+    death_year = serializers.IntegerField(source="person.death_year", min_value=-9999, max_value=9999, required=False, allow_null=True)
     biography = serializers.CharField(source="person.biography", required=False, allow_blank=True)
     portrait = serializers.ImageField(source="person.portrait", required=False, allow_null=True)
     portrait_media = serializers.SerializerMethodField()
@@ -3231,7 +3252,15 @@ class AdminScholarSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"network": ["学术关系包含不存在的学者。"]})
         _structured_entries(value, "key_concepts")
         _structured_entries(value, "concept_map")
+        from catalog.services.public_scholars import validate_scholar_curation
+        return validate_scholar_curation(value, self.instance)
+
+    def validate_birth_year(self, value):
+        from catalog.models import validate_person_year
+        validate_person_year(value)
         return value
+
+    validate_death_year = validate_birth_year
 
     def validate_editorial_status(self, value):
         request = self.context.get("request")

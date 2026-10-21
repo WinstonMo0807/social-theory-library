@@ -138,6 +138,9 @@ def catalog_health(edition, *, field_state=None):
         snapshot = edition.active_catalog_revision.snapshot or {}
         public = _public_values(snapshot)
         actual = {row.field_name: row.value for row in fields}
+        actual["contributor_scopes"] = [{"person_id": str(row.person_id), "role": row.role,
+                                        "scope": row.scope or {"kind": "edition"}}
+                                       for row in sorted(edition.contributions.all(), key=lambda row: (row.order, str(row.pk))) if row.approved]
         relevant = set(actual).intersection(public) - {"file", "reader_asset", "publication_mode"}
         pending_changes = any(not _same_public_value(public[name], actual[name]) for name in relevant)
         publication = "changes_pending" if pending_changes else "published"
@@ -170,6 +173,7 @@ def _public_values(snapshot):
     values["reader_asset"] = snapshot.get("document", {}).get("asset_id")
     values["file"] = values["reader_asset"]
     values["journal_contents"] = snapshot.get("journal_contents", [])
+    values["contributor_scopes"] = [{"person_id": str(row["person_id"]), "role": row["role"], "scope": row.get("scope") or {"kind": "edition"}} for row in snapshot.get("contributions", [])]
     values["translation_of"] = values.get("translation_of_id")
     return values
 
@@ -259,6 +263,11 @@ def prepare_revision(edition):
         state = "unchanged" if _same_public_value(before, after) else "added" if before in empty else "removed" if after in empty else "changed"
         changes.append({"field": name, "label": field.label, "change": state,
                         "before": before, "after": after, "before_display": display(before, name, previous=True), "after_display": display(after, name)})
+    def scope_display(rows):
+        return "\n".join(f"{names.get(row['person_id'], old_names.get(row['person_id'], '责任者'))}：" + ("；".join(f"{part['title']}（PDF {part['page_start']}–{part['page_end']}）" for part in row["scope"].get("chapters", [])) if row["scope"].get("kind") == "chapter" else "整部版本") for row in rows)
+    before_scopes, after_scopes = public.get("contributor_scopes", []), values.get("contributor_scopes", [])
+    changes.append({"field": "contributor_scopes", "label": "责任者章节范围", "change": "unchanged" if before_scopes == after_scopes else "changed",
+                    "before": before_scopes, "after": after_scopes, "before_display": scope_display(before_scopes), "after_display": scope_display(after_scopes)})
     checks = publication_preflight(edition)
     return {"edition_id": str(edition.pk), "active_revision_id": str(edition.active_catalog_revision_id) if edition.active_catalog_revision_id else None,
             "fingerprint": fingerprint, "changes": changes, "blocking": checks["blockers"], "warnings": checks["warnings"],

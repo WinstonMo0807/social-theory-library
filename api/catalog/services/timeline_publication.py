@@ -1,4 +1,5 @@
 """Public timeline projections over reviewed events and active catalog snapshots."""
+from catalog.services.contribution_scope import whole_edition_contribution
 from uuid import UUID
 
 from collections import defaultdict
@@ -240,7 +241,7 @@ def aggregates(rows):
 def _snapshot_ids(snapshot):
     people, topics = set(), set()
     for row in snapshot.get("contributions") or []:
-        if isinstance(row, dict) and row.get("role") == "author":
+        if isinstance(row, dict) and row.get("role") == "author" and whole_edition_contribution(row):
             raw = row.get("person_id") or (row.get("person") or {}).get("id")
             try:
                 people.add(UUID(str(raw)))

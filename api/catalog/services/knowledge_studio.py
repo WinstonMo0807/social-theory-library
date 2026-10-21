@@ -842,7 +842,15 @@ class KnowledgeObjectEditorAdapter:
         return data
 
     @classmethod
-    def _serialize(cls, object_type: str, target, *, revision=None, reviewer=None) -> tuple[dict, str, list[str]]:
+    def _serialize(cls, object_type: str, target, *, revision=None, reviewer=None, scholar_preview_overrides=None) -> tuple[dict, str, list[str]]:
+        if object_type == "scholar":
+            from types import SimpleNamespace
+            from catalog.services.public_scholars import public_scholar_detail, preview_scholar
+            if revision is not None or not cls._is_public(object_type, target) or scholar_preview_overrides is not None:
+                data = preview_scholar(target, snapshot=revision.materialized_preview if revision else None, request=SimpleNamespace(user=reviewer), curation_overrides=scholar_preview_overrides)
+            else:
+                data = public_scholar_detail(target.slug)
+            return data, "PublicScholarDetailSerializer", []
         if object_type == "reading_path":
             from types import SimpleNamespace
             from catalog.services.public_reading_paths import public_reading_path_snapshot, preview_reading_path
@@ -910,7 +918,7 @@ class KnowledgeObjectEditorAdapter:
         return serialized, serializer_class.__name__, unsupported_fields
 
     @classmethod
-    def enrich(cls, *, object_type: str, target, selection: dict[str, Any], reviewer=None) -> dict[str, Any]:
+    def enrich(cls, *, object_type: str, target, selection: dict[str, Any], reviewer=None, scholar_preview_overrides=None) -> dict[str, Any]:
         from catalog.services.dependency_engine import projection_types_for
         from catalog.services.editorial_revision import TARGET_POLICIES
 
@@ -927,13 +935,16 @@ class KnowledgeObjectEditorAdapter:
         draft_serializer = serializer_name
         unsupported_fields: list[str] = []
         draft_source = "editorial_revision"
-        if revision is not None:
+        if revision is not None or scholar_preview_overrides is not None:
             draft_public, draft_serializer, unsupported_fields = cls._serialize(
                 object_type,
                 target,
                 revision=revision,
                 reviewer=reviewer,
+                scholar_preview_overrides=scholar_preview_overrides,
             )
+            if scholar_preview_overrides is not None:
+                draft_source = "unsaved_selection"
         elif not is_public:
             # An unpublished canonical row is itself the current editable
             # draft.  It must remain previewable before the first revision is
@@ -3019,6 +3030,7 @@ def _selection(
     object_id: str,
     *,
     reviewer=None,
+    scholar_preview_overrides=None,
 ) -> dict[str, Any] | None:
     identifier = _valid_uuid(object_id)
     if object_type not in OBJECT_TYPES or identifier is None:
@@ -3069,6 +3081,7 @@ def _selection(
         target=target,
         selection=selection,
         reviewer=reviewer,
+        scholar_preview_overrides=scholar_preview_overrides,
     )
     selection["field_assistant_values"] = _assistant_field_values(object_type, target, selection)
     if assistant_target is not None:
@@ -3358,6 +3371,7 @@ def knowledge_object_preview_payload(
     object_type: str,
     object_id: str,
     reviewer=None,
+    scholar_preview_overrides=None,
 ) -> dict[str, Any] | None:
     """Return the protected preview contract used by the admin preview route.
 
@@ -3366,7 +3380,7 @@ def knowledge_object_preview_payload(
     not create a second preview-only knowledge representation.
     """
 
-    selection = _selection(object_type, object_id, reviewer=reviewer)
+    selection = _selection(object_type, object_id, reviewer=reviewer, scholar_preview_overrides=scholar_preview_overrides)
     if selection is None:
         return None
     perspectives = selection.get("preview_perspectives") or {}

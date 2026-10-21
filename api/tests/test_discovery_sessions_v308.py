@@ -26,7 +26,7 @@ def fixture_source(count=7):
     work = Work.objects.create(title="正式检索材料", document_type="book")
     edition = Edition.objects.create(work=work, state="published")
     asset = Asset.objects.create(edition=edition, kind="normalized", status="ready", validation_status="valid",
-                                 sha256=uuid4().hex * 2, access_status="public", page_count=count)
+                                 sha256=uuid4().hex * 2, access_status="public", page_count=count, file="synthetic/discovery.pdf")
     document = DocumentRevision.objects.create(asset=asset, revision=1, source_checksum=asset.sha256,
                                                text_checksum="b" * 64)
     spans = []

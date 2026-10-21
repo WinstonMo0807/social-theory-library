@@ -3,6 +3,7 @@
 Never read drafts or private editorial_note. Source text remains unmodified;
 token children are disposable projections over the exact captured revision.
 """
+from catalog.services.contribution_scope import whole_edition_contribution
 from hashlib import sha256
 import json
 from itertools import islice
@@ -14,7 +15,7 @@ from django.urls import reverse
 from catalog.models import (Asset, Concept, Discipline, Edition, EvidenceCuration,
     EvidenceSpan, KnowledgeNode, ReadingPath, RecommendationIssue, ScholarProfile,
     Subdiscipline, TheoryTimelineEvent, Topic)
-from catalog.services.publication_eligibility import public_editions
+from catalog.services.publication_eligibility import current_retrieval_source_q, public_editions
 from catalog.services.scoped_search import public_scholar_queryset
 
 
@@ -38,7 +39,7 @@ def source_queryset(kind, access_statuses=None):
             active_catalog_revision__reader_asset__validation_status="valid",
             active_catalog_revision__reader_asset__edition_id=F("pk"),
             active_catalog_revision__document_revision__asset_id=F("active_catalog_revision__reader_asset_id"))
-        return rows.filter(active_catalog_revision__reader_asset__access_status__in=access_statuses) if access_statuses is not None else rows
+        return rows.filter(current_retrieval_source_q(asset_prefix="active_catalog_revision__reader_asset", access_statuses=access_statuses))
     if kind == "scholar":
         return public_scholar_queryset()
     if kind == "node":
@@ -149,9 +150,9 @@ def edition_metadata_header(row, *, taxonomy=None):
             "language": work.get("language", ""), "page_count": asset.page_count if asset and asset.page_count else None,
             "version_label": edition.get("version_label", ""), "document_type": work.get("document_type", "")},
         authors=[str(item.get("name") or (item.get("person") or {}).get("preferred_name") or "")
-                 for item in snapshot.get("contributions", []) if item.get("role") == "author"],
+                 for item in snapshot.get("contributions", []) if item.get("role") == "author" and whole_edition_contribution(item)],
         author_ids=[str(item.get("person_id") or (item.get("person") or {}).get("id") or "")
-                    for item in snapshot.get("contributions", []) if item.get("role") == "author"],
+                    for item in snapshot.get("contributions", []) if item.get("role") == "author" and whole_edition_contribution(item)],
         language=work.get("language", ""), topics=snapshot.get("knowledge", {}).get("topics", []),
         theories=snapshot.get("knowledge", {}).get("nodes", []))
 

@@ -1,5 +1,15 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-21 学者公开投影与私人关注
+
+既有admin/knowledge-preview/{object_type}/{object_id}/纳入契约，GET仅在scholar支持featured_source_id和reading_path_ids未保存选择覆盖。前者UUID或空清除，后者单个逗号分隔最多100 UUID或空清人工关联；重复/未知参数拒绝。只修改内存中的草稿副本，继续受控预览与真实公开资料投影；自动路径关联和完整分页总数保留。异步选择变更取消旧请求，以本次选择的返回决定预览，错误保留输入并可重试。
+
+catalog/scholars列表与slug详情保留原URL，新增明确PublicScholarDirectory/PublicScholarDetail，含真实筛选/分页、正式资料字段、作品准确版本与责任范围、公开知识/问题/事件/关系/主题/阅读路径。候选关系必须显式请求及双权限；目录curated_topics来自正式人工推荐，与related_topics分开。旧栏目和旧嵌入消费者保持兼容。
+
+Contribution.scope输入为edition或chapter；章节必须给asset_id/document_revision_id/outline_revision_id/outline_node_id/title/page_start/page_end。公开scope附status/notice/reader_href；失效返回chapter unavailable与空chapters，不泄露旧身份。后台省略scope保持原值。
+
+reading/source-follows增加scholar_id（ScholarProfile UUID）和by-request查回。命令响应owner_id/record/receipt，固定request_id及expected_revision，不自动重放401写请求；隐私清除后的回执不能重建记录。schema205路径保留原203，TypeScript生成同步。Discovery/library metadata保留warnings code/message，准确章节筛选不支持或超限会明确报错。0073/0019仅源码，正式接口验收未执行。
+
 ## 2026-10-21 公共路径与私人跟读
 
 catalog/theory-system/reading-paths列表按q/search、topic、discipline、node、difficulty、page筛选；详情revision/compare_to选正式版本。PublicReadingPath含稳定stages/items、准确材料身份、available/no_fulltext/unavailable/withdrawn/revision_changed、明确替代书目、学习问题/争论/公开署名与最多50版历史。列表批量投影，既有公共消费者统一DTO；草稿预览仅编辑权限且无私人写入。

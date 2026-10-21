@@ -626,6 +626,7 @@ def _work_edition_section_snapshot(edition: Edition, field_name: str) -> dict[st
                     "person_id": str(row.person_id),
                     "role": row.role,
                     "order": row.order,
+                    "scope": row.scope,
                 }
                 for row in edition.contributions.order_by("order", "created_at", "id")
             ]
@@ -675,13 +676,20 @@ def _validated_work_edition_patch(
         if key not in {"expected_updated_at", "expected_work_updated_at", "note"}
     }
     if field_name == "contributors":
+        from catalog.services.contribution_scope import ContributionScopeError, validate_contribution_scope
+        scopes = {(str(row.person_id), row.role): row.scope for row in edition.contributions.all()}
         normalized_rows = []
         for index, row in enumerate(values.get("contributors", [])):
+            try:
+                scope = validate_contribution_scope(edition, row.get("scope", scopes.get((str(row["person_id"]), row["role"]), {})))
+            except ContributionScopeError as error:
+                raise EditorialRevisionError(str(error)) from error
             normalized_rows.append(
                 {
                     "person_id": str(row["person_id"]),
                     "role": row["role"],
                     "order": row.get("order", index),
+                    "scope": scope,
                 }
             )
         missing = _missing_ids(
@@ -884,6 +892,13 @@ def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> 
                 patch[field_name] = normalized
     if isinstance(target, ScholarProfile) and "person" in patch:
         patch["person"] = _validated_scholar_person_patch(target, patch["person"])
+    if isinstance(target, ScholarProfile) and "curation" in patch:
+        from catalog.services.public_scholars import validate_scholar_curation
+        from rest_framework.exceptions import ValidationError as APIValidationError
+        try:
+            patch["curation"] = validate_scholar_curation(patch["curation"], target)
+        except APIValidationError as error:
+            raise EditorialRevisionError(str(error.detail)) from error
     if isinstance(target, ScholarProfile) and "portrait_selection" in patch:
         from catalog.services.scholar_media import validate_portrait_selection
         patch["portrait_selection"] = validate_portrait_selection(target, patch["portrait_selection"])

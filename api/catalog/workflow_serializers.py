@@ -66,7 +66,11 @@ class BibliographySectionSerializer(WorkflowSectionSerializer):
     responsibility_statement = serializers.CharField(required=False, allow_blank=True)
 
 
+from catalog.contribution_serializers import ContributionScopeInputSerializer
+
+
 class ContributorRowSerializer(serializers.Serializer):
+    scope = ContributionScopeInputSerializer(required=False)
     person_id = serializers.UUIDField()
     role = serializers.ChoiceField(choices=Contribution.Role.choices)
     order = serializers.IntegerField(min_value=0, required=False)

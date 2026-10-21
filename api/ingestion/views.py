@@ -1660,6 +1660,8 @@ class MetadataReviewView(APIView):
                 setattr(edition, field_name, data[field_name])
         edition.metadata_confidence = 1
 
+        retained_author_scopes = {row.person_id: row.scope for row in
+                                  edition.contributions.select_for_update().filter(role=Contribution.Role.AUTHOR)}
         edition.contributions.filter(role=Contribution.Role.AUTHOR).delete()
         author_names = []
         selected_people = []
@@ -1703,6 +1705,7 @@ class MetadataReviewView(APIView):
                 role=Contribution.Role.AUTHOR,
                 order=order,
                 source="manual_review",
+                scope=retained_author_scopes.get(person.pk, {}),
                 confidence=1,
                 approved=True,
             )
