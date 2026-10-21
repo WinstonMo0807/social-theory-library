@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -439,6 +439,39 @@ class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
         })
 
 
+class TopicPreviewCurationSerializer(serializers.Serializer):
+    question_node_ids = serializers.ListField(child=serializers.UUIDField(), max_length=200, required=False)
+    debate_node_ids = serializers.ListField(child=serializers.UUIDField(), max_length=200, required=False)
+    concept_node_ids = serializers.ListField(child=serializers.UUIDField(), max_length=200, required=False)
+    edition_ids = serializers.ListField(child=serializers.UUIDField(), max_length=200, required=False)
+    foundational_edition_ids = serializers.ListField(child=serializers.UUIDField(), max_length=200, required=False)
+    disputed_edition_ids = serializers.ListField(child=serializers.UUIDField(), max_length=200, required=False)
+    related_scholar_ids = serializers.ListField(child=serializers.UUIDField(), max_length=200, required=False)
+    reading_path_ids = serializers.ListField(child=serializers.UUIDField(), max_length=200, required=False)
+    issue_ids = serializers.ListField(child=serializers.UUIDField(), max_length=50, required=False)
+    featured_source_id = serializers.UUIDField(allow_null=True, required=False)
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict) or set(data) - set(self.fields):
+            raise ValidationError("主题预览只接受明确的编排字段。")
+        values = super().to_internal_value(data)
+        return {key: [str(item) for item in value] if isinstance(value, list) else str(value) if value else None
+            for key, value in values.items()}
+
+
+class TopicPreviewRequestSerializer(serializers.Serializer):
+    curation = TopicPreviewCurationSerializer(required=False)
+    parent = serializers.UUIDField(allow_null=True, required=False)
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict) or set(data) - set(self.fields):
+            raise ValidationError("主题预览只接受上级主题与编排选择，不保存任何资料。")
+        result = super().to_internal_value(data)
+        if result.get("parent") is not None:
+            result["parent"] = str(result["parent"])
+        return result
+
+
 class AdminKnowledgeObjectPreviewView(APIView):
     """Protected draft/public preview backed by the public serializer contract."""
 
@@ -482,6 +515,27 @@ class AdminKnowledgeObjectPreviewView(APIView):
                 {"detail": "知识对象不存在，或对象类型与标识不匹配。"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        return Response(payload)
+
+    @extend_schema(
+        operation_id="admin_topic_selection_preview",
+        request=TopicPreviewRequestSerializer,
+        parameters=[OpenApiParameter("object_type", OpenApiTypes.STR, OpenApiParameter.PATH),
+            OpenApiParameter("object_id", OpenApiTypes.UUID, OpenApiParameter.PATH)],
+        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+        description="Read-only Topic selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written.",
+    )
+    def post(self, request, object_type, object_id):
+        from catalog.services.knowledge_studio import knowledge_object_preview_payload
+
+        if object_type != "topic" or request.query_params:
+            raise ValidationError("此操作只支持主题的只读选择预览。")
+        body = TopicPreviewRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        payload = knowledge_object_preview_payload(object_type="topic", object_id=str(object_id),
+            reviewer=request.user, topic_preview_overrides=body.validated_data)
+        if payload is None:
+            return Response({"detail": "主题不存在，或对象类型与标识不匹配。"}, status=status.HTTP_404_NOT_FOUND)
         return Response(payload)
 
 

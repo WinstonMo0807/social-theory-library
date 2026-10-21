@@ -37,7 +37,7 @@ def image_target(object_type, object_id, *, public=False):
         raise NotFound("不支持的图片对象。")
     query = TARGETS[object_type].objects.all()
     if public:
-        query = query.filter(**{"editorial_status" if object_type in {"discipline", "subdiscipline"} else "status": "published"})
+        query = query.filter(**{"editorial_status" if object_type in {"discipline", "subdiscipline", "topic"} else "status": "published"})
     return get_object_or_404(query, pk=object_id)
 
 
@@ -49,7 +49,7 @@ def image_state(target, object_type):
     url = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"]) if media else image_legacy_file(target).url if selection["legacy_path"] else ""
     return {"object_type": object_type, "object_id": target.pk, "name": getattr(target, "name", getattr(target, "canonical_name_zh", getattr(target, "title", ""))), "media": media, "preview_url": url,
             "editorial_revision_id": draft.pk if draft else None, "canonical_write_deferred": draft is not None, "fingerprint": image_fingerprint(target, draft),
-            "editor_url": {"knowledge_node": f"/admin/theory-nodes?node={target.pk}", "reading_path": f"/admin/reading-paths?path={target.pk}", "discipline": f"/admin/disciplines?discipline={target.pk}", "subdiscipline": f"/admin/subdisciplines?subdiscipline={target.pk}"}[object_type]}
+            "editor_url": {"knowledge_node": f"/admin/theory-nodes?node={target.pk}", "reading_path": f"/admin/reading-paths?path={target.pk}", "discipline": f"/admin/disciplines?discipline={target.pk}", "subdiscipline": f"/admin/subdisciplines?subdiscipline={target.pk}", "topic": f"/admin/topics/{target.pk}"}[object_type]}
 
 
 class KnowledgeImageSelectionView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
@@ -88,7 +88,12 @@ class PublicKnowledgeImageView(TheorySystemFeatureMixin, APIView):
         from catalog.views import _public_media_response
 
         target = image_target(object_type, object_id, public=True)
-        media = image_media(target)
+        selection = None
+        if object_type == "topic":
+            from catalog.services.public_topics import _formal
+            target = _formal(target)
+            selection = getattr(target, "_public_image_selection", None)
+        media = image_media(target, selection=selection)
         if media is None:
             raise NotFound("没有已发布的媒体图片。")
         return _public_media_response(request, media)

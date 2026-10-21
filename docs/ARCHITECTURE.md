@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-10-21 主题正式投影与私人身份
+
+Topic保持唯一实体，catalog0074增加可空层级与媒体引用；正式名称/slug/层级/编排读取EditorialRevision，公开成员复用现有馆藏、规范节点、学者、策划与路径投影。目录与卡片共用准确版本计数，后台预览POST仅内存覆盖，保存和发布不混同。旧作品ID、Person及内联路径保留原身份，不猜新对象。
+
+SourceFollow增加topic UUID，SavedTopic仍为独立收藏；收藏复用KnowledgeSaveReceipt的topic哈希命名空间，owner/版本/固定请求保护未知结果与删除防复活。隐私组沿用，撤下主题不输出旧名称简介。两个迁移仅源码，正式验收未运行。详情见stl4/TOPICS_20261021。
+
 ## 2026-10-21 正式学者档案与章节责任
 
 ScholarProfile/Person继续唯一身份，公开展示读取正式EditorialRevision及当前公开关联，别名限人工核验。Contribution.scope在原责任关系内区分整版与准确章节，catalog0073不建第二份馆藏；工作流、发布快照/指纹、人工合并撤销同步保存。正式章节来源须同时匹配活动正文、活动目录、文件哈希与真实页。

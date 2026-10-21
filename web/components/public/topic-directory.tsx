@@ -1,0 +1,49 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { ArrowRight, ChevronDown, ChevronRight, LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
+import { topicHref, topicQuery, topicValue } from "@/lib/api/topics.params";
+import type { TopicDirectory as DirectoryData, TopicHierarchy, TopicSearchParams } from "@/lib/api/topics.types";
+import { TopicCard, TopicImage, TopicPagination } from "./topic-shared";
+import styles from "./topic.module.css";
+
+function HierarchyChoices({ rows, selected, onChange }: { rows: TopicHierarchy[]; selected: string[]; onChange: (value: string[]) => void }) {
+  const ids = new Set(rows.map(row => row.id));
+  const branch = (parent: string | null, ancestors: string[] = []) => rows.filter(row => (row.parent_id && ids.has(row.parent_id) ? row.parent_id : null) === parent && !ancestors.includes(row.id)).map(row => {
+    const children = branch(row.id, [...ancestors, row.id]);
+    const choice = <label><input type="checkbox" name="parent" value={row.id} checked={selected.includes(row.id)} disabled={selected.length >= 20 && !selected.includes(row.id)} onChange={event => onChange(event.target.checked ? [...selected, row.id] : selected.filter(id => id !== row.id))} /><span>{row.name}</span><small>（{row.count}）</small></label>;
+    const expanded = selected.some(id => { let candidate = rows.find(item => item.id === id); const seen = new Set<string>(); while (candidate && !seen.has(candidate.id)) { if (candidate.id === row.id) return true; seen.add(candidate.id); candidate = rows.find(item => item.id === candidate?.parent_id); } return false; });
+    return <li key={row.id}>{children.length ? <details open={expanded || undefined}><summary><ChevronRight size={13} />{choice}</summary><ul className={styles.tree}>{children}</ul></details> : choice}</li>;
+  });
+  return <ul className={styles.tree}>{branch(null)}</ul>;
+}
+function HierarchyForm({ result, params, query, mobile }: { result: DirectoryData; params: TopicSearchParams; query: string; mobile: boolean }) {
+  const [selected, setSelected] = useState(result.selected_parents.map(row => row.id));
+  return <form action="/topics" aria-label={mobile ? "移动主题筛选" : "主题层级筛选"} className={styles.filterForm}>
+    {[...topicQuery(params)].filter(([key]) => !["parent", "page", "view", "search", "q"].includes(key)).map(([key, value], index) => <input type="hidden" name={key} value={value} key={`${key}:${index}`} />)}<input type="hidden" name="view" value="directory" /><input type="hidden" name="q" value={query} />
+    <header><h2>主题层级</h2><Link href={topicHref("/topics", { q: query, view: "directory" })}>清空筛选</Link></header><label><input type="checkbox" checked={!selected.length} onChange={() => setSelected([])} /><span>全部主题</span></label>
+    {result.hierarchy.length ? <HierarchyChoices rows={result.hierarchy} selected={selected} onChange={setSelected} /> : <p className={styles.muted}>尚未配置公开主题层级。</p>}<p className={styles.muted}>可选多个主题分支，最多 20 项。分支内包含其子主题。</p><button type="submit" className={styles.primaryButton}>应用筛选<ArrowRight size={14} /></button>
+  </form>;
+}
+export function TopicDirectory({ result, params, error }: { result: DirectoryData | null; params: TopicSearchParams; error: string }) {
+  const [filtersOpen, setFiltersOpen] = useState(false), query = topicValue(params, "q") || topicValue(params, "search");
+  const directory = topicValue(params, "view") === "directory" || !!query || ["parent", "discipline", "subdiscipline", "theory", "sort", "page", "layout"].some(key => !!params[key]);
+  const list = topicValue(params, "layout") === "list", parents = [...new Set(result?.filters.parents || [])], selected = ["discipline", "subdiscipline", "theory"].filter(key => !!topicValue(params, key)), selectedCount = parents.length + selected.length;
+  const filters = (mobile: boolean) => result ? <HierarchyForm key={`${mobile}:${parents.join("|")}`} result={result} params={params} query={query} mobile={mobile} /> : null;
+  return <main className={`${styles.page} ${directory ? styles.directoryPage : styles.hubPage}`}>
+    <header className={styles.directoryHero}><img src="/visual/stl4/topics/hub-hero.webp" alt="" /><div className={styles.heroCopy}><nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/">首页</Link><span>›</span>{directory ? <><Link href="/topics">主题</Link><span>›</span><span>主题与专题方向索引</span></> : <span>主题</span>}</nav><h1>{directory ? "主题与专题方向索引" : "主题"}</h1><p>{directory ? "按研究问题和主题进入材料，帮助不知道学者名字的初学者。" : "从不同的主题，进入社会理论的多重视角。"}</p><form action="/topics" role="search" className={styles.search}><Search size={20} /><input type="hidden" name="view" value="directory" />{[...topicQuery(params)].filter(([key]) => !["q", "search", "page", "view", "section"].includes(key)).map(([key, value], index) => <input type="hidden" key={`${key}:${index}`} name={key} value={value} />)}<input type="search" name="q" defaultValue={query} key={query} maxLength={300} aria-label="搜索主题、概念或问题关键词" placeholder="搜索主题、概念或问题关键词…" /><button type="submit">搜索</button></form></div></header>
+    {error ? <section className={styles.error} role="alert"><h2>主题目录暂时无法读取</h2><p>{error}</p><button type="button" className={styles.primaryButton} onClick={() => window.location.reload()}>重试读取</button><Link href="/topics?view=directory">清除筛选</Link></section> : result ? <>
+      {!directory && result.recommendations.results.length ? <section className={styles.hubSection}><header className={styles.sectionHeading}><h2>精选主题</h2></header><div className={styles.featuredGrid}>{result.recommendations.results.map(topic => <Link prefetch={false} href={topic.href} className={styles.featuredCard} key={topic.id}><div><h3>{topic.name}</h3><p>{topic.problem_statement || topic.description}</p></div><TopicImage topic={topic} /><ArrowRight size={23} /></Link>)}</div></section> : null}
+      <div className={directory ? styles.directoryLayout : styles.hubSection}>{directory ? <aside className={styles.desktopFilters}>{filters(false)}</aside> : null}<section className={styles.directoryResults} aria-label="公开主题结果">
+        {directory ? <button type="button" className={styles.mobileFilterButton} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16} />主题分类{selectedCount ? `（${selectedCount}）` : ""}<ChevronDown size={15} /></button> : null}
+        <div className={styles.resultToolbar}>{directory ? <p>找到 <strong>{result.count}</strong> 个相关主题</p> : <h2>全部主题</h2>}{directory ? <form action="/topics" className={styles.sortForm}>{[...topicQuery(params)].filter(([key]) => !["sort", "page", "view"].includes(key)).map(([key, value], index) => <input type="hidden" name={key} value={value} key={`${key}:${index}`} />)}<input type="hidden" name="view" value="directory" /><label>排序<select key={result.filters.sort} name="sort" defaultValue={result.filters.sort}><option value="relevance">相关性优先</option><option value="name">名称排序</option><option value="works">相关作品数量</option><option value="updated">最近更新</option></select></label><button type="submit" aria-label="应用主题排序"><ArrowRight size={14} /></button><Link href={topicHref("/topics", params, { layout: "grid" })} aria-label="网格展示主题" aria-current={!list ? "true" : undefined}><LayoutGrid size={16} /></Link><Link href={topicHref("/topics", params, { layout: "list" })} aria-label="列表展示主题" aria-current={list ? "true" : undefined}><List size={16} /></Link></form> : <Link href="/topics?view=directory">查看全部<ArrowRight size={15} /></Link>}</div>
+        {selectedCount ? <div className={styles.filterChips}>{parents.map(value => { const row = result.selected_parents.find(item => item.id === value || item.slug === value), label = row?.name || "不可用的主题筛选"; return <Link key={value} aria-label={`移除主题筛选：${label}`} href={topicHref("/topics", params, { parent: parents.filter(id => id !== value), page: undefined })}>{label}<X size={12} /></Link>; })}{selected.map(key => <Link key={key} href={topicHref("/topics", params, { [key]: undefined, page: undefined })}>{({ discipline: "已选学科", subdiscipline: "已选子学科", theory: "已选理论" }[key])}<X size={12} /></Link>)}<Link href={topicHref("/topics", { q: query, view: "directory" })}>清除全部</Link></div> : null}
+        {result.overlap_notice ? <aside className={`${styles.notice} ${styles.duplicates}`} aria-label="主题名称重叠提示"><div><strong>多个主题匹配此名称</strong><p>{result.overlap_notice}</p><ul>{result.disambiguation.map(topic => <li key={topic.id}><Link prefetch={false} href={topic.href}>{topic.name}{topic.parent ? ` · ${topic.parent.name}` : ""}</Link>{topic.problem_statement ? <p>{topic.problem_statement}</p> : null}</li>)}</ul></div></aside> : null}
+        {result.results.length ? <div className={`${styles.resultGrid} ${!directory ? styles.hubGrid : ""} ${list ? styles.resultList : ""}`}>{result.results.map(topic => <TopicCard topic={topic} key={topic.id} />)}</div> : <section className={styles.empty}><Search size={32} /><h2>未找到相关主题</h2><p>保留当前关键词，尝试减少筛选条件，也可以查看全部主题。</p><Link className={styles.outlineButton} href={topicHref("/topics", { q: query, view: "directory" })}>清除筛选条件</Link><Link className={styles.inlineLink} href="/topics?view=directory">浏览全部主题<ArrowRight size={14} /></Link></section>}
+        <TopicPagination page={result} path="/topics" params={{ ...params, view: "directory" }} />
+      </section></div><Dialog open={filtersOpen} onRequestClose={() => setFiltersOpen(false)} className={styles.filterDialog} aria-labelledby="topic-filter-heading"><header><h2 id="topic-filter-heading">筛选主题</h2><button type="button" aria-label="关闭主题筛选" onClick={() => setFiltersOpen(false)}><X size={20} /></button></header>{filtersOpen ? filters(true) : null}</Dialog>
+    </> : null}
+  </main>;
+}

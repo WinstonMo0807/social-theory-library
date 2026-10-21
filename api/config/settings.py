@@ -186,6 +186,8 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "TopicKnowledgeNodeTypeEnum": ["research_problem", "debate", "concept"],
+        "KnowledgeNodeTypeEnum": [("discipline", "学科"), ("theory_tradition", "理论传统"), ("subdiscipline", "子学科"), ("concept", "核心概念"), ("debate", "理论争论"), ("research_problem", "研究问题"), ("topic", "主题")],
         "PathReadingProgressEnum": ["pending", "reading", "completed", "skipped"],
         "PathMaterialKindEnum": ["work", "chapter", "paper", "node"],
         "PathDifficultyEnum": [("beginner", "入门"), ("intermediate", "进阶"), ("advanced", "深入")],

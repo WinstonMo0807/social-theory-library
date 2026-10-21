@@ -43,7 +43,7 @@ def canonical_path(raw):
     return base
 
 
-def resolve_public_source(raw="", *, scholar_profile_id=None):
+def resolve_public_source(raw="", *, scholar_profile_id=None, topic_id=None):
     """Shared by feedback cards and follows: only activated anonymous-public metadata."""
     path = safe_public_path(raw)
     base = canonical_path(path)
@@ -53,8 +53,25 @@ def resolve_public_source(raw="", *, scholar_profile_id=None):
         "reader_url": "", "work_id": None, "edition_id": None, "asset_id": None,
         "catalog_revision_id": None, "document_revision_id": None,
         "scholar_profile_id": str(scholar_profile_id) if scholar_profile_id else None, "person_id": None,
+        "topic_id": str(topic_id) if topic_id else None,
         "public_revision": "", "href": "", "scope_notice": "",
         "notice": "当前无法核对公开来源。未公开、撤回或不存在的来源均不显示旧书目信息。"}
+    if scholar_profile_id and topic_id:
+        return result
+    topic_path = re.fullmatch(r"/topics/([^/]+)", base)
+    if topic_id or (topic_path and not scholar_profile_id):
+        from catalog.services.public_topics import _base as public_topic_queryset, topic_follow_summary
+        if not topic_id:
+            # values_list drops directory counts; resolve the formal slug, never a live draft slug.
+            topic_id = public_topic_queryset().filter(public_slug=topic_path.group(1)).values_list("pk", flat=True).first()
+        summary = topic_follow_summary(topic_id) if topic_id else None
+        if summary:
+            href = f"/topics/{summary['slug']}"
+            result.update(path=href, canonical_path=href, href=href, status="available", title=summary["name"],
+                source_type="公开主题档案", updated_at=summary["updated_at"], can_subscribe=True,
+                topic_id=str(summary["topic_id"]), public_revision=summary["public_revision"],
+                scope_notice=summary["scope_notice"], notice=summary["scope_notice"])
+        return result
     scholar_path = re.fullmatch(r"/scholars/([^/]+)", base)
     if scholar_profile_id or scholar_path:
         from catalog.services.public_scholars import scholar_follow_summary
@@ -139,6 +156,8 @@ def resolve_public_source(raw="", *, scholar_profile_id=None):
 
 
 def state_fingerprint(source):
+    if source.get("topic_id"):
+        return digest({key: source[key] for key in ("status", "topic_id", "public_revision")})
     if source.get("scholar_profile_id"):
         return digest({key: source[key] for key in ("status", "scholar_profile_id", "public_revision")})
     return digest({key: source[key] for key in ("status", "catalog_revision_id", "document_revision_id", "asset_id")})
@@ -159,7 +178,7 @@ def refresh(follow_id, owner_id):
     from .privacy import retention_enabled
     if not retention_enabled(owner, "source_follows"):
         return row
-    source = resolve_public_source(row.path, scholar_profile_id=row.scholar_profile_id)
+    source = resolve_public_source(row.path, scholar_profile_id=row.scholar_profile_id, topic_id=row.topic_id)
     fingerprint = state_fingerprint(source)
     changed = fingerprint != row.state_fingerprint
     if changed:
@@ -167,7 +186,7 @@ def refresh(follow_id, owner_id):
         SourceFollowEvent.objects.create(follow=row, user_id=owner_id, action="changed",
             before_status=row.source_status, after_status=source["status"], revision=row.revision)
         row.source_status, row.state_fingerprint = source["status"], fingerprint
-    if row.scholar_profile_id and source["can_subscribe"]:
+    if (row.scholar_profile_id or row.topic_id) and source["can_subscribe"]:
         row.path = source["canonical_path"]
     row.last_checked_at, row.check_error = timezone.now(), ""
     row.save(update_fields=["revision", "source_status", "state_fingerprint", "last_checked_at", "check_error", "path"]
@@ -182,7 +201,7 @@ def event_output(event):
 
 def output(row, *, history_page=1, export=False):
     from .privacy import retention_enabled
-    source = resolve_public_source(row.path, scholar_profile_id=row.scholar_profile_id)  # No historical titles survive withdrawal.
+    source = resolve_public_source(row.path, scholar_profile_id=row.scholar_profile_id, topic_id=row.topic_id)  # No historical titles survive withdrawal.
     events = row.events.order_by("-created_at", "-id")
     changed = events.filter(action="changed")
     if row.read_at:
@@ -190,6 +209,7 @@ def output(row, *, history_page=1, export=False):
     start = (history_page - 1) * PAGE_SIZE
     return {"id": str(row.pk), "owner_id": str(row.user_id), "path": source["canonical_path"] if source["can_subscribe"] else row.path,
         "scholar_profile_id": str(row.scholar_profile_id) if row.scholar_profile_id else None, "active": row.active,
+        "topic_id": str(row.topic_id) if row.topic_id else None,
         "revision": row.revision, "created_at": row.created_at.isoformat(), "updated_at": row.updated_at.isoformat(),
         "last_checked_at": row.last_checked_at.isoformat() if row.last_checked_at else None,
         "check_error": row.check_error, "unread_count": changed.count(), "source": source, "notice": NOTICE,
@@ -222,10 +242,17 @@ def command(user, data):
     lock_owner(user.pk)
     path = canonical_path(data["path"])
     scholar_id = data.get("scholar_profile_id")
+    topic_id = data.get("topic_id")
+    if scholar_id and topic_id:
+        raise ValidationError("一次关注只能指定一个公开对象。")
     if scholar_id:
         scholar_id = identifier(scholar_id, "scholar_profile_id")
         if not re.fullmatch(r"/scholars/[^/]+", path):
             raise ValidationError({"path": "学者关注需要站内学者页面。"})
+    elif topic_id:
+        topic_id = identifier(topic_id, "topic_id")
+        if not re.fullmatch(r"/topics/[^/]+", path):
+            raise ValidationError({"path": "主题关注需要站内主题页面。"})
     elif not re.fullmatch(r"/(reader|works)/[^/]+", path):
         raise ValidationError({"path": "请选择可核对的站内公开原文或书目页面。"})
     action = data["action"]
@@ -233,23 +260,24 @@ def command(user, data):
     prior = prior_command(user, data["request_id"], fingerprint)
     if prior:
         return command_output(user, prior)
-    identity = {"scholar_profile_id": scholar_id} if scholar_id else {"path": path, "scholar_profile_id__isnull": True}
+    identity = ({"scholar_profile_id": scholar_id} if scholar_id else {"topic_id": topic_id} if topic_id
+                else {"path": path, "scholar_profile_id__isnull": True, "topic_id__isnull": True})
     row = SourceFollow.objects.select_for_update().filter(user=user, **identity).first()
     if data["expected_revision"] != (row.revision if row else 0):
         raise ResearchConflict("来源关注已变化，请重新读取；尚未应用本次操作。")
     if action == "subscribe":
         from .privacy import require_retention
         require_retention(user, "source_follows")
-        source = resolve_public_source(path, scholar_profile_id=scholar_id)
+        source = resolve_public_source(path, scholar_profile_id=scholar_id, topic_id=topic_id)
         if not source["can_subscribe"]:
             raise ValidationError("当前不能核对这项公开来源，未建立订阅。")
         if row is None:
             if SourceFollow.objects.filter(user=user).count() >= MAX_FOLLOWS:
                 raise ValidationError("已达到 500 项来源记录上限，请先在隐私与资料中删除不需要的历史记录。")
-            row = SourceFollow.objects.create(user=user, path=source["canonical_path"], scholar_profile_id=scholar_id, state_fingerprint=state_fingerprint(source),
+            row = SourceFollow.objects.create(user=user, path=source["canonical_path"], scholar_profile_id=scholar_id, topic_id=topic_id, state_fingerprint=state_fingerprint(source),
                 source_status=source["status"], last_checked_at=timezone.now())
         else:
-            if scholar_id:
+            if scholar_id or topic_id:
                 row.path = source["canonical_path"]
             row.active = True
             row.revision += 1

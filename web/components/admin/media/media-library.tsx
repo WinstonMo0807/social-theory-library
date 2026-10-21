@@ -107,7 +107,7 @@ export function MediaLibrary() {
   const editionId = params.get("edition");
   const scholarId = params.get("scholar");
   const objectType = params.get("object_type"), objectId = params.get("object_id");
-  const knownObjectType = objectType === "knowledge_node" || objectType === "reading_path" || objectType === "discipline" || objectType === "subdiscipline";
+  const knownObjectType = objectType === "knowledge_node" || objectType === "reading_path" || objectType === "discipline" || objectType === "subdiscipline" || objectType === "topic";
   const requestedSlot = params.get("slot") ?? "cover";
   const slot = requestedSlot === "recommendation" ? "recommendation" : "cover";
   const validSlot = (requestedSlot === "cover" || requestedSlot === "recommendation") && [scholarId, editionId, objectId].filter(Boolean).length <= 1 && (objectType || objectId ? knownObjectType && Boolean(objectId) : true);

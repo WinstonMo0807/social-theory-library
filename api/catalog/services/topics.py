@@ -135,6 +135,11 @@ def topic_merge_preview(source, target=None):
                 if _conflict(row, duplicate):
                     conflicts.append({"code": "review_conflict", "label": f"{label}存在人工确认与人工拒绝冲突，请先处理。"})
     blockers = []
+    children = list(models.Topic.objects.filter(parent=source).order_by("pk"))
+    impact.append({"label": "下级主题", "count": len(children)})
+    fingerprint_rows.extend(_snapshot(row) for row in children)
+    if children:
+        blockers.append({"code": "topic_has_children", "label": "来源主题仍有下级主题，请先明确调整并发布其上级，再合并主题。"})
     if target is not None:
         if source.pk == target.pk:
             blockers.append({"code": "same_topic", "label": "不能将主题合并到自身。"})
@@ -142,6 +147,13 @@ def topic_merge_preview(source, target=None):
             blockers.append({"code": "source_archived", "label": "来源主题已经下线。"})
         if target.editorial_status != "published":
             blockers.append({"code": "target_unpublished", "label": "请选择已发布的目标主题。"})
+        current, seen = target, set()
+        while current is not None and current.pk not in seen:
+            if current.pk == source.pk:
+                blockers.append({"code": "target_is_descendant", "label": "不能将主题合并到自身的下级主题。"})
+                break
+            seen.add(current.pk)
+            current = current.parent
         blockers.extend(_draft_blockers(source, target, work_ids))
         for legacy in models.WorkKnowledgeRelation.objects.filter(topic_id__in=[source.pk, target.pk], approved=True).exclude(review_status="rejected"):
             if models.WorkTopicRelation.objects.filter(work_id=legacy.work_id, topic_id__in=[source.pk, target.pk], review_status="rejected").exists():
@@ -350,4 +362,6 @@ def merge_topics(source_id, target_id, *, actor, change_note="", expected_finger
     }
     source.curation = {**(source.curation or {}), "topic_merge": {"target_id": str(target.pk), "merged_at": now.isoformat(), "result": result}}
     source.save(update_fields=["curation", "updated_at"])
+    from catalog.services.public_topics import capture_topic_publication
+    capture_topic_publication(target, actor=actor, change_note=change_note or "合并主题后的正式编排")
     return result

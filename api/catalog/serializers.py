@@ -3001,6 +3001,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
             "id",
             "edit_version",
             "name",
+            "parent",
             "slug",
             "description",
             "problem_statement",
@@ -3022,7 +3023,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "work_count", "suggestions", "created_at", "updated_at")
 
-    def get_normalized_relations(self, obj):
+    def get_normalized_relations(self, obj) -> dict:
         return {
             "disciplines": [
                 {
@@ -3056,10 +3057,10 @@ class AdminTopicSerializer(serializers.ModelSerializer):
             ],
         }
 
-    def get_work_count(self, obj):
+    def get_work_count(self, obj) -> int:
         return obj.workknowledgerelation_set.filter(approved=True).values("work_id").distinct().count()
 
-    def get_suggestions(self, obj):
+    def get_suggestions(self, obj) -> dict:
         relations = WorkKnowledgeRelation.objects.filter(
             topic=obj,
         )
@@ -3081,10 +3082,10 @@ class AdminTopicSerializer(serializers.ModelSerializer):
         }
 
     def validate_curation(self, value):
-        value = value if isinstance(value, dict) else {}
+        from catalog.services.public_topics import validate_topic_curation
+        value = validate_topic_curation(value, self.instance)
         _validate_reference_list(value, "foundational_work_ids", Work.objects.all(), "奠基文献")
         _validate_reference_list(value, "recent_work_ids", Work.objects.all(), "最近入库文献")
-        _validate_reference_list(value, "related_scholar_ids", ScholarProfile.objects.all(), "相关学者")
         _validate_reference_list(value, "linked_theory_ids", TheorySchool.objects.all(), "关联流派")
         featured_passage_id = value.get("featured_passage_id")
         if featured_passage_id and not Passage.objects.filter(pk=featured_passage_id).exists():
@@ -3096,6 +3097,11 @@ class AdminTopicSerializer(serializers.ModelSerializer):
             if not isinstance(path, dict):
                 raise serializers.ValidationError({"reading_paths": ["阅读路径格式无效。"]})
             _validate_reference_list(path, "work_ids", Work.objects.all(), "阅读路径文献")
+        return value
+
+    def validate_parent(self, value):
+        from catalog.services.public_topics import validate_topic_parent
+        validate_topic_parent(self.instance, value)
         return value
 
     def validate_editorial_status(self, value):

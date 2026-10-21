@@ -1,6 +1,7 @@
 import pytest
 from datetime import timedelta
 from hashlib import sha256
+from uuid import uuid4
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
@@ -385,8 +386,9 @@ def test_reader_can_save_and_remove_a_published_topic(api_client, reader_user):
 
     created = api_client.post(
         "/api/reading/saved-topics/",
-        {"topic": str(topic.id)},
+        {"topic": str(topic.id), "expected_version": "0", "request_id": str(uuid4())},
         format="json",
+        HTTP_X_READER_OWNER=str(reader_user.pk),
     )
     assert created.status_code == 201
     listing = api_client.get("/api/reading/saved-topics/", {"topic": str(topic.id)})
@@ -397,7 +399,9 @@ def test_reader_can_save_and_remove_a_published_topic(api_client, reader_user):
     assert exported.status_code == 200
     assert exported.data["saved_topics"][0]["name"] == "可收藏主题"
 
-    removed = api_client.delete(f"/api/reading/saved-topics/{created.data['id']}/")
+    from urllib.parse import urlencode
+    query = urlencode({"topic": str(topic.id), "expected_version": created.data["version"], "request_id": str(uuid4())})
+    removed = api_client.delete(f"/api/reading/saved-topics/{created.data['id']}/?{query}", HTTP_X_READER_OWNER=str(reader_user.pk))
     assert removed.status_code == 204
 
 

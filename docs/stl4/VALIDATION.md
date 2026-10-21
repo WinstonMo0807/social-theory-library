@@ -1,5 +1,15 @@
 # 验收记录
 
+## 2026-10-21 PDF68–71主题静态记录
+
+- 精确白名单tmp/stl4-topics-checkpoint.json共74路径；.venv/Scripts/python.exe tmp/topic-checkpoint-20261021.py逐个ast.parse 28个Python文件，1b1764退出0；同批git diff --check退出0。未执行测试函数。
+- web下node node_modules/eslint/bin/eslint.js <30目标TS/TSX路径>，70fc53退出0，0错误/8提示（7图片优化、1既有导航）。node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false最终52383/690e4f退出0；早期缺失legacy预览字段导致失败，已补完整默认字段后通过。
+- PostCSS解析topic.module.css 240顶层节点、82直接class引用无缺失，85df8b退出0；不证明实际视觉。两照片裁片元数据保留sources.json。
+- 进程DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8运行.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-topics-schema-20261021.json --validate。最终8c3a1a退出0，0错误/10既有Home/Scholar/Topic提示；早期枚举嵌套导入提示已改为准确choices。openapi-typescript同步49e8ff退出0，213路径，原205全部保留。
+- 6776a7退出0：在阻止BaseDatabaseWrapper.ensure_connection的条件下，公开主题基础/slug/版本/规范条目/学者/双理论关系共6组查询分别SQLite与PostgreSQL编译12次；参数数一致，数据库连接0。此前私人10AST/8导入/16SQL的f8a04d及2组轻量slug SQL的47bc34退出0，未运行数据库查询。
+- 后端公共9函数9案例、私人11函数19案例，合计20函数28案例；既有test_admin_configuration收藏场景同步。公共/管理预览10场景、私人4场景只定义。fixture接local_cataloging_e2e_api但未运行；统计脚本最初ast.literal_eval遇uuid4调用退出1，改为仅计AST列表长度后b268a1退出0，未执行测试定义。
+- catalog0074/reading0020仅编写未应用；无正式功能测试、浏览器、构建、实际迁移、模型/OCR、检索质量测评、索引重建或生产操作。逐图、并发、真实设备和B01–B06仍待全量开发后验收。
+
 ## 2026-10-21 PDF62–66学者静态记录
 
 - 最终冻结后全量TypeScript会话95875/04cd3e退出0，覆盖新增两条预览浏览器定义；110路径精确暂存cd9abd退出0，ingestion/views.py仅3行责任范围保留，其他历史改动仍留工作区。

@@ -17,9 +17,9 @@ import { TheoryTimelinePublicList } from "@/components/public/theory-timeline-pu
 import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import type { TheorySchool } from "@/lib/data";
-import { adaptApiTopic, adaptApiWork } from "@/lib/public-data-adapters";
+import { adaptApiWork } from "@/lib/public-data-adapters";
 import type { PublicScholarDetail } from "@/lib/api/scholars.types";
-import type { ApiTopic } from "@/lib/api/topics.types";
+import type { PublicTopicDetail } from "@/lib/api/topics.types";
 import { adminListHref, safeAdminHref } from "@/lib/admin-route-context";
 import type { Discipline, Subdiscipline } from "@/lib/api/taxonomy.types";
 import type { KnowledgeNodeDetail, LocalTheoryGraph, NormalizedTimelineEvent, NormalizedReadingPath, TheoryDisciplinePage } from "@/lib/api/knowledge.types";
@@ -115,14 +115,13 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
         : <ScholarPublicView preview data={item} footer={footer} />;
     }
     case "topic": {
-      const raw = data as ApiTopic;
-      if (!raw.id || !raw.slug || !raw.name) {
+      const item = data as PublicTopicDetail;
+      if (!item.id || !item.slug || !item.name) {
         return <p className="admin-list-state is-unavailable">主题预览缺少规范身份，已停止渲染并保留草稿。</p>;
       }
-      const item = adaptApiTopic(raw);
       return pageId && pageId !== "overview"
-        ? <TopicSectionPublicView topic={item} section={pageId} />
-        : <TopicPublicView topic={item} footer={footer} />;
+        ? <TopicSectionPublicView preview topic={item} section={pageId} />
+        : <TopicPublicView preview topic={item} footer={footer} />;
     }
     case "reading_path":
       return <ReadingPathPublicView preview initialTab={moduleId.replace(/^reading-path-/, "") || pageId} previewStageId={previewStageId} path={data as NormalizedReadingPath} footer={footer} />;

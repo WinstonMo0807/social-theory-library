@@ -101,6 +101,8 @@ def main():
     seed_reading_paths(User.objects.get(email="owner-v305@example.test"))
     from scholar_e2e_fixtures import seed_scholars
     seed_scholars(User.objects.get(email="owner-v305@example.test"))
+    from topic_e2e_fixtures import seed_topics
+    seed_topics(User.objects.get(email="owner-v305@example.test"))
     from v306_assistance_e2e_fixtures import seed_assistance
     seed_assistance(User.objects.get(email="owner-v305@example.test"))
     if os.environ.get("STL_E2E_V307") == "1":

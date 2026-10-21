@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, F, Max, OuterRef, Subquery
-from rest_framework import mixins, status, viewsets
+from rest_framework import mixins, serializers, status, viewsets
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
@@ -186,10 +187,99 @@ class SavedItemViewSet(OwnedModelViewSet):
         return rows
 
 
+class TopicSaveCommand(serializers.Serializer):
+    topic = serializers.UUIDField()
+    saved = serializers.BooleanField()
+    expected_version = serializers.CharField(max_length=100)
+    request_id = serializers.UUIDField()
+
+    def to_internal_value(self, data):
+        if not hasattr(data, "items") or set(data) - set(self.fields):
+            raise serializers.ValidationError("收藏操作包含不支持的字段。")
+        if type(data.get("saved")) is not bool:
+            raise serializers.ValidationError({"saved": "请传入明确的收藏开关。"})
+        return super().to_internal_value(data)
+
+
+class TopicSaveCreate(serializers.Serializer):
+    topic = serializers.UUIDField()
+    expected_version = serializers.CharField(max_length=100)
+    request_id = serializers.UUIDField()
+
+    def to_internal_value(self, data):
+        if not hasattr(data, "items") or set(data) - set(self.fields):
+            raise serializers.ValidationError("收藏操作包含不支持的字段。")
+        return super().to_internal_value(data)
+
+
+class TopicSaveReceipt(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    applied_saved = serializers.BooleanField()
+
+
+class TopicSaveOutput(serializers.Serializer):
+    owner_id = serializers.CharField()
+    topic_id = serializers.UUIDField()
+    saved = serializers.BooleanField()
+    version = serializers.CharField()
+    can_save = serializers.BooleanField()
+    record = SavedTopicSerializer(allow_null=True)
+    receipt = TopicSaveReceipt(allow_null=True)
+
+
+TOPIC_OWNER = OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER, required=True)
+
+
 class SavedTopicViewSet(OwnedModelViewSet):
     queryset = SavedTopic.objects.select_related("topic")
     serializer_class = SavedTopicSerializer
     filterset_fields = ("topic",)
+    # A collection never changes identity through generic PATCH/PUT.
+    http_method_names = ["get", "post", "delete", "head", "options"]
+
+    def require_owner(self, request):
+        if request.headers.get("X-Reader-Owner") != str(request.user.pk):
+            raise PermissionDenied("请核对当前账户后再读取或修改主题收藏。")
+
+    @extend_schema(parameters=[TOPIC_OWNER, OpenApiParameter("topic", str, required=True),
+        OpenApiParameter("request_id", str)], responses=TopicSaveOutput)
+    @action(detail=False, methods=["get"])
+    def state(self, request):
+        from . import topic_saves
+        self.require_owner(request)
+        return Response(topic_saves.state(request.user, request.query_params.get("topic"), request.query_params.get("request_id")))
+
+    @extend_schema(parameters=[TOPIC_OWNER], request=TopicSaveCommand, responses=TopicSaveOutput)
+    @action(detail=False, methods=["post"])
+    def command(self, request):
+        from . import topic_saves
+        self.require_owner(request)
+        data = TopicSaveCommand(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(topic_saves.command(request.user, data.validated_data))
+
+    @extend_schema(parameters=[TOPIC_OWNER], request=TopicSaveCreate, responses={201: SavedTopicSerializer, 204: None})
+    def create(self, request, *args, **kwargs):
+        from . import topic_saves
+        self.require_owner(request)
+        data = TopicSaveCreate(data=request.data)
+        data.is_valid(raise_exception=True)
+        result = topic_saves.command(request.user, {**data.validated_data, "saved": True})
+        return Response(result["record"], status=201 if result["record"] else 204)
+
+    @extend_schema(parameters=[TOPIC_OWNER, OpenApiParameter("topic", str, required=True),
+        OpenApiParameter("expected_version", str, required=True), OpenApiParameter("request_id", str, required=True)],
+        responses={204: None})
+    def destroy(self, request, *args, **kwargs):
+        from . import topic_saves
+        self.require_owner(request)
+        data = TopicSaveCommand(data={"topic": request.query_params.get("topic"), "saved": False,
+            "expected_version": request.query_params.get("expected_version"), "request_id": request.query_params.get("request_id")})
+        data.is_valid(raise_exception=True)
+        if data.validated_data["expected_version"].split(":", 1)[0] != str(kwargs["pk"]):
+            raise serializers.ValidationError("收藏版本与待删除记录不一致。")
+        topic_saves.command(request.user, data.validated_data)
+        return Response(status=204)
 
 
 class ReadingListViewSet(OwnedModelViewSet):

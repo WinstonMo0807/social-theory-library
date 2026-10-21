@@ -1,0 +1,44 @@
+[
+  {
+    "file": "hub-hero.webp",
+    "source_pdf": "output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf",
+    "source_page": 68,
+    "extracted_image": "tmp/pdfs/stl4-topics-20261021/page-68-image-0.png",
+    "source_size": [
+      1672,
+      941
+    ],
+    "crop_xyxy": [
+      610,
+      76,
+      1285,
+      388
+    ],
+    "output_size": [
+      675,
+      312
+    ],
+    "purpose": "Decorative photograph only; no atlas chrome, sample product text, or interface elements."
+  },
+  {
+    "file": "detail-hero.webp",
+    "source_pdf": "output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf",
+    "source_page": 71,
+    "extracted_image": "tmp/pdfs/stl4-topics-20261021/page-71-image-0.jpg",
+    "source_size": [
+      1536,
+      1024
+    ],
+    "crop_xyxy": [
+      531,
+      73,
+      900,
+      387
+    ],
+    "output_size": [
+      369,
+      314
+    ],
+    "purpose": "Decorative photograph only; no atlas chrome, sample product text, or interface elements."
+  }
+]

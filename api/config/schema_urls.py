@@ -12,6 +12,7 @@ from reading.urls import router as reading_router, urlpatterns as reading_patter
 
 VERIFIED_NAMES = {
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
+    "topic-list", "topic-detail", "admin-topic-list", "admin-topic-detail",
     "knowledge-entry-citation", "theory-system-overview", "knowledge-node-list", "knowledge-node-detail",
     "normalized-theory-timeline", "normalized-theory-timeline-detail", "reading-path-list", "reading-path-detail",
     "admin-reading-path-list", "admin-reading-path-detail", "admin-knowledge-object-preview",
@@ -60,7 +61,7 @@ urlpatterns = [
     path("api/reading/", include([
         pattern for pattern in reading_router.urls
         if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views", "reading.parallel_views", "reading.graph_views", "reading.path_views"}
-        or pattern.name in {"annotations-list", "annotations-detail", "bookmarks-list", "bookmarks-detail", "progress-list", "progress-detail", "reading-history-list", "reading-history-detail"}
+        or pattern.name in {"annotations-list", "annotations-detail", "bookmarks-list", "bookmarks-detail", "progress-list", "progress-detail", "reading-history-list", "reading-history-detail", "saved-topics-list", "saved-topics-detail", "saved-topics-state", "saved-topics-command"}
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
         "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
         "citation-source-preview", "citation-source-preview-file",

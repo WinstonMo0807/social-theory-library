@@ -1261,6 +1261,7 @@ def _draft_published_editorial_change(
 
 
 class AdminTopicListView(AdminEditorialDraftReadMixin, generics.ListCreateAPIView):
+    http_method_names = ["get", "post", "head", "options"]
     editorial_target_type = "topic"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminTopicSerializer
@@ -1272,6 +1273,8 @@ class AdminTopicListView(AdminEditorialDraftReadMixin, generics.ListCreateAPIVie
     def perform_create(self, serializer):
         topic = serializer.save()
         if topic.editorial_status == "published":
+            from catalog.services.public_topics import capture_topic_publication
+            capture_topic_publication(topic, actor=self.request.user)
             from catalog.services.canonical_mutations import (
                 record_admin_canonical_change,
             )
@@ -1300,6 +1303,8 @@ class AdminTopicDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpdate
         previous_status = serializer.instance.editorial_status
         topic = serializer.save()
         if topic.editorial_status == "published":
+            from catalog.services.public_topics import capture_topic_publication
+            capture_topic_publication(topic, actor=self.request.user)
             from catalog.services.canonical_mutations import (
                 record_admin_canonical_change,
             )
@@ -1324,6 +1329,11 @@ class AdminTopicDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpdate
         if topic.editorial_status != "published":
             return super().update(request, *args, **kwargs)
         if "hero_image" in request.data:
+            uploaded = request.data["hero_image"]
+            if hasattr(uploaded, "read"):
+                from catalog.services.knowledge_media import stage_legacy_image_upload
+                stage_legacy_image_upload(topic, uploaded, actor=request.user)
+                return Response(self._draft_read_rows([topic])[0], status=status.HTTP_202_ACCEPTED)
             return Response(
                 {
                     "detail": "已发布主题的主视觉尚不支持进入 JSON 编辑草稿。",
@@ -1820,206 +1830,28 @@ class TheorySchoolDetailView(generics.RetrieveAPIView):
         return Response(data)
 
 
-class TopicListView(generics.ListAPIView):
+class TopicListView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = TopicSerializer
+    from .topic_serializers import PublicTopicDirectorySerializer as serializer_class
 
-    def get_queryset(self):
-        queryset = (
-            Topic.objects.filter(editorial_status="published")
-            .prefetch_related("knowledge_node_links__node")
-            .annotate(
-                work_count=Count(
-                    "work_relations",
-                    filter=Q(
-                        work_relations__review_status=RelationReviewStatus.APPROVED,
-                        work_relations__work__editions__state=PublicationState.PUBLISHED,
-                    ),
-                    distinct=True,
-                )
-            )
-        )
-        discipline = self.request.query_params.get("discipline", "").strip()
-        subdiscipline = self.request.query_params.get("subdiscipline", "").strip()
-        theory = self.request.query_params.get("theory", "").strip()
-        if discipline:
-            queryset = queryset.filter(
-                discipline_relations__review_status=RelationReviewStatus.APPROVED,
-            )
-            queryset = filter_slug_or_uuid(
-                queryset,
-                discipline,
-                slug_field="discipline_relations__discipline__slug",
-                id_field="discipline_relations__discipline_id",
-            )
-        if subdiscipline:
-            queryset = queryset.filter(
-                subdiscipline_relations__review_status=RelationReviewStatus.APPROVED,
-            )
-            queryset = filter_slug_or_uuid(
-                queryset,
-                subdiscipline,
-                slug_field="subdiscipline_relations__subdiscipline__slug",
-                id_field="subdiscipline_relations__subdiscipline_id",
-            )
-        if theory:
-            # Prefer normalized Topic to KnowledgeNode relations while retaining
-            # legacy TheorySchool matching for records awaiting backfill.
-            normalized = Q(
-                knowledge_node_links__status=KnowledgePublicationStatus.PUBLISHED,
-                knowledge_node_links__node__status=KnowledgePublicationStatus.PUBLISHED,
-                knowledge_node_links__node__node_type="theory_tradition",
-            )
-            legacy = Q(theory_relations__review_status=RelationReviewStatus.APPROVED)
-            try:
-                theory_identifier = UUID(str(theory))
-            except (TypeError, ValueError, AttributeError):
-                normalized &= Q(knowledge_node_links__node__slug=theory)
-                legacy &= Q(theory_relations__theory_school__slug=theory)
-            else:
-                normalized &= Q(knowledge_node_links__node_id=theory_identifier)
-                legacy &= Q(theory_relations__theory_school_id=theory_identifier)
-            queryset = queryset.filter(normalized | legacy)
-        query = (
-            self.request.query_params.get("q", "").strip()
-            or self.request.query_params.get("search", "").strip()
-        )
-        queryset = SearchService(request=self.request).queryset(
-            SearchContext.TOPICS,
-            query,
-            base_queryset=queryset,
-        )
-        if self.request.query_params.get("sort") == "works":
-            fields = ("_search_rank", "-work_count", "name") if query else ("-work_count", "name")
-            return queryset.distinct().order_by(*fields)
-        fields = ("_search_rank", "-curation_level", "name") if query else ("-curation_level", "name")
-        return queryset.distinct().order_by(*fields)
+    @extend_schema(operation_id="public_topic_directory", responses=serializer_class, parameters=[OpenApiParameter(name, type=str, many=name == "parent") for name in ("q", "search", "parent", "discipline", "subdiscipline", "theory", "sort", "page", "page_size")])
+    def get(self, request):
+        from catalog.services.public_topics import public_topic_directory
+        return Response(public_topic_directory(request.query_params, request=request))
 
 
-class TopicDetailView(generics.RetrieveAPIView):
+class TopicDetailView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = TopicSerializer
-    lookup_field = "slug"
+    from .topic_serializers import PublicTopicDetailSerializer as serializer_class
 
-    def get_queryset(self):
-        list_view = TopicListView()
-        list_view.request = self.request
-        return list_view.get_queryset()
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        return Response(self.public_payload(instance, request))
+    @extend_schema(responses=serializer_class, parameters=[OpenApiParameter(name, type=str) for name in ("section", "question_type", "availability", "reading", "sort", "page", "page_size")])
+    def get(self, request, slug):
+        from catalog.services.public_topics import public_topic_detail
+        return Response(public_topic_detail(slug, request.query_params, request=request))
 
     def public_payload(self, instance, request):
-        """Shared public/controlled-preview read; no persistence or dispatch."""
-        data = self.get_serializer(instance).data
-        works = public_works().filter(
-            topic_relations__topic=instance,
-            topic_relations__review_status=RelationReviewStatus.APPROVED,
-        ).distinct()
-        data["work_count"] = works.count()
-        data["works"] = WorkCardSerializer(works, many=True, context={"request": request}).data
-        scholars = public_scholar_queryset().filter(
-            Q(
-                person__topic_relations__topic=instance,
-                person__topic_relations__review_status=RelationReviewStatus.APPROVED,
-            )
-            | Q(
-                person__contributions__approved=True,
-                person__contributions__edition__state=PublicationState.PUBLISHED,
-                person__contributions__edition__work__topic_relations__topic=instance,
-                person__contributions__edition__work__topic_relations__review_status=RelationReviewStatus.APPROVED,
-            )
-        ).select_related("person").distinct()
-        data["scholars"] = ScholarProfileSerializer(
-            scholars,
-            many=True,
-            context={"request": request},
-        ).data
-        theory_node_ids = WorkNodeRelation.objects.filter(
-            status=KnowledgePublicationStatus.PUBLISHED,
-            node__node_type="theory_tradition",
-            work__topic_relations__topic=instance,
-            work__topic_relations__review_status=RelationReviewStatus.APPROVED,
-        ).values_list("node_id", flat=True)
-        theories = TheorySchool.objects.filter(
-            editorial_status="published",
-            pk__in=_legacy_theory_ids_for_normalized_nodes(theory_node_ids),
-        ).distinct()
-        theory_ids = list(theories.values_list("id", flat=True))
-        theory_counts = _legacy_theory_work_counts(theory_ids)
-        theories = theories.annotate(
-            work_count=Case(
-                *[
-                    When(pk=theory_id, then=Value(count))
-                    for theory_id, count in theory_counts.items()
-                ],
-                default=Value(0),
-                output_field=IntegerField(),
-            )
-        )
-        data["theories"] = TheorySchoolSerializer(
-            theories,
-            many=True,
-            context={"request": request},
-        ).data
-        authenticated = bool(request.user.is_authenticated)
-        staff = bool(
-            authenticated
-            and (
-                request.user.is_staff
-                or getattr(request.user, "role", "") in {"admin", "editor", "reviewer"}
-            )
-        )
-        passage_queryset = (
-            Passage.objects.filter(
-                page__asset__kind=Asset.Kind.NORMALIZED,
-                page__asset__status=Asset.Status.READY,
-                page__asset__access_status__in=viewer_access_statuses(
-                    authenticated=authenticated,
-                    staff=staff,
-                ),
-            )
-            .filter(active_document_q(asset_prefix="page__asset"))
-            .filter(
-                Q(
-                    page__asset__edition__work__topic_relations__topic=instance,
-                    page__asset__edition__work__topic_relations__review_status=RelationReviewStatus.APPROVED,
-                )
-                | Q(
-                    page__asset__edition__work__knowledge_relations__topic=instance,
-                    page__asset__edition__work__knowledge_relations__approved=True,
-                )
-            )
-            .select_related("page__asset__edition__work")
-            .distinct()
-            .order_by("page__asset__edition", "page__index")
-        )
-        curation = instance.curation if isinstance(instance.curation, dict) else {}
-        featured_passage_id = str(curation.get("featured_passage_id", ""))
-        passages = list(passage_queryset[:12])
-        passages.sort(
-            key=lambda passage: (
-                0 if str(passage.id) == featured_passage_id else 1,
-                passage.page.index,
-            )
-        )
-        passages = passages[:6]
-        data["passages"] = [
-            {
-                "id": str(passage.id),
-                "asset_id": str(passage.page.asset_id),
-                "title": _active_edition_work_title(
-                    passage.page.asset.edition,
-                    require_fulltext=True,
-                ),
-                "page_index": passage.page.index,
-                "printed_label": clean_page_label(passage.page.printed_label),
-                "snippet": passage_snippet(passage.text, ""),
-            }
-            for passage in passages
-        ]
-        return data
+        from catalog.services.public_topics import public_topic_detail
+        return public_topic_detail(instance.slug, request=request)
 
 
 class ScholarListView(APIView):

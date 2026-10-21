@@ -20,7 +20,7 @@ from .knowledge_models import SavedKnowledgeNode
 from .graph_models import SavedGraphView
 
 RETENTION = {"reading_history": True, "search_history": False, "personal_notes": True, "followed_topics": True, "source_follows": True, "saved_knowledge": True}
-RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "关注的主题", "source_follows": "来源与学者关注", "saved_knowledge": "知识条目与图谱视图"}
+RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "收藏的主题", "source_follows": "来源、学者与主题关注", "saved_knowledge": "知识条目与图谱视图"}
 EXPORT_GROUPS = {"research": ("research",), "notes": ("annotations", "memories", "parallel_alignments"),
                  "plans": ("plans",), "audits": ("audits", "citation_sources"), "source_follows": ("source_follows",),
                  "saved_knowledge": ("saved_knowledge", "graph_views")}
@@ -199,10 +199,10 @@ def erase_impact(user, category, row, *, contexts=None):
                "plans": "删除此阅读计划或公共路径跟读及其中的进度、笔记与建议；原文和独立研究、笔记保留。未完成任务将失效，仅保留防止旧请求重新创建资料所需的最少回执。",
                "reading_history": "删除此条阅读历史；阅读进度、笔记和馆藏原件保留。",
                "search_history": "删除这条主动保存的检索记录；当前检索与研究所需临时会话不受影响。",
-               "followed_topics": "取消关注此主题；主题和公开馆藏保留。",
+               "followed_topics": "删除此主题收藏；仅保留防止旧请求重新收藏所需的最少回执，主题档案更新关注和公开馆藏保留。",
                "saved_knowledge": "删除本人知识条目收藏；公开条目保留，只保留防止旧请求重新保存所需的最少回执。",
                "graph_views": "删除本人保存的图谱名称、范围与布局；公开关系保留，仅保留防止旧请求重新创建的最少回执。",
-               "source_follows": "删除此来源订阅或学者关注及状态历史，停止后续检查；仅保留防止旧请求重建的最小操作回执，公开内容保留。"}[category]
+               "source_follows": "删除此来源订阅、学者或主题关注及状态历史，停止后续检查；仅保留防止旧请求重建的最小操作回执，独立收藏与公开内容保留。"}[category]
     return {"message": message, "memories": affected, "scope_count": sum(len(value["scopes"]) for value in affected)}
 
 
@@ -255,10 +255,13 @@ def describe_item(user, category, row):
         title = source["title"]
     elif category == "source_follows":
         from .source_follow import resolve_public_source
-        source = resolve_public_source(row.path, scholar_profile_id=row.scholar_profile_id)
+        source = resolve_public_source(row.path, scholar_profile_id=row.scholar_profile_id, topic_id=row.topic_id)
         title = source["title"]
     elif category == "followed_topics":
-        title = row.topic.name
+        from catalog.services.public_topics import topic_follow_summary
+        current = topic_follow_summary(row.topic_id)
+        title = current["name"] if current else "当前不可用的主题"
+        source = {"title": title, "path": f"/topics/{current['slug']}" if current else ""}
     else:
         title = payload.get("query") or payload.get("goal") or payload.get("title") or "未命名资料"
     return {**target_of(row, category), "title": title, "updated_at": row.updated_at.isoformat(),

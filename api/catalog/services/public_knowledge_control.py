@@ -287,13 +287,14 @@ THEORY_MODULES = {
 TOPIC_MODULES = {
     "identity": _module(
         "topic-identity", "名称与简介", "TopicHero", EDITORIAL,
-        ("name", "description"), REQUIRED, "identity", canonical=("name", "description"),
+        ("name", "description", "parent", "hero_image"), REQUIRED, "identity", canonical=("name", "description", "parent", "hero_rendition"),
         projections=("public", "query_lexicon"),
     ),
     "problem": _module(
         "topic-problem", "问题范围与核心问题", "TopicQuestions", EDITORIAL,
-        ("problem_statement", "core_questions"), RECOMMENDED, "research-framework",
-        canonical=("problem_statement", "core_questions"),
+        ("questions",), RECOMMENDED, "research-framework",
+        canonical=("problem_statement", "core_questions"), curated=("curation.question_node_ids", "curation.debate_node_ids"),
+        note="规范问题与争论须为已发布知识节点；旧文字保留导读，不产生问题或讨论数量。",
     ),
     "framework": _module(
         "topic-framework", "形成背景、研究维度与方法", "TopicFramework", EDITORIAL,
@@ -302,18 +303,18 @@ TOPIC_MODULES = {
     ),
     "works": _module(
         "topic-works", "馆藏作品", "TopicWorks", COMPUTED,
-        ("works", "work_count"), RECOMMENDED, "works", computed=("WorkTopicRelation",),
+        ("works", "work_count"), RECOMMENDED, "works", computed=("CatalogPublicationRevision.knowledge.topics",),
         projections=("public", "recommendation"),
         note="作品清单和数量共用公开详情的规范关系查询；人工推荐书目另列，不代替完整关联馆藏。",
     ),
     "evidence": _module(
         "topic-evidence", "主题相关原文", "TopicEvidence", COMPUTED,
-        ("passages",), OPTIONAL, "evidence", computed=("Passage", "EvidenceSpan"),
+        ("evidence", "featured_quote"), OPTIONAL, "evidence", computed=("EvidenceCuration", "Passage", "EvidenceSpan"), curated=("curation.featured_source_id",),
         projections=("public", "fulltext"),
     ),
     "curated_works": _module(
         "topic-curated-works", "奠基文献与推荐作品", "TopicCuratedWorks", CURATED,
-        ("curated.foundational_works", "curated.recent_works"), OPTIONAL, "curation-works", curated=("curation.foundational_work_ids", "curation.recent_work_ids"),
+        ("works", "work_facets"), OPTIONAL, "curation-works", curated=("curation.edition_ids", "curation.foundational_edition_ids", "curation.disputed_edition_ids"),
         projections=("public", "recommendation"),
     ),
     "scholars": _module(
@@ -321,7 +322,7 @@ TOPIC_MODULES = {
         ("scholars",), RECOMMENDED, "knowledge-relations",
         relations=("PersonTopicRelation",), curated=("curation.related_scholar_ids",),
         projections=("public", "knowledge_graph"),
-        note="该页学者来自规范主题关系及馆藏署名，人工相关学者选择单独保留在策展数据，不会代替规范关系。",
+        note="该页学者来自已确认主题关系与显式选入的公开档案，不凭同名或共同出现推断学术关系。",
     ),
     "theories": _module(
         "topic-theories", "理论传统", "TopicTheories", RELATION,
@@ -331,8 +332,8 @@ TOPIC_MODULES = {
     ),
     "concepts": _module(
         "topic-concepts", "核心概念", "TopicConcepts", EDITORIAL,
-        ("key_concepts", "knowledge_nodes"), RECOMMENDED, "knowledge-relations",
-        canonical=("key_concepts",), relations=("KnowledgeNodeTopic",),
+        ("concepts",), RECOMMENDED, "knowledge-relations",
+        canonical=("key_concepts",), relations=("KnowledgeNodeTopic",), curated=("curation.concept_node_ids",),
     ),
     "timeline": _module(
         "topic-timeline", "发展时间线", "TopicTimeline", EDITORIAL,
@@ -341,13 +342,18 @@ TOPIC_MODULES = {
     ),
     "reading_paths": _module(
         "topic-reading-paths", "阅读路径", "TopicReadingPaths", CURATED,
-        ("curated.reading_paths",), OPTIONAL, "reading", curated=("curation.reading_paths",),
+        ("paths",), OPTIONAL, "reading", curated=("curation.reading_path_ids",),
         projections=("public", "reading_path_support"),
     ),
     "claims": _module(
         "topic-curated-claims", "观点、批评与回应", "CuratedClaimGroups", AI_OPTIONAL,
         ("curated_claims",), OPTIONAL, "claims", curated=("CuratedClaim",),
         projections=("public", "claim_index"),
+    ),
+    "articles": _module(
+        "topic-articles", "策划文章", "TopicArticles", CURATED,
+        ("articles",), OPTIONAL, "articles", curated=("curation.issue_ids",),
+        note="明确选择已发布的推荐专题；计划材料仅沿专题真实计划条目，不将无全文等同待购。",
     ),
 }
 
@@ -372,7 +378,7 @@ def _page(
             "KnowledgeNodeDetailSerializer",
             "/api/catalog/theory-system/nodes/{slug}/",
         ),
-        "topic": ("TopicSerializer", "/api/catalog/topics/{slug}/"),
+        "topic": ("PublicTopicDetailSerializer", "/api/catalog/topics/{slug}/"),
         "work": ("WorkDetailSerializer", "/api/catalog/works/{slug}/"),
         "reading_path": ("PublicReadingPathSerializer", "/api/catalog/theory-system/reading-paths/{slug}/"),
         "discipline": ("DisciplineSerializer", "/api/catalog/disciplines/{slug}/"),
@@ -431,7 +437,7 @@ PUBLIC_PAGE_CONTRACTS: tuple[PublicPageContract, ...] = (
     _page("theory", "scholar-entry", "学者中的理论入口", "/scholars/{scholar_slug}/theories", "ScholarSectionPublicView", (SCHOLAR_MODULES["theories"],), "/admin/theories/{id}?section=scholars", serializer="PublicScholarDetailSerializer", api="/api/catalog/scholars/{scholar_slug}/", preview_support=False),
     _page("theory", "topic-entry", "主题中的理论入口", "/topics/{topic_slug}/theory-schools", "TopicSectionPublicView", (THEORY_MODULES["topics"],), "/admin/theories/{id}?section=topics", serializer="TopicSerializer", api="/api/catalog/topics/{topic_slug}/", preview_support=False),
     _page("theory", "reading-path", "Reading Path", "/theories/reading-paths/{path_slug}", "ReadingPathPublicView", (THEORY_MODULES["reading_paths"],), "/admin/theories/{id}?section=reading", serializer="PublicReadingPathSerializer", api="/api/catalog/theory-system/reading-paths/{path_slug}/"),
-    _page("topic", "overview", "概览", "/topics/{slug}", "TopicPublicView", (TOPIC_MODULES["identity"], TOPIC_MODULES["problem"], TOPIC_MODULES["framework"], TOPIC_MODULES["evidence"], TOPIC_MODULES["claims"]), "/admin/topics/{id}"),
+    _page("topic", "overview", "概览", "/topics/{slug}", "TopicPublicView", (TOPIC_MODULES["identity"], TOPIC_MODULES["problem"], TOPIC_MODULES["framework"], TOPIC_MODULES["works"], TOPIC_MODULES["scholars"], TOPIC_MODULES["concepts"], TOPIC_MODULES["articles"], TOPIC_MODULES["reading_paths"], TOPIC_MODULES["evidence"], TOPIC_MODULES["claims"]), "/admin/topics/{id}"),
     _page("topic", "works", "馆藏作品", "/topics/{slug}/works", "TopicSectionPublicView", (TOPIC_MODULES["works"], TOPIC_MODULES["curated_works"]), "/admin/topics/{id}?section=works"),
     _page("topic", "recent", "最新入库", "/topics/{slug}/recent", "TopicSectionPublicView", (TOPIC_MODULES["works"], TOPIC_MODULES["curated_works"]), "/admin/topics/{id}?section=works"),
     _page("topic", "scholars", "代表学者", "/topics/{slug}/scholars", "TopicSectionPublicView", (TOPIC_MODULES["scholars"],), "/admin/topics/{id}?section=scholars"),
@@ -624,6 +630,8 @@ ADMIN_FIELD_USAGE = {
     },
     "topic": {
         "name": ("topic-identity", "Search", "QueryLexicon"),
+        "parent": ("topic-identity", "Topic directory"),
+        "image_selection": ("topic-identity",),
         "slug": ("topic-identity", "Topic route", "Search"),
         "search_aliases": ("Search", "QueryLexicon"),
         "description": ("topic-identity",),
@@ -634,7 +642,7 @@ ADMIN_FIELD_USAGE = {
         "formation_context": ("topic-framework",),
         "key_concepts": ("topic-concepts",),
         "timeline": ("topic-timeline",),
-        "curation": ("topic-curated-works", "topic-reading-paths"),
+        "curation": ("topic-curated-works", "topic-reading-paths", "topic-articles", "topic-problem", "topic-concepts", "topic-evidence", "topic-scholars"),
         "editorial_status": ("Public visibility",),
         "discipline_relations": ("Topic directory", "Knowledge graph"),
         "theory_relations": ("topic-theories",),

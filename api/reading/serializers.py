@@ -351,13 +351,34 @@ class SavedItemSerializer(OwnedSerializer):
 
 
 class SavedTopicSerializer(OwnedSerializer):
-    name = serializers.CharField(source="topic.name", read_only=True)
-    slug = serializers.CharField(source="topic.slug", read_only=True)
-    description = serializers.CharField(source="topic.description", read_only=True)
+    name = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    version = serializers.SerializerMethodField()
+
+    def public_topic(self, row):
+        from catalog.services.public_topics import topic_identity
+        cache = self.context.setdefault("saved_topic_public_projection", {})
+        if row.topic_id not in cache:
+            cache[row.topic_id] = topic_identity(row.topic_id)
+        return cache[row.topic_id] or {}
+
+    def get_name(self, row) -> str:
+        return self.public_topic(row).get("name", "当前不可用的主题")
+
+    def get_slug(self, row) -> str:
+        return self.public_topic(row).get("slug", "")
+
+    def get_description(self, row) -> str:
+        return self.public_topic(row).get("description", "")
+
+    def get_version(self, row) -> str:
+        from .topic_saves import version
+        return version(row)
 
     class Meta:
         model = SavedTopic
-        fields = ("id", "topic", "name", "slug", "description", "created_at")
+        fields = ("id", "topic", "name", "slug", "description", "created_at", "version")
         read_only_fields = ("id", "created_at")
 
     def validate_topic(self, value: Topic):

@@ -1,5 +1,15 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-21 主题与独立私人动作
+
+catalog/topics与slug详情保留原URL，响应改为明确PublicTopicDirectory/PublicTopicDetail。目录q/search、parent重复值最多20（分支并集）、discipline/subdiscipline/theory、sort、page/page_size；详情section、question_type、availability、reading、sort与分页。规范理论与旧流派分别按准确ID/slug匹配；错误分支不放宽查询。八栏目、准确版/原文、真实counts、无全文/明确待购/不可用及旧资料均有结构化字段。
+
+admin/knowledge-preview/topic/{id}/ POST只读预览，body为parent与curation；curation支持规范问题/争论/概念、准确出版版本、ScholarProfile、ReadingPath、RecommendationIssue的UUID数组（一般最多200，issue最多50）及本主题featured_source_id。只覆盖内存草稿，正式视角不变，private/no-store，无任务或版本写入。管理topic集合只GET/POST，详情沿原草稿/发布流程；媒体库支持topic。
+
+reading/source-follows支持topic_id稳定UUID，与scholar_id互斥；继续owner/CAS/request_id/回执查回。SavedTopic独立收藏：GET saved-topics/state/?topic=UUID&request_id=可选；POST saved-topics/command/传topic/saved/expected_version/request_id，要求X-Reader-Owner；返回owner_id/topic_id/saved/version/can_save/record/receipt。旧POST/DELETE同步命令保护，禁PUT/PATCH；撤下收藏只显示安全占位。
+
+schema213路径完整保留205旧路径，0错误/10既有提示，生成类型同步。catalog0074/reading0020未应用；契约为静态结果，不代表运行验收。
+
 ## 2026-10-21 学者公开投影与私人关注
 
 既有admin/knowledge-preview/{object_type}/{object_id}/纳入契约，GET仅在scholar支持featured_source_id和reading_path_ids未保存选择覆盖。前者UUID或空清除，后者单个逗号分隔最多100 UUID或空清人工关联；重复/未知参数拒绝。只修改内存中的草稿副本，继续受控预览与真实公开资料投影；自动路径关联和完整分页总数保留。异步选择变更取消旧请求，以本次选择的返回决定预览，错误保留输入并可重试。

@@ -1,5 +1,15 @@
 # 中断恢复最短路径
 
+## 2026-10-21 主题源码收口
+
+前置ba56939；恢复先读CURRENT_PROGRESS最上方与TOPICS_20261021，核对最新Git提交。tmp/stl4-topics-checkpoint.json为74路径精确白名单；不要纳入其他继承脏改。公开主题/层级/0074、后台新编排与POST预览、媒体、SourceFollow topic/0020、SavedTopic命令及隐私、契约/生成类型一并保存。原代理已不在活动列表，后续由主线继续。
+
+90源码接入、10部分、109待实施只是视图源码统计。迁移、正式测试、浏览器、构建、检索测评与生产操作未运行。PDF73–78六张实际读图在tmp/pdfs/stl4-curation-20261021；下一单元从RecommendationIssue/EditorialRevision/editorial_blocks和现有Reader接续。相关策划前后端文件已有继承修改，先读diff并保留，不能覆盖或整批暂存。没有新生产种子或清理授权。
+
+## 当前接续点 ba56939
+
+2026-10-21学者110路径已保存，保留其余继承未提交修改。先读CURRENT_PROGRESS最上方主题68–71项；不要重做学者或把本地提交当作部署。private代理继续SourceFollow topic/0020，public后端代理继续Topic parent/0074及正式公开投影与DTO，UI代理继续68–71公共页；root接后台编辑/受控预览并完成契约与进度。当前主题未计入已接入视图。原PDF四图已实际读取。
+
 ## 2026-10-21 学者源码收口
 
 前置a0720ad。先读SCHOLARS_20261021与本节之后的最终检查点编号；恢复公开学者DTO/投影、0073及Contribution.scope全调用链、SourceFollow/0019及隐私、三路由/公开组件/后台编辑预览、schema与生成类型。tmp/stl4-scholars-checkpoint.json为本次精确白名单；ingestion/views.py只纳入3行范围保留改动，其他继承脏改不得整批提交。

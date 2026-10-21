@@ -12,7 +12,7 @@ import styles from "./source-status.module.css";
 
 type PendingCommand = { owner: string; input: SourceCommand; dispatched: boolean };
 export type SourceFollowCommands = { memory: RefObject<Map<string, PendingCommand>>; changed: () => void };
-const commandKey = (path: string, profile?: string | null) => profile ? `scholar:${profile}` : path;
+const commandKey = (path: string, profile?: string | null, topic?: string | null) => profile ? `scholar:${profile}` : topic ? `topic:${topic}` : path;
 
 /** Keep only command identities in memory, above session-driven child remounts. */
 export function useSourceFollowCommands(owner?: string | null): SourceFollowCommands {
@@ -28,11 +28,11 @@ export function useSourceFollowCommands(owner?: string | null): SourceFollowComm
   return { memory, changed };
 }
 
-export function SourceFollowControl({ ownerId, path, scholarProfileId, row, canSubscribe, onSaved, onReload, commands, className }: {
-  ownerId: string; path: string; scholarProfileId?: string | null; row: SourceFollow | null; canSubscribe: boolean;
+export function SourceFollowControl({ ownerId, path, scholarProfileId, topicId, row, canSubscribe, onSaved, onReload, commands, className }: {
+  ownerId: string; path: string; scholarProfileId?: string | null; topicId?: string | null; row: SourceFollow | null; canSubscribe: boolean;
   onSaved: (row: SourceFollow | null) => void; onReload: () => void; commands: SourceFollowCommands; className?: string;
 }) {
-  const key = commandKey(path, scholarProfileId);
+  const key = commandKey(path, scholarProfileId, topicId);
   const [state, setState] = useState<"idle" | "pending" | "unknown">(() => commands.memory.current.get(key)?.owner === ownerId ? "unknown" : "idle");
   const [message, setMessage] = useState("");
   const controller = useRef<AbortController | null>(null), epoch = useRef(0);
@@ -51,7 +51,7 @@ export function SourceFollowControl({ ownerId, path, scholarProfileId, row, canS
     let pending = commands.memory.current.get(key);
     if (pending?.owner !== ownerId) pending = undefined;
     if (!pending && action) {
-      pending = { owner: ownerId, dispatched: false, input: { path, ...(scholarProfileId ? { scholar_profile_id: scholarProfileId } : {}), action, expected_revision: row?.revision ?? 0, request_id: crypto.randomUUID() } };
+      pending = { owner: ownerId, dispatched: false, input: { path, ...(scholarProfileId ? { scholar_profile_id: scholarProfileId } : {}), ...(topicId ? { topic_id: topicId } : {}), action, expected_revision: row?.revision ?? 0, request_id: crypto.randomUUID() } };
       commands.memory.current.set(key, pending); commands.changed();
     }
     if (!pending) return;
@@ -71,7 +71,7 @@ export function SourceFollowControl({ ownerId, path, scholarProfileId, row, canS
       if (request.signal.aborted || epoch.current !== version) return;
       const current = result.record;
       if (result.receipt.request_id !== input.request_id || result.receipt.deleted !== (current === null)
-        || current && (current.owner_id !== ownerId || (input.scholar_profile_id ? current.scholar_profile_id !== input.scholar_profile_id : current.path !== input.path))) {
+        || current && (current.owner_id !== ownerId || (input.scholar_profile_id ? current.scholar_profile_id !== input.scholar_profile_id : input.topic_id ? current.topic_id !== input.topic_id : current.path !== input.path))) {
         throw new Error("原操作回执身份无法核对，请保留原请求后重试。");
       }
       commands.memory.current.delete(key); commands.changed(); setState("idle"); onSaved(current);
@@ -85,11 +85,11 @@ export function SourceFollowControl({ ownerId, path, scholarProfileId, row, canS
       if (reason instanceof PrivateOwnerVerificationError || reason instanceof ApiRequestError && [401, 403, 409].includes(reason.status)) onReload();
     } finally { if (controller.current === request) controller.current = null; }
   }
-  const disabled = state !== "idle", scholar = !!scholarProfileId;
+  const disabled = state !== "idle", entity = !!(scholarProfileId || topicId);
   return <div className={styles.controls}>
     <div className={styles.actions}>
-      {row?.active ? <button className={className} disabled={disabled} onClick={() => void execute("unsubscribe")}><BellOff size={16} />{scholar ? "已关注 · 取消关注" : "取消订阅"}</button>
-        : <button className={className} disabled={disabled || !canSubscribe} onClick={() => void execute("subscribe")}><Bell size={16} />{scholar ? "关注学者" : row ? "重新订阅更新" : "订阅更新"}</button>}
+      {row?.active ? <button className={className} disabled={disabled} onClick={() => void execute("unsubscribe")}><BellOff size={16} />{entity ? "已关注 · 取消关注" : "取消订阅"}</button>
+        : <button className={className} disabled={disabled || !canSubscribe} onClick={() => void execute("subscribe")}><Bell size={16} />{scholarProfileId ? "关注学者" : topicId ? "关注主题" : row ? "重新订阅更新" : "订阅更新"}</button>}
       {row && row.unread_count > 0 ? <button disabled={disabled} onClick={() => void execute("mark_read")}><Check size={16} />标为已读</button> : null}
       {state === "unknown" ? <button onClick={() => void execute()}><RefreshCw size={15} />核对原操作</button> : null}
       {state === "pending" ? <span role="status">正在保存…</span> : null}
@@ -100,28 +100,35 @@ export function SourceFollowControl({ ownerId, path, scholarProfileId, row, canS
 
 export function ScholarFollowButton(props: { profileId: string; href: string; className?: string; preview?: boolean }) {
   if (props.preview) return <button className={props.className} disabled title="管理预览不执行私人关注"><Bell size={16} />关注学者</button>;
-  return <ScholarFollowAction {...props} />;
+  return <EntityFollowAction {...props} kind="scholar" entityId={props.profileId} />;
 }
 
-function ScholarFollowAction({ profileId, href, className }: { profileId: string; href: string; className?: string }) {
+export function TopicFollowButton(props: { topicId: string; href: string; className?: string; preview?: boolean }) {
+  if (props.preview) return <button className={props.className} disabled title="管理预览不执行私人关注"><Bell size={16} />关注主题</button>;
+  return <EntityFollowAction {...props} kind="topic" entityId={props.topicId} />;
+}
+
+function EntityFollowAction({ kind, entityId, href, className }: { kind: "scholar" | "topic"; entityId: string; href: string; className?: string }) {
   const { state: session, retry } = usePublicSession();
   const owner = session.status === "authenticated" && session.user ? String(session.user.id) : null;
   const commands = useSourceFollowCommands(owner);
-  const [data, setData] = useState<{ owner: string; profile: string; attempt: number; row: SourceFollow | null; source: PublicSourceStatus } | null>(null);
+  const identity = `${kind}:${entityId}`, label = kind === "topic" ? "关注主题" : "关注学者";
+  const [data, setData] = useState<{ owner: string; identity: string; attempt: number; row: SourceFollow | null; source: PublicSourceStatus } | null>(null);
   const [error, setError] = useState(""), [attempt, setAttempt] = useState(0);
   const reload = () => { setError(""); setAttempt(value => value + 1); };
   useEffect(() => {
     if (!owner) return;
     const controller = new AbortController(), unsubscribe = subscribeToSessionChanges(() => { controller.abort(); setData(null); setError(""); });
-    Promise.all([loadPublicSource(href, controller.signal, profileId), loadSourceFollows(owner, controller.signal, { scholar_profile_id: profileId })])
-      .then(([source, page]) => { if (!controller.signal.aborted) setData({ owner, profile: profileId, attempt, row: page.results[0] ?? null, source }); })
+    const selector = { [kind === "topic" ? "topic_id" : "scholar_profile_id"]: entityId };
+    Promise.all([loadPublicSource(href, controller.signal, kind === "scholar" ? entityId : undefined, kind === "topic" ? entityId : undefined), loadSourceFollows(owner, controller.signal, selector)])
+      .then(([source, page]) => { if (!controller.signal.aborted) setData({ owner, identity, attempt, row: page.results[0] ?? null, source }); })
       .catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "关注状态未能读取。"); });
     return () => { controller.abort(); unsubscribe(); };
-  }, [owner, profileId, href, attempt]);
-  if (session.status === "unauthenticated") return <Link className={className} href={`/login?next=${encodeURIComponent(href)}`}><Bell size={16} />关注学者</Link>;
-  if (!owner) return <div><button className={className} disabled><Bell size={16} />关注学者</button>{session.status !== "loading" ? <button onClick={retry}>重新验证登录</button> : null}</div>;
-  const current = data?.owner === owner && data.profile === profileId && data.attempt === attempt ? data : null;
-  return <div>{current ? <SourceFollowControl key={`${owner}:${profileId}`} ownerId={owner} path={current.source.canonical_path || href} scholarProfileId={profileId}
+  }, [owner, kind, entityId, identity, href, attempt]);
+  if (session.status === "unauthenticated") return <Link className={className} href={`/login?next=${encodeURIComponent(href)}`}><Bell size={16} />{label}</Link>;
+  if (!owner) return <div><button className={className} disabled><Bell size={16} />{label}</button>{session.status !== "loading" ? <button onClick={retry}>重新验证登录</button> : null}</div>;
+  const current = data?.owner === owner && data.identity === identity && data.attempt === attempt ? data : null;
+  return <div>{current ? <SourceFollowControl key={`${owner}:${identity}`} ownerId={owner} path={current.source.canonical_path || href} scholarProfileId={kind === "scholar" ? entityId : undefined} topicId={kind === "topic" ? entityId : undefined}
     row={current.row} canSubscribe={current.source.can_subscribe} commands={commands} className={className} onSaved={reload} onReload={reload} />
     : <button className={className} disabled><Bell size={16} />正在读取关注…</button>}
     {error ? <p role="alert">{error}<button onClick={reload}>重新读取</button></p> : null}

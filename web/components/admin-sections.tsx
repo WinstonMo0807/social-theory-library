@@ -1,6 +1,8 @@
 "use client";
 
 import { ScholarProfileFieldsEditor, type ScholarProfileFields } from "./admin/knowledge/scholar-profile-fields";
+import { TopicFieldsEditor, topicCuration, topicFields, type TopicCurationFields } from "./admin/knowledge/topic-fields";
+import { KnowledgeImagePanel } from "./admin/media/knowledge-image-panel";
 import { AdminListPages, useAdminListPage } from "@/components/admin/knowledge/list-pages";
 
 import {
@@ -19,7 +21,6 @@ import {
   Save,
   Search,
   Server,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -135,6 +136,7 @@ type AdminTheory = {
 
 type AdminTopic = {
   id: string;
+  parent: string | null;
   editorial_revision?: { id: string } | null;
   edit_version?: string;
   name: string;
@@ -192,7 +194,7 @@ type ReadingPathDraft = {
   workIds: string[];
 };
 
-type TaxonomyDraft = {
+type TaxonomyDraft = TopicCurationFields & {
   id: string | null;
   edit_version?: string;
   kind: "theory" | "topic";
@@ -226,6 +228,7 @@ type TaxonomyDraft = {
 };
 
 const emptyTaxonomy: TaxonomyDraft = {
+  ...topicFields(),
   id: null,
   kind: "theory",
   name: "",
@@ -307,6 +310,7 @@ export function TaxonomyAdmin({
   function editTheory(item: AdminTheory) {
     const curation = item.curation ?? {};
     setDraftState({
+      ...topicFields(),
       id: item.id,
       kind: "theory",
       name: item.name,
@@ -348,6 +352,7 @@ export function TaxonomyAdmin({
   function editTopic(item: AdminTopic) {
     const curation = item.curation ?? {};
     setDraftState({
+      ...topicFields(curation, item.parent),
       id: item.id,
       edit_version: item.edit_version,
       kind: "topic",
@@ -443,28 +448,8 @@ export function TaxonomyAdmin({
         }
       : {
           ...draft.baseCuration,
+          ...topicCuration(draft),
           hero_caption: draft.heroCaption.trim(),
-          foundational_work_ids: draft.primaryWorkIds,
-          recent_work_ids: draft.secondaryWorkIds,
-          related_scholar_ids: draft.scholarIds,
-          linked_theory_ids: draft.theoryIds,
-          featured_passage_id: draft.featuredPassageIds[0] ?? "",
-          featured_passage_reason: (
-            draft.suggestions.passages?.find(
-              (option) => option.id === draft.featuredPassageIds[0],
-            )?.reason ?? ""
-          ),
-          featured_passage_evidence: (
-            draft.suggestions.passages?.find(
-              (option) => option.id === draft.featuredPassageIds[0],
-            )?.evidence ?? {}
-          ),
-          reading_paths: draft.readingPaths.map((path) => ({
-            title: path.title.trim(),
-            level: path.level.trim(),
-            description: path.description.trim(),
-            work_ids: path.workIds,
-          })).filter((path) => path.title),
         };
     const body = draft.kind === "theory"
       ? {
@@ -484,6 +469,7 @@ export function TaxonomyAdmin({
           name: draft.name,
           slug: draft.slug,
           description: draft.description,
+          parent: draft.parentId || null,
           problem_statement: draft.problemStatement,
           core_questions: splitLines(draft.coreQuestions),
           research_dimensions: splitLines(draft.researchDimensions),
@@ -710,7 +696,7 @@ export function TaxonomyAdmin({
             onChange={(value) => setDraft({ ...draft, timeline: formatEditorRows(value, ["year", "node", "description"]) })}
           /> : null}
           <label><span>{draft.kind === "topic" ? "主题说明" : "理论说明"}</span><textarea rows={7} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
-          <fieldset className="curation-fieldset">
+          {draft.kind === "theory" ? <fieldset className="curation-fieldset">
             <legend>系统建议与人工编排</legend>
             <p>候选来自已确认的 PDF 作者、流派和主题关系。选中后才会进入公开页面。</p>
             <CuratedSelector
@@ -737,15 +723,6 @@ export function TaxonomyAdmin({
               selected={draft.theoryIds}
               onChange={(theoryIds) => setDraft({ ...draft, theoryIds })}
             />
-            {draft.kind === "topic" ? (
-              <CuratedSelector
-                label="全文摘录聚焦，限选一项"
-                options={draft.suggestions.passages ?? []}
-                selected={draft.featuredPassageIds}
-                single
-                onChange={(featuredPassageIds) => setDraft({ ...draft, featuredPassageIds })}
-              />
-            ) : null}
             {draft.kind === "theory" ? (
               <RelationDetailsEditor
                 label="相邻流派的关系与依据"
@@ -756,7 +733,8 @@ export function TaxonomyAdmin({
                 onChange={(neighborRelations) => setDraft({ ...draft, neighborRelations })}
               />
             ) : null}
-          </fieldset>
+          </fieldset> : null}
+          {draft.kind === "topic" ? ["identity", "questions", "works", "scholars", "concepts", "articles", "paths", "sources"].map(section => <div data-editor-section={section} key={section}><TopicFieldsEditor topicId={draft.id} section={section} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></div>) : null}
           {draft.kind === "theory" ? <StructuredRowsEditor focused
             label="概念关系图"
             rowLabel="关系"
@@ -771,96 +749,7 @@ export function TaxonomyAdmin({
             ]}
             onChange={(value) => setDraft({ ...draft, mapLines: formatEditorRows(value, ["source", "target", "relation", "description"]) })}
           /> : null}
-          {draft.kind === "topic" ? (
-            <fieldset className="reading-path-editor">
-              <legend>人工编排的阅读路径</legend>
-              <p>每条路径独立选择文献，不再自动复用奠基文献。</p>
-              {draft.readingPaths.map((path, index) => (
-                <div className="reading-path-admin-row" key={`${index}-${path.title}`}>
-                  <div className="inline-fields">
-                    <label>
-                      <span>路径名称</span>
-                      <input
-                        value={path.title}
-                        onChange={(event) => setDraft({
-                          ...draft,
-                          readingPaths: draft.readingPaths.map((item, itemIndex) => (
-                            itemIndex === index ? { ...item, title: event.target.value } : item
-                          )),
-                        })}
-                      />
-                    </label>
-                    <label>
-                      <span>难度</span>
-                      <select
-                        value={path.level}
-                        onChange={(event) => setDraft({
-                          ...draft,
-                          readingPaths: draft.readingPaths.map((item, itemIndex) => (
-                            itemIndex === index ? { ...item, level: event.target.value } : item
-                          )),
-                        })}
-                      >
-                        <option value="">未分级</option>
-                        <option value="入门">入门</option>
-                        <option value="进阶">进阶</option>
-                        <option value="研究">研究</option>
-                      </select>
-                    </label>
-                  </div>
-                  <label>
-                    <span>说明</span>
-                    <textarea
-                      rows={2}
-                      value={path.description}
-                      onChange={(event) => setDraft({
-                        ...draft,
-                        readingPaths: draft.readingPaths.map((item, itemIndex) => (
-                          itemIndex === index ? { ...item, description: event.target.value } : item
-                        )),
-                      })}
-                    />
-                  </label>
-                  <CuratedSelector
-                    label="本路径文献"
-                    options={draft.suggestions.works ?? []}
-                    selected={path.workIds}
-                    onChange={(workIds) => setDraft({
-                      ...draft,
-                      readingPaths: draft.readingPaths.map((item, itemIndex) => (
-                        itemIndex === index ? { ...item, workIds } : item
-                      )),
-                    })}
-                  />
-                  <button
-                    className="button secondary"
-                    type="button"
-                    onClick={() => setDraft({
-                      ...draft,
-                      readingPaths: draft.readingPaths.filter((_item, itemIndex) => itemIndex !== index),
-                    })}
-                  >
-                    <X size={14} />删除这条路径
-                  </button>
-                </div>
-              ))}
-              <button
-                className="button secondary"
-                type="button"
-                onClick={() => setDraft({
-                  ...draft,
-                  readingPaths: draft.readingPaths.concat({
-                    title: "",
-                    level: "",
-                    description: "",
-                    workIds: [],
-                  }),
-                })}
-              >
-                <Plus size={14} />新增阅读路径
-              </button>
-            </fieldset>
-          ) : null}
+          {draft.kind === "topic" && (draft.readingPaths.length > 0 || draft.primaryWorkIds.length > 0 || draft.secondaryWorkIds.length > 0) ? <div data-editor-section="versions"><p>已有的作品级书目与旧阅读编排继续保留。新版通过明确出版版本和正式阅读路径展示；保存本页不会删除旧记录或自动替换读者材料。</p></div> : null}
           <label><span>编辑状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
           <button className="button" type="submit" disabled={Boolean(pendingAction)}><Save size={15} />{pendingAction ? "正在保存…" : "保存主题草稿"}</button>
           {message ? <p className="form-message" role="status">{message}</p> : null}
@@ -884,7 +773,7 @@ export function TaxonomyAdmin({
           objectId={draft.id}
           refreshKey={message}
           onChanged={detail.refresh}
-        /> : null}{draft.kind === "topic" && draft.id ? <TopicMergePanel topicId={draft.id} name={draft.name} status={draft.status} /> : null}</div></KnowledgeVisualEditor> : null}
+        /> : null}{draft.kind === "topic" && draft.id ? <KnowledgeImagePanel objectType="topic" objectId={draft.id} refreshKey={message} onChanged={() => { detail.refresh(); setMessage("页面图片草稿已更新，请核对预览后发布。"); }} /> : null}{draft.kind === "topic" && draft.id ? <TopicMergePanel topicId={draft.id} name={draft.name} status={draft.status} /> : null}</div></KnowledgeVisualEditor> : null}
       </div>
     </AdminPageFrame>
   );

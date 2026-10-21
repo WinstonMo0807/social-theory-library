@@ -5,15 +5,15 @@ from uuid import UUID
 
 from django.db import transaction
 
-from catalog.models import Discipline, Subdiscipline, EditorialRevision, KnowledgeNode, MediaRendition, ReadingPath
+from catalog.models import Discipline, Subdiscipline, Topic, EditorialRevision, KnowledgeNode, MediaRendition, ReadingPath
 from catalog.services.editorial_drafts import save_object_editorial_patch
 from catalog.services.media import RENDITION_WIDTHS, build_rendition, media_rendition_snapshot, protect_editorial_renditions
 
-TARGETS = {"knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline}
+TARGETS = {"knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline, "topic": Topic}
 
 
 def image_fields(target):
-    return ("hero_rendition", "hero_image") if isinstance(target, (Discipline, Subdiscipline)) else ("cover_rendition", "cover_asset")
+    return ("hero_rendition", "hero_image") if isinstance(target, (Discipline, Subdiscipline, Topic)) else ("cover_rendition", "cover_asset")
 
 
 def image_legacy_file(target):

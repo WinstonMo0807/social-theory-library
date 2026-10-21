@@ -36,6 +36,7 @@ class PublicSourceStatus(serializers.Serializer):
     catalog_revision_id = serializers.UUIDField(allow_null=True)
     document_revision_id = serializers.UUIDField(allow_null=True)
     scholar_profile_id = serializers.UUIDField(allow_null=True)
+    topic_id = serializers.UUIDField(allow_null=True)
     person_id = serializers.UUIDField(allow_null=True)
     public_revision = serializers.CharField(allow_blank=True)
     href = serializers.CharField(allow_blank=True)
@@ -64,6 +65,7 @@ class SourceFollowOutput(serializers.Serializer):
     owner_id = serializers.CharField()
     path = serializers.CharField()
     scholar_profile_id = serializers.UUIDField(allow_null=True)
+    topic_id = serializers.UUIDField(allow_null=True)
     active = serializers.BooleanField()
     revision = serializers.IntegerField()
     created_at = serializers.DateTimeField()
@@ -101,6 +103,12 @@ class SourceFollowCommand(SourceCommandInput):
     request_id = serializers.UUIDField()
     expected_revision = serializers.IntegerField(min_value=0)
     scholar_profile_id = serializers.UUIDField(required=False)
+    topic_id = serializers.UUIDField(required=False)
+
+    def validate(self, data):
+        if data.get("scholar_profile_id") and data.get("topic_id"):
+            raise serializers.ValidationError("一次关注只能指定一个公开对象。")
+        return data
 
 
 class SourceFollowDelete(SourceCommandInput):
@@ -127,24 +135,35 @@ def positive(value):
 class PublicSourceStatusView(PrivateResponses, APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(parameters=[OpenApiParameter("path", str), OpenApiParameter("scholar_profile_id", str)], responses=PublicSourceStatus)
+    @extend_schema(parameters=[OpenApiParameter("path", str), OpenApiParameter("scholar_profile_id", str), OpenApiParameter("topic_id", str)], responses=PublicSourceStatus)
     def get(self, request):
         profile = request.query_params.get("scholar_profile_id")
         if profile is not None:
             profile = serializers.UUIDField().run_validation(profile)
-        path = serializers.CharField(max_length=400, allow_blank=profile is not None).run_validation(request.query_params.get("path", ""))
-        return Response(source_follow.resolve_public_source(path, scholar_profile_id=profile))
+        topic = request.query_params.get("topic_id")
+        if topic is not None:
+            topic = serializers.UUIDField().run_validation(topic)
+        if profile is not None and topic is not None:
+            raise serializers.ValidationError("一次查询只能指定一个公开对象。")
+        path = serializers.CharField(max_length=400, allow_blank=profile is not None or topic is not None).run_validation(request.query_params.get("path", ""))
+        return Response(source_follow.resolve_public_source(path, scholar_profile_id=profile, topic_id=topic))
 
 
 class SourceFollowsView(PrivateResponses, APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(operation_id="reading_source_follows_list", parameters=[OpenApiParameter("path", str), OpenApiParameter("scholar_profile_id", str), OpenApiParameter("page", int)], responses=SourceFollowsPage)
+    @extend_schema(operation_id="reading_source_follows_list", parameters=[OpenApiParameter("path", str), OpenApiParameter("scholar_profile_id", str), OpenApiParameter("topic_id", str), OpenApiParameter("page", int)], responses=SourceFollowsPage)
     def get(self, request):
         page = positive(request.query_params.get("page", 1))
+        if request.headers.get("X-Reader-Owner") is not None:
+            require_owner(request)
         query = SourceFollow.objects.filter(user=request.user)
+        if "scholar_profile_id" in request.query_params and "topic_id" in request.query_params:
+            raise serializers.ValidationError("一次查询只能指定一个公开对象。")
         if "scholar_profile_id" in request.query_params:
             query = query.filter(scholar_profile_id=serializers.UUIDField().run_validation(request.query_params["scholar_profile_id"]))
+        elif "topic_id" in request.query_params:
+            query = query.filter(topic_id=serializers.UUIDField().run_validation(request.query_params["topic_id"]))
         elif "path" in request.query_params:
             raw = serializers.CharField(max_length=400).run_validation(request.query_params["path"])
             query = query.filter(path=source_follow.canonical_path(raw))
@@ -172,6 +191,8 @@ class SourceFollowDetailView(PrivateResponses, APIView):
 
     @extend_schema(parameters=[OpenApiParameter("history_page", int)], responses=SourceFollowOutput)
     def get(self, request, pk):
+        if request.headers.get("X-Reader-Owner") is not None:
+            require_owner(request)
         row = source_follow.refresh(pk, request.user.pk)
         if row is None:
             raise NotFound("本人来源关注记录不存在。")

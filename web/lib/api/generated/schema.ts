@@ -1,3 +1,4 @@
+/** Generated from DRF/OpenAPI. Do not edit by hand. */
 export interface paths {
     "/api/catalog/admin/assets/{asset_id}/outline/": {
         parameters: {
@@ -537,7 +538,8 @@ export interface paths {
         /** @description Protected KnowledgePreviewPayload envelope with existing draft/published perspectives and their public serializer data. Optional scholar selections affect only an in-memory draft copy; no data is saved. */
         get: operations["admin_knowledge_object_preview"];
         put?: never;
-        post?: never;
+        /** @description Read-only Topic selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written. */
+        post: operations["admin_topic_selection_preview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1067,6 +1069,44 @@ export interface paths {
         head?: never;
         /** @description Opt-in only on protected Admin views, never public catalog views. */
         patch: operations["catalog_admin_theory_timeline_partial_update"];
+        trace?: never;
+    };
+    "/api/catalog/admin/topics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_topics_list"];
+        put?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        post: operations["catalog_admin_topics_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/topics/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_topics_retrieve"];
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        put: operations["catalog_admin_topics_update"];
+        post?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        delete: operations["catalog_admin_topics_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        patch: operations["catalog_admin_topics_partial_update"];
         trace?: never;
     };
     "/api/catalog/admin/works/{work_id}/editions/": {
@@ -1720,6 +1760,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["catalog_theory_timeline_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/topics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["public_topic_directory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/topics/{slug}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_topics_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3223,6 +3295,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/saved-topics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_saved_topics_list"];
+        put?: never;
+        post: operations["reading_saved_topics_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/saved-topics/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_saved_topics_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["reading_saved_topics_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/saved-topics/command/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_saved_topics_command_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/saved-topics/state/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_saved_topics_state_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/search-records/": {
         parameters: {
             query?: never;
@@ -3570,6 +3706,60 @@ export interface components {
             /** Format: int64 */
             sort_order?: number;
         };
+        AdminTopic: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly edit_version: string;
+            name: string;
+            /** Format: uuid */
+            parent?: string | null;
+            slug?: string;
+            description?: string;
+            problem_statement?: string;
+            core_questions?: unknown;
+            research_dimensions?: unknown;
+            methods?: unknown;
+            formation_context?: string;
+            key_concepts?: unknown;
+            timeline?: unknown;
+            /** Format: uri */
+            hero_image?: string | null;
+            /** Format: int64 */
+            curation_level?: number;
+            curation?: unknown;
+            readonly normalized_relations: {
+                [key: string]: unknown;
+            };
+            readonly suggestions: {
+                [key: string]: unknown;
+            };
+            editorial_status?: string;
+            readonly work_count: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        AdminTopicRequest: {
+            name: string;
+            /** Format: uuid */
+            parent?: string | null;
+            slug?: string;
+            description?: string;
+            problem_statement?: string;
+            core_questions?: unknown;
+            research_dimensions?: unknown;
+            methods?: unknown;
+            formation_context?: string;
+            key_concepts?: unknown;
+            timeline?: unknown;
+            /** Format: binary */
+            hero_image?: string;
+            /** Format: int64 */
+            curation_level?: number;
+            curation?: unknown;
+            editorial_status?: string;
+        };
         /**
          * @description * `alias` - 别名
          *     * `translation` - 译名
@@ -3807,6 +3997,14 @@ export interface components {
          * @enum {string}
          */
         AuthorityStatusEnum: "draft" | "needs_review" | "verified" | "rejected" | "merged" | "archived";
+        /**
+         * @description * `all` - all
+         *     * `readable` - readable
+         *     * `no_fulltext` - no_fulltext
+         *     * `planned` - planned
+         * @enum {string}
+         */
+        AvailabilityEnum: "all" | "readable" | "no_fulltext" | "planned";
         /**
          * @description * `database` - database
          * @enum {string}
@@ -4613,7 +4811,7 @@ export interface components {
         DiscoveryResponse: {
             /** Format: uuid */
             id: string;
-            sort: components["schemas"]["SortEnum"];
+            sort: components["schemas"]["DiscoveryResponseSortEnum"];
             /** @description 本轮恢复或扩展后当前仍可访问的新增原文材料总数，包含未分页展示的结果。 */
             added_count: number;
             documents: components["schemas"]["DiscoveryDocuments"];
@@ -4665,6 +4863,13 @@ export interface components {
             deprecated?: boolean;
             status_url?: string;
         };
+        /**
+         * @description * `relevance` - relevance
+         *     * `year_desc` - year_desc
+         *     * `year_asc` - year_asc
+         * @enum {string}
+         */
+        DiscoveryResponseSortEnum: "relevance" | "year_desc" | "year_asc";
         DiscoveryRetrievalIdentity: {
             index_generation: string;
             index_uid: string;
@@ -5624,7 +5829,7 @@ export interface components {
         KnowledgeNodeDetail: {
             /** Format: uuid */
             readonly id: string;
-            node_type: components["schemas"]["NodeTypeEnum"];
+            node_type: components["schemas"]["KnowledgeNodeTypeEnum"];
             canonical_name_zh: string;
             canonical_name_en?: string;
             slug: string;
@@ -5687,7 +5892,7 @@ export interface components {
         KnowledgeNodeList: {
             /** Format: uuid */
             readonly id: string;
-            node_type: components["schemas"]["NodeTypeEnum"];
+            node_type: components["schemas"]["KnowledgeNodeTypeEnum"];
             canonical_name_zh: string;
             canonical_name_en?: string;
             slug: string;
@@ -5714,7 +5919,7 @@ export interface components {
             readonly updated_at: string;
         };
         KnowledgeNodeListRequest: {
-            node_type: components["schemas"]["NodeTypeEnum"];
+            node_type: components["schemas"]["KnowledgeNodeTypeEnum"];
             canonical_name_zh: string;
             canonical_name_en?: string;
             slug: string;
@@ -5754,6 +5959,17 @@ export interface components {
             sort_order?: number;
             status?: components["schemas"]["KnowledgePublicationStatusEnum"];
         };
+        /**
+         * @description * `discipline` - 学科
+         *     * `theory_tradition` - 理论传统
+         *     * `subdiscipline` - 子学科
+         *     * `concept` - 核心概念
+         *     * `debate` - 理论争论
+         *     * `research_problem` - 研究问题
+         *     * `topic` - 主题
+         * @enum {string}
+         */
+        KnowledgeNodeTypeEnum: "discipline" | "theory_tradition" | "subdiscipline" | "concept" | "debate" | "research_problem" | "topic";
         /**
          * @description * `draft` - 草稿
          *     * `pending` - 待审核
@@ -6455,17 +6671,6 @@ export interface components {
             request_key: string;
             workbench_url: string;
         };
-        /**
-         * @description * `discipline` - 学科
-         *     * `theory_tradition` - 理论传统
-         *     * `subdiscipline` - 子学科
-         *     * `concept` - 核心概念
-         *     * `debate` - 理论争论
-         *     * `research_problem` - 研究问题
-         *     * `topic` - 主题
-         * @enum {string}
-         */
-        NodeTypeEnum: "discipline" | "theory_tradition" | "subdiscipline" | "concept" | "debate" | "research_problem" | "topic";
         NormalizedTimelineDetail: {
             /** Format: uuid */
             readonly id: string;
@@ -6693,9 +6898,10 @@ export interface components {
          *     * `reading_path` - reading_path
          *     * `discipline` - discipline
          *     * `subdiscipline` - subdiscipline
+         *     * `topic` - topic
          * @enum {string}
          */
-        ObjectTypeEnum: "knowledge_node" | "reading_path" | "discipline" | "subdiscipline";
+        ObjectTypeEnum: "knowledge_node" | "reading_path" | "discipline" | "subdiscipline" | "topic";
         /**
          * @description * `outline` - outline
          *     * `guide` - guide
@@ -6782,6 +6988,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["AdminTheoryTimelineEvent"][];
+        };
+        PaginatedAdminTopicList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AdminTopic"][];
         };
         PaginatedAnnotationList: {
             /** @example 123 */
@@ -7007,6 +7228,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["ReadingProgress"][];
+        };
+        PaginatedSavedTopicList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["SavedTopic"][];
         };
         PaginatedSubdisciplineListList: {
             /** @example 123 */
@@ -7497,6 +7733,26 @@ export interface components {
             evidence_work_id?: string | null;
             /** Format: uuid */
             evidence_edition_id?: string | null;
+        };
+        PatchedAdminTopicRequest: {
+            name?: string;
+            /** Format: uuid */
+            parent?: string | null;
+            slug?: string;
+            description?: string;
+            problem_statement?: string;
+            core_questions?: unknown;
+            research_dimensions?: unknown;
+            methods?: unknown;
+            formation_context?: string;
+            key_concepts?: unknown;
+            timeline?: unknown;
+            /** Format: binary */
+            hero_image?: string;
+            /** Format: int64 */
+            curation_level?: number;
+            curation?: unknown;
+            editorial_status?: string;
         };
         PatchedAnnotationRequest: {
             /** Format: uuid */
@@ -8600,6 +8856,12 @@ export interface components {
             readonly schema_version: number;
             readonly turns: components["schemas"]["PrivateRecord"][];
         };
+        /**
+         * @description * `available` - available
+         *     * `sparse` - sparse
+         * @enum {string}
+         */
+        ProfileStateEnum: "available" | "sparse";
         ProjectCreateInputRequest: {
             expected_owner_id?: number;
             /**
@@ -8945,6 +9207,26 @@ export interface components {
             diff?: unknown;
             preview?: boolean;
         };
+        PublicScholarCard: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            person_id: string;
+            slug: string;
+            href: string;
+            person: components["schemas"]["ScholarPerson"];
+            short_description: string;
+            affiliations: string[];
+            key_concerns: string[];
+            nationalities: string[];
+            occupations: string[];
+            matched_alias: string;
+            fields: components["schemas"]["ScholarLink"][];
+            schools: components["schemas"]["ScholarLink"][];
+            work_count: number;
+            authored_work_count: number;
+            profile_state: components["schemas"]["ProfileStateEnum"];
+        };
         /**
          * @description * `available` - available
          *     * `replaced` - replaced
@@ -8981,6 +9263,8 @@ export interface components {
             document_revision_id: string | null;
             /** Format: uuid */
             scholar_profile_id: string | null;
+            /** Format: uuid */
+            topic_id: string | null;
             /** Format: uuid */
             person_id: string | null;
             public_revision: string;
@@ -9053,6 +9337,85 @@ export interface components {
          * @enum {string}
          */
         PublicTimelineSourceStatusEnum: "available" | "unavailable";
+        PublicTopicCard: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            href: string;
+            description: string;
+            problem_statement: string;
+            hero_image: string;
+            tags: string[];
+            matched_alias: string;
+            parent: components["schemas"]["TopicLink"] | null;
+            work_count: number;
+            edition_count: number;
+            scholar_count: number;
+            question_count: number;
+            profile_state: components["schemas"]["ProfileStateEnum"];
+        };
+        PublicTopicDetail: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            href: string;
+            description: string;
+            problem_statement: string;
+            hero_image: string;
+            tags: string[];
+            matched_alias: string;
+            parent: components["schemas"]["TopicLink"] | null;
+            work_count: number;
+            edition_count: number;
+            scholar_count: number;
+            question_count: number;
+            profile_state: components["schemas"]["ProfileStateEnum"];
+            public_revision: components["schemas"]["ScholarRevision"];
+            breadcrumbs: components["schemas"]["TopicLink"][];
+            children: components["schemas"]["TopicLink"][];
+            introduction: components["schemas"]["TopicIntroduction"];
+            counts: {
+                [key: string]: number;
+            };
+            questions: components["schemas"]["TopicKnowledgePage"];
+            works: components["schemas"]["TopicWorkPage"];
+            scholars: components["schemas"]["TopicScholarPage"];
+            concepts: components["schemas"]["TopicKnowledgePage"];
+            articles: components["schemas"]["TopicArticlePage"];
+            paths: components["schemas"]["TopicPathPage"];
+            evidence: components["schemas"]["TopicEvidencePage"];
+            featured_quote: components["schemas"]["CurationItem"] | null;
+            unavailable_links: components["schemas"]["TopicUnavailable"][];
+            unavailable_notice: string;
+            discussion_notice: string;
+            feedback_href: string;
+            graph_href: string;
+            research_href: string;
+            filters: components["schemas"]["TopicDetailFilters"];
+            work_facets: {
+                [key: string]: number;
+            };
+            legacy: components["schemas"]["TopicLegacy"];
+        };
+        PublicTopicDirectory: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["PublicTopicCard"][];
+            query: string;
+            filters: components["schemas"]["TopicDirectoryFilters"];
+            hierarchy: components["schemas"]["TopicHierarchy"][];
+            selected_parent: components["schemas"]["TopicLink"] | null;
+            selected_parents: components["schemas"]["TopicLink"][];
+            recommendations: components["schemas"]["TopicRecommendations"];
+            disambiguation: components["schemas"]["PublicTopicCard"][];
+            overlap_notice: string;
+        };
         PublicWorkDetail: {
             /** Format: uuid */
             readonly id: string;
@@ -9144,6 +9507,13 @@ export interface components {
              */
             allow_neighbors: boolean;
         };
+        /**
+         * @description * `all` - all
+         *     * `research_problem` - research_problem
+         *     * `debate` - debate
+         * @enum {string}
+         */
+        QuestionTypeEnum: "all" | "research_problem" | "debate";
         ReaderAssetAccess: {
             url: string;
             download_url: string;
@@ -9374,6 +9744,13 @@ export interface components {
          * @enum {string}
          */
         ReadingDifficultyEnum: "beginner" | "intermediate" | "advanced";
+        /**
+         * @description * `all` - all
+         *     * `foundational` - foundational
+         *     * `disputed` - disputed
+         * @enum {string}
+         */
+        ReadingEnum: "all" | "foundational" | "disputed";
         ReadingHistory: {
             /** Format: uuid */
             readonly id: string;
@@ -9706,6 +10083,45 @@ export interface components {
             item_count: number;
             planned_count: number;
         };
+        SavedTopic: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            topic: string;
+            readonly name: string;
+            readonly slug: string;
+            readonly description: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly version: string;
+        };
+        ScholarContribution: {
+            /** Format: uuid */
+            person_id: string;
+            name: string;
+            role: string;
+            role_label: string;
+            scope: components["schemas"]["PublicContributionScope"];
+        };
+        ScholarLink: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            href: string;
+        };
+        ScholarPerson: {
+            /** Format: uuid */
+            id: string;
+            preferred_name: string;
+            original_name: string;
+            aliases: string[];
+            birth_year: number | null;
+            death_year: number | null;
+            biography: string;
+            portrait: string;
+            portrait_media: components["schemas"]["PublicCoverMedia"] | null;
+        };
         ScholarPortraitRequestRequest: {
             /** Format: uuid */
             media_id: string | null;
@@ -9788,6 +10204,15 @@ export interface components {
             summary: string;
             source: string;
             edit_version?: string;
+        };
+        ScholarRevision: {
+            token: string;
+            /** Format: uuid */
+            id: string | null;
+            number: number | null;
+            /** Format: date-time */
+            published_at: string | null;
+            change_note: string;
         };
         /**
          * @description * `works` - works
@@ -9889,6 +10314,25 @@ export interface components {
             results: components["schemas"]["SearchRecordOutput"][];
             notice: string;
         };
+        /**
+         * @description * `overview` - overview
+         *     * `questions` - questions
+         *     * `works` - works
+         *     * `scholars` - scholars
+         *     * `concepts` - concepts
+         *     * `articles` - articles
+         *     * `paths` - paths
+         *     * `evidence` - evidence
+         * @enum {string}
+         */
+        SectionEnum: "overview" | "questions" | "works" | "scholars" | "concepts" | "articles" | "paths" | "evidence";
+        /**
+         * @description * `related` - related
+         *     * `foundational` - foundational
+         *     * `disputed` - disputed
+         * @enum {string}
+         */
+        SelectionEnum: "related" | "foundational" | "disputed";
         /**
          * @description * `add` - add
          *     * `remove` - remove
@@ -10014,13 +10458,6 @@ export interface components {
             about_blocks: components["schemas"]["AboutPageBlockRequest"][];
             edit_version: string;
         };
-        /**
-         * @description * `relevance` - relevance
-         *     * `year_desc` - year_desc
-         *     * `year_asc` - year_asc
-         * @enum {string}
-         */
-        SortEnum: "relevance" | "year_desc" | "year_asc";
         SourceCommandOutput: {
             owner_id: string;
             record: components["schemas"]["SourceFollowOutput"] | null;
@@ -10077,6 +10514,8 @@ export interface components {
             expected_revision: number;
             /** Format: uuid */
             scholar_profile_id?: string;
+            /** Format: uuid */
+            topic_id?: string;
         };
         SourceFollowOutput: {
             /** Format: uuid */
@@ -10085,6 +10524,8 @@ export interface components {
             path: string;
             /** Format: uuid */
             scholar_profile_id: string | null;
+            /** Format: uuid */
+            topic_id: string | null;
             active: boolean;
             revision: number;
             /** Format: date-time */
@@ -10646,6 +11087,272 @@ export interface components {
             readonly curated: string;
             readonly curated_claims: string;
         };
+        TopicArticle: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            summary: string;
+            href: string;
+            cover_url: string;
+            public_byline: string;
+            /** Format: date-time */
+            published_at: string | null;
+        };
+        TopicArticlePage: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["TopicArticle"][];
+        };
+        TopicDetailFilters: {
+            section: components["schemas"]["SectionEnum"];
+            question_type: components["schemas"]["QuestionTypeEnum"];
+            availability: components["schemas"]["AvailabilityEnum"];
+            reading: components["schemas"]["ReadingEnum"];
+            sort: components["schemas"]["TopicDetailFiltersSortEnum"];
+        };
+        /**
+         * @description * `relevance` - relevance
+         *     * `published` - published
+         *     * `title` - title
+         * @enum {string}
+         */
+        TopicDetailFiltersSortEnum: "relevance" | "published" | "title";
+        TopicDirectoryFilters: {
+            parent: string;
+            parents: string[];
+            discipline: string;
+            subdiscipline: string;
+            theory: string;
+            sort: components["schemas"]["TopicDirectoryFiltersSortEnum"];
+        };
+        /**
+         * @description * `relevance` - relevance
+         *     * `name` - name
+         *     * `works` - works
+         *     * `updated` - updated
+         * @enum {string}
+         */
+        TopicDirectoryFiltersSortEnum: "relevance" | "name" | "works" | "updated";
+        TopicEvidencePage: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["CurationItem"][];
+        };
+        TopicHierarchy: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            href: string;
+            /** Format: uuid */
+            parent_id: string | null;
+            child_count: number;
+            descendant_count: number;
+            count: number;
+        };
+        TopicIntroduction: {
+            description: string;
+            problem_statement: string;
+            formation_context: string;
+            core_questions: string[];
+            research_dimensions: string[];
+            methods: string[];
+        };
+        TopicKnowledge: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            href: string;
+            node_type: components["schemas"]["TopicKnowledgeNodeTypeEnum"];
+            summary: string;
+            relation_label: string;
+            work_count: number;
+            discussion_count: number;
+            response_count: number;
+            count_notice: string;
+        };
+        /**
+         * @description * `research_problem` - research_problem
+         *     * `debate` - debate
+         *     * `concept` - concept
+         * @enum {string}
+         */
+        TopicKnowledgeNodeTypeEnum: "research_problem" | "debate" | "concept";
+        TopicKnowledgePage: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["TopicKnowledge"][];
+        };
+        TopicLegacy: {
+            timeline: unknown;
+            research_dimensions: string[];
+            methods: string[];
+            subdisciplines: components["schemas"]["TopicLink"][];
+            linked_theories: components["schemas"]["TopicLink"][];
+            theory_nodes: components["schemas"]["TopicLink"][];
+            curated_works: unknown;
+            reading_paths: unknown;
+            related_scholars: unknown;
+        };
+        TopicLink: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            href: string;
+        };
+        TopicPathPage: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["PublicReadingPath"][];
+        };
+        TopicPreviewCurationRequest: {
+            question_node_ids?: string[];
+            debate_node_ids?: string[];
+            concept_node_ids?: string[];
+            edition_ids?: string[];
+            foundational_edition_ids?: string[];
+            disputed_edition_ids?: string[];
+            related_scholar_ids?: string[];
+            reading_path_ids?: string[];
+            issue_ids?: string[];
+            /** Format: uuid */
+            featured_source_id?: string | null;
+        };
+        TopicPreviewRequestRequest: {
+            curation?: components["schemas"]["TopicPreviewCurationRequest"];
+            /** Format: uuid */
+            parent?: string | null;
+        };
+        TopicRecommendations: {
+            /** Format: uuid */
+            revision_id: string | null;
+            source: string;
+            results: components["schemas"]["PublicTopicCard"][];
+        };
+        TopicSaveCommandRequest: {
+            /** Format: uuid */
+            topic: string;
+            saved: boolean;
+            expected_version: string;
+            /** Format: uuid */
+            request_id: string;
+        };
+        TopicSaveCreateRequest: {
+            /** Format: uuid */
+            topic: string;
+            expected_version: string;
+            /** Format: uuid */
+            request_id: string;
+        };
+        TopicSaveOutput: {
+            owner_id: string;
+            /** Format: uuid */
+            topic_id: string;
+            saved: boolean;
+            version: string;
+            can_save: boolean;
+            record: components["schemas"]["SavedTopic"] | null;
+            receipt: components["schemas"]["TopicSaveReceipt"] | null;
+        };
+        TopicSaveReceipt: {
+            /** Format: uuid */
+            request_id: string;
+            applied_saved: boolean;
+        };
+        TopicScholarPage: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["PublicScholarCard"][];
+        };
+        TopicUnavailable: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["TopicUnavailableKindEnum"];
+            status: components["schemas"]["TopicUnavailableStatusEnum"];
+            notice: string;
+        };
+        /**
+         * @description * `question` - question
+         *     * `concept` - concept
+         *     * `work` - work
+         *     * `scholar` - scholar
+         *     * `article` - article
+         *     * `path` - path
+         * @enum {string}
+         */
+        TopicUnavailableKindEnum: "question" | "concept" | "work" | "scholar" | "article" | "path";
+        /**
+         * @description * `unavailable` - unavailable
+         * @enum {string}
+         */
+        TopicUnavailableStatusEnum: "unavailable";
+        TopicWork: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            edition_id: string | null;
+            /** Format: uuid */
+            catalog_revision_id: string | null;
+            title: string;
+            original_title: string;
+            href: string;
+            cover_url: string;
+            document_type: string;
+            language: string;
+            publication_year: number | null;
+            version_label: string;
+            roles: string[];
+            role_labels: string[];
+            contributions: components["schemas"]["ScholarContribution"][];
+            source_status: components["schemas"]["TopicWorkSourceStatusEnum"];
+            reader_href: string;
+            is_essential: boolean;
+            source_notice: string;
+            selection: components["schemas"]["SelectionEnum"];
+            /** Format: uuid */
+            issue_id: string | null;
+            /** Format: uuid */
+            issue_item_id: string | null;
+        };
+        TopicWorkPage: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["TopicWork"][];
+        };
+        /**
+         * @description * `available` - available
+         *     * `no_fulltext` - no_fulltext
+         *     * `planned` - planned
+         * @enum {string}
+         */
+        TopicWorkSourceStatusEnum: "available" | "no_fulltext" | "planned";
         /**
          * @description * `search` - search
          *     * `counterargument` - counterargument
@@ -12147,6 +12854,66 @@ export interface operations {
             };
         };
     };
+    admin_topic_selection_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TopicPreviewRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TopicPreviewRequestRequest"];
+                "multipart/form-data": components["schemas"]["TopicPreviewRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     catalog_admin_media_list: {
         parameters: {
             query?: never;
@@ -13423,6 +14190,152 @@ export interface operations {
             };
         };
     };
+    catalog_admin_topics_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAdminTopicList"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AdminTopicRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminTopicRequest"];
+                "application/json": components["schemas"]["AdminTopicRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTopic"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTopic"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AdminTopicRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminTopicRequest"];
+                "application/json": components["schemas"]["AdminTopicRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTopic"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_admin_topics_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["PatchedAdminTopicRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminTopicRequest"];
+                "application/json": components["schemas"]["PatchedAdminTopicRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTopic"];
+                };
+            };
+        };
+    };
     catalog_admin_works_editions_create: {
         parameters: {
             query?: never;
@@ -14509,6 +15422,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedTheoryTimelineEventList"];
+                };
+            };
+        };
+    };
+    public_topic_directory: {
+        parameters: {
+            query?: {
+                discipline?: string;
+                page?: string;
+                page_size?: string;
+                parent?: string[];
+                q?: string;
+                search?: string;
+                sort?: string;
+                subdiscipline?: string;
+                theory?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTopicDirectory"];
+                };
+            };
+        };
+    };
+    catalog_topics_retrieve: {
+        parameters: {
+            query?: {
+                availability?: string;
+                page?: string;
+                page_size?: string;
+                question_type?: string;
+                reading?: string;
+                section?: string;
+                sort?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTopicDetail"];
                 };
             };
         };
@@ -18136,6 +19107,167 @@ export interface operations {
             };
         };
     };
+    reading_saved_topics_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+                topic?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSavedTopicList"];
+                };
+            };
+        };
+    };
+    reading_saved_topics_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopicSaveCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TopicSaveCreateRequest"];
+                "multipart/form-data": components["schemas"]["TopicSaveCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedTopic"];
+                };
+            };
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_saved_topics_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 saved topic 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedTopic"];
+                };
+            };
+        };
+    };
+    reading_saved_topics_destroy: {
+        parameters: {
+            query: {
+                expected_version: string;
+                request_id: string;
+                topic: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 saved topic 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_saved_topics_command_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopicSaveCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TopicSaveCommandRequest"];
+                "multipart/form-data": components["schemas"]["TopicSaveCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicSaveOutput"];
+                };
+            };
+        };
+    };
+    reading_saved_topics_state_retrieve: {
+        parameters: {
+            query: {
+                request_id?: string;
+                topic: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicSaveOutput"];
+                };
+            };
+        };
+    };
     reading_search_records_retrieve: {
         parameters: {
             query: {
@@ -18165,6 +19297,7 @@ export interface operations {
                 page?: number;
                 path?: string;
                 scholar_profile_id?: string;
+                topic_id?: string;
             };
             header?: never;
             path?: never;
@@ -18282,6 +19415,7 @@ export interface operations {
             query?: {
                 path?: string;
                 scholar_profile_id?: string;
+                topic_id?: string;
             };
             header?: never;
             path?: never;

@@ -2281,6 +2281,105 @@
                         "description": ""
                     }
                 }
+            },
+            "post": {
+                "operationId": "admin_topic_selection_preview",
+                "description": "Read-only Topic selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicPreviewRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicPreviewRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicPreviewRequestRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
             }
         },
         "/api/catalog/admin/media/": {
@@ -4782,6 +4881,297 @@
             },
             "delete": {
                 "operationId": "catalog_admin_theory_timeline_destroy",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/topics/": {
+            "get": {
+                "operationId": "catalog_admin_topics_list",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAdminTopicList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_topics_create",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTopicRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTopicRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTopicRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminTopic"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/topics/{id}/": {
+            "get": {
+                "operationId": "catalog_admin_topics_retrieve",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminTopic"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_topics_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTopicRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTopicRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTopicRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminTopic"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_topics_partial_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminTopicRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminTopicRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminTopicRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminTopic"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "catalog_admin_topics_destroy",
                 "description": "Opt-in only on protected Admin views, never public catalog views.",
                 "parameters": [
                     {
@@ -7358,6 +7748,191 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/PaginatedTheoryTimelineEventList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/topics/": {
+            "get": {
+                "operationId": "public_topic_directory",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "discipline",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "parent",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "subdiscipline",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "theory",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicTopicDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/topics/{slug}/": {
+            "get": {
+                "operationId": "catalog_topics_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "availability",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "question_type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "reading",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "section",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicTopicDetail"
                                 }
                             }
                         },
@@ -14643,6 +15218,344 @@
                 }
             }
         },
+        "/api/reading/saved-topics/": {
+            "get": {
+                "operationId": "reading_saved_topics_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedSavedTopicList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_saved_topics_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicSaveCreateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicSaveCreateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicSaveCreateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SavedTopic"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/saved-topics/{id}/": {
+            "get": {
+                "operationId": "reading_saved_topics_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 saved topic 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SavedTopic"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "reading_saved_topics_destroy",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "expected_version",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 saved topic 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/saved-topics/command/": {
+            "post": {
+                "operationId": "reading_saved_topics_command_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicSaveCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicSaveCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicSaveCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TopicSaveOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/saved-topics/state/": {
+            "get": {
+                "operationId": "reading_saved_topics_state_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TopicSaveOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/search-records/": {
             "get": {
                 "operationId": "reading_search_records_retrieve",
@@ -14716,6 +15629,13 @@
                     {
                         "in": "query",
                         "name": "scholar_profile_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic_id",
                         "schema": {
                             "type": "string"
                         }
@@ -14946,6 +15866,13 @@
                     {
                         "in": "query",
                         "name": "scholar_profile_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic_id",
                         "schema": {
                             "type": "string"
                         }
@@ -15855,6 +16782,165 @@
                     }
                 }
             },
+            "AdminTopic": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "edit_version": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "parent": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "slug": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^[-a-zA-Z0-9_]+$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "problem_statement": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "research_dimensions": {},
+                    "methods": {},
+                    "formation_context": {
+                        "type": "string"
+                    },
+                    "key_concepts": {},
+                    "timeline": {},
+                    "hero_image": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "curation_level": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "curation": {},
+                    "normalized_relations": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "readOnly": true
+                    },
+                    "suggestions": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "readOnly": true
+                    },
+                    "editorial_status": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "work_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "edit_version",
+                    "id",
+                    "name",
+                    "normalized_relations",
+                    "suggestions",
+                    "updated_at",
+                    "work_count"
+                ]
+            },
+            "AdminTopicRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "parent": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "slug": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^[-a-zA-Z0-9_]+$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "problem_statement": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "research_dimensions": {},
+                    "methods": {},
+                    "formation_context": {
+                        "type": "string"
+                    },
+                    "key_concepts": {},
+                    "timeline": {},
+                    "hero_image": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "curation_level": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "curation": {},
+                    "editorial_status": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            },
             "AliasTypeEnum": {
                 "enum": [
                     "alias",
@@ -16492,6 +17578,16 @@
                 ],
                 "type": "string",
                 "description": "* `draft` - 草稿\n* `needs_review` - 待消歧\n* `verified` - 已核验\n* `rejected` - 已拒绝\n* `merged` - 已合并\n* `archived` - 已归档"
+            },
+            "AvailabilityEnum": {
+                "enum": [
+                    "all",
+                    "readable",
+                    "no_fulltext",
+                    "planned"
+                ],
+                "type": "string",
+                "description": "* `all` - all\n* `readable` - readable\n* `no_fulltext` - no_fulltext\n* `planned` - planned"
             },
             "BackendEnum": {
                 "enum": [
@@ -19139,7 +20235,7 @@
                         "format": "uuid"
                     },
                     "sort": {
-                        "$ref": "#/components/schemas/SortEnum"
+                        "$ref": "#/components/schemas/DiscoveryResponseSortEnum"
                     },
                     "added_count": {
                         "type": "integer",
@@ -19320,6 +20416,15 @@
                     "task_progress",
                     "warnings"
                 ]
+            },
+            "DiscoveryResponseSortEnum": {
+                "enum": [
+                    "relevance",
+                    "year_desc",
+                    "year_asc"
+                ],
+                "type": "string",
+                "description": "* `relevance` - relevance\n* `year_desc` - year_desc\n* `year_asc` - year_asc"
             },
             "DiscoveryRetrievalIdentity": {
                 "type": "object",
@@ -22519,7 +23624,7 @@
                         "readOnly": true
                     },
                     "node_type": {
-                        "$ref": "#/components/schemas/NodeTypeEnum"
+                        "$ref": "#/components/schemas/KnowledgeNodeTypeEnum"
                     },
                     "canonical_name_zh": {
                         "type": "string",
@@ -22780,7 +23885,7 @@
                         "readOnly": true
                     },
                     "node_type": {
-                        "$ref": "#/components/schemas/NodeTypeEnum"
+                        "$ref": "#/components/schemas/KnowledgeNodeTypeEnum"
                     },
                     "canonical_name_zh": {
                         "type": "string",
@@ -22906,7 +24011,7 @@
                 "type": "object",
                 "properties": {
                     "node_type": {
-                        "$ref": "#/components/schemas/NodeTypeEnum"
+                        "$ref": "#/components/schemas/KnowledgeNodeTypeEnum"
                     },
                     "canonical_name_zh": {
                         "type": "string",
@@ -23049,6 +24154,19 @@
                     "id",
                     "topic"
                 ]
+            },
+            "KnowledgeNodeTypeEnum": {
+                "enum": [
+                    "discipline",
+                    "theory_tradition",
+                    "subdiscipline",
+                    "concept",
+                    "debate",
+                    "research_problem",
+                    "topic"
+                ],
+                "type": "string",
+                "description": "* `discipline` - 学科\n* `theory_tradition` - 理论传统\n* `subdiscipline` - 子学科\n* `concept` - 核心概念\n* `debate` - 理论争论\n* `research_problem` - 研究问题\n* `topic` - 主题"
             },
             "KnowledgePublicationStatusEnum": {
                 "enum": [
@@ -25484,19 +26602,6 @@
                     "workbench_url"
                 ]
             },
-            "NodeTypeEnum": {
-                "enum": [
-                    "discipline",
-                    "theory_tradition",
-                    "subdiscipline",
-                    "concept",
-                    "debate",
-                    "research_problem",
-                    "topic"
-                ],
-                "type": "string",
-                "description": "* `discipline` - 学科\n* `theory_tradition` - 理论传统\n* `subdiscipline` - 子学科\n* `concept` - 核心概念\n* `debate` - 理论争论\n* `research_problem` - 研究问题\n* `topic` - 主题"
-            },
             "NormalizedTimelineDetail": {
                 "type": "object",
                 "properties": {
@@ -26405,10 +27510,11 @@
                     "knowledge_node",
                     "reading_path",
                     "discipline",
-                    "subdiscipline"
+                    "subdiscipline",
+                    "topic"
                 ],
                 "type": "string",
-                "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline"
+                "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `topic` - topic"
             },
             "OperationEnum": {
                 "enum": [
@@ -26624,6 +27730,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/AdminTheoryTimelineEvent"
+                        }
+                    }
+                }
+            },
+            "PaginatedAdminTopicList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminTopic"
                         }
                     }
                 }
@@ -27089,6 +28226,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/ReadingProgress"
+                        }
+                    }
+                }
+            },
+            "PaginatedSavedTopicList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SavedTopic"
                         }
                     }
                 }
@@ -28689,6 +29857,63 @@
                         "format": "uuid",
                         "writeOnly": true,
                         "nullable": true
+                    }
+                }
+            },
+            "PatchedAdminTopicRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "parent": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "slug": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^[-a-zA-Z0-9_]+$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "problem_statement": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "research_dimensions": {},
+                    "methods": {},
+                    "formation_context": {
+                        "type": "string"
+                    },
+                    "key_concepts": {},
+                    "timeline": {},
+                    "hero_image": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "curation_level": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "curation": {},
+                    "editorial_status": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
                     }
                 }
             },
@@ -32274,6 +33499,14 @@
                     "updated_at"
                 ]
             },
+            "ProfileStateEnum": {
+                "enum": [
+                    "available",
+                    "sparse"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `sparse` - sparse"
+            },
             "ProjectCreateInputRequest": {
                 "type": "object",
                 "properties": {
@@ -33446,6 +34679,97 @@
                     "versions_truncated"
                 ]
             },
+            "PublicScholarCard": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "person": {
+                        "$ref": "#/components/schemas/ScholarPerson"
+                    },
+                    "short_description": {
+                        "type": "string"
+                    },
+                    "affiliations": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "key_concerns": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "nationalities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "occupations": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "matched_alias": {
+                        "type": "string"
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ScholarLink"
+                        }
+                    },
+                    "schools": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ScholarLink"
+                        }
+                    },
+                    "work_count": {
+                        "type": "integer"
+                    },
+                    "authored_work_count": {
+                        "type": "integer"
+                    },
+                    "profile_state": {
+                        "$ref": "#/components/schemas/ProfileStateEnum"
+                    }
+                },
+                "required": [
+                    "affiliations",
+                    "authored_work_count",
+                    "fields",
+                    "href",
+                    "id",
+                    "key_concerns",
+                    "matched_alias",
+                    "nationalities",
+                    "occupations",
+                    "person",
+                    "person_id",
+                    "profile_state",
+                    "schools",
+                    "short_description",
+                    "slug",
+                    "work_count"
+                ]
+            },
             "PublicSourceAvailabilityEnum": {
                 "enum": [
                     "available",
@@ -33534,6 +34858,11 @@
                         "format": "uuid",
                         "nullable": true
                     },
+                    "topic_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
                     "person_id": {
                         "type": "string",
                         "format": "uuid",
@@ -33574,6 +34903,7 @@
                     "source_type",
                     "status",
                     "title",
+                    "topic_id",
                     "updated_at",
                     "version_label",
                     "work_id"
@@ -33809,6 +35139,352 @@
                 ],
                 "type": "string",
                 "description": "* `available` - available\n* `unavailable` - unavailable"
+            },
+            "PublicTopicCard": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "problem_statement": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "matched_alias": {
+                        "type": "string"
+                    },
+                    "parent": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TopicLink"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "work_count": {
+                        "type": "integer"
+                    },
+                    "edition_count": {
+                        "type": "integer"
+                    },
+                    "scholar_count": {
+                        "type": "integer"
+                    },
+                    "question_count": {
+                        "type": "integer"
+                    },
+                    "profile_state": {
+                        "$ref": "#/components/schemas/ProfileStateEnum"
+                    }
+                },
+                "required": [
+                    "description",
+                    "edition_count",
+                    "hero_image",
+                    "href",
+                    "id",
+                    "matched_alias",
+                    "name",
+                    "parent",
+                    "problem_statement",
+                    "profile_state",
+                    "question_count",
+                    "scholar_count",
+                    "slug",
+                    "tags",
+                    "work_count"
+                ]
+            },
+            "PublicTopicDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "problem_statement": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "matched_alias": {
+                        "type": "string"
+                    },
+                    "parent": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TopicLink"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "work_count": {
+                        "type": "integer"
+                    },
+                    "edition_count": {
+                        "type": "integer"
+                    },
+                    "scholar_count": {
+                        "type": "integer"
+                    },
+                    "question_count": {
+                        "type": "integer"
+                    },
+                    "profile_state": {
+                        "$ref": "#/components/schemas/ProfileStateEnum"
+                    },
+                    "public_revision": {
+                        "$ref": "#/components/schemas/ScholarRevision"
+                    },
+                    "breadcrumbs": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicLink"
+                        }
+                    },
+                    "children": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicLink"
+                        }
+                    },
+                    "introduction": {
+                        "$ref": "#/components/schemas/TopicIntroduction"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "questions": {
+                        "$ref": "#/components/schemas/TopicKnowledgePage"
+                    },
+                    "works": {
+                        "$ref": "#/components/schemas/TopicWorkPage"
+                    },
+                    "scholars": {
+                        "$ref": "#/components/schemas/TopicScholarPage"
+                    },
+                    "concepts": {
+                        "$ref": "#/components/schemas/TopicKnowledgePage"
+                    },
+                    "articles": {
+                        "$ref": "#/components/schemas/TopicArticlePage"
+                    },
+                    "paths": {
+                        "$ref": "#/components/schemas/TopicPathPage"
+                    },
+                    "evidence": {
+                        "$ref": "#/components/schemas/TopicEvidencePage"
+                    },
+                    "featured_quote": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CurationItem"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "unavailable_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicUnavailable"
+                        }
+                    },
+                    "unavailable_notice": {
+                        "type": "string"
+                    },
+                    "discussion_notice": {
+                        "type": "string"
+                    },
+                    "feedback_href": {
+                        "type": "string"
+                    },
+                    "graph_href": {
+                        "type": "string"
+                    },
+                    "research_href": {
+                        "type": "string"
+                    },
+                    "filters": {
+                        "$ref": "#/components/schemas/TopicDetailFilters"
+                    },
+                    "work_facets": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "legacy": {
+                        "$ref": "#/components/schemas/TopicLegacy"
+                    }
+                },
+                "required": [
+                    "articles",
+                    "breadcrumbs",
+                    "children",
+                    "concepts",
+                    "counts",
+                    "description",
+                    "discussion_notice",
+                    "edition_count",
+                    "evidence",
+                    "featured_quote",
+                    "feedback_href",
+                    "filters",
+                    "graph_href",
+                    "hero_image",
+                    "href",
+                    "id",
+                    "introduction",
+                    "legacy",
+                    "matched_alias",
+                    "name",
+                    "parent",
+                    "paths",
+                    "problem_statement",
+                    "profile_state",
+                    "public_revision",
+                    "question_count",
+                    "questions",
+                    "research_href",
+                    "scholar_count",
+                    "scholars",
+                    "slug",
+                    "tags",
+                    "unavailable_links",
+                    "unavailable_notice",
+                    "work_count",
+                    "work_facets",
+                    "works"
+                ]
+            },
+            "PublicTopicDirectory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicTopicCard"
+                        }
+                    },
+                    "query": {
+                        "type": "string"
+                    },
+                    "filters": {
+                        "$ref": "#/components/schemas/TopicDirectoryFilters"
+                    },
+                    "hierarchy": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicHierarchy"
+                        }
+                    },
+                    "selected_parent": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TopicLink"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "selected_parents": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicLink"
+                        }
+                    },
+                    "recommendations": {
+                        "$ref": "#/components/schemas/TopicRecommendations"
+                    },
+                    "disambiguation": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicTopicCard"
+                        }
+                    },
+                    "overlap_notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "count",
+                    "disambiguation",
+                    "filters",
+                    "hierarchy",
+                    "next",
+                    "overlap_notice",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "query",
+                    "recommendations",
+                    "results",
+                    "selected_parent",
+                    "selected_parents",
+                    "total_pages"
+                ]
             },
             "PublicWorkDetail": {
                 "type": "object",
@@ -34177,6 +35853,15 @@
                         "description": "限定段落时始终关闭，不扩大到整书。"
                     }
                 }
+            },
+            "QuestionTypeEnum": {
+                "enum": [
+                    "all",
+                    "research_problem",
+                    "debate"
+                ],
+                "type": "string",
+                "description": "* `all` - all\n* `research_problem` - research_problem\n* `debate` - debate"
             },
             "ReaderAssetAccess": {
                 "type": "object",
@@ -34917,6 +36602,15 @@
                 ],
                 "type": "string",
                 "description": "* `beginner` - beginner\n* `intermediate` - intermediate\n* `advanced` - advanced"
+            },
+            "ReadingEnum": {
+                "enum": [
+                    "all",
+                    "foundational",
+                    "disputed"
+                ],
+                "type": "string",
+                "description": "* `all` - all\n* `foundational` - foundational\n* `disputed` - disputed"
             },
             "ReadingHistory": {
                 "type": "object",
@@ -35931,6 +37625,156 @@
                     "title"
                 ]
             },
+            "SavedTopic": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "topic": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "version": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "description",
+                    "id",
+                    "name",
+                    "slug",
+                    "topic",
+                    "version"
+                ]
+            },
+            "ScholarContribution": {
+                "type": "object",
+                "properties": {
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "role_label": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/PublicContributionScope"
+                    }
+                },
+                "required": [
+                    "name",
+                    "person_id",
+                    "role",
+                    "role_label",
+                    "scope"
+                ]
+            },
+            "ScholarLink": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "ScholarPerson": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "preferred_name": {
+                        "type": "string"
+                    },
+                    "original_name": {
+                        "type": "string"
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "birth_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "death_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "biography": {
+                        "type": "string"
+                    },
+                    "portrait": {
+                        "type": "string"
+                    },
+                    "portrait_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "aliases",
+                    "biography",
+                    "birth_year",
+                    "death_year",
+                    "id",
+                    "original_name",
+                    "portrait",
+                    "portrait_media",
+                    "preferred_name"
+                ]
+            },
             "ScholarPortraitRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -36213,6 +38057,38 @@
                     "target_scholar"
                 ]
             },
+            "ScholarRevision": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "number": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "change_note": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "change_note",
+                    "id",
+                    "number",
+                    "published_at",
+                    "token"
+                ]
+            },
             "ScopedSearchContextEnum": {
                 "enum": [
                     "works",
@@ -36490,6 +38366,29 @@
                     "recording_enabled",
                     "results"
                 ]
+            },
+            "SectionEnum": {
+                "enum": [
+                    "overview",
+                    "questions",
+                    "works",
+                    "scholars",
+                    "concepts",
+                    "articles",
+                    "paths",
+                    "evidence"
+                ],
+                "type": "string",
+                "description": "* `overview` - overview\n* `questions` - questions\n* `works` - works\n* `scholars` - scholars\n* `concepts` - concepts\n* `articles` - articles\n* `paths` - paths\n* `evidence` - evidence"
+            },
+            "SelectionEnum": {
+                "enum": [
+                    "related",
+                    "foundational",
+                    "disputed"
+                ],
+                "type": "string",
+                "description": "* `related` - related\n* `foundational` - foundational\n* `disputed` - disputed"
             },
             "SelectionInputActionEnum": {
                 "enum": [
@@ -37029,15 +38928,6 @@
                     "edit_version"
                 ]
             },
-            "SortEnum": {
-                "enum": [
-                    "relevance",
-                    "year_desc",
-                    "year_asc"
-                ],
-                "type": "string",
-                "description": "* `relevance` - relevance\n* `year_desc` - year_desc\n* `year_asc` - year_asc"
-            },
             "SourceCommandOutput": {
                 "type": "object",
                 "properties": {
@@ -37171,6 +39061,10 @@
                     "scholar_profile_id": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "topic_id": {
+                        "type": "string",
+                        "format": "uuid"
                     }
                 },
                 "required": [
@@ -37194,6 +39088,11 @@
                         "type": "string"
                     },
                     "scholar_profile_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "topic_id": {
                         "type": "string",
                         "format": "uuid",
                         "nullable": true
@@ -37249,6 +39148,7 @@
                     "revision",
                     "scholar_profile_id",
                     "source",
+                    "topic_id",
                     "unread_count",
                     "updated_at",
                     "updates_paused"
@@ -39340,6 +41240,978 @@
                     "subdisciplines",
                     "work_count"
                 ]
+            },
+            "TopicArticle": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "public_byline": {
+                        "type": "string"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "cover_url",
+                    "href",
+                    "id",
+                    "public_byline",
+                    "published_at",
+                    "slug",
+                    "summary",
+                    "title"
+                ]
+            },
+            "TopicArticlePage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicArticle"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "TopicDetailFilters": {
+                "type": "object",
+                "properties": {
+                    "section": {
+                        "$ref": "#/components/schemas/SectionEnum"
+                    },
+                    "question_type": {
+                        "$ref": "#/components/schemas/QuestionTypeEnum"
+                    },
+                    "availability": {
+                        "$ref": "#/components/schemas/AvailabilityEnum"
+                    },
+                    "reading": {
+                        "$ref": "#/components/schemas/ReadingEnum"
+                    },
+                    "sort": {
+                        "$ref": "#/components/schemas/TopicDetailFiltersSortEnum"
+                    }
+                },
+                "required": [
+                    "availability",
+                    "question_type",
+                    "reading",
+                    "section",
+                    "sort"
+                ]
+            },
+            "TopicDetailFiltersSortEnum": {
+                "enum": [
+                    "relevance",
+                    "published",
+                    "title"
+                ],
+                "type": "string",
+                "description": "* `relevance` - relevance\n* `published` - published\n* `title` - title"
+            },
+            "TopicDirectoryFilters": {
+                "type": "object",
+                "properties": {
+                    "parent": {
+                        "type": "string"
+                    },
+                    "parents": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "discipline": {
+                        "type": "string"
+                    },
+                    "subdiscipline": {
+                        "type": "string"
+                    },
+                    "theory": {
+                        "type": "string"
+                    },
+                    "sort": {
+                        "$ref": "#/components/schemas/TopicDirectoryFiltersSortEnum"
+                    }
+                },
+                "required": [
+                    "discipline",
+                    "parent",
+                    "parents",
+                    "sort",
+                    "subdiscipline",
+                    "theory"
+                ]
+            },
+            "TopicDirectoryFiltersSortEnum": {
+                "enum": [
+                    "relevance",
+                    "name",
+                    "works",
+                    "updated"
+                ],
+                "type": "string",
+                "description": "* `relevance` - relevance\n* `name` - name\n* `works` - works\n* `updated` - updated"
+            },
+            "TopicEvidencePage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CurationItem"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "TopicHierarchy": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "parent_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "child_count": {
+                        "type": "integer"
+                    },
+                    "descendant_count": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "child_count",
+                    "count",
+                    "descendant_count",
+                    "href",
+                    "id",
+                    "name",
+                    "parent_id",
+                    "slug"
+                ]
+            },
+            "TopicIntroduction": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string"
+                    },
+                    "problem_statement": {
+                        "type": "string"
+                    },
+                    "formation_context": {
+                        "type": "string"
+                    },
+                    "core_questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "research_dimensions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "methods": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "core_questions",
+                    "description",
+                    "formation_context",
+                    "methods",
+                    "problem_statement",
+                    "research_dimensions"
+                ]
+            },
+            "TopicKnowledge": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "node_type": {
+                        "$ref": "#/components/schemas/TopicKnowledgeNodeTypeEnum"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "relation_label": {
+                        "type": "string"
+                    },
+                    "work_count": {
+                        "type": "integer"
+                    },
+                    "discussion_count": {
+                        "type": "integer"
+                    },
+                    "response_count": {
+                        "type": "integer"
+                    },
+                    "count_notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "count_notice",
+                    "discussion_count",
+                    "href",
+                    "id",
+                    "name",
+                    "node_type",
+                    "relation_label",
+                    "response_count",
+                    "slug",
+                    "summary",
+                    "work_count"
+                ]
+            },
+            "TopicKnowledgeNodeTypeEnum": {
+                "enum": [
+                    "research_problem",
+                    "debate",
+                    "concept"
+                ],
+                "type": "string",
+                "description": "* `research_problem` - research_problem\n* `debate` - debate\n* `concept` - concept"
+            },
+            "TopicKnowledgePage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicKnowledge"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "TopicLegacy": {
+                "type": "object",
+                "properties": {
+                    "timeline": {},
+                    "research_dimensions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "methods": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "subdisciplines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicLink"
+                        }
+                    },
+                    "linked_theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicLink"
+                        }
+                    },
+                    "theory_nodes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicLink"
+                        }
+                    },
+                    "curated_works": {},
+                    "reading_paths": {},
+                    "related_scholars": {}
+                },
+                "required": [
+                    "curated_works",
+                    "linked_theories",
+                    "methods",
+                    "reading_paths",
+                    "related_scholars",
+                    "research_dimensions",
+                    "subdisciplines",
+                    "theory_nodes",
+                    "timeline"
+                ]
+            },
+            "TopicLink": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "TopicPathPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicReadingPath"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "TopicPreviewCurationRequest": {
+                "type": "object",
+                "properties": {
+                    "question_node_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200
+                    },
+                    "debate_node_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200
+                    },
+                    "concept_node_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200
+                    },
+                    "edition_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200
+                    },
+                    "foundational_edition_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200
+                    },
+                    "disputed_edition_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200
+                    },
+                    "related_scholar_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200
+                    },
+                    "reading_path_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200
+                    },
+                    "issue_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
+                    "featured_source_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                }
+            },
+            "TopicPreviewRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "curation": {
+                        "$ref": "#/components/schemas/TopicPreviewCurationRequest"
+                    },
+                    "parent": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                }
+            },
+            "TopicRecommendations": {
+                "type": "object",
+                "properties": {
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicTopicCard"
+                        }
+                    }
+                },
+                "required": [
+                    "results",
+                    "revision_id",
+                    "source"
+                ]
+            },
+            "TopicSaveCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "saved": {
+                        "type": "boolean"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "request_id",
+                    "saved",
+                    "topic"
+                ]
+            },
+            "TopicSaveCreateRequest": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "request_id",
+                    "topic"
+                ]
+            },
+            "TopicSaveOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "topic_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "saved": {
+                        "type": "boolean"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "can_save": {
+                        "type": "boolean"
+                    },
+                    "record": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SavedTopic"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TopicSaveReceipt"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "can_save",
+                    "owner_id",
+                    "receipt",
+                    "record",
+                    "saved",
+                    "topic_id",
+                    "version"
+                ]
+            },
+            "TopicSaveReceipt": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "applied_saved": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "applied_saved",
+                    "request_id"
+                ]
+            },
+            "TopicScholarPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicScholarCard"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "TopicUnavailable": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/TopicUnavailableKindEnum"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/TopicUnavailableStatusEnum"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "notice",
+                    "status"
+                ]
+            },
+            "TopicUnavailableKindEnum": {
+                "enum": [
+                    "question",
+                    "concept",
+                    "work",
+                    "scholar",
+                    "article",
+                    "path"
+                ],
+                "type": "string",
+                "description": "* `question` - question\n* `concept` - concept\n* `work` - work\n* `scholar` - scholar\n* `article` - article\n* `path` - path"
+            },
+            "TopicUnavailableStatusEnum": {
+                "enum": [
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `unavailable` - unavailable"
+            },
+            "TopicWork": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "original_title": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "role_labels": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "contributions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ScholarContribution"
+                        }
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/TopicWorkSourceStatusEnum"
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    },
+                    "is_essential": {
+                        "type": "boolean"
+                    },
+                    "source_notice": {
+                        "type": "string"
+                    },
+                    "selection": {
+                        "$ref": "#/components/schemas/SelectionEnum"
+                    },
+                    "issue_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "issue_item_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "catalog_revision_id",
+                    "contributions",
+                    "cover_url",
+                    "document_type",
+                    "edition_id",
+                    "href",
+                    "id",
+                    "is_essential",
+                    "issue_id",
+                    "issue_item_id",
+                    "language",
+                    "original_title",
+                    "publication_year",
+                    "reader_href",
+                    "role_labels",
+                    "roles",
+                    "selection",
+                    "source_notice",
+                    "source_status",
+                    "title",
+                    "version_label"
+                ]
+            },
+            "TopicWorkPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicWork"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "TopicWorkSourceStatusEnum": {
+                "enum": [
+                    "available",
+                    "no_fulltext",
+                    "planned"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `no_fulltext` - no_fulltext\n* `planned` - planned"
             },
             "TurnCreateInputModeEnum": {
                 "enum": [

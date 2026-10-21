@@ -216,6 +216,9 @@ TARGET_POLICIES = {
         frozenset(
             {
                 "name",
+                "parent",
+                "image_selection",
+                "curation_level",
                 "slug",
                 "search_aliases",
                 "description",
@@ -858,7 +861,7 @@ def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> 
     if isinstance(target, (KnowledgeRelation, TheoryTimelineEvent)):
         from catalog.services.relation_editorial import validate_relation_patch
         validate_relation_patch(target, patch)
-    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline)) and "image_selection" in patch:
+    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline, Topic)) and "image_selection" in patch:
         from catalog.services.knowledge_media import validate_image_selection
         patch["image_selection"] = validate_image_selection(target, patch["image_selection"])
     if isinstance(target, Work):
@@ -925,6 +928,15 @@ def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> 
                 seen.add(str(current.id))
                 current = current.parent
     if isinstance(target, Topic):
+        from catalog.services.public_topics import validate_topic_curation, validate_topic_parent
+        from rest_framework.exceptions import ValidationError as APIValidationError
+        try:
+            if "parent" in patch:
+                patch["parent"] = validate_topic_parent(target, patch["parent"])
+            if "curation" in patch:
+                patch["curation"] = validate_topic_curation(patch["curation"], target)
+        except APIValidationError as error:
+            raise EditorialRevisionError(str(error.detail)) from error
         for field_name in TOPIC_RELATION_POLICIES:
             if field_name in patch:
                 patch[field_name] = _validated_topic_relation_patch(
@@ -984,7 +996,7 @@ def _target_snapshot(target, policy: EditorialTargetPolicy) -> dict[str, Any]:
         for key, value in model_to_dict(target, fields=scalar_fields).items()
     }
     snapshot.update(_special_snapshot(target))
-    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline)):
+    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline, Topic)):
         from catalog.services.knowledge_media import image_selection
         snapshot["image_selection"] = image_selection(target)
     return snapshot
@@ -1367,7 +1379,7 @@ def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
     if isinstance(target, TheoryTimelineEvent) and "timeline_relations" in patch:
         from catalog.services.relation_editorial import apply_timeline_relations
         apply_timeline_relations(target, patch["timeline_relations"])
-    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline)) and "image_selection" in patch:
+    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline, Topic)) and "image_selection" in patch:
         from catalog.services.knowledge_media import apply_image_selection
         apply_image_selection(target, patch["image_selection"], actor=actor)
     if isinstance(target, Work):
@@ -1547,7 +1559,7 @@ def create_editorial_revision(
     if isinstance(target, ScholarProfile):
         from catalog.services.scholar_media import protect_portrait_references
         protect_portrait_references(revision, target)
-    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline)):
+    if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline, Topic)):
         from catalog.services.knowledge_media import protect_image_references
         protect_image_references(revision, target)
     return revision

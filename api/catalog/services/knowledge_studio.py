@@ -122,10 +122,11 @@ PUBLIC_MODULE_FIELDS = {
         ("精选文献导读", ("works",)),
     ),
     "topic": (
-        ("范围与核心问题", ("description", "problem_statement", "core_questions")),
-        ("理论视角", ("knowledge_nodes", "linked_theories")),
-        ("作品与观点", ("curated", "curated_claims")),
-        ("研究路径", ("research_dimensions", "methods")),
+        ("主题导读", ("description", "problem_statement", "introduction")),
+        ("规范问题与概念", ("questions", "concepts")),
+        ("公开版本与学者", ("works", "scholars")),
+        ("策划与研究路径", ("articles", "paths")),
+        ("准确原文", ("evidence",)),
     ),
     "reading_path": (
         ("目标读者", ("audience",)),
@@ -705,6 +706,7 @@ class KnowledgeObjectEditorAdapter:
             },
             "scholar": {"person", "portrait_selection"},
             "topic": {
+                "image_selection",
                 "discipline_relations",
                 "theory_relations",
                 "subdiscipline_relations",
@@ -734,7 +736,7 @@ class KnowledgeObjectEditorAdapter:
                     media = image_media(target, selection=selected, private=True)
                     materialized["cover_media"] = media
                     image_url = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"]) if media else image_legacy_file(target).url if selected["legacy_path"] else ""
-                    materialized["hero_image" if object_type in {"discipline", "subdiscipline"} else "cover_url"] = image_url
+                    materialized["hero_image" if object_type in {"discipline", "subdiscipline", "topic"} else "cover_url"] = image_url
                     continue
                 if object_type in NODE_OBJECT_TYPES:
                     cls._node_special_overlay(
@@ -842,7 +844,16 @@ class KnowledgeObjectEditorAdapter:
         return data
 
     @classmethod
-    def _serialize(cls, object_type: str, target, *, revision=None, reviewer=None, scholar_preview_overrides=None) -> tuple[dict, str, list[str]]:
+    def _serialize(cls, object_type: str, target, *, revision=None, reviewer=None, scholar_preview_overrides=None, topic_preview_overrides=None) -> tuple[dict, str, list[str]]:
+        if object_type == "topic":
+            from types import SimpleNamespace
+            from catalog.services.public_topics import public_topic_detail, preview_topic
+            if revision is not None or not cls._is_public(object_type, target) or topic_preview_overrides is not None:
+                data = preview_topic(target, snapshot=revision.materialized_preview if revision else None, request=SimpleNamespace(user=reviewer), curation_overrides=topic_preview_overrides)
+            else:
+                from catalog.services.public_topics import _formal
+                data = public_topic_detail(_formal(target).slug)
+            return data, "PublicTopicDetailSerializer", []
         if object_type == "scholar":
             from types import SimpleNamespace
             from catalog.services.public_scholars import public_scholar_detail, preview_scholar
@@ -918,7 +929,7 @@ class KnowledgeObjectEditorAdapter:
         return serialized, serializer_class.__name__, unsupported_fields
 
     @classmethod
-    def enrich(cls, *, object_type: str, target, selection: dict[str, Any], reviewer=None, scholar_preview_overrides=None) -> dict[str, Any]:
+    def enrich(cls, *, object_type: str, target, selection: dict[str, Any], reviewer=None, scholar_preview_overrides=None, topic_preview_overrides=None) -> dict[str, Any]:
         from catalog.services.dependency_engine import projection_types_for
         from catalog.services.editorial_revision import TARGET_POLICIES
 
@@ -935,15 +946,16 @@ class KnowledgeObjectEditorAdapter:
         draft_serializer = serializer_name
         unsupported_fields: list[str] = []
         draft_source = "editorial_revision"
-        if revision is not None or scholar_preview_overrides is not None:
+        if revision is not None or scholar_preview_overrides is not None or topic_preview_overrides is not None:
             draft_public, draft_serializer, unsupported_fields = cls._serialize(
                 object_type,
                 target,
                 revision=revision,
                 reviewer=reviewer,
                 scholar_preview_overrides=scholar_preview_overrides,
+                topic_preview_overrides=topic_preview_overrides,
             )
-            if scholar_preview_overrides is not None:
+            if scholar_preview_overrides is not None or topic_preview_overrides is not None:
                 draft_source = "unsaved_selection"
         elif not is_public:
             # An unpublished canonical row is itself the current editable
@@ -2403,6 +2415,8 @@ def _scholar_selection(profile: ScholarProfile) -> dict[str, Any]:
 
 def _topic_selection(topic: Topic) -> dict[str, Any]:
     canonical = {
+        "parent": str(topic.parent_id) if topic.parent_id else None,
+        "curation": topic.curation,
         "name": topic.name,
         "slug": topic.slug,
         "description": topic.description,
@@ -3031,6 +3045,7 @@ def _selection(
     *,
     reviewer=None,
     scholar_preview_overrides=None,
+    topic_preview_overrides=None,
 ) -> dict[str, Any] | None:
     identifier = _valid_uuid(object_id)
     if object_type not in OBJECT_TYPES or identifier is None:
@@ -3082,6 +3097,7 @@ def _selection(
         selection=selection,
         reviewer=reviewer,
         scholar_preview_overrides=scholar_preview_overrides,
+        topic_preview_overrides=topic_preview_overrides,
     )
     selection["field_assistant_values"] = _assistant_field_values(object_type, target, selection)
     if assistant_target is not None:
@@ -3372,6 +3388,7 @@ def knowledge_object_preview_payload(
     object_id: str,
     reviewer=None,
     scholar_preview_overrides=None,
+    topic_preview_overrides=None,
 ) -> dict[str, Any] | None:
     """Return the protected preview contract used by the admin preview route.
 
@@ -3380,7 +3397,7 @@ def knowledge_object_preview_payload(
     not create a second preview-only knowledge representation.
     """
 
-    selection = _selection(object_type, object_id, reviewer=reviewer, scholar_preview_overrides=scholar_preview_overrides)
+    selection = _selection(object_type, object_id, reviewer=reviewer, scholar_preview_overrides=scholar_preview_overrides, topic_preview_overrides=topic_preview_overrides)
     if selection is None:
         return None
     perspectives = selection.get("preview_perspectives") or {}

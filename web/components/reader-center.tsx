@@ -39,6 +39,7 @@ import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";
 import { BookCard, BookCover, SectionHeading } from "./ui";
 import { DisplayPreferences } from "./display-preferences";
 import { ResearchCenterNav } from "./research/research-center-nav";
+import { SaveTopicButton, useTopicSaveCommands } from "./save-topic-button";
 
 const tabs = [
   [BookOpen, "概览"],
@@ -162,6 +163,7 @@ export function ReaderCenter() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { state: session, retry: retrySession } = useSessionBootstrap();
+  const topicCommands = useTopicSaveCommands(session.status === "authenticated" && session.user ? String(session.user.id) : null);
   const section = searchParams.get("section");
   const [selectedTab, selectTab] = useState<{ section: string | null; label: string } | null>(null);
   const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : "概览";
@@ -410,7 +412,7 @@ export function ReaderCenter() {
     }
   }
 
-  async function deleteRecord(kind: "saved" | "saved-topics" | "annotations" | "bookmarks", id: string) {
+  async function deleteRecord(kind: "saved" | "annotations" | "bookmarks", id: string) {
     const token = getServerSessionCredential();
     const owner = session.user?.id;
     if (!token || owner === undefined) return;
@@ -422,7 +424,6 @@ export function ReaderCenter() {
       setReaderData((current) => ({
         ...current,
         saved: kind === "saved" ? current.saved.filter((item) => item.id !== id) : current.saved,
-        savedTopics: kind === "saved-topics" ? current.savedTopics.filter((item) => item.id !== id) : current.savedTopics,
         annotations: kind === "annotations" ? current.annotations.filter((item) => item.id !== id) : current.annotations,
         bookmarks: kind === "bookmarks" ? current.bookmarks.filter((item) => item.id !== id) : current.bookmarks,
       }));
@@ -572,6 +573,7 @@ export function ReaderCenter() {
         </header>
         <ResearchCenterNav active={active === "书单" ? "lists" : "research"} counts={{ notes: noteGroups.length, plans: readerData.plans.length, lists: readerData.lists.length }} />
         <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav></details>
+        {Array.from(topicCommands.memory.current.entries()).filter(([id, operation]) => operation.owner === String(session.user?.id) && (active !== "收藏" || !readerData.savedTopics.some(row => row.topic === id))).map(([id]) => <section key={id} className="form-message"><p>有一项主题收藏操作尚待核对，原请求与期望版本仍保留。</p><SaveTopicButton topicId={id} commands={topicCommands} onChange={() => setResourceAttempt(value => value + 1)} /></section>)}
 
         {resourcesLoading ? <p className="form-message" role="status">正在读取个人阅读资料……</p> : null}
         {Object.keys(resourceErrors).length ? (
@@ -696,8 +698,8 @@ export function ReaderCenter() {
                 <Bookmark size={17} />
                 <div><strong>{topic.name}</strong><p>{topic.description || "馆藏主题"}</p></div>
                 <span className="reader-data-actions">
-                  <Link href={`/topics/${topic.slug}`}>打开 <ArrowRight size={14} /></Link>
-                  <ActionButton type="button" state={pendingAction === `delete-record:saved-topics:${topic.id}` ? "pending" : "idle"} pendingLabel="移除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:saved-topics:${topic.id}`} onClick={() => void deleteRecord("saved-topics", topic.id)}>移除收藏</ActionButton>
+                  {topic.slug ? <Link href={`/topics/${topic.slug}`}>打开 <ArrowRight size={14} /></Link> : <span>来源当前不可用</span>}
+                  <SaveTopicButton topicId={topic.topic} commands={topicCommands} onChange={saved => { if (!saved) setReaderData(current => ({ ...current, savedTopics: current.savedTopics.filter(item => item.id !== topic.id) })); }} />
                 </span>
               </article>
             ))}

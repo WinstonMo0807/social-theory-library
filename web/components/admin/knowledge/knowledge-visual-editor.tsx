@@ -4,6 +4,8 @@ import { Children, Fragment, cloneElement, isValidElement, useEffect, useMemo, u
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { projectScholar, scholarPreviewQuery } from "./scholar-preview";
+import { projectTopic, topicPreviewBody } from "./topic-preview";
+import type { TopicCurationFields } from "./topic-fields";
 import { projectReadingPath } from "@/components/admin/curation/reading-path-preview";
 import { FixedPageEditor, type PreviewSelection } from "@/components/admin/curation/fixed-page-editor";
 import { PreviewSurface, type KnowledgePreviewPayload } from "@/components/admin/preview/knowledge-page-preview";
@@ -18,7 +20,7 @@ import type { EvidenceCurationType } from "@/lib/api/evidence-curation.types";
 
 type Props = {objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; previewStageId?: string; onPreviewSelect?: (selection: PreviewSelection) => void};
 type FieldProps = {children?: ReactNode; label?: string; className?: string; type?: string; role?: string; disabled?: boolean; style?: {display?: string}; "data-editor-section"?: string};
-const sectionLabels: Record<string, string> = {identity:"基本信息", biography:"传记与机构", questions:"研究问题", history:"形成与发展", dimensions:"研究维度", methods:"研究方法 / 工具", concepts:"关键概念", timeline:"生平与事件", "concept-map":"概念图", network:"学术关系", content:"内容与说明", relations:"人物与馆藏关联", works:"代表作品", paths:"阅读路径", passages:"原文策展", media:"图片", learning:"学习问题与争论", curation:"策划说明与署名", versions:"版本记录", sources:"资料来源与路径", publication:"保存与发布"};
+const sectionLabels: Record<string, string> = {identity:"基本信息", biography:"传记与机构", questions:"研究问题", scholars:"相关学者", articles:"策划文章", history:"形成与发展", dimensions:"研究维度", methods:"研究方法 / 工具", concepts:"关键概念", timeline:"生平与事件", "concept-map":"概念图", network:"学术关系", content:"内容与说明", relations:"人物与馆藏关联", works:"代表作品", paths:"阅读路径", passages:"原文策展", media:"图片", learning:"学习问题与争论", curation:"策划说明与署名", versions:"版本记录", sources:"资料来源与路径", publication:"保存与发布"};
 function textOf(node: ReactNode): string { if (typeof node === "string") return node; if (!isValidElement<FieldProps>(node)) return ""; return node.props.label || Children.toArray(node.props.children).map(textOf).join(" "); }
 function flatten(nodes: ReactNode): ReactNode[] {return Children.toArray(nodes).flatMap(node => {
   if (!isValidElement<FieldProps>(node)) return [node];
@@ -50,22 +52,15 @@ function sectionFor(node: ReactNode): string {
 }
 function alwaysVisible(node:ReactNode) {return isValidElement<FieldProps>(node) && (node.type === EditorialConflictHelp || node.type === AsyncStatus || ["status","alert"].includes(node.props.role || "") || node.props.type === "submit" || node.type === "footer" || /footer|editor-actions|form-message/.test(node.props.className || ""));}
 type Row = Record<string, unknown>;
-function selectRows(ids: unknown, ...pools: unknown[]): Row[] { const all = pools.flatMap(pool => Array.isArray(pool) ? pool as Row[] : []); return (Array.isArray(ids) ? ids : []).flatMap(id => { const found = all.find(row => row.id === id || (row.person as Row)?.id === id); return found ? [found] : []; }); }
 const lines = (value: unknown) => typeof value === "string" ? value.split(/\r?\n/).map(row => row.trim()).filter(Boolean) : Array.isArray(value) ? value : [];
-const structured = (value: unknown, keys: string[]) => lines(value).map(line => {const values = String(line).split(/[｜|]/); return Object.fromEntries(keys.map((key, index) => [key, values[index]?.trim() || ""]));});
 function project(type: string, raw: unknown, draft: Record<string, unknown>): Record<string, unknown> {
   const base = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
-  const curated = base.curated && typeof base.curated === "object" ? base.curated as Record<string, unknown> : {};
   const defaults = {id: draft.id || "new", slug: draft.slug || "draft-preview", works: [], knowledge_nodes: [], ...base};
-  const suggestions = (draft.suggestions || {}) as Row;
   const labels = (draft.preview_labels || {}) as Record<string,string>;
   const reference = (id:unknown,previous:unknown) => {const existing=(previous || {}) as Row;return id && typeof id === "string" ? (existing.id === id ? existing : {id,name:labels[id] || "已选择的馆内条目",slug:""}) : null;};
-  const workPool = [base.works, curated.essential_works, curated.foundational_works, curated.recent_works];
-  const candidateWorks = ((suggestions.works || []) as Row[]).map(row=>({id:row.id,title:row.title || row.name || "",document_type:row.document_type || "book",theories:[],topics:[],language:"",abstract:row.description || "",edition:null}));
-  workPool.push(candidateWorks);
   if (type === "reading_path") return projectReadingPath(base, draft);
   if (type === "scholar") return projectScholar(base, draft);
-  if (type === "topic") return {...defaults, name:draft.name, description:draft.description, problem_statement:draft.problemStatement, formation_context:draft.formationContext, core_questions:lines(draft.coreQuestions), research_dimensions:lines(draft.researchDimensions), methods:lines(draft.methods), key_concepts:lines(draft.terms), timeline:structured(draft.timeline,["year","title","description"]).map(row => [row.year,row.title,row.description]), disciplines:base.disciplines || [], subdisciplines:base.subdisciplines || [], theories:base.theories || [], scholars:[...((base.scholars || []) as Row[]), ...selectRows(draft.scholarIds,suggestions.scholars).filter(row=>!((base.scholars || []) as Row[]).some(saved=>saved.id===row.id || (saved.person as Row)?.id===row.id)).map(row=>({id:row.id,slug:row.slug || "",person:{id:row.id,preferred_name:row.name || row.title,original_name:"",biography:row.description || ""},short_description:row.description || "",key_concerns:[]}))], passages:base.passages || [], work_count:base.work_count || 0, curated:{...curated, foundational_works:selectRows(draft.primaryWorkIds,...workPool), recent_works:selectRows(draft.secondaryWorkIds,...workPool), related_scholars:selectRows(draft.scholarIds,curated.related_scholars,suggestions.scholars), linked_theories:selectRows(draft.theoryIds,curated.linked_theories,suggestions.theories), reading_paths:((draft.readingPaths || []) as Row[]).map(path => ({...path,works:selectRows(path.workIds,...workPool)})), hero_caption:draft.heroCaption, featured_passage_id:(draft.featuredPassageIds as string[] || [])[0] || ""}};
+  if (type === "topic") return projectTopic(base, draft);
   if (["theory", "concept", "debate", "research_problem"].includes(type)) return {...defaults, ...draft, core_questions:lines(draft.core_questions), basic_propositions:lines(draft.basic_propositions), representative_scholars:base.representative_scholars || [], related_disciplines:(draft.related_disciplines as string[] || []).map(id=>reference(id,((base.related_disciplines || []) as Row[]).find(row=>row.id===id))), primary_discipline:reference(draft.primary_discipline,base.primary_discipline), work_groups:base.work_groups || {}, evidence:base.evidence || [], direct_relations:base.direct_relations || [], updated_at:base.updated_at || ""};
   return {...defaults, ...draft, discipline:reference(draft.discipline,base.discipline) || base.discipline || {name:"",slug:""}, theories:base.theories || [], works:base.works || [], disciplines:base.disciplines || [], core_questions:lines(draft.core_questions), research_directions:lines(draft.research_directions), methods:lines(draft.methods), representative_issues:lines(draft.representative_issues), research_questions:lines(draft.research_questions)};
 }
@@ -78,7 +73,8 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
   const [previewRetry, setPreviewRetry] = useState(0);
   const previewQuery = objectType === "scholar" ? scholarPreviewQuery(draft as Row) : "";
-  const previewKey = JSON.stringify([objectType, objectId, refreshKey, previewQuery, previewRetry]);
+  const previewBody = objectType === "topic" ? topicPreviewBody(draft as TopicCurationFields) : "";
+  const previewKey = JSON.stringify([objectType, objectId, refreshKey, previewQuery, previewBody, previewRetry]);
   const payload = resolved?.key === previewKey ? resolved.payload : null;
   const error = failure?.key === previewKey ? failure.message : "";
   const [evidenceDirty, setEvidenceDirty] = useState(false);
@@ -103,11 +99,11 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
     if (!objectId) return;
     const controller = new AbortController();
     queueMicrotask(() => { if (!controller.signal.aborted) { setResolved(null); setFailure(null); } });
-    apiRequest<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/${previewQuery ? `?${previewQuery}` : ""}`, { signal: controller.signal }, getServerSessionCredential())
+    apiRequest<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/${previewQuery ? `?${previewQuery}` : ""}`, { signal: controller.signal, ...(previewBody ? { method: "POST", body: previewBody } : {}) }, getServerSessionCredential())
       .then(value => { if (!controller.signal.aborted) { setResolved({ key: previewKey, payload: value }); setFailure(null); } })
       .catch(reason => { if (!controller.signal.aborted) setFailure({ key: previewKey, message: reason instanceof Error ? reason.message : "预览读取失败" }); });
     return () => controller.abort();
-  }, [objectType, objectId, previewQuery, previewKey]);
+  }, [objectType, objectId, previewQuery, previewBody, previewKey]);
   const childList = Children.toArray(children);
   const form = childList.find(node => isValidElement(node) && node.type === "form") as ReactElement<{children:ReactNode}> | undefined;
   const rail = childList.filter(node => node !== form);
@@ -120,7 +116,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const selected = sections.some(row => row.id === active) ? active : "identity";
   const live = useMemo(() => {const projected=project(objectType,payload?.perspective.data,draft as Record<string,unknown>);return localImage ? {...projected,hero_image:localImage,cover_url:localImage,cover_media:null,...(objectType === "scholar" ? {person:{...(projected.person as Row),portrait:localImage,portrait_media:null}} : {})}:projected;},[objectType,payload,draft,localImage]);
   const previewPayload = {...payload, object_type:objectType, object_id:objectId || "new", active_perspective:"draft", perspective:{source:"browser_input", available:true, serializer:payload?.perspective.serializer || "", data:live}} as KnowledgePreviewPayload;
-  const page = objectType === "reading_path" ? selected : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works","sources","paths"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
+  const page = objectType === "reading_path" ? selected : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works","sources","paths"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths","scholars","articles"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
   function changeSection(id: string) {
     if (id === selected) return;
     if (selected === "passages" && evidenceDirty && !window.confirm("原文策展尚未保存，确定切换并放弃这些输入吗？")) return;

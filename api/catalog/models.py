@@ -2031,6 +2031,8 @@ class TheorySchool(NamedKnowledgeObject):
 
 
 class Topic(NamedKnowledgeObject):
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="children")
+    hero_rendition = models.ForeignKey("MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="topic_images")
     problem_statement = models.TextField(blank=True)
     core_questions = models.JSONField(default=list, blank=True)
     research_dimensions = models.JSONField(default=list, blank=True)
@@ -2040,6 +2042,19 @@ class Topic(NamedKnowledgeObject):
     timeline = models.JSONField(default=list, blank=True)
     curation_level = models.PositiveSmallIntegerField(default=0)
     curation = models.JSONField(default=dict, blank=True)
+
+    class Meta(NamedKnowledgeObject.Meta):
+        constraints = [models.CheckConstraint(condition=~models.Q(id=models.F("parent_id")), name="topic_parent_not_self")]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        seen, current = {self.pk}, self.parent
+        while current is not None:
+            if current.pk in seen:
+                raise ValidationError({"parent": "主题层级不能形成循环。"})
+            seen.add(current.pk)
+            current = current.parent
 
 
 class Concept(NamedKnowledgeObject):
