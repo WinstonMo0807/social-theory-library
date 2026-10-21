@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 import tempfile
 
-import fitz
 from django.core.files import File
 from django.db import transaction
 from django.utils import timezone
@@ -14,11 +14,16 @@ from catalog.services.page_geometry import normalized_bbox, validated_geometry
 from .files import materialize_field_file, safe_component, sha256_file, validate_pdf_structure
 
 
+if TYPE_CHECKING:
+    import fitz
+
+
 class OcrPdfValidationError(RuntimeError):
     pass
 
 
 def _scaled_rectangle(block_bbox, source_page: Page, pdf_page) -> fitz.Rect | None:
+    import fitz
     geometry = validated_geometry(source_page.geometry, source_page=pdf_page)
     coordinates = normalized_bbox(block_bbox, geometry)
     if not coordinates:
@@ -34,6 +39,7 @@ def _scaled_rectangle(block_bbox, source_page: Page, pdf_page) -> fitz.Rect | No
 
 
 def _insert_invisible_text(pdf_page, rectangle: fitz.Rect, text: str) -> bool:
+    import fitz
     text = str(text or "").replace("\x00", "").strip()
     if not text:
         return False
@@ -66,6 +72,7 @@ def _insert_invisible_text(pdf_page, rectangle: fitz.Rect, text: str) -> bool:
 
 
 def _write_searchable_copy(source_path: Path, target_path: Path, asset: Asset) -> dict:
+    import fitz
     document = fitz.open(str(source_path))
     inserted_blocks = 0
     inserted_pages = 0

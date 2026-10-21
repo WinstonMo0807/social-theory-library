@@ -52,13 +52,17 @@ def validate_relation_patch(target, patch):
             setattr(preview, field.attname, field.to_python(value))
         except (ValidationError, TypeError, ValueError) as error:
             raise EditorialRevisionError(f"时间线字段 {field.verbose_name} 无效。") from error
-    if not any(getattr(preview, f"{name}_id") for name in ("discipline", "theory_school", "subdiscipline", "scholar", "work")) and not (rows if rows is not None else target.normalized_relations.exists()):
+    if not any(getattr(preview, f"{name}_id") for name in ("discipline", "theory_school", "subdiscipline", "scholar", "work", "subject_edition")) and not (rows if rows is not None else target.normalized_relations.exists()):
         raise EditorialRevisionError("时间线事件至少需要关联一个理论、学科、学者或文献。")
     if preview.start_year is not None and preview.end_year is not None and preview.end_year < preview.start_year:
         raise EditorialRevisionError("结束年不能早于开始年。")
     if preview.review_status != "rejected":
-        from catalog.services.timeline_evidence import validate_timeline_file
+        from catalog.services.timeline_evidence import validate_timeline_file, validate_timeline_identity
         try:
+            validate_timeline_identity(**{
+                name: getattr(preview, name)
+                for name in ("work", "subject_edition", "start_year", "end_year", "date_precision")
+            })
             validate_timeline_file(preview.evidence_asset, preview.evidence_page)
         except (ValueError, ObjectDoesNotExist) as error:
             raise EditorialRevisionError(str(error)) from error

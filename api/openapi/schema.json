@@ -4130,6 +4130,297 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-timeline/": {
+            "get": {
+                "operationId": "catalog_admin_theory_timeline_list",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAdminTheoryTimelineEventList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_timeline_create",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTheoryTimelineEventRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTheoryTimelineEventRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTheoryTimelineEventRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminTheoryTimelineEvent"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-timeline/{id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_timeline_retrieve",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminTheoryTimelineEvent"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_theory_timeline_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTheoryTimelineEventRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTheoryTimelineEventRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminTheoryTimelineEventRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminTheoryTimelineEvent"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_theory_timeline_partial_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminTheoryTimelineEventRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminTheoryTimelineEventRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminTheoryTimelineEventRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminTheoryTimelineEvent"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "catalog_admin_theory_timeline_destroy",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/works/{work_id}/editions/": {
             "post": {
                 "operationId": "catalog_admin_works_editions_create",
@@ -6280,6 +6571,56 @@
                 "operationId": "catalog_theory_system_timeline_list",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "author",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "description": "重复参数或逗号分隔，组内OR；最多30项。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "discipline",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "event_type",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "description": "重复参数或逗号分隔，组内OR；最多30项。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "focus",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "has_collection",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "node",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "name": "ordering",
                         "required": false,
                         "in": "query",
@@ -6289,12 +6630,24 @@
                         }
                     },
                     {
-                        "name": "page",
-                        "required": false,
                         "in": "query",
-                        "description": "分页结果集中的页码。",
+                        "name": "page",
                         "schema": {
                             "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "related_to",
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     {
@@ -6304,6 +6657,50 @@
                         "description": "搜索关键词。",
                         "schema": {
                             "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "description": "重复参数或逗号分隔，组内OR；最多30项。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "year",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "年份组或undated；不改变全筛选集的year_groups。"
+                    },
+                    {
+                        "in": "query",
+                        "name": "year_from",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "year_to",
+                        "schema": {
+                            "type": "integer"
                         }
                     }
                 ],
@@ -6324,7 +6721,10 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PaginatedNormalizedTimelineEventList"
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/NormalizedTimelinePage"
+                                    }
                                 }
                             }
                         },
@@ -6357,6 +6757,58 @@
                         }
                     },
                     {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/NormalizedTimelineDetail"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/theory-timeline/": {
+            "get": {
+                "operationId": "catalog_theory_timeline_list",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "name": "page",
                         "required": false,
                         "in": "query",
@@ -6392,7 +6844,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PaginatedNormalizedTimelineEventList"
+                                    "$ref": "#/components/schemas/PaginatedTheoryTimelineEventList"
                                 }
                             }
                         },
@@ -13195,6 +13647,449 @@
                     "upcoming"
                 ]
             },
+            "AdminTheoryTimelineEvent": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "theory_school": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "subdiscipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "scholar": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "subject_edition": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "image": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "date_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "date_precision": {
+                        "$ref": "#/components/schemas/DatePrecisionEnum"
+                    },
+                    "orientation": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "evidence_asset": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "evidence_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "evidence_printed_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "evidence_text": {
+                        "type": "string"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "review_status": {
+                        "$ref": "#/components/schemas/ReviewStatusEnum"
+                    },
+                    "reviewed_by": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "reviewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "display_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminTimelineEventRelation"
+                        }
+                    },
+                    "evidence_file": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineAdminEvidenceFile"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "edit_version": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "editorial_revision": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineEditorialRevision"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "public_status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "has_unpublished_changes": {
+                        "type": "boolean",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "edit_version",
+                    "editorial_revision",
+                    "event_type",
+                    "evidence_file",
+                    "has_unpublished_changes",
+                    "id",
+                    "public_status",
+                    "reviewed_at",
+                    "reviewed_by",
+                    "title",
+                    "updated_at"
+                ]
+            },
+            "AdminTheoryTimelineEventRequest": {
+                "type": "object",
+                "properties": {
+                    "discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "theory_school": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "subdiscipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "scholar": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "subject_edition": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "image": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "date_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "date_precision": {
+                        "$ref": "#/components/schemas/DatePrecisionEnum"
+                    },
+                    "orientation": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "evidence_asset": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "evidence_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "evidence_printed_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "evidence_text": {
+                        "type": "string"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "review_status": {
+                        "$ref": "#/components/schemas/ReviewStatusEnum"
+                    },
+                    "display_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminTimelineEventRelationRequest"
+                        }
+                    },
+                    "evidence_work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true,
+                        "nullable": true
+                    },
+                    "evidence_edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true,
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "event_type",
+                    "title"
+                ]
+            },
+            "AdminTimelineEventRelation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/AdminTimelineEventRelationRelationTypeEnum"
+                    },
+                    "node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "node_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "discipline_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "scholar": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "scholar_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work_title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "evidence": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "maxLength": 400
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    }
+                },
+                "required": [
+                    "discipline_name",
+                    "id",
+                    "node_name",
+                    "scholar_name",
+                    "work_title"
+                ]
+            },
+            "AdminTimelineEventRelationRelationTypeEnum": {
+                "enum": [
+                    "subject",
+                    "context",
+                    "evidence"
+                ],
+                "type": "string",
+                "description": "* `subject` - 事件主体\n* `context` - 相关背景\n* `evidence` - 馆藏证据"
+            },
+            "AdminTimelineEventRelationRequest": {
+                "type": "object",
+                "properties": {
+                    "relation_type": {
+                        "$ref": "#/components/schemas/AdminTimelineEventRelationRelationTypeEnum"
+                    },
+                    "node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "scholar": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "evidence": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "maxLength": 400
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    }
+                }
+            },
             "AliasTypeEnum": {
                 "enum": [
                     "alias",
@@ -15566,6 +16461,16 @@
                     "previous",
                     "results"
                 ]
+            },
+            "DatePrecisionEnum": {
+                "enum": [
+                    "unknown",
+                    "year",
+                    "approximate",
+                    "range"
+                ],
+                "type": "string",
+                "description": "* `unknown` - 精度未确认\n* `year` - 确切年份\n* `approximate` - 约年\n* `range` - 时间区间"
             },
             "DecisionEnum": {
                 "enum": [
@@ -22024,6 +22929,176 @@
                 "type": "string",
                 "description": "* `discipline` - 学科\n* `theory_tradition` - 理论传统\n* `subdiscipline` - 子学科\n* `concept` - 核心概念\n* `debate` - 理论争论\n* `research_problem` - 研究问题\n* `topic` - 主题"
             },
+            "NormalizedTimelineDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "date_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "evidence_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "evidence_printed_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "evidence_text": {
+                        "type": "string"
+                    },
+                    "relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TheoryTimelineTarget"
+                        },
+                        "readOnly": true
+                    },
+                    "reader_href": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "origin_kind": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "date_precision": {
+                        "$ref": "#/components/schemas/DatePrecisionEnum"
+                    },
+                    "subject_edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineSubjectEdition"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "subject_status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "subject_work": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineSubjectWork"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineScholar"
+                        },
+                        "readOnly": true
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineTopic"
+                        },
+                        "readOnly": true
+                    },
+                    "source_status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "evidence_source": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineEvidenceSource"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "related_events": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NormalizedTimelineEvent"
+                        },
+                        "readOnly": true
+                    },
+                    "related_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "knowledge_relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeRelation"
+                        },
+                        "readOnly": true
+                    },
+                    "knowledge_relation_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "event_type",
+                    "evidence_source",
+                    "id",
+                    "image_url",
+                    "knowledge_relation_count",
+                    "knowledge_relations",
+                    "origin_kind",
+                    "reader_href",
+                    "related_count",
+                    "related_events",
+                    "relations",
+                    "scholars",
+                    "source_status",
+                    "subject_edition",
+                    "subject_status",
+                    "subject_work",
+                    "title",
+                    "topics"
+                ]
+            },
             "NormalizedTimelineEvent": {
                 "type": "object",
                 "properties": {
@@ -22089,14 +23164,163 @@
                         "type": "string",
                         "nullable": true,
                         "readOnly": true
+                    },
+                    "origin_kind": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "date_precision": {
+                        "$ref": "#/components/schemas/DatePrecisionEnum"
+                    },
+                    "subject_edition": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineSubjectEdition"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "subject_status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "subject_work": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineSubjectWork"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineScholar"
+                        },
+                        "readOnly": true
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineTopic"
+                        },
+                        "readOnly": true
+                    },
+                    "source_status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "evidence_source": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineEvidenceSource"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "event_type",
+                    "evidence_source",
                     "id",
+                    "image_url",
+                    "origin_kind",
                     "reader_href",
                     "relations",
-                    "title"
+                    "scholars",
+                    "source_status",
+                    "subject_edition",
+                    "subject_status",
+                    "subject_work",
+                    "title",
+                    "topics"
+                ]
+            },
+            "NormalizedTimelinePage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NormalizedTimelineEvent"
+                        }
+                    },
+                    "page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "scope_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "year_groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineYearGroup"
+                        }
+                    },
+                    "bounds": {
+                        "$ref": "#/components/schemas/TimelineBounds"
+                    },
+                    "focus_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "selected_topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineTopic"
+                        }
+                    },
+                    "selected_authors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineScholar"
+                        }
+                    }
+                },
+                "required": [
+                    "bounds",
+                    "count",
+                    "focus_id",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "results",
+                    "scope_count",
+                    "selected_authors",
+                    "selected_topics",
+                    "total_pages",
+                    "year_groups"
                 ]
             },
             "OCRCommandActionEnum": {
@@ -22774,6 +23998,37 @@
                 "type": "string",
                 "description": "* `front` - front\n* `body` - body\n* `appendix` - appendix\n* `other` - other\n* `blank` - blank"
             },
+            "PaginatedAdminTheoryTimelineEventList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminTheoryTimelineEvent"
+                        }
+                    }
+                }
+            },
             "PaginatedAnnotationList": {
                 "type": "object",
                 "required": [
@@ -22925,37 +24180,6 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/MemoryListOutput"
-                        }
-                    }
-                }
-            },
-            "PaginatedNormalizedTimelineEventList": {
-                "type": "object",
-                "required": [
-                    "count",
-                    "results"
-                ],
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "next": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=4"
-                    },
-                    "previous": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=2"
-                    },
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/NormalizedTimelineEvent"
                         }
                     }
                 }
@@ -23235,6 +24459,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/SubdisciplineList"
+                        }
+                    }
+                }
+            },
+            "PaginatedTheoryTimelineEventList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TheoryTimelineEvent"
                         }
                     }
                 }
@@ -24553,6 +25808,136 @@
                     "code",
                     "message"
                 ]
+            },
+            "PatchedAdminTheoryTimelineEventRequest": {
+                "type": "object",
+                "properties": {
+                    "discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "theory_school": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "subdiscipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "scholar": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "subject_edition": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "image": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "date_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "date_precision": {
+                        "$ref": "#/components/schemas/DatePrecisionEnum"
+                    },
+                    "orientation": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "evidence_asset": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "evidence_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "evidence_printed_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "evidence_text": {
+                        "type": "string"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "review_status": {
+                        "$ref": "#/components/schemas/ReviewStatusEnum"
+                    },
+                    "display_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminTimelineEventRelationRequest"
+                        }
+                    },
+                    "evidence_work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true,
+                        "nullable": true
+                    },
+                    "evidence_edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true,
+                        "nullable": true
+                    }
+                }
             },
             "PatchedAnnotationRequest": {
                 "type": "object",
@@ -32634,6 +34019,122 @@
                     "slug"
                 ]
             },
+            "TheoryTimelineEvent": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "date_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "orientation": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "image": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "theory": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineNamedReference"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "discipline": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineNamedReference"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "subdiscipline": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineNamedReference"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "scholar": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineNamedReference"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "work": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineWorkReference"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "evidence_page": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "evidence_printed_label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "evidence_text": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "discipline",
+                    "event_type",
+                    "id",
+                    "scholar",
+                    "subdiscipline",
+                    "theory",
+                    "title",
+                    "work"
+                ]
+            },
             "TheoryTimelineTarget": {
                 "type": "object",
                 "properties": {
@@ -32656,6 +34157,15 @@
                     "detail_href": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "node_type": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -32711,6 +34221,556 @@
                         }
                     }
                 }
+            },
+            "TimelineAdminEvidenceFile": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_title": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "page_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "reader_href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "edition_id",
+                    "edition_label",
+                    "filename",
+                    "id",
+                    "page_count",
+                    "reader_href",
+                    "version",
+                    "work_id",
+                    "work_title"
+                ]
+            },
+            "TimelineBounds": {
+                "type": "object",
+                "properties": {
+                    "min_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "max_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "undated_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "max_year",
+                    "min_year",
+                    "undated_count"
+                ]
+            },
+            "TimelineEditorialRevision": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_type": {
+                        "type": "string"
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "base_revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "current_revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "patch": {},
+                    "materialized_preview": {},
+                    "changed_fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "change_note": {
+                        "type": "string"
+                    },
+                    "created_by": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "published_by": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "has_conflict": {
+                        "type": "boolean"
+                    },
+                    "publish_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "base_revision",
+                    "change_note",
+                    "changed_fields",
+                    "created_at",
+                    "created_by",
+                    "current_revision",
+                    "has_conflict",
+                    "id",
+                    "materialized_preview",
+                    "patch",
+                    "publish_url",
+                    "published_at",
+                    "published_by",
+                    "revision",
+                    "status",
+                    "target_id",
+                    "target_type",
+                    "updated_at"
+                ]
+            },
+            "TimelineEditorialRevisionRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_type": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "base_revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "current_revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "patch": {},
+                    "materialized_preview": {},
+                    "changed_fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "change_note": {
+                        "type": "string"
+                    },
+                    "created_by": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "published_by": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "has_conflict": {
+                        "type": "boolean"
+                    },
+                    "publish_url": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "base_revision",
+                    "change_note",
+                    "changed_fields",
+                    "created_at",
+                    "created_by",
+                    "current_revision",
+                    "has_conflict",
+                    "id",
+                    "materialized_preview",
+                    "patch",
+                    "publish_url",
+                    "published_at",
+                    "published_by",
+                    "revision",
+                    "status",
+                    "target_id",
+                    "target_type",
+                    "updated_at"
+                ]
+            },
+            "TimelineEventTypeCount": {
+                "type": "object",
+                "properties": {
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "count",
+                    "event_type"
+                ]
+            },
+            "TimelineEvidenceSource": {
+                "type": "object",
+                "properties": {
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "printed_page_label": {
+                        "type": "string"
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "document_revision_id",
+                    "edition_id",
+                    "edition_label",
+                    "pdf_page",
+                    "printed_page_label",
+                    "quote",
+                    "reader_href",
+                    "title",
+                    "work_id"
+                ]
+            },
+            "TimelineNamedReference": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "TimelineScholar": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "portrait_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "name",
+                    "person_id",
+                    "portrait_url",
+                    "slug"
+                ]
+            },
+            "TimelineSubjectEdition": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "subtitle": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_status": {
+                        "type": "string"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "reader_href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "detail_href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "version_label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "author",
+                    "cover_url",
+                    "detail_href",
+                    "document_type",
+                    "id",
+                    "language",
+                    "publisher",
+                    "reader_href",
+                    "slug",
+                    "subtitle",
+                    "title",
+                    "version_label",
+                    "year"
+                ]
+            },
+            "TimelineSubjectWork": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "detail_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail_href",
+                    "id",
+                    "title"
+                ]
+            },
+            "TimelineTopic": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "TimelineWorkReference": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "title"
+                ]
+            },
+            "TimelineYearGroup": {
+                "type": "object",
+                "properties": {
+                    "year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "event_types": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineEventTypeCount"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "event_types",
+                    "year"
+                ]
             },
             "Topic": {
                 "type": "object",

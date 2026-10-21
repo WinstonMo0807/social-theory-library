@@ -2050,6 +2050,17 @@ class SubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.ModelSer
         return self._public_data(obj)["sources"]
 
 
+class TimelineNamedReferenceSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+
+
+class TimelineWorkReferenceSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+
+
 class TheoryTimelineEventSerializer(serializers.ModelSerializer):
     theory = serializers.SerializerMethodField()
     discipline = serializers.SerializerMethodField()
@@ -2087,15 +2098,19 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
             return None
         return {"id": str(value.id), "name": value.name, "slug": value.slug}
 
+    @extend_schema_field(TimelineNamedReferenceSerializer(allow_null=True))
     def get_theory(self, obj):
         return self._named(obj.theory_school)
 
+    @extend_schema_field(TimelineNamedReferenceSerializer(allow_null=True))
     def get_discipline(self, obj):
         return self._named(obj.discipline)
 
+    @extend_schema_field(TimelineNamedReferenceSerializer(allow_null=True))
     def get_subdiscipline(self, obj):
         return self._named(obj.subdiscipline)
 
+    @extend_schema_field(TimelineNamedReferenceSerializer(allow_null=True))
     def get_scholar(self, obj):
         if obj.scholar is None or (
             not self.context.get("include_unpublished_items")
@@ -2108,12 +2123,15 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
             "slug": obj.scholar.slug,
         }
 
+    @extend_schema_field(TimelineWorkReferenceSerializer(allow_null=True))
     def get_work(self, obj):
-        if obj.work is None:
+        if obj.work is None and not obj.subject_edition_id:
             return None
         if self.context.get("include_unpublished_items"):
-            return {"id": str(obj.work_id), "title": obj.work.title}
-        edition = public_editions().filter(work_id=obj.work_id).order_by(
+            work = obj.subject_edition.work if obj.subject_edition_id else obj.work
+            return {"id": str(work.pk), "title": work.title}
+        editions = public_editions().filter(pk=obj.subject_edition_id) if obj.subject_edition_id else public_editions().filter(work_id=obj.work_id)
+        edition = editions.order_by(
             "-is_primary", "-published_at", "id",
         ).first()
         if edition is None:
@@ -2122,11 +2140,14 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
             (active_catalog_snapshot(edition).get("work") or {}).get("title")
             or "未题名"
         )
-        return {"id": str(obj.work_id), "title": title}
+        return {"id": str(edition.work_id), "title": title}
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data.update(legacy_evidence_fields(instance, self.context))
+        if not self.context.get("include_unpublished_items"):
+            from .services.timeline_evidence import timeline_reader_href
+            if not timeline_reader_href(instance, self.context):
+                data.update(evidence_text="", evidence_page=None, evidence_printed_label="")
         return data
 
 
@@ -2420,7 +2441,46 @@ class AdminTimelineEventRelationSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class TimelineAdminEvidenceFileSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    work_id = serializers.UUIDField()
+    work_title = serializers.CharField(allow_blank=True)
+    edition_id = serializers.UUIDField()
+    edition_label = serializers.CharField(allow_blank=True)
+    filename = serializers.CharField(allow_blank=True)
+    version = serializers.IntegerField()
+    page_count = serializers.IntegerField(min_value=0)
+    reader_href = serializers.CharField(allow_null=True)
+    detail = serializers.CharField()
+
+
+class TimelineEditorialRevisionSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    target_type = serializers.CharField()
+    target_id = serializers.UUIDField()
+    base_revision = serializers.IntegerField(min_value=0)
+    current_revision = serializers.IntegerField(min_value=0)
+    revision = serializers.IntegerField(min_value=0)
+    patch = serializers.JSONField()
+    materialized_preview = serializers.JSONField()
+    changed_fields = serializers.ListField(child=serializers.CharField())
+    status = serializers.CharField()
+    change_note = serializers.CharField(allow_blank=True)
+    created_by = serializers.UUIDField(allow_null=True)
+    published_by = serializers.UUIDField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+    published_at = serializers.DateTimeField(allow_null=True)
+    has_conflict = serializers.BooleanField()
+    publish_url = serializers.CharField()
+
+
 class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
+    # The protected draft-read mixin adds these after canonical serialization.
+    edit_version = serializers.CharField(read_only=True)
+    editorial_revision = TimelineEditorialRevisionSerializer(read_only=True, required=False)
+    public_status = serializers.CharField(read_only=True)
+    has_unpublished_changes = serializers.BooleanField(read_only=True)
     evidence_file = serializers.SerializerMethodField()
     evidence_work_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     evidence_edition_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
@@ -2436,15 +2496,25 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
         fields = tuple(
             field.name
             for field in TheoryTimelineEvent._meta.fields
-        ) + ("relations", "evidence_file", "evidence_work_id", "evidence_edition_id")
+        ) + ("relations", "evidence_file", "evidence_work_id", "evidence_edition_id",
+             "edit_version", "editorial_revision", "public_status", "has_unpublished_changes")
         read_only_fields = ("reviewed_by", "reviewed_at")
 
+    @extend_schema_field(TimelineAdminEvidenceFileSerializer(allow_null=True))
     def get_evidence_file(self, obj):
         from catalog.services.timeline_evidence import admin_timeline_file
         return admin_timeline_file(obj, self.context)
 
     def validate(self, attrs):
-        from catalog.services.timeline_evidence import validate_timeline_file
+        from catalog.services.timeline_evidence import validate_timeline_file, validate_timeline_identity
+        if attrs.get("review_status", getattr(self.instance, "review_status", "")) != "rejected":
+            try:
+                validate_timeline_identity(**{
+                    name: attrs.get(name, getattr(self.instance, name, "unknown" if name == "date_precision" else None))
+                    for name in ("work", "subject_edition", "start_year", "end_year", "date_precision")
+                })
+            except ValueError as error:
+                raise serializers.ValidationError(str(error)) from error
         asset = attrs.get("evidence_asset", getattr(self.instance, "evidence_asset", None))
         work_id = attrs.pop("evidence_work_id", None)
         edition_id = attrs.pop("evidence_edition_id", None)
@@ -2467,6 +2537,7 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
             "subdiscipline",
             "scholar",
             "work",
+            "subject_edition",
         )) and not normalized_relations and not has_existing_relations:
             raise serializers.ValidationError("时间轴事件至少需要关联一个学术实体或文献。")
         request = self.context.get("request")

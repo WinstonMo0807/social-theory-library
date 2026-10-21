@@ -1268,6 +1268,8 @@ type TimelineEvent = {
   start_year: number | null;
   end_year: number | null;
   date_label: string;
+  date_precision?: "unknown" | "year" | "approximate" | "range";
+  subject_edition?: string | null;
   orientation: string;
   source: string;
   evidence_asset: string | null;
@@ -1295,6 +1297,8 @@ type TimelineDraft = {
   start_year: string;
   end_year: string;
   date_label: string;
+  date_precision: "unknown" | "year" | "approximate" | "range";
+  subject_edition: string;
   source: string;
   source_work: string;
   source_edition: string;
@@ -1333,6 +1337,8 @@ const emptyTimelineDraft: TimelineDraft = {
   start_year: "",
   end_year: "",
   date_label: "",
+  date_precision: "unknown",
+  subject_edition: "",
   source: "",
   source_work: "",
   source_edition: "",
@@ -1357,6 +1363,8 @@ function timelineToDraft(event: TimelineEvent): TimelineDraft {
     start_year: event.start_year?.toString() ?? "",
     end_year: event.end_year?.toString() ?? "",
     date_label: event.date_label,
+    date_precision: event.date_precision || "unknown",
+    subject_edition: event.subject_edition || "",
     source: event.source,
     source_work: event.evidence_file?.work_id ?? "",
     source_edition: event.evidence_file?.edition_id ?? "",
@@ -1369,8 +1377,9 @@ function timelineToDraft(event: TimelineEvent): TimelineDraft {
     display_order: event.display_order,
     nodes: event.relations.filter((item) => item.node).map((item) => item.node as string),
     disciplines: event.relations.filter((item) => item.discipline).map((item) => item.discipline as string),
-    scholar: event.scholar ?? event.relations.find((item) => item.scholar)?.scholar ?? "",
-    work: event.work ?? event.relations.find((item) => item.work)?.work ?? "",
+    scholar: event.scholar ?? "",
+    // A related work is not automatically the event's subject publication.
+    work: event.work ?? "",
   };
 }
 
@@ -1378,6 +1387,38 @@ type TimelineEvidenceFile = {
   id: string; work_id: string; work_title: string; edition_id: string; edition_label: string;
   filename: string; version: number; page_count: number; reader_href: string | null; detail: string;
 };
+
+function TimelineSubjectEdition({ work, value, onChange }: {
+  work: string; value: string; onChange: (edition: string) => void;
+}) {
+  const [page, setPage] = useState(1);
+  const base = "/catalog/admin/library/works/?view=editions";
+  const editions = useAdminData<CollectionPage<WorkLibraryRow>>(
+    work ? `${base}&work_id=${encodeURIComponent(work)}&page=${page}` : null,
+  );
+  const listed = editions.data?.results.find(row => row.id === value);
+  const selected = useAdminData<CollectionPage<WorkLibraryRow>>(
+    value && !listed ? `${base}&edition_id=${encodeURIComponent(value)}` : null,
+  );
+  const chosen = listed || selected.data?.results.find(row => row.id === value);
+  return <section className="timeline-evidence-fields" aria-label="事件涉及的出版版本">
+    <h3>事件涉及的出版版本</h3>
+    <p>明确这次出版、译介或概念使用涉及哪个版本。无法确认时保留“版本未明确”；下方出处可以引用另一部作品。</p>
+    <ErrorNotice message={editions.error || selected.error} retry={() => { editions.refresh(); selected.refresh(); }} />
+    <label><span>事件出版版本</span><select name="subject_edition" value={value}
+      disabled={Boolean(work && editions.loading)} onChange={event => onChange(event.target.value)}>
+      <option value="">版本未明确</option>
+      {value && !listed ? <option value={value}>{chosen?.label || (selected.error ? "已保存版本，暂无法读取" : "已保存版本，正在核对")}</option> : null}
+      {editions.data?.results.map(row => <option key={row.id} value={row.id}>{row.label || row.title || "出版信息待补"}{row.is_primary ? "（主版本）" : ""}</option>)}
+    </select></label>
+    {chosen ? <p>所选版本属于《{chosen.title}》。是否在公开页显示，仍取决于这个版本的当前发布状态。</p> : null}
+    {!work ? <p>先选择上方关联馆藏，再浏览它的出版版本。已保存的版本引用可以保留或清除。</p> : <nav aria-label="事件出版版本分页">
+      <span>{editions.data ? `共 ${editions.data.count} 个版本，第 ${page} 页` : "正在读取版本…"}</span>
+      <button type="button" disabled={editions.loading || !editions.data?.previous} onClick={() => setPage(current => current - 1)}>上一页事件版本</button>
+      <button type="button" disabled={editions.loading || !editions.data?.next} onClick={() => setPage(current => current + 1)}>下一页事件版本</button>
+    </nav>}
+  </section>;
+}
 
 function TimelineEvidenceFields({ draft, saved, workName, onChange, onLabels }: {
   draft: TimelineDraft; saved: TimelineEvent | null; workName: string;
@@ -1527,6 +1568,8 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
       start_year: draft.start_year ? Number(draft.start_year) : null,
       end_year: draft.end_year ? Number(draft.end_year) : null,
       date_label: draft.date_label,
+      date_precision: draft.date_precision,
+      subject_edition: draft.subject_edition || null,
       // Placement is not edited by this form. Keep it when changing text.
       orientation: editing?.orientation ?? "neutral",
       source: draft.source,
@@ -1646,9 +1689,17 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
           <label><span>说明</span><textarea rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
           <div className="inline-fields"><label><span>开始年</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label></div>
           <div className="inline-fields"><label><span>显示时期</span><input value={draft.date_label} onChange={(event) => setDraft({ ...draft, date_label: event.target.value })} placeholder="例如 20世纪中期" /></label><label><span>事件类型</span><select value={draft.event_type} onChange={(event) => setDraft({ ...draft, event_type: event.target.value })}>{timelineTypes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
+          <label><span>时间确定程度</span><select name="date_precision" value={draft.date_precision} onChange={event => setDraft({ ...draft, date_precision: event.target.value as TimelineDraft["date_precision"] })}>
+            <option value="unknown">未明确，保留原日期说明</option>
+            <option value="year">确切年份</option>
+            <option value="approximate">约略年份</option>
+            <option value="range">已知年份范围</option>
+          </select></label>
+          <p>确切年份只填写一个年份；约略年份至少填写一端；年份范围需要开始、结束两端。已有文字日期不会自动推断为确切年份。</p>
           <ResearchEntityPicker label="理论传统和知识理论或概念，可多选" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_timeline" field="nodes" multiple values={manyPickerValues(draft.nodes, timelineNodeName)} onChange={(next) => { setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, nodes: next.flatMap((value) => value.id ? [value.id] : []) }); }} />
           <ResearchEntityPicker label="关联学科，可多选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_timeline" field="disciplines" multiple values={manyPickerValues(draft.disciplines, timelineDisciplineName)} onChange={(next) => { setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, disciplines: next.flatMap((value) => value.id ? [value.id] : []) }); }} />
-          <div className="inline-fields"><ResearchEntityPicker label="关联学者" endpoint="/catalog/admin/scholars/" entityType="person" step="maintenance_theory_timeline" field="scholar" values={onePickerValue(draft.scholar, timelineScholarName(draft.scholar))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, scholar: picked?.id ?? "" }); }} /><ResearchEntityPicker label="关联馆藏" endpoint="/catalog/admin/library/works/" entityType="work" step="maintenance_theory_timeline" field="work" values={onePickerValue(draft.work, timelineWorkName(draft.work))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, work: picked?.id ?? "" }); }} /></div>
+          <div className="inline-fields"><ResearchEntityPicker label="关联学者" endpoint="/catalog/admin/scholars/" entityType="person" step="maintenance_theory_timeline" field="scholar" values={onePickerValue(draft.scholar, timelineScholarName(draft.scholar))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, scholar: picked?.id ?? "" }); }} /><ResearchEntityPicker label="关联馆藏" endpoint="/catalog/admin/library/works/" entityType="work" step="maintenance_theory_timeline" field="work" values={onePickerValue(draft.work, timelineWorkName(draft.work))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft(current => ({ ...current, work: picked?.id ?? "", subject_edition: current.work === (picked?.id ?? "") ? current.subject_edition : "" })); }} /></div>
+          <TimelineSubjectEdition key={`${editing?.id || "new"}:${draft.work}`} work={draft.work} value={draft.subject_edition} onChange={subject_edition => setDraft(current => ({ ...current, subject_edition }))} />
           <label><span>来源</span><input value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })} placeholder="书目、论文或馆藏来源" /></label>
           <TimelineEvidenceFields draft={draft} saved={editing} workName={entityLabels[draft.source_work] || editing?.evidence_file?.work_title || "已选择出处馆藏"} onLabels={(values) => setEntityLabels((current) => ({ ...current, ...pickerLabels(values) }))} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
           <label><span>证据原文或来源说明</span><textarea rows={4} value={draft.evidence_text} onChange={(event) => setDraft({ ...draft, evidence_text: event.target.value })} /></label>
@@ -1658,7 +1709,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
           <SavedDraftActions revision={editing?.editorial_revision} dirty={timelineDirty} busy={Boolean(pendingAction)} impact="请核对上方的事件预览与关联对象。确认发布后，公开时间线和关联页面会更新。" publish={() => void publishEvent()} />
           <EditorialConflictHelp visible={editConflict} href={location.href({ event: editing?.id ?? null })} />
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
-        </form><aside className="timeline-current-preview"><header><strong>当前事件 · 实时预览</strong><span>{timelineDirty ? "有未保存修改" : "已保存内容"}</span></header><TheoryTimelinePublicList detailLinks={false} events={[{id:editing?.id || "draft",title:draft.title,description:draft.description,event_type:draft.event_type,start_year:Number(draft.start_year)||null,end_year:Number(draft.end_year)||null,date_label:draft.date_label,source:draft.source,evidence_page:Number(draft.evidence_page)||null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:null}]}/></aside></div>
+        </form><aside className="timeline-current-preview"><header><strong>当前事件 · 实时预览</strong><span>{timelineDirty ? "有未保存修改" : "已保存内容"}</span></header><TheoryTimelinePublicList detailLinks={false} events={[{id:editing?.id || "draft",title:draft.title,description:draft.description,event_type:draft.event_type,start_year:draft.start_year === "" ? null : Number(draft.start_year),end_year:draft.end_year === "" ? null : Number(draft.end_year),date_label:draft.date_label,date_precision:draft.date_precision,source:draft.source,evidence_page:Number(draft.evidence_page)||null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:null}]}/></aside></div>
       </div>
     </AdminFrame>
   );

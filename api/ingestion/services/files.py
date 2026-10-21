@@ -8,7 +8,6 @@ import tempfile
 from typing import Callable
 import unicodedata
 
-import fitz
 from django.core.files import File
 from django.core.files.storage import FileSystemStorage
 
@@ -103,6 +102,7 @@ def store_path_in_file_field(instance, field_name: str, source_path: str | Path,
 
 
 def validate_pdf_structure(path: str | Path, max_pages: int) -> int:
+    import fitz
     try:
         document = fitz.open(str(path))
     except Exception as exc:

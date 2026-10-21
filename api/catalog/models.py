@@ -2607,6 +2607,12 @@ class PersonTopicRelation(UUIDTimeStampedModel):
 
 
 class TheoryTimelineEvent(UUIDTimeStampedModel):
+    class DatePrecision(models.TextChoices):
+        UNKNOWN = "unknown", "精度未确认"
+        YEAR = "year", "确切年份"
+        APPROXIMATE = "approximate", "约年"
+        RANGE = "range", "时间区间"
+
     class EventType(models.TextChoices):
         SCHOLAR = "scholar", "学者"
         PUBLICATION = "publication", "重要发表"
@@ -2657,6 +2663,10 @@ class TheoryTimelineEvent(UUIDTimeStampedModel):
         on_delete=models.SET_NULL,
         related_name="theory_timeline_events",
     )
+    subject_edition = models.ForeignKey(
+        Edition, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="subject_timeline_events",
+    )
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to="public/knowledge/timeline/%Y/%m/", blank=True)
@@ -2664,6 +2674,9 @@ class TheoryTimelineEvent(UUIDTimeStampedModel):
     start_year = models.SmallIntegerField(null=True, blank=True, db_index=True)
     end_year = models.SmallIntegerField(null=True, blank=True)
     date_label = models.CharField(max_length=120, blank=True)
+    date_precision = models.CharField(
+        max_length=16, choices=DatePrecision.choices, default=DatePrecision.UNKNOWN,
+    )
     orientation = models.CharField(max_length=20, default="neutral")
     source = models.CharField(max_length=120, blank=True)
     evidence_asset = models.ForeignKey(

@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import re
 
-import fitz
 from django.db import transaction
 from django.utils import timezone
 
@@ -65,6 +64,7 @@ def _page_label(page, *, explicit_labels: bool) -> tuple[str, str, float]:
 
 
 def _page_raster_coverage(page) -> float:
+    import fitz
     page_area = max(float(page.rect.width) * float(page.rect.height), 1)
     coverage = 0.0
     try:
@@ -107,6 +107,7 @@ def _has_unmapped_composite_font(document, page) -> bool:
 
 
 def _native_pages(path: str | Path) -> list[ExtractedPage]:
+    import fitz
     document = fitz.open(str(path))
     try:
         explicit_labels = _explicit_page_labels(document)
@@ -208,6 +209,7 @@ def _ocr_pages(
     page_numbers: list[int] | None = None,
     task_options: dict | None = None,
 ) -> tuple[list[ExtractedPage], str]:
+    import fitz
     try:
         if page_numbers is None:
             payload, provider = parse_pdf_with_ocr(path)

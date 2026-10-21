@@ -16,7 +16,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from .public_response_serializers import ReaderFocusSerializer
 
 from common.capabilities import Capability, has_capability
@@ -81,6 +81,8 @@ from .theory_serializers import (
     KnowledgeRelationSerializer,
     KnowledgeRelationVersionSerializer,
     NormalizedTimelineEventSerializer,
+    NormalizedTimelineDetailSerializer,
+    NormalizedTimelinePageSerializer,
     ReadingPathSerializer,
     TheoryReviewTaskSerializer,
     WorkNodeRelationSerializer,
@@ -530,75 +532,72 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
 class NormalizedTimelineListView(TheorySystemFeatureMixin, generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = NormalizedTimelineEventSerializer
+    pagination_class = None
 
     def get_queryset(self):
-        queryset = TheoryTimelineEvent.objects.filter(
-            review_status=RelationReviewStatus.APPROVED
-        ).prefetch_related(
-            "normalized_relations__node",
-            "normalized_relations__discipline",
-            "normalized_relations__scholar__person",
-            "normalized_relations__work",
-        )
-        params = self.request.query_params
-        discipline = params.get("discipline", "").strip()
-        node = params.get("node", "").strip()
-        event_type = params.get("event_type", "").strip()
-        has_collection = params.get("has_collection", "").strip().lower()
-        query = params.get("q", "").strip()
-        years = {}
-        for key in ("year_from", "year_to"):
-            value = params.get(key, "").strip()
-            if value:
-                try:
-                    years[key] = int(value)
-                except ValueError:
-                    raise APIValidationError({key: "年份须为整数。"})
-                if not -32768 <= years[key] <= 32767:
-                    raise APIValidationError({key: "年份超出支持范围。"})
-        if "year_from" in years and "year_to" in years and years["year_from"] > years["year_to"]:
-            raise APIValidationError({"year_to": "结束年份不能早于开始年份。"})
-        if years:
-            queryset = queryset.annotate(range_start=Coalesce("start_year", "end_year"), range_end=Coalesce("end_year", "start_year"))
-            if "year_from" in years:
-                queryset = queryset.filter(range_end__gte=years["year_from"])
-            if "year_to" in years:
-                queryset = queryset.filter(range_start__lte=years["year_to"])
-        if discipline:
-            queryset = queryset.filter(
-                Q(discipline__slug=discipline, discipline__editorial_status="published")
-                | Q(normalized_relations__discipline__slug=discipline,
-                    normalized_relations__discipline__editorial_status="published")
-                | Q(normalized_relations__node__discipline_links__discipline__slug=discipline,
-                    normalized_relations__node__discipline_links__discipline__editorial_status="published",
-                    normalized_relations__node__discipline_links__status="published",
-                    normalized_relations__node__status="published")
-            )
-        if node:
-            queryset = queryset.filter(
-                normalized_relations__node__slug=node, normalized_relations__node__status="published",
-            )
-        if event_type:
-            queryset = queryset.filter(event_type=event_type)
-        if has_collection in {"1", "true", "yes"}:
-            queryset = queryset.filter(
-                Q(work_id__in=public_editions().values("work_id"))
-                | Q(normalized_relations__work_id__in=public_editions().values("work_id"))
-            )
-        if query:
-            queryset = queryset.filter(
-                Q(title__icontains=query)
-                | Q(description__icontains=query)
-                | Q(source__icontains=query)
-                | Q(normalized_relations__node__canonical_name_zh__icontains=query,
-                    normalized_relations__node__status="published")
-            )
-        return queryset.distinct().order_by("start_year", "display_order", "title", "pk")
+        from .services.timeline_publication import ordered, scoped_events
+        if getattr(self, "swagger_fake_view", False):
+            return TheoryTimelineEvent.objects.none()
+        rows, sort, _selected = scoped_events(self.request.query_params)
+        return ordered(rows, sort)
+
+    @extend_schema(
+        responses=NormalizedTimelinePageSerializer,
+        parameters=[
+            *[OpenApiParameter(key, str) for key in ("discipline", "node", "q", "related_to", "focus")],
+            *[OpenApiParameter(key, str, many=True, description="重复参数或逗号分隔，组内OR；最多30项。")
+              for key in ("topic", "author", "event_type")],
+            OpenApiParameter("sort", str, enum=["asc", "desc"]),
+            OpenApiParameter("year_from", int), OpenApiParameter("year_to", int),
+            OpenApiParameter("year", str, description="年份组或undated；不改变全筛选集的year_groups。"),
+            OpenApiParameter("page", int), OpenApiParameter("has_collection", bool),
+        ],
+    )
+    def get(self, request, *args, **kwargs):
+        from django.core.paginator import InvalidPage, Paginator
+        from rest_framework.utils.urls import remove_query_param, replace_query_param
+        from .services.timeline_publication import aggregates, focus_page, integer, ordered, scoped_events
+        params = request.query_params
+        scope, sort, selections = scoped_events(params)
+        summary = aggregates(scope)
+        group = params.get("year", "").strip()
+        rows = scope.filter(timeline_year__isnull=True) if group == "undated" else scope
+        if group and group != "undated":
+            rows = rows.filter(timeline_year=integer(params, "year"))
+        rows = ordered(rows, sort)
+        focus = params.get("focus", "").strip()
+        selected_id = None
+        if focus:
+            page_number, selected_id = focus_page(rows, focus, sort, 24)
+        else:
+            raw_page = params.get("page", "1")
+            try:
+                page_number = int(raw_page) if raw_page.isascii() and raw_page.isdigit() else 0
+            except ValueError:
+                page_number = 0
+            if page_number < 1:
+                raise APIValidationError({"page": "页码须为正整数。"})
+        paginator = Paginator(rows, 24)
+        try:
+            page = paginator.page(page_number)
+        except InvalidPage:
+            raise NotFound("此事件页不存在，请返回第一页重新查看。")
+        base_url = remove_query_param(request.build_absolute_uri(), "focus")
+        return Response({
+            "count": paginator.count,
+            "next": replace_query_param(base_url, "page", page.next_page_number()) if page.has_next() else None,
+            "previous": replace_query_param(base_url, "page", page.previous_page_number()) if page.has_previous() else None,
+            "results": self.get_serializer(page.object_list, many=True).data,
+            "page": page.number, "page_size": 24, "total_pages": paginator.num_pages,
+            "focus_id": selected_id, **summary, **selections,
+        })
 
 
 class NormalizedTimelineDetailView(NormalizedTimelineListView):
     """Stable event links reuse the public timeline's visibility and serializer."""
-    @extend_schema(operation_id="theory_system_timeline_detail", responses=NormalizedTimelineEventSerializer)
+    serializer_class = NormalizedTimelineDetailSerializer
+
+    @extend_schema(operation_id="theory_system_timeline_detail", responses=NormalizedTimelineDetailSerializer)
     def get(self, request, pk):
         from django.shortcuts import get_object_or_404
         return Response(self.get_serializer(get_object_or_404(self.get_queryset(), pk=pk)).data)

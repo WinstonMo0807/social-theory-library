@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { TheoryEmpty } from "@/components/theory-system-ui";
 import type { NormalizedTimelineEvent } from "@/lib/api/knowledge.types";
 import { CollectionLink } from "@/components/collection-link";
+import { timelineDate } from "@/lib/api/timeline.types";
 
 export const theoryTimelineEventTypeLabels: Record<string, string> = {
   publication: "重要著作出版",
@@ -35,9 +36,9 @@ export function TheoryTimelinePublicList({
         const nodeNames = event.relations.filter((item) => item.type === "node").map((item) => item.name);
         const hasWork = event.relations.some((item) => item.type === "work");
         return <article id={`timeline-event-${event.id}`} key={event.id}>
-          <time>{event.start_year ? `${Math.floor(event.start_year / 10) * 10}s` : event.date_label}</time>
+          <time>{timelineDate(event)}</time>
           <span className="event-icon">{hasWork ? <BookOpen size={21} /> : <CalendarDays size={21} />}</span>
-          <div className="event-main"><small>{event.date_label || event.start_year}</small><h2>{detailLinks ? <Link href={`/theories/events/${event.id}`}>{event.title}</Link> : event.title}</h2><p>{event.description}</p></div>
+          <div className="event-main"><small>{timelineDate(event)}</small><h2>{detailLinks ? <Link href={`/theories/events/${event.id}`}>{event.title}</Link> : event.title}</h2><p>{event.description}</p></div>
           <dl>{event.event_type ? <><dt>事件类型</dt><dd>{theoryTimelineEventTypeLabels[event.event_type] || event.event_type}</dd></> : null}{nodeNames.length ? <><dt>相关理论</dt><dd>{nodeNames.join("、")}</dd></> : null}{event.source ? <><dt>信息来源</dt><dd>{event.source}</dd></> : null}</dl>
           {event.reader_href ? <CollectionLink href={event.reader_href}>查看馆藏证据<ExternalLink size={15} /></CollectionLink> : null}
         </article>;

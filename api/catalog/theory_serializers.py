@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.db import transaction
-from django.db.models import F, Q
+from django.db.models import F, Q, prefetch_related_objects
 from django.urls import reverse
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
@@ -113,8 +113,10 @@ def _published_edition(work):
     )
 
 
-def compact_work(work, request=None, *, include_unpublished=False):
-    edition = _published_edition(work)
+def compact_work(work, request=None, *, include_unpublished=False, edition=None):
+    if edition is not None and edition.work_id != work.pk:
+        return None
+    edition = edition if edition is not None else _published_edition(work)
     snapshot = active_catalog_snapshot(edition)
     if snapshot:
         revision = edition.active_catalog_revision
@@ -243,6 +245,9 @@ class TheoryTimelineTargetSerializer(serializers.Serializer):
     relation_type = serializers.CharField()
     slug = serializers.CharField(required=False, allow_blank=True)
     detail_href = serializers.CharField(required=False, allow_null=True)
+    href = serializers.CharField(required=False)
+    node_type = serializers.CharField(required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
 
 
 class DisciplineCompactSerializer(TaxonomyImageSerializerMixin, serializers.ModelSerializer):
@@ -1542,13 +1547,76 @@ class KnowledgeNodeMergeRecordSerializer(serializers.ModelSerializer):
         )
 
 
+class TimelineSubjectEditionSerializer(CompactTheoryWorkSerializer):
+    version_label = serializers.CharField(allow_blank=True)
+
+
+class TimelineSubjectWorkSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    detail_href = serializers.CharField()
+
+
+class TimelineScholarSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    person_id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+    href = serializers.CharField()
+    portrait_url = serializers.CharField(allow_blank=True)
+
+
+class TimelineTopicSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+    href = serializers.CharField()
+
+
+class TimelineEvidenceSourceSerializer(serializers.Serializer):
+    asset_id = serializers.UUIDField()
+    edition_id = serializers.UUIDField()
+    work_id = serializers.UUIDField()
+    document_revision_id = serializers.UUIDField()
+    title = serializers.CharField(allow_blank=True)
+    edition_label = serializers.CharField(allow_blank=True)
+    pdf_page = serializers.IntegerField(min_value=1)
+    printed_page_label = serializers.CharField(allow_blank=True)
+    quote = serializers.CharField(allow_blank=True)
+    reader_href = serializers.CharField()
+
+
+class TimelineProjectionListSerializer(TimelineEvidenceListSerializer):
+    def to_representation(self, data):
+        from catalog.services.timeline_publication import prepare_timeline_projections
+        rows = list(data.all() if hasattr(data, "all") else data)
+        # Legacy node/lineage callers also use this serializer. Complete their
+        # relation caches in batches; already selected/prefetched paths are reused.
+        prefetch_related_objects(rows, "discipline", "subdiscipline", "theory_school", "scholar__person", "work",
+            "subject_edition__work", "subject_edition__active_catalog_revision__reader_asset",
+            "subject_edition__active_catalog_revision__document_revision",
+            "normalized_relations__node", "normalized_relations__discipline",
+            "normalized_relations__scholar__person", "normalized_relations__work")
+        prepare_timeline_projections(rows, self.context)
+        return super().to_representation(rows)
+
+
 class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
     relations = serializers.SerializerMethodField()
     reader_href = serializers.SerializerMethodField()
+    origin_kind = serializers.SerializerMethodField()
+    subject_edition = serializers.SerializerMethodField()
+    subject_status = serializers.SerializerMethodField()
+    subject_work = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
+    scholars = serializers.SerializerMethodField()
+    topics = serializers.SerializerMethodField()
+    source_status = serializers.SerializerMethodField()
+    evidence_source = serializers.SerializerMethodField()
 
     class Meta:
         model = TheoryTimelineEvent
-        list_serializer_class = TimelineEvidenceListSerializer
+        list_serializer_class = TimelineProjectionListSerializer
         fields = (
             "id",
             "title",
@@ -1563,54 +1631,57 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
             "evidence_text",
             "relations",
             "reader_href",
+            "origin_kind",
+            "date_precision",
+            "subject_edition",
+            "subject_status",
+            "subject_work",
+            "image_url",
+            "scholars",
+            "topics",
+            "source_status",
+            "evidence_source",
         )
+
+    def _projection(self, obj):
+        from catalog.services.timeline_publication import event_projection
+        return event_projection(obj, self.context)
 
     @extend_schema_field(TheoryTimelineTargetSerializer(many=True))
     def get_relations(self, obj):
-        rows = []
-        for relation in obj.normalized_relations.all():
-            target = None
-            if relation.node_id:
-                if relation.node.status != "published":
-                    continue
-                target = {
-                    "type": "node",
-                    "id": str(relation.node_id),
-                    "name": relation.node.canonical_name_zh,
-                    "slug": relation.node.slug,
-                }
-            elif relation.discipline_id:
-                if relation.discipline.editorial_status != "published":
-                    continue
-                target = {
-                    "type": "discipline",
-                    "id": str(relation.discipline_id),
-                    "name": relation.discipline.name,
-                    "slug": relation.discipline.slug,
-                }
-            elif relation.scholar_id:
-                if not scholar_public_eligibility(relation.scholar)["eligible"]:
-                    continue
-                target = {
-                    "type": "scholar",
-                    "id": str(relation.scholar_id),
-                    "name": relation.scholar.person.preferred_name,
-                    "slug": relation.scholar.slug,
-                }
-            elif relation.work_id:
-                work = compact_work(relation.work, self.context.get("request"))
-                if work is None:
-                    continue
-                target = {
-                    "type": "work",
-                    "id": str(relation.work_id),
-                    "name": work["title"],
-                    "slug": work["slug"],
-                    "detail_href": work["detail_href"],
-                }
-            if target:
-                rows.append({"relation_type": relation.relation_type, **target})
-        return rows
+        return self._projection(obj)["relations"]
+
+    def get_origin_kind(self, obj) -> str:
+        return "timeline_event"
+
+    @extend_schema_field(TimelineSubjectEditionSerializer(allow_null=True))
+    def get_subject_edition(self, obj):
+        return self._projection(obj)["subject_edition"]
+
+    def get_subject_status(self, obj) -> str:
+        return self._projection(obj)["subject_status"]
+
+    @extend_schema_field(TimelineSubjectWorkSerializer(allow_null=True))
+    def get_subject_work(self, obj):
+        return self._projection(obj)["subject_work"]
+
+    def get_image_url(self, obj) -> str:
+        return self._projection(obj)["image_url"]
+
+    @extend_schema_field(TimelineScholarSerializer(many=True))
+    def get_scholars(self, obj):
+        return self._projection(obj)["scholars"]
+
+    @extend_schema_field(TimelineTopicSerializer(many=True))
+    def get_topics(self, obj):
+        return self._projection(obj)["topics"]
+
+    def get_source_status(self, obj) -> str:
+        return self._projection(obj)["source_status"]
+
+    @extend_schema_field(TimelineEvidenceSourceSerializer(allow_null=True))
+    def get_evidence_source(self, obj):
+        return self._projection(obj)["evidence_source"]
 
     def get_reader_href(self, obj) -> str | None:
         asset = timeline_file(obj, self.context)
@@ -1627,3 +1698,74 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
             data["evidence_page"] = None
             data["evidence_printed_label"] = ""
         return data
+
+
+class NormalizedTimelineDetailSerializer(NormalizedTimelineEventSerializer):
+    related_events = serializers.SerializerMethodField()
+    related_count = serializers.SerializerMethodField()
+    knowledge_relations = serializers.SerializerMethodField()
+    knowledge_relation_count = serializers.SerializerMethodField()
+
+    class Meta(NormalizedTimelineEventSerializer.Meta):
+        fields = NormalizedTimelineEventSerializer.Meta.fields + (
+            "related_events", "related_count", "knowledge_relations", "knowledge_relation_count",
+        )
+
+    def _related(self, obj):
+        from catalog.services.timeline_publication import public_events, related_query, ordered
+        if not hasattr(self, "_related_rows"):
+            self._related_rows = ordered(public_events().filter(related_query(obj, self.context)).exclude(pk=obj.pk).distinct(), "asc")
+        return self._related_rows
+
+    @extend_schema_field(NormalizedTimelineEventSerializer(many=True))
+    def get_related_events(self, obj):
+        return NormalizedTimelineEventSerializer(self._related(obj)[:12], many=True, context=self.context).data
+
+    def get_related_count(self, obj) -> int:
+        return self._related(obj).count()
+
+    def _knowledge(self, obj):
+        from catalog.services.timeline_publication import event_knowledge_relations
+        if not hasattr(self, "_knowledge_rows"):
+            self._knowledge_rows = event_knowledge_relations(obj)
+        return self._knowledge_rows
+
+    @extend_schema_field(KnowledgeRelationSerializer(many=True))
+    def get_knowledge_relations(self, obj):
+        return KnowledgeRelationSerializer(self._knowledge(obj)[:40], many=True, context=self.context).data
+
+    def get_knowledge_relation_count(self, obj) -> int:
+        return self._knowledge(obj).count()
+
+
+class TimelineEventTypeCountSerializer(serializers.Serializer):
+    event_type = serializers.ChoiceField(choices=TheoryTimelineEvent.EventType.choices)
+    count = serializers.IntegerField(min_value=0)
+
+
+class TimelineYearGroupSerializer(serializers.Serializer):
+    year = serializers.IntegerField(allow_null=True)
+    count = serializers.IntegerField(min_value=0)
+    event_types = TimelineEventTypeCountSerializer(many=True)
+
+
+class TimelineBoundsSerializer(serializers.Serializer):
+    min_year = serializers.IntegerField(allow_null=True)
+    max_year = serializers.IntegerField(allow_null=True)
+    undated_count = serializers.IntegerField(min_value=0)
+
+
+class NormalizedTimelinePageSerializer(serializers.Serializer):
+    count = serializers.IntegerField(min_value=0)
+    next = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results = NormalizedTimelineEventSerializer(many=True)
+    page = serializers.IntegerField(min_value=1)
+    page_size = serializers.IntegerField(min_value=1)
+    total_pages = serializers.IntegerField(min_value=1)
+    scope_count = serializers.IntegerField(min_value=0)
+    year_groups = TimelineYearGroupSerializer(many=True)
+    bounds = TimelineBoundsSerializer()
+    focus_id = serializers.UUIDField(allow_null=True)
+    selected_topics = TimelineTopicSerializer(many=True)
+    selected_authors = TimelineScholarSerializer(many=True)

@@ -1,5 +1,16 @@
 # 验收记录
 
+## 2026-10-21 PDF56/57时间线静态收口
+
+- 唯一PDF56/57及纯照片hero已实际读取。按tmp/stl4-timeline-checkpoint.py精确55路径取25个Python文件，ast.parse退出0（278567）；13个测试函数34参数案例只计AST、未运行。
+- web下node node_modules/eslint/bin/eslint.js检查四时间线路由、theory-system-admin、theory-timeline-public-view/page/workspace、timeline-event-details/picker、timeline.types/server、knowledge.types及两spec，共15文件，退出0（9ebf35，0错误/3 img建议）。同一工具调用中的白名单脚本因web工作目录找不到Python未执行，随后已在根目录278567单独成功，不影响ESLint结果。
+- PostCSS解析theory-timeline.module.css为215顶层节点；样式引用核对退出0。全量node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false最终66497退出0（87633a）；前一轮类型检查修复节点子页timeline参数、空筛选类型和关系数组交叉类型后80010退出0。
+- SQLite/PostgreSQL各5条ORM SQL仅编译，覆盖作者快照、准确版本/相关作品、作者关联、year/type聚合和排序。占位符与参数数一致，ensure_connection明确拒绝连接，未查询数据库。
+- 完整spectacular首轮45abab退出1，Windows应用控制阻止PyMuPDF原生DLL。11模块fitz延迟到21个实际使用函数，25 Python AST包含这些改动；单独对11模块剔除导入后业务AST与HEAD一致，静态导入不载入fitz/pymupdf并禁止DB连接。未执行PDF。
+- 本进程DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8，执行.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-timeline-schema-20261021.json --validate，最终93213e退出0，0错误/10既有Home/Scholar/Topic提示。中间18提示的5旧字段和3列表方法冲突均已修。
+- openapi-typescript openapiTS/astToString同步api/openapi/schema.json与web/lib/api/generated/schema.ts，0fbe8c退出0；191路径，原188无删除。
+- 13公共浏览器与2管理场景、合成隔离fixture已编写，未运行；公开/隐藏次版、来源变化、日期精度/0年、筛选统计、键盘、移动和发布分离均待统一功能验收。0071未应用。没有正式测试、浏览器、构建、检索质量评测或生产操作。
+
 ## 2026-10-20 PDF50/51/54子学科与目录静态收口
 
 - 实际读取唯一final-r2 PDF50/51/54及下一单元52/53/55–57原图；13张装饰裁片逐项查看，仅纯照片，不是实施页截图。

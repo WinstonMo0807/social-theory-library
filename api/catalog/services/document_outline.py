@@ -11,7 +11,6 @@ import math
 import re
 from uuid import UUID, uuid4, uuid5
 
-import fitz
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -133,6 +132,7 @@ def extract_outline(asset, path, *, progress=None):
     Page labels are looked up independently, retaining Roman/body/appendix
     segments and ambiguous repeated labels. A whole-book offset is never guessed.
     """
+    import fitz
     nodes, diagnostics, geometry = [], [], {}
     if progress:
         progress("bookmarks", 0, asset.page_count)

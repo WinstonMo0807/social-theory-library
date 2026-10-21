@@ -6,7 +6,6 @@ import re
 import tempfile
 from uuid import uuid4
 
-import fitz
 from PIL import Image, ImageStat
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -44,6 +43,7 @@ def _fold(value: str) -> str:
 
 
 def _page_metrics(page, page_index: int, work: Work, author_names: list[str], max_pages: int):
+    import fitz
     text = page.get_text("text", sort=True).strip()
     folded_text = _fold(text[:4000])
     folded_title = _fold(work.title)
@@ -242,6 +242,7 @@ def select_cover_candidate(candidate: CoverCandidate, *, automatic: bool = False
 
 
 def generate_cover_candidates(asset: Asset, *, force: bool = False, auto_select: bool = True, include_non_book: bool = False):
+    import fitz
     asset = Asset.objects.select_related("edition__work").get(pk=asset.pk)
     work = asset.edition.work
     if not include_non_book and work.document_type not in {DocumentType.BOOK, DocumentType.JOURNAL_ISSUE}:
@@ -319,6 +320,7 @@ def generate_cover_candidates(asset: Asset, *, force: bool = False, auto_select:
 
 def prepare_cover_page(asset: Asset, page_index: int):
     """Render one explicitly requested PDF page; never write Page or the PDF."""
+    import fitz
     with _local_asset_path(asset) as path, fitz.open(str(path)) as document:
         if page_index < 1 or page_index > document.page_count:
             raise CoverCandidateUnavailable(f"页码须在 1—{document.page_count} 之间，按PDF实际页序填写。")
@@ -343,6 +345,7 @@ def generate_recommendation_image(asset: Asset, *, force: bool = False, actor=No
     first non-blank page among the first six pages. This runs during ingestion,
     so public recommendation requests never render PDF pages on demand.
     """
+    import fitz
     asset = Asset.objects.select_related("edition__work").get(pk=asset.pk)
     work = asset.edition.work
     if expected_work_id is not None and str(work.pk) != str(expected_work_id):

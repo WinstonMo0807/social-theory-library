@@ -5,7 +5,6 @@ import tempfile
 import time
 import uuid
 
-import fitz
 import httpx
 from django.conf import settings
 from django.db import connection
@@ -220,6 +219,7 @@ def system_health_snapshot() -> dict:
 
 
 def _scanned_probe_pdf(path: Path) -> None:
+    import fitz
     source = fitz.open()
     page = source.new_page(width=360, height=240)
     page.insert_text((32, 110), "System health OCR 2026", fontsize=18)
@@ -234,6 +234,7 @@ def _scanned_probe_pdf(path: Path) -> None:
 
 
 def run_end_to_end_self_test() -> dict:
+    import fitz
     started = time.monotonic()
     steps = {}
     with tempfile.TemporaryDirectory(prefix="library-system-health-") as temporary:

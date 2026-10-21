@@ -977,6 +977,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-timeline/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_theory_timeline_list"];
+        put?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        post: operations["catalog_admin_theory_timeline_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-timeline/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_theory_timeline_retrieve"];
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        put: operations["catalog_admin_theory_timeline_update"];
+        post?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        delete: operations["catalog_admin_theory_timeline_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        patch: operations["catalog_admin_theory_timeline_partial_update"];
+        trace?: never;
+    };
     "/api/catalog/admin/works/{work_id}/editions/": {
         parameters: {
             query?: never;
@@ -1612,6 +1650,22 @@ export interface paths {
         };
         /** @description Stable event links reuse the public timeline's visibility and serializer. */
         get: operations["theory_system_timeline_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/theory-timeline/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_theory_timeline_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3079,6 +3133,147 @@ export interface components {
             summary: components["schemas"]["AdminIssueSummary"];
             upcoming: components["schemas"]["RecommendationIssue"][];
         };
+        AdminTheoryTimelineEvent: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            /** Format: uuid */
+            discipline?: string | null;
+            /** Format: uuid */
+            theory_school?: string | null;
+            /** Format: uuid */
+            subdiscipline?: string | null;
+            /** Format: uuid */
+            scholar?: string | null;
+            /** Format: uuid */
+            work?: string | null;
+            /** Format: uuid */
+            subject_edition?: string | null;
+            title: string;
+            description?: string;
+            /** Format: uri */
+            image?: string | null;
+            event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            date_label?: string;
+            date_precision?: components["schemas"]["DatePrecisionEnum"];
+            orientation?: string;
+            source?: string;
+            /** Format: uuid */
+            evidence_asset?: string | null;
+            /** Format: int64 */
+            evidence_page?: number | null;
+            evidence_printed_label?: string;
+            evidence_text?: string;
+            /** Format: double */
+            confidence?: number;
+            review_status?: components["schemas"]["ReviewStatusEnum"];
+            readonly reviewed_by: number | null;
+            /** Format: date-time */
+            readonly reviewed_at: string | null;
+            /** Format: int64 */
+            display_order?: number;
+            relations?: components["schemas"]["AdminTimelineEventRelation"][];
+            readonly evidence_file: components["schemas"]["TimelineAdminEvidenceFile"] | null;
+            readonly edit_version: string;
+            readonly editorial_revision: components["schemas"]["TimelineEditorialRevision"];
+            readonly public_status: string;
+            readonly has_unpublished_changes: boolean;
+        };
+        AdminTheoryTimelineEventRequest: {
+            /** Format: uuid */
+            discipline?: string | null;
+            /** Format: uuid */
+            theory_school?: string | null;
+            /** Format: uuid */
+            subdiscipline?: string | null;
+            /** Format: uuid */
+            scholar?: string | null;
+            /** Format: uuid */
+            work?: string | null;
+            /** Format: uuid */
+            subject_edition?: string | null;
+            title: string;
+            description?: string;
+            /** Format: binary */
+            image?: string;
+            event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            date_label?: string;
+            date_precision?: components["schemas"]["DatePrecisionEnum"];
+            orientation?: string;
+            source?: string;
+            /** Format: uuid */
+            evidence_asset?: string | null;
+            /** Format: int64 */
+            evidence_page?: number | null;
+            evidence_printed_label?: string;
+            evidence_text?: string;
+            /** Format: double */
+            confidence?: number;
+            review_status?: components["schemas"]["ReviewStatusEnum"];
+            /** Format: int64 */
+            display_order?: number;
+            relations?: components["schemas"]["AdminTimelineEventRelationRequest"][];
+            /** Format: uuid */
+            evidence_work_id?: string | null;
+            /** Format: uuid */
+            evidence_edition_id?: string | null;
+        };
+        AdminTimelineEventRelation: {
+            /** Format: uuid */
+            readonly id: string;
+            relation_type?: components["schemas"]["AdminTimelineEventRelationRelationTypeEnum"];
+            /** Format: uuid */
+            node?: string | null;
+            readonly node_name: string;
+            /** Format: uuid */
+            discipline?: string | null;
+            readonly discipline_name: string;
+            /** Format: uuid */
+            scholar?: string | null;
+            readonly scholar_name: string;
+            /** Format: uuid */
+            work?: string | null;
+            readonly work_title: string;
+            /** Format: uuid */
+            evidence?: string | null;
+            description?: string;
+            /** Format: int64 */
+            sort_order?: number;
+        };
+        /**
+         * @description * `subject` - 事件主体
+         *     * `context` - 相关背景
+         *     * `evidence` - 馆藏证据
+         * @enum {string}
+         */
+        AdminTimelineEventRelationRelationTypeEnum: "subject" | "context" | "evidence";
+        AdminTimelineEventRelationRequest: {
+            relation_type?: components["schemas"]["AdminTimelineEventRelationRelationTypeEnum"];
+            /** Format: uuid */
+            node?: string | null;
+            /** Format: uuid */
+            discipline?: string | null;
+            /** Format: uuid */
+            scholar?: string | null;
+            /** Format: uuid */
+            work?: string | null;
+            /** Format: uuid */
+            evidence?: string | null;
+            description?: string;
+            /** Format: int64 */
+            sort_order?: number;
+        };
         /**
          * @description * `alias` - 别名
          *     * `translation` - 译名
@@ -3840,6 +4035,14 @@ export interface components {
             previous: string | null;
             results: components["schemas"]["CurationSource"][];
         };
+        /**
+         * @description * `unknown` - 精度未确认
+         *     * `year` - 确切年份
+         *     * `approximate` - 约年
+         *     * `range` - 时间区间
+         * @enum {string}
+         */
+        DatePrecisionEnum: "unknown" | "year" | "approximate" | "range";
         /**
          * @description * `accepted` - accepted
          *     * `ignored` - ignored
@@ -5754,6 +5957,39 @@ export interface components {
          * @enum {string}
          */
         NodeTypeEnum: "discipline" | "theory_tradition" | "subdiscipline" | "concept" | "debate" | "research_problem" | "topic";
+        NormalizedTimelineDetail: {
+            /** Format: uuid */
+            readonly id: string;
+            title: string;
+            description?: string;
+            event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            date_label?: string;
+            source?: string;
+            /** Format: int64 */
+            evidence_page?: number | null;
+            evidence_printed_label?: string;
+            evidence_text?: string;
+            readonly relations: components["schemas"]["TheoryTimelineTarget"][];
+            readonly reader_href: string | null;
+            readonly origin_kind: string;
+            date_precision?: components["schemas"]["DatePrecisionEnum"];
+            readonly subject_edition: components["schemas"]["TimelineSubjectEdition"] | null;
+            readonly subject_status: string;
+            readonly subject_work: components["schemas"]["TimelineSubjectWork"] | null;
+            readonly image_url: string;
+            readonly scholars: components["schemas"]["TimelineScholar"][];
+            readonly topics: components["schemas"]["TimelineTopic"][];
+            readonly source_status: string;
+            readonly evidence_source: components["schemas"]["TimelineEvidenceSource"] | null;
+            readonly related_events: components["schemas"]["NormalizedTimelineEvent"][];
+            readonly related_count: number;
+            readonly knowledge_relations: components["schemas"]["KnowledgeRelation"][];
+            readonly knowledge_relation_count: number;
+        };
         NormalizedTimelineEvent: {
             /** Format: uuid */
             readonly id: string;
@@ -5772,6 +6008,32 @@ export interface components {
             evidence_text?: string;
             readonly relations: components["schemas"]["TheoryTimelineTarget"][];
             readonly reader_href: string | null;
+            readonly origin_kind: string;
+            date_precision?: components["schemas"]["DatePrecisionEnum"];
+            readonly subject_edition: components["schemas"]["TimelineSubjectEdition"] | null;
+            readonly subject_status: string;
+            readonly subject_work: components["schemas"]["TimelineSubjectWork"] | null;
+            readonly image_url: string;
+            readonly scholars: components["schemas"]["TimelineScholar"][];
+            readonly topics: components["schemas"]["TimelineTopic"][];
+            readonly source_status: string;
+            readonly evidence_source: components["schemas"]["TimelineEvidenceSource"] | null;
+        };
+        NormalizedTimelinePage: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["NormalizedTimelineEvent"][];
+            page: number;
+            page_size: number;
+            total_pages: number;
+            scope_count: number;
+            year_groups: components["schemas"]["TimelineYearGroup"][];
+            bounds: components["schemas"]["TimelineBounds"];
+            /** Format: uuid */
+            focus_id: string | null;
+            selected_topics: components["schemas"]["TimelineTopic"][];
+            selected_authors: components["schemas"]["TimelineScholar"][];
         };
         /**
          * @description * `save` - save
@@ -5982,6 +6244,21 @@ export interface components {
          * @enum {string}
          */
         PageTypeEnum: "front" | "body" | "appendix" | "other" | "blank";
+        PaginatedAdminTheoryTimelineEventList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AdminTheoryTimelineEvent"][];
+        };
         PaginatedAnnotationList: {
             /** @example 123 */
             count: number;
@@ -6056,21 +6333,6 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["MemoryListOutput"][];
-        };
-        PaginatedNormalizedTimelineEventList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["NormalizedTimelineEvent"][];
         };
         PaginatedParallelCalibrationPageOutputList: {
             /** @example 123 */
@@ -6206,6 +6468,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["SubdisciplineList"][];
+        };
+        PaginatedTheoryTimelineEventList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TheoryTimelineEvent"][];
         };
         PaginatedWorkCardList: {
             /** @example 123 */
@@ -6595,6 +6872,49 @@ export interface components {
         ParallelWarning: {
             code: string;
             message: string;
+        };
+        PatchedAdminTheoryTimelineEventRequest: {
+            /** Format: uuid */
+            discipline?: string | null;
+            /** Format: uuid */
+            theory_school?: string | null;
+            /** Format: uuid */
+            subdiscipline?: string | null;
+            /** Format: uuid */
+            scholar?: string | null;
+            /** Format: uuid */
+            work?: string | null;
+            /** Format: uuid */
+            subject_edition?: string | null;
+            title?: string;
+            description?: string;
+            /** Format: binary */
+            image?: string;
+            event_type?: components["schemas"]["EventTypeEnum"];
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            date_label?: string;
+            date_precision?: components["schemas"]["DatePrecisionEnum"];
+            orientation?: string;
+            source?: string;
+            /** Format: uuid */
+            evidence_asset?: string | null;
+            /** Format: int64 */
+            evidence_page?: number | null;
+            evidence_printed_label?: string;
+            evidence_text?: string;
+            /** Format: double */
+            confidence?: number;
+            review_status?: components["schemas"]["ReviewStatusEnum"];
+            /** Format: int64 */
+            display_order?: number;
+            relations?: components["schemas"]["AdminTimelineEventRelationRequest"][];
+            /** Format: uuid */
+            evidence_work_id?: string | null;
+            /** Format: uuid */
+            evidence_edition_id?: string | null;
         };
         PatchedAnnotationRequest: {
             /** Format: uuid */
@@ -8980,6 +9300,30 @@ export interface components {
             /** Format: uuid */
             discipline_id?: string | null;
         };
+        TheoryTimelineEvent: {
+            /** Format: uuid */
+            readonly id: string;
+            title: string;
+            description?: string;
+            event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            date_label?: string;
+            orientation?: string;
+            /** Format: uri */
+            image?: string | null;
+            readonly theory: components["schemas"]["TimelineNamedReference"] | null;
+            readonly discipline: components["schemas"]["TimelineNamedReference"] | null;
+            readonly subdiscipline: components["schemas"]["TimelineNamedReference"] | null;
+            readonly scholar: components["schemas"]["TimelineNamedReference"] | null;
+            readonly work: components["schemas"]["TimelineWorkReference"] | null;
+            /** Format: int64 */
+            evidence_page?: number | null;
+            evidence_printed_label?: string;
+            evidence_text?: string;
+        };
         TheoryTimelineTarget: {
             type: string;
             /** Format: uuid */
@@ -8988,6 +9332,9 @@ export interface components {
             relation_type: string;
             slug?: string;
             detail_href?: string | null;
+            href?: string;
+            node_type?: string;
+            description?: string;
         };
         TheoryWorkGroups: {
             foundational_work?: components["schemas"]["WorkNodeRelation"][];
@@ -8997,6 +9344,164 @@ export interface components {
             comparative_study?: components["schemas"]["WorkNodeRelation"][];
             critique?: components["schemas"]["WorkNodeRelation"][];
             general_mention?: components["schemas"]["WorkNodeRelation"][];
+        };
+        TimelineAdminEvidenceFile: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            work_id: string;
+            work_title: string;
+            /** Format: uuid */
+            edition_id: string;
+            edition_label: string;
+            filename: string;
+            version: number;
+            page_count: number;
+            reader_href: string | null;
+            detail: string;
+        };
+        TimelineBounds: {
+            min_year: number | null;
+            max_year: number | null;
+            undated_count: number;
+        };
+        TimelineEditorialRevision: {
+            /** Format: uuid */
+            id: string;
+            target_type: string;
+            /** Format: uuid */
+            target_id: string;
+            base_revision: number;
+            current_revision: number;
+            revision: number;
+            patch: unknown;
+            materialized_preview: unknown;
+            changed_fields: string[];
+            status: string;
+            change_note: string;
+            /** Format: uuid */
+            created_by: string | null;
+            /** Format: uuid */
+            published_by: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            published_at: string | null;
+            has_conflict: boolean;
+            publish_url: string;
+        };
+        TimelineEditorialRevisionRequest: {
+            /** Format: uuid */
+            id: string;
+            target_type: string;
+            /** Format: uuid */
+            target_id: string;
+            base_revision: number;
+            current_revision: number;
+            revision: number;
+            patch: unknown;
+            materialized_preview: unknown;
+            changed_fields: string[];
+            status: string;
+            change_note: string;
+            /** Format: uuid */
+            created_by: string | null;
+            /** Format: uuid */
+            published_by: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            published_at: string | null;
+            has_conflict: boolean;
+            publish_url: string;
+        };
+        TimelineEventTypeCount: {
+            event_type: components["schemas"]["EventTypeEnum"];
+            count: number;
+        };
+        TimelineEvidenceSource: {
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+            title: string;
+            edition_label: string;
+            pdf_page: number;
+            printed_page_label: string;
+            quote: string;
+            reader_href: string;
+        };
+        TimelineNamedReference: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+        };
+        TimelineScholar: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            person_id: string;
+            name: string;
+            slug: string;
+            href: string;
+            portrait_url: string;
+        };
+        TimelineSubjectEdition: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            subtitle: string;
+            document_type: string;
+            language: string;
+            author: string;
+            year: number | null;
+            publisher: string;
+            cover_url: string;
+            /** Format: uuid */
+            edition_id?: string;
+            /** Format: uuid */
+            catalog_revision_id?: string;
+            /** Format: uuid */
+            document_revision_id?: string | null;
+            source_status?: string;
+            /** Format: uuid */
+            asset_id: string | null;
+            reader_href: string | null;
+            detail_href: string | null;
+            version_label: string;
+        };
+        TimelineSubjectWork: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            detail_href: string;
+        };
+        TimelineTopic: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            href: string;
+        };
+        TimelineWorkReference: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+        };
+        TimelineYearGroup: {
+            year: number | null;
+            count: number;
+            event_types: components["schemas"]["TimelineEventTypeCount"][];
         };
         Topic: {
             /** Format: uuid */
@@ -11438,6 +11943,152 @@ export interface operations {
             };
         };
     };
+    catalog_admin_theory_timeline_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAdminTheoryTimelineEventList"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AdminTheoryTimelineEventRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminTheoryTimelineEventRequest"];
+                "application/json": components["schemas"]["AdminTheoryTimelineEventRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTheoryTimelineEvent"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTheoryTimelineEvent"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AdminTheoryTimelineEventRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminTheoryTimelineEventRequest"];
+                "application/json": components["schemas"]["AdminTheoryTimelineEventRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTheoryTimelineEvent"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_admin_theory_timeline_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["PatchedAdminTheoryTimelineEventRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminTheoryTimelineEventRequest"];
+                "application/json": components["schemas"]["PatchedAdminTheoryTimelineEventRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTheoryTimelineEvent"];
+                };
+            };
+        };
+    };
     catalog_admin_works_editions_create: {
         parameters: {
             query?: never;
@@ -12417,6 +13068,74 @@ export interface operations {
     catalog_theory_system_timeline_list: {
         parameters: {
             query?: {
+                /** @description 重复参数或逗号分隔，组内OR；最多30项。 */
+                author?: string[];
+                discipline?: string;
+                /** @description 重复参数或逗号分隔，组内OR；最多30项。 */
+                event_type?: string[];
+                focus?: string;
+                has_collection?: boolean;
+                node?: string;
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                page?: number;
+                q?: string;
+                related_to?: string;
+                /** @description 搜索关键词。 */
+                search?: string;
+                sort?: "asc" | "desc";
+                /** @description 重复参数或逗号分隔，组内OR；最多30项。 */
+                topic?: string[];
+                /** @description 年份组或undated；不改变全筛选集的year_groups。 */
+                year?: string;
+                year_from?: number;
+                year_to?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NormalizedTimelinePage"][];
+                };
+            };
+        };
+    };
+    theory_system_timeline_detail: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NormalizedTimelineDetail"][];
+                };
+            };
+        };
+    };
+    catalog_theory_timeline_list: {
+        parameters: {
+            query?: {
                 /** @description 用于排序结果的字段。 */
                 ordering?: string;
                 /** @description 分页结果集中的页码。 */
@@ -12435,35 +13154,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedNormalizedTimelineEventList"];
-                };
-            };
-        };
-    };
-    theory_system_timeline_detail: {
-        parameters: {
-            query?: {
-                /** @description 用于排序结果的字段。 */
-                ordering?: string;
-                /** @description 分页结果集中的页码。 */
-                page?: number;
-                /** @description 搜索关键词。 */
-                search?: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedNormalizedTimelineEventList"];
+                    "application/json": components["schemas"]["PaginatedTheoryTimelineEventList"];
                 };
             };
         };

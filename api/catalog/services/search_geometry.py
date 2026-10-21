@@ -7,7 +7,6 @@ import math
 import shutil
 import tempfile
 
-import fitz
 from django.core.cache import cache
 from catalog.services.page_geometry import locator_geometry, native_geometry
 
@@ -125,6 +124,7 @@ def _pdf_text_highlights(
     query: str,
     page_rows: list[dict],
 ) -> dict[int, list[dict]]:
+    import fitz
     page_indexes = tuple(sorted({int(row["page_index"]) for row in page_rows}))
     query_digest = sha256(query.encode("utf-8")).hexdigest()[:20]
     pages_digest = sha256(",".join(map(str, page_indexes)).encode("ascii")).hexdigest()[:16]

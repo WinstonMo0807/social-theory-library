@@ -6,7 +6,6 @@ from pathlib import PurePosixPath
 from urllib.parse import urlsplit
 from zipfile import ZipFile
 
-import fitz
 import httpx
 from django.conf import settings
 
@@ -50,6 +49,7 @@ def _units(paragraphs, kind):
 
 
 def _image_pdf(blob, unit):
+    import fitz
     from PIL import Image
     with ZipFile(BytesIO(blob)) as archive:
         content = archive.read(unit["media_path"])
@@ -74,6 +74,7 @@ def enrich_private_manuscript(*, blob, kind, paragraphs, cache, generation, chec
     Completed units survive cancellation; failed units are tried again only in a
     new owner-requested generation. The caller encrypts every checkpoint.
     """
+    import fitz
     units = _units(paragraphs, kind)
     pending = [unit for unit in units if unit["id"] not in cache or (
         cache[unit["id"]].get("status") in {"failed", "no_text"} and cache[unit["id"]].get("generation") != generation)]

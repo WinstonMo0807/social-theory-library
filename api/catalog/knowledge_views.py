@@ -226,6 +226,7 @@ class TheoryTimelineListView(generics.ListAPIView):
         theory = self.request.query_params.get("theory", "").strip()
         orientation = self.request.query_params.get("orientation", "").strip()
         if discipline:
+            queryset = queryset.filter(discipline__editorial_status="published")
             queryset = filter_slug_or_uuid(
                 queryset,
                 discipline,
@@ -233,6 +234,7 @@ class TheoryTimelineListView(generics.ListAPIView):
                 id_field="discipline_id",
             )
         if theory:
+            queryset = queryset.filter(theory_school__editorial_status="published")
             queryset = filter_slug_or_uuid(
                 queryset,
                 theory,
@@ -594,6 +596,7 @@ class AdminSubdisciplineDetailView(
 
 
 class AdminTheoryTimelineListView(StagedRelationEditorMixin, generics.ListCreateAPIView):
+    http_method_names = ["get", "post", "head", "options"]
     editorial_target_type = "timeline_event"
     public_status_field = "review_status"
     public_status_value = "approved"
@@ -608,6 +611,7 @@ class AdminTheoryTimelineListView(StagedRelationEditorMixin, generics.ListCreate
             "subdiscipline",
             "scholar__person",
             "work",
+            "subject_edition__work",
         ).prefetch_related(
             "normalized_relations__node",
             "normalized_relations__discipline",
@@ -635,7 +639,8 @@ class AdminTheoryTimelineListView(StagedRelationEditorMixin, generics.ListCreate
             queryset = queryset.filter(review_status=review_status)
         if has_collection in {"1", "true", "yes"}:
             queryset = queryset.filter(
-                Q(work__isnull=False) | Q(normalized_relations__work__isnull=False)
+                Q(work__isnull=False) | Q(subject_edition__isnull=False)
+                | Q(normalized_relations__work__isnull=False)
             )
         if query:
             queryset = queryset.filter(
@@ -658,7 +663,9 @@ class AdminTheoryTimelineDetailView(StagedRelationEditorMixin, generics.Retrieve
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminTheoryTimelineEventSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
-    queryset = TheoryTimelineEvent.objects.prefetch_related(
+    queryset = TheoryTimelineEvent.objects.select_related(
+        "work", "subject_edition__work", "evidence_asset__edition__work",
+    ).prefetch_related(
         "normalized_relations__node",
         "normalized_relations__discipline",
         "normalized_relations__scholar__person",

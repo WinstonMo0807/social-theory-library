@@ -213,6 +213,7 @@ export type NormalizedTimelineEvent = {
   start_year: number | null;
   end_year: number | null;
   date_label: string;
+  date_precision?: "unknown" | "year" | "approximate" | "range";
   source: string;
   evidence_page: number | null;
   evidence_printed_label: string;

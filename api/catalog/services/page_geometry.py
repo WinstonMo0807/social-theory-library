@@ -2,7 +2,6 @@
 from copy import deepcopy
 import math
 
-import fitz
 
 
 def _numbers(value, length):
@@ -23,6 +22,7 @@ def validated_geometry(value, *, source_page=None):
     Rendered OCR uses an axis-aligned positive DPI scale. Other transforms require
     an explicit future contract; rejecting them only disables precise overlays.
     """
+    import fitz
     if not isinstance(value, dict) or type(value.get("schema")) is not int or value["schema"] != 1:
         return {}
     space = value.get("coordinate_space")
@@ -68,6 +68,7 @@ def validated_geometry(value, *, source_page=None):
 
 def normalized_bbox(bbox, geometry):
     """Return [x0,y0,x1,y1] fractions of the displayed cropped/rotated page."""
+    import fitz
     geometry = validated_geometry(geometry)
     if not geometry or not _numbers(bbox, 4) or bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
         return []

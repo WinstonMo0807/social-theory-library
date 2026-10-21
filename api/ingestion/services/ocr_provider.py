@@ -2,7 +2,6 @@ from pathlib import Path
 from contextlib import ExitStack
 from io import BytesIO
 
-import fitz
 import httpx
 from django.conf import settings
 
@@ -82,6 +81,7 @@ def _request_document_gateway(
     transport: httpx.BaseTransport | None = None,
     task_options: dict | None = None,
 ):
+    import fitz
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     if request_headers:
         headers.update(request_headers)

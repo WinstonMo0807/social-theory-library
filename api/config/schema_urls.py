@@ -14,6 +14,7 @@ VERIFIED_NAMES = {
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
     "knowledge-entry-citation", "theory-system-overview", "knowledge-node-list", "knowledge-node-detail",
     "normalized-theory-timeline", "normalized-theory-timeline-detail", "reading-path-list", "reading-path-detail",
+    "theory-timeline", "admin-theory-timeline-list", "admin-theory-timeline-detail",
     "local-theory-graph",
     "parallel-versions", "parallel-segments", "parallel-candidates",
     "catalog-feedback", "catalog-admin-public-feedback", "catalog-admin-public-feedback-detail",

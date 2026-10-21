@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-21 时间线契约
+
+GET /catalog/theory-system/timeline/继续原事件身份，支持topic/author/event_type多值、discipline/node、q、year_from/year_to、has_collection、sort、year、page、focus及related_to。结果包含当前24项分页和完整scope_count/year_groups（按year与event_types计数）/bounds；focus计算真实页。详情增加subject_edition、subject_status、evidence_source、related_events/related_count及knowledge_relations/knowledge_relation_count。事件与来源作品/版本/文件/修订独立，来源须当前授权Page逐字核对。
+
+管理timeline新增date_precision、subject_edition；响应准确声明evidence_file、edit_version及editorial_revision。列表仅GET/POST，详情延续原读写/发布权限。兼容旧公共timeline保留并同步公开过滤和出处资格。Schema新增纳入3个既有时间线路径至191，原188全部保留，生成TypeScript同步。0071未应用，正式API验收未运行。
+
 ## 2026-10-20 子学科与真实目录
 
 新增GET catalog/theory-system/directory：type/discipline/parent/q/page，公开真实父级分组与返回路径、每页20条、总数、直属子项数和循环截断提示。无效400、未公开筛选或越界404、真实空结果200。规范关系补source_node_type/target_node_type，不从名称判断概念类型。

@@ -1,9 +1,22 @@
 """Resolve timeline citations through existing Assets and reader eligibility."""
-from django.db.models import BooleanField, Case, Q, Value, When
+from django.db.models import BooleanField, Case, F, Q, Value, When
 from rest_framework import serializers
 
-from catalog.models import Asset
-from catalog.services.publication_eligibility import active_asset_q
+from catalog.models import Asset, Page
+from catalog.services.publication_eligibility import active_document_q
+
+
+def validate_timeline_identity(*, work, subject_edition, start_year, end_year, date_precision):
+    if subject_edition and work and subject_edition.work_id != work.pk:
+        raise ValueError("事件所属版本不属于所选作品；出处文献可以是另一作品，请分别选择。")
+    if start_year is not None and end_year is not None and end_year < start_year:
+        raise ValueError("结束年不能早于开始年。")
+    if date_precision == "year" and (start_year is None or end_year not in (None, start_year)):
+        raise ValueError("确切年份须填写开始年，结束年应留空或与开始年相同。")
+    if date_precision == "approximate" and start_year is None and end_year is None:
+        raise ValueError("约年须至少填写一个年份。")
+    if date_precision == "range" and (start_year is None or end_year is None or start_year >= end_year):
+        raise ValueError("时间区间须填写开始年和较晚的结束年。")
 
 
 def validate_timeline_file(asset, page):
@@ -19,23 +32,39 @@ def validate_timeline_file(asset, page):
 
 def timeline_files(events):
     identifiers = {row.evidence_asset_id for row in events if row.evidence_asset_id}
-    # One query for a complete serializer page, including non-primary editions.
+    # Two batched queries for assets and page text, including non-primary editions.
     # This is a read of saved eligibility, not a storage probe or OCR check.
-    readable = active_asset_q(asset_prefix="") & Q(
+    readable = active_document_q(asset_prefix="") & Q(
+        edition__active_catalog_revision__document_revision__asset_id=F("pk"),
+        edition__active_catalog_revision__document_revision__is_active=True,
         kind=Asset.Kind.NORMALIZED, status=Asset.Status.READY,
         validation_status=Asset.ValidationStatus.VALID,
         access_status__in=[Asset.AccessStatus.PUBLIC, Asset.AccessStatus.INHERIT, Asset.AccessStatus.REGISTERED],
         page_count__gt=0,
     ) & ~Q(file="")
-    return {str(asset.pk): asset for asset in Asset.objects.filter(pk__in=identifiers)
-            .select_related("edition__work")
-            .annotate(timeline_readable=Case(When(readable, then=Value(True)), default=Value(False), output_field=BooleanField()))}
+    assets = {str(asset.pk): asset for asset in Asset.objects.filter(pk__in=identifiers)
+              .select_related("edition__work", "edition__active_catalog_revision__document_revision")
+              .annotate(timeline_readable=Case(When(readable, then=Value(True)), default=Value(False), output_field=BooleanField()))}
+    pages = {}
+    for asset_id, index, text in Page.objects.filter(
+        asset_id__in=identifiers, index__in={row.evidence_page for row in events if row.evidence_page},
+    ).values_list("asset_id", "index", "text"):
+        pages.setdefault(str(asset_id), {})[index] = text or ""
+    for identifier, asset in assets.items():
+        asset.timeline_pages = pages.get(identifier, {})
+    # Keep negative lookups as well, so a missing file is not queried repeatedly.
+    return {str(identifier): assets.get(str(identifier)) for identifier in identifiers}
 
 
 class TimelineEvidenceListSerializer(serializers.ListSerializer):
     def to_representation(self, data):
         rows = list(data.all() if hasattr(data, "all") else data)
-        self.context["timeline_files"] = timeline_files(rows)
+        files = self.context.setdefault("timeline_files", {})
+        for identifier, asset in timeline_files(rows).items():
+            previous = files.get(identifier)
+            if asset and previous:
+                asset.timeline_pages = {**previous.timeline_pages, **asset.timeline_pages}
+            files[identifier] = asset
         return super().to_representation(rows)
 
 
@@ -43,13 +72,28 @@ def timeline_file(event, context):
     files = context.get("timeline_files")
     if files is None:
         files = timeline_files([event])
+        context["timeline_files"] = files
+    elif event.evidence_asset_id and str(event.evidence_asset_id) not in files:
+        files.update(timeline_files([event]))
     return files.get(str(event.evidence_asset_id))
 
 
 def timeline_reader_href(event, context):
     asset = timeline_file(event, context)
-    if asset and asset.timeline_readable and event.evidence_page and 1 <= event.evidence_page <= asset.page_count:
-        return f"/reader/{asset.pk}?page={event.evidence_page}"
+    if asset and asset.timeline_readable and event.evidence_page in asset.timeline_pages:
+        quote = event.evidence_text or ""
+        if quote and (not quote.strip() or quote not in asset.timeline_pages[event.evidence_page]):
+            # A saved excerpt is not proof that today's OCR revision contains it.
+            return None
+        from catalog.services.semantic_search import viewer_access_statuses
+        user = getattr(context.get("request"), "user", None)
+        authenticated = bool(user and getattr(user, "is_authenticated", False))
+        statuses = viewer_access_statuses(
+            authenticated=authenticated,
+            staff=authenticated and (getattr(user, "is_staff", False) or getattr(user, "role", "") in {"admin", "editor", "reviewer"}),
+        )
+        if asset.access_status in statuses and 1 <= event.evidence_page <= asset.page_count:
+            return f"/reader/{asset.pk}?page={event.evidence_page}&revision={asset.edition.active_catalog_revision.document_revision_id}"
     return None
 
 
@@ -57,7 +101,7 @@ def admin_timeline_file(event, context):
     asset = timeline_file(event, context)
     if asset is None:
         return None
-    href = f"/reader/{asset.pk}?page={event.evidence_page}" if asset.timeline_readable and event.evidence_page and 1 <= event.evidence_page <= asset.page_count else None
+    href = timeline_reader_href(event, context)
     if href:
         detail = "读者可按此页序打开出处。" if asset.access_status != "registered" else "读者登录后可按此页序打开出处。"
     else:

@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-10-21 时间线投影与可选原生依赖
+
+复用TheoryTimelineEvent、TimelineEventRelation、正式馆藏快照、Page与DocumentRevision；0071增加可空subject_edition及date_precision，不建立第二套事件或馆藏。公共按页批量投影，主体版本不借用其他版；来源独立核对当前阅读文件/活动修订/原文和访问权限。相关事件只表达已有共同关联，影响关系仍须正式KnowledgeRelation。后台继续沿原editorial revision流程。
+
+PDF原生库仅在真实PDF处理函数入口导入，使普通API导入与契约生成不依赖本机PDF执行能力。11模块仅导入位置变化，业务AST与HEAD一致；不捕获或伪装依赖失败。原生处理环境仍待核实，实际PDF/OCR未执行。详见stl4/TIMELINE_20261020及stl4/VALIDATION。
+
 ## 2026-10-20 子学科与目录投影
 
 Subdiscipline、Discipline、Topic保持独立实体，目录是原有实体/正式知识节点的有界公开投影，不另建分类库。子学科轻量列表与详情分开，后者复用既有人工关系、内容编排、正式发布快照与准确来源。core_works及旧works共用真实分页，来源仍按自身版本读回；可靠旧映射保留原身份，不凭名字合并。目录按真实parent呈现并保护未公开层级，详细契约见stl4/SUBDISCIPLINE_DIRECTORY_20261020。没有新迁移。

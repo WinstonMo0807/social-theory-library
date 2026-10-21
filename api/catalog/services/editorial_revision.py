@@ -60,7 +60,7 @@ TARGET_POLICIES = {
         KnowledgeRelation, frozenset({"source_node", "target_node", "relation_type", "direction", "description", "evidence_source", "confidence", "status"}),
     ),
     EditorialRevision.TargetType.TIMELINE_EVENT: EditorialTargetPolicy(
-        TheoryTimelineEvent, frozenset({"title", "description", "image", "event_type", "start_year", "end_year", "date_label", "orientation", "source", "evidence_asset", "evidence_page", "evidence_printed_label", "evidence_text", "confidence", "review_status", "display_order", "discipline", "theory_school", "subdiscipline", "scholar", "work", "timeline_relations"}),
+        TheoryTimelineEvent, frozenset({"title", "description", "image", "event_type", "start_year", "end_year", "date_label", "date_precision", "orientation", "source", "evidence_asset", "evidence_page", "evidence_printed_label", "evidence_text", "confidence", "review_status", "display_order", "discipline", "theory_school", "subdiscipline", "scholar", "work", "subject_edition", "timeline_relations"}),
     ),
     EditorialRevision.TargetType.WORK: EditorialTargetPolicy(
         Work,

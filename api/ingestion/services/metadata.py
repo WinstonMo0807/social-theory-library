@@ -5,7 +5,6 @@ from pathlib import Path
 from urllib.parse import quote, urlencode
 from xml.etree import ElementTree
 
-import fitz
 import httpx
 from django.conf import settings
 
@@ -247,6 +246,7 @@ def extract_text_candidates(
 
 
 def extract_local_candidates(path: str | Path) -> tuple[list[Candidate], str]:
+    import fitz
     with fitz.open(str(path)) as document:
         metadata = document.metadata or {}
         first_text = "\n".join(
