@@ -117,7 +117,9 @@ export function usePersistentWorkspace<T>(path: string, ownerId: string | null, 
 }
 
 export function useResearchRecord<T>(collection: ResearchCollection, id: string | null, ownerId: string | null) {
-  return usePersistentWorkspace<ResearchRecord<T>>(id ? researchRecordPath(collection, id) : "", ownerId, taskPollDelay);
+  const load = useCallback((path: string, signal: AbortSignal) => privateRequest<ResearchRecord<T>>(path,
+    { signal, ...(collection === "reading-plans" && ownerId ? { headers: { "X-Reader-Owner": ownerId } } : {}) }), [collection, ownerId]);
+  return usePersistentWorkspace<ResearchRecord<T>>(id ? researchRecordPath(collection, id) : "", ownerId, taskPollDelay, load);
 }
 export function useContentPlacements(type: PlacementPage, id: string | null, ownerId: string | null) {
   return usePersistentWorkspace<PlacementState>(id ? placementsPath(type, id) : "", ownerId);

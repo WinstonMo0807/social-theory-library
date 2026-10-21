@@ -162,8 +162,10 @@ def estimate_items(items, user, policy, *, overrides=None):
     return items
 
 
-def schedule_plan(items, prerequisites, policy, *, preserve_order=False):
-    by_work = {row["work_id"]: row for row in items}
+def schedule_plan(items, prerequisites, policy, *, preserve_order=False, identity_key="work_id"):
+    # Public-path copies retain repeated works/chapters as independent items.
+    # Existing generated plans continue to use work identities by default.
+    by_work = {row[identity_key]: row for row in items}
     graph = {key: set() for key in by_work}
     for edge in prerequisites:
         graph[edge["work_id"]].add(edge["requires_work_id"])
@@ -172,7 +174,7 @@ def schedule_plan(items, prerequisites, policy, *, preserve_order=False):
         sorter.prepare()
     except CycleError as exc:
         raise ValidationError({"prerequisites": "先修关系有环，请先修正。"}) from exc
-    positions = {row["work_id"]: index for index, row in enumerate(items)}
+    positions = {row[identity_key]: index for index, row in enumerate(items)}
     ready, order = [], []
     def priority(key):
         item = by_work[key]
@@ -195,10 +197,10 @@ def schedule_plan(items, prerequisites, policy, *, preserve_order=False):
     ordered = [item if item.get("status") == "completed" else next(future) for item in items]
     available = policy["budget_minutes"]
     consumed = 0
-    selected, sessions, unknown, unscheduled_minutes = {item["work_id"] for item in complete}, [], 0, 0
+    selected, sessions, unknown, unscheduled_minutes = {item[identity_key] for item in complete}, [], 0, 0
     session_size = policy["session_minutes"]
     for item in ordered:
-        key = item["work_id"]
+        key = item[identity_key]
         if item.get("status") == "completed":
             selected.add(key)
             item["budget_assignment"] = {"included": True, "reason": "completed_preserved", "planned_minutes": 0}

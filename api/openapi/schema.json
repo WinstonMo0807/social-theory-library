@@ -4130,6 +4130,297 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-system/reading-paths/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_reading_paths_list",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAdminReadingPathList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_system_reading_paths_create",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminReadingPathRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminReadingPathRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminReadingPathRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminReadingPath"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/reading-paths/{id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_reading_paths_retrieve",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminReadingPath"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_theory_system_reading_paths_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminReadingPathRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminReadingPathRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminReadingPathRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminReadingPath"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_theory_system_reading_paths_partial_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminReadingPathRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminReadingPathRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminReadingPathRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminReadingPath"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "catalog_admin_theory_system_reading_paths_destroy",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-timeline/": {
             "get": {
                 "operationId": "catalog_admin_theory_timeline_list",
@@ -6640,7 +6931,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PaginatedReadingPathList"
+                                    "$ref": "#/components/schemas/PaginatedPublicReadingPathList"
                                 }
                             }
                         },
@@ -6679,7 +6970,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ReadingPath"
+                                    "$ref": "#/components/schemas/PublicReadingPath"
                                 }
                             }
                         },
@@ -11008,6 +11299,577 @@
                 }
             }
         },
+        "/api/reading/path-follows/": {
+            "get": {
+                "operationId": "reading_path_follows_list",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedPathPageOutputList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_path_follows_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathCreateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathCreateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathCreateInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/path-follows/{id}/": {
+            "get": {
+                "operationId": "reading_path_follows_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 personal reading plan 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "reading_path_follows_partial_update",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 personal reading plan 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedPathUpdateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedPathUpdateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedPathUpdateInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "reading_path_follows_destroy",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "expected_revision",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 personal reading plan 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/path-follows/{id}/copy-plan/": {
+            "post": {
+                "operationId": "reading_path_follows_copy_plan_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 personal reading plan 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathCopyInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathCopyInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathCopyInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/path-follows/{id}/upgrade/": {
+            "post": {
+                "operationId": "reading_path_follows_upgrade_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 personal reading plan 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathUpgradeInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathUpgradeInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathUpgradeInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/path-follows/{id}/upgrade-preview/": {
+            "get": {
+                "operationId": "reading_path_follows_upgrade_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 personal reading plan 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "target_revision",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathUpgradePreviewOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/path-follows/by-path/": {
+            "get": {
+                "operationId": "reading_path_follows_by_path_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "path_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/path-follows/by-request/": {
+            "get": {
+                "operationId": "reading_path_follows_by_request_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/privacy/": {
             "get": {
                 "operationId": "reading_privacy_retrieve",
@@ -11879,6 +12741,16 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    },
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -14052,6 +14924,247 @@
                     "published",
                     "scheduled",
                     "total"
+                ]
+            },
+            "AdminReadingPath": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "learning_goal": {
+                        "type": "string"
+                    },
+                    "primary_discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "primary_discipline_data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisciplineCompact"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "audience": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "difficulty": {
+                        "$ref": "#/components/schemas/PathDifficultyEnum"
+                    },
+                    "estimated_reading": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "estimated_weeks": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "learning_questions": {},
+                    "related_debate_ids": {},
+                    "curator_note": {
+                        "type": "string"
+                    },
+                    "credits": {},
+                    "cover_asset": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "stages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingPathStage"
+                        },
+                        "readOnly": true
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingPathItem"
+                        }
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "edit_version": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "cover_media",
+                    "cover_url",
+                    "created_at",
+                    "edit_version",
+                    "id",
+                    "primary_discipline_data",
+                    "published_at",
+                    "slug",
+                    "stages",
+                    "title",
+                    "updated_at"
+                ]
+            },
+            "AdminReadingPathRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                    },
+                    "slug": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "learning_goal": {
+                        "type": "string"
+                    },
+                    "primary_discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "audience": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "difficulty": {
+                        "$ref": "#/components/schemas/PathDifficultyEnum"
+                    },
+                    "estimated_reading": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "estimated_weeks": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "learning_questions": {},
+                    "related_debate_ids": {},
+                    "curator_note": {
+                        "type": "string"
+                    },
+                    "credits": {},
+                    "cover_asset": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingPathItemRequest"
+                        }
+                    },
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "writeOnly": true
+                    },
+                    "stage_groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathStageGroupInputRequest"
+                        },
+                        "writeOnly": true
+                    }
+                },
+                "required": [
+                    "slug",
+                    "title"
                 ]
             },
             "AdminRecommendationIssueCollection": {
@@ -17179,6 +18292,44 @@
                 "required": [
                     "code",
                     "id",
+                    "name",
+                    "slug"
+                ]
+            },
+            "DisciplineCompactRequest": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "foreign_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "hero_image": {
+                        "type": "string",
+                        "format": "binary"
+                    }
+                },
+                "required": [
+                    "code",
                     "name",
                     "slug"
                 ]
@@ -21554,6 +22705,65 @@
                     "work_count"
                 ]
             },
+            "KnowledgeNodeListRequest": {
+                "type": "object",
+                "properties": {
+                    "node_type": {
+                        "$ref": "#/components/schemas/NodeTypeEnum"
+                    },
+                    "canonical_name_zh": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "canonical_name_en": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "period_label": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    }
+                },
+                "required": [
+                    "canonical_name_zh",
+                    "node_type",
+                    "slug"
+                ]
+            },
             "KnowledgeNodeSubdiscipline": {
                 "type": "object",
                 "properties": {
@@ -25159,6 +26369,37 @@
                 "type": "string",
                 "description": "* `front` - front\n* `body` - body\n* `appendix` - appendix\n* `other` - other\n* `blank` - blank"
             },
+            "PaginatedAdminReadingPathList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminReadingPath"
+                        }
+                    }
+                }
+            },
             "PaginatedAdminTheoryTimelineEventList": {
                 "type": "object",
                 "required": [
@@ -25438,6 +26679,37 @@
                     }
                 }
             },
+            "PaginatedPathPageOutputList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathPageOutput"
+                        }
+                    }
+                }
+            },
             "PaginatedPrivacyOperationsPageList": {
                 "type": "object",
                 "required": [
@@ -25531,6 +26803,37 @@
                     }
                 }
             },
+            "PaginatedPublicReadingPathList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicReadingPath"
+                        }
+                    }
+                }
+            },
             "PaginatedReadingHistoryList": {
                 "type": "object",
                 "required": [
@@ -25558,37 +26861,6 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/ReadingHistory"
-                        }
-                    }
-                }
-            },
-            "PaginatedReadingPathList": {
-                "type": "object",
-                "required": [
-                    "count",
-                    "results"
-                ],
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "next": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=4"
-                    },
-                    "previous": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=2"
-                    },
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/ReadingPath"
                         }
                     }
                 }
@@ -27001,6 +28273,98 @@
                     "message"
                 ]
             },
+            "PatchedAdminReadingPathRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                    },
+                    "slug": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "learning_goal": {
+                        "type": "string"
+                    },
+                    "primary_discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "audience": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "difficulty": {
+                        "$ref": "#/components/schemas/PathDifficultyEnum"
+                    },
+                    "estimated_reading": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "estimated_weeks": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "learning_questions": {},
+                    "related_debate_ids": {},
+                    "curator_note": {
+                        "type": "string"
+                    },
+                    "credits": {},
+                    "cover_asset": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingPathItemRequest"
+                        }
+                    },
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "writeOnly": true
+                    },
+                    "stage_groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathStageGroupInputRequest"
+                        },
+                        "writeOnly": true
+                    }
+                }
+            },
             "PatchedAdminTheoryTimelineEventRequest": {
                 "type": "object",
                 "properties": {
@@ -27332,6 +28696,36 @@
                     }
                 }
             },
+            "PatchedPathUpdateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/PathUpdateInputActionEnum"
+                    },
+                    "bookmarked": {
+                        "type": "boolean"
+                    },
+                    "item_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PathReadingProgressEnum"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 4000
+                    }
+                }
+            },
             "PatchedPlanUpdateInputRequest": {
                 "type": "object",
                 "properties": {
@@ -27397,6 +28791,11 @@
                         },
                         "maxItems": 40
                     },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "公共路径私人副本写入必需；同一操作重试保持原请求标识。"
+                    },
                     "goal": {
                         "type": "string",
                         "minLength": 1,
@@ -27418,11 +28817,18 @@
                         "format": "uuid"
                     },
                     "status": {
-                        "$ref": "#/components/schemas/PlanUpdateInputStatusEnum"
+                        "$ref": "#/components/schemas/PathReadingProgressEnum"
                     },
                     "note": {
                         "type": "string",
                         "maxLength": 4000
+                    },
+                    "item_minutes": {
+                        "type": "integer",
+                        "maximum": 100000,
+                        "minimum": 1,
+                        "nullable": true,
+                        "description": "公共路径副本以稳定item_id记录本人时长估计，不按作品合并不同章节。"
                     },
                     "reference": {
                         "$ref": "#/components/schemas/EvidenceReferenceInputRequest"
@@ -27531,6 +28937,1024 @@
                         "maxLength": 4000
                     }
                 }
+            },
+            "PathCommandOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "record": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PathRecordOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PathReceiptOutput"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "owner_id",
+                    "receipt",
+                    "record"
+                ]
+            },
+            "PathCopyInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 240
+                    }
+                },
+                "required": [
+                    "expected_revision",
+                    "request_id"
+                ]
+            },
+            "PathCreateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "path_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_source_revision": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    },
+                    "bookmarked": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "required": [
+                    "expected_source_revision",
+                    "path_id",
+                    "request_id"
+                ]
+            },
+            "PathCreditInput": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "role": {
+                        "type": "string",
+                        "maxLength": 100
+                    }
+                },
+                "required": [
+                    "name",
+                    "role"
+                ]
+            },
+            "PathDiffOutput": {
+                "type": "object",
+                "properties": {
+                    "added": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "removed": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "changed": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "unchanged": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                },
+                "required": [
+                    "added",
+                    "changed",
+                    "removed",
+                    "unchanged"
+                ]
+            },
+            "PathDifficultyEnum": {
+                "enum": [
+                    "beginner",
+                    "intermediate",
+                    "advanced"
+                ],
+                "type": "string",
+                "description": "* `beginner` - 入门\n* `intermediate` - 进阶\n* `advanced` - 深入"
+            },
+            "PathLinkOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "slug",
+                    "title"
+                ]
+            },
+            "PathMaterialKindEnum": {
+                "enum": [
+                    "work",
+                    "chapter",
+                    "paper",
+                    "node"
+                ],
+                "type": "string",
+                "description": "* `work` - work\n* `chapter` - chapter\n* `paper` - paper\n* `node` - node"
+            },
+            "PathMaterialOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "stage_id": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/PathMaterialKindEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "chapter_title": {
+                        "type": "string"
+                    },
+                    "page_start": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string"
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "reader_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/PathMaterialOutputSourceStatusEnum"
+                    },
+                    "source_notice": {
+                        "type": "string"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "is_required": {
+                        "type": "boolean"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "reading_order": {
+                        "type": "integer"
+                    },
+                    "substitutes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "authors",
+                    "chapter_title",
+                    "cover_url",
+                    "document_revision_id",
+                    "edition_id",
+                    "href",
+                    "id",
+                    "is_required",
+                    "kind",
+                    "node_id",
+                    "page_end",
+                    "page_start",
+                    "position",
+                    "prerequisite",
+                    "printed_page_label",
+                    "publication_year",
+                    "reader_url",
+                    "reading_order",
+                    "reason",
+                    "source_notice",
+                    "source_status",
+                    "stage_id",
+                    "substitutes",
+                    "title",
+                    "version_label",
+                    "work_id"
+                ]
+            },
+            "PathMaterialOutputSourceStatusEnum": {
+                "enum": [
+                    "available",
+                    "no_fulltext",
+                    "unavailable",
+                    "withdrawn",
+                    "revision_changed"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `no_fulltext` - no_fulltext\n* `unavailable` - unavailable\n* `withdrawn` - withdrawn\n* `revision_changed` - revision_changed"
+            },
+            "PathPageOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathRecordOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "owner_id",
+                    "previous",
+                    "results"
+                ]
+            },
+            "PathProgressOutput": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/PathReadingProgressEnum"
+                    },
+                    "note": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "note",
+                    "status"
+                ]
+            },
+            "PathReadingProgressEnum": {
+                "enum": [
+                    "pending",
+                    "reading",
+                    "completed",
+                    "skipped"
+                ],
+                "type": "string",
+                "description": "* `pending` - pending\n* `reading` - reading\n* `completed` - completed\n* `skipped` - skipped"
+            },
+            "PathReceiptOutput": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "applied_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "deleted": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "applied_revision",
+                    "deleted",
+                    "request_id"
+                ]
+            },
+            "PathRecordOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/PathRecordOutputTypeEnum"
+                    },
+                    "path_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "path_slug": {
+                        "type": "string"
+                    },
+                    "bookmarked": {
+                        "type": "boolean"
+                    },
+                    "source_revision": {
+                        "$ref": "#/components/schemas/PathSourceRevisionOutput"
+                    },
+                    "latest_source_revision": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PathSourceRevisionOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/PathRecordOutputSourceStatusEnum"
+                    },
+                    "path": {
+                        "description": "Original public stages/items with current source availability; no draft content."
+                    },
+                    "progress": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/PathProgressOutput"
+                        }
+                    },
+                    "completed_items": {
+                        "type": "integer"
+                    },
+                    "total_items": {
+                        "type": "integer"
+                    },
+                    "completed_stages": {
+                        "type": "integer"
+                    },
+                    "total_stages": {
+                        "type": "integer"
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "data": {
+                        "description": "Personal plan data; the existing plan editor uses the same encrypted record."
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "bookmarked",
+                    "completed_items",
+                    "completed_stages",
+                    "created_at",
+                    "data",
+                    "history",
+                    "id",
+                    "latest_source_revision",
+                    "path",
+                    "path_id",
+                    "path_slug",
+                    "progress",
+                    "revision",
+                    "source_revision",
+                    "source_status",
+                    "total_items",
+                    "total_stages",
+                    "type",
+                    "updated_at"
+                ]
+            },
+            "PathRecordOutputSourceStatusEnum": {
+                "enum": [
+                    "available",
+                    "unavailable",
+                    "revision_changed"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `unavailable` - unavailable\n* `revision_changed` - revision_changed"
+            },
+            "PathRecordOutputTypeEnum": {
+                "enum": [
+                    "path_follow",
+                    "personal_plan"
+                ],
+                "type": "string",
+                "description": "* `path_follow` - path_follow\n* `personal_plan` - personal_plan"
+            },
+            "PathRevisionOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "token": {
+                        "type": "string"
+                    },
+                    "number": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "change_note": {
+                        "type": "string"
+                    },
+                    "legacy": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "change_note",
+                    "id",
+                    "legacy",
+                    "number",
+                    "published_at",
+                    "token"
+                ]
+            },
+            "PathSourceRevisionOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "token": {
+                        "type": "string"
+                    },
+                    "number": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "change_note": {
+                        "type": "string"
+                    },
+                    "legacy": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "change_note",
+                    "id",
+                    "legacy",
+                    "number",
+                    "published_at",
+                    "token"
+                ]
+            },
+            "PathStageGroupInput": {
+                "type": "object",
+                "properties": {
+                    "estimated_reading": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 120
+                    },
+                    "learning_questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 2000
+                        },
+                        "maxItems": 40
+                    },
+                    "related_debate_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 40
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathStageItemInput"
+                        }
+                    }
+                },
+                "required": [
+                    "items",
+                    "name"
+                ]
+            },
+            "PathStageGroupInputRequest": {
+                "type": "object",
+                "properties": {
+                    "estimated_reading": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 120
+                    },
+                    "learning_questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2000
+                        },
+                        "maxItems": 40
+                    },
+                    "related_debate_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 40
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathStageItemInputRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "items",
+                    "name"
+                ]
+            },
+            "PathStageItemInput": {
+                "type": "object",
+                "properties": {
+                    "material_kind": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PathMaterialKindEnum"
+                            }
+                        ],
+                        "default": "work"
+                    },
+                    "edition": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "chapter_title": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 300
+                    },
+                    "page_start": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 80
+                    },
+                    "status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PathStageItemInputStatusEnum"
+                            }
+                        ],
+                        "default": "active"
+                    },
+                    "substitute_edition_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 12
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "recommendation_reason": {
+                        "type": "string"
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "editorial_note": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "is_required": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PathStageItemInputRequest": {
+                "type": "object",
+                "properties": {
+                    "material_kind": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PathMaterialKindEnum"
+                            }
+                        ],
+                        "default": "work"
+                    },
+                    "edition": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "chapter_title": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 300
+                    },
+                    "page_start": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 80
+                    },
+                    "status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PathStageItemInputStatusEnum"
+                            }
+                        ],
+                        "default": "active"
+                    },
+                    "substitute_edition_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 12
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "recommendation_reason": {
+                        "type": "string"
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "editorial_note": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "is_required": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PathStageItemInputStatusEnum": {
+                "enum": [
+                    "active",
+                    "withdrawn"
+                ],
+                "type": "string",
+                "description": "* `active` - active\n* `withdrawn` - withdrawn"
+            },
+            "PathStageOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "estimated_reading": {
+                        "type": "string"
+                    },
+                    "learning_questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "related_debates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathLinkOutput"
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathMaterialOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "description",
+                    "estimated_reading",
+                    "id",
+                    "items",
+                    "learning_questions",
+                    "name",
+                    "position",
+                    "related_debates"
+                ]
+            },
+            "PathUpdateInputActionEnum": {
+                "enum": [
+                    "bookmark",
+                    "progress",
+                    "note"
+                ],
+                "type": "string",
+                "description": "* `bookmark` - bookmark\n* `progress` - progress\n* `note` - note"
+            },
+            "PathUpgradeInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "target_revision": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    }
+                },
+                "required": [
+                    "expected_revision",
+                    "request_id",
+                    "target_revision"
+                ]
+            },
+            "PathUpgradePreviewOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "record_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "source_revision": {
+                        "$ref": "#/components/schemas/PathSourceRevisionOutput"
+                    },
+                    "target_revision": {
+                        "$ref": "#/components/schemas/PathSourceRevisionOutput"
+                    },
+                    "diff": {
+                        "$ref": "#/components/schemas/PathDiffOutput"
+                    },
+                    "retained_completed": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "retained_notes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                },
+                "required": [
+                    "diff",
+                    "expected_revision",
+                    "owner_id",
+                    "record_id",
+                    "retained_completed",
+                    "retained_notes",
+                    "source_revision",
+                    "target_revision"
+                ]
             },
             "PersonCompact": {
                 "type": "object",
@@ -28823,7 +31247,8 @@
                     },
                     "reading_path_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "description": "旧输入不再创建路径副本；请使用path-follows的公开版本确认与copy-plan接口。"
                     },
                     "references": {
                         "type": "array",
@@ -28845,16 +31270,6 @@
                     "goal",
                     "request_id"
                 ]
-            },
-            "PlanUpdateInputStatusEnum": {
-                "enum": [
-                    "pending",
-                    "reading",
-                    "completed",
-                    "skipped"
-                ],
-                "type": "string",
-                "description": "* `pending` - pending\n* `reading` - reading\n* `completed` - completed\n* `skipped` - skipped"
             },
             "PlannedItemLinkRequest": {
                 "type": "object",
@@ -30602,6 +33017,147 @@
                     "topics"
                 ]
             },
+            "PublicReadingPath": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "learning_goal": {
+                        "type": "string"
+                    },
+                    "audience": {
+                        "type": "string"
+                    },
+                    "difficulty": {
+                        "type": "string"
+                    },
+                    "estimated_reading": {
+                        "type": "string"
+                    },
+                    "estimated_weeks": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "curator_note": {
+                        "type": "string"
+                    },
+                    "credits": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathCreditInput"
+                        }
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathLinkOutput"
+                        }
+                    },
+                    "learning_questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "related_debates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathLinkOutput"
+                        }
+                    },
+                    "revision": {
+                        "$ref": "#/components/schemas/PathRevisionOutput"
+                    },
+                    "latest_revision": {
+                        "$ref": "#/components/schemas/PathRevisionOutput"
+                    },
+                    "is_current_revision": {
+                        "type": "boolean"
+                    },
+                    "versions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathRevisionOutput"
+                        }
+                    },
+                    "versions_truncated": {
+                        "type": "boolean"
+                    },
+                    "stages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathStageOutput"
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathMaterialOutput"
+                        }
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "cover_media": {
+                        "nullable": true
+                    },
+                    "primary_discipline_data": {
+                        "nullable": true
+                    },
+                    "diff": {},
+                    "preview": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "audience",
+                    "counts",
+                    "cover_media",
+                    "cover_url",
+                    "credits",
+                    "curator_note",
+                    "difficulty",
+                    "estimated_reading",
+                    "estimated_weeks",
+                    "id",
+                    "introduction",
+                    "is_current_revision",
+                    "items",
+                    "latest_revision",
+                    "learning_goal",
+                    "learning_questions",
+                    "prerequisite",
+                    "primary_discipline_data",
+                    "related_debates",
+                    "revision",
+                    "slug",
+                    "stages",
+                    "title",
+                    "topics",
+                    "versions",
+                    "versions_truncated"
+                ]
+            },
             "PublicSourceAvailabilityEnum": {
                 "enum": [
                     "available",
@@ -32185,12 +34741,35 @@
                         "maxLength": 240
                     },
                     "difficulty": {
-                        "$ref": "#/components/schemas/ReadingPathDifficultyEnum"
+                        "$ref": "#/components/schemas/PathDifficultyEnum"
                     },
                     "estimated_reading": {
                         "type": "string",
                         "maxLength": 120
                     },
+                    "estimated_weeks": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "learning_questions": {},
+                    "related_debate_ids": {},
+                    "curator_note": {
+                        "type": "string"
+                    },
+                    "credits": {},
                     "cover_asset": {
                         "type": "string",
                         "format": "uri",
@@ -32261,22 +34840,12 @@
                     "updated_at"
                 ]
             },
-            "ReadingPathDifficultyEnum": {
-                "enum": [
-                    "beginner",
-                    "intermediate",
-                    "advanced"
-                ],
-                "type": "string",
-                "description": "* `beginner` - 入门\n* `intermediate` - 进阶\n* `advanced` - 深入"
-            },
             "ReadingPathItem": {
                 "type": "object",
                 "properties": {
                     "id": {
                         "type": "string",
-                        "format": "uuid",
-                        "readOnly": true
+                        "format": "uuid"
                     },
                     "stage": {
                         "type": "string",
@@ -32348,15 +34917,179 @@
                     },
                     "editorial_note": {
                         "type": "string"
-                    }
+                    },
+                    "material_kind": {
+                        "$ref": "#/components/schemas/ReadingPathItemMaterialKindEnum"
+                    },
+                    "edition": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "chapter_title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "page_start": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ReadingPathItemStatusEnum"
+                    },
+                    "substitute_edition_ids": {}
                 },
                 "required": [
-                    "id",
                     "node_data",
                     "stage_data",
                     "stage_name",
                     "work_data"
                 ]
+            },
+            "ReadingPathItemMaterialKindEnum": {
+                "enum": [
+                    "work",
+                    "chapter",
+                    "paper",
+                    "node"
+                ],
+                "type": "string",
+                "description": "* `work` - 整部作品\n* `chapter` - 章节\n* `paper` - 论文\n* `node` - 知识条目"
+            },
+            "ReadingPathItemRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "stage": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "stage_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    },
+                    "stage_description": {
+                        "type": "string"
+                    },
+                    "node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "recommendation_reason": {
+                        "type": "string"
+                    },
+                    "prerequisite": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "reading_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "is_required": {
+                        "type": "boolean"
+                    },
+                    "editorial_note": {
+                        "type": "string"
+                    },
+                    "material_kind": {
+                        "$ref": "#/components/schemas/ReadingPathItemMaterialKindEnum"
+                    },
+                    "edition": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "chapter_title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "page_start": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "page_end": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ReadingPathItemStatusEnum"
+                    },
+                    "substitute_edition_ids": {}
+                },
+                "required": [
+                    "stage_name"
+                ]
+            },
+            "ReadingPathItemStatusEnum": {
+                "enum": [
+                    "active",
+                    "withdrawn"
+                ],
+                "type": "string",
+                "description": "* `active` - 在读材料\n* `withdrawn` - 已撤回材料"
             },
             "ReadingPathStage": {
                 "type": "object",
@@ -32379,6 +35112,12 @@
                         "minimum": 0,
                         "format": "int64"
                     },
+                    "estimated_reading": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "learning_questions": {},
+                    "related_debate_ids": {},
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -32395,6 +35134,34 @@
                     "id",
                     "name",
                     "updated_at"
+                ]
+            },
+            "ReadingPathStageRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "estimated_reading": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "learning_questions": {},
+                    "related_debate_ids": {}
+                },
+                "required": [
+                    "name"
                 ]
             },
             "ReadingProgress": {

@@ -572,14 +572,11 @@ class KnowledgeObjectEditorAdapter:
         reading_order = 0
         for fallback_position, group in enumerate(value):
             stage_id = str(group.get("id") or "").strip()
-            if stage_id:
-                canonical_stage = existing_stages.get(stage_id)
-                if canonical_stage is None:
-                    raise ValueError("stage_groups preview references a missing stage")
-                stage = copy(canonical_stage)
+            if stage_id and stage_id in existing_stages:
+                stage = copy(existing_stages[stage_id])
             else:
                 stage = ReadingPathStage(
-                    id=uuid5(
+                    id=stage_id or uuid5(
                         NAMESPACE_URL,
                         f"knowledge-preview:{target.pk}:stage:{fallback_position}",
                     ),
@@ -592,6 +589,9 @@ class KnowledgeObjectEditorAdapter:
                 raise ValueError("stage_groups preview contains an empty stage name")
             stage.description = str(group.get("description") or "")
             stage.position = int(group.get("position", fallback_position))
+            for field in ("estimated_reading", "learning_questions", "related_debate_ids"):
+                if field in group:
+                    setattr(stage, field, group[field])
             stages.append((fallback_position, stage))
 
             source_items = list(group.get("items") or [])
@@ -606,7 +606,7 @@ class KnowledgeObjectEditorAdapter:
                         "stage_groups preview item must reference one canonical object"
                     )
                 item = ReadingPathItem(
-                    id=uuid5(
+                    id=row.get("id") or uuid5(
                         NAMESPACE_URL,
                         (
                             f"knowledge-preview:{target.pk}:stage:{stage.pk}:"
@@ -627,6 +627,8 @@ class KnowledgeObjectEditorAdapter:
                     reading_order=reading_order,
                     is_required=bool(row.get("is_required", False)),
                     editorial_note=str(row.get("editorial_note") or ""),
+                    **{field: row[field] for field in ("material_kind", "chapter_title", "page_start", "page_end", "printed_page_label", "status", "substitute_edition_ids") if field in row},
+                    **{field + "_id": row[field] for field in ("edition", "asset", "document_revision") if row.get(field)},
                 )
                 items.append(item)
                 reading_order += 1
@@ -707,7 +709,7 @@ class KnowledgeObjectEditorAdapter:
                 "theory_relations",
                 "subdiscipline_relations",
             },
-            "reading_path": {"stage_groups", "image_selection"},
+            "reading_path": {"stage_groups", "image_selection", "topics"},
             "discipline": {"image_selection"},
             "subdiscipline": {"image_selection"},
         }.get(object_type, set())
@@ -722,6 +724,9 @@ class KnowledgeObjectEditorAdapter:
                 unsupported.add(field_name)
                 continue
             try:
+                if object_type == "reading_path" and field_name == "topics":
+                    materialized["topics"] = list(value)
+                    continue
                 if field_name == "image_selection":
                     from catalog.services.knowledge_media import image_media, image_legacy_file, validate_image_selection
 
@@ -837,7 +842,15 @@ class KnowledgeObjectEditorAdapter:
         return data
 
     @classmethod
-    def _serialize(cls, object_type: str, target, *, revision=None) -> tuple[dict, str, list[str]]:
+    def _serialize(cls, object_type: str, target, *, revision=None, reviewer=None) -> tuple[dict, str, list[str]]:
+        if object_type == "reading_path":
+            from types import SimpleNamespace
+            from catalog.services.public_reading_paths import public_reading_path_snapshot, preview_reading_path
+            if revision is not None or target.status != "published":
+                data = preview_reading_path(target, snapshot=revision.materialized_preview if revision else None, request=SimpleNamespace(user=reviewer))
+            else:
+                data = public_reading_path_snapshot(target.pk)
+            return data, "PublicReadingPathSerializer", []
         serializer_class = cls._serializer(object_type)
         unsupported_fields: list[str] = []
         if revision is not None:
@@ -897,7 +910,7 @@ class KnowledgeObjectEditorAdapter:
         return serialized, serializer_class.__name__, unsupported_fields
 
     @classmethod
-    def enrich(cls, *, object_type: str, target, selection: dict[str, Any]) -> dict[str, Any]:
+    def enrich(cls, *, object_type: str, target, selection: dict[str, Any], reviewer=None) -> dict[str, Any]:
         from catalog.services.dependency_engine import projection_types_for
         from catalog.services.editorial_revision import TARGET_POLICIES
 
@@ -908,7 +921,7 @@ class KnowledgeObjectEditorAdapter:
             target_id=target.pk,
             status=EditorialRevision.Status.DRAFT,
         ).order_by("-revision").first()
-        canonical_public, serializer_name, _unsupported = cls._serialize(object_type, target)
+        canonical_public, serializer_name, _unsupported = cls._serialize(object_type, target, reviewer=reviewer)
         is_public = cls._is_public(object_type, target)
         draft_public: dict[str, Any] | None = None
         draft_serializer = serializer_name
@@ -919,6 +932,7 @@ class KnowledgeObjectEditorAdapter:
                 object_type,
                 target,
                 revision=revision,
+                reviewer=reviewer,
             )
         elif not is_public:
             # An unpublished canonical row is itself the current editable
@@ -3054,6 +3068,7 @@ def _selection(
         object_type=object_type,
         target=target,
         selection=selection,
+        reviewer=reviewer,
     )
     selection["field_assistant_values"] = _assistant_field_values(object_type, target, selection)
     if assistant_target is not None:
@@ -3273,6 +3288,8 @@ def _theory_secondary_preview(
         ReadingPathSerializer,
     )
 
+    from catalog.reading_path_serializers import PublicReadingPathSerializer
+
     target = KnowledgeNode.objects.filter(pk=object_id).first()
     if target is None:
         return {"graph": _theory_graph_preview(active_data), "timeline": [], "reading_paths": []}
@@ -3306,10 +3323,10 @@ def _theory_secondary_preview(
             NormalizedTimelineEventSerializer(timeline, many=True, context={}).data
         ),
         "reading_paths": list(
-            ReadingPathSerializer(
+            PublicReadingPathSerializer(
                 paths,
                 many=True,
-                context={"include_unpublished_items": True},
+                context={},
             ).data
         ),
     }

@@ -977,6 +977,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/reading-paths/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_theory_system_reading_paths_list"];
+        put?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        post: operations["catalog_admin_theory_system_reading_paths_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/reading-paths/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_theory_system_reading_paths_retrieve"];
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        put: operations["catalog_admin_theory_system_reading_paths_update"];
+        post?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        delete: operations["catalog_admin_theory_system_reading_paths_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        patch: operations["catalog_admin_theory_system_reading_paths_partial_update"];
+        trace?: never;
+    };
     "/api/catalog/admin/theory-timeline/": {
         parameters: {
             query?: never;
@@ -2513,6 +2551,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/path-follows/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_path_follows_list"];
+        put?: never;
+        post: operations["reading_path_follows_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/path-follows/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_path_follows_retrieve"];
+        put?: never;
+        post?: never;
+        delete: operations["reading_path_follows_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["reading_path_follows_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/path-follows/{id}/copy-plan/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_path_follows_copy_plan_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/path-follows/{id}/upgrade/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_path_follows_upgrade_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/path-follows/{id}/upgrade-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_path_follows_upgrade_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/path-follows/by-path/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_path_follows_by_path_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/path-follows/by-request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_path_follows_by_request_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/privacy/": {
         parameters: {
             query?: never;
@@ -3171,6 +3321,72 @@ export interface components {
             published: number;
             drafts: number;
             scheduled: number;
+        };
+        AdminReadingPath: {
+            /** Format: uuid */
+            readonly id: string;
+            title: string;
+            slug: string;
+            introduction?: string;
+            learning_goal?: string;
+            /** Format: uuid */
+            primary_discipline?: string | null;
+            readonly primary_discipline_data: components["schemas"]["DisciplineCompact"];
+            audience?: string;
+            difficulty?: components["schemas"]["PathDifficultyEnum"];
+            estimated_reading?: string;
+            /** Format: int64 */
+            estimated_weeks?: number | null;
+            prerequisite?: string;
+            topics?: string[];
+            learning_questions?: unknown;
+            related_debate_ids?: unknown;
+            curator_note?: string;
+            credits?: unknown;
+            /** Format: uri */
+            cover_asset?: string | null;
+            readonly cover_url: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+            /** Format: int64 */
+            sort_order?: number;
+            readonly stages: components["schemas"]["ReadingPathStage"][];
+            items?: components["schemas"]["ReadingPathItem"][];
+            /** Format: date-time */
+            readonly published_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly edit_version: string;
+        };
+        AdminReadingPathRequest: {
+            title: string;
+            slug: string;
+            introduction?: string;
+            learning_goal?: string;
+            /** Format: uuid */
+            primary_discipline?: string | null;
+            audience?: string;
+            difficulty?: components["schemas"]["PathDifficultyEnum"];
+            estimated_reading?: string;
+            /** Format: int64 */
+            estimated_weeks?: number | null;
+            prerequisite?: string;
+            topics?: string[];
+            learning_questions?: unknown;
+            related_debate_ids?: unknown;
+            curator_note?: string;
+            credits?: unknown;
+            /** Format: binary */
+            cover_asset?: string;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+            /** Format: int64 */
+            sort_order?: number;
+            items?: components["schemas"]["ReadingPathItemRequest"][];
+            /** Format: date-time */
+            expected_updated_at?: string;
+            stage_groups?: components["schemas"]["PathStageGroupInputRequest"][];
         };
         AdminRecommendationIssueCollection: {
             count: number;
@@ -4162,6 +4378,15 @@ export interface components {
             description?: string;
             /** Format: uri */
             hero_image?: string | null;
+        };
+        DisciplineCompactRequest: {
+            code: string;
+            name: string;
+            foreign_name?: string;
+            slug: string;
+            description?: string;
+            /** Format: binary */
+            hero_image?: string;
         };
         DiscoveryAttribution: {
             status: string;
@@ -5456,6 +5681,22 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        KnowledgeNodeListRequest: {
+            node_type: components["schemas"]["NodeTypeEnum"];
+            canonical_name_zh: string;
+            canonical_name_en?: string;
+            slug: string;
+            summary?: string;
+            core_questions?: unknown;
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            period_label?: string;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+            /** Format: int64 */
+            sort_order?: number;
+        };
         KnowledgeNodeSubdiscipline: {
             /** Format: uuid */
             readonly id: string;
@@ -6480,6 +6721,21 @@ export interface components {
          * @enum {string}
          */
         PageTypeEnum: "front" | "body" | "appendix" | "other" | "blank";
+        PaginatedAdminReadingPathList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AdminReadingPath"][];
+        };
         PaginatedAdminTheoryTimelineEventList: {
             /** @example 123 */
             count: number;
@@ -6615,6 +6871,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["ParallelTaskPageOutput"][];
         };
+        PaginatedPathPageOutputList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["PathPageOutput"][];
+        };
         PaginatedPrivacyOperationsPageList: {
             /** @example 123 */
             count: number;
@@ -6660,6 +6931,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["PublicParallelCalibrationPageOutput"][];
         };
+        PaginatedPublicReadingPathList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["PublicReadingPath"][];
+        };
         PaginatedReadingHistoryList: {
             /** @example 123 */
             count: number;
@@ -6674,21 +6960,6 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["ReadingHistory"][];
-        };
-        PaginatedReadingPathList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["ReadingPath"][];
         };
         PaginatedReadingProgressList: {
             /** @example 123 */
@@ -7124,6 +7395,34 @@ export interface components {
             code: string;
             message: string;
         };
+        PatchedAdminReadingPathRequest: {
+            title?: string;
+            slug?: string;
+            introduction?: string;
+            learning_goal?: string;
+            /** Format: uuid */
+            primary_discipline?: string | null;
+            audience?: string;
+            difficulty?: components["schemas"]["PathDifficultyEnum"];
+            estimated_reading?: string;
+            /** Format: int64 */
+            estimated_weeks?: number | null;
+            prerequisite?: string;
+            topics?: string[];
+            learning_questions?: unknown;
+            related_debate_ids?: unknown;
+            curator_note?: string;
+            credits?: unknown;
+            /** Format: binary */
+            cover_asset?: string;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+            /** Format: int64 */
+            sort_order?: number;
+            items?: components["schemas"]["ReadingPathItemRequest"][];
+            /** Format: date-time */
+            expected_updated_at?: string;
+            stage_groups?: components["schemas"]["PathStageGroupInputRequest"][];
+        };
         PatchedAdminTheoryTimelineEventRequest: {
             /** Format: uuid */
             discipline?: string | null;
@@ -7232,6 +7531,17 @@ export interface components {
             data?: components["schemas"]["ParallelTaskDataInputRequest"];
             expected_revision?: number;
         };
+        PatchedPathUpdateInputRequest: {
+            /** Format: uuid */
+            request_id?: string;
+            expected_revision?: number;
+            action?: components["schemas"]["PathUpdateInputActionEnum"];
+            bookmarked?: boolean;
+            /** Format: uuid */
+            item_id?: string;
+            status?: components["schemas"]["PathReadingProgressEnum"];
+            note?: string;
+        };
         PatchedPlanUpdateInputRequest: {
             expected_revision?: number;
             time_budget?: string;
@@ -7249,13 +7559,20 @@ export interface components {
             /** @description 默认关闭，仅使用显式选择的本人已确认笔记。 */
             use_confirmed_memories?: boolean;
             confirmed_memory_ids?: string[];
+            /**
+             * Format: uuid
+             * @description 公共路径私人副本写入必需；同一操作重试保持原请求标识。
+             */
+            request_id?: string;
             goal?: string;
             background?: string;
             order?: string[];
             /** Format: uuid */
             item_id?: string;
-            status?: components["schemas"]["PlanUpdateInputStatusEnum"];
+            status?: components["schemas"]["PathReadingProgressEnum"];
             note?: string;
+            /** @description 公共路径副本以稳定item_id记录本人时长估计，不按作品合并不同章节。 */
+            item_minutes?: number | null;
             reference?: components["schemas"]["EvidenceReferenceInputRequest"];
             adopt_suggestion?: boolean;
             optimize_order?: boolean;
@@ -7297,6 +7614,315 @@ export interface components {
             /** Format: date-time */
             expected_asset_updated_at?: string;
             rights_note?: string;
+        };
+        PathCommandOutput: {
+            owner_id: string;
+            record: components["schemas"]["PathRecordOutput"] | null;
+            receipt: components["schemas"]["PathReceiptOutput"] | null;
+        };
+        PathCopyInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_revision: number;
+            /** @default  */
+            title: string;
+        };
+        PathCreateInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            path_id: string;
+            expected_source_revision: string;
+            /** @default true */
+            bookmarked: boolean;
+        };
+        PathCreditInput: {
+            name: string;
+            role: string;
+        };
+        PathDiffOutput: {
+            added: string[];
+            removed: string[];
+            changed: string[];
+            unchanged: string[];
+        };
+        /**
+         * @description * `beginner` - 入门
+         *     * `intermediate` - 进阶
+         *     * `advanced` - 深入
+         * @enum {string}
+         */
+        PathDifficultyEnum: "beginner" | "intermediate" | "advanced";
+        PathLinkOutput: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug: string;
+            href: string;
+        };
+        /**
+         * @description * `work` - work
+         *     * `chapter` - chapter
+         *     * `paper` - paper
+         *     * `node` - node
+         * @enum {string}
+         */
+        PathMaterialKindEnum: "work" | "chapter" | "paper" | "node";
+        PathMaterialOutput: {
+            id: string;
+            stage_id: string;
+            kind: components["schemas"]["PathMaterialKindEnum"];
+            title: string;
+            /** Format: uuid */
+            work_id: string | null;
+            /** Format: uuid */
+            edition_id: string | null;
+            /** Format: uuid */
+            node_id: string | null;
+            /** Format: uuid */
+            asset_id: string | null;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            chapter_title: string;
+            page_start: number | null;
+            page_end: number | null;
+            printed_page_label: string;
+            version_label: string;
+            authors: string[];
+            publication_year: number | null;
+            cover_url: string;
+            href: string | null;
+            reader_url: string | null;
+            source_status: components["schemas"]["PathMaterialOutputSourceStatusEnum"];
+            source_notice: string;
+            reason: string;
+            prerequisite: string;
+            is_required: boolean;
+            position: number;
+            reading_order: number;
+            substitutes: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * @description * `available` - available
+         *     * `no_fulltext` - no_fulltext
+         *     * `unavailable` - unavailable
+         *     * `withdrawn` - withdrawn
+         *     * `revision_changed` - revision_changed
+         * @enum {string}
+         */
+        PathMaterialOutputSourceStatusEnum: "available" | "no_fulltext" | "unavailable" | "withdrawn" | "revision_changed";
+        PathPageOutput: {
+            owner_id: string;
+            count: number;
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["PathRecordOutput"][];
+        };
+        PathProgressOutput: {
+            status: components["schemas"]["PathReadingProgressEnum"];
+            note: string;
+        };
+        /**
+         * @description * `pending` - pending
+         *     * `reading` - reading
+         *     * `completed` - completed
+         *     * `skipped` - skipped
+         * @enum {string}
+         */
+        PathReadingProgressEnum: "pending" | "reading" | "completed" | "skipped";
+        PathReceiptOutput: {
+            /** Format: uuid */
+            request_id: string;
+            applied_revision: number;
+            deleted: boolean;
+        };
+        PathRecordOutput: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            type: components["schemas"]["PathRecordOutputTypeEnum"];
+            /** Format: uuid */
+            path_id: string;
+            path_slug: string;
+            bookmarked: boolean;
+            source_revision: components["schemas"]["PathSourceRevisionOutput"];
+            latest_source_revision: components["schemas"]["PathSourceRevisionOutput"] | null;
+            source_status: components["schemas"]["PathRecordOutputSourceStatusEnum"];
+            /** @description Original public stages/items with current source availability; no draft content. */
+            path: unknown;
+            progress: {
+                [key: string]: components["schemas"]["PathProgressOutput"];
+            };
+            completed_items: number;
+            total_items: number;
+            completed_stages: number;
+            total_stages: number;
+            history: unknown[];
+            /** @description Personal plan data; the existing plan editor uses the same encrypted record. */
+            data: unknown;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description * `available` - available
+         *     * `unavailable` - unavailable
+         *     * `revision_changed` - revision_changed
+         * @enum {string}
+         */
+        PathRecordOutputSourceStatusEnum: "available" | "unavailable" | "revision_changed";
+        /**
+         * @description * `path_follow` - path_follow
+         *     * `personal_plan` - personal_plan
+         * @enum {string}
+         */
+        PathRecordOutputTypeEnum: "path_follow" | "personal_plan";
+        PathRevisionOutput: {
+            /** Format: uuid */
+            id: string | null;
+            token: string;
+            number: number | null;
+            published_at: string | null;
+            change_note: string;
+            legacy: boolean;
+        };
+        PathSourceRevisionOutput: {
+            id: string | null;
+            token: string;
+            number: number | null;
+            /** Format: date-time */
+            published_at: string | null;
+            change_note: string;
+            legacy: boolean;
+        };
+        PathStageGroupInput: {
+            /** @default  */
+            estimated_reading: string;
+            learning_questions?: string[];
+            related_debate_ids?: string[];
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            description?: string;
+            position?: number;
+            items: components["schemas"]["PathStageItemInput"][];
+        };
+        PathStageGroupInputRequest: {
+            /** @default  */
+            estimated_reading: string;
+            learning_questions?: string[];
+            related_debate_ids?: string[];
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            description?: string;
+            position?: number;
+            items: components["schemas"]["PathStageItemInputRequest"][];
+        };
+        PathStageItemInput: {
+            /** @default work */
+            material_kind: components["schemas"]["PathMaterialKindEnum"];
+            /** Format: uuid */
+            edition?: string | null;
+            /** Format: uuid */
+            asset?: string | null;
+            /** Format: uuid */
+            document_revision?: string | null;
+            /** @default  */
+            chapter_title: string;
+            page_start?: number | null;
+            page_end?: number | null;
+            /** @default  */
+            printed_page_label: string;
+            /** @default active */
+            status: components["schemas"]["PathStageItemInputStatusEnum"];
+            substitute_edition_ids?: string[];
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            node?: string | null;
+            /** Format: uuid */
+            work?: string | null;
+            recommendation_reason?: string;
+            prerequisite?: string;
+            editorial_note?: string;
+            position?: number;
+            is_required?: boolean;
+        };
+        PathStageItemInputRequest: {
+            /** @default work */
+            material_kind: components["schemas"]["PathMaterialKindEnum"];
+            /** Format: uuid */
+            edition?: string | null;
+            /** Format: uuid */
+            asset?: string | null;
+            /** Format: uuid */
+            document_revision?: string | null;
+            /** @default  */
+            chapter_title: string;
+            page_start?: number | null;
+            page_end?: number | null;
+            /** @default  */
+            printed_page_label: string;
+            /** @default active */
+            status: components["schemas"]["PathStageItemInputStatusEnum"];
+            substitute_edition_ids?: string[];
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            node?: string | null;
+            /** Format: uuid */
+            work?: string | null;
+            recommendation_reason?: string;
+            prerequisite?: string;
+            editorial_note?: string;
+            position?: number;
+            is_required?: boolean;
+        };
+        /**
+         * @description * `active` - active
+         *     * `withdrawn` - withdrawn
+         * @enum {string}
+         */
+        PathStageItemInputStatusEnum: "active" | "withdrawn";
+        PathStageOutput: {
+            id: string;
+            name: string;
+            description: string;
+            position: number;
+            estimated_reading: string;
+            learning_questions: string[];
+            related_debates: components["schemas"]["PathLinkOutput"][];
+            items: components["schemas"]["PathMaterialOutput"][];
+        };
+        /**
+         * @description * `bookmark` - bookmark
+         *     * `progress` - progress
+         *     * `note` - note
+         * @enum {string}
+         */
+        PathUpdateInputActionEnum: "bookmark" | "progress" | "note";
+        PathUpgradeInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_revision: number;
+            target_revision: string;
+        };
+        PathUpgradePreviewOutput: {
+            owner_id: string;
+            /** Format: uuid */
+            record_id: string;
+            expected_revision: number;
+            source_revision: components["schemas"]["PathSourceRevisionOutput"];
+            target_revision: components["schemas"]["PathSourceRevisionOutput"];
+            diff: components["schemas"]["PathDiffOutput"];
+            retained_completed: string[];
+            retained_notes: string[];
         };
         PersonCompact: {
             /** Format: uuid */
@@ -7681,20 +8307,15 @@ export interface components {
             project_id?: string;
             /** Format: uuid */
             turn_id?: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description 旧输入不再创建路径副本；请使用path-follows的公开版本确认与copy-plan接口。
+             */
             reading_path_id?: string;
             references?: components["schemas"]["EvidenceReferenceInputRequest"][];
             prerequisites?: components["schemas"]["PrerequisiteInputRequest"][];
             scope?: components["schemas"]["QueryScopeInputRequest"];
         };
-        /**
-         * @description * `pending` - pending
-         *     * `reading` - reading
-         *     * `completed` - completed
-         *     * `skipped` - skipped
-         * @enum {string}
-         */
-        PlanUpdateInputStatusEnum: "pending" | "reading" | "completed" | "skipped";
         PlannedItemLinkRequest: {
             edit_version: string;
             /** Format: uuid */
@@ -8232,6 +8853,39 @@ export interface components {
             readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
             readonly editions: components["schemas"]["CatalogEdition"][];
         };
+        PublicReadingPath: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            introduction: string;
+            learning_goal: string;
+            audience: string;
+            difficulty: string;
+            estimated_reading: string;
+            estimated_weeks: number | null;
+            prerequisite: string;
+            curator_note: string;
+            credits: components["schemas"]["PathCreditInput"][];
+            topics: components["schemas"]["PathLinkOutput"][];
+            learning_questions: string[];
+            related_debates: components["schemas"]["PathLinkOutput"][];
+            revision: components["schemas"]["PathRevisionOutput"];
+            latest_revision: components["schemas"]["PathRevisionOutput"];
+            is_current_revision: boolean;
+            versions: components["schemas"]["PathRevisionOutput"][];
+            versions_truncated: boolean;
+            stages: components["schemas"]["PathStageOutput"][];
+            items: components["schemas"]["PathMaterialOutput"][];
+            counts: {
+                [key: string]: number;
+            };
+            cover_url: string;
+            cover_media: unknown;
+            primary_discipline_data: unknown;
+            diff?: unknown;
+            preview?: boolean;
+        };
         /**
          * @description * `available` - available
          *     * `replaced` - replaced
@@ -8692,8 +9346,16 @@ export interface components {
             primary_discipline?: string | null;
             readonly primary_discipline_data: components["schemas"]["DisciplineCompact"];
             audience?: string;
-            difficulty?: components["schemas"]["ReadingPathDifficultyEnum"];
+            difficulty?: components["schemas"]["PathDifficultyEnum"];
             estimated_reading?: string;
+            /** Format: int64 */
+            estimated_weeks?: number | null;
+            prerequisite?: string;
+            topics?: string[];
+            learning_questions?: unknown;
+            related_debate_ids?: unknown;
+            curator_note?: string;
+            credits?: unknown;
             /** Format: uri */
             cover_asset?: string | null;
             readonly cover_url: string;
@@ -8710,16 +9372,9 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
-        /**
-         * @description * `beginner` - 入门
-         *     * `intermediate` - 进阶
-         *     * `advanced` - 深入
-         * @enum {string}
-         */
-        ReadingPathDifficultyEnum: "beginner" | "intermediate" | "advanced";
         ReadingPathItem: {
             /** Format: uuid */
-            readonly id: string;
+            id?: string;
             /** Format: uuid */
             stage?: string | null;
             readonly stage_data: components["schemas"]["ReadingPathStage"];
@@ -8739,7 +9394,71 @@ export interface components {
             reading_order?: number;
             is_required?: boolean;
             editorial_note?: string;
+            material_kind?: components["schemas"]["ReadingPathItemMaterialKindEnum"];
+            /** Format: uuid */
+            edition?: string | null;
+            /** Format: uuid */
+            asset?: string | null;
+            /** Format: uuid */
+            document_revision?: string | null;
+            chapter_title?: string;
+            /** Format: int64 */
+            page_start?: number | null;
+            /** Format: int64 */
+            page_end?: number | null;
+            printed_page_label?: string;
+            status?: components["schemas"]["ReadingPathItemStatusEnum"];
+            substitute_edition_ids?: unknown;
         };
+        /**
+         * @description * `work` - 整部作品
+         *     * `chapter` - 章节
+         *     * `paper` - 论文
+         *     * `node` - 知识条目
+         * @enum {string}
+         */
+        ReadingPathItemMaterialKindEnum: "work" | "chapter" | "paper" | "node";
+        ReadingPathItemRequest: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            stage?: string | null;
+            stage_name: string;
+            stage_description?: string;
+            /** Format: uuid */
+            node?: string | null;
+            /** Format: uuid */
+            work?: string | null;
+            recommendation_reason?: string;
+            prerequisite?: string;
+            /** Format: int64 */
+            position?: number;
+            /** Format: int64 */
+            reading_order?: number;
+            is_required?: boolean;
+            editorial_note?: string;
+            material_kind?: components["schemas"]["ReadingPathItemMaterialKindEnum"];
+            /** Format: uuid */
+            edition?: string | null;
+            /** Format: uuid */
+            asset?: string | null;
+            /** Format: uuid */
+            document_revision?: string | null;
+            chapter_title?: string;
+            /** Format: int64 */
+            page_start?: number | null;
+            /** Format: int64 */
+            page_end?: number | null;
+            printed_page_label?: string;
+            status?: components["schemas"]["ReadingPathItemStatusEnum"];
+            substitute_edition_ids?: unknown;
+        };
+        /**
+         * @description * `active` - 在读材料
+         *     * `withdrawn` - 已撤回材料
+         * @enum {string}
+         */
+        ReadingPathItemStatusEnum: "active" | "withdrawn";
         ReadingPathStage: {
             /** Format: uuid */
             readonly id: string;
@@ -8747,10 +9466,22 @@ export interface components {
             description?: string;
             /** Format: int64 */
             position?: number;
+            estimated_reading?: string;
+            learning_questions?: unknown;
+            related_debate_ids?: unknown;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        ReadingPathStageRequest: {
+            name: string;
+            description?: string;
+            /** Format: int64 */
+            position?: number;
+            estimated_reading?: string;
+            learning_questions?: unknown;
+            related_debate_ids?: unknown;
         };
         ReadingProgress: {
             /** Format: uuid */
@@ -12259,6 +12990,152 @@ export interface operations {
             };
         };
     };
+    catalog_admin_theory_system_reading_paths_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAdminReadingPathList"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AdminReadingPathRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminReadingPathRequest"];
+                "application/json": components["schemas"]["AdminReadingPathRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReadingPath"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReadingPath"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AdminReadingPathRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminReadingPathRequest"];
+                "application/json": components["schemas"]["AdminReadingPathRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReadingPath"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["PatchedAdminReadingPathRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminReadingPathRequest"];
+                "application/json": components["schemas"]["PatchedAdminReadingPathRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReadingPath"];
+                };
+            };
+        };
+    };
     catalog_admin_theory_timeline_list: {
         parameters: {
             query?: {
@@ -13375,7 +14252,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedReadingPathList"];
+                    "application/json": components["schemas"]["PaginatedPublicReadingPathList"];
                 };
             };
         };
@@ -13396,7 +14273,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReadingPath"];
+                    "application/json": components["schemas"]["PublicReadingPath"];
                 };
             };
         };
@@ -15479,6 +16356,272 @@ export interface operations {
             };
         };
     };
+    reading_path_follows_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedPathPageOutputList"];
+                };
+            };
+        };
+    };
+    reading_path_follows_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PathCreateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PathCreateInputRequest"];
+                "multipart/form-data": components["schemas"]["PathCreateInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_path_follows_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 personal reading plan 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_path_follows_destroy: {
+        parameters: {
+            query: {
+                expected_revision: number;
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 personal reading plan 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_path_follows_partial_update: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 personal reading plan 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedPathUpdateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedPathUpdateInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedPathUpdateInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_path_follows_copy_plan_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 personal reading plan 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PathCopyInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PathCopyInputRequest"];
+                "multipart/form-data": components["schemas"]["PathCopyInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_path_follows_upgrade_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 personal reading plan 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PathUpgradeInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PathUpgradeInputRequest"];
+                "multipart/form-data": components["schemas"]["PathUpgradeInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_path_follows_upgrade_preview_retrieve: {
+        parameters: {
+            query: {
+                target_revision: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 personal reading plan 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathUpgradePreviewOutput"];
+                };
+            };
+        };
+    };
+    reading_path_follows_by_path_retrieve: {
+        parameters: {
+            query: {
+                path_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathCommandOutput"];
+                };
+            };
+        };
+    };
+    reading_path_follows_by_request_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathCommandOutput"];
+                };
+            };
+        };
+    };
     reading_privacy_retrieve: {
         parameters: {
             query?: never;
@@ -15910,6 +17053,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathCommandOutput"];
+                };
+            };
             /** @description No response body */
             204: {
                 headers: {

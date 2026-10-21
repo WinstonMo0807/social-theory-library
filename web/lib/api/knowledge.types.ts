@@ -222,41 +222,8 @@ export type NormalizedTimelineEvent = {
   reader_href: string | null;
 };
 
-export type NormalizedReadingPathItem = {
-  id: string;
-  stage_name: string;
-  stage_description: string;
-  node: string | null;
-  node_data: KnowledgeNodeListItem | null;
-  work: string | null;
-  work_data: TheoryWorkCompact | null;
-  recommendation_reason: string;
-  prerequisite?: string;
-  reading_order: number;
-  is_required: boolean;
-  editorial_note: string;
-};
-
-export type NormalizedReadingPath = {
-  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
-  id: string;
-  title: string;
-  slug: string;
-  introduction: string;
-  learning_goal?: string;
-  primary_discipline: string | null;
-  primary_discipline_data: TheoryDisciplineCompact | null;
-  audience: string;
-  difficulty: string;
-  estimated_reading: string;
-  cover_url: string;
-  status: string;
-  sort_order: number;
-  items: NormalizedReadingPathItem[];
-  published_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
+export type NormalizedReadingPathItem = import("./reading-paths.types").PathMaterial;
+export type NormalizedReadingPath = import("./reading-paths.types").PublicReadingPath;
 
 export type TheorySystemOverview = {
   featured_nodes?: KnowledgeNodeListItem[];

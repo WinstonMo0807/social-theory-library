@@ -62,8 +62,10 @@ function PreviewViewport({ children }: { children: ReactNode }) {
 }
 
 export type FixedEditorSection = { id: string; label: string; description?: string };
-export function FixedPageEditor({ sections, activeSection, onSectionChange, fields, preview, dirty, previewHref, toolbar }: {
+export type PreviewSelection = { sectionId?: string; stageId?: string; itemId?: string };
+export function FixedPageEditor({ sections, activeSection, onSectionChange, onPreviewSelect, fields, preview, dirty, previewHref, toolbar }: {
   sections: FixedEditorSection[]; activeSection: string; onSectionChange: (id: string) => void;
+  onPreviewSelect?: (selection: PreviewSelection) => void;
   fields: ReactNode; preview: ReactNode; dirty: boolean; previewHref?: string; toolbar?: ReactNode;
 }) {
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -73,10 +75,15 @@ export function FixedPageEditor({ sections, activeSection, onSectionChange, fiel
       element.dataset.editActive = String(element.dataset.editSection === activeSection);
     });
   }, [activeSection, preview]);
-  function select(id: string, focus = false) {
+  function select(id: string, focus = false, selection?: PreviewSelection) {
     if (!sections.some(section => section.id === id)) return;
     onSectionChange(id);
-    if (focus) window.requestAnimationFrame(() => { Array.from(fieldRef.current?.querySelectorAll<HTMLElement>("input,textarea,select,button") || []).find(element => !element.closest("[hidden]") && element.offsetParent !== null)?.focus(); });
+    if (focus) window.requestAnimationFrame(() => {
+      const selectedFields = selection?.itemId
+        ? Array.from(fieldRef.current?.querySelectorAll<HTMLElement>("[data-editor-item-id]") || []).find(element => element.dataset.editorItemId === selection.itemId)
+        : selection?.stageId ? Array.from(fieldRef.current?.querySelectorAll<HTMLElement>("[data-editor-stage-id]") || []).find(element => element.dataset.editorStageId === selection.stageId) : null;
+      Array.from((selectedFields || fieldRef.current)?.querySelectorAll<HTMLElement>("input,textarea,select,button") || []).find(element => !element.closest("[hidden]") && element.offsetParent !== null && (!selection || !element.matches(":disabled")))?.focus();
+    });
   }
   return <div className="fixed-page-editor">
     <aside className="fixed-editor-panel"><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} aria-current={activeSection === section.id ? "true" : undefined} onClick={() => select(section.id)}>{section.label}</button>)}</nav>
@@ -90,10 +97,13 @@ export function FixedPageEditor({ sections, activeSection, onSectionChange, fiel
         });
       }} data-active-section={activeSection} onClickCapture={event => {
         const target = event.target as Element;
+        const section = target.closest<HTMLElement>("[data-edit-section]");
+        const selection = { sectionId: section?.dataset.editSection, stageId: target.closest<HTMLElement>("[data-preview-stage-id]")?.dataset.previewStageId,
+          itemId: target.closest<HTMLElement>("[data-preview-item-id]")?.dataset.previewItemId };
+        onPreviewSelect?.(selection);
         const row = target.closest<HTMLElement>("[data-edit-row]");
         if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select", { detail: Number(row.dataset.editRow) }));
-        const section = target.closest<HTMLElement>("[data-edit-section]");
-        if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", true); }
+        if (section && sections.some(item => item.id === section.dataset.editSection)) { event.preventDefault(); event.stopPropagation(); select(section.dataset.editSection || "", true, onPreviewSelect ? selection : undefined); }
         else if (target.closest("a,button,input,select,textarea,form")) { event.preventDefault(); event.stopPropagation(); }
       }} onSubmitCapture={event => { event.preventDefault(); event.stopPropagation(); }}>{preview}</div></PreviewViewport>
     </section>

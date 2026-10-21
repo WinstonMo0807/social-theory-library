@@ -52,7 +52,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
   const works = [...new Map(allWorks.map(work => [work.id, work])).values()];
   const disciplines = [...new Map([node.primary_discipline, ...node.related_disciplines].flatMap(item => item ? [[item.id, item] as const] : [])).values()];
   const usages = node.public_detail?.usages || [];
-  const readingPaths = paths.filter(path => path.items.some(item => item.node === node.id || item.node_data?.id === node.id));
+  const readingPaths = paths.filter(path => path.items.some(item => item.node_id === node.id));
   const nav = tradition
     ? [["guide", "概览"], ["scholars", "代表人物与作品"], ["debates", "主要分歧与争论"], ["paths", "入门路径"], ["relations", "相关与区别的学派"], ["works", "馆藏与知识对象"]]
     : [["guide", "概念总览"], ["usages", "不同作者的用法"], ["history", "形成与变化"], ["debates", "争论"], ["relations", "关系与图谱"], ["works", "相关作品"], ["usages", "并列比较"], ["contexts", "语境探索"], ["research", "继续研究"]];
@@ -76,7 +76,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
     })}</div>{!node.representative_scholars.length ? <p className={styles.empty}>代表人物尚待确认。这里仅展示已有公开关联的学者。</p> : null}
   </section>;
   const pathSection = <section className={styles.section} id="paths"><header className={styles.sectionHeading}><h2>{tradition ? "入门路径" : "继续阅读的路径"}</h2><Link href={`${base}/paths`}>查看全部<ArrowRight size={15} /></Link></header>
-    {readingPaths.map(path => <article className={styles.readingPath} key={path.id}><header><h3><Link href={`/theories/reading-paths/${path.slug}`}>{path.title}<ArrowRight size={14} /></Link></h3>{path.introduction ? <p>{path.introduction}</p> : null}</header><ol>{path.items.map(item => <li key={item.id}><span>{item.reading_order}</span><div><strong>{item.stage_name || item.work_data?.title || item.node_data?.canonical_name_zh || "阅读步骤"}</strong>{item.stage_description || item.recommendation_reason ? <p>{item.stage_description || item.recommendation_reason}</p> : null}{item.work_data ? <WorkRow work={item.work_data} compact /> : item.node_data ? <Link href={`/theories/nodes/${item.node_data.slug}`}>{item.node_data.canonical_name_zh}<ArrowRight size={13} /></Link> : null}</div></li>)}</ol></article>)}
+    {readingPaths.map(path => <article className={styles.readingPath} key={path.id}><header><h3><Link href={`/theories/reading-paths/${path.slug}`}>{path.title}<ArrowRight size={14} /></Link></h3>{path.introduction ? <p>{path.introduction}</p> : null}</header><ol>{path.items.map(item => <li key={item.id}><span>{item.reading_order}</span><div><strong>{path.stages.find(stage => stage.id === item.stage_id)?.name || "阅读步骤"}</strong><p>{item.title}</p>{item.reason ? <p>{item.reason}</p> : null}{item.href ? <Link href={item.href}>查看材料<ArrowRight size={13} /></Link> : <small>来源当前不可用，保留路径位置。</small>}</div></li>)}</ol></article>)}
     {!readingPaths.length ? <p className={styles.empty}>尚无包含本条目的已公开阅读路径。可先从下方相关作品开始。</p> : null}
   </section>;
 

@@ -1233,11 +1233,12 @@ class TheoryReviewTaskSerializer(serializers.ModelSerializer):
 class ReadingPathStageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReadingPathStage
-        fields = ("id", "name", "description", "position", "created_at", "updated_at")
+        fields = ("id", "name", "description", "position", "estimated_reading", "learning_questions", "related_debate_ids", "created_at", "updated_at")
         read_only_fields = ("id", "created_at", "updated_at")
 
 
 class ReadingPathItemSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
     node_data = KnowledgeNodeListSerializer(source="node", read_only=True)
     work_data = serializers.SerializerMethodField()
     stage_data = ReadingPathStageSerializer(source="stage", read_only=True)
@@ -1260,6 +1261,8 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
             "reading_order",
             "is_required",
             "editorial_note",
+            "material_kind", "edition", "asset", "document_revision", "chapter_title",
+            "page_start", "page_end", "printed_page_label", "status", "substitute_edition_ids",
         )
 
     @extend_schema_field(CompactTheoryWorkSerializer(allow_null=True))
@@ -1267,6 +1270,7 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
         return compact_work(
             obj.work, self.context.get("request"),
             include_unpublished=bool(self.context.get("include_unpublished_items")),
+            edition=obj.edition if obj.edition_id else None,
         ) if obj.work_id else None
 
     def to_representation(self, instance):
@@ -1277,15 +1281,18 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
 
 
 class ReadingPathSerializer(serializers.ModelSerializer):
+    from catalog.reading_path_serializers import ReadingPathStageGroupsField
     primary_discipline_data = DisciplineCompactSerializer(source="primary_discipline", read_only=True)
     items = ReadingPathItemSerializer(many=True, required=False)
     stages = ReadingPathStageSerializer(many=True, read_only=True)
     cover_url = serializers.SerializerMethodField()
     cover_media = serializers.SerializerMethodField()
     expected_updated_at = serializers.DateTimeField(write_only=True, required=False)
-    stage_groups = serializers.JSONField(write_only=True, required=False)
+    stage_groups = ReadingPathStageGroupsField(write_only=True, required=False)
 
     class Meta:
+        from catalog.reading_path_serializers import PublicReadingPathListSerializer
+        list_serializer_class = PublicReadingPathListSerializer
         model = ReadingPath
         fields = (
             "id",
@@ -1298,6 +1305,8 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             "audience",
             "difficulty",
             "estimated_reading",
+            "estimated_weeks", "prerequisite", "topics", "learning_questions",
+            "related_debate_ids", "curator_note", "credits",
             "cover_asset",
             "cover_url",
             "cover_media",
@@ -1332,34 +1341,27 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("只有管理员可以发布或下线阅读路径。")
         return value
 
+    def validate(self, attrs):
+        from catalog.reading_path_serializers import PathMetadataInput
+        metadata = dict(attrs)
+        if "topics" in metadata:
+            metadata["topics"] = [str(row.pk) for row in metadata["topics"]]
+        checked = PathMetadataInput(data=metadata, partial=True)
+        checked.is_valid(raise_exception=True)
+        values = checked.validated_data
+        if "related_debate_ids" in values:
+            identifiers = values["related_debate_ids"]
+            if KnowledgeNode.objects.filter(pk__in=identifiers, node_type="debate").count() != len(set(identifiers)):
+                raise serializers.ValidationError({"related_debate_ids": "相关争论须关联现有争论知识节点。"})
+        return attrs
+
     def _sync_items(self, path, items):
-        path.items.all().delete()
-        has_explicit_stage = any(row.get("stage") is not None for row in items)
-        if not has_explicit_stage:
-            path.stages.all().delete()
-        for fallback_position, source_row in enumerate(items):
-            row = dict(source_row)
-            if int(row.get("node") is not None) + int(row.get("work") is not None) != 1:
-                raise serializers.ValidationError(
-                    {"items": ["每个路径项目必须且只能关联一个理论节点或馆藏作品。"]}
-                )
-            stage = row.get("stage")
-            if stage is not None and stage.reading_path_id != path.id:
-                raise serializers.ValidationError(
-                    {"items": ["阅读阶段必须属于当前阅读路径。"]}
-                )
-            if stage is None:
-                stage = ReadingPathStage.objects.create(
-                    reading_path=path,
-                    name=row.get("stage_name") or f"第 {fallback_position + 1} 阶段",
-                    description=row.get("stage_description", ""),
-                    position=row.get("reading_order", fallback_position),
-                )
-                row["stage"] = stage
-            row["stage_name"] = stage.name
-            row["stage_description"] = stage.description
-            row.setdefault("position", 0)
-            ReadingPathItem.objects.create(reading_path=path, **row)
+        from catalog.services.reading_paths import ReadingPathStructureError, stage_groups_from_items
+        try:
+            groups = stage_groups_from_items(path, items)
+        except ReadingPathStructureError as exc:
+            raise serializers.ValidationError({"items": [str(exc)]}) from exc
+        self._sync_stage_groups(path, groups)
 
     def _sync_stage_groups(self, path, groups):
         from catalog.services.reading_paths import (
@@ -1373,38 +1375,10 @@ class ReadingPathSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"stage_groups": [str(exc)]}) from exc
 
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if self.context.get("include_unpublished_items"):
-            return data
-        if instance.primary_discipline_id and instance.primary_discipline.editorial_status != "published":
-            data["primary_discipline"] = None
-            data["primary_discipline_data"] = None
-        public_items = []
-        public_stage_ids = set()
-        for row in data.get("items", []):
-            work_is_public = bool(row.get("work") and row.get("work_data"))
-            node_data = row.get("node_data") or {}
-            node_is_public = bool(
-                row.get("node") and node_data.get("status") == "published"
-            )
-            if not (work_is_public or node_is_public):
-                continue
-            if not node_is_public:
-                row["node"] = None
-                row["node_data"] = None
-            if not work_is_public:
-                row["work"] = None
-                row["work_data"] = None
-            public_items.append(row)
-            if row.get("stage"):
-                public_stage_ids.add(str(row["stage"]))
-        data["items"] = public_items
-        data["stages"] = [
-            stage
-            for stage in data.get("stages", [])
-            if str(stage.get("id")) in public_stage_ids
-        ]
-        return data
+        if not self.context.get("include_unpublished_items"):
+            from catalog.services.public_reading_paths import public_reading_path_snapshot
+            return public_reading_path_snapshot(instance.pk, request=self.context.get("request"))
+        return super().to_representation(instance)
 
     @transaction.atomic
     def create(self, validated_data):
@@ -1441,6 +1415,9 @@ class ReadingPathSerializer(serializers.ModelSerializer):
                     else ""
                 ),
             )
+        if path.status == "published":
+            from catalog.services.public_reading_paths import capture_reading_path_publication
+            capture_reading_path_publication(path, actor=actor)
         return path
 
     @transaction.atomic
@@ -1487,6 +1464,9 @@ class ReadingPathSerializer(serializers.ModelSerializer):
                     request.headers.get("Idempotency-Key", "") if request else ""
                 ),
             )
+        if path.status == "published":
+            from catalog.services.public_reading_paths import capture_reading_path_publication
+            capture_reading_path_publication(path, actor=actor)
         return path
 
 

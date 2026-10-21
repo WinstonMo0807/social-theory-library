@@ -2,6 +2,8 @@ import { apiRequest, apiStreamRequest, getServerSessionCredential } from "../api
 import type { Paginated } from "./pagination";
 import type { DiscoveryFilters, DiscoveryPassage } from "./discovery.types";
 import type { ReaderGeometryBox } from "../reader-coordinates";
+import { subscribeToSessionChanges } from "../api";
+import { withPrivateOwner } from "./private-owner";
 
 export type EvidenceAnchor = {
   evidence_span_id?: string; asset_id?: string; document_revision_id?: string; pdf_page?: number; content_hash?: string;
@@ -66,7 +68,7 @@ export type PlanData = {
     deferred_item_ids: string[]; sessions: Array<{ index: number; minutes: number; items: Array<{ item_id: string; planned_minutes: number }> }>;
     unscheduled_minutes?: number; notice?: string };
   prerequisites?: Array<{ work_id: string; requires_work_id: string; reference: ResolvedEvidence }>;
-  origin?: { reading_path_id?: string; turn_id?: string }; [key: string]: unknown;
+  origin?: { reading_path_id?: string; turn_id?: string; type?: string; source_revision?: { token: string }; path_slug?: string }; [key: string]: unknown;
 };
 type Revision = { expected_revision: number };
 type NewRequest = { request_id: string };
@@ -148,8 +150,8 @@ export function listResearchRecords<T>(collection: ResearchCollection, page = 1,
 export function readResearchRecord<T>(collection: ResearchCollection, id: string, signal?: AbortSignal) {
   return privateRequest<ResearchRecord<T>>(researchRecordPath(collection, id), { signal });
 }
-export function exportResearchRecord<T>(collection: ResearchCollection, id: string) {
-  return privateRequest<ResearchRecord<T> & { schema_version: number; turns?: ResearchRecord<TurnData>[] }>(`${researchRecordPath(collection, id)}export/`);
+export function exportResearchRecord<T>(collection: ResearchCollection, id: string, ownerId?: string) {
+  return privateRequest<ResearchRecord<T> & { schema_version: number; turns?: ResearchRecord<TurnData>[] }>(`${researchRecordPath(collection, id)}export/`, ownerId ? { headers: { "X-Reader-Owner": ownerId } } : {});
 }
 export function deleteResearchRecord(collection: Exclude<ResearchCollection, "research-turns">, id: string, revision: number) {
   return write<void>(researchRecordPath(collection, id), { expected_revision: revision }, "DELETE");
@@ -209,8 +211,15 @@ export function searchResearchMemories(data: { q: string; semantic?: boolean; al
 export function createReadingPlan(data: NewRequest & PlanPolicy & { goal: string; background?: string; project_id?: string; turn_id?: string; reading_path_id?: string; references?: EvidenceReference[]; prerequisites?: Array<{ work_id: string; requires_work_id: string; reference: EvidenceReference }>; scope?: QueryScope }) {
   return write<ResearchRecord<PlanData>>(researchRecordPath("reading-plans"), data);
 }
-export function updateReadingPlan(id: string, data: Revision & PlanPolicy & { goal?: string; background?: string; order?: string[]; item_id?: string; status?: PlanItem["status"]; note?: string; reference?: EvidenceReference; adopt_suggestion?: boolean; optimize_order?: boolean; preview?: boolean; remove_related_prerequisites?: boolean }) {
-  return write<ResearchRecord<PlanData>>(researchRecordPath("reading-plans", id), data, "PATCH");
+export async function updateReadingPlan(id: string, data: Revision & PlanPolicy & { request_id?: string; item_minutes?: number | null; goal?: string; background?: string; order?: string[]; item_id?: string; status?: PlanItem["status"]; note?: string; reference?: EvidenceReference; adopt_suggestion?: boolean; optimize_order?: boolean; preview?: boolean; remove_related_prerequisites?: boolean }, ownerId: string, signal?: AbortSignal, onDispatch?: () => void) {
+  const session = new AbortController(), unsubscribe = subscribeToSessionChanges(() => session.abort());
+  const combined = AbortSignal.any([session.signal, AbortSignal.timeout(30000), ...(signal ? [signal] : [])]);
+  try {
+    return await withPrivateOwner(ownerId, () => {
+      combined.throwIfAborted(); onDispatch?.();
+      return apiRequest<ResearchRecord<PlanData>>(researchRecordPath("reading-plans", id), { method: "PATCH", body: JSON.stringify(data), cache: "no-store", signal: combined, headers: { "X-Reader-Owner": ownerId } }, getServerSessionCredential(), false);
+    }, combined);
+  } finally { unsubscribe(); }
 }
 export function commandReadingPlan(id: string, data: Revision & { action: "cancel" | "retry" | "enhance" }) {
   return write<ResearchRecord<PlanData>>(`${researchRecordPath("reading-plans", id)}command/`, data);

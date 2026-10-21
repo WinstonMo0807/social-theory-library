@@ -274,3 +274,4 @@ from .research_models import (CitationAudit, PersonalReadingPlan, ReaderDataOper
 from .parallel_models import ParallelCalibration, ParallelReadingReceipt, ParallelReadingTask  # noqa: E402,F401
 from .knowledge_models import KnowledgeSaveReceipt, SavedKnowledgeNode  # noqa: E402,F401
 from .graph_models import GraphViewReceipt, SavedGraphView  # noqa: E402,F401
+from .path_models import PlanCommandReceipt  # noqa: E402,F401

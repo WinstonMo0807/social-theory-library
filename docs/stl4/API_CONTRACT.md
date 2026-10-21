@@ -1,5 +1,13 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-21 公共路径与私人跟读
+
+catalog/theory-system/reading-paths列表按q/search、topic、discipline、node、difficulty、page筛选；详情revision/compare_to选正式版本。PublicReadingPath含稳定stages/items、准确材料身份、available/no_fulltext/unavailable/withdrawn/revision_changed、明确替代书目、学习问题/争论/公开署名与最多50版历史。列表批量投影，既有公共消费者统一DTO；草稿预览仅编辑权限且无私人写入。
+
+reading/path-follows列表/创建、UUID详情/进度/笔记/删除、by-path、by-request、copy-plan、upgrade-preview及upgrade要求X-Reader-Owner；写入request_id固定，已存在对象expected_revision，创建附expected_source_revision，升级附target_revision。返回owner_id/record/receipt。copy的普通reading-plans GET/PATCH/export也核对owner；PATCH新增request_id和item_minutes，旧模型生成入口不能再有损复制路径。删除后回执不重建资料。
+
+本组纳入7条私人路径和2条既有管理路径，203路径完整保留原194；管理集合仅GET/POST，具体对象沿现权限。stage_groups有准确输入结构。schema与TypeScript生成类型同步；0072/0018尚未应用，正式接口验收未执行。
+
 ## 2026-10-21 图谱与私人视图契约
 
 GET catalog/theory-system/graph沿原入口，center_kind四类、center slug/UUID、depth1–3、limit≤120、edge_limit≤300、多值node_type/relation_type、discipline、start_year/end_year、三态has_collection、selected_node、works_page及include_candidates。节点键kind:UUID，学者为ScholarProfile；边键实际模型名:UUID。正式边含方向、说明、来源状态和至多6条精确当前原文；candidate_edges独立最多60条，普通账户请求候选403且不泄露数量。返回真实截断、当前子图计数、筛选说明、12个准确公开版本分页；no-store并Vary Cookie/Authorization。

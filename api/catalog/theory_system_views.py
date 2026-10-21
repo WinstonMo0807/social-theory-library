@@ -632,38 +632,68 @@ class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):
 
 class ReadingPathListView(TheorySystemFeatureMixin, generics.ListAPIView):
     permission_classes = [AllowAny]
-    serializer_class = ReadingPathSerializer
+    from catalog.reading_path_serializers import PublicReadingPathSerializer
+    serializer_class = PublicReadingPathSerializer
 
     def get_queryset(self):
-        queryset = ReadingPath.objects.filter(status="published").select_related(
-            "primary_discipline"
-        ).prefetch_related("stages", "items__stage", "items__node", "items__work")
-        discipline = self.request.query_params.get("discipline", "").strip()
-        if discipline:
-            queryset = queryset.filter(
-                primary_discipline__slug=discipline, primary_discipline__editorial_status="published",
-            )
-        node = self.request.query_params.get("node", "").strip()
-        if node:
-            queryset = queryset.filter(items__node__slug=node, items__node__status="published").distinct()
-        query = (
-            self.request.query_params.get("q", "").strip()
-            or self.request.query_params.get("search", "").strip()
-        )
-        return SearchService(request=self.request).queryset(
-            SearchContext.READING_PATHS,
-            query,
-            base_queryset=queryset,
-        )
+        from uuid import UUID
+        from catalog.reading_path_serializers import ReadingPathQuery
+        schema = ReadingPathQuery(data=self.request.query_params)
+        schema.is_valid(raise_exception=True)
+        values = schema.validated_data
+        queryset = ReadingPath.objects.filter(status="published").select_related("primary_discipline")
+        for parameter, relation, status_field in (("discipline", "primary_discipline", "editorial_status"),
+                ("topic", "topics", "editorial_status"), ("node", "items__node", "status")):
+            value = values.get(parameter)
+            if value:
+                try:
+                    identifier = UUID(value)
+                except ValueError:
+                    identifier = None
+                queryset = queryset.filter(**{relation + ("__pk" if identifier else "__slug"): identifier or value,
+                    relation + "__" + status_field: "published"}).distinct()
+        if values.get("difficulty"):
+            queryset = queryset.filter(difficulty=values["difficulty"])
+        query = values.get("q") or values.get("search") or ""
+        return SearchService(request=self.request).queryset(SearchContext.READING_PATHS, query, base_queryset=queryset)
+
+    @extend_schema(parameters=[
+        OpenApiParameter("q", str), OpenApiParameter("search", str),
+        OpenApiParameter("discipline", str, description="已公开学科UUID或slug"),
+        OpenApiParameter("topic", str, description="已公开主题UUID或slug"),
+        OpenApiParameter("node", str, description="已公开知识节点UUID或slug"),
+        OpenApiParameter("difficulty", str, enum=["beginner", "intermediate", "advanced"]),
+        OpenApiParameter("page", int),
+    ])
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 class ReadingPathDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView):
     permission_classes = [AllowAny]
-    serializer_class = ReadingPathSerializer
+    from catalog.reading_path_serializers import PublicReadingPathSerializer
+    serializer_class = PublicReadingPathSerializer
     lookup_field = "slug"
-    queryset = ReadingPath.objects.filter(status="published").select_related(
-        "primary_discipline"
-    ).prefetch_related("stages", "items__stage", "items__node", "items__work")
+    queryset = ReadingPath.objects.filter(status="published")
+
+    @extend_schema(parameters=[OpenApiParameter("revision", str, description="本路径正式发布修订UUID；旧记录为legacy摘要"),
+        OpenApiParameter("compare_to", str, description="同一路径的较早正式公开修订，返回安全版本差异")])
+    def retrieve(self, request, *args, **kwargs):
+        from catalog.reading_path_serializers import ReadingPathQuery
+        from catalog.services.public_reading_paths import public_reading_path_snapshot, diff_reading_path_snapshots
+        schema = ReadingPathQuery(data=request.query_params)
+        schema.is_valid(raise_exception=True)
+        values = schema.validated_data
+        path = self.get_object()
+        payload = public_reading_path_snapshot(path.pk, revision=values.get("revision"), request=request)
+        if values.get("compare_to"):
+            previous = public_reading_path_snapshot(path.pk, revision=values["compare_to"], request=request)
+            payload["diff"] = diff_reading_path_snapshots(previous, payload)
+        response = Response(self.get_serializer(payload).data)
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 class AdminKnowledgeNodeListView(AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
@@ -1388,6 +1418,7 @@ class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
 
 class AdminReadingPathListView(AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     editorial_target_type = "reading_path"
+    http_method_names = ["get", "post", "head", "options"]
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminReadingPathSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]

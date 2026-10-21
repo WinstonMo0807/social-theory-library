@@ -14,6 +14,7 @@ VERIFIED_NAMES = {
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
     "knowledge-entry-citation", "theory-system-overview", "knowledge-node-list", "knowledge-node-detail",
     "normalized-theory-timeline", "normalized-theory-timeline-detail", "reading-path-list", "reading-path-detail",
+    "admin-reading-path-list", "admin-reading-path-detail",
     "theory-timeline", "admin-theory-timeline-list", "admin-theory-timeline-detail",
     "local-theory-graph",
     "parallel-versions", "parallel-segments", "parallel-candidates",
@@ -58,7 +59,7 @@ urlpatterns = [
     path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name == "ocr-workspace"])),
     path("api/reading/", include([
         pattern for pattern in reading_router.urls
-        if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views", "reading.parallel_views", "reading.graph_views"}
+        if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views", "reading.parallel_views", "reading.graph_views", "reading.path_views"}
         or pattern.name in {"annotations-list", "annotations-detail", "bookmarks-list", "bookmarks-detail", "progress-list", "progress-detail", "reading-history-list", "reading-history-detail"}
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
         "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",

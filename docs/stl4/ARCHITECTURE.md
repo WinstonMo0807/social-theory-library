@@ -1,5 +1,11 @@
 # STL 4.0 架构事实与决定
 
+## 2026-10-21 阅读路径稳定材料与私人副本
+
+ReadingPath/Stage/Item增加明确版本、文件、修订、页码和策划字段，不建第二套馆藏或版本库。稳定UUID穿过草稿、发布和私人副本，公开历史沿EditorialRevision.materialized_preview，GET不补写版本。公开路径只读取当前可公开的节点/出版版本和准确原文，隐私跟读也不能绕过来源边界。
+
+PersonalReadingPlan.public_path_id非空表示唯一owner跟读，空值的public_path_copy为独立私人计划。PlanCommandReceipt记录owner/nonce/fingerprint/applied_revision，记录删除SET_NULL保留最少防重凭据。source_snapshot用于公开差异，path_snapshot重核权限后输出；显式替换仅改本人未完成材料，公开升级保留本人修改和完成历史。沿现有规划服务以item_id作为副本排程身份，默认旧work_id规则不变。catalog0072和reading0018仅源码。
+
 ## 2026-10-21 有界图谱与私人布局
 
 theory_graph基于八个已有公开关系模型按邻域展开，typed身份不混同Person/ScholarProfile或同名对象；ScholarRelation使用发布修订。正式书目从当前发布快照定位准确版本。EvidenceSnippet仅允许该关系自己的当前授权文件、活动修订和逐字真实页，候选只供双权限人员核对，不参与公开统计。

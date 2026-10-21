@@ -248,19 +248,23 @@ class PlanCreateInput(PlanPolicyInput):
     time_budget = serializers.CharField(max_length=160, required=False, allow_blank=True)
     project_id = serializers.UUIDField(required=False)
     turn_id = serializers.UUIDField(required=False)
-    reading_path_id = serializers.UUIDField(required=False)
+    reading_path_id = serializers.UUIDField(required=False,
+        help_text="旧输入不再创建路径副本；请使用path-follows的公开版本确认与copy-plan接口。")
     references = EvidenceReferenceInput(many=True, required=False)
     prerequisites = PrerequisiteInput(many=True, required=False)
     scope = QueryScopeInput(required=False)
 
 
 class PlanUpdateInput(RevisionInput, PlanPolicyInput):
+    request_id = serializers.UUIDField(required=False, help_text="公共路径私人副本写入必需；同一操作重试保持原请求标识。")
     goal = serializers.CharField(max_length=4000, required=False)
     background = serializers.CharField(max_length=4000, required=False, allow_blank=True)
     order = serializers.ListField(child=serializers.UUIDField(), required=False)
     item_id = serializers.UUIDField(required=False)
     status = serializers.ChoiceField(choices=["pending", "reading", "completed", "skipped"], required=False)
     note = serializers.CharField(max_length=4000, required=False, allow_blank=True)
+    item_minutes = serializers.IntegerField(min_value=1, max_value=100000, allow_null=True, required=False,
+        help_text="公共路径副本以稳定item_id记录本人时长估计，不按作品合并不同章节。")
     reference = EvidenceReferenceInput(required=False)
     adopt_suggestion = serializers.BooleanField(required=False)
     optimize_order = serializers.BooleanField(required=False)
@@ -271,6 +275,10 @@ class PlanUpdateInput(RevisionInput, PlanPolicyInput):
 
 class PlanCommandInput(RevisionInput):
     action = serializers.ChoiceField(choices=["cancel", "retry", "enhance"])
+
+
+class PlanDeleteInput(RevisionInput):
+    request_id = serializers.UUIDField(required=False, help_text="公共路径私人副本删除必需；普通私人计划保持既有删除契约。")
 
 
 class CitationOCROutput(serializers.Serializer):

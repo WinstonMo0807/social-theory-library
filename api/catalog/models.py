@@ -3244,6 +3244,13 @@ class ReadingPath(UUIDTimeStampedModel):
     audience = models.CharField(max_length=240, blank=True)
     difficulty = models.CharField(max_length=20, choices=Difficulty.choices, default=Difficulty.BEGINNER)
     estimated_reading = models.CharField(max_length=120, blank=True)
+    estimated_weeks = models.PositiveSmallIntegerField(null=True, blank=True)
+    prerequisite = models.TextField(blank=True)
+    topics = models.ManyToManyField(Topic, blank=True, related_name="reading_paths")
+    learning_questions = models.JSONField(default=list, blank=True)
+    related_debate_ids = models.JSONField(default=list, blank=True)
+    curator_note = models.TextField(blank=True)
+    credits = models.JSONField(default=list, blank=True)
     cover_asset = models.ImageField(upload_to="public/knowledge/reading-paths/%Y/%m/", blank=True)
     cover_rendition = models.ForeignKey("MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="reading_path_covers")
     status = models.CharField(
@@ -3282,6 +3289,9 @@ class ReadingPathStage(UUIDTimeStampedModel):
     )
     name = models.CharField(max_length=160)
     description = models.TextField(blank=True)
+    estimated_reading = models.CharField(max_length=120, blank=True)
+    learning_questions = models.JSONField(default=list, blank=True)
+    related_debate_ids = models.JSONField(default=list, blank=True)
     position = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -3290,6 +3300,16 @@ class ReadingPathStage(UUIDTimeStampedModel):
 
 
 class ReadingPathItem(UUIDTimeStampedModel):
+    class MaterialKind(models.TextChoices):
+        WORK = "work", "整部作品"
+        CHAPTER = "chapter", "章节"
+        PAPER = "paper", "论文"
+        NODE = "node", "知识条目"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "在读材料"
+        WITHDRAWN = "withdrawn", "已撤回材料"
+
     reading_path = models.ForeignKey(ReadingPath, on_delete=models.CASCADE, related_name="items")
     stage = models.ForeignKey(
         ReadingPathStage,
@@ -3302,6 +3322,16 @@ class ReadingPathItem(UUIDTimeStampedModel):
     stage_description = models.TextField(blank=True)
     node = models.ForeignKey(KnowledgeNode, null=True, blank=True, on_delete=models.SET_NULL, related_name="reading_path_items")
     work = models.ForeignKey(Work, null=True, blank=True, on_delete=models.SET_NULL, related_name="reading_path_items")
+    material_kind = models.CharField(max_length=16, choices=MaterialKind.choices, default=MaterialKind.WORK)
+    edition = models.ForeignKey(Edition, null=True, blank=True, on_delete=models.PROTECT, related_name="reading_path_items")
+    asset = models.ForeignKey(Asset, null=True, blank=True, on_delete=models.PROTECT, related_name="reading_path_items")
+    document_revision = models.ForeignKey("DocumentRevision", null=True, blank=True, on_delete=models.PROTECT, related_name="reading_path_items")
+    chapter_title = models.CharField(max_length=300, blank=True)
+    page_start = models.PositiveIntegerField(null=True, blank=True)
+    page_end = models.PositiveIntegerField(null=True, blank=True)
+    printed_page_label = models.CharField(max_length=80, blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    substitute_edition_ids = models.JSONField(default=list, blank=True)
     recommendation_reason = models.TextField(blank=True)
     position = models.PositiveIntegerField(default=0)
     reading_order = models.PositiveIntegerField(default=0)

@@ -36,11 +36,13 @@ from .source_follow_views import PublicSourceStatusView, SourceFollowsView, Sour
 from .search_record_views import ReaderSearchRecordsView
 from .knowledge_save_views import KnowledgeSaveView
 from .graph_views import SavedGraphViewSet
+from .path_views import PathFollowViewSet
 from .parallel_views import (AdminParallelCalibrationViewSet, ParallelCalibrationViewSet,
                              ParallelReadingTaskViewSet, PublicParallelCalibrationViewSet)
 
 router = DefaultRouter()
 router.register("graph-views", SavedGraphViewSet, basename="graph-views")
+router.register("path-follows", PathFollowViewSet, basename="path-follows")
 router.register("parallel-tasks", ParallelReadingTaskViewSet, basename="parallel-tasks")
 # Specific prefixes precede the owner detail route, so public/admin are not treated as UUIDs.
 router.register("parallel-calibrations/public", PublicParallelCalibrationViewSet, basename="public-parallel-calibrations")

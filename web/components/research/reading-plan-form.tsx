@@ -15,6 +15,7 @@ export function PlanSettingsForm({ ownerId, initial, busy, error, onSave, onCanc
   ownerId: string; initial?: PlanData; busy: boolean; error?: string;
   onSave: (settings: PlanSettings) => void; onCancel: () => void; children?: React.ReactNode;
 }) {
+  const publicCopy = initial?.origin?.type === "public_path_copy";
   const inputs = initial?.planning_inputs || {};
   const [goal, setGoal] = useState(initial?.goal || "");
   const [background, setBackground] = useState(initial?.background || "");
@@ -36,14 +37,14 @@ export function PlanSettingsForm({ ownerId, initial, busy, error, onSave, onCanc
     return () => window.removeEventListener("beforeunload", warn);
   }, [edited]);
   const total = budgetMode === "weekly" ? Number(weekly) * Number(weeks) : budget ? Number(budget) : null;
-  const valid = goal.trim().length >= 2 && (total === null || total > 0 && total <= 100000) && (!useMemories || memoryIds.length > 0);
+  const valid = goal.trim().length >= 2 && (total === null || total > 0 && total <= 100000) && (publicCopy || !useMemories || memoryIds.length > 0);
   function submit(event: FormEvent) {
     event.preventDefault();
     if (busy || !valid) return;
     onSave({ goal: goal.trim(), background: background.trim(), reading_level: level, time_budget: "",
       ...(budgetMode === "weekly" ? { weekly_minutes: Number(weekly), duration_weeks: Number(weeks) } : { budget_minutes: total }),
       session_minutes: Number(sessionMinutes), language_preference: language, prefer_unread: preferUnread,
-      use_confirmed_memories: useMemories, confirmed_memory_ids: useMemories ? memoryIds : [] });
+      ...(!publicCopy ? { use_confirmed_memories: useMemories, confirmed_memory_ids: useMemories ? memoryIds : [] } : {}) });
   }
   return <form className="stl4-plan-settings" onSubmit={submit} onChange={() => setEdited(true)}>
     <div className="stl4-plan-fields">
@@ -52,7 +53,7 @@ export function PlanSettingsForm({ ownerId, initial, busy, error, onSave, onCanc
       <section><h3>3. 时间安排</h3><label>预算方式<select value={budgetMode} onChange={event => setBudgetMode(event.target.value as "weekly" | "total")}><option value="weekly">每周时间 × 计划周期</option><option value="total">本轮总时间</option></select></label><div className="stl4-plan-field-row">{budgetMode === "weekly" ? <><label>每周可投入（分钟）<input type="number" min={1} max={10080} step={1} value={weekly} onChange={event => setWeekly(event.target.value)} required /></label><label>持续周期（周）<input type="number" min={1} max={52} step={1} value={weeks} onChange={event => setWeeks(event.target.value)} required /></label></> : <label>总时间（分钟，可留空）<input type="number" min={1} max={100000} step={1} value={budget} onChange={event => setBudget(event.target.value)} /></label>}<label>每次阅读（分钟）<input type="number" min={5} max={480} step={1} value={sessionMinutes} onChange={event => setSessionMinutes(event.target.value)} required /></label></div><label>材料语言偏好<select value={language} onChange={event => setLanguage(event.target.value)}><option>不限</option><option>中文优先</option><option>英文优先</option></select></label><label className="stl4-plan-check"><input type="checkbox" checked={preferUnread} onChange={event => setPreferUnread(event.target.checked)} />在允许使用阅读记录时优先安排未读材料</label></section>
       {children}
     </div>
-    <aside className="stl4-plan-basis"><h3>依据预览</h3><dl><dt>主题匹配</dt><dd>{goal.trim() || "填写研究问题后，围绕问题组织材料。"}</dd><dt>阅读基础</dt><dd>{planLevels[level]}。阅读完成由本人记录，不推断理解程度。</dd><dt>先修关系</dt><dd>只按有来源的先修关系排序；材料中的文字建议供你判断。</dd><dt>时间预算</dt><dd>{total === null ? "尚未限制总时间" : `本轮共 ${planDurations(total)}`}，每次 {sessionMinutes || "—"} 分钟。估计可由本人修改。</dd><dt>语言偏好</dt><dd>{language}。用于导读建议，不自动排除其他语言的材料。</dd></dl><h3>其他选项</h3><label className="stl4-plan-check"><input type="checkbox" checked={useMemories} onChange={event => { setUseMemories(event.target.checked); setEdited(true); }} />使用选定的已确认笔记</label><p>只将本人明确选择的笔记用于本计划的建议。</p>{useMemories ? <PlanMemoryPicker ownerId={ownerId} value={memoryIds} onChange={value => { setMemoryIds(value); setEdited(true); }} /> : <p>当前不使用个人笔记。</p>}
+    <aside className="stl4-plan-basis"><h3>依据预览</h3><dl><dt>主题匹配</dt><dd>{goal.trim() || "填写研究问题后，围绕问题组织材料。"}</dd><dt>阅读基础</dt><dd>{planLevels[level]}。阅读完成由本人记录，不推断理解程度。</dd><dt>先修关系</dt><dd>{publicCopy ? "保留公共路径阶段顺序；仅调整本人时间安排。" : "只按有来源的先修关系排序；材料中的文字建议供你判断。"}</dd><dt>时间预算</dt><dd>{total === null ? "尚未限制总时间" : `本轮共 ${planDurations(total)}`}，每次 {sessionMinutes || "—"} 分钟。估计可由本人修改。</dd><dt>语言偏好</dt><dd>{language}。用于导读建议，不自动排除其他语言的材料。</dd></dl>{!publicCopy ? <><h3>其他选项</h3><label className="stl4-plan-check"><input type="checkbox" checked={useMemories} onChange={event => { setUseMemories(event.target.checked); setEdited(true); }} />使用选定的已确认笔记</label><p>只将本人明确选择的笔记用于本计划的建议。</p>{useMemories ? <PlanMemoryPicker ownerId={ownerId} value={memoryIds} onChange={value => { setMemoryIds(value); setEdited(true); }} /> : <p>当前不使用个人笔记。</p>}</> : <p>公共路径副本保留编排，不使用个人笔记生成建议。</p>}
       {total !== null && total > 100000 ? <p role="alert">本轮预算不能超过 100000 分钟，请缩短周期。</p> : null}
       {error ? <p className="stl4-plan-error" role="alert">{error}</p> : null}<div className="stl4-plan-buttons"><button type="button" onClick={onCancel} disabled={busy}>取消</button><button className="is-primary" type="submit" disabled={busy || !valid}>{busy ? "正在保存…" : initial ? "保存设置" : "生成计划"}</button></div>
     </aside>

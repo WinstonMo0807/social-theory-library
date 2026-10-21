@@ -42,7 +42,7 @@ export function KnowledgeNodePublicView({
   publicDesign?: boolean;
   initialCompare?: string;
 }) {
-  const readingPaths = allPaths.filter((path) => path.items.some((item) => item.node_data?.id === node.id));
+  const readingPaths = allPaths.filter((path) => path.items.some((item) => item.node_id === node.id));
   const groupedWorks = Object.entries(node.work_groups).filter(([, rows]) => rows.length);
   const disciplineLinks = [node.primary_discipline, ...node.related_disciplines].filter(Boolean);
   const subdisciplines = (node.subdiscipline_links ?? []).map((row) => row.subdiscipline);
@@ -133,7 +133,7 @@ export function KnowledgeNodePublicView({
 
         {section === "works" && readingPaths.length ? <section className="theory-node-reading-order" data-module-id="theory-reading-paths" data-edit-section="paths">
           <TheorySectionHeading title="推荐阅读顺序" />
-          {readingPaths.map((path) => <article key={path.id}><header><Link href={`/theories/reading-paths/${path.slug}`}>{path.title}<ArrowRight size={17} /></Link><p>{path.introduction}</p></header><ol>{path.items.map((item) => <li key={item.id}><b>{item.reading_order}</b><span><strong>{item.stage_name}</strong><small>{item.work_data?.title || item.node_data?.canonical_name_zh || item.stage_description}</small></span></li>)}</ol></article>)}
+          {readingPaths.map((path) => <article key={path.id}><header><Link href={`/theories/reading-paths/${path.slug}`}>{path.title}<ArrowRight size={17} /></Link><p>{path.introduction}</p></header><ol>{path.items.map((item) => <li key={item.id}><b>{item.reading_order}</b><span><strong>{path.stages.find(stage => stage.id === item.stage_id)?.name}</strong><small>{item.title || item.reason}</small></span></li>)}</ol></article>)}
         </section> : null}
         {pagination}
         {section === "timeline" && !timeline.length ? <p className="empty-state">尚无已确认并公开的相关事件。</p> : null}

@@ -752,6 +752,12 @@ def serialize_record(record, user, *, memory_context_rows=None):
             status="failed", error_code="task_timeout", finished_at=timezone.now())
         record.refresh_from_db()
     payload = unpack(record)
+    if isinstance(record, PersonalReadingPlan) and payload.get("origin", {}).get("type") in {"path_follow", "public_path_copy"}:
+        from .path_plans import record_output
+        result = record_output(record, user)
+        return {**{key: result[key] for key in ("id", "revision", "data", "created_at", "updated_at")},
+            "status": "completed", "enhancement_status": "not_requested", "poll_after_ms": None,
+            "project_id": str(record.project_id) if record.project_id else None}
     payload.pop("source_paragraphs", None)
     # Immutable input for incremental processing, not a second report/export.
     payload.pop("version_baseline", None)
@@ -1369,26 +1375,7 @@ def generate_plan(user, data, *, existing=None):
     goal = text(data.get("goal", ""), "goal", 4000, True)
     items, origin, seen = [], {}, set()
     if data.get("reading_path_id"):
-        path = source_queryset("reading_path").filter(pk=identifier(data["reading_path_id"])).first()
-        if path is None:
-            raise NotFound("公开阅读路径不存在。")
-        origin = {"reading_path_id": str(path.id), "revision_at": path.updated_at.isoformat()}
-        for row in path.items.select_related("work", "stage").all():
-            if not row.work_id or str(row.work_id) in seen:
-                continue
-            edition = source_queryset("edition", access_for(user)).filter(work_id=row.work_id).first()
-            if not edition:
-                continue
-            snapshot = edition.active_catalog_revision.snapshot or {}
-            items.append({"id": str(uuid4()), "work_id": str(row.work_id), "edition_id": str(edition.id),
-                "asset_id": str(edition.active_catalog_revision.reader_asset_id),
-                "document_revision_id": str(edition.active_catalog_revision.document_revision_id),
-                "title": (snapshot.get("work") or {}).get("title", ""), "stage": row.stage.name if row.stage else row.stage_name,
-                "declared_difficulty": path.difficulty, "difficulty_origin": {"reading_path_id": str(path.id), "revision_at": path.updated_at.isoformat()},
-                "reason": row.recommendation_reason, "prerequisite_text": row.prerequisite,
-                "status": "pending", "estimated_minutes": None, "reference": None,
-                "reader_url": f"/reader/{edition.active_catalog_revision.reader_asset_id}?page=1"})
-            seen.add(str(row.work_id))
+        raise ValidationError({"reading_path_id": "请在公开路径页使用另存为私人计划，按已确认的公开版本保留阶段、章节与知识条目。"})
     ref_values = data.get("references", [])
     if data.get("turn_id"):
         turn = owned(ResearchTurn, user, data["turn_id"])
@@ -1479,6 +1466,12 @@ def request_plan(request, data):
 
 @transaction.atomic
 def update_plan(user, pk, data):
+    current = owned(PersonalReadingPlan, user, pk)
+    if current.public_path_id is not None:
+        raise ValidationError("公共路径跟读使用专用进度接口，不是私人计划副本。")
+    if unpack(current).get("origin", {}).get("type") == "public_path_copy":
+        from .path_plans import update_copy
+        return update_copy(user, pk, data)
     plan = owned(PersonalReadingPlan, user, pk, lock=True)
     expect(plan, data.get("expected_revision"))
     for flag in ("optimize_order", "preview", "adopt_suggestion", "remove_related_prerequisites"):
@@ -1582,6 +1575,8 @@ def command_plan(request, pk, data):
     expect(plan, data.get("expected_revision"))
     payload = unpack(plan)
     action = data.get("action")
+    if payload.get("origin", {}).get("type") in {"path_follow", "public_path_copy"}:
+        raise ValidationError("公共路径及其副本按正式阶段保存，不执行自动生成或模型导读任务。")
     source_turn = None
     if payload.get("origin", {}).get("turn_id"):
         source_turn = ResearchTurn.objects.filter(pk=payload["origin"]["turn_id"], project__user=request.user).first()

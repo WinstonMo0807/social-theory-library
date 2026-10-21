@@ -1,5 +1,16 @@
 # 验收记录
 
+## 2026-10-21 PDF58–60阅读路径静态记录
+
+- `ast.parse`精确白名单29个Python文件，3b4135退出0。公共代理另编译10个序列化声明和有界版本历史SQL，私人代理导入模块并分别编译SQLite/PostgreSQL三组owner/计划/回执SQL，均0实际查询、连接为None；没有运行功能用例。
+- `node node_modules/eslint/bin/eslint.js <白名单26个TS/TSX文件>`（web）：34b66d退出0，0错误/11条动态图片优化建议。首次根目录运行未发现配置，改用web目录；新hook参数命名和render读取ref的错误已修，26文件最终结果如上。
+- PostCSS parse `reading-path.module.css`：c920eb退出0，202顶层节点、四个直接引用组件无缺失class；代理额外复核五组件通过。不证明实际视觉。
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web）：初次98678退出1，修改过程中的替代书目类型与三个旧字段不同步；统一PathSubstitute后，最终5427退出0（92fe95），私人代理87761也退出0。必要后续新修改检查追加记录，不运行正式用例。
+- 进程内`DATABASE_URL=sqlite:///:memory:`、`PUBLIC_DEPLOYMENT_MODE=false`、`DJANGO_DEBUG=true`、`PYTHONIOENCODING=utf-8`运行`.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-reading-path-schema-20261021.json --validate`。首次8329e5为201路径0错误/11提示；纳入管理两路径后90291f揭示集合继承方法及枚举冲突，修复后9fba86退出0，203路径、0错误/10既有Home/Scholar/Topic类型提示。
+- 用openapi-typescript `openapiTS/astToString`同步schema和生成类型，b3cd95退出0，明确断言原194路径无丢失。只使用内存SQLite设置，没有真实库、迁移或队列操作。
+- 后端18函数、24参数案例；公共浏览器8场景、私人4场景，均只定义未运行。隔离reading_path_e2e_fixtures与既有启动器接线，未执行夹具。全部正式功能、浏览器、逐图、迁移、资源及生产仍待全量实施后验收。
+- 精确源码白名单位于本地tmp/stl4-reading-path-checkpoint.json，共72路径（含文档/契约/装饰照片）。PDF、tmp、真实数据和继承业务脏文件不纳入。
+
 ## 2026-10-21 PDF52/53/55图谱静态收口
 
 - 唯一PDF52/53/55及53纯照片裁片实际读取；原图58–60也已逐张读取，仅作为下一组审计，不计本单元完成。49路径白名单见tmp/stl4-graph-checkpoint.py，19 Python文件逐个ast.parse退出0（12f772）；只解析未执行业务代码。
@@ -222,3 +233,5 @@ Python ast.parse八路径退出0；web下目标ESLint五路径退出0（两个im
 未执行正式测试、浏览器、构建、视觉回归、OCR/模型/NAS、检索质量评测、迁移、部署或清理。静态检查和检查点不等于B01–B06或209视图验收通过。
 
 本单元51文件准确白名单核验及`git diff --cached --check`退出0；限定private-key/provider-token/credential-url模式扫描无命中。ATLAS_INDEX保持209行22字段，仅205–215记录更新，图像来源身份字段与其他行不变。检查点1d19dd5。
+
+- 2026-10-21阅读路径最终预览补查：8文件ESLint e5869a退出0（2个既有img建议）；全量TS session56556最终205061退出0；差异检查b3e533退出0。阶段和材料双向选择按稳定ID同步，新增两条管理场景后本单元浏览器定义14条，均未运行。

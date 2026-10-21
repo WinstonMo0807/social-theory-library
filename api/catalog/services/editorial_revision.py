@@ -260,6 +260,8 @@ TARGET_POLICIES = {
                 "audience",
                 "difficulty",
                 "estimated_reading",
+                "estimated_weeks", "prerequisite", "topics", "learning_questions",
+                "related_debate_ids", "curator_note", "credits",
                 "sort_order",
                 "status",
                 "stage_groups",
@@ -286,6 +288,7 @@ SPECIAL_FIELDS = frozenset(
         "person",
         "portrait_selection",
         "stage_groups",
+        "topics",
         "discipline_relations",
         "theory_relations",
         "subdiscipline_relations",
@@ -504,7 +507,7 @@ def _special_snapshot(target) -> dict[str, Any]:
     if isinstance(target, ReadingPath):
         from catalog.services.reading_paths import reading_path_stage_groups
 
-        return {"stage_groups": reading_path_stage_groups(target)}
+        return {"stage_groups": reading_path_stage_groups(target), "topics": [str(row.pk) for row in target.topics.all()]}
     return {}
 
 
@@ -913,6 +916,19 @@ def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> 
                     field_name,
                     patch[field_name],
                 )
+    if isinstance(target, ReadingPath):
+        from catalog.reading_path_serializers import PathMetadataInput
+        from rest_framework.exceptions import ValidationError as APIValidationError
+        schema = PathMetadataInput(data=patch, partial=True)
+        try:
+            schema.is_valid(raise_exception=True)
+        except APIValidationError as exc:
+            raise EditorialRevisionError(str(exc.detail)) from exc
+        patch.update(_json_value(schema.validated_data))
+        if "topics" in patch and Topic.objects.filter(pk__in=patch["topics"]).count() != len(set(patch["topics"])):
+            raise EditorialRevisionError("阅读路径引用了不存在的主题。")
+        if "related_debate_ids" in patch and KnowledgeNode.objects.filter(pk__in=patch["related_debate_ids"], node_type="debate").count() != len(set(patch["related_debate_ids"])):
+            raise EditorialRevisionError("相关争论须关联现有争论知识节点。")
     if isinstance(target, ReadingPath) and "stage_groups" in patch:
         from catalog.services.reading_paths import (
             ReadingPathStructureError,
@@ -1396,6 +1412,8 @@ def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
     if isinstance(target, PublisherAuthority) and "aliases" in patch:
         target.aliases = list(patch["aliases"] or [])
         target.save(update_fields=["aliases", "updated_at"])
+    if isinstance(target, ReadingPath) and "topics" in patch:
+        target.topics.set(patch["topics"])
     if isinstance(target, ReadingPath) and "stage_groups" in patch:
         from catalog.services.reading_paths import (
             ReadingPathStructureError,
@@ -1730,10 +1748,14 @@ def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=
         from catalog.services.knowledge_nodes import record_relation_version
         record_relation_version(target, actor, revision.change_note or "发布关系修改")
 
+    if isinstance(target, ReadingPath):
+        from catalog.services.public_reading_paths import capture_reading_path_publication
+        capture_reading_path_publication(target, actor=actor, revision=revision)
+
     revision.status = EditorialRevision.Status.PUBLISHED
     revision.published_by = actor
     revision.published_at = timezone.now()
-    revision.save(update_fields=["status", "published_by", "published_at", "updated_at"])
+    revision.save(update_fields=["status", "published_by", "published_at", "materialized_preview", "updated_at"])
     EditorialRevision.objects.filter(
         target_type=revision.target_type,
         target_id=revision.target_id,

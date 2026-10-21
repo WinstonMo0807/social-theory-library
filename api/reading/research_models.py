@@ -74,12 +74,17 @@ class CitationAudit(PrivateResearchRecord):
 
 class PersonalReadingPlan(PrivateResearchRecord):
     project = models.ForeignKey(ResearchProject, null=True, blank=True, on_delete=models.SET_NULL, related_name="plans")
+    # A public-path follow is the owner's progress/bookmark, not a generated
+    # personal plan. Copies keep this null and retain their source in encrypted data.
+    public_path_id = models.UUIDField(null=True, blank=True)
     # Scheduling marker only; private job details remain encrypted. Null means an older row needs classification.
     task_pending = models.BooleanField(null=True, default=None, db_index=True)
 
     class Meta(PrivateResearchRecord.Meta):
         abstract = False
-        constraints = [models.UniqueConstraint(fields=["user", "request_id"], name="reading_plan_request_unique")]
+        constraints = [models.UniqueConstraint(fields=["user", "request_id"], name="reading_plan_request_unique"),
+            models.UniqueConstraint(fields=["user", "public_path_id"], condition=models.Q(public_path_id__isnull=False),
+                name="reading_plan_owner_path_unique")]
 
 
 class ResearchMemory(PrivateResearchRecord):

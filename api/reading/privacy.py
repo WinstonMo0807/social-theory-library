@@ -196,7 +196,7 @@ def erase_impact(user, category, row, *, contexts=None):
     message = {"annotations": "删除原笔记，保留独立确认的认识，并撤销关联认识的使用范围。",
                "memories": "删除此条认识、修改历史与派生向量，撤销使用范围；原阅读笔记保留。",
                "parallel_alignments": "删除此组私人对齐、术语笔记与阅读位置，并保留防止旧请求重新创建资料所需的最少记录；已提交的公共校准记录独立保留，馆藏原文与账户保留。",
-               "plans": "删除此阅读计划与计划内建议；原文、独立研究和笔记保留，未完成计划任务将失效。",
+               "plans": "删除此阅读计划或公共路径跟读及其中的进度、笔记与建议；原文和独立研究、笔记保留。未完成任务将失效，仅保留防止旧请求重新创建资料所需的最少回执。",
                "reading_history": "删除此条阅读历史；阅读进度、笔记和馆藏原件保留。",
                "search_history": "删除这条主动保存的检索记录；当前检索与研究所需临时会话不受影响。",
                "followed_topics": "取消关注此主题；主题和公开馆藏保留。",
@@ -212,6 +212,16 @@ def describe_item(user, category, row):
     if category == "graph_views":
         title = payload.get("title") or "未命名图谱视图"
         source = {"title": "本人保存的图谱视图", "path": f"/theories/graph?saved_view={row.pk}"}
+    elif category == "plans":
+        from .path_plans import is_path_plan, record_output
+        if is_path_plan(payload):
+            current = record_output(row, user)
+            title = payload.get("goal") or "公共路径记录"
+            source = {"title": "公共路径跟读" if row.public_path_id else "另存的私人计划",
+                      "path": f"/theories/reading-paths/{current['path_slug']}" if row.public_path_id and current["path_slug"] else f"/account/plans/{row.pk}" if not row.public_path_id else ""}
+        else:
+            title = payload.get("goal") or "未命名阅读计划"
+            source = {"title": "私人阅读计划", "path": f"/account/plans/{row.pk}"}
     elif category == "saved_knowledge":
         from .knowledge_saves import output
         current = output(user, row.node_id)

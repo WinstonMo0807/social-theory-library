@@ -186,6 +186,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "PathReadingProgressEnum": ["pending", "reading", "completed", "skipped"],
+        "PathMaterialKindEnum": ["work", "chapter", "paper", "node"],
+        "PathDifficultyEnum": [("beginner", "入门"), ("intermediate", "进阶"), ("advanced", "深入")],
         "PublicGraphEntityKindEnum": ["knowledge_node", "scholar", "topic", "subdiscipline"],
         "PublicGraphDirectionEnum": ["directed", "bidirectional", "undirected"],
         "PublicGraphSourceStatusEnum": ["available", "citation_only", "missing", "unverified"],

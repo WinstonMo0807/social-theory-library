@@ -14,13 +14,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import research
+from .path_serializers import PathCommandOutput
 from .citation_audit import audit_capabilities, audit_versions, create_audit, original_document, update_audit
 from .citation_sources import paginated_units
 from .research_serializers import CitationSourceCreateInput, CitationSourceCommandInput, CitationTextUnitsOutput
 from .models import (CitationAudit, PersonalReadingPlan, ResearchMemory, ResearchProject, ResearchTurn)
 from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, AuditVersionInput, AuditVersionsOutput, CitationOCROutput, ComparisonInput,
     MemoryCreateInput, MemoryListInput, MemorySearchInput, MemoryUpdateInput, MemoryUsageInput, PlanCreateInput, PlanUpdateInput,
-    PlanCommandInput, ProjectCreateInput, ProjectImportInput, ProjectUpdateInput, ResearchAccountOutput, ResearchPreferenceInput, RevisionInput, SelectionInput, TurnCreateInput,
+    PlanCommandInput, PlanDeleteInput, ProjectCreateInput, ProjectImportInput, ProjectUpdateInput, ResearchAccountOutput, ResearchPreferenceInput, RevisionInput, SelectionInput, TurnCreateInput,
     SubclaimsInput, TurnExpandInput, TurnListInput, TurnRetryInput)
 
 
@@ -298,6 +299,29 @@ class ResearchMemoryViewSet(PrivateRecordViewSet):
 class PersonalReadingPlanViewSet(PrivateRecordViewSet):
     model = PersonalReadingPlan
 
+    def get_queryset(self):
+        return super().get_queryset().filter(public_path_id__isnull=True)
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        pk = kwargs.get("pk")
+        if pk:
+            record = PersonalReadingPlan.objects.filter(user=request.user, pk=research.identifier(pk)).first()
+            if record and research.unpack(record).get("origin", {}).get("type") == "public_path_copy":
+                if request.headers.get("X-Reader-Owner") != str(request.user.pk):
+                    raise PermissionDenied("读取或修改公共路径私人副本需要携带当前账户标识。")
+
+    @extend_schema(request=PlanDeleteInput, responses={204: None, 200: PathCommandOutput})
+    def destroy(self, request, pk=None):
+        from . import path_plans
+        record = self.get_queryset().filter(pk=research.identifier(pk)).first()
+        is_copy = record and research.unpack(record).get("origin", {}).get("type") == "public_path_copy"
+        if is_copy or (record is None and isinstance(request.data, dict) and request.data.get("request_id")):
+            if request.headers.get("X-Reader-Owner") != str(request.user.pk):
+                raise PermissionDenied("删除公共路径私人副本需要携带当前账户标识。")
+            return Response(path_plans.delete_plan(request.user, pk, request.data, copy_only=True))
+        return super().destroy(request, pk)
+
     @extend_schema(request=PlanCreateInput, responses={201: PrivateRecordSerializer, 202: PrivateRecordSerializer})
     def create(self, request):
         plan = research.request_plan(request, command(request, PlanCreateInput))
@@ -419,7 +443,7 @@ class ResearchAccountView(PrivateResponses, APIView):
     def get(self, request):
         user = request.user
         return Response({"counts": {"research": ResearchProject.objects.filter(user=user).count(),
-            "memories": ResearchMemory.objects.filter(user=user).count(), "plans": PersonalReadingPlan.objects.filter(user=user).count(),
+            "memories": ResearchMemory.objects.filter(user=user).count(), "plans": PersonalReadingPlan.objects.filter(user=user, public_path_id__isnull=True).count(),
             "audits": CitationAudit.objects.filter(user=user, purpose="manuscript").count()},
             "preferences": (user.reader_profile.reading_preferences or {}).get("research_personalization", False),
             "deletion_notice": "删除同步移除该记录及其派生向量；独立来源笔记保留。备份按原有保留期清理。"})

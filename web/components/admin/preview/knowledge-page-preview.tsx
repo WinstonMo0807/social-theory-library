@@ -91,7 +91,7 @@ function disciplinePage(data: Discipline): TheoryDisciplinePage {
   };
 }
 
-export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewPayload; pageId: string }) {
+export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId = "" }: { payload: KnowledgePreviewPayload; pageId: string; moduleId?: string; previewStageId?: string }) {
   const data = payload.perspective.data;
   if (!data || typeof data !== "object") {
     return <p className="admin-list-state is-unavailable">当前对象没有可渲染的草稿或公开内容。</p>;
@@ -129,7 +129,7 @@ export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewP
         : <TopicPublicView topic={item} footer={footer} />;
     }
     case "reading_path":
-      return <ReadingPathPublicView path={data as NormalizedReadingPath} footer={footer} />;
+      return <ReadingPathPublicView preview initialTab={moduleId.replace(/^reading-path-/, "") || pageId} previewStageId={previewStageId} path={data as NormalizedReadingPath} footer={footer} />;
     case "theory":
     case "concept":
     case "debate":
@@ -165,7 +165,7 @@ export function PreviewSurface({ payload, pageId }: { payload: KnowledgePreviewP
       if (payload.object_type === "theory" && pageId === "reading-path") {
         const path = payload.secondary_preview?.reading_paths?.[0];
         return path
-          ? <ReadingPathPublicView path={path} footer={footer} />
+          ? <ReadingPathPublicView preview path={path} footer={footer} />
           : <main className="page-shell secondary-detail-page"><header><p className="eyebrow">Reading Path</p><h1>{node.canonical_name_zh}的阅读路径</h1></header><p className="empty-state" data-module-id="theory-reading-paths">当前没有包含该理论的已发布阅读路径。</p></main>;
       }
       if (payload.object_type === "theory" && pageId !== "overview" && !["concepts", "works", "evidence", "relations", "propositions"].includes(pageId)) {
@@ -291,7 +291,7 @@ export function AdminKnowledgePagePreview({ objectType, objectId }: { objectType
         {anchorMessage ? <p className="admin-preview-warning">{anchorMessage}</p> : null}
       </div>
       <div className="admin-knowledge-page-preview-body" inert>
-        <PreviewSurface payload={payload} pageId={pageId} />
+        <PreviewSurface payload={payload} pageId={pageId} moduleId={moduleId} />
       </div>
       <div className="page-shell"><p className="admin-preview-note">预览复用公开页面组件。为避免误操作，预览内的保存、询问、Reader 和跨页链接均已停用。</p></div>
     </div>
