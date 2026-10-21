@@ -6378,6 +6378,78 @@
         "/api/catalog/recommendation-issues/": {
             "get": {
                 "operationId": "catalog_recommendation_issues_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "curator",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "view",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "year_from",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "year_to",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "tags": [
                     "catalog"
                 ],
@@ -6395,7 +6467,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/RecommendationIssueCollection"
+                                    "$ref": "#/components/schemas/RecommendationIssueListing"
                                 }
                             }
                         },
@@ -6444,9 +6516,33 @@
             }
         },
         "/api/catalog/recommendation-issues/{slug}/save-list/": {
-            "post": {
-                "operationId": "catalog_recommendation_issues_save_list_create",
+            "get": {
+                "operationId": "catalog_recommendation_issues_save_list_retrieve",
                 "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "public_revision_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
                     {
                         "in": "path",
                         "name": "slug",
@@ -6459,6 +6555,70 @@
                 "tags": [
                     "catalog"
                 ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SavedIssueList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_recommendation_issues_save_list_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SaveIssueListCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SaveIssueListCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SaveIssueListCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "security": [
                     {
                         "libraryCookie": []
@@ -9150,6 +9310,408 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/article-comments/{issue_id}/": {
+            "get": {
+                "operationId": "reading_article_comments_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommentPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_article_comments_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CommentCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CommentCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CommentCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommentReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/article-comments/{issue_id}/{comment_id}/": {
+            "delete": {
+                "operationId": "reading_article_comments_destroy",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "comment_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/article-comments/{issue_id}/requests/{request_id}/": {
+            "get": {
+                "operationId": "reading_article_comments_requests_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommentReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/article-comments/admin/{issue_id}/": {
+            "get": {
+                "operationId": "reading_article_comments_admin_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommentPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_article_comments_admin_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CommentModerateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CommentModerateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CommentModerateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommentOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/article-comments/public/{issue_id}/": {
+            "get": {
+                "operationId": "reading_article_comments_public_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "public_revision_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommentPage"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -17177,6 +17739,122 @@
                     "severity"
                 ]
             },
+            "ArticleMetadata": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ArticleMetadataKindEnum"
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 80
+                        },
+                        "maxItems": 30
+                    },
+                    "topic_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
+                    "scholar_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
+                    "reading_path_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
+                    "curator_role": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "curator_affiliation": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "curator_portrait_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                }
+            },
+            "ArticleMetadataKindEnum": {
+                "enum": [
+                    "article",
+                    "research",
+                    "exhibition"
+                ],
+                "type": "string",
+                "description": "* `article` - article\n* `research` - research\n* `exhibition` - exhibition"
+            },
+            "ArticleMetadataRequest": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ArticleMetadataKindEnum"
+                    },
+                    "keywords": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                        },
+                        "maxItems": 30
+                    },
+                    "topic_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
+                    "scholar_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
+                    "reading_path_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
+                    "curator_role": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "curator_affiliation": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "curator_portrait_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                }
+            },
             "AssetCompact": {
                 "type": "object",
                 "properties": {
@@ -18596,6 +19274,7 @@
             },
             "CategoriesEnum": {
                 "enum": [
+                    "article_comments",
                     "research",
                     "notes",
                     "plans",
@@ -18604,7 +19283,7 @@
                     "saved_knowledge"
                 ],
                 "type": "string",
-                "description": "* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge"
+                "description": "* `article_comments` - article_comments\n* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge"
             },
             "ChangeEnum": {
                 "enum": [
@@ -18761,6 +19440,192 @@
                     "source_id",
                     "status",
                     "units"
+                ]
+            },
+            "CommentCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "public_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "byline": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "body": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 3000
+                    },
+                    "confirm_public": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "body",
+                    "byline",
+                    "confirm_public",
+                    "public_revision_id",
+                    "request_id"
+                ]
+            },
+            "CommentModerateRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/CommentModerateStatusEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 240
+                    }
+                },
+                "required": [
+                    "expected_revision",
+                    "id",
+                    "status"
+                ]
+            },
+            "CommentModerateStatusEnum": {
+                "enum": [
+                    "published",
+                    "rejected"
+                ],
+                "type": "string",
+                "description": "* `published` - published\n* `rejected` - rejected"
+            },
+            "CommentOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "public_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "byline": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/CommentOutputStatusEnum"
+                    },
+                    "moderation_reason": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "body",
+                    "byline",
+                    "created_at",
+                    "id",
+                    "public_revision_id"
+                ]
+            },
+            "CommentOutputStatusEnum": {
+                "enum": [
+                    "pending",
+                    "published",
+                    "rejected"
+                ],
+                "type": "string",
+                "description": "* `pending` - pending\n* `published` - published\n* `rejected` - rejected"
+            },
+            "CommentPage": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CommentOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "CommentReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "comment": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CommentOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "comment",
+                    "notice",
+                    "owner_id",
+                    "request_id"
                 ]
             },
             "CompactTheoryWork": {
@@ -20984,24 +21849,121 @@
                     "total_pages"
                 ]
             },
-            "EditorialBlockTypeEnum": {
+            "EditorialDirectoryFacets": {
+                "type": "object",
+                "properties": {
+                    "curators": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "years": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "kinds": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EditorialDirectoryKind"
+                        }
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EditorialDirectoryTopic"
+                        }
+                    }
+                },
+                "required": [
+                    "curators",
+                    "kinds",
+                    "topics",
+                    "years"
+                ]
+            },
+            "EditorialDirectoryFilters": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "curator": {
+                        "type": "string"
+                    },
+                    "sort": {
+                        "$ref": "#/components/schemas/EditorialDirectoryFiltersSortEnum"
+                    },
+                    "year_from": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "year_to": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "curator",
+                    "kind",
+                    "sort",
+                    "topic",
+                    "year_from",
+                    "year_to"
+                ]
+            },
+            "EditorialDirectoryFiltersSortEnum": {
                 "enum": [
-                    "paragraph",
-                    "heading",
-                    "quote",
-                    "link",
-                    "evidence",
-                    "work",
-                    "person",
-                    "concept",
-                    "node",
-                    "timeline",
-                    "reading_path",
-                    "comparison",
-                    "analysis"
+                    "newest",
+                    "oldest",
+                    "title"
                 ],
                 "type": "string",
-                "description": "* `paragraph` - paragraph\n* `heading` - heading\n* `quote` - quote\n* `link` - link\n* `evidence` - evidence\n* `work` - work\n* `person` - person\n* `concept` - concept\n* `node` - node\n* `timeline` - timeline\n* `reading_path` - reading_path\n* `comparison` - comparison\n* `analysis` - analysis"
+                "description": "* `newest` - newest\n* `oldest` - oldest\n* `title` - title"
+            },
+            "EditorialDirectoryKind": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label"
+                ]
+            },
+            "EditorialDirectoryTopic": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "name",
+                    "slug"
+                ]
             },
             "EditorialPublishRequest": {
                 "type": "object",
@@ -21013,6 +21975,183 @@
                 },
                 "required": [
                     "edit_version"
+                ]
+            },
+            "EditorialRelated": {
+                "type": "object",
+                "properties": {
+                    "scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicScholarCard"
+                        },
+                        "readOnly": true
+                    },
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EditorialRelatedMaterial"
+                        }
+                    },
+                    "paths": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EditorialRelatedPath"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "materials",
+                    "notice",
+                    "paths",
+                    "scholars"
+                ]
+            },
+            "EditorialRelatedMaterial": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "article_href": {
+                        "type": "string"
+                    },
+                    "source_status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "article_href",
+                    "authors",
+                    "cover_url",
+                    "href",
+                    "id",
+                    "source_status",
+                    "title"
+                ]
+            },
+            "EditorialRelatedMaterialRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "authors": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "article_href": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "source_status": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "article_href",
+                    "authors",
+                    "cover_url",
+                    "href",
+                    "id",
+                    "source_status",
+                    "title"
+                ]
+            },
+            "EditorialRelatedPath": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "title"
+                ]
+            },
+            "EditorialRelatedPathRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "href": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "title"
+                ]
+            },
+            "EditorialRelatedRequest": {
+                "type": "object",
+                "properties": {
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EditorialRelatedMaterialRequest"
+                        }
+                    },
+                    "paths": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EditorialRelatedPathRequest"
+                        }
+                    },
+                    "notice": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "materials",
+                    "notice",
+                    "paths"
                 ]
             },
             "EditorialSourceKindEnum": {
@@ -23181,7 +24320,7 @@
                         "format": "uuid"
                     },
                     "type": {
-                        "$ref": "#/components/schemas/EditorialBlockTypeEnum"
+                        "$ref": "#/components/schemas/IssueBodyBlockTypeEnum"
                     },
                     "text": {
                         "type": "string"
@@ -23190,6 +24329,18 @@
                         "type": "string"
                     },
                     "url": {
+                        "type": "string"
+                    },
+                    "image_rendition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "alt_text": {
                         "type": "string"
                     },
                     "target": {
@@ -23233,6 +24384,7 @@
                     }
                 },
                 "required": [
+                    "image_url",
                     "resolved_sources",
                     "source_status",
                     "text",
@@ -23247,7 +24399,7 @@
                         "format": "uuid"
                     },
                     "type": {
-                        "$ref": "#/components/schemas/EditorialBlockTypeEnum"
+                        "$ref": "#/components/schemas/IssueBodyBlockTypeEnum"
                     },
                     "text": {
                         "type": "string"
@@ -23256,6 +24408,14 @@
                         "type": "string"
                     },
                     "url": {
+                        "type": "string"
+                    },
+                    "image_rendition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "alt_text": {
                         "type": "string"
                     },
                     "target": {
@@ -23291,6 +24451,26 @@
                     "text",
                     "type"
                 ]
+            },
+            "IssueBodyBlockTypeEnum": {
+                "enum": [
+                    "paragraph",
+                    "heading",
+                    "quote",
+                    "link",
+                    "image",
+                    "evidence",
+                    "work",
+                    "person",
+                    "concept",
+                    "node",
+                    "timeline",
+                    "reading_path",
+                    "comparison",
+                    "analysis"
+                ],
+                "type": "string",
+                "description": "* `paragraph` - paragraph\n* `heading` - heading\n* `quote` - quote\n* `link` - link\n* `image` - image\n* `evidence` - evidence\n* `work` - work\n* `person` - person\n* `concept` - concept\n* `node` - node\n* `timeline` - timeline\n* `reading_path` - reading_path\n* `comparison` - comparison\n* `analysis` - analysis"
             },
             "IssueItem": {
                 "type": "object",
@@ -23332,6 +24512,9 @@
                     },
                     "position": {
                         "type": "integer"
+                    },
+                    "section_id": {
+                        "type": "string"
                     },
                     "document_type": {
                         "type": "string"
@@ -23441,6 +24624,9 @@
                     },
                     "position": {
                         "type": "integer"
+                    },
+                    "section_id": {
+                        "type": "string"
                     },
                     "document_type": {
                         "type": "string",
@@ -32988,7 +34174,7 @@
                         "items": {
                             "$ref": "#/components/schemas/CategoriesEnum"
                         },
-                        "maxItems": 6
+                        "maxItems": 7
                     },
                     "targets": {
                         "type": "array",
@@ -33220,6 +34406,7 @@
             },
             "PrivacyTargetInputCategoryEnum": {
                 "enum": [
+                    "article_comments",
                     "reading_history",
                     "search_history",
                     "annotations",
@@ -33229,10 +34416,11 @@
                     "followed_topics",
                     "source_follows",
                     "saved_knowledge",
-                    "graph_views"
+                    "graph_views",
+                    "reading_lists"
                 ],
                 "type": "string",
-                "description": "* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge\n* `graph_views` - graph_views"
+                "description": "* `article_comments` - article_comments\n* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge\n* `graph_views` - graph_views\n* `reading_lists` - reading_lists"
             },
             "PrivacyTargetInputRequest": {
                 "type": "object",
@@ -33946,6 +35134,177 @@
                     "rights",
                     "source_label",
                     "source_url"
+                ]
+            },
+            "PublicEditorialCard": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "issue_label": {
+                        "type": "string"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "public_byline": {
+                        "type": "string"
+                    },
+                    "curator": {
+                        "$ref": "#/components/schemas/PublicEditorialCurator"
+                    },
+                    "article_metadata": {
+                        "$ref": "#/components/schemas/ArticleMetadata"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "display_from": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "reading_minutes": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "reading_time_notice": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "article_metadata",
+                    "cover_url",
+                    "curator",
+                    "display_from",
+                    "href",
+                    "id",
+                    "introduction",
+                    "issue_label",
+                    "public_byline",
+                    "published_at",
+                    "reading_minutes",
+                    "reading_time_notice",
+                    "slug",
+                    "title"
+                ]
+            },
+            "PublicEditorialCurator": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "affiliation": {
+                        "type": "string"
+                    },
+                    "portrait_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "affiliation",
+                    "name",
+                    "portrait_url",
+                    "role"
+                ]
+            },
+            "PublicEditorialCuratorRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "affiliation": {
+                        "type": "string"
+                    },
+                    "portrait_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "affiliation",
+                    "name",
+                    "portrait_url",
+                    "role"
+                ]
+            },
+            "PublicEditorialDirectory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicEditorialCard"
+                        }
+                    },
+                    "query": {
+                        "type": "string"
+                    },
+                    "filters": {
+                        "$ref": "#/components/schemas/EditorialDirectoryFilters"
+                    },
+                    "facets": {
+                        "$ref": "#/components/schemas/EditorialDirectoryFacets"
+                    },
+                    "related": {
+                        "$ref": "#/components/schemas/EditorialRelated"
+                    }
+                },
+                "required": [
+                    "count",
+                    "facets",
+                    "filters",
+                    "next",
+                    "page",
+                    "page_size",
+                    "previous",
+                    "query",
+                    "related",
+                    "results",
+                    "total_pages"
                 ]
             },
             "PublicEntityLink": {
@@ -37319,6 +38678,35 @@
                     "public_byline": {
                         "type": "string"
                     },
+                    "article_metadata": {
+                        "$ref": "#/components/schemas/ArticleMetadata"
+                    },
+                    "curator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicEditorialCurator"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "related": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditorialRelated"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "public_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "reading_minutes": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "body_blocks": {
                         "type": "array",
                         "items": {
@@ -37374,10 +38762,14 @@
                 },
                 "required": [
                     "body_source_problems",
+                    "curator",
                     "draft_revision_id",
                     "has_unpublished_changes",
                     "id",
+                    "public_revision_id",
                     "published_at",
+                    "reading_minutes",
+                    "related",
                     "title"
                 ]
             },
@@ -37418,6 +38810,16 @@
                     "results"
                 ]
             },
+            "RecommendationIssueListing": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/RecommendationIssueCollection"
+                    },
+                    {
+                        "$ref": "#/components/schemas/PublicEditorialDirectory"
+                    }
+                ]
+            },
             "RecommendationIssueRequest": {
                 "type": "object",
                 "properties": {
@@ -37437,6 +38839,9 @@
                     },
                     "public_byline": {
                         "type": "string"
+                    },
+                    "article_metadata": {
+                        "$ref": "#/components/schemas/ArticleMetadataRequest"
                     },
                     "body_blocks": {
                         "type": "array",
@@ -37601,12 +39006,33 @@
                 "type": "string",
                 "description": "* `foundational_work` - 奠基性原著\n* `systematic_exposition` - 系统阐释\n* `theoretical_development` - 理论发展\n* `empirical_application` - 经验应用\n* `comparative_study` - 比较研究\n* `critique` - 批评反思\n* `general_mention` - 一般提及"
             },
+            "SaveIssueListCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "public_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "public_revision_id",
+                    "request_id"
+                ]
+            },
             "SavedIssueList": {
                 "type": "object",
                 "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
                     "id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
                     },
                     "title": {
                         "type": "string"
@@ -37614,14 +39040,25 @@
                     "item_count": {
                         "type": "integer"
                     },
-                    "planned_count": {
-                        "type": "integer"
+                    "saved": {
+                        "type": "boolean"
+                    },
+                    "receipt": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string"
                     }
                 },
                 "required": [
                     "id",
                     "item_count",
-                    "planned_count",
+                    "notice",
+                    "owner_id",
+                    "receipt",
+                    "saved",
                     "title"
                 ]
             },

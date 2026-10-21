@@ -1,5 +1,6 @@
 from django.core.paginator import Paginator
 from django.db.models import CharField, F, OuterRef, Q, Subquery, Value
+from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
@@ -117,7 +118,9 @@ class CurationSourcesView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVie
         keys = lists[0].union(lists[1], all=True).order_by("page_order", "source_kind", "source_key")
         paginator = Paginator(keys, 24)
         page = paginator.get_page(request.query_params.get("page", 1))
-        selected = list(page.object_list)
+        # SQL UUID casts use 32 hex digits on SQLite and canonical UUIDs on
+        # PostgreSQL. Match the hydrated model keys in either database.
+        selected = [{**key, "source_key": str(service.identifier(key["source_key"]))} for key in page.object_list]
         found = {kind: {str(row.pk): row for row in service.sources(kind).filter(pk__in=[key["source_key"] for key in selected if key["source_kind"] == kind])} for kind in ("span", "passage")}
         def serialize(key):
             return service.source_payload(key["source_kind"], found[key["source_kind"]][key["source_key"]])
@@ -167,8 +170,11 @@ class AdminScholarRelationListView(EditorialErrorMixin, AdminPrivateResponseMixi
         rows = ScholarRelation.objects.select_related("active_revision")
         if request.query_params.get("scholar"):
             key = str(service.identifier(request.query_params["scholar"]))
-            latest = EditorialRevision.objects.filter(target_type="scholar_relation", target_id=OuterRef("pk")).order_by("-revision")
-            rows = rows.annotate(draft_source=Subquery(latest.values("materialized_preview__source_scholar")[:1]), draft_target=Subquery(latest.values("materialized_preview__target_scholar")[:1]))
+            latest = EditorialRevision.objects.filter(target_type="scholar_relation", target_id=OuterRef("pk")).order_by("-revision").annotate(
+                source_key=KeyTextTransform("source_scholar", "materialized_preview"),
+                target_key=KeyTextTransform("target_scholar", "materialized_preview"),
+            )
+            rows = rows.annotate(draft_source=Subquery(latest.values("source_key")[:1]), draft_target=Subquery(latest.values("target_key")[:1]))
             rows = rows.filter(Q(source_scholar_id=key) | Q(target_scholar_id=key) | Q(draft_source=key) | Q(draft_target=key))
         return Response(paged(request, rows.order_by("-updated_at", "pk"), service.relation_payload))
 

@@ -14,7 +14,7 @@ export async function evidenceIdentity(reference: EvidenceReference): Promise<st
 export function safeResearchReturn(value?: string) {
   if (!value || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(value)) return "";
   const url = new URL(value, "https://library.invalid");
-  if (url.origin !== "https://library.invalid" || !/^\/(account|research|explore)(\/|$)/.test(url.pathname)) return "";
+  if (url.origin !== "https://library.invalid" || !/^\/(account|research|explore|recommendations)(\/|$)/.test(url.pathname)) return "";
   return `${url.pathname}${url.search}${url.hash}`;
 }
 

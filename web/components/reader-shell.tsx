@@ -33,6 +33,7 @@ import {
 import {
   useCallback,
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -68,6 +69,8 @@ import { useReaderResearch } from "./reader/use-reader-research";
 import { formatReaderTimestamp, useReaderPageOverlays } from "./reader/use-reader-page-overlays";
 import { ReaderOcrStatus } from "./reader/reader-ocr-status";
 import { ReaderPageThumbnail } from "./reader/reader-page-thumbnail";
+import { ReaderSettings, useReaderPreferences } from "./reader/reader-settings";
+import { SaveWorkButton } from "./save-work-button";
 
 function useMediaQuery(query: string) {
   const subscribe = useCallback((notify: () => void) => {
@@ -99,6 +102,7 @@ function ReaderWorkspace({
   researchTurnId = "",
   researchReferenceId = "",
   returnTo = "",
+  embedded = false,
   outline = [],
   relatedScholars = [],
   relatedTheories = [],
@@ -117,6 +121,7 @@ function ReaderWorkspace({
   researchTurnId?: string;
   researchReferenceId?: string;
   returnTo?: string;
+  embedded?: boolean;
   outline?: OutlineNode[];
   relatedScholars?: { name: string; slug: string; years: string; portrait?: string }[];
   relatedTheories?: { name: string; slug: string }[];
@@ -133,11 +138,13 @@ function ReaderWorkspace({
   const { state: readerSession } = usePublicSession();
   const readerAuthenticated = readerSession.status === "authenticated";
   const [dark, setDark] = useState(false);
-  const [leftOpen, setLeftOpen] = useState(true);
-  const [rightOpen, setRightOpen] = useState(true);
+  const [leftOpen, setLeftOpen] = useState<boolean | null>(null);
+  const [rightOpen, setRightOpen] = useState(!embedded);
   const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
   const [compactRightOpen, setCompactRightOpen] = useState(false);
   const [toolbarOpen, setToolbarOpen] = useState(false);
+  const {preferences,save:savePreferences}=useReaderPreferences();
+  const applyPreferences=(value:typeof preferences)=>{savePreferences(value);setLeftOpen(value.outline);};
   const [ocrOpen, setOcrOpen] = useState(false);
   const [ocrRecoveryLocked, setOcrRecoveryLocked] = useState(false);
   const toolbarSummary = useRef<HTMLButtonElement | null>(null);
@@ -145,7 +152,7 @@ function ReaderWorkspace({
   const [selectionPosition, setSelectionPosition] = useState<{left:number;top:number} | null>(null);
   const isMobile = useMediaQuery("(max-width: 760px)");
   const isCompact = useMediaQuery("(max-width: 1050px)");
-  const effectiveLeftOpen = isMobile ? mobileLeftOpen : leftOpen;
+  const effectiveLeftOpen = isMobile ? mobileLeftOpen : leftOpen ?? preferences.outline;
   const effectiveRightOpen = isCompact ? compactRightOpen : rightOpen;
   const { access, accessError, pagePayloads, pageErrors, requestPagePayload, retryPagePayload, statusPollPaused, trackDownload, retryAccess } = useReaderDocument({
     assetId: work.id, workId: work.workId, documentRevisionId,
@@ -163,7 +170,7 @@ function ReaderWorkspace({
     page, setPage, zoom, totalPages, progress, thumbnailPages, scrollRequest,
     jumpToPage, changeZoom, onDocumentLoad, onVisiblePageChange,
   } = useReaderNavigation({
-    initialPage, initialPageCount: work.pages, accessPageCount: access?.page_count,
+    initialPage, initialPageCount: work.pages, accessPageCount: access?.page_count, reducedMotion:preferences.motion === "reduced",
   });
   const currentPagePayload = pagePayloads[page] ?? null;
   const setLeftPanel = useCallback((open: boolean) => {
@@ -219,7 +226,7 @@ function ReaderWorkspace({
     editionId: work.editionId ?? access?.edition_id, page: citationPage, setCopyStatus, setCopyStatusState,
   });
 
-  useReaderProgress({ assetId: work.id, page, totalPages, readerAuthenticated, readerId: readerSession.user?.id });
+  useReaderProgress({ assetId: work.id, page, totalPages, readerAuthenticated:readerAuthenticated && Boolean(access && currentPagePayload), readerId: readerSession.user?.id });
   const { researchAnchors, researchError, retryResearch } = useReaderResearch({ assetId: work.id, revisionId: documentRevisionId, requestedRevisionId,
     projectId: researchProjectId, turnId: researchTurnId, referenceId: researchReferenceId,
     ownerId: readerSession.status === "authenticated" && readerSession.user ? String(readerSession.user.id) : null, requestPagePayload, jumpToPage });
@@ -308,11 +315,23 @@ function ReaderWorkspace({
     return () => document.removeEventListener("fullscreenchange", update);
   }, []);
   useEffect(() => {
-    if (!hasDraft && !annotationSaveUnknown && !ocrRecoveryLocked) return;
+    if (!hasDraft && !annotationSaveUnknown && !ocrRecoveryLocked && !pendingAction) return;
     const protect = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", protect);
     return () => window.removeEventListener("beforeunload", protect);
-  }, [hasDraft, annotationSaveUnknown, ocrRecoveryLocked]);
+  }, [hasDraft, annotationSaveUnknown, ocrRecoveryLocked, pendingAction]);
+  const protectOuterNavigation=useEffectEvent((event:MouseEvent)=>{
+    if(event.defaultPrevented || event.button!==0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)return;
+    const link=event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+    if(link && !shellRef.current?.contains(link) && link.target!=="_blank" && !link.hasAttribute("download") && !canLeave()){
+      event.preventDefault();event.stopImmediatePropagation();
+    }
+  });
+  useEffect(()=>{
+    if(!embedded)return;
+    const protect=(event:MouseEvent)=>protectOuterNavigation(event);
+    document.addEventListener("click",protect,true);return()=>document.removeEventListener("click",protect,true);
+  },[embedded]);
 
   const recordStatus = !readerAuthenticated ? <p className="reader-empty-list">登录后查看本人笔记与书签。<button type="button" onClick={() => setGate("个人阅读记录")}>登录</button></p>
     : recordsLoading ? <div className="reader-panel-status" role="status"><p>正在读取个人批注与书签…</p><button type="button" onClick={stopRecords}>停止加载</button></div>
@@ -348,14 +367,14 @@ function ReaderWorkspace({
   const versions = work.versions?.map(row => row.id === work.editionId && work.version ? work.version : row) || (work.version ? [work.version] : []);
 
   return (
-    <div ref={shellRef} className={`reader stl4-reader ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`}
+    <div ref={shellRef} data-reader-motion={preferences.motion} data-reader-highlight={preferences.highlight} className={`reader stl4-reader ${embedded ? "reader-embedded" : ""} ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`}
       onClickCapture={event => {
         const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
         if (link && link.target !== "_blank" && !link.hasAttribute("download") && (hasDraft || pendingAction || annotationSaveUnknown || ocrRecoveryLocked) && !canLeave()) event.preventDefault();
       }}>
       <UsageTracker eventType="reader_open" assetId={work.id} workId={work.workId} source="reader" />
-      <div className="reader-site-header"><SiteHeader config={siteConfig} reader beforeLogout={canLeave} /></div>
-      <div className="reader-heading">
+      {!embedded ? <div className="reader-site-header"><SiteHeader config={siteConfig} reader beforeLogout={canLeave} /></div> : null}
+      {embedded ? <div className="reader-heading reader-embedded-heading"><div><strong>{work.title}</strong><small>{work.author}</small></div><div className="reader-embedded-progress"><span>阅读进度 {page} / {totalPages} 页</span><progress value={page} max={totalPages} aria-label="展项阅读位置" /><span>{progress}%</span></div><div className="reader-embedded-actions"><SaveWorkButton workId={work.workId}/>{access ? <a className="button" href={access.download_url || access.url} download={access.download_filename} onClick={trackDownload}><Download size={15}/>下载 PDF</a> : <span>下载暂不可用</span>}<ReaderSettings value={preferences} onSave={applyPreferences}/></div></div> : <div className="reader-heading">
         <nav className="reader-breadcrumb" aria-label="当前位置"><Link href="/">首页</Link><ChevronRight size={12} /><Link href="/explore">探索</Link><ChevronRight size={12} /><Link href={detailHref}>{work.kind}</Link><ChevronRight size={12} /><span>PDF 原文阅读器</span></nav>
         <div className="reader-book-heading">
           {work.coverImage ? <BookCover work={work} size="small" /> : <span className="reader-no-cover">暂无封面</span>}
@@ -367,9 +386,9 @@ function ReaderWorkspace({
               router.push(researchReturn && version.readable_asset ? `${url}?${new URLSearchParams({ return_to: researchReturn })}` : url);
             }}>{versions.map(version => <option value={version.id} key={version.id}>{version.id === work.editionId ? "当前 · " : ""}{[version.edition_statement || version.language, version.publication_year, version.publisher].filter(Boolean).join(" · ") || "未标注版本"}{!version.readable_asset ? "（查看详情）" : ""}</option>)}</select></label> : null}
           </div>
-          <div className="reader-heading-actions"><Link className="button secondary" href={detailHref}><ChevronLeft size={15} />返回文献</Link>{researchReturn ? <Link className="button secondary" href={researchReturn}>{researchReturn.startsWith("/explore/") ? "返回候选位置" : "返回研究"}</Link> : null}<button className="button" type="button" onClick={() => sharedSource()}><FolderPlus size={15} />加入研究</button></div>
+          <div className="reader-heading-actions"><Link className="button secondary" href={detailHref}><ChevronLeft size={15} />返回文献</Link>{researchReturn ? <Link className="button secondary" href={researchReturn}>{researchReturn.startsWith("/recommendations/") ? "返回展项" : researchReturn.startsWith("/explore/") ? "返回候选位置" : "返回研究"}</Link> : null}<button className="button" type="button" onClick={() => sharedSource()}><FolderPlus size={15} />加入研究</button></div>
         </div>
-      </div>
+      </div>}
 
       <header className="reader-toolbar" aria-label="阅读工具栏">
         <button type="button" className="reader-mobile-back" aria-label="返回文献" onClick={() => { if (canLeave()) router.push(detailHref); }}><ChevronLeft size={18} /></button>
@@ -433,7 +452,7 @@ function ReaderWorkspace({
       </ReaderPanel>
       <footer className="reader-bottom"><span className="reader-bottom-work">{work.title}</span><div className="reader-bottom-progress"><span>{page} / {totalPages}</span><progress value={page} max={totalPages} aria-label="阅读位置" /><span>{progress}%</span></div><div className="reader-bottom-actions"><button type="button" onClick={() => effectiveLeftOpen ? setLeftPanel(false) : openLeft("outline")} aria-pressed={effectiveLeftOpen}><List size={17} />目录</button><button type="button" onClick={() => openRight("notes")}><StickyNote size={17} />笔记</button><button type="button" onClick={() => openRight("citation")}><Quote size={17} />引用</button><button type="button" onClick={() => setToolbarOpen(true)}><MoreHorizontal size={17} />更多</button></div></footer>
       <Dialog open={ocrOpen} className="reader-more-dialog reader-ocr-dialog" onRequestClose={() => { if (!ocrRecoveryLocked) setOcrOpen(false); }} aria-labelledby="reader-ocr-heading"><header><h2 id="reader-ocr-heading">文字识别与处理状态</h2><button type="button" disabled={ocrRecoveryLocked} aria-label="关闭文字处理状态" onClick={() => setOcrOpen(false)}><X size={20} /></button></header>{ocrOpen ? <ReaderOcrStatus assetId={work.id} documentRevisionId={documentRevisionId} ownerId={readerSession.user?.id} canViewManagement={Boolean(readerAuthenticated && readerSession.user?.capabilities?.includes("access_back_office"))} canManage={Boolean(readerAuthenticated && readerSession.user?.capabilities?.includes("access_back_office") && readerSession.user.capabilities.includes("can_retry_jobs"))} onRecoveryLockChange={setOcrRecoveryLocked} preview={access ? <ReaderPageThumbnail key={`${access.requested_asset_id}:${access.sha256}:${page}`} sourceRef={readerDocumentRef} page={page} identity={`${access.requested_asset_id}:${access.sha256}`} /> : undefined} /> : null}<Link href={detailHref} target="_blank" rel="noopener noreferrer">在文献详情核对当前版本</Link></Dialog>
-      <Dialog open={toolbarOpen} className="reader-more-dialog" id="reader-more" onRequestClose={() => setToolbarOpen(false)} aria-label="阅读工具"><header><h2>阅读工具</h2><button type="button" aria-label="关闭阅读工具" onClick={() => setToolbarOpen(false)}><X size={20} /></button></header>{recoveryControls(true)}<div className="reader-more-actions"><button type="button" onClick={() => { setToolbarOpen(false); setOcrOpen(true); }}><BookOpen size={18} />文字识别与处理状态</button><Link href={`/reader/${work.id}?mode=parallel&page=${page}`}><BookOpen size={18} />原文与译本并读</Link><button type="button" onClick={() => { setToolbarOpen(false); openLeft("search"); }}><Search size={18} />书内搜索</button><button type="button" onClick={() => { setToolbarOpen(false); protectedAction("书签"); }} aria-pressed={bookmarkedPage}><Bookmark size={18} />{bookmarkedPage ? "移除本页书签" : "保存本页书签"}</button><button type="button" onClick={() => { setToolbarOpen(false); openLeft("highlights"); }}><Highlighter size={18} />我的高亮与划线</button>{access ? <a href={access.download_url || access.url} download={access.download_filename} onClick={trackDownload}><Download size={18} />{access.download_rendition === "ocr_pdf" ? "下载可搜索 PDF" : "下载 PDF"}</a> : <button type="button" disabled><Download size={18} />下载暂不可用</button>}{readerSession.user?.capabilities?.includes("access_back_office") ? <Link href="/admin/processing?tab=ocr"><BookOpen size={18} />查看文字处理任务</Link> : null}<button type="button" onClick={() => { setRotation(value => ((value + 90) % 360) as ReaderRotation); setSelectionTools(null); window.getSelection()?.removeAllRanges(); jumpToPage(page, "auto"); }}><RotateCw size={18} />旋转页面 · {rotation}°</button><button type="button" onClick={() => setDark(value => !value)}>{dark ? <Sun size={18} /> : <Moon size={18} />}{dark ? "浅色阅读界面" : "深色阅读界面"}</button><button type="button" onClick={() => { setToolbarOpen(false); void toggleFullscreen(); }}><Maximize size={18} />{fullscreen ? "退出全屏" : "全屏阅读"}</button></div><div className="reader-more-zoom"><span>页面缩放</span><button type="button" disabled={zoom <= 60} onClick={() => changeZoom(-10)}><Minus size={16} /></button><button type="button" onClick={() => changeZoom(100 - zoom)}>{zoom}%</button><button type="button" disabled={zoom >= 180} onClick={() => changeZoom(10)}><Plus size={16} /></button></div>{access?.original_download_url ? <a href={access.original_download_url} download={access.download_filename}>下载原始扫描版</a> : null}</Dialog>
+      <Dialog open={toolbarOpen} className="reader-more-dialog" id="reader-more" onRequestClose={() => setToolbarOpen(false)} aria-label="阅读工具"><header><h2>阅读工具</h2><button type="button" aria-label="关闭阅读工具" onClick={() => setToolbarOpen(false)}><X size={20} /></button></header>{recoveryControls(true)}<div className="reader-more-actions"><ReaderSettings value={preferences} onSave={applyPreferences}/><button type="button" onClick={() => { setToolbarOpen(false); setOcrOpen(true); }}><BookOpen size={18} />文字识别与处理状态</button><Link href={`/reader/${work.id}?mode=parallel&page=${page}`}><BookOpen size={18} />原文与译本并读</Link><button type="button" onClick={() => { setToolbarOpen(false); openLeft("search"); }}><Search size={18} />书内搜索</button><button type="button" onClick={() => { setToolbarOpen(false); protectedAction("书签"); }} aria-pressed={bookmarkedPage}><Bookmark size={18} />{bookmarkedPage ? "移除本页书签" : "保存本页书签"}</button><button type="button" onClick={() => { setToolbarOpen(false); openLeft("highlights"); }}><Highlighter size={18} />我的高亮与划线</button>{access ? <a href={access.download_url || access.url} download={access.download_filename} onClick={trackDownload}><Download size={18} />{access.download_rendition === "ocr_pdf" ? "下载可搜索 PDF" : "下载 PDF"}</a> : <button type="button" disabled><Download size={18} />下载暂不可用</button>}{readerSession.user?.capabilities?.includes("access_back_office") ? <Link href="/admin/processing?tab=ocr"><BookOpen size={18} />查看文字处理任务</Link> : null}<button type="button" onClick={() => { setRotation(value => ((value + 90) % 360) as ReaderRotation); setSelectionTools(null); window.getSelection()?.removeAllRanges(); jumpToPage(page, "auto"); }}><RotateCw size={18} />旋转页面 · {rotation}°</button><button type="button" onClick={() => setDark(value => !value)}>{dark ? <Sun size={18} /> : <Moon size={18} />}{dark ? "浅色阅读界面" : "深色阅读界面"}</button><button type="button" onClick={() => { setToolbarOpen(false); void toggleFullscreen(); }}><Maximize size={18} />{fullscreen ? "退出全屏" : "全屏阅读"}</button></div><div className="reader-more-zoom"><span>页面缩放</span><button type="button" disabled={zoom <= 60} onClick={() => changeZoom(-10)}><Minus size={16} /></button><button type="button" onClick={() => changeZoom(100 - zoom)}>{zoom}%</button><button type="button" disabled={zoom >= 180} onClick={() => changeZoom(10)}><Plus size={16} /></button></div>{access?.original_download_url ? <a href={access.original_download_url} download={access.download_filename}>下载原始扫描版</a> : null}</Dialog>
       {sharedCitation ? <SharedCitationOverlay {...sharedCitation} open onClose={() => setSharedCitation(null)} /> : null}
       {gate ? <Dialog open className="login-gate" onRequestClose={() => setGate(null)} aria-labelledby="login-gate-title"><div><button className="panel-close" type="button" aria-label="关闭登录提示" onClick={() => setGate(null)}><X size={18} /></button><p className="eyebrow">保存个人阅读资料</p><h2 id="login-gate-title">登录后使用{gate}</h2><p>在线阅读、下载、全文搜索、复制和引用对访客开放。个人笔记与书签保存到自己的账户。</p><Link className="button" href={`/login?${new URLSearchParams({ next: readerReturnPath(work.id, { page: String(page), q: query, focus: initialFocus, passage: initialPassage, evidence: initialEvidence, research_project: researchProjectId, research_turn: researchTurnId, reference: researchReferenceId, revision: requestedRevisionId || documentRevisionId, return_to: researchReturn }) })}`}>登录<ArrowRight size={16} /></Link><Link className="button secondary" href="/register">注册读者</Link></div></Dialog> : null}
     </div>

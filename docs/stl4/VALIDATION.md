@@ -1,5 +1,16 @@
 # 验收记录
 
+## 2026-10-21 PDF73–78专题文章/微展览静态记录
+
+- 白名单tmp/stl4-editorial-checkpoint.json为62路径。22个Python逐个ast.parse通过，0faa23退出0；其中新16个后端函数21参数案例仅AST统计，未执行。旧v307书单与privacy样例、11个浏览器场景同步定义，未运行。
+- web下按白名单筛选23个TS/TSX（排除generated）运行node node_modules/eslint/bin/eslint.js，最终86877/ba1234退出0，0错误/4个图片优化建议。第一次reader修改曾报effect内setState，改为用户选择与默认偏好的派生状态后通过。
+- web下node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false，最终63771/a6d2b4退出0。455ddf曾报会话user可空和privacy测试计数缺article_comments；修正后通过。早期结构化来源nullable字段、schema循环导入分别修复后通过，不删除检查项。
+- PostCSS解析editorial.module.css 191顶层节点、stl4-reader.css 180节点，67个直接styles类引用没有缺失，682ba0退出0。实际图片/布局/焦点/移动状态尚未验收。
+- 环境DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8，运行.venv/Scripts/python.exe api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-curation-schema-20261021.json --validate，ff954f退出0：0错误/10个既有Home/Scholar/Topic类型提示。openapi-typescript/astToString同步，a87ec4退出0，218路径，原213全部保留；新五路径为评论公开/本人/回执/删除/管理。
+- 0faa23退出0：禁用BaseDatabaseWrapper.ensure_connection，目录类型/主题JSON/署名关键词/图片UUID及评论公开/本人六组SQL分别SQLite/PostgreSQL仅编译12次，参数数一致，数据库连接0。
+- MigrationLoader(None)+MigrationAutodetector仅内存比较模型/迁移，8495dc退出0、数据库连接0：reading/catalog没有差异；contenttypes/sessions/admin/auth/accounts报告既有options/字段状态差异，保留待统一环境核验，没有生成、应用或删除任何迁移。0021及此前迁移均未应用。
+- 不运行正式API/数据库/并发/功能测试、浏览器、E2E、构建、实际PDF/OCR/模型、检索质量测评、索引重建或生产操作。96/209仅源码接入，全部视觉与B01–B06仍待全量完成后统一验收。
+
 ## 2026-10-21 PDF68–71主题静态记录
 
 - 精确白名单tmp/stl4-topics-checkpoint.json共74路径；.venv/Scripts/python.exe tmp/topic-checkpoint-20261021.py逐个ast.parse 28个Python文件，1b1764退出0；同批git diff --check退出0。未执行测试函数。

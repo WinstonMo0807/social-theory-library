@@ -1,8 +1,12 @@
 import type { IssueBlock, IssueResolvedSource } from "@/lib/api/recommendation-issues.types";
 import { CollectionLink } from "@/components/collection-link";
 import { SharedCitationButton } from "@/components/shared-citation-overlay";
+import { EditorialSource } from "./editorial-source";
+import { EditorialImage } from "./editorial-directory";
+import styles from "./editorial.module.css";
 
 function SourceLink({ source }: { source: IssueResolvedSource }) {
+  if (source.type === "span" || source.edition_id || source.href) return <EditorialSource source={source}>{source.title}{source.printed_label ? ` · 第 ${source.printed_label} 页` : source.page_start ? ` · PDF ${source.page_start}` : ""}</EditorialSource>;
   const href = source.reader_url || source.work_url || "";
   if (!/^\/(reader|works)\//.test(href) || /[\\\u0000-\u001f]/.test(href)) return <span>{source.title}</span>;
   return <CollectionLink href={href}>{source.title}{source.printed_label ? ` · 第 ${source.printed_label} 页` : source.page_start ? ` · PDF ${source.page_start}` : ""}</CollectionLink>;
@@ -10,6 +14,7 @@ function SourceLink({ source }: { source: IssueResolvedSource }) {
 
 /** The same published-source payload renders in the editor preview and public article. */
 export function IssueBlockView({ block }: { block: IssueBlock }) {
+  if (block.type === "image") return <figure className={styles.inlineImage}><EditorialImage key={block.image_url} src={block.image_url || ""} className={styles.articleImage} retry /><figcaption><strong>{block.text}</strong><p>{block.alt_text}</p>{block.source ? <cite>{block.source}</cite> : null}</figcaption></figure>;
   if (block.source_status === "unavailable") return <p>本段来源当前不可访问，原文与定位暂不展示。</p>;
   const sources = block.resolved_sources || [];
   if (block.type === "heading" || (block.type === "analysis" && block.style === "heading")) return <h3>{block.text}</h3>;

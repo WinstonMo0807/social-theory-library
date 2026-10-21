@@ -40,6 +40,8 @@ from .path_views import PathFollowViewSet
 from .parallel_views import (AdminParallelCalibrationViewSet, ParallelCalibrationViewSet,
                              ParallelReadingTaskViewSet, PublicParallelCalibrationViewSet)
 
+from .editorial_comment_views import (PublicArticleCommentsView, OwnArticleCommentsView, ArticleCommentReceiptView, ArticleCommentDeleteView, AdminArticleCommentsView)
+
 router = DefaultRouter()
 router.register("graph-views", SavedGraphViewSet, basename="graph-views")
 router.register("path-follows", PathFollowViewSet, basename="path-follows")
@@ -69,6 +71,11 @@ router.register(
 )
 
 urlpatterns = [
+    path("article-comments/public/<uuid:issue_id>/", PublicArticleCommentsView.as_view(), name="article-comments-public"),
+    path("article-comments/admin/<uuid:issue_id>/", AdminArticleCommentsView.as_view(), name="article-comments-admin"),
+    path("article-comments/<uuid:issue_id>/", OwnArticleCommentsView.as_view(), name="article-comments-own"),
+    path("article-comments/<uuid:issue_id>/requests/<uuid:request_id>/", ArticleCommentReceiptView.as_view(), name="article-comment-receipt"),
+    path("article-comments/<uuid:issue_id>/<uuid:comment_id>/", ArticleCommentDeleteView.as_view(), name="article-comment-delete"),
     path("saved-knowledge/<uuid:node_id>/", KnowledgeSaveView.as_view(), name="saved-knowledge-node"),
     path("search-records/", ReaderSearchRecordsView.as_view(), name="reader-search-records"),
     path("citation-preview/", PublicCitationPreviewView.as_view(), name="public-citation-preview"),

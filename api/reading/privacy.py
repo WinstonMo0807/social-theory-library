@@ -12,25 +12,26 @@ from rest_framework.exceptions import NotFound, Throttled, ValidationError
 from accounts.models import ReaderProfile
 from . import research
 from .models import (Annotation, CitationAudit, PersonalReadingPlan, ReaderDataOperation,
-                     ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic)
+                     ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic, ReadingList)
 from .services import decrypt_private_text
 from .source_models import SourceFollow
 from .parallel_models import ParallelReadingTask
 from .knowledge_models import SavedKnowledgeNode
 from .graph_models import SavedGraphView
+from .editorial_comment_models import EditorialComment
 
 RETENTION = {"reading_history": True, "search_history": False, "personal_notes": True, "followed_topics": True, "source_follows": True, "saved_knowledge": True}
-RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "收藏的主题", "source_follows": "来源、学者与主题关注", "saved_knowledge": "知识条目与图谱视图"}
-EXPORT_GROUPS = {"research": ("research",), "notes": ("annotations", "memories", "parallel_alignments"),
+RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "收藏的主题", "source_follows": "来源、学者与主题关注", "saved_knowledge": "知识条目、图谱视图与私人书单"}
+EXPORT_GROUPS = {"article_comments": ("article_comments",), "research": ("research",), "notes": ("annotations", "memories", "parallel_alignments"),
                  "plans": ("plans",), "audits": ("audits", "citation_sources"), "source_follows": ("source_follows",),
-                 "saved_knowledge": ("saved_knowledge", "graph_views")}
-ERASE_GROUPS = {"reading_history": ("reading_history",), "search_history": ("search_history",),
+                 "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists")}
+ERASE_GROUPS = {"article_comments": ("article_comments",), "reading_history": ("reading_history",), "search_history": ("search_history",),
                 "personal_notes": ("annotations", "memories", "parallel_alignments"), "reading_plans": ("plans",),
-                "followed_topics": ("followed_topics",), "source_follows": ("source_follows",), "saved_knowledge": ("saved_knowledge", "graph_views")}
-MODELS = {"research": ResearchProject, "annotations": Annotation, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
+                "followed_topics": ("followed_topics",), "source_follows": ("source_follows",), "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists")}
+MODELS = {"article_comments": EditorialComment, "research": ResearchProject, "annotations": Annotation, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
           "plans": PersonalReadingPlan, "audits": CitationAudit, "citation_sources": CitationAudit,
           "reading_history": ReadingHistory, "search_history": ReaderSearchRecord, "followed_topics": SavedTopic,
-          "source_follows": SourceFollow, "saved_knowledge": SavedKnowledgeNode, "graph_views": SavedGraphView}
+          "source_follows": SourceFollow, "saved_knowledge": SavedKnowledgeNode, "graph_views": SavedGraphView, "reading_lists": ReadingList}
 MAX_ITEMS = 500
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -136,6 +137,8 @@ def target_of(row, category):
     target = {"category": category, "id": str(row.id), "revision": version(row)}
     if category == "research":
         target["children"] = {str(turn.id): turn.revision for turn in row.turns.all()}
+    if category == "reading_lists":
+        target["children"] = {str(value.pk): f"{value.work_id}:{value.order}" for value in row.items.all()}
     return target
 
 
@@ -159,6 +162,12 @@ def annotation_export(user, row):
 
 
 def export_item(user, category, row):
+    if category == "article_comments":
+        from .editorial_comments import record
+        return {**record(row, private=True), "issue_id": str(row.issue_id)}
+    if category == "reading_lists":
+        return {"id": str(row.pk), "title": row.title, "description": row.description, "created_at": row.created_at.isoformat(),
+            "items": [{"work_id": str(item.work_id), "order": item.order} for item in row.items.all()]}
     if category == "graph_views":
         from .graph_saves import record_output
         return record_output(row, user)
@@ -193,7 +202,7 @@ def erase_impact(user, category, row, *, contexts=None):
         scopes = [{"kind": kind, "id": str(context.id)} for kind, context in contexts
                   if str(memory.id) in research.unpack(context).get("confirmed_memory_ids", [])]
         affected.append({"id": str(memory.id), "revision": memory.revision, "scopes": scopes})
-    message = {"annotations": "删除原笔记，保留独立确认的认识，并撤销关联认识的使用范围。",
+    message = {"article_comments": "删除本人评论与公开署名，已公开评论立即撤下；文章和其他读者评论保留，只留防止旧提交复活的最少回执。", "annotations": "删除原笔记，保留独立确认的认识，并撤销关联认识的使用范围。",
                "memories": "删除此条认识、修改历史与派生向量，撤销使用范围；原阅读笔记保留。",
                "parallel_alignments": "删除此组私人对齐、术语笔记与阅读位置，并保留防止旧请求重新创建资料所需的最少记录；已提交的公共校准记录独立保留，馆藏原文与账户保留。",
                "plans": "删除此阅读计划或公共路径跟读及其中的进度、笔记与建议；原文和独立研究、笔记保留。未完成任务将失效，仅保留防止旧请求重新创建资料所需的最少回执。",
@@ -202,6 +211,7 @@ def erase_impact(user, category, row, *, contexts=None):
                "followed_topics": "删除此主题收藏；仅保留防止旧请求重新收藏所需的最少回执，主题档案更新关注和公开馆藏保留。",
                "saved_knowledge": "删除本人知识条目收藏；公开条目保留，只保留防止旧请求重新保存所需的最少回执。",
                "graph_views": "删除本人保存的图谱名称、范围与布局；公开关系保留，仅保留防止旧请求重新创建的最少回执。",
+               "reading_lists": "删除这份私人书单及其作品顺序；公开馆藏保留，只保留防止旧请求重新创建书单所需的最少回执。",
                "source_follows": "删除此来源订阅、学者或主题关注及状态历史，停止后续检查；仅保留防止旧请求重建的最小操作回执，独立收藏与公开内容保留。"}[category]
     return {"message": message, "memories": affected, "scope_count": sum(len(value["scopes"]) for value in affected)}
 
@@ -209,7 +219,13 @@ def erase_impact(user, category, row, *, contexts=None):
 def describe_item(user, category, row):
     payload = research.unpack(row) if hasattr(row, "data_ciphertext") else {}
     source = {}
-    if category == "graph_views":
+    if category == "article_comments":
+        title = payload.get("body", "")[:120] or "文章评论"
+        source = {"title": "本人投稿评论（含待审核与已公开）", "path": f"/recommendations/{row.issue.slug}#article-comments"}
+    elif category == "reading_lists":
+        title = row.title
+        source = {"title": "私人书单", "path": "/account?section=lists"}
+    elif category == "graph_views":
         title = payload.get("title") or "未命名图谱视图"
         source = {"title": "本人保存的图谱视图", "path": f"/theories/graph?saved_view={row.pk}"}
     elif category == "plans":
@@ -452,7 +468,7 @@ def command_operation(user, pk, data):
                 except NotFound:
                     unavailable.append({"id": target["id"], "category": target["category"], "status": "failed", "error_code": "record_unavailable"})
                     continue
-                target["revision"] = version(current)
+                target.update(target_of(current, target["category"]))
                 payload["impacts"][target["id"]] = erase_impact(user, target["category"], current, contexts=contexts)
             payload["results"] = [result for result in payload.get("results", []) if result["status"] == "completed"] + unavailable
             row.status = "preview" if len(pending) > len(unavailable) else "partial" if successful else "failed"

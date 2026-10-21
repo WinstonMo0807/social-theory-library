@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-10-21 专题文章、嵌入阅读与明确公开评论
+
+策划继续使用RecommendationIssue/EditorialRevision不可变发布快照，生效排期决定目录筛选与媒体公开资格。类型、公开策划资料、稳定正文/图片及展品分组保存在该快照，不新增平行内容库。来源继续绑定Edition/Asset/DocumentRevision，嵌入ReaderShell复用同一阅读/引用/笔记/收藏和文件访问。
+
+ReadingList书目副本与准确原文引用分开；固定命令回执复用KnowledgeSaveReceipt独立哈希命名空间。新EditorialComment仅保存明确提交的评论，正文/署名加密，按公开文章修订归属；投稿与编辑公开分开，owner+审核权限+版本并发保护同步隐私导出删除，最少回执防删除后重放。0021仅源码，未执行迁移。具体边界见stl4/EDITORIAL_20261021。
+
 ## 2026-10-21 主题正式投影与私人身份
 
 Topic保持唯一实体，catalog0074增加可空层级与媒体引用；正式名称/slug/层级/编排读取EditorialRevision，公开成员复用现有馆藏、规范节点、学者、策划与路径投影。目录与卡片共用准确版本计数，后台预览POST仅内存覆盖，保存和发布不混同。旧作品ID、Person及内联路径保留原身份，不猜新对象。

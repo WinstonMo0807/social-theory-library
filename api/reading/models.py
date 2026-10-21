@@ -275,3 +275,5 @@ from .parallel_models import ParallelCalibration, ParallelReadingReceipt, Parall
 from .knowledge_models import KnowledgeSaveReceipt, SavedKnowledgeNode  # noqa: E402,F401
 from .graph_models import GraphViewReceipt, SavedGraphView  # noqa: E402,F401
 from .path_models import PlanCommandReceipt  # noqa: E402,F401
+
+from .editorial_comment_models import EditorialComment  # noqa: E402,F401

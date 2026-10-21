@@ -1,13 +1,26 @@
 """Wire contracts shared with generated TypeScript; commands validate domain rules."""
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.helpers import lazy_serializer
 from catalog.serializers import SiteConfigSerializer, AboutPageBlockSerializer
 
 
 class IssueBodyBlockSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=["paragraph", "heading", "quote", "link"])
+    id = serializers.UUIDField(required=False)
+    type = serializers.ChoiceField(choices=["paragraph", "heading", "quote", "link", "image", "evidence", "work", "person", "concept", "node", "timeline", "reading_path", "comparison", "analysis"])
     text = serializers.CharField(allow_blank=True)
     source = serializers.CharField(required=False, allow_blank=True)
     url = serializers.CharField(required=False, allow_blank=True)
+    image_rendition_id = serializers.UUIDField(required=False, allow_null=True)
+    image_url = serializers.CharField(read_only=True, allow_blank=True)
+    alt_text = serializers.CharField(required=False, allow_blank=True)
+    target = serializers.DictField(required=False)
+    dimensions = serializers.ListField(child=serializers.CharField(), required=False)
+    rows = serializers.ListField(child=serializers.DictField(), required=False)
+    references = serializers.ListField(child=serializers.DictField(), required=False)
+    style = serializers.ChoiceField(choices=["paragraph", "heading"], required=False)
+    source_status = serializers.CharField(read_only=True)
+    resolved_sources = serializers.ListField(child=serializers.DictField(), read_only=True)
 
 
 class IssueItemSerializer(serializers.Serializer):
@@ -22,6 +35,7 @@ class IssueItemSerializer(serializers.Serializer):
     doi = serializers.CharField(required=False, allow_blank=True)
     note = serializers.CharField(required=False, allow_blank=True)
     position = serializers.IntegerField(required=False)
+    section_id = serializers.CharField(required=False, allow_blank=True)
     document_type = serializers.CharField(required=False)
     status = serializers.CharField(read_only=True)
     work_url = serializers.CharField(read_only=True)
@@ -35,6 +49,110 @@ class IssueItemSerializer(serializers.Serializer):
     match_candidates = serializers.ListField(child=serializers.DictField(), read_only=True)
 
 
+class ArticleMetadataSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["article", "research", "exhibition"], required=False)
+    keywords = serializers.ListField(child=serializers.CharField(max_length=80), max_length=30, required=False)
+    topic_ids = serializers.ListField(child=serializers.UUIDField(), max_length=50, required=False)
+    scholar_ids = serializers.ListField(child=serializers.UUIDField(), max_length=50, required=False)
+    reading_path_ids = serializers.ListField(child=serializers.UUIDField(), max_length=50, required=False)
+    curator_role = serializers.CharField(max_length=240, allow_blank=True, required=False)
+    curator_affiliation = serializers.CharField(max_length=240, allow_blank=True, required=False)
+    curator_portrait_id = serializers.UUIDField(allow_null=True, required=False)
+
+
+class PublicEditorialCuratorSerializer(serializers.Serializer):
+    name = serializers.CharField(allow_blank=True)
+    role = serializers.CharField(allow_blank=True)
+    affiliation = serializers.CharField(allow_blank=True)
+    portrait_url = serializers.CharField(allow_blank=True)
+
+
+class PublicEditorialCardSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    slug = serializers.CharField()
+    title = serializers.CharField()
+    issue_label = serializers.CharField(allow_blank=True)
+    introduction = serializers.CharField(allow_blank=True)
+    public_byline = serializers.CharField(allow_blank=True)
+    curator = PublicEditorialCuratorSerializer()
+    article_metadata = ArticleMetadataSerializer()
+    cover_url = serializers.CharField(allow_blank=True)
+    published_at = serializers.DateTimeField(allow_null=True)
+    display_from = serializers.DateTimeField(allow_null=True)
+    reading_minutes = serializers.IntegerField(allow_null=True)
+    reading_time_notice = serializers.CharField(allow_blank=True)
+    href = serializers.CharField()
+
+
+class EditorialDirectoryFiltersSerializer(serializers.Serializer):
+    topic = serializers.CharField(allow_blank=True)
+    kind = serializers.CharField(allow_blank=True)
+    curator = serializers.CharField(allow_blank=True)
+    sort = serializers.ChoiceField(choices=["newest", "oldest", "title"])
+    year_from = serializers.IntegerField(allow_null=True)
+    year_to = serializers.IntegerField(allow_null=True)
+
+
+class EditorialDirectoryKindSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    label = serializers.CharField()
+
+
+class EditorialDirectoryTopicSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    slug = serializers.CharField()
+    name = serializers.CharField()
+    href = serializers.CharField()
+
+
+class EditorialDirectoryFacetsSerializer(serializers.Serializer):
+    curators = serializers.ListField(child=serializers.CharField())
+    years = serializers.ListField(child=serializers.IntegerField())
+    kinds = EditorialDirectoryKindSerializer(many=True)
+    topics = EditorialDirectoryTopicSerializer(many=True)
+
+
+class EditorialRelatedMaterialSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    authors = serializers.CharField(allow_blank=True)
+    href = serializers.CharField()
+    cover_url = serializers.CharField(allow_blank=True)
+    article_href = serializers.CharField()
+    source_status = serializers.CharField()
+
+
+class EditorialRelatedPathSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    href = serializers.CharField()
+
+
+class EditorialRelatedSerializer(serializers.Serializer):
+    scholars = serializers.SerializerMethodField()
+    materials = EditorialRelatedMaterialSerializer(many=True)
+    paths = EditorialRelatedPathSerializer(many=True)
+    notice = serializers.CharField()
+
+    @extend_schema_field(lazy_serializer("catalog.scholar_serializers.PublicScholarCardSerializer")(many=True))
+    def get_scholars(self, obj):
+        return obj["scholars"]
+
+
+class PublicEditorialDirectorySerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+    next = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results = PublicEditorialCardSerializer(many=True)
+    query = serializers.CharField(allow_blank=True)
+    filters = EditorialDirectoryFiltersSerializer()
+    facets = EditorialDirectoryFacetsSerializer()
+    related = EditorialRelatedSerializer()
+
+
 class RecommendationIssueSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     slug = serializers.CharField(required=False)
@@ -42,6 +160,11 @@ class RecommendationIssueSerializer(serializers.Serializer):
     issue_label = serializers.CharField(required=False, allow_blank=True)
     introduction = serializers.CharField(required=False, allow_blank=True)
     public_byline = serializers.CharField(required=False, allow_blank=True)
+    article_metadata = ArticleMetadataSerializer(required=False)
+    curator = PublicEditorialCuratorSerializer(read_only=True)
+    related = EditorialRelatedSerializer(read_only=True)
+    public_revision_id = serializers.UUIDField(read_only=True)
+    reading_minutes = serializers.IntegerField(read_only=True, allow_null=True)
     body_blocks = IssueBodyBlockSerializer(many=True, required=False)
     cover_url = serializers.CharField(required=False, allow_blank=True)
     cover_rendition_id = serializers.UUIDField(required=False, allow_null=True)
@@ -51,6 +174,7 @@ class RecommendationIssueSerializer(serializers.Serializer):
     edit_version = serializers.CharField(required=False)
     draft_revision_id = serializers.UUIDField(read_only=True, allow_null=True)
     has_unpublished_changes = serializers.BooleanField(read_only=True)
+    body_source_problems = serializers.ListField(child=serializers.DictField(), read_only=True)
 
 
 class RecommendationIssueCollectionSerializer(serializers.Serializer):
@@ -91,7 +215,15 @@ class SiteContentSerializer(serializers.Serializer):
 
 
 class SavedIssueListSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
+    owner_id = serializers.CharField()
+    id = serializers.UUIDField(allow_null=True)
     title = serializers.CharField()
     item_count = serializers.IntegerField()
-    planned_count = serializers.IntegerField()
+    saved = serializers.BooleanField()
+    receipt = serializers.DictField(allow_null=True)
+    notice = serializers.CharField()
+
+
+class SaveIssueListCommandSerializer(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    public_revision_id = serializers.UUIDField()

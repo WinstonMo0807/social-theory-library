@@ -1,5 +1,6 @@
 """Critical isolation and command boundaries for fixed 3.0.7 editors."""
 from datetime import timedelta
+from uuid import uuid4
 from unittest.mock import patch
 
 import pytest
@@ -154,12 +155,14 @@ def test_save_issue_list_is_private_and_retry_safe(api_client, admin_user):
     first = User.objects.create_user(username="v307-reader-one", email="v307-one@example.org", role="reader")
     second = User.objects.create_user(username="v307-reader-two", email="v307-two@example.org", role="reader")
     api_client.force_authenticate(first)
-    result = api_client.post(url, {}, format="json")
-    retry = api_client.post(url, {}, format="json")
+    issue.refresh_from_db()
+    data = {"request_id": str(uuid4()), "public_revision_id": str(issue.active_revision_id)}
+    result = api_client.post(url, data, format="json", HTTP_X_READER_OWNER=str(first.pk))
+    retry = api_client.post(url, data, format="json", HTTP_X_READER_OWNER=str(first.pk))
     assert result.status_code == retry.status_code == 200
     assert result.data["id"] == retry.data["id"] and result.data["item_count"] == 1
     api_client.force_authenticate(second)
-    other = api_client.post(url, {}, format="json")
+    other = api_client.post(url, {**data, "request_id": str(uuid4())}, format="json", HTTP_X_READER_OWNER=str(second.pk))
     assert other.data["id"] != result.data["id"]
     assert ReadingList.objects.filter(user=first).count() == 1
 

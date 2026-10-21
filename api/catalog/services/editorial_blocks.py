@@ -50,8 +50,19 @@ def resolve_target(raw, *, public=False):
     name = row.preferred_name if kind == "person" else row.title
     target = {"type": kind, "id": str(key)}
     source = {**target, "title": name}
+    if public and kind == "person":
+        from catalog.services.public_scholars import _base, _formal_profile
+        profile = get_object_or_404(_base(), person_id=key)
+        profile = _formal_profile(profile, profile.public_snapshot or {})
+        source.update(title=profile.person.preferred_name, summary=profile.short_description, href=f"/scholars/{profile.slug}")
+    if kind == "reading_path" and public:
+        from catalog.models import EditorialRevision
+        revision = EditorialRevision.objects.filter(target_type="reading_path", target_id=key, status="published",
+            materialized_preview__status="published").order_by("-revision").first()
+        raw = revision.materialized_preview if revision else {}
+        source.update(title=raw.get("title", row.title), href=f"/theories/reading-paths/{raw.get('slug', row.slug)}")
     if kind == "timeline":
-        source.update(start_year=row.start_year, end_year=row.end_year, event_type=row.event_type)
+        source.update(start_year=row.start_year, end_year=row.end_year, event_type=row.event_type, summary=row.description, href=f"/theories/timeline?focus={row.pk}")
     return target, source
 
 
@@ -123,6 +134,15 @@ def block_references(block):
 def body_payload(blocks, *, public=False, require_public=False):
     output, problems = [], []
     for position, block in enumerate(blocks):
+        if block.get("type") == "image":
+            from catalog.models import MediaRendition
+            key = block.get("image_rendition_id")
+            rendition = MediaRendition.objects.filter(pk=key).first() if key else None
+            raw = {**deepcopy(block), "image_url": "", "source_status": "unavailable"}
+            if rendition:
+                raw.update(image_url=f"/api/catalog/editorial-media/{key}/" if public or require_public else f"/api/catalog/admin/media/renditions/{key}/file/", source_status="available")
+            output.append(raw)
+            continue
         refs = block_references(block)
         if not refs:
             output.append(deepcopy(block))
@@ -138,7 +158,8 @@ def body_payload(blocks, *, public=False, require_public=False):
             problem = {"block_id": block.get("id"), "position": position, "code": "source_unavailable",
                        "detail": "文章区块的来源尚未公开、已经失效或修订不一致。"}
             problems.append(problem)
-            output.append({"id": block.get("id"), "type": block["type"], "text": "", "source_status": "unavailable"}
+            output.append({"id": block.get("id"), "type": block["type"], "text": "", "source_status": "unavailable",
+                           **({"style": block.get("style", "paragraph")} if block["type"] == "analysis" else {})}
                           if public else {**deepcopy(block), "source_status": "unavailable", "resolved_sources": []})
         else:
             output.append({**deepcopy(block), "source_status": "available", "resolved_sources": sources})

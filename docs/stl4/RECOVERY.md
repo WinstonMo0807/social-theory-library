@@ -1,5 +1,17 @@
 # 中断恢复最短路径
 
+## 2026-10-21 专题文章/微展览源码收口
+
+前置9bb2bb4。先读EDITORIAL_20261021及CURRENT_PROGRESS最新项；tmp/stl4-editorial-checkpoint.json为本单元精确路径，不整批暂存其他脏文件。恢复public_editorial、typed正文/分组、公开目录/文章/嵌入Reader、阅读设置、私人书单及评论0021、隐私组、后台编辑/审核、218路径契约与生成类型。其余继承成果保留。
+
+96/10/103是源码统计，不是验收通过。0021及此前迁移均未应用，正式测试/浏览器/构建/质量测评/生产操作未执行。静态检查过程详见VALIDATION；comments只读当前文章公开修订，旧评论留在本人资料与审核队列，不能自动转绑新版。任何未知提交先查原回执，删除后旧请求不得重建。
+
+下一项PDF80/81今日工作和馆藏总览，需实际读图；backoffice/processing_center/admin相关文件已有继承未提交改动，先核对diff和调用链。其余公共/首页/读者缺口及B01–B06不能遗漏。
+
+## 当前接续点9bb2bb4 · 专题文章73–78实施中
+
+主题74路径已保存。当前未提交新增public_editorial.py、editorial-directory.tsx/editorial.module.css、article-metadata-fields.tsx及其前后端接线；editorial_issues/issue_views/serializers、RecommendationIssueView及后台编辑已有继承修改，须保留并按具体差异接续。实际图像位于tmp/pdfs/stl4-curation-20261021。目录关联、正文目录/原文侧栏、微型展览与私人保存继续实施；尚未静态收口、未计入视图。正式测试/浏览器/构建/迁移/检索测评/生产操作均未运行。禁止整批暂存其他脏文件。
+
 ## 2026-10-21 主题源码收口
 
 前置ba56939；恢复先读CURRENT_PROGRESS最上方与TOPICS_20261021，核对最新Git提交。tmp/stl4-topics-checkpoint.json为74路径精确白名单；不要纳入其他继承脏改。公开主题/层级/0074、后台新编排与POST预览、媒体、SourceFollow topic/0020、SavedTopic命令及隐私、契约/生成类型一并保存。原代理已不在活动列表，后续由主线继续。

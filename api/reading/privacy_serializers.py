@@ -7,7 +7,7 @@ class PrivacyPreferencesInput(serializers.Serializer):
 
 
 class PrivacyTargetInput(serializers.Serializer):
-    category = serializers.ChoiceField(choices=["reading_history", "search_history", "annotations", "memories", "parallel_alignments", "plans", "followed_topics", "source_follows", "saved_knowledge", "graph_views"])
+    category = serializers.ChoiceField(choices=["article_comments", "reading_history", "search_history", "annotations", "memories", "parallel_alignments", "plans", "followed_topics", "source_follows", "saved_knowledge", "graph_views", "reading_lists"])
     id = serializers.UUIDField()
     revision = serializers.CharField(max_length=80)
 
@@ -15,7 +15,7 @@ class PrivacyTargetInput(serializers.Serializer):
 class PrivacyOperationInput(serializers.Serializer):
     request_id = serializers.UUIDField()
     kind = serializers.ChoiceField(choices=["export", "erase"])
-    categories = serializers.ListField(child=serializers.ChoiceField(choices=["research", "notes", "plans", "audits", "source_follows", "saved_knowledge"]), max_length=6, required=False)
+    categories = serializers.ListField(child=serializers.ChoiceField(choices=["article_comments", "research", "notes", "plans", "audits", "source_follows", "saved_knowledge"]), max_length=7, required=False)
     targets = PrivacyTargetInput(many=True, required=False)
 
     def validate(self, attrs):

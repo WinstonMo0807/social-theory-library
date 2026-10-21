@@ -75,8 +75,9 @@ def _save_revision(kind, identifier, payload, actor):
         changed_fields=list(payload), created_by=actor, idempotency_key=f"v307:{kind}:{uuid4()}",
     )
     EditorialRevision.objects.filter(target_type=kind, target_id=identifier, status="draft").exclude(pk=draft.pk).update(status="superseded")
-    rendition_ids = [payload.get("cover_rendition_id"), payload.get("config", {}).get("home_hero_rendition_id"),
-                     *[row.get("cover_rendition_id") for row in payload.get("items", [])]]
+    rendition_ids = [payload.get("cover_rendition_id"), payload.get("article_metadata", {}).get("curator_portrait_id"), payload.get("config", {}).get("home_hero_rendition_id"),
+                     *[row.get("cover_rendition_id") for row in payload.get("items", [])],
+                     *[row.get("image_rendition_id") for row in payload.get("body_blocks", []) if row.get("type") == "image"]]
     for identifier in filter(None, rendition_ids):
         rendition = _rendition(identifier)
         EditorialRevisionMedia.objects.get_or_create(editorial_revision=draft, rendition=rendition)
@@ -101,13 +102,34 @@ def _text(value, maximum=30000):
 
 
 def _body(value):
+    from catalog.services.editorial_blocks import REFERENCE_TYPES, block_references, normalize_typed_block
     if not isinstance(value, list) or len(value) > 150:
         raise ValidationError({"body_blocks": "正文最多150个固定段落。"})
-    blocks = []
+    blocks, block_ids, reference_count = [], set(), 0
     for row in value:
-        if not isinstance(row, dict) or row.get("type") not in {"paragraph", "heading", "quote", "link"}:
+        if not isinstance(row, dict) or not isinstance(row.get("type"), str):
+            raise ValidationError({"body_blocks": "文章区块类型无效。"})
+        if isinstance(row, dict) and row.get("type") in {*REFERENCE_TYPES, "comparison", "analysis"}:
+            block = normalize_typed_block(row)
+            reference_count += len(block_references(block))
+            if block["id"] in block_ids or reference_count > 400:
+                raise ValidationError({"body_blocks": "区块身份不能重复，引用总数不能超过400项。"})
+            block_ids.add(block["id"])
+            blocks.append(block)
+            continue
+        if not isinstance(row, dict) or row.get("type") not in {"paragraph", "heading", "quote", "link", "image"}:
             raise ValidationError({"body_blocks": "仅支持段落、小标题、带出处引文及链接。"})
-        block = {"type": row["type"], "text": _text(row.get("text", ""))}
+        from catalog.services.shared_curation import identifier
+        block = {"id": str(identifier(row["id"])) if row.get("id") else str(uuid4()), "type": row["type"], "text": _text(row.get("text", ""))}
+        if block["id"] in block_ids:
+            raise ValidationError({"body_blocks": "区块身份不能重复。"})
+        block_ids.add(block["id"])
+        if row["type"] == "image":
+            rendition = _rendition(row.get("image_rendition_id"))
+            block.update(image_rendition_id=str(rendition.pk) if rendition else None,
+                alt_text=_text(row.get("alt_text", ""), 1000), source=_text(row.get("source", ""), 1000))
+            if not block["alt_text"] or not block["source"]:
+                raise ValidationError({"body_blocks": "图像展项须填写文字说明和来源；缺图可以保留资料。"})
         if row["type"] == "quote":
             block["source"] = _text(row.get("source", ""), 1000)
             if not block["source"]:
@@ -153,6 +175,8 @@ def save_issue(identifier, data, actor):
         raise ValidationError({"title": "请填写本期标题。"})
     # Once a URL exists its identity remains stable across corrections.
     payload["slug"] = issue.slug
+    from catalog.services.public_editorial import metadata_input
+    payload["article_metadata"] = metadata_input(values.get("article_metadata", {}))
     payload["body_blocks"] = _body(values.get("body_blocks", []))
     rendition = _rendition(values.get("cover_rendition_id"))
     payload["cover_rendition_id"] = str(rendition.pk) if rendition else None
@@ -189,17 +213,22 @@ def save_issue(identifier, data, actor):
         row = {name: _text(item.get(name) or "", limit) for name, limit in (
             ("title", 600), ("authors", 1000), ("version_note", 1500), ("isbn", 40), ("doi", 255), ("note", 6000))}
         row.update(id=item_id, kind=item.get("kind", "catalog"), position=position)
+        section_id = str(item.get("section_id") or "")
+        headings = {block["id"] for block in payload["body_blocks"] if block["type"] == "heading" or (block["type"] == "analysis" and block.get("style") == "heading")}
+        if section_id and section_id not in headings:
+            raise ValidationError({"items": "展项分组已不存在，请重新选择正文小标题。"})
+        row["section_id"] = section_id
         work_id, edition_id = item.get("work_id"), item.get("edition_id")
         if row["kind"] == "catalog":
             editions = public_editions().filter(work_id=work_id)
-            edition = editions.filter(pk=edition_id).first() if edition_id else editions.order_by("-is_primary", "id").first()
+            edition = editions.filter(pk=edition_id).first() if edition_id else None
             if not edition:
                 raise ValidationError({"items": "已有馆藏推荐须选择准确的已公开作品与版本。"})
             snapshot = edition.active_catalog_revision.snapshot or {}
             work_snapshot = snapshot.get("work", {})
             row["title"] = str(work_snapshot.get("title") or snapshot.get("title") or row["title"])
-            row["authors"] = "、".join(str(person.get("name") or person.get("person", {}).get("preferred_name") or "")
-                                      for person in snapshot.get("contributions", []) if person.get("role") == "author")
+            from catalog.services.contribution_projection import edition_author_projection
+            row["authors"] = "、".join(edition_author_projection(snapshot)["authors"])
             row["cover_rendition_id"] = (work_snapshot.get("cover_media") or {}).get("primary_rendition_id")
             row["cover_path"] = work_snapshot.get("cover", "")
             row["version_note"] = row["version_note"] or str(snapshot.get("edition", {}).get("version_label") or "")
@@ -258,8 +287,10 @@ def publish_issue(identifier, expected, actor):
     if not revision or revision.status != "draft":
         raise ValidationError("没有待发布草稿。")
     payload = revision.materialized_preview
-    if not payload.get("items"):
-        raise ValidationError("本期至少需要一项阅读推荐。")
+    from catalog.services.editorial_blocks import body_payload
+    body_payload(payload.get("body_blocks", []), require_public=True)
+    if not payload.get("items") and not any(row.get("text", "").strip() or row.get("type") == "image" for row in payload.get("body_blocks", [])):
+        raise ValidationError("至少需要一段正式文章内容或一项阅读推荐。")
     for item in payload["items"]:
         if item["kind"] == "catalog" and not public_editions().filter(pk=item["edition_id"], work_id=item["work_id"]).exists():
             raise ValidationError("推荐馆藏已撤回或尚未公开，请重新核对。")
@@ -295,11 +326,18 @@ def public_issue_revision(issue):
     return issue.active_revision
 
 
-def issue_payload(issue, *, public=False, include_cover_storage=False, revision=None):
+def issue_payload(issue, *, public=False, include_cover_storage=False, revision=None, include_body=True):
     revision = public_issue_revision(issue) if public else revision
     payload = deepcopy(revision.materialized_preview) if revision else issue_draft_payload(issue)
+    from catalog.services.editorial_blocks import body_payload
+    payload["body_blocks"], body_problems = body_payload(payload.get("body_blocks", []) if include_body else [], public=public)
+    if not public and include_body:
+        _public_blocks, public_problems = body_payload(payload["body_blocks"], public=True)
+        payload["body_source_problems"] = public_problems or body_problems
     published_at = revision.published_at if revision else issue.published_at
     payload.update(id=str(issue.pk), slug=issue.slug, published_at=published_at.isoformat() if published_at else None)
+    from catalog.services.public_editorial import public_metadata
+    payload["article_metadata"], payload["curator"] = public_metadata(payload, public=public)
     if payload.get("cover_rendition_id"):
         rid = payload["cover_rendition_id"]
         payload["cover_url"] = f"/api/catalog/editorial-media/{rid}/" if public else f"/api/catalog/admin/media/renditions/{rid}/file/"
@@ -314,6 +352,9 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     edition_ids = {row.get("edition_id") for row in payload.get("items", []) if row.get("edition_id")}
     edition_ids.update(str(row.linked_edition_id) for row in records.values() if row.linked_edition_id)
     editions = {str(row.pk): row for row in public_editions().filter(pk__in=edition_ids)}
+    from catalog.services.publication_eligibility import current_retrieval_source_q
+    readable_ids = set(map(str, public_editions().filter(pk__in=edition_ids).filter(
+        current_retrieval_source_q(asset_prefix="active_catalog_revision__reader_asset", access_statuses=("public", "inherit"))).values_list("pk", flat=True)))
     for row in payload.get("items", []):
         record = records.get(row["id"])
         edition_id = row.get("edition_id")
@@ -321,14 +362,11 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
             edition_id = str(record.linked_edition_id)
         edition = editions.get(str(edition_id)) if edition_id else None
         reader = edition.active_catalog_revision.reader_asset if edition else None
-        from catalog.services.semantic_search import viewer_access_statuses
-        readable = bool(reader and reader.edition_id == edition.pk and reader.kind == "normalized"
-            and reader.status == "ready" and reader.validation_status == "valid"
-            and reader.access_status in viewer_access_statuses())
+        readable = bool(edition and str(edition.pk) in readable_ids)
         row["status"] = "available" if readable else "bibliographic" if edition else "planned" if row["kind"] == "planned" else "unavailable"
         row["file_status"] = reader.access_status if reader else "no_file"
         row["work_url"] = f"/works/{edition.public_slug}" if edition and edition.public_slug else ""
-        row["reader_url"] = f"/reader/{reader.pk}" if readable else ""
+        row["reader_url"] = f"/reader/{reader.pk}?revision={edition.active_catalog_revision.document_revision_id}" if readable else ""
         if edition:
             row["available_work_id"] = str(edition.work_id)
             row["available_edition_id"] = str(edition.pk)

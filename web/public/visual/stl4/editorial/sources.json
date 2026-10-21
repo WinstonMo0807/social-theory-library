@@ -1,0 +1,20 @@
+{
+  "reference_pdf": "output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf",
+  "images": [
+    {
+      "file": "directory-hero.webp",
+      "pdf_page": 74,
+      "source_image_size": [
+        1536,
+        1024
+      ],
+      "crop": [
+        548,
+        86,
+        833,
+        359
+      ],
+      "note": "Only photograph area; excludes source text, page frame and sample records."
+    }
+  ]
+}

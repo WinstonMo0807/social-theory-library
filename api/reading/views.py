@@ -287,6 +287,12 @@ class ReadingListViewSet(OwnedModelViewSet):
     serializer_class = ReadingListSerializer
 
     @transaction.atomic
+    def perform_create(self, serializer):
+        from .privacy import require_retention
+        require_retention(self.request.user, "saved_knowledge")
+        super().perform_create(serializer)
+
+    @transaction.atomic
     @action(detail=True, methods=["post"])
     def add_item(self, request, pk=None):
         from .privacy import lock_owner
@@ -347,7 +353,8 @@ class ReaderDataExportView(APIView):
     def get(self, request):
         context = {"request": request}
         from .research import research_export, serialize_record
-        from .privacy import annotation_export, operation_output, profile_data
+        from .privacy import annotation_export, operation_output, profile_data, export_item
+        from .editorial_comment_models import EditorialComment
         from .models import ReaderDataOperation, ReaderSearchRecord
         conversations = request.user.library_conversations.prefetch_related(
             "messages__sources__asset",
@@ -356,6 +363,7 @@ class ReaderDataExportView(APIView):
         return Response(
             {
                 "research_data": research_export(request.user),
+                "article_comments": [export_item(request.user, "article_comments", row) for row in EditorialComment.objects.filter(user=request.user)],
                 "search_history": [serialize_record(row, request.user) for row in ReaderSearchRecord.objects.filter(user=request.user)],
                 "data_operations": [operation_output(row) for row in ReaderDataOperation.objects.filter(user=request.user)],
                 "profile": {

@@ -16,10 +16,11 @@ export function readerThumbnailPages(page: number, totalPages: number) {
 }
 
 /** Owns PDF page/zoom position and the existing URL page parameter. */
-export function useReaderNavigation({ initialPage, initialPageCount, accessPageCount = 0 }: {
+export function useReaderNavigation({ initialPage, initialPageCount, accessPageCount = 0, reducedMotion = false }: {
   initialPage: number;
   initialPageCount: number;
   accessPageCount?: number;
+  reducedMotion?: boolean;
 }) {
   const [page, setPage] = useState(Math.min(Math.max(initialPage, 1), Math.max(initialPageCount, 1)));
   const [zoom, setZoom] = useState(100);
@@ -36,10 +37,10 @@ export function useReaderNavigation({ initialPage, initialPageCount, accessPageC
     setScrollRequest((current) => ({
       page: nextPage,
       sequence: current.sequence + 1,
-      behavior,
+      behavior: reducedMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : behavior,
       position,
     }));
-  }, [totalPages]);
+  }, [totalPages, reducedMotion]);
   const changeZoom = useCallback((delta: number) => {
     setZoom((value) => Math.min(180, Math.max(60, value + delta)));
     setScrollRequest((current) => ({

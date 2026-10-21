@@ -119,14 +119,15 @@ def _source(target, *, public=False):
         title = snapshot.get("work", {}).get("title", "") if public else edition.work.title
         label = snapshot.get("edition", {}).get("version_label", "") if public else edition.version_label
         reader = edition.active_catalog_revision.reader_asset if eligible else None
-        readable = bool(reader and reader.edition_id == edition.pk and reader.kind == "normalized"
-                        and reader.status == "ready" and reader.validation_status == "valid"
-                        and reader.access_status in viewer_access_statuses()
-                        and public_editions(require_fulltext=True).filter(pk=edition.pk).exists())
+        from catalog.services.publication_eligibility import current_retrieval_source_q
+        readable = bool(reader and public_editions().filter(pk=edition.pk).filter(current_retrieval_source_q(
+            asset_prefix="active_catalog_revision__reader_asset", access_statuses=("public", "inherit") if public else viewer_access_statuses())).exists())
+        document_id = str(edition.active_catalog_revision.document_revision_id) if readable else ""
         source = {"type": kind, "id": str(key), "work_id": str(edition.work_id),
                   "edition_id": str(edition.pk), "title": title, "edition_label": label,
                   "public_eligible": eligible,
-                  "reader_url": f"/reader/{reader.pk}" if readable else "",
+                  "reader_url": f"/reader/{reader.pk}?revision={document_id}" if readable else "",
+                  "asset_id": str(reader.pk) if readable else "", "document_revision_id": document_id,
                   "work_url": f"/works/{edition.public_slug}" if eligible and edition.public_slug else "",
                   "edit_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}"}
         return {"type": kind, "id": str(key), "edition_id": str(edition.pk)}, source
@@ -135,6 +136,7 @@ def _source(target, *, public=False):
         row = get_object_or_404(rows, pk=key)
         return {"type": kind, "id": str(key)}, {
             "type": kind, "id": str(key), "title": row.canonical_name_zh,
+            "href": f"/theories/nodes/{row.slug}", "summary": row.definition or row.summary,
             "public_eligible": row.status == "published", "edit_url": f"/admin/theories/{key}"}
     if kind == "span":
         row = get_object_or_404(shared_curation.sources("span", public=public), pk=key)

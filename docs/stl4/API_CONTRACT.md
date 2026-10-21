@@ -1,5 +1,15 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-21 专题文章、私人书单与评论
+
+GET catalog/recommendation-issues/?view=directory接q/topic(UUID或slug)/kind/curator/year_from/year_to/sort/page/page_size，标量条件保留逗号。PublicEditorialDirectory返回公开有效修订卡片、完整分页、类型/主题/策划者/年份选项和有界明确关联。旧无view模式保留。article_metadata包含kind、keywords、topic_ids、scholar_ids、reading_path_ids和公开策划资料；item.section_id只能指本篇稳定标题；image区块须说明/来源，可无图片。文章详情增加public_revision_id、curator、reading_minutes、related。预计时间明确估算；公开媒体按实际生效修订授权。
+
+save-list GET/POST均要求X-Reader-Owner及request_id/public_revision_id，POST只复制公开Work清单，GET按原请求查回。响应owner_id、nullable id、title、item_count、saved、receipt、notice；删除后旧请求返回未保存，不复活。隐私saved_knowledge组增加reading_lists叶对象。
+
+reading/article-comments/public/{issue_id}/ GET公开当前版本已审核评论，支持page/page_size和可选public_revision_id核对，不输出owner/审核人。article-comments/{issue_id}/ GET本人全版本列表，POST要求固定request_id、public_revision_id、byline≤80、body≤3000、confirm_public=true；均要求X-Reader-Owner。requests/{request_id}/ GET原提交回执，{comment_id}/ DELETE要求expected_revision。admin/{issue_id}/ GET审核分页、POST id/expected_revision/status(published或rejected)/reason，权限CanPublishAuthority。评论绑定准确公开修订，旧版不迁移；回执最少保留防重，私人接口no-store。隐私独立article_comments导出/删除组。0021未应用。
+
+218路径完整保留原213。契约生成与静态类型通过不代表真实API行为已经验收。
+
 ## 2026-10-21 主题与独立私人动作
 
 catalog/topics与slug详情保留原URL，响应改为明确PublicTopicDirectory/PublicTopicDetail。目录q/search、parent重复值最多20（分支并集）、discipline/subdiscipline/theory、sort、page/page_size；详情section、question_type、availability、reading、sort与分页。规范理论与旧流派分别按准确ID/slug匹配；错误分支不放宽查询。八栏目、准确版/原文、真实counts、无全文/明确待购/不可用及旧资料均有结构化字段。

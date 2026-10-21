@@ -1500,7 +1500,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["catalog_recommendation_issues_save_list_retrieve"];
         put?: never;
         post: operations["catalog_recommendation_issues_save_list_create"];
         delete?: never;
@@ -1997,6 +1997,86 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["reading_annotations_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/article-comments/{issue_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_article_comments_retrieve"];
+        put?: never;
+        post: operations["reading_article_comments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/article-comments/{issue_id}/{comment_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["reading_article_comments_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/article-comments/{issue_id}/requests/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_article_comments_requests_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/article-comments/admin/{issue_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_article_comments_admin_retrieve"];
+        put?: never;
+        post: operations["reading_article_comments_admin_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/article-comments/public/{issue_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_article_comments_public_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/reading/bookmarks/": {
@@ -3850,6 +3930,35 @@ export interface components {
             severity: components["schemas"]["SeverityEnum"];
             details: unknown;
         };
+        ArticleMetadata: {
+            kind?: components["schemas"]["ArticleMetadataKindEnum"];
+            keywords?: string[];
+            topic_ids?: string[];
+            scholar_ids?: string[];
+            reading_path_ids?: string[];
+            curator_role?: string;
+            curator_affiliation?: string;
+            /** Format: uuid */
+            curator_portrait_id?: string | null;
+        };
+        /**
+         * @description * `article` - article
+         *     * `research` - research
+         *     * `exhibition` - exhibition
+         * @enum {string}
+         */
+        ArticleMetadataKindEnum: "article" | "research" | "exhibition";
+        ArticleMetadataRequest: {
+            kind?: components["schemas"]["ArticleMetadataKindEnum"];
+            keywords?: string[];
+            topic_ids?: string[];
+            scholar_ids?: string[];
+            reading_path_ids?: string[];
+            curator_role?: string;
+            curator_affiliation?: string;
+            /** Format: uuid */
+            curator_portrait_id?: string | null;
+        };
         AssetCompact: {
             /** Format: uuid */
             readonly id: string;
@@ -4294,7 +4403,8 @@ export interface components {
          */
         CatalogingSourceTypeEnum: "upload" | "manual" | "import" | "existing";
         /**
-         * @description * `research` - research
+         * @description * `article_comments` - article_comments
+         *     * `research` - research
          *     * `notes` - notes
          *     * `plans` - plans
          *     * `audits` - audits
@@ -4302,7 +4412,7 @@ export interface components {
          *     * `saved_knowledge` - saved_knowledge
          * @enum {string}
          */
-        CategoriesEnum: "research" | "notes" | "plans" | "audits" | "source_follows" | "saved_knowledge";
+        CategoriesEnum: "article_comments" | "research" | "notes" | "plans" | "audits" | "source_follows" | "saved_knowledge";
         /**
          * @description * `unchanged` - unchanged
          *     * `added` - added
@@ -4361,6 +4471,65 @@ export interface components {
             readonly next_page: number | null;
             readonly units: unknown;
             readonly notice: string;
+        };
+        CommentCommandRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            public_revision_id: string;
+            byline: string;
+            body: string;
+            confirm_public: boolean;
+        };
+        CommentModerateRequest: {
+            expected_revision: number;
+            /** Format: uuid */
+            id: string;
+            status: components["schemas"]["CommentModerateStatusEnum"];
+            reason?: string;
+        };
+        /**
+         * @description * `published` - published
+         *     * `rejected` - rejected
+         * @enum {string}
+         */
+        CommentModerateStatusEnum: "published" | "rejected";
+        CommentOutput: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            public_revision_id: string;
+            byline: string;
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+            revision?: number;
+            status?: components["schemas"]["CommentOutputStatusEnum"];
+            moderation_reason?: string;
+        };
+        /**
+         * @description * `pending` - pending
+         *     * `published` - published
+         *     * `rejected` - rejected
+         * @enum {string}
+         */
+        CommentOutputStatusEnum: "pending" | "published" | "rejected";
+        CommentPage: {
+            owner_id?: string;
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["CommentOutput"][];
+        };
+        CommentReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            comment: components["schemas"]["CommentOutput"] | null;
+            notice: string;
         };
         CompactTheoryWork: {
             /** Format: uuid */
@@ -5036,25 +5205,83 @@ export interface components {
             total_pages: number;
             results: components["schemas"]["EditorialAssistance"][];
         };
+        EditorialDirectoryFacets: {
+            curators: string[];
+            years: number[];
+            kinds: components["schemas"]["EditorialDirectoryKind"][];
+            topics: components["schemas"]["EditorialDirectoryTopic"][];
+        };
+        EditorialDirectoryFilters: {
+            topic: string;
+            kind: string;
+            curator: string;
+            sort: components["schemas"]["EditorialDirectoryFiltersSortEnum"];
+            year_from: number | null;
+            year_to: number | null;
+        };
         /**
-         * @description * `paragraph` - paragraph
-         *     * `heading` - heading
-         *     * `quote` - quote
-         *     * `link` - link
-         *     * `evidence` - evidence
-         *     * `work` - work
-         *     * `person` - person
-         *     * `concept` - concept
-         *     * `node` - node
-         *     * `timeline` - timeline
-         *     * `reading_path` - reading_path
-         *     * `comparison` - comparison
-         *     * `analysis` - analysis
+         * @description * `newest` - newest
+         *     * `oldest` - oldest
+         *     * `title` - title
          * @enum {string}
          */
-        EditorialBlockTypeEnum: "paragraph" | "heading" | "quote" | "link" | "evidence" | "work" | "person" | "concept" | "node" | "timeline" | "reading_path" | "comparison" | "analysis";
+        EditorialDirectoryFiltersSortEnum: "newest" | "oldest" | "title";
+        EditorialDirectoryKind: {
+            id: string;
+            label: string;
+        };
+        EditorialDirectoryTopic: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            href: string;
+        };
         EditorialPublishRequest: {
             edit_version: string;
+        };
+        EditorialRelated: {
+            readonly scholars: components["schemas"]["PublicScholarCard"][];
+            materials: components["schemas"]["EditorialRelatedMaterial"][];
+            paths: components["schemas"]["EditorialRelatedPath"][];
+            notice: string;
+        };
+        EditorialRelatedMaterial: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            authors: string;
+            href: string;
+            cover_url: string;
+            article_href: string;
+            source_status: string;
+        };
+        EditorialRelatedMaterialRequest: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            authors: string;
+            href: string;
+            cover_url: string;
+            article_href: string;
+            source_status: string;
+        };
+        EditorialRelatedPath: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            href: string;
+        };
+        EditorialRelatedPathRequest: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            href: string;
+        };
+        EditorialRelatedRequest: {
+            materials: components["schemas"]["EditorialRelatedMaterialRequest"][];
+            paths: components["schemas"]["EditorialRelatedPathRequest"][];
+            notice: string;
         };
         /**
          * @description * `catalog` - catalog
@@ -5692,10 +5919,14 @@ export interface components {
         IssueBodyBlock: {
             /** Format: uuid */
             id?: string;
-            type: components["schemas"]["EditorialBlockTypeEnum"];
+            type: components["schemas"]["IssueBodyBlockTypeEnum"];
             text: string;
             source?: string;
             url?: string;
+            /** Format: uuid */
+            image_rendition_id?: string | null;
+            readonly image_url: string;
+            alt_text?: string;
             target?: {
                 [key: string]: unknown;
             };
@@ -5715,10 +5946,13 @@ export interface components {
         IssueBodyBlockRequest: {
             /** Format: uuid */
             id?: string;
-            type: components["schemas"]["EditorialBlockTypeEnum"];
+            type: components["schemas"]["IssueBodyBlockTypeEnum"];
             text: string;
             source?: string;
             url?: string;
+            /** Format: uuid */
+            image_rendition_id?: string | null;
+            alt_text?: string;
             target?: {
                 [key: string]: unknown;
             };
@@ -5731,6 +5965,24 @@ export interface components {
             }[];
             style?: components["schemas"]["EditorialTextKindEnum"];
         };
+        /**
+         * @description * `paragraph` - paragraph
+         *     * `heading` - heading
+         *     * `quote` - quote
+         *     * `link` - link
+         *     * `image` - image
+         *     * `evidence` - evidence
+         *     * `work` - work
+         *     * `person` - person
+         *     * `concept` - concept
+         *     * `node` - node
+         *     * `timeline` - timeline
+         *     * `reading_path` - reading_path
+         *     * `comparison` - comparison
+         *     * `analysis` - analysis
+         * @enum {string}
+         */
+        IssueBodyBlockTypeEnum: "paragraph" | "heading" | "quote" | "link" | "image" | "evidence" | "work" | "person" | "concept" | "node" | "timeline" | "reading_path" | "comparison" | "analysis";
         IssueItem: {
             /** Format: uuid */
             id?: string;
@@ -5746,6 +5998,7 @@ export interface components {
             doi?: string;
             note?: string;
             position?: number;
+            section_id?: string;
             document_type?: string;
             readonly status: string;
             readonly work_url: string;
@@ -5778,6 +6031,7 @@ export interface components {
             doi?: string;
             note?: string;
             position?: number;
+            section_id?: string;
             document_type?: string;
         };
         ItemEstimateInputRequest: {
@@ -8777,7 +9031,8 @@ export interface components {
             notice: string;
         };
         /**
-         * @description * `reading_history` - reading_history
+         * @description * `article_comments` - article_comments
+         *     * `reading_history` - reading_history
          *     * `search_history` - search_history
          *     * `annotations` - annotations
          *     * `memories` - memories
@@ -8787,9 +9042,10 @@ export interface components {
          *     * `source_follows` - source_follows
          *     * `saved_knowledge` - saved_knowledge
          *     * `graph_views` - graph_views
+         *     * `reading_lists` - reading_lists
          * @enum {string}
          */
-        PrivacyTargetInputCategoryEnum: "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views";
+        PrivacyTargetInputCategoryEnum: "article_comments" | "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists";
         PrivacyTargetInputRequest: {
             category: components["schemas"]["PrivacyTargetInputCategoryEnum"];
             /** Format: uuid */
@@ -8993,6 +9249,50 @@ export interface components {
             license: string;
             credit: string;
             renditions: components["schemas"]["PublicMediaRendition"][];
+        };
+        PublicEditorialCard: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            issue_label: string;
+            introduction: string;
+            public_byline: string;
+            curator: components["schemas"]["PublicEditorialCurator"];
+            article_metadata: components["schemas"]["ArticleMetadata"];
+            cover_url: string;
+            /** Format: date-time */
+            published_at: string | null;
+            /** Format: date-time */
+            display_from: string | null;
+            reading_minutes: number | null;
+            reading_time_notice: string;
+            href: string;
+        };
+        PublicEditorialCurator: {
+            name: string;
+            role: string;
+            affiliation: string;
+            portrait_url: string;
+        };
+        PublicEditorialCuratorRequest: {
+            name: string;
+            role: string;
+            affiliation: string;
+            portrait_url: string;
+        };
+        PublicEditorialDirectory: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["PublicEditorialCard"][];
+            query: string;
+            filters: components["schemas"]["EditorialDirectoryFilters"];
+            facets: components["schemas"]["EditorialDirectoryFacets"];
+            related: components["schemas"]["EditorialRelated"];
         };
         PublicEntityLink: {
             /** Format: uuid */
@@ -9974,6 +10274,12 @@ export interface components {
             issue_label?: string;
             introduction?: string;
             public_byline?: string;
+            article_metadata?: components["schemas"]["ArticleMetadata"];
+            readonly curator: components["schemas"]["PublicEditorialCurator"];
+            readonly related: components["schemas"]["EditorialRelated"];
+            /** Format: uuid */
+            readonly public_revision_id: string;
+            readonly reading_minutes: number | null;
             body_blocks?: components["schemas"]["IssueBodyBlock"][];
             cover_url?: string;
             /** Format: uuid */
@@ -9998,12 +10304,14 @@ export interface components {
             current: components["schemas"]["RecommendationIssue"] | null;
             results: components["schemas"]["RecommendationIssue"][];
         };
+        RecommendationIssueListing: components["schemas"]["RecommendationIssueCollection"] | components["schemas"]["PublicEditorialDirectory"];
         RecommendationIssueRequest: {
             slug?: string;
             title: string;
             issue_label?: string;
             introduction?: string;
             public_byline?: string;
+            article_metadata?: components["schemas"]["ArticleMetadataRequest"];
             body_blocks?: components["schemas"]["IssueBodyBlockRequest"][];
             cover_url?: string;
             /** Format: uuid */
@@ -10076,12 +10384,23 @@ export interface components {
          * @enum {string}
          */
         RoleEnum: "foundational_work" | "systematic_exposition" | "theoretical_development" | "empirical_application" | "comparative_study" | "critique" | "general_mention";
-        SavedIssueList: {
+        SaveIssueListCommandRequest: {
             /** Format: uuid */
-            id: string;
+            request_id: string;
+            /** Format: uuid */
+            public_revision_id: string;
+        };
+        SavedIssueList: {
+            owner_id: string;
+            /** Format: uuid */
+            id: string | null;
             title: string;
             item_count: number;
-            planned_count: number;
+            saved: boolean;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+            notice: string;
         };
         SavedTopic: {
             /** Format: uuid */
@@ -14894,7 +15213,18 @@ export interface operations {
     };
     catalog_recommendation_issues_list: {
         parameters: {
-            query?: never;
+            query?: {
+                curator?: string;
+                kind?: string;
+                page?: string;
+                page_size?: string;
+                q?: string;
+                sort?: string;
+                topic?: string;
+                view?: string;
+                year_from?: string;
+                year_to?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -14906,7 +15236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecommendationIssueCollection"];
+                    "application/json": components["schemas"]["RecommendationIssueListing"];
                 };
             };
         };
@@ -14932,16 +15262,50 @@ export interface operations {
             };
         };
     };
-    catalog_recommendation_issues_save_list_create: {
+    catalog_recommendation_issues_save_list_retrieve: {
         parameters: {
-            query?: never;
-            header?: never;
+            query: {
+                public_revision_id: string;
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
             path: {
                 slug: string;
             };
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedIssueList"];
+                };
+            };
+        };
+    };
+    catalog_recommendation_issues_save_list_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveIssueListCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SaveIssueListCommandRequest"];
+                "multipart/form-data": components["schemas"]["SaveIssueListCommandRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -16034,6 +16398,184 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Annotation"];
+                };
+            };
+        };
+    };
+    reading_article_comments_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentPage"];
+                };
+            };
+        };
+    };
+    reading_article_comments_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CommentCommandRequest"];
+                "multipart/form-data": components["schemas"]["CommentCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentReceipt"];
+                };
+            };
+        };
+    };
+    reading_article_comments_destroy: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                comment_id: string;
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_article_comments_requests_retrieve: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                issue_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentReceipt"];
+                };
+            };
+        };
+    };
+    reading_article_comments_admin_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentPage"];
+                };
+            };
+        };
+    };
+    reading_article_comments_admin_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentModerateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CommentModerateRequest"];
+                "multipart/form-data": components["schemas"]["CommentModerateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentOutput"];
+                };
+            };
+        };
+    };
+    reading_article_comments_public_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                public_revision_id?: string;
+            };
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentPage"];
                 };
             };
         };

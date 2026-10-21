@@ -8,14 +8,15 @@ from django.utils import timezone
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, PolymorphicProxySerializer, extend_schema
 
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import EditorialRevision, RecommendationIssue, RecommendationIssueItem, MediaRendition, SiteSetting
 from catalog.services import editorial_issues as service
 from common.permissions import CanAccessBackOffice, CanEditMetadata, CanPublishAuthority, IsLibraryAdmin
 from catalog.editorial_issue_serializers import (RecommendationIssueSerializer, RecommendationIssueCollectionSerializer,
-    AdminRecommendationIssueCollectionSerializer, EditorialPublishSerializer, PlannedItemLinkSerializer, SiteContentSerializer, SavedIssueListSerializer)
+    AdminRecommendationIssueCollectionSerializer, EditorialPublishSerializer, PlannedItemLinkSerializer, SiteContentSerializer, SavedIssueListSerializer,
+    PublicEditorialDirectorySerializer, SaveIssueListCommandSerializer)
 
 
 def collection(request, queryset, *, public=False):
@@ -43,8 +44,13 @@ def collection(request, queryset, *, public=False):
 
 class PublicIssueListView(APIView):
     permission_classes = [AllowAny]
-    @extend_schema(operation_id="catalog_recommendation_issues_list", responses=RecommendationIssueCollectionSerializer)
+    @extend_schema(operation_id="catalog_recommendation_issues_list", responses=PolymorphicProxySerializer(
+        component_name="RecommendationIssueListing", serializers=[RecommendationIssueCollectionSerializer, PublicEditorialDirectorySerializer], resource_type_field_name=None),
+        parameters=[OpenApiParameter(key, type=str) for key in ("view", "q", "topic", "kind", "curator", "year_from", "year_to", "sort", "page", "page_size")])
     def get(self, request):
+        if request.query_params.get("view") == "directory":
+            from catalog.services.public_editorial import public_directory
+            return Response(public_directory(request.query_params))
         return Response(collection(request, service.published_issues(), public=True))
 
 
@@ -52,29 +58,36 @@ class PublicIssueDetailView(APIView):
     permission_classes = [AllowAny]
     @extend_schema(responses=RecommendationIssueSerializer)
     def get(self, request, slug):
-        return Response(service.issue_payload(get_object_or_404(service.published_issues(), slug=slug), public=True))
-
-
-class SaveIssueReadingListView(APIView):
-    permission_classes = [IsAuthenticated]
-    @extend_schema(request=None, responses=SavedIssueListSerializer)
-    @transaction.atomic
-    def post(self, request, slug):
-        from django.contrib.auth import get_user_model
-        from reading.models import ReadingList, ReadingListItem
+        from catalog.services.public_editorial import article_context
         issue = get_object_or_404(service.published_issues(), slug=slug)
-        payload = service.issue_payload(issue, public=True)
-        # Serialize concurrent retries for this user; no other reader's list is read.
-        get_user_model().objects.select_for_update().get(pk=request.user.pk)
-        marker = f"书库推荐 /recommendations/{issue.slug}"
-        reading_list = ReadingList.objects.filter(user=request.user, description=marker).first()
-        if reading_list is None:
-            reading_list = ReadingList.objects.create(user=request.user, title=payload["title"][:240], description=marker)
-        for position, item in enumerate(payload["items"]):
-            if item.get("available_work_id"):
-                ReadingListItem.objects.get_or_create(reading_list=reading_list, work_id=item["available_work_id"], defaults={"order": position})
-        return Response({"id": str(reading_list.pk), "title": reading_list.title, "item_count": reading_list.items.count(),
-                         "planned_count": sum(row["status"] == "planned" for row in payload["items"])})
+        return Response(article_context(issue, service.issue_payload(issue, public=True)))
+
+
+from reading.research_views import PrivateResponses
+
+
+class SaveIssueReadingListView(PrivateResponses, APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(parameters=[OpenApiParameter("request_id", str, required=True), OpenApiParameter("public_revision_id", str, required=True),
+        OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER, required=True)], responses=SavedIssueListSerializer)
+    def get(self, request, slug):
+        from reading.source_follow_views import require_owner
+        from reading.issue_lists import state
+        require_owner(request)
+        data = SaveIssueListCommandSerializer(data=request.query_params)
+        data.is_valid(raise_exception=True)
+        return Response(state(request.user, slug, data.validated_data["public_revision_id"], data.validated_data["request_id"]))
+
+    @extend_schema(request=SaveIssueListCommandSerializer, responses=SavedIssueListSerializer,
+        parameters=[OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER, required=True)])
+    def post(self, request, slug):
+        from reading.source_follow_views import require_owner
+        from reading.issue_lists import save
+        require_owner(request)
+        data = SaveIssueListCommandSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(save(request.user, slug, data.validated_data))
 
 
 class EditorialErrorMixin:
@@ -166,8 +179,8 @@ class PublicEditorialMediaView(APIView):
     def get(self, request, rendition_id):
         from django.http import Http404
         key = str(rendition_id)
-        published = service.published_issues().filter(Q(active_revision__materialized_preview__cover_rendition_id=key) |
-            Q(scheduled_for__lte=timezone.now(), scheduled_revision__materialized_preview__cover_rendition_id=key)).exists()
+        from catalog.services.public_editorial import published_media_usage
+        published = published_media_usage(key)
         published = published or SiteSetting.objects.filter(key="site_config", public=True, value__home_hero_rendition_id=key).exists()
         if not published:
             raise Http404
