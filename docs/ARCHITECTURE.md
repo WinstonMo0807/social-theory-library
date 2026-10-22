@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 出版前检查与同版预览
+
+NEW-A16复用PublicationLedger的owner/未知命令回执/原维护服务，增加只读review呈现；后端review_details从prepare_revision、正式修订与当前资产状态生成检查信息。主校验仍为原publication_preflight，不以OCR就绪作为所有书目发布条件。iframe复用既有AdminWorkPagePreview/WorkDetailView，前后校验版本和指纹；消息确认限制同源、准确frame、Edition及两版本标识。EditionCompactSerializer仅在精确preview_edition上下文取已保存信息，公开调用保持正式快照。未新增持久化模型或发布任务。
+
 ## 2026-10-22 出版版本发布工作台
 
 publication_desk为只读投影，复用CatalogPublicationRevision/KnowledgePublicationEvent、prepare_revision及edition_file_workspace.impacts。版本标识绑定Edition状态/活动指针/更新时间、Work更新时间、最近正式修订及作品编辑修订。原维护发布/撤回和rollback命令在既有事务内核对预览版本；旧调用兼容。恢复仍创建原发布服务的新序号修订，原快照、PDF、人工草稿不覆盖。

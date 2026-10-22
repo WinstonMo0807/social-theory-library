@@ -112,6 +112,38 @@ class PublicationDeskEventSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
 
+class PublicationReviewRelationItemSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    label = serializers.CharField()
+    change = serializers.ChoiceField(choices=["unchanged", "added", "removed"])
+
+
+class PublicationReviewRelationSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    field = serializers.CharField()
+    count = serializers.IntegerField()
+    items = PublicationReviewRelationItemSerializer(many=True)
+
+
+class PublicationReviewCheckSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    title = serializers.CharField()
+    state = serializers.ChoiceField(choices=["notice", "ready", "warning"])
+    detail = serializers.CharField()
+    href = serializers.CharField()
+
+
+class PublicationReviewSerializer(serializers.Serializer):
+    current = PublicationDeskRevisionSerializer(allow_null=True)
+    saved_at = serializers.DateTimeField()
+    saved_by = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_blank=True)
+    page_count_before = serializers.IntegerField(allow_null=True)
+    page_count_after = serializers.IntegerField(allow_null=True)
+    relations = PublicationReviewRelationSerializer(many=True)
+    checks = PublicationReviewCheckSerializer(many=True)
+
+
 class PublicationDeskSerializer(serializers.Serializer):
     edition_id = serializers.UUIDField()
     work_id = serializers.UUIDField()
@@ -130,22 +162,23 @@ class PublicationDeskSerializer(serializers.Serializer):
     workbench_url = serializers.CharField()
     preview_url = serializers.CharField()
     notice = serializers.CharField()
+    review = PublicationReviewSerializer(allow_null=True)
 
 
 class PublicationHistoryView(PublicationReadView):
     permission_classes = [CanAccessBackOffice]
 
-    @extend_schema(parameters=[OpenApiParameter("view", type=str, enum=["desk"]), OpenApiParameter("page", type=int), OpenApiParameter("impact_page", type=int), OpenApiParameter("revision", type=str)], responses=PolymorphicProxySerializer(component_name="PublicationHistoryResponse", serializers=[PublicationHistoryItemSerializer(many=True), PublicationDeskSerializer], resource_type_field_name=None, many=False))
+    @extend_schema(parameters=[OpenApiParameter("view", type=str, enum=["desk", "review"]), OpenApiParameter("page", type=int), OpenApiParameter("impact_page", type=int), OpenApiParameter("revision", type=str)], responses=PolymorphicProxySerializer(component_name="PublicationHistoryResponse", serializers=[PublicationHistoryItemSerializer(many=True), PublicationDeskSerializer], resource_type_field_name=None, many=False))
     def get(self, request, edition_id):
         edition = get_object_or_404(Edition, pk=edition_id)
-        if request.query_params.get("view") != "desk":
+        if request.query_params.get("view") not in {"desk", "review"}:
             return Response(publication_history(edition))
         from catalog.services.publication_desk import desk
         try:
             page = serializers.IntegerField(min_value=1).run_validation(request.query_params.get("page", 1))
             impact_page = serializers.IntegerField(min_value=1).run_validation(request.query_params.get("impact_page", 1))
             revision = serializers.UUIDField().run_validation(request.query_params["revision"]) if request.query_params.get("revision") else None
-            return Response(desk(edition, page=page, impact_page=impact_page, selected_revision=revision))
+            return Response(desk(edition, page=page, impact_page=impact_page, selected_revision=revision, include_review=request.query_params.get("view") == "review"))
         except InvalidPage:
             raise ValidationError("历史页码不存在，请返回第一页。")
         except PublicationCommandError as error:

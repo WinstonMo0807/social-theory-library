@@ -4,7 +4,9 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { RefreshCw } from "lucide-react";
 import { ActionButton, AsyncStatus } from "@/components/action-feedback";
 import { WorkDetailView } from "@/components/work-detail-view";
-import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
+import { withPrivateOwner } from "@/lib/api/private-owner";
+import { useAdminSession } from "@/lib/admin-session";
 import type { Work } from "@/lib/data";
 import type { ApiWork } from "@/lib/api/public-catalog";
 import { useSearchParams } from "next/navigation";
@@ -69,21 +71,26 @@ export function AdminWorkPagePreview({
   footer: ReactNode;
 }) {
   const routeParams = useSearchParams();
+  const user = useAdminSession(), owner = user ? String(user.id) : "";
+  const version = routeParams.get("version") || "", fingerprint = routeParams.get("fingerprint") || "", frame = routeParams.get("frame") === "1";
   const [payload, setPayload] = useState<PreviewPayload | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const requestRevision = useRef(0);
+  const lifetime = useRef<AbortController | null>(null);
 
   const load = useCallback(async () => {
     const revision = ++requestRevision.current;
     setLoading(true);
+    setPayload(null);
     setMessage("");
     try {
-      const result = await apiRequest<PreviewPayload>(
-        `/catalog/admin/page-preview/editions/${editionId}/`,
-        {},
-        getServerSessionCredential(),
-      );
+      if (frame && (!/^[0-9a-f]{64}$/.test(version) || !/^[0-9a-f]{64}$/.test(fingerprint))) throw Error("请从发布前检查重新打开当前版本预览。");
+      const signal = AbortSignal.any([lifetime.current!.signal, AbortSignal.timeout(30000)]);
+      const query = version || fingerprint ? `?${new URLSearchParams({version, fingerprint})}` : "";
+      const result = await withPrivateOwner(owner, () => apiRequest<PreviewPayload>(
+        `/catalog/admin/page-preview/editions/${editionId}/${query}`, {signal, headers:{"X-Editor-Owner":owner}}, getServerSessionCredential()), signal);
+      if (result.work.edition?.id !== editionId) throw Error("预览与选定版本不一致，请返回检查。");
       if (requestRevision.current === revision) setPayload(result);
     } catch (reason) {
       if (requestRevision.current === revision) {
@@ -92,15 +99,23 @@ export function AdminWorkPagePreview({
     } finally {
       if (requestRevision.current === revision) setLoading(false);
     }
-  }, [editionId]);
+  }, [editionId, owner, version, fingerprint, frame]);
 
   useEffect(() => {
+    if (!owner) return;
+    const controller = new AbortController(); lifetime.current = controller;
+    const unsubscribe = subscribeToSessionChanges(() => {controller.abort();requestRevision.current += 1;setPayload(null);setMessage("账户已变化，请重新打开预览。");setLoading(false);});
     const timer = window.setTimeout(() => { void load(); }, 0);
     return () => {
+      controller.abort(); unsubscribe();
       window.clearTimeout(timer);
       requestRevision.current += 1;
     };
-  }, [load]);
+  }, [load, owner]);
+
+  useEffect(() => {
+    if (frame && !loading) window.parent.postMessage({type:"stl:publication-preview",editionId,version,fingerprint,ok:Boolean(payload)&&!message},window.location.origin);
+  }, [frame, loading, payload, message, editionId, version, fingerprint]);
 
   const work = useMemo(() => payload ? adaptPreviewWork(payload.work) : null, [payload]);
   if (!work || !payload) {

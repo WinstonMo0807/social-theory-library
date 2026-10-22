@@ -1695,7 +1695,8 @@
                         "schema": {
                             "type": "string",
                             "enum": [
-                                "desk"
+                                "desk",
+                                "review"
                             ]
                         }
                     }
@@ -20068,16 +20069,6 @@
                 ],
                 "type": "string",
                 "description": "* `article_comments` - article_comments\n* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge"
-            },
-            "ChangeEnum": {
-                "enum": [
-                    "unchanged",
-                    "added",
-                    "removed",
-                    "changed"
-                ],
-                "type": "string",
-                "description": "* `unchanged` - unchanged\n* `added` - added\n* `removed` - removed\n* `changed` - changed"
             },
             "ChecksEnum": {
                 "enum": [
@@ -38512,6 +38503,14 @@
                     },
                     "notice": {
                         "type": "string"
+                    },
+                    "review": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicationReview"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -38527,6 +38526,7 @@
                     "preparation",
                     "preview_url",
                     "publication",
+                    "review",
                     "selected",
                     "title",
                     "version",
@@ -38712,7 +38712,7 @@
                         "type": "string"
                     },
                     "change": {
-                        "$ref": "#/components/schemas/ChangeEnum"
+                        "$ref": "#/components/schemas/PublicationFieldDiffChangeEnum"
                     },
                     "before": {
                         "nullable": true
@@ -38736,6 +38736,16 @@
                     "field",
                     "label"
                 ]
+            },
+            "PublicationFieldDiffChangeEnum": {
+                "enum": [
+                    "unchanged",
+                    "added",
+                    "removed",
+                    "changed"
+                ],
+                "type": "string",
+                "description": "* `unchanged` - unchanged\n* `added` - added\n* `removed` - removed\n* `changed` - changed"
             },
             "PublicationHistoryItem": {
                 "type": "object",
@@ -38841,6 +38851,150 @@
                     "fingerprint",
                     "warnings"
                 ]
+            },
+            "PublicationReview": {
+                "type": "object",
+                "properties": {
+                    "current": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicationDeskRevision"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "saved_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "saved_by": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "page_count_before": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "page_count_after": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "relations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationReviewRelation"
+                        }
+                    },
+                    "checks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationReviewCheck"
+                        }
+                    }
+                },
+                "required": [
+                    "checks",
+                    "current",
+                    "note",
+                    "page_count_after",
+                    "page_count_before",
+                    "relations",
+                    "saved_at",
+                    "saved_by"
+                ]
+            },
+            "PublicationReviewCheck": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/PublicationReviewCheckStateEnum"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "href",
+                    "key",
+                    "state",
+                    "title"
+                ]
+            },
+            "PublicationReviewCheckStateEnum": {
+                "enum": [
+                    "notice",
+                    "ready",
+                    "warning"
+                ],
+                "type": "string",
+                "description": "* `notice` - notice\n* `ready` - ready\n* `warning` - warning"
+            },
+            "PublicationReviewRelation": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "field": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationReviewRelationItem"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "field",
+                    "items",
+                    "title"
+                ]
+            },
+            "PublicationReviewRelationItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "change": {
+                        "$ref": "#/components/schemas/PublicationReviewRelationItemChangeEnum"
+                    }
+                },
+                "required": [
+                    "change",
+                    "id",
+                    "label"
+                ]
+            },
+            "PublicationReviewRelationItemChangeEnum": {
+                "enum": [
+                    "unchanged",
+                    "added",
+                    "removed"
+                ],
+                "type": "string",
+                "description": "* `unchanged` - unchanged\n* `added` - added\n* `removed` - removed"
             },
             "PublicationRollbackRequest": {
                 "type": "object",

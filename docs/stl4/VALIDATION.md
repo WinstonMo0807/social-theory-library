@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-23 NEW-A16静态检查
+
+- `.venv/Scripts/python.exe tmp/stl4-review-static-20261023.py`，最终dc9f18退出0：5文件AST、14次SQLite/PostgreSQL SQL编译；ensure_connection禁止连接，0数据库连接，无测试运行。
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web），最终56958/afdcc2退出0，前次46223/f8f47d亦退出0。前序74571/af934d因旧验收fixture缺review字段失败；已补review:null，再完整检查通过，不隐瞒前序失败。
+- 10目标ESLint（review、entry、ledger、work-page-preview、workflow-editor、admin-shell、两路由页、两个publication验收定义），b04132退出0；1项既有img及2项既有window.location.assign建议，无错误。末次预览视口高度修正后两目标a0dd16退出0。
+- `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-publication-review-schema-20261023.json --validate`（DATABASE_URL=sqlite:///:memory:，PUBLIC_DEPLOYMENT_MODE=false，DJANGO_DEBUG=true），dc9f18退出0；0错误/10既有警告，不是fail-on-warn通过。`node tmp/stl4-review-contracts-20261023.mjs`最终b50ecb退出0，保留226路径、生成双方类型、CSS84顶层节点可解析。一次重复生成曾遇Windows UNKNOWN写文件错误；随后重新执行成功，未删除或替换原件绕过。
+- 7后端函数和4浏览器场景只定义。覆盖草稿/公开出版信息分离、纯书目、历史跨页、关联增删、owner/权限、预览版本冲突、旧收件ID解析、真实命令参数、预览失败门槛。浏览器用例中的iframe只模拟消息确认，不能证明真实WorkDetailView视觉；真实iframe呈现、版式与全部状态待统一验收。无测试/E2E/浏览器/构建/迁移/模型/检索测评/生产操作。
+
 ## 2026-10-22 M18出版历史工作台静态检查
 
 - `.venv/Scripts/python.exe tmp/stl4-publication-desk-static.py`（PYTHONIOENCODING=utf-8），c90621退出0：6文件AST、SQLite/PostgreSQL共10次SQL编译，ensure_connection阻断，0连接。

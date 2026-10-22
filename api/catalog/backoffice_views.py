@@ -31,6 +31,7 @@ from catalog.services.backoffice import (
 )
 from catalog.services.admin_workspace import build_admin_workspace
 from catalog.serializers import AdminWorkPagePreviewSerializer
+from catalog.publication_command_views import PublicationReadView
 from catalog.services.query_lexicon.operations import (
     enqueue_query_lexicon_reconciliation,
     reconcile_preview,
@@ -367,7 +368,7 @@ class AdminIntakeWorkspaceView(AdminPrivateResponseMixin, APIView):
         )
 
 
-class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
+class AdminWorkPagePreviewView(PublicationReadView):
     permission_classes = [CanViewEvidence]
 
     def get(self, request, edition_id):
@@ -389,11 +390,33 @@ class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
             ),
             pk=edition_id,
         )
+        from catalog.services.publication_desk import check_version
+        from catalog.services.publication_commands import PublicationCommandError, prepare_revision
+
+        def check_saved_version():
+            expected = request.query_params.get("version")
+            fingerprint = request.query_params.get("fingerprint")
+            if expected is None and fingerprint is None:
+                return
+            fresh = Edition.objects.select_related("work").get(pk=edition.pk)
+            check_version(fresh, expected)
+            if fingerprint != prepare_revision(fresh)["fingerprint"]:
+                raise PublicationCommandError("保存内容已变化，请返回发布前检查重新读取。")
+
+        try:
+            check_saved_version()
+        except PublicationCommandError as error:
+            return Response({"detail": str(error), "code": "publication.changed"}, status=409)
+        from catalog.services.field_decisions import formal_field_values
+        publication_values, _ = formal_field_values(edition)
         normalized = edition.assets.filter(
+            pk=publication_values.get("reader_asset"),
             kind="normalized",
             is_current=True,
             status="ready",
         ).order_by("-version").first()
+        if publication_values.get("publication_mode") == Edition.PublicationMode.BIBLIOGRAPHIC:
+            normalized = None
         draft_revision = EditorialRevision.objects.filter(
             target_type=EditorialRevision.TargetType.WORK,
             target_id=edition.work_id,
@@ -406,6 +429,7 @@ class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
             context={
                 "request": request,
                 "preview_edition": edition,
+                "publication_values": publication_values,
                 "editorial_preview": (
                     draft_revision.materialized_preview if draft_revision else None
                 ),
@@ -422,6 +446,10 @@ class AdminWorkPagePreviewView(AdminPrivateResponseMixin, APIView):
             else f"/admin/library/works/{edition.work_id}?edition={edition.id}"
         )
         publication = catalog_publication_state(edition)
+        try:
+            check_saved_version()
+        except PublicationCommandError as error:
+            return Response({"detail": str(error), "code": "publication.changed"}, status=409)
         return Response({
             "preview_mode": True,
             "publication_state": publication["public_state"],

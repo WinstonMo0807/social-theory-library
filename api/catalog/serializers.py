@@ -493,6 +493,10 @@ class EditionCompactSerializer(serializers.ModelSerializer):
     publisher_verbatim = serializers.CharField(source="publisher", read_only=True)
     publication_place_verbatim = serializers.CharField(source="publication_place", read_only=True)
 
+    def _previewing(self, obj):
+        edition = self.context.get("preview_edition")
+        return edition is not None and edition.pk == obj.pk
+
     class Meta:
         model = Edition
         fields = (
@@ -541,7 +545,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
     @extend_schema_field(PublicContributionSnapshotSerializer(many=True))
     def get_contributors(self, obj):
         from catalog.services.contribution_scope import public_contribution_scope
-        snapshot = active_catalog_snapshot(obj)
+        snapshot = {} if self._previewing(obj) else active_catalog_snapshot(obj)
         if snapshot:
             return [
                 {
@@ -567,6 +571,15 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             status=Asset.Status.READY,
             access_status__in=_viewer_asset_statuses(self.context),
         )
+        if self._previewing(obj):
+            from catalog.services.field_decisions import formal_field_values
+            values = self.context.get("publication_values")
+            if values is None:
+                values, _ = formal_field_values(obj)
+            if values.get("publication_mode") == Edition.PublicationMode.BIBLIOGRAPHIC:
+                return None
+            asset = queryset.filter(pk=values.get("reader_asset")).first()
+            return AssetCompactSerializer(asset).data if asset else None
         snapshot = active_catalog_snapshot(obj)
         if snapshot:
             asset_id = (snapshot.get("document") or {}).get("asset_id")
@@ -578,7 +591,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        snapshot = active_catalog_snapshot(instance)
+        snapshot = {} if self._previewing(instance) else active_catalog_snapshot(instance)
         values = snapshot.get("edition") if snapshot else None
         if not isinstance(values, dict):
             return data
@@ -1013,7 +1026,14 @@ class AdminWorkPagePreviewSerializer(WorkDetailSerializer):
 
     def get_outline(self, obj):
         edition = self._preview_edition()
+        from catalog.services.field_decisions import formal_field_values
+        values = self.context.get("publication_values")
+        if values is None:
+            values, _ = formal_field_values(edition)
+        if values.get("publication_mode") == Edition.PublicationMode.BIBLIOGRAPHIC:
+            return []
         asset = edition.assets.filter(
+            pk=values.get("reader_asset"),
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
             is_current=True,

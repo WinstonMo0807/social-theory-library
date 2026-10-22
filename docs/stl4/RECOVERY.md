@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 NEW-A16恢复
+
+前置791bd9b，本批白名单tmp/stl4-publication-review-checkpoint-20261023.json；核对git log确定检查点。读PUBLICATION_CHECK_20261023，统计96/26/87，正式验收未运行。/admin/publication/[itemId]默认为旧收件ID；object=edition为明确Edition；view=history为独立原发布账本。history?view=review复用desk投影，page-preview接受version/fingerprint与owner校验。不要重跑tmp/stl4-review-wire/adjust/record脚本，不暂存继承修改。下一步继续M17/M18知识对象及固定页面的发布/历史能力，必须先读取唯一PDF相应图。
+
 ## 2026-10-22 M18出版版本工作台恢复
 
 M17检查点0e11275；M18本批白名单tmp/stl4-publication-ledger-checkpoint.json，核对git log确认提交。当前源码见PUBLICATION_LEDGER_20261022，统计96/25/88。唯一PDF134–137已读，图136 NEW-A16独立页面仍待实现；继续现有preview/prepare/维护命令，不能把旧itemId默认为editionId。后台GET history?view=desk保留旧数组；无迁移/正式验收/生产。不要重跑tmp编辑或记录脚本，不暂存继承脏改。

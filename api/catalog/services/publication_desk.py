@@ -46,7 +46,50 @@ def snapshot_fields(snapshot):
         "document": ("阅读文件", "已保存阅读文件关联" if snapshot.get("document", {}).get("asset_id") else "仅书目")}
 
 
-def desk(edition, *, page=1, selected_revision=None, impact_page=1):
+def review_details(edition, preparation):
+    """PDF 136 read model. Gate decisions remain in the original preflight."""
+    from catalog.models import Asset, KnowledgeNode, Person, TheorySchool, Topic
+    from catalog.services.publication_commands import editorial_draft_applies_to_edition
+
+    changes = {row["field"]: row for row in preparation["changes"]}
+    public = catalog_publication_state(edition)
+    current = edition.active_catalog_revision if public["catalog_revision_active"] else None
+    draft = EditorialRevision.objects.filter(target_type="work", target_id=edition.work_id, status="draft").select_related("created_by").order_by("-revision").first()
+    if not editorial_draft_applies_to_edition(draft, edition):
+        draft = None
+    asset_id = changes.get("reader_asset", {}).get("after")
+    asset = edition.assets.filter(pk=asset_id).first() if asset_id else None
+    previous_asset = edition.assets.filter(pk=current.reader_asset_id).first() if current and current.reader_asset_id else None
+    groups = []
+    for field, title, model, label in (("theories", "关联理论", KnowledgeNode, "canonical_name_zh"), ("authors", "关联责任者", Person, "preferred_name"), ("topics", "关联主题", Topic, "name")):
+        row = changes.get(field, {})
+        before, after = [str(value) for value in row.get("before") or []], [str(value) for value in row.get("after") or []]
+        names = {str(obj.pk): str(getattr(obj, label) or getattr(obj, "canonical_name_en", "") or "名称待确认") for obj in model.objects.filter(pk__in=set(before + after))}
+        if field == "theories":
+            names.update({str(obj.pk): obj.name for obj in TheorySchool.objects.filter(pk__in=set(before + after))})
+        groups.append({"title": title, "field": field, "count": len(after), "items": [
+            {"id": identifier, "label": names.get(identifier, "原关联对象已不可用"), "change": "removed" if identifier not in after else "added" if identifier not in before else "unchanged"}
+            for identifier in dict.fromkeys(after + before)]})
+    mode = changes.get("publication_mode", {}).get("after") or edition.publication_mode
+    bibliography = mode == Edition.PublicationMode.BIBLIOGRAPHIC
+    if bibliography:
+        asset = None
+    file_href = f"/admin/library/works/{edition.work_id}/files?edition={edition.pk}&tab=files"
+    work_href = f"/admin/library/works/{edition.work_id}?edition={edition.pk}"
+    checks = [
+        {"key": "file", "title": "PDF 文件", "state": "notice" if bibliography else "ready" if asset and asset.validation_status == Asset.ValidationStatus.VALID else "warning", "detail": "仅公开书目，无阅读或下载文件" if bibliography else f"已关联阅读文件，共 {asset.page_count} 页" if asset else "阅读文件尚未就绪", "href": file_href},
+        {"key": "ocr", "title": "OCR 识别", "state": "notice" if bibliography else "ready" if edition.ocr_status in {"not_required", "succeeded"} else "warning", "detail": "书目发布不依赖 OCR" if bibliography else edition.get_ocr_status_display(), "href": file_href},
+        {"key": "pages", "title": "页面定位", "state": "notice" if bibliography else "ready" if edition.page_label_status == "ready" else "warning", "detail": "仅书目，无原文页定位" if bibliography else edition.get_page_label_status_display(), "href": work_href + "#reader"},
+        {"key": "index", "title": "关联与索引", "state": "notice", "detail": "发布后按正式修订异步更新；当前全文" + ("已就绪" if public["fulltext_ready"] else "未就绪") + "，智能检索" + edition.get_semantic_index_status_display(), "href": work_href + "#publication"},
+        {"key": "rights", "title": "权限与公开范围", "state": "notice", "detail": ("仅公开书目信息" if bibliography else f"阅读文件：{asset.get_access_status_display()}" if asset else "阅读文件尚未关联") + "；发布者须确认本次公开授权", "href": file_href.replace("tab=files", "tab=rights")},
+    ]
+    return {"current": revision_row(current, edition) if current else None, "saved_at": draft.updated_at if draft else max(edition.updated_at, edition.work.updated_at),
+            "saved_by": (draft.created_by.display_name or draft.created_by.get_username()) if draft and draft.created_by else "", "note": draft.change_note if draft else "",
+            "page_count_before": previous_asset.page_count if previous_asset else None, "page_count_after": asset.page_count if asset else None,
+            "relations": groups, "checks": checks}
+
+
+def desk(edition, *, page=1, selected_revision=None, impact_page=1, include_review=False):
     from catalog.services.edition_file_workspace import impacts
     edition = Edition.objects.select_related("work", "active_catalog_revision").get(pk=edition.pk)
     current_version = version(edition)
@@ -83,11 +126,12 @@ def desk(edition, *, page=1, selected_revision=None, impact_page=1):
                "detail": "需要检查原发布任务，已保存内容保留。" if row.status in {"failed", "dead_letter"} else "以当前公开修订与各处理结果为准。"}
               for row in KnowledgePublicationEvent.objects.filter(catalog_revision__edition=edition).select_related("catalog_revision", "actor").order_by("-created_at")[:20]]
     dependencies = impacts(edition, page=impact_page)
+    review = review_details(edition, preparation) if include_review else None
     fresh = Edition.objects.select_related("work").get(pk=edition.pk)
     check_version(fresh, current_version)
     return {"edition_id": str(edition.pk), "work_id": str(edition.work_id), "version": current_version, "checked_at": timezone.now(),
             "title": title, "authors": changes.get("authors", {}).get("after_display", ""), "publication": public,
-            "preparation": preparation, "history": history, "selected": detail, "impacts": scope, "dependencies": dependencies,
+            "preparation": preparation, "history": history, "selected": detail, "impacts": scope, "dependencies": dependencies, "review": review,
             "events": events, "events_limited": len(events) == 20, "workbench_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication",
             "preview_url": f"/admin/preview/works/{edition.pk}",
             "notice": "影响范围按已有书目关联与馆藏证据列出，不推算访问量或未建立的引用关系。恢复单一版本不会自动恢复其他已撤回对象。"}

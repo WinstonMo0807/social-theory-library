@@ -4549,14 +4549,6 @@ export interface components {
          */
         CategoriesEnum: "article_comments" | "research" | "notes" | "plans" | "audits" | "source_follows" | "saved_knowledge";
         /**
-         * @description * `unchanged` - unchanged
-         *     * `added` - added
-         *     * `removed` - removed
-         *     * `changed` - changed
-         * @enum {string}
-         */
-        ChangeEnum: "unchanged" | "added" | "removed" | "changed";
-        /**
          * @description * `citation_identification` - citation_identification
          *     * `bibliography_identity` - bibliography_identity
          *     * `version_page` - version_page
@@ -10110,6 +10102,7 @@ export interface components {
             workbench_url: string;
             preview_url: string;
             notice: string;
+            review: components["schemas"]["PublicationReview"] | null;
         };
         PublicationDeskEvent: {
             /** Format: uuid */
@@ -10159,12 +10152,20 @@ export interface components {
         PublicationFieldDiff: {
             field: string;
             label: string;
-            change: components["schemas"]["ChangeEnum"];
+            change: components["schemas"]["PublicationFieldDiffChangeEnum"];
             before: unknown;
             after: unknown;
             before_display: string;
             after_display: string;
         };
+        /**
+         * @description * `unchanged` - unchanged
+         *     * `added` - added
+         *     * `removed` - removed
+         *     * `changed` - changed
+         * @enum {string}
+         */
+        PublicationFieldDiffChangeEnum: "unchanged" | "added" | "removed" | "changed";
         PublicationHistoryItem: {
             /** Format: uuid */
             id: string;
@@ -10189,6 +10190,50 @@ export interface components {
             background_processing: string[];
             can_publish: boolean;
         };
+        PublicationReview: {
+            current: components["schemas"]["PublicationDeskRevision"] | null;
+            /** Format: date-time */
+            saved_at: string;
+            saved_by: string;
+            note: string;
+            page_count_before: number | null;
+            page_count_after: number | null;
+            relations: components["schemas"]["PublicationReviewRelation"][];
+            checks: components["schemas"]["PublicationReviewCheck"][];
+        };
+        PublicationReviewCheck: {
+            key: string;
+            title: string;
+            state: components["schemas"]["PublicationReviewCheckStateEnum"];
+            detail: string;
+            href: string;
+        };
+        /**
+         * @description * `notice` - notice
+         *     * `ready` - ready
+         *     * `warning` - warning
+         * @enum {string}
+         */
+        PublicationReviewCheckStateEnum: "notice" | "ready" | "warning";
+        PublicationReviewRelation: {
+            title: string;
+            field: string;
+            count: number;
+            items: components["schemas"]["PublicationReviewRelationItem"][];
+        };
+        PublicationReviewRelationItem: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            change: components["schemas"]["PublicationReviewRelationItemChangeEnum"];
+        };
+        /**
+         * @description * `unchanged` - unchanged
+         *     * `added` - added
+         *     * `removed` - removed
+         * @enum {string}
+         */
+        PublicationReviewRelationItemChangeEnum: "unchanged" | "added" | "removed";
         PublicationRollbackRequest: {
             /** Format: uuid */
             revision_id: string;
@@ -13343,7 +13388,7 @@ export interface operations {
                 impact_page?: number;
                 page?: number;
                 revision?: string;
-                view?: "desk";
+                view?: "desk" | "review";
             };
             header?: never;
             path: {

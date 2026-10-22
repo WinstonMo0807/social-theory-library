@@ -8,7 +8,7 @@ async function setup(page:Page,options:{withdraw?:boolean;unknownRestore?:boolea
   const value:components["schemas"]["PublicationDesk"]={edition_id:edition,work_id:work,title:"隔离发布台验收馆藏",authors:"验收作者",version:"a".repeat(64),checked_at:"2026-10-22T03:00:00Z",
     publication:{public_state:"published",catalog_revision_active:true,publicly_visible:true,listed_publicly:true,public_url:"/works/fixture",detail:"当前正式版本仍公开。"},
     preparation:{edition_id:edition,active_revision_id:current,fingerprint:"b".repeat(64),can_publish:true,blocking:[],warnings:[],background_processing:[],changes:[{field:"title",label:"标题",before:"旧题名",after:"新题名",before_display:"旧题名",after_display:"新题名",change:"changed"}]},
-    history:{count:2,page:1,pages:1,results:[{id:current,revision:2,title:"当前正式版",status:"active",created_at:"2026-10-22T02:00:00Z",activated_at:"2026-10-22T02:01:00Z",is_current:true,can_rollback:false,created_by:"验收编辑",note:"当前公开内容",changed_fields:["标题"]},{id:old,revision:1,title:"旧正式版",status:"superseded",created_at:"2026-10-21T02:00:00Z",activated_at:"2026-10-21T02:01:00Z",is_current:false,can_rollback:true,created_by:"验收编辑",note:"原公开内容保留",changed_fields:["首次发布"]}]},selected:null,
+    history:{count:2,page:1,pages:1,results:[{id:current,revision:2,title:"当前正式版",status:"active",created_at:"2026-10-22T02:00:00Z",activated_at:"2026-10-22T02:01:00Z",is_current:true,can_rollback:false,created_by:"验收编辑",note:"当前公开内容",changed_fields:["标题"]},{id:old,revision:1,title:"旧正式版",status:"superseded",created_at:"2026-10-21T02:00:00Z",activated_at:"2026-10-21T02:01:00Z",is_current:false,can_rollback:true,created_by:"验收编辑",note:"原公开内容保留",changed_fields:["首次发布"]}]},selected:null,review:null,
     impacts:[{title:"在线阅读与引用",detail:"保留原始定位",href:`/admin/library/works/${work}/files?edition=${edition}`}],
     dependencies:{count:0,page:1,page_size:20,results:[],summary:{catalog_evidence:0,reader_annotations:0,reader_bookmarks:0,reader_progress:0},notice:"私人记录只显示数量。",export_url:""},events:[],events_limited:false,workbench_url:`/admin/library/works/${work}?edition=${edition}#publication`,preview_url:`/admin/preview/works/${edition}`,notice:"仅已有依赖，不推算访问量。"};
   await page.context().addCookies([{name:"stl_access",value:"opaque-publication-fixture",domain:"127.0.0.1",path:"/",httpOnly:true,sameSite:"Lax"}]);
@@ -23,7 +23,7 @@ async function setup(page:Page,options:{withdraw?:boolean;unknownRestore?:boolea
   });
   await page.goto(`/admin/publication?selection=${edition}`);
   await expect(page.getByRole("heading",{name:"发布台、历史与撤回",exact:true})).toBeVisible();
-  await expect(page.getByRole("button",{name:"按授权发布",exact:true})).toBeEnabled();
+  await expect(page.getByRole("link",{name:"进入发布前检查 →",exact:true})).toBeVisible();
   return commands;
 }
 

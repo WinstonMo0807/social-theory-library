@@ -1,5 +1,12 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 NEW-A16出版版本检查
+
+- 既有GET /api/catalog/admin/editions/{edition_id}/publication/history/支持view=review；旧默认数组及view=desk保留。PublicationDesk.review新增nullable强类型PublicationReview（current、保存人/时间/说明、前后文件页数、关联对象增删、五项实际状态与修正入口）。desk默认review=null，review模式不写数据。
+- 原GET /api/catalog/admin/page-preview/editions/{edition_id}/可携version与fingerprint；任一存在即要求两个都匹配，返回前后分别核对，不匹配409 publication.changed。X-Editor-Owner不符403；保持CanViewEvidence及private/no-store。此既有端点未新增到226路径契约覆盖，参数与返回沿原手写PreviewPayload同步，本节记录覆盖边界。
+- 发布仍POST原WorkMaintenance publication，携edition_id/action/prepared_fingerprint/expected_version/confirm_warnings，未知结果保留原JSON与目标后显式重试。没有新业务路由、数据库表或迁移。
+- 前端旧path itemId默认为UploadItem，经原intake上下文解析Edition；?object=edition显式指定Edition，?view=history读取该对象原历史，无列表分页依赖。不能根据UUID长相猜实体类型。
+
 ## 2026-10-22 出版版本发布台
 
 原GET editions/{edition_id}/publication/history/增加view=desk、page、revision、impact_page。无view沿原最近50条数组；desk为PublicationDesk，20条历史分页、选定历史摘要差异、现有prepare/publication状态、影响与FileImpactOutput、最近20任务。revision严格属于选定Edition，非法页码400、错误对象404、读取过程中版本变化409。API路径226保持。
