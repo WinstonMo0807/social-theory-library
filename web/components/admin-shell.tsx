@@ -1,28 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Bell,
-  BookOpen,
-  Boxes,
-  CalendarDays,
-  ChartNoAxesCombined,
-  Cloud,
-  CircleDot,
-  ChevronDown,
-  LayoutDashboard,
-  ListTodo,
-  Menu,
-  RefreshCw,
-  Search,
-  Sparkles,
-  Tags,
-  Upload,
-  Trash2,
-  UserRound,
-  Users,
-  X,
-} from "lucide-react";
+import { Bell, BookOpen, Boxes, ChartNoAxesCombined, CircleDot, ChevronDown, LayoutDashboard, ListTodo, Menu, RefreshCw, Search, Sparkles, Upload, Users, X, LockKeyhole, CircleHelp, MoreHorizontal } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
@@ -31,40 +10,31 @@ import { AdminSessionContext } from "@/lib/admin-session";
 import { adminLoginHref, adminTaskScope, safeAdminHref } from "@/lib/admin-route-context";
 import { Wordmark } from "./site-header";
 
-const navigation = [
-    ["/admin", LayoutDashboard, "今日工作"],
-    ["/admin/uploads", Upload, "上传"],
-    ["/admin/review", Boxes, "待办与复核"],
-    ["/admin/recycle", Trash2, "回收站"],
-    ["/admin/theories", CircleDot, "理论流派"],
-    ["/admin/scholars", UserRound, "学者"],
-    ["/admin/topics", Tags, "主题"],
-    ["/admin/recommendations", Sparkles, "推荐与随机"],
-    ["/admin/about", BookOpen, "网站与关于书库"],
-    ["/admin/processing", ChartNoAxesCombined, "Processing Center"],
-    ["/admin/storage", Cloud, "文件存储"],
-    ["/admin/backups", Boxes, "备份"],
-    ["/admin/analytics", ChartNoAxesCombined, "审计与统计"],
-    ["/admin/users", Users, "用户与权限"],
-] as const;
-
-// The legacy route list remains the compatibility map for existing tests and
-// deep links. The visible shell groups those same routes into the nine task
-// areas shown in the v2 reference set; children are contextual links only.
-const designNavigation = [
-  { key: "work", primary: "/admin", label: "工作台", Icon: LayoutDashboard, match: ["/admin"], children: [["/admin", "今日工作"], ["/admin/review", "待完成"], ["/admin/uploads", "最近上传"]] },
-  { key: "library", primary: "/admin/uploads", label: "馆藏", Icon: BookOpen, match: ["/admin/library", "/admin/uploads", "/admin/review", "/admin/intake", "/admin/cataloging", "/admin/" + "media", "/admin/publication"], children: [["/admin/library", "馆藏列表"], ["/admin/uploads", "上传 PDF"], ["/admin/review", "待完成"], ["/admin/" + "media", "图片库"]] },
-  { key: "theory", primary: "/admin/theories", label: "理论流派", Icon: CircleDot, match: ["/admin/theories", "/admin/disciplines", "/admin/subdisciplines", "/admin/reading-paths"], children: [["/admin/theories", "理论流派"], ["/admin/theories/disciplines", "学科"], ["/admin/theories/subdisciplines", "子学科"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/reading-paths", "阅读路径"]] },
-  { key: "scholars", primary: "/admin/scholars", label: "学者", Icon: UserRound, match: ["/admin/scholars", "/admin/" + "people"], children: [["/admin/scholars", "学者列表"], ["/admin/scholars?create=1", "新建学者"], ["/admin/scholars/people", "人物查重"]] },
-  { key: "topics", primary: "/admin/topics", label: "主题", Icon: Tags, match: ["/admin/topics"], children: [["/admin/topics", "主题列表"]] },
-  { key: "recommendations", primary: "/admin/recommendations", label: "每日荐读", Icon: CalendarDays, match: ["/admin/recommendations"], children: [["/admin/recommendations", "文章列表"], ["/admin/recommendations?view=calendar", "编辑日历"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
-  { key: "site", primary: "/admin/about", label: "网站内容", Icon: Boxes, match: ["/admin/about", "/admin/support/feedback", "/admin/support/parallel-calibrations"], children: [["/admin/about", "首页与关于书库"], ["/admin/about?section=brand", "品牌与页脚"], ["/admin/support/feedback", "反馈处理"], ["/admin/support/parallel-calibrations", "公共校准"]] },
-  { key: "processing", primary: "/admin/processing", label: "处理中心", Icon: ListTodo, match: ["/admin/processing", "/admin/status", "/admin/system-health", "/admin/query-lexicon", "/admin/semantic-index"], children: [["/admin/processing", "待处理任务"], ["/admin/processing?tab=ocr", "文字识别"], ["/admin/processing?tab=sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"], ["/admin/processing/status", "运行检查"]] },
-  { key: "system", primary: "/admin/storage", label: "系统管理", Icon: ChartNoAxesCombined, match: ["/admin/storage", "/admin/backups", "/admin/analytics", "/admin/users", "/admin/recycle", "/admin/" + "settings", "/admin/distribution"], children: [["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "使用统计"], ["/admin/users", "用户权限"], ["/admin/recycle", "回收站"]] },
+const navigationGroups = [
+  { label: "工作", entries: [
+    { href: "/admin", title: "今日工作", Icon: LayoutDashboard, paths: ["/admin"], children: [] },
+    { href: "/admin/uploads", title: "收件与编目", Icon: Upload, paths: ["/admin/uploads", "/admin/intake", "/admin/cataloging", "/admin/review"], children: [["/admin/uploads", "上传与收件"], ["/admin/review", "待办与复核"], ["/admin/cataloging/new", "手工编目"]] },
+    { href: "/admin/library", title: "馆藏目录", Icon: BookOpen, paths: ["/admin/library"], children: [] },
+    { href: "/admin/processing", title: "文件与处理", Icon: ListTodo, paths: ["/admin/processing"], children: [["/admin/processing?surface=documents", "OCR 与文档"], ["/admin/processing?surface=workers", "后台任务"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"]] },
+  ] },
+  { label: "内容", entries: [
+    { href: "/admin/recommendations", title: "特别策划", Icon: Sparkles, paths: ["/admin/recommendations"], children: [["/admin/recommendations", "策划文章"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
+    { href: "/admin/about", title: "页面编排", Icon: Boxes, paths: ["/admin/about", "/admin/media"], children: [["/admin/about", "网站与关于书库"], ["/admin/media", "图片库"]] },
+    { href: "/admin/theories", title: "学者与知识", Icon: CircleDot, paths: ["/admin/theories", "/admin/scholars", "/admin/topics", "/admin/people", "/admin/reading-paths", "/admin/disciplines", "/admin/subdisciplines"], children: [["/admin/scholars", "学者"], ["/admin/theories", "理论流派"], ["/admin/topics", "主题"], ["/admin/theories/disciplines", "学科"], ["/admin/theories/subdisciplines", "子学科"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/reading-paths", "阅读路径"], ["/admin/scholars/people", "人物查重"]] },
+    { href: "/admin/publication", title: "发布台", Icon: BookOpen, paths: ["/admin/publication"], children: [] },
+  ] },
+  { label: "系统", entries: [
+    { href: "/admin/users", title: "账户与权限", Icon: Users, paths: ["/admin/users"], children: [] },
+    { href: "/admin/processing/status", title: "运行维护", Icon: ChartNoAxesCombined, paths: ["/admin/status", "/admin/system-health", "/admin/storage", "/admin/backups", "/admin/analytics", "/admin/recycle", "/admin/settings", "/admin/distribution", "/admin/query-lexicon", "/admin/semantic-index", "/admin/support"], children: [["/admin/processing/status", "运行检查"], ["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "审计与统计"], ["/admin/settings", "运行设置"], ["/admin/distribution", "分发设置"], ["/admin/recycle", "回收站"], ["/admin/support/feedback", "反馈处理"], ["/admin/support/parallel-calibrations", "公共校准"]] },
+  ] },
 ] as const;
 
 const routeCapabilities: Record<string, string[]> = {
   "/admin/processing": ["can_view_system_status"],
+  "/admin/publication": ["can_publish_work"],
+  "/admin/uploads": ["can_upload"],
+  "/admin/cataloging": ["can_edit_metadata"],
+  "/admin/recycle": ["can_edit_metadata"],
   "/admin/status": ["can_view_system_status"],
   "/admin/system-health": ["can_view_system_status"],
   "/admin/query-lexicon": ["can_view_query_lexicon"],
@@ -108,6 +78,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const returnHref = safeAdminHref(searchParams.get("return_to"), "");
   const curationReturn = returnHref && new URL(returnHref, "https://admin.invalid");
   const returnToCuration = curationReturn && curationReturn.pathname === "/admin/review" && curationReturn.searchParams.get("workspace") === "curation";
+  const returnToToday = curationReturn && curationReturn.pathname === "/admin";
   const focusMode = false;
   const [open, setOpen] = useState(false);
   const [compactNavigation, setCompactNavigation] = useState(false);
@@ -204,7 +175,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
       if (href === "/admin/backups") return user.is_library_owner === true;
       return user.role === "admin" || !administratorOnlyRoutes.has(href.split(/[?#]/)[0]);
     }
-    const required = routeCapabilities[href] ?? routeCapabilities[href.split(/[?#]/)[0]];
+    const path = href.split(/[?#]/)[0];
+    const key = Object.keys(routeCapabilities).sort((a, b) => b.length - a.length).find(route => path === route || path.startsWith(`${route}/`));
+    const required = routeCapabilities[href] ?? (key ? routeCapabilities[key] : undefined);
     if (!required) return true;
     return required.some((capability) => capabilities.has(capability));
   }
@@ -224,30 +197,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
       >
         <Link className="admin-logo" href="/" prefetch={false}><Wordmark /></Link>
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
-        <nav>
-          {navigation.filter(([href]) => canViewRoute(href)).map(([href]) => {
-            const section = designNavigation.find((item) => item.primary === href);
-            if (!section) return null;
-            const active = section.match.some((match) => pathname === match || (match !== "/admin" && pathname.startsWith(`${match}/`)));
-            return <div className={`admin-nav-section ${active ? "active" : ""}`} key={section.key}>
-              <Link className="admin-nav-primary" aria-current={active ? "page" : undefined} href={section.primary} prefetch={false} onClick={closeNavigation}>
-                <section.Icon size={17} />
-                <span>{section.label}</span>
-                <ChevronDown size={14} aria-hidden="true" />
-              </Link>
-              {active ? <div className="admin-nav-children">
-                {section.children.filter(([childHref]) => canViewRoute(childHref)).map(([childHref, childLabel]) => {
-                  const childPath = childHref.split("?")[0];
-                  const childQuery = childHref.includes("?") ? new URLSearchParams(childHref.split("?")[1]) : null;
-                  const queryMatches = childQuery ? Array.from(childQuery.entries()).every(([key, value]) => searchParams.get(key) === value) : !searchParams.get("view") || childPath !== pathname;
-                  const childActive = pathname === childPath && queryMatches;
-                  return <Link className={childActive ? "active" : ""} aria-current={childActive ? "page" : undefined} href={childHref} key={childHref} prefetch={false} onClick={closeNavigation}>{childLabel}</Link>;
-                })}
-              </div> : null}
+        <nav aria-label="管理工作区">
+          {navigationGroups.map(group => <section className="stl4-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.entries.map(entry => {
+            const active = entry.paths.some(path => pathname === path || path !== "/admin" && pathname.startsWith(`${path}/`));
+            const allowed = canViewRoute(entry.href);
+            return <div className="admin-nav-section" key={entry.href}>
+              {allowed ? <Link className={`admin-nav-primary ${active ? "active" : ""}`} aria-current={active ? "page" : undefined} href={entry.href} prefetch={false} onClick={closeNavigation}><entry.Icon size={17} /><span>{entry.title}</span>{active && entry.children.length ? <ChevronDown size={13} /> : null}</Link> : <span className="stl4-nav-locked" aria-disabled="true"><entry.Icon size={17} /><span>{entry.title}</span><LockKeyhole size={12} /></span>}
+              {active && allowed && entry.children.length ? <div className="admin-nav-children">{entry.children.filter(([href]) => canViewRoute(href)).map(([href, title]) => <Link key={href} href={href} prefetch={false} onClick={closeNavigation} aria-current={`${pathname}${searchParams.size ? `?${searchParams}` : ""}` === href ? "page" : undefined}>{title}</Link>)}</div> : null}
             </div>;
-          })}
+          })}</section>)}
         </nav>
-        <footer><Link className="admin-back-public" href="/" prefetch={false}>← <span>返回前台</span></Link><span className="admin-version">{ADMIN_VERSION_LABEL}</span></footer>
+        <footer><Link className="stl4-admin-help" href="/help"><CircleHelp size={17} />帮助</Link><Link className="admin-back-public" href="/" prefetch={false}>← <span>返回前台</span></Link><span className="admin-version">{ADMIN_VERSION_LABEL}</span></footer>
       </aside> : null}
       <div className="admin-main" inert={compactNavigation && open}>
         {!focusMode ? <header className="admin-topbar">
@@ -260,16 +220,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-controls="admin-navigation"
             onClick={() => setOpen(true)}
           ><Menu size={20} /></button>
-          <div className="admin-breadcrumb" aria-label="当前管理范围"><span>后台</span><b>›</b><strong>{scope.title}</strong></div>
-          <form action="/admin/library">
-            <label><Search size={15} /><input type="search" name="q" placeholder="搜索馆藏……" aria-label="搜索后台馆藏" /></label>
-            <button className="sr-only" type="submit">搜索</button>
+          <Link className="stl4-mobile-brand" href="/admin" aria-label="管理首页"><Wordmark /></Link><span className="sr-only">{scope.title}</span>
+          <form action="/admin/library" className="stl4-admin-search">
+            <label><Search size={15} /><input type="search" name="q" placeholder="搜索馆藏书名、作者…" aria-label="搜索后台馆藏" /></label>
+            <button className="stl4-search-submit" type="submit">搜索</button>
           </form>
           {canViewRoute("/admin/processing") ? <Link className="admin-processing-link" href="/admin/processing" prefetch={false} aria-label="打开处理中心"><Bell size={18} /></Link> : null}
-          <div className="admin-user"><span>{user.display_name.slice(0, 1)}</span><p><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small></p></div>
+          <details className="stl4-admin-account" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label="账户菜单"><span>{user.display_name.slice(0, 1)}</span><ChevronDown size={13} /></summary><div><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small><Link href="/account">读者中心与账户</Link><Link href="/">返回前台</Link></div></details>
         </header> : null}
-        <div className="admin-content">{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{children}</div>
+        <div className="admin-content" key={String(user.id)}>{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{returnToToday ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回今日工作</Link> : null}{canViewRoute(pathname) ? children : <section className="stl4-admin-denied" role="alert"><LockKeyhole size={28} /><h1>当前账户没有此项管理权限</h1><p>你可以返回今日工作，继续处理有权访问的条目。</p><Link href="/admin">返回今日工作</Link><Link href="/feedback?category=usage">申请权限</Link></section>}</div>
       </div>
+      <nav className="stl4-admin-mobile-nav" aria-label="移动端管理导航" inert={compactNavigation && open}>{navigationGroups[0].entries.map(entry => canViewRoute(entry.href) ? <Link href={entry.href} key={entry.href} prefetch={false} aria-current={entry.paths.some(path => pathname === path || path !== "/admin" && pathname.startsWith(`${path}/`)) ? "page" : undefined}><entry.Icon size={19} /><span>{entry.title}</span></Link> : <span key={entry.href} aria-disabled="true"><LockKeyhole size={17} /><span>{entry.title}</span></span>)}<button type="button" onClick={() => setOpen(true)} aria-controls="admin-navigation" aria-expanded={open}><MoreHorizontal size={20} /><span>更多</span></button></nav>
     </div>
     </AdminSessionContext.Provider>
   );

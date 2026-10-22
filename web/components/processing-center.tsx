@@ -333,6 +333,7 @@ export function ProcessingCenter() {
   const [jobPage, setJobPage] = useState(1);
   const [jobQuery, setJobQuery] = useState("");
   const [jobQueryInput, setJobQueryInput] = useState("");
+  const [taskIdentity, setTaskIdentity] = useState({ id: "", source: "" });
   const [ocrPage, setOcrPage] = useState(1);
   const [ocrQuery, setOcrQuery] = useState("");
   const [ocrQueryInput, setOcrQueryInput] = useState("");
@@ -349,6 +350,7 @@ export function ProcessingCenter() {
   const [reviewStatus, setReviewStatus] = useState("pending");
   const [jobType, setJobType] = useState("");
   const [jobStatus, setJobStatus] = useState("");
+  const [editionId, setEditionId] = useState("");
   const [filtersReady, setFiltersReady] = useState(false);
   const [activeSurface, setActiveSurface] = useState<ProcessingSurface>("documents");
   const [revision, setRevision] = useState(0);
@@ -361,7 +363,7 @@ export function ProcessingCenter() {
   const loadRequestRef = useRef<{ key: string; controller: AbortController; promise: Promise<boolean> } | null>(null);
 
   const load = useCallback((): Promise<boolean> => {
-    const key = JSON.stringify([reviewStatus, jobType, jobStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
+    const key = JSON.stringify([reviewStatus, jobType, jobStatus, editionId, jobPage, jobQuery, taskIdentity, ocrPage, ocrQuery, itemPage, reviewPage]);
     if (loadRequestRef.current?.key === key) return loadRequestRef.current.promise;
     loadRequestRef.current?.controller.abort();
     const controller = new AbortController();
@@ -380,12 +382,12 @@ export function ProcessingCenter() {
       try {
       const [itemsResult, healthResult, jobsResult, semanticResult, reviewResult] = await Promise.allSettled([
         apiRequest<Paginated<ProcessingItem>>(
-          `/ingestion/items/?scope=processing&ordering=-updated_at,-id&page=${itemPage}`,
+          `/ingestion/items/?scope=processing&ordering=-updated_at,-id&page=${itemPage}&search=${encodeURIComponent(jobQuery)}&edition_id=${encodeURIComponent(editionId)}`,
           options,
           token,
         ),
         apiRequest<QueueHealth>("/ingestion/queue-health/", options, token),
-        apiRequest<ProcessingJobsPayload>(`/ingestion/processing-center/?${new URLSearchParams({ job_type: jobType, status: jobStatus, page: String(jobPage), q: jobQuery, ocr_inventory_page: String(ocrPage), ocr_query: ocrQuery })}`, options, token).then((result) => {
+        apiRequest<ProcessingJobsPayload>(`/ingestion/processing-center/?${new URLSearchParams({ job_type: jobType, status: jobStatus, edition_id: editionId, page: String(jobPage), q: jobQuery, task_id: taskIdentity.id, task_source: taskIdentity.source, ocr_inventory_page: String(ocrPage), ocr_query: ocrQuery })}`, options, token).then((result) => {
           // Job feedback must not wait for slow provider/worker health checks.
           if (!current()) return result;
           setJobs(result.results);
@@ -443,7 +445,7 @@ export function ProcessingCenter() {
       if (loadRequestRef.current?.promise === request) loadRequestRef.current = null;
     });
     return request;
-  }, [reviewStatus, jobType, jobStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
+  }, [reviewStatus, jobType, jobStatus, editionId, jobPage, jobQuery, taskIdentity, ocrPage, ocrQuery, itemPage, reviewPage]);
 
   function beginOperation(actionKey: string, pendingMessage: string) {
     if (operationInFlightRef.current) return false;
@@ -466,8 +468,10 @@ export function ProcessingCenter() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const parameters = new URLSearchParams(window.location.search);
+      setTaskIdentity({ id: parameters.get("task_id") || "", source: parameters.get("task_source") || "" });
       setJobType(parameters.get("type") ?? "");
       setJobStatus(parameters.get("status") ?? "");
+      setEditionId(parameters.get("edition_id") ?? "");
       const readPage = (name: string) => { const value = Number(parameters.get(name)); return Number.isSafeInteger(value) && value > 0 ? value : 1; };
       setJobPage(readPage("page")); setOcrPage(readPage("ocr_page")); setItemPage(readPage("upload_page")); setReviewPage(readPage("review_page"));
       setJobQuery(parameters.get("q") ?? ""); setJobQueryInput(parameters.get("q") ?? "");
@@ -490,11 +494,11 @@ export function ProcessingCenter() {
     for (const [name, value] of Object.entries({ page: jobPage, ocr_page: ocrPage, upload_page: itemPage, review_page: reviewPage })) {
       if (value > 1) url.searchParams.set(name, String(value)); else url.searchParams.delete(name);
     }
-    for (const [name, value] of Object.entries({ q: jobQuery, ocr_q: ocrQuery })) {
+    for (const [name, value] of Object.entries({ q: jobQuery, ocr_q: ocrQuery, edition_id: editionId, task_id: taskIdentity.id, task_source: taskIdentity.source })) {
       if (value) url.searchParams.set(name, value); else url.searchParams.delete(name);
     }
     window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-  }, [activeSurface, filtersReady, jobStatus, jobType, reviewStatus, jobPage, jobQuery, ocrPage, ocrQuery, itemPage, reviewPage]);
+  }, [activeSurface, filtersReady, jobStatus, jobType, reviewStatus, editionId, jobPage, jobQuery, taskIdentity, ocrPage, ocrQuery, itemPage, reviewPage]);
 
   useEffect(() => {
     if (!filtersReady) return;
@@ -814,6 +818,7 @@ export function ProcessingCenter() {
           <div><h2 id="paused-ocr-inventory-title">暂停的文字识别</h2><p>按馆藏找到尚未结束的识别。可继续剩余页面，或取消这一次识别；两者都保留 PDF、已保存文字和阅读记录。名称随馆藏资料更新。</p></div>
           <span>{pausedOCRInventory?.total ?? 0} 项</span>
         </header>
+        {taskIdentity.id ? <p role="status">当前只显示所选处理记录。<button type="button" onClick={() => { setTaskIdentity({ id: "", source: "" }); setJobPage(1); }}>查看全部处理记录</button></p> : null}
         <form className="processing-search" onSubmit={(event) => { event.preventDefault(); setOcrPage(1); setOcrQuery(ocrQueryInput.trim()); }}>
           <label>查找馆藏<input value={ocrQueryInput} onChange={(event) => setOcrQueryInput(event.target.value)} placeholder="输入馆藏名称或来源文件名" /></label>
           <button type="submit">查找</button>
@@ -887,6 +892,7 @@ export function ProcessingCenter() {
       </section> : null}
       {activeSurface === "workers" ? <section className="processing-list admin-panel processing-job-list" id="processing-task-list">
         <header className="processing-job-toolbar"><div><h2>后台任务</h2><p>从全部任务中筛选，按创建时间由新到旧排列。计数来自完整查询，不只本页。</p></div><span>符合条件 {taskMeta?.count ?? 0} 项</span></header>
+        {taskIdentity.id ? <p role="status">当前只显示所选处理记录。<button type="button" onClick={() => { setTaskIdentity({ id: "", source: "" }); setJobPage(1); }}>查看全部处理记录</button></p> : null}
         <form className="processing-search" onSubmit={(event) => { event.preventDefault(); setJobPage(1); setJobQuery(jobQueryInput.trim()); }}><label>查找馆藏<input value={jobQueryInput} onChange={(event) => setJobQueryInput(event.target.value)} placeholder="馆藏名称或来源文件名" /></label><button type="submit">查找</button></form>
         <nav className="processing-type-tabs" aria-label="任务类型筛选">
           <button type="button" className={!jobType ? "active" : ""} aria-pressed={!jobType} onClick={() => { setJobPage(1); setJobType(""); }}>全部 <strong>{Object.values(typeCounts).reduce((sum, count) => sum + count, 0)}</strong></button>

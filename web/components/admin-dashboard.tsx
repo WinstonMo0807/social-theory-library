@@ -1,76 +1,82 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, FileText, Plus, Tags, UserRound, CircleDot, Sparkles, AlertTriangle, Upload } from "lucide-react";
-import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowDownUp, ArrowRight, BookOpen, CircleAlert, FileText, LockKeyhole, MoreHorizontal, RefreshCw, Search } from "lucide-react";
+import { useState } from "react";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import { useAdminSession } from "@/lib/admin-session";
-import { documentLabels, queueWorkbenchHref, type WorkflowQueueItem, type WorkflowQueuePage } from "@/lib/api/admin-collections";
-import { withAdminReturn } from "@/lib/admin-route-context";
-import { PageHeader, StatusBadge } from "./admin-ui";
-import { OcrIndexWorkHelper, type ProcessingAttentionData } from "./admin/ocr-index-work-helper";
+import { adminListHref, safeAdminHref, withAdminReturn } from "@/lib/admin-route-context";
+import type { components } from "@/lib/api/generated/schema";
+import styles from "./admin/today-work.module.css";
 
-type DashboardData = {
-  documents: { total: number; published: number; withdrawn: number };
-  needs_review: number; processing: number;
-  recent_items: { id: string; title: string; source_filename: string; status: string; created_at: string; updated_at: string }[];
-  processing_attention?: ProcessingAttentionData;
-};
+type TodayWork = components["schemas"]["TodayWorkPage"];
+type WorkItem = components["schemas"]["TodayWorkItem"];
+const categories = [["all", "全部"], ["editing", "最近编辑"], ["intake", "待继续收件"], ["catalog", "待校准目录"], ["problems", "待处理问题"], ["publication", "待发布核对"]] as const;
+const kinds = [["", "全部任务类型"], ["catalog", "书目处理"], ["curation", "策划与知识"], ["processing", "数字化处理"]];
+const states = [["", "全部状态"], ["draft", "已保存 · 未发布"], ["changes_pending", "已发布 · 有草稿"], ["pending", "等待处理"], ["running", "处理中"], ["paused", "已暂停"], ["partial", "部分完成"], ["attention", "待核对"], ["failed", "处理失败"], ["ready", "待发布核对"]];
+const options = ["q", "category", "kind", "state", "owner", "ordering", "page"];
+function formatDate(value: string, full = false) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "时间待核对" : new Intl.DateTimeFormat("zh-CN", { year: full ? "numeric" : undefined, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+}
 
-function deduplicate(items: WorkflowQueueItem[]) {
-  const seen = new Set<string>();
-  return items.filter(item => {
-    const key = item.edition_id || item.work_id || item.item_id || item.id;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+function WorkRow({ row, returnTo }: { row: WorkItem; returnTo: string }) {
+  const [failedImage, setFailedImage] = useState("");
+  const [copied, setCopied] = useState("");
+  const destination = safeAdminHref(row.url, "");
+  const href = destination ? withAdminReturn(destination, returnTo) : "";
+  async function copy() {
+    try { await navigator.clipboard.writeText(row.object_id); setCopied("编号已复制"); }
+    catch { setCopied("复制未完成，请选择下方编号复制。"); }
+  }
+  return <li className={styles.row}>
+    <div className={styles.thumbnail}>{row.thumbnail_url && failedImage !== row.thumbnail_url ? <img src={row.thumbnail_url} alt="" loading="lazy" decoding="async" onError={() => setFailedImage(row.thumbnail_url)} /> : <BookOpen size={32} strokeWidth={1} aria-hidden="true" />}</div>
+    <div className={styles.copy}>
+      <h2>{href ? <Link href={href} prefetch={false}>{row.title || "未命名条目"}</Link> : row.title || "未命名条目"}</h2>
+      <div className={styles.identity}><span>{row.label}</span><code title={row.object_id}>{row.object_id.slice(0, 8)}</code></div>
+      <p>{row.summary}</p>
+    </div>
+    <div className={styles.state}>
+      <strong data-state={row.state}><i aria-hidden="true" />{row.state_label}</strong>
+      <time dateTime={row.updated_at}>更新：{formatDate(row.updated_at)}</time>
+    </div>
+    <div className={styles.actions}>
+      {href ? <Link className={row.category === "editing" ? styles.primary : styles.secondary} href={href} prefetch={false}>{row.action_label}<ArrowRight size={13} /></Link> : <span>工作位置待核对</span>}
+      <details className={styles.more} onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+        <summary aria-label={`${row.title || "条目"}的更多操作`}><MoreHorizontal size={18} /></summary>
+        <div><button type="button" onClick={() => void copy()}>复制条目编号</button><code>{row.object_id}</code><span role="status">{copied}</span>{href ? <Link href={href} prefetch={false}>打开完整工作页</Link> : null}</div>
+      </details>
+    </div>
+  </li>;
 }
 
 export function AdminDashboard() {
   const user = useAdminSession();
-  const credential = user ? getServerSessionCredential() : null;
-  const context = String(user?.id ?? "");
-  const dashboard = useApiResource<DashboardData>("/ingestion/dashboard/", credential, context);
-  const retryDashboard = dashboard.retry;
-  const queue = useApiResource<WorkflowQueuePage>("/catalog/admin/workflows/queue/?category=all&page_size=8", credential, context);
-  useEffect(() => {
-    if (!credential) return;
-    const timer = window.setInterval(() => {
-      if (!document.hidden) retryDashboard();
-    }, 15000);
-    return () => window.clearInterval(timer);
-  }, [credential, retryDashboard]);
-  const items = deduplicate(queue.data?.results ?? []).slice(0, 8);
-  const cards = [
-    { title: "未完成馆藏", value: queue.data?.counts.all, detail: "当前需要处理的出版版本", href: "/admin/review", Icon: BookOpen },
-    { title: "需要处理的异常", value: queue.data?.counts.exception, detail: "查看原因与下一步", href: "/admin/review?category=exception", Icon: AlertTriangle },
-    { title: "等待发布检查", value: queue.data?.counts.publication_ready, detail: "请核对后明确发布", href: "/admin/review?category=publication_ready", Icon: FileText },
-    { title: "已公开馆藏", value: dashboard.data?.documents.published, detail: "来自当前馆藏汇总", href: "/admin/library?view=published", Icon: Upload },
-  ];
-  const shortcuts = [
-    {href:"/admin/topics", title:"主题", Icon:Tags}, {href:"/admin/scholars", title:"学者", Icon:UserRound},
-    {href:"/admin/theories", title:"理论流派", Icon:CircleDot}, {href:"/admin/recommendations", title:"本期书库推荐", Icon:Sparkles},
-  ];
-  return <div className="admin-dashboard admin-v307-dashboard stl4-admin-dashboard">
-    <PageHeader eyebrow="管理后台" title="今日工作与继续处理" description="从待办事项继续，完成馆藏整理、异常处理与发布检查。" actions={<Link className="button" href="/admin/uploads"><Plus size={16} />上传 PDF</Link>} />
-    {dashboard.error ? <p className="admin-error" role="alert">{dashboard.error}<button type="button" onClick={dashboard.retry}>重新读取概况</button></p> : null}
-    <section className="admin-v307-metrics" aria-label="工作概况">{cards.map(({ title, value, detail, href, Icon }) => <Link href={href} key={title}><Icon size={25} /><div><span>{title}</span><strong>{value ?? "—"}<small>项</small></strong><p>{detail}</p></div></Link>)}</section>
-    <OcrIndexWorkHelper data={dashboard.data?.processing_attention} />
-    <div className="admin-v307-day-grid">
-      <section className="admin-panel admin-v307-unfinished"><header><div><h2>未完成的馆藏</h2><p>每个出版版本只列一次，直接进入当前需要处理的位置。</p></div><Link href="/admin/review">查看全部 <ArrowRight size={14} /></Link></header>
-        {queue.error ? <p className="admin-error" role="alert">{queue.error}<button type="button" onClick={queue.retry}>重试工作队列</button></p> : null}
-        {queue.loading ? <p role="status">正在读取待办…</p> : null}
-        <div className="admin-v307-table-scroll"><table><thead><tr><th>馆藏信息</th><th>类型</th><th>当前工作</th><th>最近更新</th><th>操作</th></tr></thead><tbody>{items.map(item => {
-          const destination = queueWorkbenchHref(item);
-          return <tr key={item.id}><td><strong>{item.title || item.source_filename || "未命名馆藏"}</strong>{item.source_filename ? <small>{item.source_filename}</small> : null}</td><td>{documentLabels[item.document_type || ""] || "待确认"}</td><td><StatusBadge label={item.current_step_label || "继续编辑"} tone={item.blockers_count ? "warning" : "neutral"} /><small>{item.blockers_count ? `${item.blockers_count} 项需要处理` : item.unresolved_count ? `${item.unresolved_count} 项待确认` : "核对预览与发布"}</small></td><td><time>{new Date(item.updated_at).toLocaleDateString("zh-CN")}</time></td><td>{destination ? <Link className="button secondary" href={withAdminReturn(destination, "/admin", item.current_step)}>继续处理 <ArrowRight size={13} /></Link> : <span>工作位置待核实</span>}</td></tr>;
-        })}</tbody></table></div>
-        {queue.data && !items.length ? <p className="admin-list-state">当前没有未完成的馆藏。</p> : null}
-      </section>
-      <aside className="admin-v307-day-aside"><section className="admin-panel"><header><h2>最近上传</h2><Link href="/admin/uploads">查看全部 <ArrowRight size={14} /></Link></header>{dashboard.data?.recent_items.slice(0, 5).map(item => <Link className="admin-v307-recent" key={item.id} href={withAdminReturn(`/admin/intake/${item.id}`, "/admin")}><FileText size={28} /><div><strong>{item.title || item.source_filename}</strong><time>{new Date(item.created_at).toLocaleDateString("zh-CN")}</time></div><ArrowRight size={14} /></Link>)}{dashboard.data && !dashboard.data.recent_items.length ? <p className="admin-list-state">尚无上传记录。</p> : null}</section>
-        <section className="admin-panel"><header><h2>策展快捷入口</h2><Link href="/admin/review?workspace=curation">继续草稿 <ArrowRight size={14} /></Link></header>{shortcuts.map(({href,title,Icon}) => <Link className="admin-v307-quick" key={href} href={href}><Icon size={21} /><strong>{title}</strong><ArrowRight size={14} /></Link>)}</section>
-      </aside>
+  const router = useRouter();
+  const search = useSearchParams();
+  const params = new URLSearchParams();
+  options.forEach(key => { const value = search.get(key); if (value) params.set(key, value); });
+  const query = params.toString();
+  const resource = useApiResource<TodayWork>(`/catalog/admin/today-work/?${query}`, user ? getServerSessionCredential() : null, String(user?.id || ""));
+  const data = resource.data;
+  const current = search.get("category") || "all";
+  const returnTo = `/admin${query ? `?${query}` : ""}`;
+  const filtered = ["q", "kind", "state"].some(key => Boolean(search.get(key))) || search.get("owner") === "me" || current !== "all";
+  function change(updates: Record<string, string | number | null>) { router.push(adminListHref("/admin", query, { page: null, ...updates }), { scroll: false }); }
+  return <div className={styles.page}>
+    <header className={styles.heading}><div><p>今日工作</p><h1>今日工作与继续处理</h1><span>从待办事项继续出发，完成编目、整理与发布。</span></div><div className={styles.refresh}>{data ? <time dateTime={data.checked_at}>{formatDate(data.checked_at, true)}</time> : null}<button type="button" onClick={resource.retry} disabled={resource.loading}><RefreshCw size={16} />{resource.loading ? "读取中" : "刷新"}</button></div></header>
+    <nav className={styles.tabs} aria-label="今日工作分类">{categories.map(([key, title]) => <Link key={key} href={adminListHref("/admin", query, { category: key === "all" ? null : key, page: null })} aria-current={current === key ? "page" : undefined} scroll={false}>{title}<span>{data ? data.counts[key] ?? 0 : "—"}</span></Link>)}</nav>
+    <div className={styles.filters}>
+      <label><span className="sr-only">任务类型</span><select value={search.get("kind") || ""} onChange={event => change({ kind: event.target.value })}>{kinds.filter(([key]) => key !== "processing" || !data?.restricted).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      <label><span className="sr-only">任务状态</span><select value={search.get("state") || ""} onChange={event => change({ state: event.target.value })}>{states.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      <label title={data?.owner_basis}><span className="sr-only">工作范围</span><select value={search.get("owner") || "all"} onChange={event => change({ owner: event.target.value })}><option value="all">全部工作</option><option value="me">我发起或编辑的</option></select></label>
+      <form className={styles.search} key={search.get("q") || ""} onSubmit={event => { event.preventDefault(); change({ q: String(new FormData(event.currentTarget).get("q") || "").trim() }); }}><label><Search size={15} /><input name="q" type="search" defaultValue={search.get("q") || ""} maxLength={200} aria-label="搜索待办题名或完整编号" placeholder="查找待办…" /></label><button type="submit">查找</button></form>
+      <button className={styles.sort} type="button" aria-label={search.get("ordering") === "updated_at" ? "按更新时间从新到旧排序" : "按更新时间从旧到新排序"} onClick={() => change({ ordering: search.get("ordering") === "updated_at" ? "-updated_at" : "updated_at" })}><span>更新时间</span><ArrowDownUp size={16} /></button>
     </div>
+    {data?.restricted ? <aside className={styles.permission}><LockKeyhole size={17} /><p>以下为你有权访问的工作。运行维护与处理任务需相应权限，未授权内容不计入列表。</p><Link href="/feedback?category=usage">申请权限</Link></aside> : null}
+    {search.get("owner") === "me" && data ? <p className={styles.scopeNote}>{data.owner_basis}</p> : null}
+    {resource.loading ? <div className={styles.loading} role="status"><FileText size={28} strokeWidth={1} /><p>正在读取工作记录…</p></div> : resource.error ? <section className={styles.empty} role="alert"><CircleAlert size={36} strokeWidth={1.2} /><h2>暂时无法获取任务列表</h2><p>{resource.error}</p><div><button className={styles.primary} type="button" onClick={resource.retry}>重新加载</button><Link className={styles.secondary} href="/help">查看帮助</Link></div></section> : data && data.results.length === 0 ? <section className={styles.empty}><BookOpen size={68} strokeWidth={.8} /><h2>{filtered ? "没有符合当前筛选的任务" : "暂无待处理的任务"}</h2><p>{filtered ? "调整任务类型、状态或工作范围，查看其他待办。" : "当前没有需要继续的任务，可以从以下入口开始。"}</p><div>{filtered ? <Link className={styles.primary} href="/admin">清除筛选</Link> : null}{data.can_upload ? <Link className={styles.primary} href="/admin/uploads">收件与编目</Link> : null}{data.can_create_issue ? <Link className={styles.secondary} href="/admin/recommendations#create-issue">创建特别策划</Link> : null}<Link className={styles.secondary} href="/admin/library">浏览馆藏目录</Link></div></section> : data ? <><ul className={styles.list} aria-label="待处理任务">{data.results.map(row => <WorkRow key={row.id} row={row} returnTo={returnTo} />)}</ul><footer className={styles.pagination}><span>共 {data.count} 项工作 · 第 {data.page} / {data.total_pages} 页</span><div>{data.page > 1 ? <Link href={adminListHref("/admin", query, { page: data.page - 1 })}>上一页</Link> : null}{data.page < data.total_pages ? <Link href={adminListHref("/admin", query, { page: data.page + 1 })}>下一页</Link> : null}</div></footer></> : null}
   </div>;
 }

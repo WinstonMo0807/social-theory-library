@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-22 今日工作读模型
+
+管理首页复用原编目查询、策展修订和两类处理任务存储，以SQL UNION执行分类/时间排序/分页，只投影当前20项，不新增任务表、不启动处理或外部探测。角色过滤在库存组合之前执行，完整处理列表与正常GET共同要求VIEW_SYSTEM_STATUS，原具体OCR查看和任务命令分别沿既有权限。全站当前设计入口移除旧design-v2样式覆盖，原文件保留历史，品牌基础进入site-header。
+
 ## 2026-10-21 专题文章、嵌入阅读与明确公开评论
 
 策划继续使用RecommendationIssue/EditorialRevision不可变发布快照，生效排期决定目录筛选与媒体公开资格。类型、公开策划资料、稳定正文/图片及展品分组保存在该快照，不新增平行内容库。来源继续绑定Edition/Asset/DocumentRevision，嵌入ReaderShell复用同一阅读/引用/笔记/收藏和文件访问。

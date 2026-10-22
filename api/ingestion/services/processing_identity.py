@@ -1,5 +1,15 @@
 """Live catalogue labels for task displays; never persist a second book title."""
-from catalog.models import EditorialRevision
+from uuid import UUID
+
+from catalog.models import EditorialRevision, RecommendationIssue
+
+
+def _issue_id(job):
+    stats = job.stats if isinstance(job.stats, dict) else {}
+    try:
+        return str(UUID(str(stats.get("issue_id", ""))))
+    except ValueError:
+        return ""
 
 
 def processing_edition(job):
@@ -26,7 +36,10 @@ def edition_titles(editions):
 
 
 def task_titles(jobs):
-    return edition_titles([edition for job in jobs if (edition := processing_edition(job)) is not None])
+    titles = edition_titles([edition for job in jobs if (edition := processing_edition(job)) is not None])
+    issue_ids = {_issue_id(job) for job in jobs if getattr(job, "job_type", "") == "editorial_assistance"} - {""}
+    titles.update({f"issue:{issue.pk}": {"title": issue.title} for issue in RecommendationIssue.objects.filter(pk__in=issue_ids)})
+    return titles
 
 
 def draft_title_work_ids(query):
@@ -36,6 +49,12 @@ def draft_title_work_ids(query):
 
 
 def processing_identity(job, titles=None):
+    if getattr(job, "job_type", "") == "editorial_assistance":
+        issue_id = _issue_id(job)
+        title = (titles if titles is not None else task_titles([job])).get(f"issue:{issue_id}", {}).get("title", "已移除的特别策划" if issue_id else "特别策划来源待核对")
+        return {"title": title, "title_has_unpublished_changes": False, "edition_label": "特别策划候选",
+                "edition_id": None, "work_id": None, "source_filename": "",
+                "workbench_url": f"/admin/recommendations/issues/{issue_id}?assistant={job.pk}" if issue_id else ""}
     edition = processing_edition(job)
     upload = getattr(job, "upload_item", None)
     filename = upload.source_filename if upload else job.asset.original_filename if job.asset_id else ""

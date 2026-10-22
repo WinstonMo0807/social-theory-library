@@ -3,8 +3,11 @@
 All filtering, deduplication, counting and ordering happen in SQL. The response
 projects only the current page; it never loads private source text or notes.
 """
+import re
+from uuid import UUID
+
 from django.core.paginator import Paginator
-from django.db.models import BooleanField, Case, CharField, F, OuterRef, Q, Subquery, TextField, Value, When
+from django.db.models import BooleanField, Case, CharField, Exists, F, OuterRef, Q, Subquery, TextField, Value, When
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast, Coalesce, Concat, Greatest
 from drf_spectacular.utils import extend_schema
@@ -41,6 +44,18 @@ class CurationDraftPageSerializer(serializers.Serializer):
 
 
 FIELDS = ("q_id", "q_object_id", "q_type", "q_title", "q_label", "q_updated", "q_url", "q_state", "q_can_edit")
+_COMPACT_UUID = re.compile(r"\b[0-9a-fA-F]{32}\b")
+
+
+def _draft_result(row):
+    field_names = ("id", "object_id", "object_type", "title", "label", "updated_at", "edit_url", "state", "can_edit")
+    result = {field: row[key] for field, key in zip(field_names, FIELDS)}
+    result["object_id"] = str(UUID(result["object_id"]))
+    # SQL casts are backend-dependent. Normalize only the returned page's
+    # identity and internally generated route tokens, never editorial text.
+    for field in ("id", "edit_url"):
+        result[field] = _COMPACT_UUID.sub(lambda match: str(UUID(match.group())), result[field])
+    return result
 
 
 def _objects(queryset, kind, label, title, title_key, state_field, url_prefix, *, url_suffix="", url_expression=None, can_edit=True, query=""):
@@ -64,13 +79,38 @@ def _objects(queryset, kind, label, title, title_key, state_field, url_prefix, *
         q_url=url_expression if url_expression is not None else Concat(Value(url_prefix), Cast("pk", CharField()), Value(url_suffix)),
         q_state=Case(When(**{f"{state_field}__in": ["published", "approved"]}, then=Value("changes_pending")), default=Value("draft"), output_field=CharField()) if state_field else Value("changes_pending" if kind == "site_content" else "draft"),
         q_can_edit=Value(can_edit, output_field=BooleanField()),
+        q_owner=Subquery(latest.values("created_by_id")[:1]),
     )
     if query:
         queryset = queryset.filter(q_title__icontains=query)
     return queryset.values(*FIELDS)
 
 
-def draft_inventory(user, *, query=""):
+def _placements(user, *, query=""):
+    allowed = []
+    if has_capability(user, Capability.EDIT_DRAFT_AUTHORITY):
+        allowed += ["scholar", "node", "topic", "discipline", "subdiscipline", "reading_path", "timeline_event"]
+    if has_capability(user, Capability.EDIT_METADATA):
+        allowed.append("issue")
+    if capability_snapshot(user).access_level in {"admin", "superadmin"}:
+        allowed.append("site")
+    published = models.EditorialRevision.objects.filter(target_type="content_placement", target_id=OuterRef("target_id"), status="published")
+    rows = models.EditorialRevision.objects.filter(target_type="content_placement", status="draft", materialized_preview__page_type__in=allowed).order_by().annotate(
+        q_has_published=Exists(published),
+        q_id=Concat(Value("content_placement:"), Cast("target_id", CharField())),
+        q_object_id=Cast(KeyTextTransform("page_id", "materialized_preview"), CharField()),
+        q_type=Value("content_placement"), q_label=Value("页面内容编排"),
+        q_title=Cast(KeyTextTransform("title", "materialized_preview"), TextField()),
+        q_updated=F("updated_at"), q_url=Cast(KeyTextTransform("edit_url", "materialized_preview"), CharField()),
+        q_state=Case(When(q_has_published=True, then=Value("changes_pending")), default=Value("draft"), output_field=CharField()),
+        q_can_edit=Value(True, output_field=BooleanField()), q_owner=F("created_by_id"),
+    )
+    if query:
+        rows = rows.filter(q_title__icontains=query)
+    return rows.values(*FIELDS)
+
+
+def draft_querysets(user, *, query="", owner_id=None):
     # These read permissions mirror the existing object editors. An object
     # which the user cannot open is not exposed merely through this inventory.
     staff = has_capability(user, Capability.ACCESS_BACK_OFFICE)
@@ -95,6 +135,14 @@ def draft_inventory(user, *, query=""):
         ]
     if capability_snapshot(user).access_level in {"admin", "superadmin"}:
         rows.append(_objects(models.SiteSetting.objects.filter(key="site_config"), "site_content", "网站与关于书库", Value("网站与关于书库"), None, None, "/admin/about?config=", query=query))
+    rows.append(_placements(user, query=query))
+    if owner_id is not None:
+        rows = [row.filter(q_owner=owner_id) for row in rows]
+    return rows
+
+
+def draft_inventory(user, *, query=""):
+    rows = draft_querysets(user, query=query)
     return rows[0].union(*rows[1:], all=True)
 
 
@@ -113,8 +161,7 @@ class CurationDraftQueueView(AdminPrivateResponseMixin, APIView):
             params = request.query_params.copy()
             params["page"] = number
             return f"{request.path}?{params.urlencode()}"
-        field_names = ("id", "object_id", "object_type", "title", "label", "updated_at", "edit_url", "state", "can_edit")
-        results = [{field: row[key] for field, key in zip(field_names, FIELDS)} for row in page.object_list]
+        results = [_draft_result(row) for row in page.object_list]
         return Response({"count": paginator.count, "page": page.number, "page_size": paginator.per_page,
                          "total_pages": paginator.num_pages, "next": page_url(page.next_page_number()) if page.has_next() else None,
                          "previous": page_url(page.previous_page_number()) if page.has_previous() else None, "results": results})

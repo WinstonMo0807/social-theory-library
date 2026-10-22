@@ -1071,6 +1071,22 @@ export interface paths {
         patch: operations["catalog_admin_theory_timeline_partial_update"];
         trace?: never;
     };
+    "/api/catalog/admin/today-work/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_today_work_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/topics/": {
         parameters: {
             query?: never;
@@ -11383,6 +11399,41 @@ export interface components {
             count: number;
             event_types: components["schemas"]["TimelineEventTypeCount"][];
         };
+        TodayWorkItem: {
+            id: string;
+            /** Format: uuid */
+            object_id: string;
+            object_type: string;
+            title: string;
+            label: string;
+            /** Format: date-time */
+            updated_at: string;
+            url: string;
+            state: string;
+            state_label: string;
+            category: string;
+            kind: string;
+            action_label: string;
+            summary: string;
+            thumbnail_url: string;
+        };
+        TodayWorkPage: {
+            results: components["schemas"]["TodayWorkItem"][];
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            counts: {
+                [key: string]: number;
+            };
+            /** Format: date-time */
+            checked_at: string;
+            restricted: boolean;
+            owner_basis: string;
+            ordering: string;
+            can_upload: boolean;
+            can_create_issue: boolean;
+        };
         Topic: {
             /** Format: uuid */
             readonly id: string;
@@ -14505,6 +14556,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminTheoryTimelineEvent"];
+                };
+            };
+        };
+    };
+    catalog_admin_today_work_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `all` - all
+                 *     * `editing` - editing
+                 *     * `intake` - intake
+                 *     * `catalog` - catalog
+                 *     * `problems` - problems
+                 *     * `publication` - publication
+                 */
+                category?: "all" | "editing" | "intake" | "catalog" | "problems" | "publication";
+                /**
+                 * @description * `` -
+                 *     * `catalog` - catalog
+                 *     * `curation` - curation
+                 *     * `processing` - processing
+                 */
+                kind?: "" | "catalog" | "curation" | "processing";
+                /**
+                 * @description * `-updated_at` - -updated_at
+                 *     * `updated_at` - updated_at
+                 */
+                ordering?: "-updated_at" | "updated_at";
+                /**
+                 * @description * `all` - all
+                 *     * `me` - me
+                 */
+                owner?: "all" | "me";
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `` -
+                 *     * `draft` - draft
+                 *     * `changes_pending` - changes_pending
+                 *     * `pending` - pending
+                 *     * `running` - running
+                 *     * `paused` - paused
+                 *     * `partial` - partial
+                 *     * `attention` - attention
+                 *     * `failed` - failed
+                 *     * `ready` - ready
+                 */
+                state?: "" | "draft" | "changes_pending" | "pending" | "running" | "paused" | "partial" | "attention" | "failed" | "ready";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayWorkPage"];
                 };
             };
         };

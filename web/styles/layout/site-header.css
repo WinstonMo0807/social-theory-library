@@ -1,3 +1,10 @@
+/* Shared brand primitives retained when retiring the obsolete global design-v2 overrides. */
+.brand-lockup { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: #24221f; }
+.brand-mark { flex: 0 0 auto; width: 34px; height: 28px; color: currentColor; overflow: visible; }
+.reader-logo .reader-brand-lockup { display: inline-flex; align-items: center; gap: 9px; }
+.reader-logo .reader-brand-lockup .brand-mark { width: 30px; height: 24px; }
+.reader-logo .reader-brand-lockup .brand-lockup { display: contents; }
+
 .site-header {
   position: relative;
   z-index: var(--stl-z-header);

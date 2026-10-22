@@ -1,11 +1,14 @@
 """Filtered, paginated read model over the two existing task stores."""
 from collections import Counter
+from uuid import UUID
 
 from django.db.models import CharField, Count, Q, Value
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Cast, Replace
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from catalog.models import KnowledgePublicationEvent, SemanticIndexJob
+from catalog.models import KnowledgePublicationEvent, RecommendationIssue, SemanticIndexJob
 from common.capabilities import Capability, has_capability
 from ingestion.models import ProcessingJob
 from .processing_identity import draft_title_work_ids, processing_edition, processing_identity, task_titles
@@ -31,6 +34,8 @@ def processing_task_page(params, actor):
     kind = str(params.get("job_type") or "").strip()
     status = str(params.get("status") or "").strip()
     query = str(params.get("q") or "").strip()[:200]
+    edition_id = str(params.get("edition_id") or "").strip()
+    work_id = str(params.get("work_id") or "").strip()
     size = page_number(params.get("page_size"), 30, 100)
     requested_page = page_number(params.get("page"))
     if status and status not in ProcessingJob.Status.values:
@@ -39,14 +44,59 @@ def processing_task_page(params, actor):
         raise ValidationError({"job_type": "请选择有效的任务类型。"})
     jobs = ProcessingJob.objects.all()
     semantic = SemanticIndexJob.objects.all()
+    # A dashboard link identifies one record across the two existing stores.
+    # Invalid identity never falls back to an unrelated first page.
+    task_id = str(params.get("task_id") or "").strip()
+    task_source = str(params.get("task_source") or "").strip()
+    if task_id or task_source:
+        if task_source not in {"processing_job", "semantic_index_job"}:
+            raise ValidationError({"task_source": "请选择有效的处理记录来源。"})
+        try:
+            identifier = UUID(task_id)
+        except (ValueError, TypeError):
+            raise ValidationError({"task_id": "处理记录编号无效，请从原任务重新打开。"})
+        jobs = jobs.filter(pk=identifier) if task_source == "processing_job" else jobs.none()
+        semantic = semantic.filter(pk=identifier) if task_source == "semantic_index_job" else semantic.none()
     if query:
         changed_titles = draft_title_work_ids(query)
-        jobs = jobs.filter(
+        # UUIDs are hex in SQLite and hyphenated in PostgreSQL; compare the
+        # persisted JSON identity to the same normalized key in either backend.
+        issue_keys = RecommendationIssue.objects.filter(title__icontains=query).annotate(
+            search_key=Replace(Cast("pk", output_field=CharField()), Value("-"), Value("")),
+        ).values("search_key")
+        jobs = jobs.annotate(
+            issue_search_key=Replace(KeyTextTransform("issue_id", "stats"), Value("-"), Value(""), output_field=CharField()),
+        ).filter(
             Q(edition__work__title__icontains=query) | Q(asset__edition__work__title__icontains=query)
             | Q(upload_item__source_filename__icontains=query) | Q(asset__original_filename__icontains=query)
             | Q(edition__work_id__in=changed_titles) | Q(asset__edition__work_id__in=changed_titles)
+            | Q(job_type=ProcessingJob.JobType.EDITORIAL_ASSISTANCE, issue_search_key__in=issue_keys)
         )
         semantic = semantic.filter(Q(asset__edition__work__title__icontains=query) | Q(asset__edition__work_id__in=changed_titles) | Q(asset__original_filename__icontains=query))
+    if edition_id:
+        try:
+            UUID(edition_id)
+        except ValueError:
+            jobs = jobs.none()
+            semantic = semantic.none()
+        else:
+            jobs = jobs.filter(
+                Q(edition_id=edition_id)
+                | Q(asset__edition_id=edition_id)
+                | Q(upload_item__edition_id=edition_id)
+            )
+            semantic = semantic.filter(asset__edition_id=edition_id)
+    if work_id:
+        try:
+            UUID(work_id)
+        except ValueError:
+            raise ValidationError({"work_id": "作品编号无效。"})
+        jobs = jobs.filter(
+            Q(edition__work_id=work_id)
+            | Q(asset__edition__work_id=work_id)
+            | Q(upload_item__edition__work_id=work_id)
+        )
+        semantic = semantic.filter(asset__edition__work_id=work_id)
     # Count the complete matching scope, not the current page or a capped sample.
     matrix = Counter()
     for row in jobs.order_by().values("job_type", "status").annotate(total=Count("pk")):

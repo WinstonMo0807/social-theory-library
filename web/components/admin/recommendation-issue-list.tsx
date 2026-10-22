@@ -16,9 +16,9 @@ function itemImage(item: RecommendationItem) {
   const target = item.target as Record<string, unknown>;
   return item.image_override || String(target.portrait || target.hero_image || "");
 }
-export function RecommendationIssueList() {
+export function RecommendationIssueList({ initialTab = "issues" }: { initialTab?: "issues" | "placements" }) {
   const { startAction, finishAction } = useActionGuard();
-  const [tab, setTab] = useState("issues"), [placement, setPlacement] = useState("");
+  const [tab, setTab] = useState(initialTab), [placement, setPlacement] = useState("");
   const [query, setQuery] = useState(""), [page, setPage] = useState(1), [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
   const credential = getServerSessionCredential();
   const resource = useApiResource<IssuePage>("/catalog/admin/recommendation-issues/?" + new URLSearchParams({ q: query, page: String(page) }), credential);
@@ -36,7 +36,7 @@ export function RecommendationIssueList() {
     } catch (error) { setMessage(error instanceof Error ? error.message : "创建失败"); setBusy(false); finishAction("create"); }
   }
   return <div className="v307-admin-editor">
-    <header className="v307-editor-heading"><div><p className="eyebrow">公开展示 · 策展</p><h1>推荐与随机</h1><p>管理本期导语、阅读书目、排期，以及首页精选。</p></div><div><Link className="button secondary" href="/" target="_blank">预览首页 ↗</Link><button className="button" onClick={create} disabled={busy}>新建一期推荐</button></div></header>
+    <header className="v307-editor-heading"><div><p className="eyebrow">公开展示 · 策展</p><h1>推荐与随机</h1><p>管理本期导语、阅读书目、排期，以及首页精选。</p></div><div><Link className="button secondary" href="/" target="_blank">预览首页 ↗</Link><button id="create-issue" className="button" onClick={create} disabled={busy}>新建一期推荐</button></div></header>
     <nav className="v307-admin-tabs" aria-label="推荐管理范围"><button aria-current={tab === "issues" ? "page" : undefined} onClick={() => setTab("issues")}>总览与归档</button><button aria-current={tab === "placements" ? "page" : undefined} onClick={() => setTab("placements")}>精选与随机设置</button></nav>
     {message ? <p role="alert">{message}</p> : null}
     {tab === "placements" ? <RecommendationsAdmin key={placement} initialPlacement={placement} /> : <>

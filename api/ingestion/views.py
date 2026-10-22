@@ -8,6 +8,7 @@ import shutil
 import uuid
 from urllib.error import URLError
 from urllib.request import Request, urlopen
+from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -43,6 +44,7 @@ from catalog.models import (
     ReviewStatus,
     ScholarProfile,
     SemanticIndexJob,
+    SemanticIndexStatus,
     Subdiscipline,
     TheorySchool,
     Topic,
@@ -1217,6 +1219,14 @@ class UploadItemListView(generics.ListAPIView):
             queryset = queryset.filter(edition__isnull=False).exclude(
                 status=UploadItem.Status.DELETED,
             )
+        edition_id = self.request.query_params.get("edition_id", "").strip()
+        if edition_id:
+            try:
+                uuid.UUID(edition_id)
+            except ValueError:
+                queryset = queryset.none()
+            else:
+                queryset = queryset.filter(edition_id=edition_id)
         return with_document_stage_ids(queryset)
 
     def list(self, request, *args, **kwargs):
@@ -2750,6 +2760,8 @@ class ProcessingCenterView(APIView):
             response["Cache-Control"] = "no-store"
             return response
 
+        if not has_capability(request.user, Capability.VIEW_SYSTEM_STATUS):
+            return Response({"detail": "当前账户不能查看完整处理任务列表。请从具体编目页查看该版本的文字处理记录。"}, status=403)
         payload = processing_task_page(request.query_params, request.user)
         payload.update({
                 "workloads": {
@@ -2848,6 +2860,21 @@ class ProcessingCenterView(APIView):
             ProcessingJob.objects.select_related("asset", "upload_item"),
             pk=job_id,
         )
+        if job.job_type == "editorial_assistance":
+            from catalog.services.editorial_assistance import assistance_action
+            try:
+                job = assistance_action(job.pk, {"action": action}, request.user)
+            except (ValueError, DRFValidationError) as exc:
+                return Response({"detail": str(exc)}, status=409)
+            return Response({"job_id": str(job.pk), "status": job.status}, status=202)
+        if job.job_type == "text_extraction" and job.stats.get("operation") == "outline_rebuild" and action in {"retry", "cancel"}:
+            from catalog.services.document_outline import outline_job_action
+
+            try:
+                job = outline_job_action(job.pk, action=action, actor=request.user)
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=409)
+            return Response({"job_id": str(job.pk), "status": job.status}, status=202)
         if job.job_type == "ocr" and action == "retry":
             from .services.catalog_ocr import retry_ocr_job
 
@@ -2995,6 +3022,148 @@ class DeleteUploadItemView(APIView):
         return Response({"detail": "上传已移入回收站，可恢复。原文件与馆藏保留。", "recycle_id": str(entry.pk)})
 
 
+def _dashboard_processing_attention(limit=12):
+    """Return a bounded, revision-aware OCR/index reminder for Today's Work."""
+    ocr_attention = {OcrStatus.PENDING, OcrStatus.RUNNING, OcrStatus.FAILED}
+    index_attention = {
+        SemanticIndexStatus.NOT_INDEXED,
+        SemanticIndexStatus.PENDING,
+        SemanticIndexStatus.RUNNING,
+        SemanticIndexStatus.FAILED,
+    }
+    editions = list(
+        Edition.objects.filter(
+            state__in=(PublicationState.DRAFT, PublicationState.READY, PublicationState.PUBLISHED),
+            assets__kind=Asset.Kind.NORMALIZED,
+            assets__is_current=True,
+        )
+        .filter(
+            Q(ocr_status__in=ocr_attention)
+            | Q(semantic_index_status__in=index_attention)
+            | Q(state=PublicationState.PUBLISHED, semantic_index_status=SemanticIndexStatus.READY)
+        )
+        .select_related("work")
+        .distinct()
+        .order_by("-updated_at", "-id")[: max(limit * 2, limit)]
+    )
+    if not editions:
+        return {"total": 0, "ocr_count": 0, "index_count": 0, "items": []}
+
+    # Reuse the same saved-revision/projection checks as the library page. This
+    # keeps the reminder from treating OCR completion as public viewpoint readiness.
+    from catalog.services.catalog_availability import batch_catalog_availability
+
+    availability = batch_catalog_availability(editions)
+    uploads = (
+        UploadItem.objects.filter(edition_id__in=[edition.pk for edition in editions])
+        .select_related("asset")
+        .exclude(status=UploadItem.Status.DELETED)
+        .order_by("edition_id", "-updated_at", "-id")
+    )
+    latest_upload_by_sha = {}
+    latest_upload_by_asset = {}
+    for item in uploads:
+        if item.sha256:
+            latest_upload_by_sha.setdefault((item.edition_id, item.sha256), item)
+        if item.asset_id:
+            latest_upload_by_asset.setdefault((item.edition_id, item.asset_id), item)
+
+    ocr_labels = dict(OcrStatus.choices)
+    index_labels = dict(SemanticIndexStatus.choices)
+    rows = []
+    for edition in editions:
+        current_asset = next(
+            (
+                asset
+                for asset in edition.assets.all()
+                if asset.kind == Asset.Kind.NORMALIZED and asset.is_current
+            ),
+            None,
+        )
+        current_upload = None
+        if current_asset:
+            current_upload = latest_upload_by_sha.get((edition.pk, current_asset.sha256))
+            if current_upload is None and current_asset.source_asset_id:
+                current_upload = latest_upload_by_asset.get((edition.pk, current_asset.source_asset_id))
+            if current_upload is None:
+                current_upload = latest_upload_by_asset.get((edition.pk, current_asset.pk))
+        preflight_value = current_upload.preflight_summary if current_upload else {}
+        preflight = preflight_value if isinstance(preflight_value, dict) else {}
+        capabilities = {
+            row["key"]: row
+            for row in availability.get(edition.pk, {}).get("capabilities", [])
+        }
+        text_capability = capabilities.get("text", {})
+        viewpoint_capability = capabilities.get("viewpoint", {})
+        needs_ocr = edition.ocr_status in ocr_attention
+        semantic_pending = edition.semantic_index_status in index_attention
+        public_viewpoint_pending = (
+            edition.state == PublicationState.PUBLISHED
+            and viewpoint_capability.get("status") != "ready"
+        )
+        if not (needs_ocr or semantic_pending or public_viewpoint_pending):
+            continue
+
+        if edition.ocr_status == OcrStatus.PENDING:
+            ocr_detail = "已判断需要 OCR，等待识别任务。"
+        elif edition.ocr_status == OcrStatus.RUNNING:
+            ocr_detail = "OCR 正在处理。"
+        elif edition.ocr_status == OcrStatus.FAILED:
+            ocr_detail = "OCR 失败，可在处理中心重试。"
+        elif edition.ocr_status == OcrStatus.DISABLED:
+            ocr_detail = "本批策略已跳过 OCR；扫描页不会进入全文和观点检索。"
+        else:
+            ocr_detail = text_capability.get("detail") or ""
+
+        if edition.state != PublicationState.PUBLISHED and semantic_pending:
+            index_status = edition.semantic_index_status
+            index_label = index_labels.get(index_status, index_status)
+            index_detail = "馆藏尚未发布；公开观点索引需在发布后追踪。"
+        elif public_viewpoint_pending:
+            index_status = viewpoint_capability.get("status") or edition.semantic_index_status
+            index_label = "观点索引" + ("未完成" if index_status != "ready" else "已就绪")
+            index_detail = viewpoint_capability.get("detail") or "当前公开正文尚未进入观点索引。"
+        else:
+            index_status = edition.semantic_index_status
+            index_label = index_labels.get(index_status, index_status)
+            index_detail = "语义索引任务可在处理中心查看或重试。"
+
+        rows.append(
+            {
+                "id": str(edition.pk),
+                "work_id": str(edition.work_id),
+                "edition_id": str(edition.pk),
+                "item_id": str(current_upload.pk) if current_upload else None,
+                "title": edition.work.title,
+                "source_filename": current_upload.source_filename if current_upload else "",
+                "processing_url": f"/admin/processing?surface=documents&q={quote(edition.work.title, safe='')}&edition_id={edition.pk}",
+                "ocr": {
+                    "status": edition.ocr_status,
+                    "label": ocr_labels.get(edition.ocr_status, edition.ocr_status),
+                    "detail": ocr_detail,
+                    "detected_pages": preflight.get("detected_ocr_pages"),
+                    "scheduled_pages": preflight.get("scheduled_ocr_pages"),
+                },
+                "index": {
+                    "status": index_status,
+                    "label": index_label,
+                    "detail": index_detail,
+                    "semantic_status": edition.semantic_index_status,
+                    "viewpoint_status": viewpoint_capability.get("status"),
+                },
+            }
+        )
+        if len(rows) >= limit:
+            break
+
+    return {
+        "total": len(rows),
+        "ocr_count": sum(1 for row in rows if row["ocr"]["status"] in ocr_attention),
+        "index_count": sum(1 for row in rows if row["index"]["status"] != "ready"),
+        "items": rows,
+    }
+
+
 class DashboardView(APIView):
     permission_classes = [IsLibraryStaff]
 
@@ -3039,5 +3208,6 @@ class DashboardView(APIView):
                     row["status"]: row["count"]
                     for row in UploadItem.objects.values("status").annotate(count=Count("id"))
                 },
+                "processing_attention": _dashboard_processing_attention(),
             }
         )

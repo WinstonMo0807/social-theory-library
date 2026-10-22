@@ -1,5 +1,15 @@
 # 验收记录
 
+## 2026-10-22 今日工作第一批静态记录
+
+- `tmp/stl4-today-static.py`（本机辅助）：SQL12组SQLite/PostgreSQL仅编译，数据库连接明确阻断为0；最终6bfe48退出0。初始7c0780混合Text/Char失败已修正，不作为通过记录。
+- Python ast.parse 10源码/测试文件：6bfe48退出0，不运行测试。
+- 完整`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：session66778/6e517e及9441/f4b280退出0。
+- 8文件目标ESLint：160714退出0、0错误5提示（4img、1既有location.assign）。4CSS PostCSS parse：c56f15退出0，62/38/16/82顶层节点，22个直接模块类引用齐全。
+- 进程DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8，`api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-today-schema-20261022.json --validate`，113b6a退出0，10既有提示/0错误；02264e生成219路径与TS类型，原218均保留。
+- ATLAS语义比较a8d25c退出0，仅80/81变更，209行22字段及来源身份保留；两视图标部分接入。
+- 后端10新函数14参数案例、浏览器6场景仅定义。继承OCR提醒2用例、旧认证用例适配保留。正式测试/浏览器/构建/迁移/检索质量测评/生产均未运行。
+
 ## 2026-10-21 PDF73–78专题文章/微展览静态记录
 
 - 白名单tmp/stl4-editorial-checkpoint.json为62路径。22个Python逐个ast.parse通过，0faa23退出0；其中新16个后端函数21参数案例仅AST统计，未执行。旧v307书单与privacy样例、11个浏览器场景同步定义，未运行。

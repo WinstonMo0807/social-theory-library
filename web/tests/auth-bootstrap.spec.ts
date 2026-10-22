@@ -80,6 +80,13 @@ async function mockApi(page: Page, options: MockAuthOptions = {}) {
       await route.fulfill({ status: 204, body: "" });
       return;
     }
+    if (path === "/api/catalog/admin/today-work/") {
+      await fulfillJson(route, 200, { results: [], count: 0, page: 1, page_size: 20, total_pages: 1,
+        counts: { all: 0, editing: 0, intake: 0, catalog: 0, problems: 0, publication: 0 },
+        checked_at: "2026-10-22T00:00:00Z", restricted: currentRole !== "admin", owner_basis: "测试工作范围",
+        ordering: "-updated_at", can_upload: true, can_create_issue: true });
+      return;
+    }
     if (path === "/api/ingestion/dashboard/") {
       await fulfillJson(route, 200, {
         documents: { total: 0, published: 0, withdrawn: 0 },

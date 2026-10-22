@@ -4911,6 +4911,136 @@
                 }
             }
         },
+        "/api/catalog/admin/today-work/": {
+            "get": {
+                "operationId": "catalog_admin_today_work_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "category",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "editing",
+                                "intake",
+                                "catalog",
+                                "problems",
+                                "publication"
+                            ],
+                            "type": "string",
+                            "default": "all",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `editing` - editing\n* `intake` - intake\n* `catalog` - catalog\n* `problems` - problems\n* `publication` - publication"
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "catalog",
+                                "curation",
+                                "processing"
+                            ],
+                            "type": "string",
+                            "default": ""
+                        },
+                        "description": "* `` - \n* `catalog` - catalog\n* `curation` - curation\n* `processing` - processing"
+                    },
+                    {
+                        "in": "query",
+                        "name": "ordering",
+                        "schema": {
+                            "enum": [
+                                "-updated_at",
+                                "updated_at"
+                            ],
+                            "type": "string",
+                            "default": "-updated_at",
+                            "minLength": 1
+                        },
+                        "description": "* `-updated_at` - -updated_at\n* `updated_at` - updated_at"
+                    },
+                    {
+                        "in": "query",
+                        "name": "owner",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "me"
+                            ],
+                            "type": "string",
+                            "default": "all",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `me` - me"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 200
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "state",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "draft",
+                                "changes_pending",
+                                "pending",
+                                "running",
+                                "paused",
+                                "partial",
+                                "attention",
+                                "failed",
+                                "ready"
+                            ],
+                            "type": "string",
+                            "default": ""
+                        },
+                        "description": "* `` - \n* `draft` - draft\n* `changes_pending` - changes_pending\n* `pending` - pending\n* `running` - running\n* `paused` - paused\n* `partial` - partial\n* `attention` - attention\n* `failed` - failed\n* `ready` - ready"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TodayWorkPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/topics/": {
             "get": {
                 "operationId": "catalog_admin_topics_list",
@@ -42598,6 +42728,133 @@
                     "count",
                     "event_types",
                     "year"
+                ]
+            },
+            "TodayWorkItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "object_type": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "state_label": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "action_label": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "thumbnail_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "action_label",
+                    "category",
+                    "id",
+                    "kind",
+                    "label",
+                    "object_id",
+                    "object_type",
+                    "state",
+                    "state_label",
+                    "summary",
+                    "thumbnail_url",
+                    "title",
+                    "updated_at",
+                    "url"
+                ]
+            },
+            "TodayWorkPage": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TodayWorkItem"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "restricted": {
+                        "type": "boolean"
+                    },
+                    "owner_basis": {
+                        "type": "string"
+                    },
+                    "ordering": {
+                        "type": "string"
+                    },
+                    "can_upload": {
+                        "type": "boolean"
+                    },
+                    "can_create_issue": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "can_create_issue",
+                    "can_upload",
+                    "checked_at",
+                    "count",
+                    "counts",
+                    "ordering",
+                    "owner_basis",
+                    "page",
+                    "page_size",
+                    "restricted",
+                    "results",
+                    "total_pages"
                 ]
             },
             "Topic": {

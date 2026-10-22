@@ -1,5 +1,13 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 今日工作第一批
+
+GET catalog/admin/today-work/，CanAccessBackOffice/private,no-store；q≤200、category(all/editing/intake/catalog/problems/publication)、kind(空/catalog/curation/processing)、state(空/draft/changes_pending/pending/running/paused/partial/attention/failed/ready)、owner(all/me)、ordering(±updated_at)、page≥1。非法值400。结果含完整counts、20项page/total_pages、checked_at、restricted、owner_basis、真实权限与稳定对象/任务来源、准确url/state/thumbnail。count为工作项，非去重馆藏数；各类别互斥，counts按其他过滤后的完整范围计算。
+
+原 ingestion/processing-center/ GET支持task_id与task_source(processing_job/semantic_index_job)成对过滤；非法身份400，未找到返回空结果，不显示其他任务。完整GET新增VIEW_SYSTEM_STATUS；已有ocr_edition_id及ocr_monitor查看分支和原写权限保留。准确edition/work过滤继承原实现。
+
+219静态契约路径保留此前218；生成类型已同步，不代表正式API验收通过。
+
 ## 2026-10-21 专题文章、私人书单与评论
 
 GET catalog/recommendation-issues/?view=directory接q/topic(UUID或slug)/kind/curator/year_from/year_to/sort/page/page_size，标量条件保留逗号。PublicEditorialDirectory返回公开有效修订卡片、完整分页、类型/主题/策划者/年份选项和有界明确关联。旧无view模式保留。article_metadata包含kind、keywords、topic_ids、scholar_ids、reading_path_ids和公开策划资料；item.section_id只能指本篇稳定标题；image区块须说明/来源，可无图片。文章详情增加public_revision_id、curator、reading_minutes、related。预计时间明确估算；公开媒体按实际生效修订授权。

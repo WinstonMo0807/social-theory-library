@@ -1,5 +1,13 @@
 # 中断恢复最短路径
 
+## 2026-10-22 今日工作第一批恢复
+
+前置dd74788。先读TODAY_WORK_20261022和CURRENT_PROGRESS顶部。36路径白名单在tmp/stl4-today-checkpoint.json；不要整批暂存其他继承脏改。M01-main/states仅部分接入，96/12/101；继续补顶部统一搜索、真实通知和81编辑构图。新接口/路由/生成契约219、精确处理ID过滤、权限与样式退役都需一起恢复。不要恢复旧design-v2全局引用，原文件仅保留历史。静态已查，所有正式验收/迁移/生产操作未运行。
+
+## 当前接续点 dd74788 · PDF80/81今日工作
+
+专题文章检查点已保存。当前今日工作实施从 admin-dashboard、admin-shell、admin_queue_query、curation_queue_views 接续；照片在 tmp/pdfs/stl4-admin-home-20261021，已实际读图。curation_queue/backoffice/processing_center 等已有继承未提交成果，按 diff 保护。新单元未计完成；无需重做上轮全文审计，不运行正式验收/浏览器/构建/迁移/生产操作。
+
 ## 2026-10-21 专题文章/微展览源码收口
 
 前置9bb2bb4。先读EDITORIAL_20261021及CURRENT_PROGRESS最新项；tmp/stl4-editorial-checkpoint.json为本单元精确路径，不整批暂存其他脏文件。恢复public_editorial、typed正文/分组、公开目录/文章/嵌入Reader、阅读设置、私人书单及评论0021、隐私组、后台编辑/审核、218路径契约与生成类型。其余继承成果保留。
