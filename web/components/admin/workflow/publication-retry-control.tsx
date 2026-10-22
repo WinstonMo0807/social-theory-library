@@ -18,13 +18,14 @@ type PublicationStatus = {
   withdrawal?: boolean;
 };
 
-export function PublicationRetryControl({ editionId, objectTarget, token, disabled = false, refreshKey = "", onCompleted }: {
+export function PublicationRetryControl({ editionId, objectTarget, token, disabled = false, refreshKey = "", onCompleted, request }: {
   editionId?: string;
   objectTarget?: { objectType: string; objectId: string };
   token: string | null;
   disabled?: boolean;
   refreshKey?: string;
   onCompleted: () => void | Promise<void>;
+  request?: <T>(url: string, init?: RequestInit) => Promise<T>;
 }) {
   const [current, setCurrent] = useState<PublicationStatus | null>(null);
   const [error, setError] = useState("");
@@ -40,7 +41,7 @@ export function PublicationRetryControl({ editionId, objectTarget, token, disabl
     if (!statusUrl) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
-    apiRequest<PublicationStatus>(statusUrl, { signal: controller.signal }, token)
+    (request ? request<PublicationStatus>(statusUrl, { signal: controller.signal }) : apiRequest<PublicationStatus>(statusUrl, { signal: controller.signal }, token))
       .then((result) => {
         if (controller.signal.aborted) return;
         setCurrent(result);
@@ -51,14 +52,15 @@ export function PublicationRetryControl({ editionId, objectTarget, token, disabl
         if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "暂时无法读取智能内容状态。");
       });
     return () => { controller.abort(); if (timer) clearTimeout(timer); };
-  }, [statusUrl, token, refresh, refreshKey]);
+  }, [statusUrl, token, refresh, refreshKey, request]);
 
   const retry = async () => {
     if (!current?.event_id || busy) return;
     setBusy(true);
     setError("");
     try {
-      const result = await apiRequest<PublicationStatus>(`/catalog/admin/knowledge-publications/${current.event_id}/retry/`, { method: "POST", body: "{}" }, token);
+      const url = `/catalog/admin/knowledge-publications/${current.event_id}/retry/`, init = { method: "POST", body: "{}" };
+      const result = await (request ? request<PublicationStatus>(url, init) : apiRequest<PublicationStatus>(url, init, token));
       setCurrent(result);
       setRefresh((value) => value + 1);
       await onCompleted();

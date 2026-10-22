@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 出版版本发布台
+
+原GET editions/{edition_id}/publication/history/增加view=desk、page、revision、impact_page。无view沿原最近50条数组；desk为PublicationDesk，20条历史分页、选定历史摘要差异、现有prepare/publication状态、影响与FileImpactOutput、最近20任务。revision严格属于选定Edition，非法页码400、错误对象404、读取过程中版本变化409。API路径226保持。
+
+原rollback请求增加可选expected_version；维护发布/撤回同样接受该参数，新UI始终发送。保留旧调用兼容，旧流程仍沿其既有保护。恢复幂等回放核对actor/Edition/历史版本/reason，先回放再CAS；发布仍用prepared_fingerprint回执。X-Editor-Owner保护history/prepare/rollback、WorkMaintenance publication及knowledge status/retry；private,no-store。权限仍是CanPublishWork/CanWithdrawWork及原任务发布能力，没有降低权限或新模型。
+
 ## 2026-10-22 文章发布检查与素材修正
 
 原GET admin/recommendation-issues/{issue_id}/preview/?review=true&edit_version=返回IssuePublicationReview（checks/changes/当前与草稿修订/时间/can_publish/reader_preview），非review沿旧响应。生成契约IssuePreviewResponse为两种响应联合。原preview此前不在schema_urls覆盖中，本批补入，旧225路径全保留，共226；实际catalog路由没有新增。read权限CanAccessBackOffice，发布CanPublishAuthority；private,no-store及X-Editor-Owner沿原保护。preview POST仍只读。

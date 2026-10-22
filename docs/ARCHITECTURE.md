@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-10-22 出版版本发布工作台
+
+publication_desk为只读投影，复用CatalogPublicationRevision/KnowledgePublicationEvent、prepare_revision及edition_file_workspace.impacts。版本标识绑定Edition状态/活动指针/更新时间、Work更新时间、最近正式修订及作品编辑修订。原维护发布/撤回和rollback命令在既有事务内核对预览版本；旧调用兼容。恢复仍创建原发布服务的新序号修订，原快照、PDF、人工草稿不覆盖。
+
+前端复用发布队列准确selection，选中Edition显示版本历史/影响/依赖，缺失选择不展示其他记录。未知命令按owner/edition在sessionStorage保留原路径/JSON，严格校验目标后显式重试；退出登录清除本页记录。私人依赖只复用聚合数量，不返回私人正文或身份。
+
 ## 2026-10-22 文章发布检查
 
 issue_publication_review在原EditorialRevision账本上生成只读差异、发布检查和公开来源预览。实际publish_issue复用checks并保留原父锁、CAS、发布/定时指针；没有第二套发布服务或数据模型。iframe走既有后台preview页的frame模式，仅在AdminShell认证及路由权限后省略外壳，页面内容复用RecommendationIssueView/SiteHeader；版本或账户变化拒绝过期预览。素材修改沿原updated_at校验和不可变rendition快照，不覆盖公开引用的旧图。

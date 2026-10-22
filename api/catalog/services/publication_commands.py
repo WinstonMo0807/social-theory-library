@@ -44,8 +44,8 @@ def validate_revision(revision, *, edition=None, for_rollback=False):
 
 def publication_history(edition):
     return [{"id": str(row.pk), "revision": row.revision, "title": row.snapshot.get("work", {}).get("title", ""),
-             "status": row.status, "activated_at": row.activated_at, "is_current": row.pk == edition.active_catalog_revision_id,
-             "can_rollback": row.activated_at is not None and row.status in {"active", "superseded"}}
+             "status": row.status, "activated_at": row.activated_at, "is_current": row.pk == edition.active_catalog_revision_id and edition.state == "published" and row.status == "active",
+             "can_rollback": edition.state == "published" and row.activated_at is not None and row.status in {"active", "superseded"}}
             for row in edition.catalog_revisions.order_by("-revision")[:50]]
 
 
@@ -338,7 +338,7 @@ def withdraw_revision(edition, actor=None, reason=""):
 
 
 @transaction.atomic
-def rollback_revision(edition, revision_id, *, actor, idempotency_key, reason=""):
+def rollback_revision(edition, revision_id, *, actor, idempotency_key, reason="", expected_version=""):
     """Republish only an already-activated snapshot under a new sequence.
 
     The original revision stays immutable. A monotonic recovery publication
@@ -348,7 +348,17 @@ def rollback_revision(edition, revision_id, *, actor, idempotency_key, reason=""
     from catalog.services.knowledge_publication import create_catalog_publication_event
     from ingestion.models import AuditEvent
 
-    edition = Edition.objects.select_for_update().get(pk=edition.pk)
+    edition = Edition.objects.select_for_update(of=("self",)).select_related("work").get(pk=edition.pk)
+    from catalog.models import KnowledgePublicationEvent
+    previous = KnowledgePublicationEvent.objects.select_related("catalog_revision").filter(idempotency_key=idempotency_key).first()
+    if previous:
+        provenance = previous.catalog_revision.provenance if previous.catalog_revision else {}
+        if not previous.catalog_revision or previous.actor_id != actor.pk or previous.catalog_revision.edition_id != edition.pk or provenance.get("rollback_source_revision_id") != str(revision_id) or provenance.get("reason") != reason[:1000]:
+            raise PublicationCommandError("此请求编号已经用于其他恢复操作，请先核对原记录。")
+        return previous
+    if expected_version:
+        from catalog.services.publication_desk import check_version
+        check_version(edition, expected_version)
     target = CatalogPublicationRevision.objects.select_related("reader_asset", "document_revision").get(pk=revision_id)
     errors = validate_revision(target, edition=edition, for_rollback=True)
     if errors:

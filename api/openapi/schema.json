@@ -1657,7 +1657,7 @@
         },
         "/api/catalog/admin/editions/{edition_id}/publication/history/": {
             "get": {
-                "operationId": "catalog_admin_editions_publication_history_list",
+                "operationId": "catalog_admin_editions_publication_history_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -1667,6 +1667,37 @@
                             "format": "uuid"
                         },
                         "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "impact_page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "revision",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "view",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "desk"
+                            ]
+                        }
                     }
                 ],
                 "tags": [
@@ -1685,10 +1716,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/PublicationHistoryItem"
-                                    }
+                                    "$ref": "#/components/schemas/PublicationHistoryResponse"
                                 }
                             }
                         },
@@ -38416,6 +38444,264 @@
                     "topics"
                 ]
             },
+            "PublicationDesk": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "string"
+                    },
+                    "publication": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "preparation": {
+                        "$ref": "#/components/schemas/PublicationPreparation"
+                    },
+                    "history": {
+                        "$ref": "#/components/schemas/PublicationDeskHistory"
+                    },
+                    "selected": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicationDeskSelected"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "impacts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationDeskImpact"
+                        }
+                    },
+                    "dependencies": {
+                        "$ref": "#/components/schemas/FileImpactOutput"
+                    },
+                    "events": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationDeskEvent"
+                        }
+                    },
+                    "events_limited": {
+                        "type": "boolean"
+                    },
+                    "workbench_url": {
+                        "type": "string"
+                    },
+                    "preview_url": {
+                        "type": "string"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authors",
+                    "checked_at",
+                    "dependencies",
+                    "edition_id",
+                    "events",
+                    "events_limited",
+                    "history",
+                    "impacts",
+                    "notice",
+                    "preparation",
+                    "preview_url",
+                    "publication",
+                    "selected",
+                    "title",
+                    "version",
+                    "work_id",
+                    "workbench_url"
+                ]
+            },
+            "PublicationDeskEvent": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "processed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "actor": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "action",
+                    "actor",
+                    "created_at",
+                    "detail",
+                    "id",
+                    "processed_at",
+                    "revision",
+                    "status"
+                ]
+            },
+            "PublicationDeskHistory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationDeskRevision"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "results"
+                ]
+            },
+            "PublicationDeskImpact": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "href",
+                    "title"
+                ]
+            },
+            "PublicationDeskRevision": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "activated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "is_current": {
+                        "type": "boolean"
+                    },
+                    "can_rollback": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "changed_fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "activated_at",
+                    "can_rollback",
+                    "changed_fields",
+                    "created_at",
+                    "created_by",
+                    "id",
+                    "is_current",
+                    "note",
+                    "revision",
+                    "status",
+                    "title"
+                ]
+            },
+            "PublicationDeskSelected": {
+                "type": "object",
+                "properties": {
+                    "revision": {
+                        "$ref": "#/components/schemas/PublicationDeskRevision"
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationFieldDiff"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "changes",
+                    "notice",
+                    "revision"
+                ]
+            },
             "PublicationFieldDiff": {
                 "type": "object",
                 "properties": {
@@ -38489,6 +38775,19 @@
                     "title"
                 ]
             },
+            "PublicationHistoryResponse": {
+                "oneOf": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationHistoryItem"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/schemas/PublicationDesk"
+                    }
+                ]
+            },
             "PublicationPreparation": {
                 "type": "object",
                 "properties": {
@@ -38558,6 +38857,11 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 1000
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
                     }
                 },
                 "required": [

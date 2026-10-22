@@ -536,8 +536,14 @@ class WorkflowQueueView(AdminPrivateResponseMixin, APIView):
         )
 
 
-class WorkMaintenancePublicationView(APIView):
+class WorkMaintenancePublicationView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanPublishWork]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        owner = request.headers.get("X-Editor-Owner")
+        if owner is not None and owner != str(request.user.pk):
+            raise PermissionDenied("登录账户已变化，请重新读取发布记录。")
 
     def get_permissions(self):
         if self.request.method == "POST" and str(self.request.data.get("action") or "").strip().casefold() == "withdraw":
@@ -570,11 +576,16 @@ class WorkMaintenancePublicationView(APIView):
             return _edit_error(error)
         action = str(request.data.get("action") or "publish").strip().casefold()
         if action == "withdraw":
-            edition = withdraw_edition(
-                edition,
-                actor=request.user,
-                reason=str(request.data.get("reason") or ""),
-            )
+            from catalog.services.publication_commands import PublicationCommandError
+            from catalog.services.publication_desk import check_version
+            try:
+                with transaction.atomic():
+                    edition = Edition.objects.select_for_update(of=("self",)).select_related("work").get(pk=edition.pk)
+                    if request.data.get("expected_version"):
+                        check_version(edition, request.data["expected_version"])
+                    edition = withdraw_edition(edition, actor=request.user, reason=str(request.data.get("reason") or ""))
+            except PublicationCommandError as error:
+                return Response({"detail": str(error), "code": "publication.changed"}, status=409)
             return Response(
                 {
                     **build_admin_workspace(
@@ -612,6 +623,14 @@ class WorkMaintenancePublicationView(APIView):
                     ).first()
                     if receipt is not None:
                         return self.publication_response(request, work_id, edition, receipt=receipt, replayed=True)
+                    if request.data.get("expected_version"):
+                        from catalog.services.publication_desk import check_version
+                        from catalog.services.publication_commands import PublicationCommandError
+                        try:
+                            edition.work.refresh_from_db()
+                            check_version(edition, request.data["expected_version"])
+                        except PublicationCommandError as error:
+                            raise PublicationBlocked([str(error)])
                     if prepare_revision(edition)["fingerprint"] != request.data["prepared_fingerprint"]:
                         raise PublicationBlocked(["内容已在准备发布后变化，请重新检查差异。"])
                 pending_revision = (

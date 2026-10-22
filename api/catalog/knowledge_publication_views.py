@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from catalog.models import Edition, KnowledgePublicationEvent
 from catalog.services.knowledge_publication import retry_knowledge_publication
 from catalog.services.publication_commands import catalog_publication_state
+from catalog.publication_command_views import PublicationReadView
 from common.capabilities import Capability, has_capability
 from common.permissions import CanAccessBackOffice
 
@@ -51,7 +52,7 @@ class PublicationStatusQuery(serializers.Serializer):
     object_id = serializers.UUIDField()
 
 
-class AdminKnowledgePublicationStatusView(APIView):
+class AdminKnowledgePublicationStatusView(PublicationReadView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request, edition_id=None):
@@ -69,7 +70,7 @@ class AdminKnowledgePublicationStatusView(APIView):
         return response
 
 
-class AdminKnowledgePublicationRetryView(APIView):
+class AdminKnowledgePublicationRetryView(PublicationReadView):
     permission_classes = [CanAccessBackOffice]
 
     def post(self, request, event_id):

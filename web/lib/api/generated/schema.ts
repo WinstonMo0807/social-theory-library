@@ -407,7 +407,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["catalog_admin_editions_publication_history_list"];
+        get: operations["catalog_admin_editions_publication_history_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10087,6 +10087,75 @@ export interface components {
             };
             readonly relations: components["schemas"]["WorkRelations"];
         };
+        PublicationDesk: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            work_id: string;
+            version: string;
+            /** Format: date-time */
+            checked_at: string;
+            title: string;
+            authors: string;
+            publication: {
+                [key: string]: unknown;
+            };
+            preparation: components["schemas"]["PublicationPreparation"];
+            history: components["schemas"]["PublicationDeskHistory"];
+            selected: components["schemas"]["PublicationDeskSelected"] | null;
+            impacts: components["schemas"]["PublicationDeskImpact"][];
+            dependencies: components["schemas"]["FileImpactOutput"];
+            events: components["schemas"]["PublicationDeskEvent"][];
+            events_limited: boolean;
+            workbench_url: string;
+            preview_url: string;
+            notice: string;
+        };
+        PublicationDeskEvent: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            action: string;
+            status: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            processed_at: string | null;
+            actor: string;
+            detail: string;
+        };
+        PublicationDeskHistory: {
+            count: number;
+            page: number;
+            pages: number;
+            results: components["schemas"]["PublicationDeskRevision"][];
+        };
+        PublicationDeskImpact: {
+            title: string;
+            detail: string;
+            href: string;
+        };
+        PublicationDeskRevision: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            title: string;
+            status: string;
+            /** Format: date-time */
+            activated_at: string | null;
+            is_current: boolean;
+            can_rollback: boolean;
+            /** Format: date-time */
+            created_at: string;
+            created_by: string;
+            note: string;
+            changed_fields: string[];
+        };
+        PublicationDeskSelected: {
+            revision: components["schemas"]["PublicationDeskRevision"];
+            changes: components["schemas"]["PublicationFieldDiff"][];
+            notice: string;
+        };
         PublicationFieldDiff: {
             field: string;
             label: string;
@@ -10107,6 +10176,7 @@ export interface components {
             is_current: boolean;
             can_rollback: boolean;
         };
+        PublicationHistoryResponse: components["schemas"]["PublicationHistoryItem"][] | components["schemas"]["PublicationDesk"];
         PublicationPreparation: {
             /** Format: uuid */
             edition_id: string;
@@ -10125,6 +10195,7 @@ export interface components {
             /** Format: uuid */
             request_key: string;
             reason: string;
+            expected_version?: string;
         };
         PublicationRollbackResult: {
             /** Format: uuid */
@@ -13266,9 +13337,14 @@ export interface operations {
             };
         };
     };
-    catalog_admin_editions_publication_history_list: {
+    catalog_admin_editions_publication_history_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                impact_page?: number;
+                page?: number;
+                revision?: string;
+                view?: "desk";
+            };
             header?: never;
             path: {
                 edition_id: string;
@@ -13282,7 +13358,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicationHistoryItem"][];
+                    "application/json": components["schemas"]["PublicationHistoryResponse"];
                 };
             };
         };

@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-22 M18出版历史工作台静态检查
+
+- `.venv/Scripts/python.exe tmp/stl4-publication-desk-static.py`（PYTHONIOENCODING=utf-8），c90621退出0：6文件AST、SQLite/PostgreSQL共10次SQL编译，ensure_connection阻断，0连接。
+- 完整`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`，最终13816/dceee7退出0；前序76882/3028b0、83509/9e3c4b亦退出0。
+- `node node_modules/eslint/bin/eslint.js components/admin/workflow/publication-ledger.tsx components/admin/workflow/publication-diff.tsx components/admin/workflow/publication-retry-control.tsx components/publication-desk.tsx tests/publication-ledger-atlas.spec.ts`，e4f1b3退出0，1项img优化建议保留。
+- `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-publication-desk-schema.json --validate`（SQLite内存URL、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true），81abbe退出0，0错误/10项既有serializer警告；严格fail-on-warn未记通过。`node tmp/stl4-publication-desk-contracts.mjs`，03e7a9退出0，226路径全部保留，CSS65顶层节点可解析。
+- 7后端函数和4浏览器场景只定义；包含只读分页、跨对象/权限、撤回状态、旧版恢复CAS与回执、准确请求、断线重开、撤回独立能力。未运行正式测试/E2E/浏览器/构建/迁移/模型或检索测评/生产操作。
+
 ## 2026-10-22 M17发布检查静态记录
 
 - `.venv/Scripts/python.exe tmp/stl4-publish-review-static.py`（PYTHONIOENCODING=utf-8），efe16f退出0：7文件AST、两数据库共8次SQL编译；ensure_connection阻断，0连接。没有运行功能测试。

@@ -1,5 +1,13 @@
 # 中断恢复最短路径
 
+## 2026-10-22 M18出版版本工作台恢复
+
+M17检查点0e11275；M18本批白名单tmp/stl4-publication-ledger-checkpoint.json，核对git log确认提交。当前源码见PUBLICATION_LEDGER_20261022，统计96/25/88。唯一PDF134–137已读，图136 NEW-A16独立页面仍待实现；继续现有preview/prepare/维护命令，不能把旧itemId默认为editionId。后台GET history?view=desk保留旧数组；无迁移/正式验收/生产。不要重跑tmp编辑或记录脚本，不暂存继承脏改。
+
+## 2026-10-22 0e11275后M18发布历史实施中
+
+M17已保存0e11275（30路径）。已实际读唯一PDF134–137，当前沿原history/prepare/rollback及WorkMaintenance publication接选定版本的历史分页、摘要差异、影响/引用依赖与操作记录。新增desk投影和版本守卫写入中；暂无本批静态/功能验收，96/22/91保持。原PDF/历史/继承脏改均保留。下一步完成UI与契约/定义/静态检查，再保存白名单检查点；不要重跑tmp编辑记录脚本。
+
 ## 2026-10-22 M17检查点恢复
 
 前置65c512b，本批见CURRENT_PROGRESS最上项与PUBLICATION_REVIEW_20261022；显式白名单为tmp/stl4-publication-checkpoint.json。核对最新git log确认该批提交，再读唯一PDF134–137接M18发布台/历史/撤回。M17状态96/22/91，只有源码和静态检查证据，无正式验收、迁移或生产操作。接口覆盖226，新增覆盖的是既有preview路由。不要重跑tmp编辑与记录脚本，不暂存继承脏改。素材/草稿原件保留，无数据重置。
