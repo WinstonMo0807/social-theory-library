@@ -14,7 +14,6 @@ import {
   HardDrive,
   ImagePlus,
   LoaderCircle,
-  LockKeyhole,
   Pencil,
   Plus,
   RefreshCw,
@@ -1311,110 +1310,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   );
 }
 
-type AdminUser = {
-  id: number;
-  email: string;
-  display_name: string;
-  role: "admin" | "editor" | "reviewer" | "reader";
-  is_active: boolean;
-  date_joined: string;
-  last_login: string | null;
-  annotation_count: number;
-  bookmark_count: number;
-  saved_count: number;
-  is_library_owner: boolean;
-  can_manage_admin_role: boolean;
-};
-
-export function UsersAdmin() {
-  const resource = useAdminResource<Paginated<AdminUser>>("/auth/users/");
-  const [target, setTarget] = useState<number | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [role, setRole] = useState<AdminUser["role"]>("reader");
-  const [active, setActive] = useState(true);
-  const [newPassword, setNewPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const selected = resource.data?.results.find((user) => user.id === target);
-  const canManageAdminRole = Boolean(resource.data?.results.some((user) => user.can_manage_admin_role));
-
-  function select(user: AdminUser) {
-    setTarget(user.id);
-    setDisplayName(user.display_name);
-    setRole(user.role);
-    setActive(user.is_active);
-    setMessage("");
-  }
-
-  async function saveAccount() {
-    const token = getServerSessionCredential();
-    if (!token || target === null) return;
-    try {
-      await apiRequest(
-        `/auth/users/${target}/`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ display_name: displayName, role, is_active: active }),
-        },
-        token,
-      );
-      setMessage("账户状态和角色已经更新。");
-      resource.refresh();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "账户更新失败。");
-    }
-  }
-
-  async function reset(event: FormEvent) {
-    event.preventDefault();
-    const token = getServerSessionCredential();
-    if (!token || target === null) {
-      setMessage("请先从真实用户列表选择账户。");
-      return;
-    }
-    try {
-      await apiRequest(
-        `/auth/users/${target}/set-password/`,
-        { method: "POST", body: JSON.stringify({ new_password: newPassword }) },
-        token,
-      );
-      setNewPassword("");
-      setMessage("新密码已设置。系统没有读取或显示旧密码。");
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "设置失败。");
-    }
-  }
-
-  return (
-    <AdminPageFrame eyebrow="账户与权限" title="读者用户" description="管理员可以设置新密码、停用账户或调整角色。旧密码始终不可读取。">
-      <ResourceState loading={resource.loading} error={resource.error} empty={!resource.data?.results.length} />
-      <section className="user-admin-grid">
-        <div className="admin-panel">
-          <header><h2>用户列表</h2><span>{resource.data?.count ?? 0} 人</span></header>
-          {resource.data?.results.map((user, index) => <button className={target === user.id ? "active" : ""} type="button" key={user.id} onClick={() => select(user)}><span>{index + 1}</span><p><strong>{user.display_name}{user.is_library_owner ? " · 最高管理员" : ""}</strong><small>{user.email}</small></p><b>{user.is_active ? user.role : "已停用"}</b></button>)}
-        </div>
-        <div className="user-admin-actions">
-          <section className="admin-panel account-editor">
-            <h2>账户状态</h2>
-            <p>{selected?.email ?? "从左侧选择用户"}</p>
-            <label><span>显示名</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} disabled={!selected} /></label>
-            <label><span>角色</span><select value={role === "reviewer" ? "editor" : role} onChange={(event) => setRole(event.target.value as AdminUser["role"])} disabled={!selected || selected.is_library_owner || (selected.role === "admin" && !canManageAdminRole)}><option value="reader">读者</option><option value="editor">编辑</option>{canManageAdminRole || selected?.role === "admin" ? <option value="admin">管理员</option> : null}</select><small>{canManageAdminRole ? "只有 System Owner 可以授予或撤销 Administrator。" : "账户角色提升由 System Owner 管理。"}</small></label>
-            <label className="switch-row"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} disabled={!selected || selected.is_library_owner} /><span>账户有效</span></label>
-            {selected ? <p className="account-counts">批注 {selected.annotation_count} · 书签 {selected.bookmark_count} · 收藏 {selected.saved_count}</p> : null}
-            <button className="button secondary" type="button" onClick={saveAccount} disabled={!selected}>保存账户</button>
-          </section>
-          <form className="admin-panel direct-reset" onSubmit={reset}>
-            <LockKeyhole size={25} />
-            <h2>直接设置新密码</h2>
-            <p>目标账户：{selected?.email ?? "尚未选择"}</p>
-            <label><span>新密码</span><input type="password" minLength={10} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required disabled={!selected} /></label>
-            <button className="button" type="submit" disabled={!selected}>设置新密码</button>
-          </form>
-          {message ? <p className="form-message" role="status">{message}</p> : null}
-        </div>
-      </section>
-    </AdminPageFrame>
-  );
-}
+// Account management uses the M25 workspace and the shared User/AuditEvent service.
 
 type CloudProvider = {
   id: string;

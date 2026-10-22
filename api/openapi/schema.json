@@ -199,6 +199,371 @@
                 }
             }
         },
+        "/api/auth/users/command/": {
+            "post": {
+                "operationId": "auth_users_command_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagementCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagementCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagementCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManagementReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/history/": {
+            "get": {
+                "operationId": "auth_users_history_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "enum": [
+                                10,
+                                20,
+                                50
+                            ],
+                            "type": "integer",
+                            "default": 10
+                        },
+                        "description": "* `10` - 10\n* `20` - 20\n* `50` - 50"
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 180
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "role",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "reader",
+                                "editor",
+                                "admin"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `reader` - reader\n* `editor` - editor\n* `admin` - admin"
+                    },
+                    {
+                        "in": "query",
+                        "name": "state",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "active",
+                                "inactive"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `active` - active\n* `inactive` - inactive"
+                    },
+                    {
+                        "in": "query",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManagementHistory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/preview/": {
+            "post": {
+                "operationId": "auth_users_preview_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagementInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagementInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagementInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManagementPreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/receipt/": {
+            "get": {
+                "operationId": "auth_users_receipt_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManagementReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/roles/": {
+            "get": {
+                "operationId": "auth_users_roles_retrieve",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoleMatrix"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/workspace/": {
+            "get": {
+                "operationId": "auth_users_workspace_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "enum": [
+                                10,
+                                20,
+                                50
+                            ],
+                            "type": "integer",
+                            "default": 10
+                        },
+                        "description": "* `10` - 10\n* `20` - 20\n* `50` - 50"
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 180
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "role",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "reader",
+                                "editor",
+                                "admin"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `reader` - reader\n* `editor` - editor\n* `admin` - admin"
+                    },
+                    {
+                        "in": "query",
+                        "name": "state",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "active",
+                                "inactive"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `active` - active\n* `inactive` - inactive"
+                    },
+                    {
+                        "in": "query",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManagementDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/assets/{asset_id}/outline/": {
             "get": {
                 "operationId": "catalog_admin_assets_outline_retrieve",
@@ -20953,6 +21318,15 @@
                 "type": "string",
                 "description": "* `inherit` - 继承版本权限\n* `private` - 仅后台可用\n* `registered` - 登录读者\n* `restricted` - 受限访问\n* `public` - 公开访问"
             },
+            "AccountManagementOperationEnum": {
+                "enum": [
+                    "create",
+                    "update",
+                    "password"
+                ],
+                "type": "string",
+                "description": "* `create` - create\n* `update` - update\n* `password` - password"
+            },
             "AdminIssueSummary": {
                 "type": "object",
                 "properties": {
@@ -22298,6 +22672,15 @@
                 "type": "string",
                 "description": "* `original` - 原始文件\n* `normalized` - 规范阅读文件\n* `ocr_pdf` - OCR 阅读文件\n* `web_derivative` - 网页阅读派生文件"
             },
+            "AssignableAccountRoleEnum": {
+                "enum": [
+                    "reader",
+                    "editor",
+                    "admin"
+                ],
+                "type": "string",
+                "description": "* `reader` - reader\n* `editor` - editor\n* `admin` - admin"
+            },
             "AttributionEnum": {
                 "enum": [
                     "author_claim",
@@ -22506,6 +22889,54 @@
                 ],
                 "type": "string",
                 "description": "* `public_library` - public_library\n* `private_materials` - private_materials"
+            },
+            "AuditRecord": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "actor": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "string"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "before": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "after": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "sessions_revoked": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "password_reset": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "action",
+                    "actor",
+                    "after",
+                    "before",
+                    "created_at",
+                    "id",
+                    "password_reset",
+                    "sessions_revoked",
+                    "user_id"
+                ]
             },
             "AuditVersionInputRequest": {
                 "type": "object",
@@ -22972,6 +23403,21 @@
                 ],
                 "type": "string",
                 "description": "* `unverified` - unverified\n* `needs_review` - needs_review\n* `confirmed` - confirmed\n* `native` - native\n* `matched` - matched\n* `generated` - generated"
+            },
+            "CapabilityOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label"
+                ]
             },
             "CatalogCounts": {
                 "type": "object",
@@ -26255,7 +26701,7 @@
                         "format": "uuid"
                     },
                     "operation": {
-                        "$ref": "#/components/schemas/OperationEnum"
+                        "$ref": "#/components/schemas/EditorialAssistanceOperationEnum"
                     },
                     "status": {
                         "type": "string"
@@ -26424,7 +26870,7 @@
                         "minLength": 1
                     },
                     "operation": {
-                        "$ref": "#/components/schemas/OperationEnum"
+                        "$ref": "#/components/schemas/EditorialAssistanceOperationEnum"
                     },
                     "question": {
                         "type": "string",
@@ -26448,6 +26894,15 @@
                     "references",
                     "request_id"
                 ]
+            },
+            "EditorialAssistanceOperationEnum": {
+                "enum": [
+                    "outline",
+                    "guide",
+                    "comparison"
+                ],
+                "type": "string",
+                "description": "* `outline` - outline\n* `guide` - guide\n* `comparison` - comparison"
             },
             "EditorialAssistancePage": {
                 "type": "object",
@@ -32544,6 +32999,286 @@
                     "password"
                 ]
             },
+            "ManagementCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "$ref": "#/components/schemas/AccountManagementOperationEnum"
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "username": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/AssignableAccountRoleEnum"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 10,
+                        "maxLength": 128
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "preview_hash": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "operation",
+                    "preview_hash",
+                    "request_id"
+                ]
+            },
+            "ManagementDirectory": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UserOutput"
+                        }
+                    },
+                    "selected": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UserOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "can_assign_roles": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "can_assign_roles",
+                    "count",
+                    "page",
+                    "page_size",
+                    "results",
+                    "selected",
+                    "total_pages"
+                ]
+            },
+            "ManagementHistory": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AuditRecord"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "count",
+                    "page",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "ManagementInputRequest": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "$ref": "#/components/schemas/AccountManagementOperationEnum"
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "username": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/AssignableAccountRoleEnum"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 10,
+                        "maxLength": 128
+                    }
+                },
+                "required": [
+                    "operation"
+                ]
+            },
+            "ManagementPreview": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "target": {
+                        "$ref": "#/components/schemas/ProposedUser"
+                    },
+                    "retained": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CapabilityOutput"
+                        }
+                    },
+                    "gained": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CapabilityOutput"
+                        }
+                    },
+                    "lost": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CapabilityOutput"
+                        }
+                    },
+                    "public_access": {
+                        "type": "string"
+                    },
+                    "private_access": {
+                        "type": "string"
+                    },
+                    "sessions_revoked": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "preview_hash": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "gained",
+                    "lost",
+                    "notice",
+                    "preview_hash",
+                    "private_access",
+                    "public_access",
+                    "retained",
+                    "sessions_revoked",
+                    "target"
+                ]
+            },
+            "ManagementReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "version": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "operation": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "operation",
+                    "request_id",
+                    "user_id",
+                    "version"
+                ]
+            },
             "MappingAsset": {
                 "type": "object",
                 "properties": {
@@ -35399,15 +36134,6 @@
                 ],
                 "type": "string",
                 "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `topic` - topic"
-            },
-            "OperationEnum": {
-                "enum": [
-                    "outline",
-                    "guide",
-                    "comparison"
-                ],
-                "type": "string",
-                "description": "* `outline` - outline\n* `guide` - guide\n* `comparison` - comparison"
             },
             "OutlineBatchRequest": {
                 "type": "object",
@@ -41638,6 +42364,43 @@
                     "schema_version"
                 ]
             },
+            "ProposedUser": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "role_label": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "display_name",
+                    "email",
+                    "id",
+                    "is_active",
+                    "role",
+                    "role_label",
+                    "username"
+                ]
+            },
             "PublicCitationInputRequest": {
                 "type": "object",
                 "properties": {
@@ -46885,6 +47648,62 @@
                 ],
                 "type": "string",
                 "description": "* `suggested` - 系统建议\n* `approved` - 人工确认\n* `rejected` - 人工拒绝"
+            },
+            "RoleMatrix": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RoleOutput"
+                        }
+                    },
+                    "can_assign_roles": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "can_assign_roles",
+                    "roles"
+                ]
+            },
+            "RoleOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CapabilityOutput"
+                        }
+                    },
+                    "public_access": {
+                        "type": "string"
+                    },
+                    "private_access": {
+                        "type": "string"
+                    },
+                    "assignable": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "assignable",
+                    "capabilities",
+                    "id",
+                    "label",
+                    "private_access",
+                    "public_access"
+                ]
             },
             "SaveIssueListCommandRequest": {
                 "type": "object",
@@ -52707,6 +53526,80 @@
                     "is_library_owner",
                     "role",
                     "system_owner_label"
+                ]
+            },
+            "UserOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "role_label": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "is_owner": {
+                        "type": "boolean"
+                    },
+                    "date_joined": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "last_login": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "can_edit": {
+                        "type": "boolean"
+                    },
+                    "can_change_role": {
+                        "type": "boolean"
+                    },
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "can_change_role",
+                    "can_edit",
+                    "capabilities",
+                    "date_joined",
+                    "display_name",
+                    "email",
+                    "id",
+                    "is_active",
+                    "is_owner",
+                    "last_login",
+                    "notice",
+                    "role",
+                    "role_label",
+                    "username",
+                    "version"
                 ]
             },
             "UserRoleEnum": {

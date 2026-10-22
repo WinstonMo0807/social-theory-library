@@ -7,7 +7,7 @@ from .cookies import enforce_cookie_csrf
 
 
 class VersionedJWTAuthentication(JWTAuthentication):
-    """Reject tokens issued before an administrator or reader changed the password."""
+    """Reject tokens retired by credential, role or account-status changes."""
 
     def authenticate(self, request):
         header = self.get_header(request)
@@ -59,5 +59,5 @@ class VersionedJWTAuthentication(JWTAuthentication):
         except (TypeError, ValueError) as exc:
             raise AuthenticationFailed("登录令牌无效，请重新登录。") from exc
         if token_version != user.token_version:
-            raise AuthenticationFailed("密码已变更，请重新登录。")
+            raise AuthenticationFailed("账户资料或登录凭证已变更，请重新登录。")
         return user

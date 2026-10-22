@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M25账户管理
+
+M25唯一User与AuditEvent服务，HMAC版本+实际能力预览+升序User锁+UUID审计回执。旧账户写入地址收敛同一服务，角色/状态/密码变化统一token_version退役，inactive无后台能力。移除旧用户列表读者私人计数。没有新账户表、角色体系或迁移；见docs/stl4/ACCOUNT_MANAGEMENT_20261023.md。
+
 ## 2026-10-23 原账户上的受限分享
 
 新ReaderGroup/Member/Invite与ReaderShare/Notice归reading，与管理权限组分离。原项目/书单/笔记是权威内容，分享只存加密范围/版本/接收身份；读取重新投影，原文按匿名可见性。原privacy导出删除接五类协作资料，旧同步导出同源。新0024迁移未执行，账号凭据和角色不变；详见docs/stl4/SHARING_WORKSPACE_20261023.md。

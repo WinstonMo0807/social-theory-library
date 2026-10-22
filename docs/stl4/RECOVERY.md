@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 M25账户管理
+
+前置13d54c1，ACCOUNT_MANAGEMENT_20261023与tmp/stl4-accounts-checkpoint-20261023.json。M25原User/AuditEvent命令集中化，273契约、96/45/68，reading0022/23/24仍待，暂无账户迁移。最终静态9e6d4d/91498e退出0，无测试/浏览器/实际账号修改。继续NEW-R04。勿重跑一次性代码/文档脚本。
+
 ## 2026-10-23 R28接续
 
 R28导出恢复：前置f793e68，见NOTEBOOK_EXPORT_20261023及tmp/stl4-notebook-export-checkpoint-20261023.json。原记录下载和书签新增笔记回执已接，267契约，96/42/71。不要重跑一次性源码/文档脚本。无测试/浏览器/业务/迁移，继续M25。

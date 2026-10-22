@@ -8,6 +8,8 @@ from rest_framework.response import Response
 
 from .serializers import VersionedTokenRefreshSerializer
 from .cookies import enforce_cookie_csrf, expose_csrf_cookie, set_auth_cookies
+from .user_management_views import (ManagementWorkspaceView, ManagementRolesView, ManagementPreviewView,
+    ManagementCommandView, ManagementReceiptView, ManagementHistoryView)
 from .views import (
     AdminSetPasswordView,
     AdminUserDetailView,
@@ -60,6 +62,12 @@ urlpatterns = [
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("capabilities/", CurrentCapabilitiesView.as_view(), name="current-capabilities"),
     path("users/", AdminUserListView.as_view(), name="admin-user-list"),
+    path("users/workspace/", ManagementWorkspaceView.as_view(), name="account-management-workspace"),
+    path("users/roles/", ManagementRolesView.as_view(), name="account-management-roles"),
+    path("users/preview/", ManagementPreviewView.as_view(), name="account-management-preview"),
+    path("users/command/", ManagementCommandView.as_view(), name="account-management-command"),
+    path("users/receipt/", ManagementReceiptView.as_view(), name="account-management-receipt"),
+    path("users/history/", ManagementHistoryView.as_view(), name="account-management-history"),
     path("users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path("password/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
     path("password/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),

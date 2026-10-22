@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework import generics
@@ -17,7 +16,6 @@ from .cookies import clear_auth_cookies, enforce_cookie_csrf, expose_csrf_cookie
 from .models import User
 from .ownership import is_library_owner, is_library_owner_identity
 from .serializers import (
-    AdminSetPasswordSerializer,
     AdminUserSerializer,
     AdminUserUpdateSerializer,
     LoginSerializer,
@@ -169,110 +167,28 @@ class PasswordResetConfirmView(AuthEntryView):
         return response
 
 
-class AdminSetPasswordView(APIView):
+class AdminSetPasswordView(PrivateAccountResponses, APIView):
     permission_classes = [CanManageUsers]
 
     def post(self, request, user_id):
-        target = get_object_or_404(User, pk=user_id)
-        if (
-            (is_library_owner_identity(target) or target.role == User.Role.ADMIN)
-            and target != request.user
-            and not is_library_owner(request.user)
-        ):
-            from rest_framework.exceptions import PermissionDenied
-
-            raise PermissionDenied("只有书库最高管理员可以重置其他管理员的密码。")
-        serializer = AdminSetPasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        target.set_password(serializer.validated_data["new_password"])
-        target.token_version += 1
-        target.save(update_fields=["password", "token_version"])
-        from ingestion.models import AuditEvent
-
-        AuditEvent.objects.create(
-            actor=request.user,
-            action="admin_set_password",
-            object_type="User",
-            object_id=str(target.id),
-            after={"password_reset": True},
-            request_ip=request.META.get("REMOTE_ADDR"),
-        )
-        return Response({"detail": "新密码已设置。旧密码从未以可读取形式保存。"})
+        from .user_management_views import legacy_command
+        return legacy_command(request, user_id, "password")
 
 
-class AdminUserListView(generics.ListAPIView):
+class AdminUserListView(PrivateAccountResponses, generics.ListAPIView):
     permission_classes = [CanManageUsers]
     serializer_class = AdminUserSerializer
-    search_fields = ("email", "display_name")
+    search_fields = ("username", "email", "display_name")
     ordering_fields = ("date_joined", "last_login", "email")
-
-    def get_queryset(self):
-        return User.objects.annotate(
-            annotation_count=Count("annotations", distinct=True),
-            bookmark_count=Count("bookmarks", distinct=True),
-            saved_count=Count("saved_items", distinct=True),
-        ).order_by("-date_joined")
+    queryset = User.objects.all().order_by("-date_joined", "-pk")
 
 
-class AdminUserDetailView(generics.RetrieveUpdateAPIView):
+class AdminUserDetailView(PrivateAccountResponses, generics.RetrieveUpdateAPIView):
     permission_classes = [CanManageUsers]
     serializer_class = AdminUserUpdateSerializer
     queryset = User.objects.all()
     lookup_url_kwarg = "user_id"
 
-    def perform_update(self, serializer):
-        target = self.get_object()
-        requested_role = serializer.validated_data.get("role", target.role)
-        requested_active = serializer.validated_data.get("is_active", target.is_active)
-        actor_is_owner = is_library_owner(self.request.user)
-        target_is_owner = is_library_owner_identity(target)
-        if target_is_owner and not actor_is_owner:
-            from rest_framework.exceptions import PermissionDenied
-
-            raise PermissionDenied("System Owner 账户只能由本人管理。")
-        if target_is_owner and (requested_role != User.Role.ADMIN or not requested_active):
-            from rest_framework.exceptions import ValidationError
-
-            raise ValidationError("最高管理员账户不能被停用或降级。")
-        if target.role == User.Role.ADMIN and target != self.request.user and not actor_is_owner:
-            from rest_framework.exceptions import PermissionDenied
-
-            raise PermissionDenied("Administrator 账户只能由 System Owner 管理。")
-        if requested_role != target.role and not actor_is_owner:
-            from rest_framework.exceptions import PermissionDenied
-
-            raise PermissionDenied("只有 System Owner 可以变更账户角色。")
-        if target == self.request.user and (requested_role != User.Role.ADMIN or not requested_active):
-            from rest_framework.exceptions import ValidationError
-
-            raise ValidationError("不能停用当前账户或撤销自己的管理员角色。")
-        if (
-            target.role == User.Role.ADMIN
-            and target.is_active
-            and (requested_role != User.Role.ADMIN or not requested_active)
-            and User.objects.filter(role=User.Role.ADMIN, is_active=True).count() <= 1
-        ):
-            from rest_framework.exceptions import ValidationError
-
-            raise ValidationError("系统必须保留至少一个有效管理员账户。")
-        before = {
-            "display_name": target.display_name,
-            "role": target.role,
-            "is_active": target.is_active,
-        }
-        updated = serializer.save()
-        from ingestion.models import AuditEvent
-
-        AuditEvent.objects.create(
-            actor=self.request.user,
-            action="admin_update_user",
-            object_type="User",
-            object_id=str(updated.id),
-            before=before,
-            after={
-                "display_name": updated.display_name,
-                "role": updated.role,
-                "is_active": updated.is_active,
-            },
-            request_ip=self.request.META.get("REMOTE_ADDR"),
-        )
+    def update(self, request, *args, **kwargs):
+        from .user_management_views import legacy_command
+        return legacy_command(request, kwargs["user_id"], "update")

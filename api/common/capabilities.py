@@ -124,6 +124,8 @@ class CapabilitySnapshot:
 def capability_snapshot(user) -> CapabilitySnapshot:
     if not user or not getattr(user, "is_authenticated", False):
         return CapabilitySnapshot("anonymous", ())
+    if not getattr(user, "is_active", False):
+        return CapabilitySnapshot("inactive", ())
     if is_library_owner(user):
         # Keep the 3.0.0 transport value until web/session consumers use the
         # explicit owner flag. The decisive boundary is the configured owner

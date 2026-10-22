@@ -119,9 +119,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
-    annotation_count = serializers.IntegerField(read_only=True)
-    bookmark_count = serializers.IntegerField(read_only=True)
-    saved_count = serializers.IntegerField(read_only=True)
     is_library_owner = serializers.SerializerMethodField()
     can_manage_admin_role = serializers.SerializerMethodField()
     system_owner_label = serializers.SerializerMethodField()
@@ -136,9 +133,6 @@ class AdminUserSerializer(serializers.ModelSerializer):
             "is_active",
             "date_joined",
             "last_login",
-            "annotation_count",
-            "bookmark_count",
-            "saved_count",
             "is_library_owner",
             "can_manage_admin_role",
             "system_owner_label",

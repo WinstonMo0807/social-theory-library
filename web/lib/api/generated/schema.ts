@@ -64,6 +64,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/users/command/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_users_command_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/users/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_users_history_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/users/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_users_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/users/receipt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_users_receipt_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/users/roles/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_users_roles_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/users/workspace/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_users_workspace_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/assets/{asset_id}/outline/": {
         parameters: {
             query?: never;
@@ -4472,6 +4568,13 @@ export interface components {
          * @enum {string}
          */
         AccessStatusEnum: "inherit" | "private" | "registered" | "restricted" | "public";
+        /**
+         * @description * `create` - create
+         *     * `update` - update
+         *     * `password` - password
+         * @enum {string}
+         */
+        AccountManagementOperationEnum: "create" | "update" | "password";
         AdminIssueSummary: {
             total: number;
             published: number;
@@ -4900,6 +5003,13 @@ export interface components {
          */
         AssetCompactKindEnum: "original" | "normalized" | "ocr_pdf" | "web_derivative";
         /**
+         * @description * `reader` - reader
+         *     * `editor` - editor
+         *     * `admin` - admin
+         * @enum {string}
+         */
+        AssignableAccountRoleEnum: "reader" | "editor" | "admin";
+        /**
          * @description * `author_claim` - author_claim
          *     * `quoted_claim` - quoted_claim
          *     * `reported_claim` - reported_claim
@@ -4975,6 +5085,23 @@ export interface components {
          * @enum {string}
          */
         AuditCreateInputScopeEnum: "public_library" | "private_materials";
+        AuditRecord: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            actor: string;
+            user_id: string;
+            action: string;
+            before: {
+                [key: string]: unknown;
+            };
+            after: {
+                [key: string]: unknown;
+            };
+            sessions_revoked: boolean | null;
+            password_reset: boolean;
+        };
         AuditVersionInputRequest: {
             expected_revision: number;
             /** Format: uuid */
@@ -5143,6 +5270,10 @@ export interface components {
          * @enum {string}
          */
         CalibrationStatusEnum: "unverified" | "needs_review" | "confirmed" | "native" | "matched" | "generated";
+        CapabilityOutput: {
+            id: string;
+            label: string;
+        };
         CatalogCounts: {
             works: number;
             books: number;
@@ -6121,7 +6252,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             issue_id: string;
-            operation: components["schemas"]["OperationEnum"];
+            operation: components["schemas"]["EditorialAssistanceOperationEnum"];
             status: string;
             stage: string;
             progress: number;
@@ -6172,12 +6303,19 @@ export interface components {
             /** Format: uuid */
             request_id: string;
             edit_version: string;
-            operation: components["schemas"]["OperationEnum"];
+            operation: components["schemas"]["EditorialAssistanceOperationEnum"];
             question: string;
             references: {
                 [key: string]: unknown;
             }[];
         };
+        /**
+         * @description * `outline` - outline
+         *     * `guide` - guide
+         *     * `comparison` - comparison
+         * @enum {string}
+         */
+        EditorialAssistanceOperationEnum: "outline" | "guide" | "comparison";
         EditorialAssistancePage: {
             count: number;
             page: number;
@@ -7994,6 +8132,74 @@ export interface components {
             /** @default true */
             remember_me: boolean;
         };
+        ManagementCommandRequest: {
+            operation: components["schemas"]["AccountManagementOperationEnum"];
+            user_id?: number;
+            expected_version?: string;
+            username?: string;
+            /** Format: email */
+            email?: string;
+            display_name?: string;
+            role?: components["schemas"]["AssignableAccountRoleEnum"];
+            is_active?: boolean;
+            password?: string;
+            /** Format: uuid */
+            request_id: string;
+            confirmed: boolean;
+            preview_hash: string;
+        };
+        ManagementDirectory: {
+            actor_id: string;
+            results: components["schemas"]["UserOutput"][];
+            selected: components["schemas"]["UserOutput"] | null;
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            can_assign_roles: boolean;
+        };
+        ManagementHistory: {
+            actor_id: string;
+            results: components["schemas"]["AuditRecord"][];
+            count: number;
+            page: number;
+            total_pages: number;
+        };
+        ManagementInputRequest: {
+            operation: components["schemas"]["AccountManagementOperationEnum"];
+            user_id?: number;
+            expected_version?: string;
+            username?: string;
+            /** Format: email */
+            email?: string;
+            display_name?: string;
+            role?: components["schemas"]["AssignableAccountRoleEnum"];
+            is_active?: boolean;
+            password?: string;
+        };
+        ManagementPreview: {
+            actor_id: string;
+            target: components["schemas"]["ProposedUser"];
+            retained: components["schemas"]["CapabilityOutput"][];
+            gained: components["schemas"]["CapabilityOutput"][];
+            lost: components["schemas"]["CapabilityOutput"][];
+            public_access: string;
+            private_access: string;
+            sessions_revoked: boolean;
+            notice: string;
+            preview_hash: string;
+        };
+        ManagementReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            user_id: number;
+            exists: boolean;
+            version: string | null;
+            operation: string;
+            /** Format: date-time */
+            created_at: string;
+        };
         MappingAsset: {
             /** Format: uuid */
             id: string;
@@ -8768,13 +8974,6 @@ export interface components {
          * @enum {string}
          */
         ObjectTypeEnum: "knowledge_node" | "reading_path" | "discipline" | "subdiscipline" | "topic";
-        /**
-         * @description * `outline` - outline
-         *     * `guide` - guide
-         *     * `comparison` - comparison
-         * @enum {string}
-         */
-        OperationEnum: "outline" | "guide" | "comparison";
         OutlineBatchRequest: {
             asset_ids: string[];
             /** Format: uuid */
@@ -10812,6 +11011,16 @@ export interface components {
             comparison?: components["schemas"]["ImportedComparisonInputRequest"];
             turns?: components["schemas"]["ImportedTurnInputRequest"][];
         };
+        ProposedUser: {
+            id: number | null;
+            display_name: string;
+            username: string;
+            /** Format: email */
+            email: string;
+            role: string;
+            role_label: string;
+            is_active: boolean;
+        };
         PublicCitationInputRequest: {
             /** Format: uuid */
             edition_id?: string;
@@ -12372,6 +12581,19 @@ export interface components {
          * @enum {string}
          */
         ReviewStatusEnum: "suggested" | "approved" | "rejected";
+        RoleMatrix: {
+            actor_id: string;
+            roles: components["schemas"]["RoleOutput"][];
+            can_assign_roles: boolean;
+        };
+        RoleOutput: {
+            id: string;
+            label: string;
+            capabilities: components["schemas"]["CapabilityOutput"][];
+            public_access: string;
+            private_access: string;
+            assignable: boolean;
+        };
         SaveIssueListCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -13988,6 +14210,26 @@ export interface components {
             readonly capabilities: string[];
             readonly system_owner_label: string;
         };
+        UserOutput: {
+            id: number;
+            username: string;
+            /** Format: email */
+            email: string;
+            display_name: string;
+            role: string;
+            role_label: string;
+            is_active: boolean;
+            is_owner: boolean;
+            /** Format: date-time */
+            date_joined: string;
+            /** Format: date-time */
+            last_login: string | null;
+            version: string;
+            can_edit: boolean;
+            can_change_role: boolean;
+            capabilities: string[];
+            notice: string;
+        };
         /**
          * @description * `admin` - 管理员
          *     * `editor` - 编辑
@@ -14457,6 +14699,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    auth_users_command_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManagementCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ManagementCommandRequest"];
+                "multipart/form-data": components["schemas"]["ManagementCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementReceipt"];
+                };
+            };
+        };
+    };
+    auth_users_history_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                /**
+                 * @description * `10` - 10
+                 *     * `20` - 20
+                 *     * `50` - 50
+                 */
+                page_size?: 10 | 20 | 50;
+                q?: string;
+                /**
+                 * @description * `` -
+                 *     * `reader` - reader
+                 *     * `editor` - editor
+                 *     * `admin` - admin
+                 */
+                role?: "" | "reader" | "editor" | "admin";
+                /**
+                 * @description * `` -
+                 *     * `active` - active
+                 *     * `inactive` - inactive
+                 */
+                state?: "" | "active" | "inactive";
+                user_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementHistory"];
+                };
+            };
+        };
+    };
+    auth_users_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManagementInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ManagementInputRequest"];
+                "multipart/form-data": components["schemas"]["ManagementInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementPreview"];
+                };
+            };
+        };
+    };
+    auth_users_receipt_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementReceipt"];
+                };
+            };
+        };
+    };
+    auth_users_roles_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleMatrix"];
+                };
+            };
+        };
+    };
+    auth_users_workspace_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                /**
+                 * @description * `10` - 10
+                 *     * `20` - 20
+                 *     * `50` - 50
+                 */
+                page_size?: 10 | 20 | 50;
+                q?: string;
+                /**
+                 * @description * `` -
+                 *     * `reader` - reader
+                 *     * `editor` - editor
+                 *     * `admin` - admin
+                 */
+                role?: "" | "reader" | "editor" | "admin";
+                /**
+                 * @description * `` -
+                 *     * `active` - active
+                 *     * `inactive` - inactive
+                 */
+                state?: "" | "active" | "inactive";
+                user_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementDirectory"];
                 };
             };
         };

@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M25账户管理
+
+auth/users新增workspace/roles/preview/command/receipt/history六路径，共273。actor头+权限+HMAC版本/预览/明确确认/UUID；旧用户PATCH和set-password必须同命令字段，拒绝旧无条件提交。原角色集合/账户表保留，实际能力矩阵来源原服务。
+
 ## 2026-10-23 R28接续
 
 新增notebook/export POST（1–20本人版本、PDF/Markdown/BibTeX/RIS、明确摘录/笔记）；原bookmark note增加GET请求回执。267路径，无模型迁移，所有者与内容/来源再核对。

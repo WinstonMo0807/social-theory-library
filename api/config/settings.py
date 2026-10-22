@@ -186,6 +186,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "AccountManagementOperationEnum": ["create", "update", "password"],
+        "AssignableAccountRoleEnum": ["reader", "editor", "admin"],
+        "EditorialAssistanceOperationEnum": ["outline", "guide", "comparison"],
         "ReaderGroupKindEnum": ["campus", "team"],
         "ReaderShareSourceKindEnum": ["research", "booklist"],
         "ReaderShareDestinationEnum": ["group", "public", "proposal"],

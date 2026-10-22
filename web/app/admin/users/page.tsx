@@ -1,2 +1,2 @@
-import { UsersAdmin } from "@/components/admin-sections";
-export default function Page() { return <UsersAdmin />; }
+import { AccountWorkspace } from "@/components/admin/accounts/account-workspace";
+export default function Page() { return <AccountWorkspace />; }
