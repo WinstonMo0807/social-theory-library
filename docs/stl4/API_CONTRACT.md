@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 就地富文本输入
+
+沿用c79756e的text/text_marks/text_style与225路径，无新增接口、模型字段或迁移。客户端固定格式的DOM只用于输入，保存仍只发送UTF-16位置和纯文字。撤销为本块50步本地输入历史，不替代后端正式修订历史；中文组合输入结束前不提交保存。
+
 ## 2026-10-22 PDF127格式、素材建议与协作
 
 IssueBodyBlock新增可选text_style(paragraph/ordered/unordered)与text_marks（最多200处，start/end为UTF-16边界，kind=strong/em/link，link只接受本站路径或http/https）。原格式缺省保留兼容；保存时同步裁切空白偏移，原始来源不接受改写。后端拒绝非整数/表情中间位置/重叠链接/非法地址，不存任意HTML。

@@ -44,11 +44,12 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
   const [busy,setBusy]=useState(""),[conflict,setConflict]=useState(false),[sessionInvalid,setSessionInvalid]=useState(false);
   const [pending,setPending]=useState<PendingSave|null>(null),[recovery,setRecovery]=useState<Recovery|null>(null);
   const [autosave,setAutosave]=useState(true),[autoBlocked,setAutoBlocked]=useState(false),[storageError,setStorageError]=useState(false);
-  const [manualRequired,setManualRequired]=useState(false);
-  const active=useRef<AbortController|null>(null), action=useRef(false);
+  const [manualRequired,setManualRequired]=useState(false),[composing,setComposingState]=useState(false);
+  const active=useRef<AbortController|null>(null), action=useRef(false),compositionActive=useRef(false);
+  const setComposing=useCallback((value:boolean)=>{compositionActive.current=value;setComposingState(value);},[]);
   const input=useMemo(()=>draft?issueInput(draft):null,[draft]);
   const savedInput=useMemo(()=>saved?issueInput(saved):null,[saved]);
-  const dirty=useUnsavedForm(input,savedInput);
+  const dirty=useUnsavedForm(composing?{input,composing:true}:input,savedInput);
   const request=useCallback(async<T,>(url:string, init:RequestInit={}):Promise<T>=>{
     const lifetime=active.current;
     const signal=AbortSignal.any([lifetime?.signal || new AbortController().signal,...(init.signal?[init.signal]:[]),AbortSignal.timeout(25000)]);
@@ -89,7 +90,7 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     setDraft(value=>value?{...value,...patch}:value);setAutoBlocked(false);
   }
   const save=useCallback(async(automatic=false,retry=false)=>{
-    if(!draft || action.current || sessionInvalid || conflict || recovery || (pending&&!retry) || (!dirty&&!pending) || automatic&&manualRequired)return;
+    if(!draft || action.current || compositionActive.current || sessionInvalid || conflict || recovery || (pending&&!retry) || (!dirty&&!pending) || automatic&&manualRequired)return;
     const lifetime=active.current;action.current=true;setBusy("save");setMessage("");
     const requestId=pending?.requestId || crypto.randomUUID();
     const command=pending || {requestId,body:JSON.stringify({...issueInput(draft),request_id:requestId,autosave:automatic})};
@@ -111,10 +112,10 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     } finally {if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   },[draft,sessionInvalid,conflict,recovery,pending,dirty,key,owner,issueId,request,endpoint,accept,manualRequired]);
   useEffect(()=>{
-    if(!autosave || !dirty || busy || pending || conflict || recovery || autoBlocked || fullPreview || sessionInvalid || manualRequired)return;
+    if(composing || !autosave || !dirty || busy || pending || conflict || recovery || autoBlocked || fullPreview || sessionInvalid || manualRequired)return;
     const timer=window.setTimeout(()=>{void save(true);},10000);
     return ()=>window.clearTimeout(timer);
-  },[autosave,dirty,busy,pending,conflict,recovery,autoBlocked,fullPreview,sessionInvalid,manualRequired,save]);
+  },[autosave,dirty,busy,pending,conflict,recovery,autoBlocked,fullPreview,sessionInvalid,manualRequired,composing,save]);
   async function lookup() {
     if(!pending || action.current)return;
     const lifetime=active.current;action.current=true;setBusy("lookup");
@@ -129,14 +130,14 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     finally{if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   }
   async function command(path:string, body:unknown, success:string) {
-    if(action.current || !draft || dirty || pending || conflict || recovery || sessionInvalid)return;
+    if(action.current || compositionActive.current || !draft || dirty || pending || conflict || recovery || sessionInvalid)return;
     const lifetime=active.current;action.current=true;setBusy(path);setMessage("");
     try {const next=await request<IssueDraft>(endpoint+path,{method:"POST",body:JSON.stringify(body)});if(!lifetime?.signal.aborted){accept(next);setMessage(success);}}
     catch(reason){if(!lifetime?.signal.aborted){setConflict(!(reason instanceof ApiRequestError) || reason.status===0 || reason.status===409 || reason.status>=500);setMessage(`${reason instanceof Error?reason.message:"操作结果待核对"} 请读取最新版本核对后继续。`);}}
     finally{if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   }
   async function recheck() {
-    if(!draft || action.current || pending || recovery || sessionInvalid)return;
+    if(!draft || action.current || compositionActive.current || pending || recovery || sessionInvalid)return;
     const lifetime=active.current;action.current=true;setBusy("preview");
     try {const next=await request<IssueDraft>(endpoint+"preview/",{method:"POST",body:JSON.stringify(issueInput(draft))});if(!lifetime?.signal.aborted){setDraft({...draft,body_blocks:next.body_blocks,body_source_problems:next.body_source_problems});setMessage(next.body_source_problems?.length?"有来源尚不满足公开条件，请核对下方提示。":"已重新核对当前来源。");}}
     catch(reason){if(!lifetime?.signal.aborted)setMessage(reason instanceof Error?reason.message:"来源核对失败，当前输入已保留。");}
@@ -150,12 +151,12 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     setMessage(recovery.pending?"已恢复未确认的保存，请先查回结果。":"已恢复本标签页输入；请重新核对来源并保存。");
   }
   function restoreHistory(value:IssueDraft) {
-    if(action.current || dirty || pending || recovery || !saved)return;
+    if(action.current || compositionActive.current || dirty || pending || recovery || !saved)return;
     setDraft({...value,edit_version:saved.edit_version,restore_revision_id:value.viewed_revision_id});setAutoBlocked(true);
     setManualRequired(true);
     setMessage(`修订 ${value.viewed_revision} 已放入编辑区，明确保存后才成为新草稿。`);
   }
-  return {draft,saved,dirty,busy,message,initialError,conflict,pending,recovery,autosave,storageError,sessionInvalid,
+  return {draft,saved,dirty,busy,composing,setComposing,message,initialError,conflict,pending,recovery,autosave,storageError,sessionInvalid,
     disabled:Boolean(busy||pending||recovery||sessionInvalid),update,save,lookup,command,recheck,recoverLocal,restoreHistory,request,
     setAutosave,retryLoad:()=>setAttempt(value=>value+1),discardRecovery:()=>{setRecovery(null);try{sessionStorage.removeItem(key);}catch{setStorageError(true);}},
     useRemote:accept,keepLocal:(remote:IssueDraft)=>{setSaved(remote);setDraft(value=>value?{...value,edit_version:remote.edit_version}:value);setConflict(false);setPending(null);setAutoBlocked(true);setManualRequired(true);},

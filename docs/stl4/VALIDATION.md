@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-22 富文本第三批静态记录
+
+完整 `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：57312/014c6d、65605/3f0d02退出0；最终57499/e767ca退出0。目标ESLint a85c5f退出0但多一项composing依赖提示，去除无用依赖后aca4ab退出0，仅保留2处既有img提示。PostCSS 568bcc退出0，185顶层节点可解析。新增4浏览器场景、现17场景仅定义，未运行正式测试/浏览器/构建/模型/检索质量评测/生产。
+
 ## 2026-10-22 PDF127第二批静态记录
 
 - Python ast.parse 9个源码/测试文件：69214d、最终fb0a39退出0；测试定义未执行。新9个后端函数、6个浏览器场景仅定义，现issue-editor-atlas共13场景。

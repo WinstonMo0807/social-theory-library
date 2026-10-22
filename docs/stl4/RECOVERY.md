@@ -1,5 +1,13 @@
 # 中断恢复最短路径
 
+## 2026-10-22 富文本第三批恢复
+
+前置c79756e。本批白名单tmp/stl4-rich-input-checkpoint.json，实际提交看Git。当前IssueTextEditor使用contentEditable，固定模型/DOM文字，不保存HTML；50步本块历史；同步组合输入保护及纯文字粘贴。完整TS、ESLint、CSS仅静态；17浏览器场景只定义。96/16/97不变，M15来源行/块缩略图仍需细化。唯一PDF128–130已实际读取，图在tmp/pdfs/stl4-authoring-20261022，下一步接M16原editorial_assistance。不要重复运行本记录脚本；不要暂存其他继承改动。
+
+## 2026-10-22 c79756e后继续富文本输入
+
+格式/素材/协作第二批已保存c79756e（34路径）。当前正在将文字格式接为原生可编辑区域，文本/marks模型与API保持原样，增加本块50步撤销、纯文字粘贴、输入法组合期间暂停自动保存。源码刚写入，尚未静态收口或计完成。下一步检查DOM文本/标记读取、选区与恢复、引用只读边界，补验收场景并检查后保存。不要重复提交其他继承脏改。
+
 ## 2026-10-22 PDF127第二批恢复
 
 前置3136d5c，当前批白名单tmp/stl4-issue-editor-details-checkpoint.json，实际提交号看Git。新IssueTextEditor/IssueProse、IssueSuggestions/editorial_suggestions、IssueCollaboration/editorial_presence，原issue保存/发布/历史继续复用。225契约。不要重跑此前或本批文档prepend辅助。当前96/16/97；M15仍部分，下一步先补就地富文本编辑/选区与撤销，再读取唯一PDF128–130并接现有editorial_assistance。格式选择与右侧预览已真实接通，但不能写已达到完全所见即所得或视觉无差异。

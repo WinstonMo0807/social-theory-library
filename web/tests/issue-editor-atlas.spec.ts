@@ -1,8 +1,11 @@
-import {expect,test,type Page} from "@playwright/test";
+import {expect,test,type Page,type Locator} from "@playwright/test";
 import type {IssueDraft} from "../components/admin/curation/use-issue-draft";
 
 const issueId="11111111-1111-4111-8111-111111111111", blockId="22222222-2222-4222-8222-222222222222", oldId="33333333-3333-4333-8333-333333333333";
 const initial:IssueDraft={id:issueId,slug:"editor-contract-only",title:"仅供隔离验收的专题",issue_label:"",introduction:"人工导语",public_byline:"",cover_url:"",cover_rendition_id:null,display_from:null,published_at:null,items:[],edit_version:"v1",has_unpublished_changes:true,saved_at:"2026-10-22T00:00:00Z",saved_by:"验收编辑",saved_revision:1,body_blocks:[{id:blockId,type:"paragraph",text:"人工正文"}]};
+async function selectGuide(locator:Locator,start:number,end:number){
+  await locator.evaluate((root:HTMLElement,{start,end})=>{root.focus();const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes:Text[]=[];while(walker.nextNode())nodes.push(walker.currentNode as Text);const point=(offset:number):[Node,number]=>{for(const node of nodes){if(offset<=node.length)return [node,offset];offset-=node.length;}return [root,0];};const range=document.createRange();range.setStart(...point(start));range.setEnd(...point(end));window.getSelection()?.removeAllRanges();window.getSelection()?.addRange(range);root.dispatchEvent(new MouseEvent("mouseup",{bubbles:true}));},{start,end});
+}
 async function setup(page:Page, options:{unknown?:boolean;conflict?:boolean;source?:boolean;unknownDiscard?:boolean;presenceFailure?:boolean}={}) {
   let value=structuredClone(initial);const writes:Record<string,unknown>[]=[];let fail=Boolean(options.unknown),discardFail=Boolean(options.unknownDiscard);const dismissals:Record<string,unknown>[]=[];let discarded=false;
   if(options.source)value.body_blocks=[{id:blockId,type:"evidence",text:"本页解释",target:{type:"span",id:oldId},resolved_sources:[{type:"span",id:oldId,title:"验收原文",text:"真实来源只读",page_start:3,reader_url:"/reader/test?page=3"}],source_status:"available"}];
@@ -70,8 +73,8 @@ test("source text stays readonly while guide remains editable",async({page})=>{
   await setup(page,{source:true});
   await page.getByRole("button",{name:/原文 本页解释/}).click();
   await expect(page.getByText("真实来源只读",{exact:true}).first()).toBeVisible();
-  await expect(page.getByRole("textbox",{name:"本页导读 / 说明"})).toHaveValue("本页解释");
-  expect(await page.locator("textarea").evaluateAll(rows=>rows.some(row=>(row as HTMLTextAreaElement).value==="真实来源只读"))).toBe(false);
+  await expect(page.getByRole("textbox",{name:"本页导读 / 说明"})).toHaveText("本页解释");
+  expect(await page.locator("textarea,[contenteditable=true]").evaluateAll(rows=>rows.some(row=>(row instanceof HTMLTextAreaElement?row.value:row.textContent)==="真实来源只读"))).toBe(false);
 });
 test("historical restore remains unsaved until explicit save",async({page})=>{
   await page.clock.install();const state=await setup(page);
@@ -97,7 +100,7 @@ test("mobile edit preview structure and modal focus remain reachable",async({pag
   await expect(page.getByRole("heading",{name:initial.title,exact:true})).toBeVisible();
   await tabs.getByRole("button",{name:"结构",exact:true}).click();
   await page.getByRole("navigation",{name:"正文结构定位"}).getByRole("button",{name:/人工正文/}).click();
-  await expect(page.getByRole("textbox",{name:"内容",exact:true})).toHaveValue("人工正文");
+  await expect(page.getByRole("textbox",{name:"内容",exact:true})).toHaveText("人工正文");
   const insert=page.getByRole("button",{name:"插入内容块",exact:true});await insert.click();
   await expect(page.getByRole("dialog",{name:"插入内容块"})).toBeVisible();await page.keyboard.press("Escape");await expect(insert).toBeFocused();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
@@ -106,8 +109,9 @@ test("mobile edit preview structure and modal focus remain reachable",async({pag
 test("formatting is saved on guide only and shared by the article preview",async({page})=>{
   const state=await setup(page,{source:true});await page.getByRole("button",{name:/原文 本页解释/}).click();
   const guide=page.getByRole("textbox",{name:"本页导读 / 说明"});await guide.fill("中文😀导读");
-  await guide.evaluate((node:HTMLTextAreaElement)=>{node.focus();node.setSelectionRange(0,4);node.dispatchEvent(new Event("select",{bubbles:true}));});
+  await selectGuide(guide,0,4);
   await page.getByRole("button",{name:"加粗所选文字"}).click();
+  await expect(guide.locator("strong,b")).toHaveText("中文😀");
   await expect(page.getByRole("complementary",{name:"文章预览与结构"}).locator("strong").filter({hasText:"中文😀"})).toBeVisible();
   await page.getByRole("button",{name:"保存",exact:true}).click();await expect.poll(()=>state.writes.length).toBe(1);
   const block=(state.writes[0].body_blocks as Array<Record<string,unknown>>)[0];expect(block.text_marks).toEqual([{start:0,end:4,kind:"strong"}]);expect(block).not.toHaveProperty("resolved_sources");
@@ -115,7 +119,7 @@ test("formatting is saved on guide only and shared by the article preview",async
 });
 test("unsafe prose links cannot be applied",async({page})=>{
   await setup(page);await page.getByRole("button",{name:/导读 人工正文/}).click();
-  await page.getByRole("textbox",{name:"内容",exact:true}).evaluate((node:HTMLTextAreaElement)=>{node.focus();node.setSelectionRange(0,2);node.dispatchEvent(new Event("select",{bubbles:true}));});
+  await selectGuide(page.getByRole("textbox",{name:"内容",exact:true}),0,2);
   await page.getByRole("button",{name:"为所选文字添加链接"}).click();const dialog=page.getByRole("dialog",{name:"设置导读链接"});
   await dialog.getByRole("textbox",{name:"链接地址"}).fill("javascript:alert(1)");await expect(dialog.getByRole("button",{name:"应用链接"})).toBeDisabled();
   await dialog.getByRole("textbox",{name:"链接地址"}).fill("/topics/contract");await dialog.getByRole("button",{name:"应用链接"}).click();
@@ -141,4 +145,32 @@ test("mobile suggestions expose real material and close detail with keyboard",as
   await page.setViewportSize({width:390,height:844});await setup(page);await page.getByRole("button",{name:"智能材料建议",exact:true}).last().click();
   const panel=page.getByRole("region",{name:"智能材料建议"});await panel.getByRole("button",{name:"概念",exact:true}).click();const button=panel.getByRole("button",{name:"查看",exact:true});await button.click();
   await expect(page.getByRole("dialog",{name:"材料建议详情"}).getByRole("link",{name:"打开资料原页 ↗"})).toHaveAttribute("href","/theories/nodes/contract");await page.keyboard.press("Escape");await expect(button).toBeFocused();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+});
+
+test("inline rich formatting and text can be undone without changing readonly material",async({page})=>{
+  await setup(page,{source:true});await page.getByRole("button",{name:/原文 本页解释/}).click();const guide=page.getByRole("textbox",{name:"本页导读 / 说明"});
+  await guide.fill("中文😀导读");await selectGuide(guide,0,4);await page.getByRole("button",{name:"加粗所选文字"}).click();await expect(guide.locator("strong,b")).toHaveText("中文😀");
+  await page.getByRole("button",{name:"撤销",exact:true}).click();await expect(guide.locator("strong,b")).toHaveCount(0);await expect(guide).toHaveText("中文😀导读");
+  await page.getByRole("button",{name:"重做",exact:true}).click();await expect(guide.locator("strong,b")).toHaveText("中文😀");await expect(page.getByText("真实来源只读",{exact:true}).first()).toBeVisible();
+});
+test("rich input uses plain clipboard text and renders real list items",async({page})=>{
+  await setup(page);await page.getByRole("button",{name:/导读 人工正文/}).click();const guide=page.getByRole("textbox",{name:"内容",exact:true});await selectGuide(guide,0,4);
+  await guide.evaluate((root:HTMLElement)=>{const data=new DataTransfer();data.setData("text/plain","第一行\n第二行");data.setData("text/html",'<img src="bad" onerror="window.__badPaste=true">');root.dispatchEvent(new ClipboardEvent("paste",{clipboardData:data,bubbles:true,cancelable:true}));});
+  await expect(guide).toHaveText("第一行\n第二行");await expect(guide.locator("img")).toHaveCount(0);await page.getByRole("button",{name:"切换无序列表"}).click();await expect(guide.locator("ul > li")).toHaveCount(2);await expect(guide.locator("ul > li").first()).toHaveText("第一行");
+});
+
+test("list conversion preserves blank lines and clear format is one undo step",async({page})=>{
+  const state=await setup(page);await page.getByRole("button",{name:/导读 人工正文/}).click();const guide=page.getByRole("textbox",{name:"内容",exact:true});
+  await guide.fill("第一行\n\n第三行");await selectGuide(guide,0,3);await page.getByRole("button",{name:"加粗所选文字"}).click();
+  await page.getByRole("button",{name:"切换有序列表"}).click();await expect(guide.locator("ol > li")).toHaveCount(3);await expect(guide.locator("ol > li").nth(1)).toHaveText("");
+  await page.getByRole("button",{name:"清除格式",exact:true}).click();await expect(guide.locator("ol,strong,b")).toHaveCount(0);
+  await page.getByRole("button",{name:"撤销",exact:true}).click();await expect(guide.locator("ol > li")).toHaveCount(3);await expect(guide.locator("strong")).toHaveText("第一行");
+  await page.getByRole("button",{name:"保存",exact:true}).click();await expect.poll(()=>state.writes.length).toBe(1);
+  expect((state.writes[0].body_blocks as Array<Record<string,unknown>>)[0]).toMatchObject({text:"第一行\n\n第三行",text_style:"ordered",text_marks:[{start:0,end:3,kind:"strong"}]});
+});
+test("IME composition pauses autosave and commits one completed input",async({page})=>{
+  await page.clock.install();const state=await setup(page);await page.getByRole("button",{name:/导读 人工正文/}).click();const guide=page.getByRole("textbox",{name:"内容",exact:true});
+  await guide.evaluate((root:HTMLElement)=>{root.focus();root.dispatchEvent(new CompositionEvent("compositionstart",{bubbles:true}));root.textContent="正在输入中文";root.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertCompositionText",data:"中文",isComposing:true}));});
+  await page.clock.fastForward(15000);expect(state.writes).toHaveLength(0);await expect(page.getByRole("button",{name:"保存",exact:true})).toBeDisabled();
+  await guide.evaluate((root:HTMLElement)=>root.dispatchEvent(new CompositionEvent("compositionend",{bubbles:true,data:"中文"})));await page.clock.fastForward(10050);await expect.poll(()=>state.writes.length).toBe(1);expect((state.writes[0].body_blocks as Array<{text:string}>)[0].text).toBe("正在输入中文");
 });

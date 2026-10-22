@@ -176,3 +176,13 @@
 .recentVersions button { display:flex; gap:20px; width:100%; align-items:center; border:0; background:white; padding:10px; font:inherit; text-align:left; }
 .recentVersions small { margin-left:auto; background:#f1e4ca; color:#806539; padding:3px 7px; white-space:nowrap; }
 @media(max-width:760px) { .collaboration { margin:14px 12px; padding:14px; } .participants { display:grid; gap:14px; } .recentVersions button { gap:9px; flex-wrap:wrap; } }
+
+.richLabel { display:block; padding:9px 12px; font-size:12px; border-bottom:1px solid var(--line); }
+.richInput { padding:12px; min-height:140px; white-space:pre-wrap; overflow-wrap:anywhere; font:14px/1.85 var(--font-serif),serif; cursor:text; }
+.richInput:focus-visible { outline:2px solid var(--gold); outline-offset:-2px; }
+.richInput[aria-readonly=true] { color:var(--muted); cursor:default; }
+.richInput :is(ul,ol) { margin:0; padding-left:24px; white-space:normal; }
+.richInput li { white-space:pre-wrap; }
+.richInput a { text-decoration:underline; text-decoration-color:var(--gold); text-underline-offset:3px; cursor:text; }
+.richInput strong,.richInput b { font-weight:700; }
+.richInput em,.richInput i { font-style:italic; }
