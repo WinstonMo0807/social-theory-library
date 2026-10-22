@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
-export function DraftConflict<T extends { edit_version: string }>({ endpoint, local, onUseRemote, onKeepLocal }: { endpoint: string; local: T; onUseRemote: (remote: T) => void; onKeepLocal: (remote: T) => void }) {
+export function DraftConflict<T extends { edit_version: string }>({ endpoint, local, onUseRemote, onKeepLocal, loadRemote }: { endpoint: string; local: T; onUseRemote: (remote: T) => void; onKeepLocal: (remote: T) => void; loadRemote?:()=>Promise<T> }) {
   const [remote, setRemote] = useState<T | null>(null), [message, setMessage] = useState("");
-  async function compare() { try { setRemote(await apiRequest<T>(endpoint, {}, getServerSessionCredential())); } catch (error) { setMessage(error instanceof Error ? error.message : "读取失败"); } }
+  async function compare() { try { setRemote(await (loadRemote ? loadRemote() : apiRequest<T>(endpoint, {}, getServerSessionCredential()))); } catch (error) { setMessage(error instanceof Error ? error.message : "读取失败"); } }
   return <section className="v307-conflict" role="alert"><h2>这份内容已被另一位管理员修改</h2><p>你的输入保留在左侧。先比较最新已保存内容，再决定使用哪一份；不会自动覆盖。</p>{!remote ? <button className="button secondary" onClick={compare}>读取最新内容并比较</button> : <><div className="v307-conflict-comparison"><section><h3>当前输入</h3><ContentSummary value={local} /></section><section><h3>最新已保存内容</h3><ContentSummary value={remote} /></section></div><div><button className="button secondary" onClick={() => onUseRemote(remote)}>使用最新已保存内容</button><button className="button secondary" onClick={() => onKeepLocal(remote)}>已比较，保留我的输入继续编辑</button></div><p>继续编辑后仍需明确保存；若其他人再次修改，保存会再次提示冲突。</p></>}{message ? <p>{message}</p> : null}</section>;
 }
 const hidden = new Set(["edit_version", "draft_revision_id", "id", "has_unpublished_changes", "match_candidates", "work_url", "reader_url", "status", "position", "created_at", "updated_at"]);

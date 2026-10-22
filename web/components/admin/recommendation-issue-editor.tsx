@@ -2,27 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { apiRequest, getServerSessionCredential, ApiRequestError } from "@/lib/api";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { DraftConflict } from "@/components/admin/curation/draft-conflict";
-import { useUnsavedForm } from "@/lib/use-unsaved-form";
-import { useActionGuard } from "@/lib/use-action-guard";
 import type { RecommendationIssue, IssueItem } from "@/lib/api/recommendation-issues.types";
 import { RecommendationIssueView } from "@/components/public/recommendation-issue-view";
-import { FixedPageEditor } from "@/components/admin/curation/fixed-page-editor";
+import { IssueBlockView } from "@/components/public/issue-block-view";
+import { IssueHistory } from "./curation/issue-history";
+import { useIssueDraft, type IssueDraft } from "./curation/use-issue-draft";
+import styles from "./curation/issue-editor.module.css";
 import { InlineMediaPicker } from "@/components/admin/curation/inline-media-picker";
 import { EntityPicker } from "@/components/admin/forms/workflow-fields";
 import { useAdminSession, hasAdminCapability } from "@/lib/admin-session";
 import { ArticleMetadataFields, emptyArticleMetadata } from "./curation/article-metadata-fields";
 import { ArticleCommentReview } from "./curation/article-comment-review";
-import { ArticleBodyFields } from "./curation/article-body-fields";
+import { ArticleBodyFields, blockNames, blockTitle } from "./curation/article-body-fields";
 
-const sections = [
-  { id: "identity", label: "标题与署名", description: "期名、标题与导语出现在读者文章的顶部。公开署名不改变真实操作账号。" },
-  { id: "cover", label: "本期主图" }, { id: "body", label: "导语与正文", description: "只编辑内容；文章版式固定。引文须填写出处。" },
-  { id: "items", label: "推荐书目", description: "可混合已有馆藏和计划上架。计划项保存为无 PDF 书目草稿。" },
-  { id: "schedule", label: "展示与发布", description: "先保存，再明确发布。未来展示时间只安排已确认发布的内容。" },
-];
-type Draft = RecommendationIssue & { cover_rendition_id?: string | null };
 type EditionOption = { id: string; label?: string; publication?: { public_state?: string; catalog_revision_active?: boolean; publicly_visible?: boolean; editorial_state?: string } };
 
 function EditionSelect({ workId, value, onChange, mode, disabled = false }: { workId: string; value: string; onChange: (value: string) => void; mode: "published" | "draft"; disabled?: boolean }) {
@@ -62,61 +56,48 @@ function ItemFields({ item, change, remove, onLink, canLink }: { item: IssueItem
 }
 export function RecommendationIssueEditor({ issueId, fullPreview = false }: { issueId: string; fullPreview?: boolean }) {
   const user = useAdminSession();
-  const [draft, setDraft] = useState<Draft | null>(null), [saved, setSaved] = useState<Draft | null>(null);
-  const [active, setActive] = useState("identity"), [selected, setSelected] = useState(0), [message, setMessage] = useState("");
-  const {pendingAction, startAction, finishAction} = useActionGuard();
-  const busy = Boolean(pendingAction);
-  const [conflict, setConflict] = useState(false);
-  const [initialError, setInitialError] = useState("");
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const dirty = useUnsavedForm(draft, saved);
-  useEffect(() => {
-    let alive = true;
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 20000);
-    queueMicrotask(()=>{if(alive){setDraft(null);setSaved(null);setSelected(0);setConflict(false);setInitialError("");}});
-    apiRequest<Draft>(`/catalog/admin/recommendation-issues/${issueId}/${fullPreview ? "preview/" : ""}`, { signal: controller.signal }, getServerSessionCredential())
-      .then(value => { if (alive) { setDraft(value); setSaved(value); } })
-      .catch(error => { if (alive) setInitialError(controller.signal.aborted ? "读取本期草稿超时，请重试。" : error instanceof Error ? error.message : "本期草稿读取失败。"); })
-      .finally(() => window.clearTimeout(timeout));
-    return () => { alive = false; window.clearTimeout(timeout); controller.abort(); };
-  }, [issueId, fullPreview, loadAttempt]);
-  async function persist(publish = false) {
-    if (!draft || busy || (publish && dirty)) return;
-    if (!publish && draft.items.some(item => item.kind === "catalog" ? !item.work_id || !item.edition_id : !item.title.trim() || Boolean(item.work_id && !item.edition_id))) { setMessage("请为已有馆藏选择准确作品和出版版本；计划项至少填写题名，复用草稿时也需选择版本。"); return; }
-    const action = publish ? "publish" : "save";
-    if (!startAction(action)) return;
-    setMessage("");
-    try {
-      const next = await apiRequest<Draft>(`/catalog/admin/recommendation-issues/${issueId}/${publish ? "publish/" : ""}`, { method: publish ? "POST" : "PUT", body: JSON.stringify(publish ? { edit_version: draft.edit_version, confirm: true } : draft) }, getServerSessionCredential());
-      setDraft(next); setSaved(next); setConflict(false); setMessage(publish ? "已确认发布；按本期展示日期出现在公开页面。" : "草稿已保存，公开页面保持原内容。");
-    } catch (error) { setConflict(error instanceof ApiRequestError && error.status === 409); setMessage(`${error instanceof Error ? error.message : "保存失败"} 当前输入已保留。`); }
-    finally { finishAction(action); }
-  }
-  if (!draft) return <section className="admin-panel" aria-busy={!initialError}><p role={initialError ? "alert" : "status"}>{initialError || "正在读取本期草稿…"}</p>{initialError ? <button type="button" className="button secondary" onClick={() => { if (!draft) { setInitialError(""); setLoadAttempt(value => value + 1); } }}>重试读取</button> : null}<p><Link href="/admin/recommendations">返回推荐与随机</Link></p></section>;
-  const previewDraft: Draft = { ...draft, curator: { name: draft.public_byline, role: draft.public_byline ? draft.article_metadata?.curator_role || "" : "", affiliation: draft.public_byline ? draft.article_metadata?.curator_affiliation || "" : "", portrait_url: draft.public_byline ? draft.curator?.portrait_url || "" : "" } };
+  return <IssueEditorSession key={`${user?.id || "anonymous"}:${issueId}:${fullPreview}`} issueId={issueId} fullPreview={fullPreview}/>;
+}
+function IssueEditorSession({ issueId, fullPreview }: { issueId: string; fullPreview: boolean }) {
+  const user = useAdminSession();
+  const editor=useIssueDraft(issueId,user ? String(user.id) : "",fullPreview);
+  const {draft,dirty,busy,initialError,message,conflict,update}=editor;
+  const [active,setActive]=useState("body"),[selected,setSelected]=useState(0),[selectedBlock,setSelectedBlock]=useState("");
+  const [pane,setPane]=useState("preview"),[mobile,setMobile]=useState("edit"),[history,setHistory]=useState(false);
+  const canEdit=hasAdminCapability(user,"can_edit_metadata");
+  if (!draft) return <section className="admin-panel" aria-busy={!initialError}><p role={initialError ? "alert" : "status"}>{initialError || "正在读取本期草稿…"}</p>{initialError ? <button type="button" className="button secondary" onClick={editor.retryLoad}>重试读取</button> : null}<p><Link href="/admin/recommendations">返回推荐与随机</Link></p></section>;
+  const previewDraft: RecommendationIssue = { ...draft, curator: { name: draft.public_byline, role: draft.public_byline ? draft.article_metadata?.curator_role || "" : "", affiliation: draft.public_byline ? draft.article_metadata?.curator_affiliation || "" : "", portrait_url: draft.public_byline ? draft.curator?.portrait_url || "" : "" } };
   if (fullPreview) return <div className="page-shell"><p className="private-preview-label">已保存草稿预览 · 仅后台可见</p><RecommendationIssueView issue={previewDraft} preview /></div>;
-  const update = (patch: Partial<Draft>) => setDraft(current => current ? { ...current, ...patch } : current);
   const field = (key: "title" | "slug" | "issue_label" | "public_byline", label: string) => <label>{label}<input readOnly={key === "slug"} value={draft[key]} onChange={event => update({ [key]: event.target.value })} /></label>;
   const canPublish = hasAdminCapability(user, "can_publish_authority");
-  async function linkItem(workId: string, editionId: string) {
-    if (!draft || dirty || busy || !draft.items[selected]?.id) return;
-    if (!startAction("link")) return;
-    setMessage("");
-    try { const next = await apiRequest<Draft>(`/catalog/admin/recommendation-issues/${issueId}/items/${draft.items[selected].id}/link/`, { method: "POST", body: JSON.stringify({ edit_version: draft.edit_version, work_id: workId, edition_id: editionId, confirm_version: true }) }, getServerSessionCredential()); setDraft(next); setSaved(next); setConflict(false); setMessage("已关联所确认的馆藏版本，本期推介文字保持不变。"); }
-    catch (error) { setConflict(error instanceof ApiRequestError && error.status === 409); setMessage(error instanceof Error ? error.message : "关联失败"); }
-    finally { finishAction("link"); }
+  function linkItem(workId:string,editionId:string) {
+    if(!draft || !draft.items[selected]?.id)return;
+    void editor.command(`items/${draft.items[selected].id}/link/`,{edit_version:draft.edit_version,work_id:workId,edition_id:editionId,confirm_version:true},"已关联所确认的馆藏版本，本期推介文字保持不变。");
   }
   function moveItem(index: number, direction: number) { const items = [...draft!.items]; const destination = index + direction; if (destination < 0 || destination >= items.length) return; [items[index], items[destination]] = [items[destination], items[index]]; update({ items: items.map((item, position) => ({ ...item, position })) }); setSelected(destination); }
-  return <div className="v307-admin-editor"><header className="v307-editor-heading"><div><Link href="/admin/recommendations">‹ 返回推荐与随机</Link><h1>{draft.title || "新一期书库推荐"}</h1></div><div><button className="button secondary" disabled={busy || !dirty} onClick={() => persist()}>保存草稿</button>{canPublish ? <button className="button" disabled={busy || dirty || (!draft.items.length && !draft.body_blocks.length)} onClick={() => persist(true)}>确认发布</button> : null}</div></header>{message ? <p role="status" className="v307-save-status">{message}</p> : null}{conflict ? <DraftConflict endpoint={`/catalog/admin/recommendation-issues/${issueId}/`} local={draft} onUseRemote={remote => { setDraft(remote); setSaved(remote); setConflict(false); }} onKeepLocal={remote => { setSaved(remote); setDraft({ ...draft, edit_version: remote.edit_version }); setConflict(false); }} /> : null}
-    <FixedPageEditor sections={sections} activeSection={active} onSectionChange={setActive} dirty={dirty} previewHref={`/admin/recommendations/issues/${issueId}/preview`} preview={<RecommendationIssueView issue={previewDraft} preview />} fields={<fieldset disabled={busy}>
+  function focusBlock(id:string) {setSelectedBlock(id);setActive("body");setMobile("edit");requestAnimationFrame(()=>document.getElementById(`editor-block-${id}`)?.scrollIntoView({block:"nearest",behavior:"auto"}));}
+  const previewMode=mobile==="structure" ? "structure" : pane;
+  return <div className={styles.editor}>
+    <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/admin/about">页面编排</Link><span>›</span><Link href="/admin/recommendations">专题编辑器</Link><span>›</span><span>{draft.title}</span></nav>
+    <header className={styles.heading}><div><h1>专题编辑器与结构化内容</h1><p>将策划叙事与真实原文、人物、概念与路径组织成文章。</p></div><div className={styles.actions}><span role="status">{busy ? "正在处理…" : editor.pending ? "保存结果待核对" : dirty ? "有尚未保存的修改" : "草稿已保存"}{editor.saved?.saved_at?<small><time dateTime={editor.saved.saved_at}>{new Date(editor.saved.saved_at).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}</time></small>:null}</span><button type="button" onClick={()=>{setPane("preview");setMobile("preview");}}>预览</button>{canEdit?<button type="button" disabled={editor.disabled || conflict || !dirty} onClick={()=>void editor.save()}>保存</button>:null}{canPublish?<button type="button" className={styles.publish} disabled={editor.disabled || conflict || dirty || !draft.has_unpublished_changes || (!draft.items.length&&!draft.body_blocks.length)} onClick={()=>void editor.command("publish/",{edit_version:draft.edit_version,confirm:true},"已确认发布；按展示日期出现在公开页面。")}>发布</button>:null}<details className={styles.more}><summary aria-label="更多编辑操作">···</summary><div><button type="button" onClick={()=>setHistory(true)}>版本历史</button><button type="button" disabled={editor.disabled} onClick={()=>void editor.recheck()}>重新核对来源</button><a href={`/admin/recommendations/issues/${issueId}/preview`} target="_blank" rel="noopener">打开已保存草稿预览 ↗</a>{canEdit?<label><input type="checkbox" checked={editor.autosave} onChange={event=>editor.setAutosave(event.target.checked)}/>停止输入 10 秒后保存草稿</label>:null}<small>本标签页暂存未保存输入，退出登录时清除。</small></div></details></div></header>
+    {message?<p className={styles.notice} role="status">{message}</p>:null}
+    {editor.storageError?<p className={styles.warning} role="alert">浏览器未能保留断线草稿，请勿刷新或关闭本页，恢复连接后手动保存。</p>:null}
+    {editor.recovery?<section className={styles.warning}><h2>本标签页有尚未确认的输入</h2><p>记录于 {new Date(editor.recovery.at).toLocaleString("zh-CN")}。恢复后先核对来源与保存结果。</p><button type="button" onClick={editor.recoverLocal}>恢复本标签页输入</button><button type="button" onClick={editor.discardRecovery}>舍弃暂存，使用已保存版本</button></section>:null}
+    {editor.pending&&!busy?<section className={styles.warning}><p>这次保存结果尚未确认。请先查回；重试会沿用原保存编号与原内容。</p><button type="button" onClick={()=>void editor.lookup()}>查回保存结果</button><button type="button" onClick={()=>void editor.save(false,true)}>重试原保存</button></section>:null}
+    {conflict?<DraftConflict endpoint={`/catalog/admin/recommendation-issues/${issueId}/`} local={draft} loadRemote={()=>editor.request<IssueDraft>(`/catalog/admin/recommendation-issues/${issueId}/`)} onUseRemote={editor.useRemote} onKeepLocal={editor.keepLocal}/>:null}
+    {draft.body_source_problems?.length?<section className={styles.warning} aria-label="待处理来源"><strong>{draft.body_source_problems.length} 个来源尚不满足公开条件</strong>{draft.body_source_problems.map((problem,index)=><p key={problem.block_id || index}>{problem.detail}<button type="button" onClick={()=>focusBlock(problem.block_id || "")}>定位区块</button></p>)}</section>:null}
+    <nav className={styles.mobileTabs} aria-label="编辑器视图">{[["edit","编辑"],["preview","预览"],["structure","结构"]].map(([id,label])=><button type="button" key={id} aria-pressed={mobile===id} onClick={()=>{setMobile(id);if(id!=="edit")setPane(id);}}>{label}</button>)}</nav>
+    <div className={styles.workspace} data-mobile={mobile}><section className={styles.editPane} aria-label="编辑文章"><nav className={styles.editorTabs} aria-label="文章设置">{[["body","文章正文"],["identity","文章信息"],["cover","主图"],["items","相关材料"],["schedule","展示与发布"]].map(([id,label])=><button type="button" key={id} aria-pressed={active===id} onClick={()=>setActive(id)}>{label}</button>)}</nav>
+    <fieldset disabled={editor.disabled || !canEdit}>
+      {active==="body"?<><section className={styles.articleInfo}><h2>文章信息</h2>{field("title","标题")}<label>导语<textarea rows={4} maxLength={3000} value={draft.introduction} onChange={event=>update({introduction:event.target.value})}/></label></section><ArticleBodyFields issueId={issueId} blocks={draft.body_blocks} selected={selectedBlock} onSelect={setSelectedBlock} protectedHeadings={draft.items.map(item=>item.section_id || "").filter(Boolean)} onChange={body_blocks=>update({body_blocks})}/></>:null}
       {active === "identity" ? <>{field("issue_label", "期名或期号")}{field("title", "本期标题")}{field("slug", "稳定地址名称（创建后保留）")}{field("public_byline", "公开署名")}<label>简短导语<textarea rows={5} value={draft.introduction} onChange={event => update({ introduction: event.target.value })} /></label></> : null}
       {active === "identity" ? <ArticleMetadataFields value={draft.article_metadata} onChange={article_metadata => update({ article_metadata })} onPortrait={(id, url) => update({article_metadata: {...emptyArticleMetadata, ...draft.article_metadata, curator_portrait_id:id}, curator:{...previewDraft.curator!,portrait_url:url}})} /> : null}
       {active === "cover" ? <><InlineMediaPicker onSelect={(id, url) => update({ cover_rendition_id: id, cover_url: url })} />{draft.cover_url ? <button className="button secondary" onClick={() => update({ cover_url: "", cover_rendition_id: null })}>移除本期主图</button> : null}</> : null}
-      {active === "body" ? <ArticleBodyFields blocks={draft.body_blocks} onChange={body_blocks => update({ body_blocks })} /> : null}
-      {active === "items" ? <><nav className="issue-item-selector" aria-label="选择推荐项">{draft.items.map((item, index) => <div key={item.id || index}><button type="button" aria-current={selected === index ? "true" : undefined} onClick={() => setSelected(index)}>{index + 1}. {item.title || "未填写题名"}</button><button aria-label="向前移动推荐项" disabled={index === 0} onClick={() => moveItem(index, -1)}>↑</button><button aria-label="向后移动推荐项" disabled={index === draft.items.length - 1} onClick={() => moveItem(index, 1)}>↓</button></div>)}</nav><button className="button secondary" onClick={() => { setSelected(draft.items.length); update({ items: [...draft.items, { id: "", kind: "planned", title: "", authors: "", version_note: "", isbn: "", doi: "", note: "", position: draft.items.length }] }); }}>添加推荐项</button>{draft.items[selected] ? <label>展项所属分组<select value={draft.items[selected].section_id || ""} onChange={event => update({items:draft.items.map((row,index) => index === selected ? {...row,section_id:event.target.value} : row)})}><option value="">独立推荐 / 未分组展项</option>{draft.body_blocks.filter(row => row.id && (row.type === "heading" || row.type === "analysis" && row.style === "heading")).map(row => <option key={row.id} value={row.id}>{row.text || "未命名分组"}</option>)}</select></label> : null}{draft.items[selected] ? <ItemFields onLink={linkItem} canLink={!dirty && !busy} key={draft.items[selected].id || `new-${selected}`} item={draft.items[selected]} change={item => update({ items: draft.items.map((row, i) => i === selected ? item : row) })} remove={() => { update({ items: draft.items.filter((_, i) => i !== selected).map((item, position) => ({ ...item, position })) }); setSelected(Math.max(0, selected - 1)); }} /> : null}</> : null}
+      {active === "items" ? <><nav className="issue-item-selector" aria-label="选择推荐项">{draft.items.map((item, index) => <div key={item.id || index}><button type="button" aria-current={selected === index ? "true" : undefined} onClick={() => setSelected(index)}>{index + 1}. {item.title || "未填写题名"}</button><button aria-label="向前移动推荐项" disabled={index === 0} onClick={() => moveItem(index, -1)}>↑</button><button aria-label="向后移动推荐项" disabled={index === draft.items.length - 1} onClick={() => moveItem(index, 1)}>↓</button></div>)}</nav><button className="button secondary" onClick={() => { setSelected(draft.items.length); update({ items: [...draft.items, { id: crypto.randomUUID(), kind: "planned", title: "", authors: "", version_note: "", isbn: "", doi: "", note: "", position: draft.items.length }] }); }}>添加推荐项</button>{draft.items[selected] ? <label>展项所属分组<select value={draft.items[selected].section_id || ""} onChange={event => update({items:draft.items.map((row,index) => index === selected ? {...row,section_id:event.target.value} : row)})}><option value="">独立推荐 / 未分组展项</option>{draft.body_blocks.filter(row => row.id && (row.type === "heading" || row.type === "analysis" && row.style === "heading")).map(row => <option key={row.id} value={row.id}>{row.text || "未命名分组"}</option>)}</select></label> : null}{draft.items[selected] ? <ItemFields onLink={linkItem} canLink={!dirty && !busy} key={draft.items[selected].id || `new-${selected}`} item={draft.items[selected]} change={item => update({ items: draft.items.map((row, i) => i === selected ? item : row) })} remove={() => { update({ items: draft.items.filter((_, i) => i !== selected).map((item, position) => ({ ...item, position })) }); setSelected(Math.max(0, selected - 1)); }} /> : null}</> : null}
       {active === "schedule" ? <><label>开始展示的日期时间<input type="datetime-local" value={draft.display_from ? localDate(draft.display_from) : ""} onChange={event => update({ display_from: event.target.value ? new Date(event.target.value).toISOString() : null })} /></label><p>留空表示确认发布后开始展示。未发布草稿不会因到期自动公开；没有新一期时保留最近的已发布一期。</p><p>{draft.has_unpublished_changes ? "存在待发布修改" : draft.published_at ? "已有正式版本" : "尚未发布"}</p></> : null}
-    </fieldset>} />
+    </fieldset></section><aside className={styles.previewPane} aria-label="文章预览与结构"><nav className={styles.previewTabs} aria-label="预览方式"><button type="button" aria-pressed={previewMode==="preview"} onClick={()=>{setPane("preview");if(mobile!=="edit")setMobile("preview");}}>文章预览</button><button type="button" aria-pressed={previewMode==="structure"} onClick={()=>{setPane("structure");if(mobile!=="edit")setMobile("structure");}}>结构视图</button></nav>
+    {previewMode==="structure"?<nav className={styles.structure} aria-label="正文结构定位"><h2>正文结构</h2>{draft.body_blocks.length?<ol>{draft.body_blocks.map((block,index)=><li key={block.id || index}><button type="button" aria-current={selectedBlock===block.id?"true":undefined} onClick={()=>focusBlock(block.id || String(index))}><span>{index+1}. {blockNames[block.type]}</span><strong>{blockTitle(block)}</strong></button></li>)}</ol>:<p>插入内容块后在这里查看顺序。</p>}</nav>:<article className={styles.articlePreview}><h2>{draft.title || "文章标题待填写"}</h2>{draft.introduction?<p>{draft.introduction}</p>:null}{draft.cover_url?<img src={draft.cover_url} alt="文章主图"/>:null}{draft.body_blocks.map((block,index)=><section key={block.id || index} className={styles.previewBlock} data-selected={selectedBlock===block.id || undefined}><button type="button" className={styles.editBlock} onClick={()=>focusBlock(block.id || String(index))}>编辑第 {index+1} 块</button><IssueBlockView block={block}/></section>)}{draft.items.length?<section><h3>相关材料</h3>{draft.items.map((item,index)=><div key={item.id || index}><h4>{index+1}. {item.title || "题名待填写"}</h4><p>{item.authors}</p><p>{item.note}</p></div>)}</section>:null}{!draft.body_blocks.length&&!draft.items.length?<p className={styles.empty}>文章内容将在这里同步预览。</p>:null}</article>}</aside></div>
+    {history?<IssueHistory issueId={issueId} request={editor.request} onClose={()=>setHistory(false)} canRestore={canEdit&&!editor.disabled&&!dirty&&!conflict} onRestore={editor.restoreHistory}/>:null}
     {canPublish && user ? <ArticleCommentReview key={String(user.id)} issueId={issueId} owner={String(user.id)} /> : null}
   </div>;
 }

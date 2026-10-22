@@ -851,6 +851,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_history_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recommendation-issues/{issue_id}/items/{item_id}/link/": {
         parameters: {
             query?: never;
@@ -877,6 +893,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["catalog_admin_recommendation_issues_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/sources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_sources_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6031,6 +6063,24 @@ export interface components {
          * @enum {string}
          */
         IssueBodyBlockTypeEnum: "paragraph" | "heading" | "quote" | "link" | "image" | "evidence" | "work" | "person" | "concept" | "node" | "timeline" | "reading_path" | "comparison" | "analysis";
+        IssueHistoryItem: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            status: string;
+            /** Format: date-time */
+            created_at: string;
+            created_by: string;
+            note: string;
+            is_current: boolean;
+            block_count: number;
+        };
+        IssueHistoryPage: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["IssueHistoryItem"][];
+        };
         IssueItem: {
             /** Format: uuid */
             id?: string;
@@ -6081,6 +6131,20 @@ export interface components {
             position?: number;
             section_id?: string;
             document_type?: string;
+        };
+        IssueSourceChoice: {
+            target: {
+                [key: string]: unknown;
+            };
+            source: {
+                [key: string]: unknown;
+            };
+        };
+        IssueSourcesPage: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["IssueSourceChoice"][];
         };
         ItemEstimateInputRequest: {
             /** Format: uuid */
@@ -10344,6 +10408,17 @@ export interface components {
             readonly body_source_problems: {
                 [key: string]: unknown;
             }[];
+            /** Format: date-time */
+            readonly saved_at: string | null;
+            readonly saved_by: string;
+            readonly saved_revision: number;
+            /** Format: uuid */
+            readonly viewed_revision_id: string;
+            readonly viewed_revision: number;
+            readonly request_found: boolean;
+            /** Format: uuid */
+            readonly applied_revision_id: string;
+            readonly is_current_revision: boolean;
         };
         RecommendationIssueCollection: {
             count: number;
@@ -10368,6 +10443,11 @@ export interface components {
             display_from?: string | null;
             items?: components["schemas"]["IssueItemRequest"][];
             edit_version?: string;
+            /** Format: uuid */
+            request_id?: string;
+            /** Format: uuid */
+            restore_revision_id?: string;
+            autosave?: boolean;
         };
         ResearchAccountCountsOutput: {
             readonly research: number;
@@ -13844,7 +13924,10 @@ export interface operations {
     };
     catalog_admin_recommendation_issues_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                request_id?: string;
+                revision?: string;
+            };
             header?: never;
             path: {
                 issue_id: string;
@@ -13988,6 +14071,29 @@ export interface operations {
             };
         };
     };
+    catalog_admin_recommendation_issues_history_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueHistoryPage"];
+                };
+            };
+        };
+    };
     catalog_admin_recommendation_issues_items_link_create: {
         parameters: {
             query?: never;
@@ -14039,6 +14145,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_sources_retrieve: {
+        parameters: {
+            query?: {
+                edition_id?: string;
+                node_type?: string;
+                page?: string;
+                q?: string;
+                type?: string;
+                work_id?: string;
+            };
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueSourcesPage"];
                 };
             };
         };

@@ -175,6 +175,17 @@ class RecommendationIssueSerializer(serializers.Serializer):
     draft_revision_id = serializers.UUIDField(read_only=True, allow_null=True)
     has_unpublished_changes = serializers.BooleanField(read_only=True)
     body_source_problems = serializers.ListField(child=serializers.DictField(), read_only=True)
+    request_id = serializers.UUIDField(required=False, write_only=True)
+    restore_revision_id = serializers.UUIDField(required=False, write_only=True)
+    autosave = serializers.BooleanField(required=False, write_only=True)
+    saved_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    saved_by = serializers.CharField(read_only=True, allow_blank=True)
+    saved_revision = serializers.IntegerField(read_only=True)
+    viewed_revision_id = serializers.UUIDField(read_only=True)
+    viewed_revision = serializers.IntegerField(read_only=True)
+    request_found = serializers.BooleanField(read_only=True)
+    applied_revision_id = serializers.UUIDField(read_only=True)
+    is_current_revision = serializers.BooleanField(read_only=True)
 
 
 class RecommendationIssueCollectionSerializer(serializers.Serializer):

@@ -4,10 +4,14 @@ No draft write mutates the public payload. Scheduling only selects a revision
 which an authorized editor has already explicitly published.
 """
 from copy import deepcopy
+from hashlib import sha256
+import json
 from uuid import UUID, uuid4
 from urllib.parse import unquote, urlsplit
 
 from django.db import transaction
+from django.core.serializers.json import DjangoJSONEncoder
+from django.shortcuts import get_object_or_404
 from django.db.models import Case, DateTimeField, F, Max, Q, When
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -101,7 +105,7 @@ def _text(value, maximum=30000):
     return value.strip()
 
 
-def _body(value):
+def _body(value, *, retained=()):
     from catalog.services.editorial_blocks import REFERENCE_TYPES, block_references, normalize_typed_block
     if not isinstance(value, list) or len(value) > 150:
         raise ValidationError({"body_blocks": "正文最多150个固定段落。"})
@@ -110,7 +114,8 @@ def _body(value):
         if not isinstance(row, dict) or not isinstance(row.get("type"), str):
             raise ValidationError({"body_blocks": "文章区块类型无效。"})
         if isinstance(row, dict) and row.get("type") in {*REFERENCE_TYPES, "comparison", "analysis"}:
-            block = normalize_typed_block(row)
+            previous = next((old for old in retained if old.get("id") == row.get("id") and old.get("type") == row.get("type")), None)
+            block = normalize_typed_block(row, retained=previous)
             reference_count += len(block_references(block))
             if block["id"] in block_ids or reference_count > 400:
                 raise ValidationError({"body_blocks": "区块身份不能重复，引用总数不能超过400项。"})
@@ -166,8 +171,21 @@ def create_issue(data, actor):
 @transaction.atomic
 def save_issue(identifier, data, actor):
     issue = RecommendationIssue.objects.select_for_update().get(pk=identifier)
+    from catalog.services.shared_curation import identifier as parse_id
+    request_id = str(parse_id(data["request_id"])) if data.get("request_id") else ""
+    fingerprint = sha256(json.dumps(data, cls=DjangoJSONEncoder, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    if request_id:
+        receipt = issue_save_receipt(issue, request_id, actor)
+        if receipt:
+            if receipt.after.get("fingerprint") != fingerprint:
+                raise EditConflict("这次保存编号已用于另一份内容，请先核对原保存结果。")
+            issue._save_receipt = receipt
+            return issue
     _check_version("recommendation_issue", issue.pk, data.get("edit_version"))
     previous = issue_draft_payload(issue)
+    restored = None
+    if data.get("restore_revision_id"):
+        restored = get_object_or_404(EditorialRevision, pk=parse_id(data["restore_revision_id"]), target_type="recommendation_issue", target_id=issue.pk)
     values = {**previous, **data}
     payload = {name: _text(values.get(name) or "", limit) for name, limit in (
         ("title", 600), ("issue_label", 120), ("introduction", 3000), ("public_byline", 240))}
@@ -177,7 +195,7 @@ def save_issue(identifier, data, actor):
     payload["slug"] = issue.slug
     from catalog.services.public_editorial import metadata_input
     payload["article_metadata"] = metadata_input(values.get("article_metadata", {}))
-    payload["body_blocks"] = _body(values.get("body_blocks", []))
+    payload["body_blocks"] = _body(values.get("body_blocks", []), retained=(restored.materialized_preview if restored else previous).get("body_blocks", []))
     rendition = _rendition(values.get("cover_rendition_id"))
     payload["cover_rendition_id"] = str(rendition.pk) if rendition else None
     payload["cover_url"] = "" if rendition else safe_image_url(values.get("cover_url"))
@@ -273,10 +291,19 @@ def save_issue(identifier, data, actor):
             row.update(work_id=str(record.planned_work_id), edition_id=str(record.cataloging_session.edition_id),
                        cataloging_session_id=str(record.cataloging_session_id))
         payload["items"].append(row)
-    _save_revision("recommendation_issue", issue.pk, payload, actor)
+    revision = _save_revision("recommendation_issue", issue.pk, payload, actor)
+    revision.change_note = f"恢复自修订 {restored.revision}" if restored else "自动保存" if data.get("autosave") is True else "保存草稿"
+    revision.save(update_fields=["change_note"])
     issue.title = payload["title"]
     issue.save(update_fields=["title", "updated_at"])
+    if request_id:
+        issue._save_receipt = AuditEvent.objects.create(actor=actor, action="recommendation_issue.save_receipt", object_type="recommendation_issue", object_id=str(issue.pk), request_id=request_id,
+            after={"fingerprint": fingerprint, "revision_id": str(revision.pk), "edit_version": edit_version("recommendation_issue", issue.pk)})
     return issue
+
+
+def issue_save_receipt(issue, request_id, actor):
+    return AuditEvent.objects.filter(actor=actor, action="recommendation_issue.save_receipt", object_type="recommendation_issue", object_id=str(issue.pk), request_id=request_id).order_by("-created_at").first()
 
 
 @transaction.atomic
@@ -287,9 +314,9 @@ def publish_issue(identifier, expected, actor):
     if not revision or revision.status != "draft":
         raise ValidationError("没有待发布草稿。")
     payload = revision.materialized_preview
-    from catalog.services.editorial_blocks import body_payload
+    from catalog.services.editorial_blocks import body_payload, block_references
     body_payload(payload.get("body_blocks", []), require_public=True)
-    if not payload.get("items") and not any(row.get("text", "").strip() or row.get("type") == "image" for row in payload.get("body_blocks", [])):
+    if not payload.get("items") and not any(row.get("text", "").strip() or row.get("type") == "image" or block_references(row) for row in payload.get("body_blocks", [])):
         raise ValidationError("至少需要一段正式文章内容或一项阅读推荐。")
     for item in payload["items"]:
         if item["kind"] == "catalog" and not public_editions().filter(pk=item["edition_id"], work_id=item["work_id"]).exists():
@@ -409,7 +436,14 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
         latest = _latest("recommendation_issue", issue.pk)
         payload.update(edit_version=edit_version("recommendation_issue", issue.pk),
             draft_revision_id=str(latest.pk) if latest and latest.status == "draft" else None,
-            has_unpublished_changes=bool(latest and latest.status == "draft"))
+            has_unpublished_changes=bool(latest and latest.status == "draft"),
+            saved_at=latest.created_at.isoformat() if latest else None,
+            saved_by=latest.created_by.display_name if latest and latest.created_by else "",
+            saved_revision=latest.revision if latest else 0)
+        receipt = getattr(issue, "_save_receipt", None)
+        if receipt:
+            payload.update(request_found=True, applied_revision_id=receipt.after["revision_id"],
+                is_current_revision=receipt.after.get("edit_version") == payload["edit_version"] and bool(latest and latest.status == "draft"))
     return payload
 
 

@@ -1,5 +1,12 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 专题编辑器第一批
+
+GET admin/recommendation-issues/{id}/history/：24项分页、真实revision/status/created_at/created_by/note/is_current/block_count。GET sources/：type/q/page/work_id/edition_id及node_type=concept，复用准确来源分页。GET原detail支持revision/request_id互斥，跨issue历史404、回执actor隔离。
+
+PUT原detail可选request_id/autosave/restore_revision_id；返回saved_at/by/revision及request_found/applied_revision_id/is_current_revision。POST原preview仅重核body_blocks与restore_revision_id，返回同草稿DTO，不写入；其余字段仍显示已保存值，客户端只合并body与source_problems。CanEditMetadata写/来源，CanAccessBackOffice读；全部private,no-store；提供X-Editor-Owner且与cookie账号不同403。223路径保留221，生成类型同步。
+
+
 ## 2026-10-22 今日工作第一批
 
 GET catalog/admin/today-work/，CanAccessBackOffice/private,no-store；q≤200、category(all/editing/intake/catalog/problems/publication)、kind(空/catalog/curation/processing)、state(空/draft/changes_pending/pending/running/paused/partial/attention/failed/ready)、owner(all/me)、ordering(±updated_at)、page≥1。非法值400。结果含完整counts、20项page/total_pages、checked_at、restricted、owner_basis、真实权限与稳定对象/任务来源、准确url/state/thumbnail。count为工作项，非去重馆藏数；各类别互斥，counts按其他过滤后的完整范围计算。

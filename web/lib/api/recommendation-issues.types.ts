@@ -3,7 +3,7 @@ import type { AboutPageBlock } from "./site.types";
 import type { PublicScholarCard } from "./scholars.types";
 
 export type IssueSourceReference = { type: "work" | "edition" | "span" | "node" | "person" | "timeline" | "reading_path"; id: string; edition_id?: string; document_revision_id?: string };
-export type IssueResolvedSource = IssueSourceReference & { title: string; text?: string; reader_url?: string; work_url?: string; printed_label?: string; page_start?: number; source_type?: string; asset_id?: string; work_id?: string; href?: string; summary?: string; edition_label?: string };
+export type IssueResolvedSource = IssueSourceReference & { title: string; text?: string; reader_url?: string; work_url?: string; printed_label?: string; page_start?: number; source_type?: string; asset_id?: string; work_id?: string; href?: string; summary?: string; edition_label?: string; public_eligible?: boolean; edit_url?: string };
 export type IssueBlock = {
   id?: string;
   type: "paragraph" | "heading" | "quote" | "link" | "image" | "evidence" | "work" | "person" | "concept" | "node" | "timeline" | "reading_path" | "analysis" | "comparison";
@@ -27,6 +27,9 @@ export type RecommendationIssue = {
   has_unpublished_changes?: boolean; status?: string;
   article_metadata?: ArticleMetadata; curator?: EditorialCurator;
   public_revision_id?: string; reading_minutes?: number | null; related?: EditorialDirectory["related"];
+  saved_at?: string | null; saved_by?: string; saved_revision?: number; body_source_problems?: Array<{block_id?:string;detail?:string}>;
+  viewed_revision_id?: string; viewed_revision?: number; request_found?: boolean; applied_revision_id?: string; is_current_revision?: boolean;
+  restore_revision_id?: string;
 };
 export type ArticleMetadata = {
   kind: "article" | "research" | "exhibition"; keywords: string[]; topic_ids: string[]; scholar_ids: string[]; reading_path_ids: string[];

@@ -91,6 +91,15 @@ class SaveIssueReadingListView(PrivateResponses, APIView):
 
 
 class EditorialErrorMixin:
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        # A tab may outlive a cookie/account switch. Never apply its command as
+        # the newly logged-in editor, even if both accounts can edit this issue.
+        owner = request.headers.get("X-Editor-Owner")
+        if owner is not None and owner != str(request.user.pk):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("登录账户已变化，请重新读取当前账户的工作。")
+
     def handle_exception(self, exc):
         from django.core.exceptions import ValidationError as ModelValidationError
         if isinstance(exc, service.EditConflict):
@@ -124,9 +133,22 @@ class AdminIssueListView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
 class AdminIssueDetailView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     def get_permissions(self):
         return [CanEditMetadata()] if self.request.method == "PUT" else [CanAccessBackOffice()]
-    @extend_schema(responses=RecommendationIssueSerializer)
+    @extend_schema(responses=RecommendationIssueSerializer, parameters=[OpenApiParameter("revision", type=str), OpenApiParameter("request_id", type=str)])
     def get(self, request, issue_id):
-        return Response(service.issue_payload(get_object_or_404(RecommendationIssue, pk=issue_id)))
+        from catalog.services.shared_curation import identifier
+        from rest_framework.exceptions import ValidationError
+        issue = get_object_or_404(RecommendationIssue, pk=issue_id)
+        if request.query_params.get("revision") and request.query_params.get("request_id"):
+            raise ValidationError("请选择历史版本或保存回执之一。")
+        revision = get_object_or_404(EditorialRevision, pk=identifier(request.query_params["revision"]), target_type="recommendation_issue", target_id=issue.pk) if request.query_params.get("revision") else None
+        if request.query_params.get("request_id"):
+            issue._save_receipt = service.issue_save_receipt(issue, str(identifier(request.query_params["request_id"])), request.user)
+        payload = service.issue_payload(issue, revision=revision)
+        if revision:
+            payload.update(viewed_revision_id=str(revision.pk), viewed_revision=revision.revision)
+        if request.query_params.get("request_id") and not issue._save_receipt:
+            payload["request_found"] = False
+        return Response(payload)
     @extend_schema(request=RecommendationIssueSerializer, responses=RecommendationIssueSerializer)
     def put(self, request, issue_id):
         get_object_or_404(RecommendationIssue, pk=issue_id)
@@ -142,7 +164,26 @@ class AdminIssuePublishView(EditorialErrorMixin, AdminPrivateResponseMixin, APIV
 
 
 class AdminIssuePreviewView(AdminIssueDetailView):
-    http_method_names = ["get", "head", "options"]
+    http_method_names = ["get", "post", "head", "options"]
+
+    def get_permissions(self):
+        return [CanEditMetadata()] if self.request.method == "POST" else [CanAccessBackOffice()]
+
+    @extend_schema(request=RecommendationIssueSerializer, responses=RecommendationIssueSerializer)
+    def post(self, request, issue_id):
+        from copy import deepcopy
+        from types import SimpleNamespace
+        from catalog.services.shared_curation import identifier
+        issue = get_object_or_404(RecommendationIssue, pk=issue_id)
+        payload = service.issue_draft_payload(issue)
+        retained = payload
+        if request.data.get("restore_revision_id"):
+            retained = get_object_or_404(EditorialRevision, pk=identifier(request.data["restore_revision_id"]), target_type="recommendation_issue", target_id=issue.pk).materialized_preview
+        payload["body_blocks"] = service._body(request.data.get("body_blocks", []), retained=retained.get("body_blocks", []))
+        # Re-resolve sources/media through the exact renderer used for saved
+        # drafts. This projection creates no revision, item or publication.
+        preview = SimpleNamespace(materialized_preview=deepcopy(payload), published_at=issue.published_at)
+        return Response(service.issue_payload(issue, revision=preview))
 
 
 class AdminIssueLinkView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):

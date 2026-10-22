@@ -79,12 +79,24 @@ function clearLegacyStoredTokens() {
   for (const key of LEGACY_SESSION_KEYS) removeStorage(key);
 }
 
+function clearTabEditorialDrafts() {
+  if (typeof window === "undefined") return;
+  try {
+    for (const key of Object.keys(window.sessionStorage)) {
+      if (key.startsWith("stl:issue-draft:v1:")) window.sessionStorage.removeItem(key);
+    }
+  } catch {
+    // A disabled browser store must not prevent logout.
+  }
+}
+
 export function clearStoredSession() {
   const hadStoredSession = Boolean(
     readStorage(SESSION_HINT_KEY)
     || LEGACY_SESSION_KEYS.some((key) => readStorage(key)),
   );
   clearLegacyStoredTokens();
+  clearTabEditorialDrafts();
   removeStorage(SESSION_HINT_KEY);
   removeStorage(REFRESH_REVISION_KEY);
   if (hadStoredSession && typeof window !== "undefined") {
@@ -101,6 +113,7 @@ export function subscribeToSessionChanges(listener: () => void) {
   if (typeof window === "undefined") return () => undefined;
   const handleStorage = (event: StorageEvent) => {
     if (event.key !== null && event.key !== SESSION_HINT_KEY) return;
+    if (!event.newValue) clearTabEditorialDrafts();
     listener();
   };
   const handleSameTabChange = () => listener();

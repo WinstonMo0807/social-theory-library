@@ -66,18 +66,29 @@ def resolve_target(raw, *, public=False):
     return target, source
 
 
-def normalize_typed_block(row):
+def normalize_typed_block(row, *, retained=None):
     kind = row.get("type")
     if not isinstance(kind, str):
         raise ValidationError({"body_blocks": "文章区块类型无效。"})
     block = {"id": str(shared_curation.identifier(row["id"])) if row.get("id") else str(uuid4()),
              "type": kind, "text": _text(row.get("text", ""))}
+    # Only identities already saved in this exact block may survive source
+    # removal. Their text stays unavailable; publication still rechecks every
+    # reference. A client cannot introduce an arbitrary missing identity.
+    old_refs = block_references(retained) if retained and retained.get("id") == block["id"] and retained.get("type") == kind else []
+    def resolve(reference):
+        try:
+            return resolve_target(reference)[0]
+        except (Http404, ValidationError):
+            if reference in old_refs:
+                return deepcopy(reference)
+            raise
     if kind in REFERENCE_TYPES:
         raw = row.get("target")
         if not isinstance(raw, dict) or raw.get("type") != REFERENCE_TYPES[kind]:
             raise ValidationError({"body_blocks": "区块类型与引用身份不一致。"})
-        block["target"], _source = resolve_target(raw)
-        if kind == "concept" and not KnowledgeNode.objects.filter(pk=block["target"]["id"], node_type="concept").exists():
+        block["target"] = resolve(raw)
+        if kind == "concept" and raw not in old_refs and not KnowledgeNode.objects.filter(pk=block["target"]["id"], node_type="concept").exists():
             raise ValidationError({"body_blocks": "概念区块须引用概念节点。"})
         return block
     if kind == "analysis":
@@ -87,7 +98,7 @@ def normalize_typed_block(row):
         style = row.get("style", "paragraph")
         if not isinstance(style, str) or style not in {"paragraph", "heading"}:
             raise ValidationError({"body_blocks": "分析文字样式无效。"})
-        return {**block, "references": [resolve_target(ref)[0] for ref in refs], "style": style}
+        return {**block, "references": [resolve(ref) for ref in refs], "style": style}
     if kind != "comparison":
         raise ValidationError({"body_blocks": "未知结构化文章区块。"})
     dimensions, incoming = row.get("dimensions"), row.get("rows")
@@ -102,7 +113,7 @@ def normalize_typed_block(row):
     for row in incoming:
         if not isinstance(row, dict) or not isinstance(row.get("cells"), list) or len(row["cells"]) != len(dimensions):
             raise ValidationError({"body_blocks": "每行须明确保存每个维度的材料或缺口。"})
-        person, _ = resolve_target({"type": "person", "id": row.get("person_id")})
+        person = resolve({"type": "person", "id": row.get("person_id")})
         cells = []
         for cell in row["cells"]:
             if not isinstance(cell, dict) or cell.get("dimension") not in dimensions:
@@ -111,7 +122,7 @@ def normalize_typed_block(row):
             if not isinstance(refs, list) or len(refs) > 8 or any(not isinstance(ref, dict) or ref.get("type") != "span" for ref in refs):
                 raise ValidationError({"body_blocks": "比较依据须为最多8项真实原文。"})
             cells.append({"dimension": cell["dimension"], "text": _text(cell.get("text", "")),
-                          "evidence": [resolve_target(ref)[0] for ref in refs], "missing": not refs})
+                          "evidence": [resolve(ref) for ref in refs], "missing": not refs})
         if {cell["dimension"] for cell in cells} != set(dimensions):
             raise ValidationError({"body_blocks": "比较单元格不能重复维度。"})
         rows.append({"person_id": person["id"], "cells": cells})

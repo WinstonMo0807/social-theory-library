@@ -1,5 +1,15 @@
 # 验收记录
 
+## 2026-10-22 专题编辑器第一批静态记录
+
+- Python ast.parse 8个源码/测试文件：a148f8退出0。未执行测试模块。
+- tmp/stl4-issue-editor-static.py：b10485退出0，历史/概念/回执6组SQLite/PostgreSQL SQL仅编译；ensure_connection明确阻断，连接0。
+- 全量TypeScript首次0ce913/fdb131退出0；加入比较回调后52585/9ad8c1出现泛型unknown，显式IssueDraft修复；最终 `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false` 88029/f661cf退出0。
+- 目标ESLint首次6feb5b报state对象潜在修改，改用不可变command；eaa43e 8目标退出0（2项img建议），后补owner/API清除等5目标b66e17退出0（1项img建议）。
+- schema用DATABASE_URL=sqlite:///:memory:等隔离进程环境，`api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-issue-editor-schema.json --validate` eb6021退出0，0错误/10项原Home Scholar/Topic提示。生成223路径保留原221及TS。首次CSS核对ad0a3c发现blocks类未定义，补齐后b66e17 123节点/45直接引用全存在。
+- git diff --check 67ba5c退出0（既有CRLF提示）。10个新后端测试函数、7个浏览器场景及auth runner登记仅定义，未运行。未浏览器/构建/迁移/检索测评/生产。
+
+
 ## 2026-10-22 今日工作第一批静态记录
 
 - `tmp/stl4-today-static.py`（本机辅助）：SQL12组SQLite/PostgreSQL仅编译，数据库连接明确阻断为0；最终6bfe48退出0。初始7c0780混合Text/Char失败已修正，不作为通过记录。

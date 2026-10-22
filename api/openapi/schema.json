@@ -3402,6 +3402,20 @@
                             "format": "uuid"
                         },
                         "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "revision",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "tags": [
@@ -3696,6 +3710,52 @@
                 }
             }
         },
+        "/api/catalog/admin/recommendation-issues/{issue_id}/history/": {
+            "get": {
+                "operationId": "catalog_admin_recommendation_issues_history_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssueHistoryPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/recommendation-issues/{issue_id}/items/{item_id}/link/": {
             "post": {
                 "operationId": "catalog_admin_recommendation_issues_items_link_create",
@@ -3815,6 +3875,87 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/RecommendationIssue"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recommendation-issues/{issue_id}/sources/": {
+            "get": {
+                "operationId": "catalog_admin_recommendation_issues_sources_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "node_type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssueSourcesPage"
                                 }
                             }
                         },
@@ -24760,6 +24901,75 @@
                 "type": "string",
                 "description": "* `paragraph` - paragraph\n* `heading` - heading\n* `quote` - quote\n* `link` - link\n* `image` - image\n* `evidence` - evidence\n* `work` - work\n* `person` - person\n* `concept` - concept\n* `node` - node\n* `timeline` - timeline\n* `reading_path` - reading_path\n* `comparison` - comparison\n* `analysis` - analysis"
             },
+            "IssueHistoryItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "is_current": {
+                        "type": "boolean"
+                    },
+                    "block_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "block_count",
+                    "created_at",
+                    "created_by",
+                    "id",
+                    "is_current",
+                    "note",
+                    "revision",
+                    "status"
+                ]
+            },
+            "IssueHistoryPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueHistoryItem"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
+                ]
+            },
             "IssueItem": {
                 "type": "object",
                 "properties": {
@@ -24923,6 +25133,51 @@
                 },
                 "required": [
                     "kind"
+                ]
+            },
+            "IssueSourceChoice": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "source": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "source",
+                    "target"
+                ]
+            },
+            "IssueSourcesPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueSourceChoice"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
                 ]
             },
             "ItemEstimateInputRequest": {
@@ -39046,19 +39301,63 @@
                             "additionalProperties": {}
                         },
                         "readOnly": true
+                    },
+                    "saved_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "saved_by": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "saved_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "viewed_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "viewed_revision": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "request_found": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "applied_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "is_current_revision": {
+                        "type": "boolean",
+                        "readOnly": true
                     }
                 },
                 "required": [
+                    "applied_revision_id",
                     "body_source_problems",
                     "curator",
                     "draft_revision_id",
                     "has_unpublished_changes",
                     "id",
+                    "is_current_revision",
                     "public_revision_id",
                     "published_at",
                     "reading_minutes",
                     "related",
-                    "title"
+                    "request_found",
+                    "saved_at",
+                    "saved_by",
+                    "saved_revision",
+                    "title",
+                    "viewed_revision",
+                    "viewed_revision_id"
                 ]
             },
             "RecommendationIssueCollection": {
@@ -39159,6 +39458,20 @@
                     "edit_version": {
                         "type": "string",
                         "minLength": 1
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true
+                    },
+                    "restore_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true
+                    },
+                    "autosave": {
+                        "type": "boolean",
+                        "writeOnly": true
                     }
                 },
                 "required": [
