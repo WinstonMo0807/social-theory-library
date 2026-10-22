@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-23 知识对象发布状态与恢复静态检查
+
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web），最终47850/ed2103退出0；前次31566/8e90ff也退出0。仅类型检查，无构建。
+- `node node_modules/eslint/bin/eslint.js components/admin/knowledge/knowledge-publish-control.tsx components/admin/knowledge/knowledge-visual-editor.tsx components/admin/knowledge/knowledge-object-context-panel.tsx components/theory-system-admin.tsx tests/knowledge-publication-atlas.spec.ts`，24265/0e35a5退出0、无警告。末次错误提示和验收配置补充后，control与playwright.auth.config.ts两目标ed71a4退出0。
+- Python AST检查api/common/permissions.py及api/tests/test_knowledge_publish_owner_20261023.py，9a9425退出0；不import、不连接数据库、不运行测试。本批不改SQL、schema或CSS，无需重复生成契约或编译SQL。
+- 新增4个后端函数（首函数对6类编辑器参数化）和5个浏览器场景，只定义未运行；auth配置登记本批与原issue-publication/publication-ledger/publication-review定义。没有正式测试/E2E/浏览器/服务/构建/迁移/模型/检索测评/生产操作。
+- 保存前白名单审计只核对18条路径、空暂存区、图集索引和生成契约未改。首次原字节比较因工作区CRLF与Git LF不同而触发断言；改按换行归一化核对文本内容，不修改索引文件或放宽业务检查。该审计不是功能测试。
+
 ## 2026-10-23 NEW-A16静态检查
 
 - `.venv/Scripts/python.exe tmp/stl4-review-static-20261023.py`，最终dc9f18退出0：5文件AST、14次SQLite/PostgreSQL SQL编译；ensure_connection禁止连接，0数据库连接，无测试运行。

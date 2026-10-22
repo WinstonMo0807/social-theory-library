@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 知识发布账户与阶段契约
+
+本批不增加路由/DTO/表。RequiresCapability、IsLibraryStaff、IsKnowledgeEditor接受可选X-Editor-Owner；存在且不等于当前认证user.pk返回403，缺省沿原权限。匹配header不授予任何新能力。当前知识控制器所有原详情GET/PATCH、knowledge-preview及editorial-revisions GET/publish POST均携此头并以withPrivateOwner前后验证。
+
+检查保存版本使用原edit_version；首次公开PATCH精确If-Match。已有draft修订直接发布其原ID与状态，响应核对target_type/target_id/status。浏览器记录prepare/publish阶段及原目标，不接受任意URL；原修订published视为已确认回执，superseded或身份不符禁止发布。未知首次PATCH不自动猜结果。原schema文件未改，此可选头部的全局语义记录于本契约。
+
 ## 2026-10-23 NEW-A16出版版本检查
 
 - 既有GET /api/catalog/admin/editions/{edition_id}/publication/history/支持view=review；旧默认数组及view=desk保留。PublicationDesk.review新增nullable强类型PublicationReview（current、保存人/时间/说明、前后文件页数、关联对象增删、五项实际状态与修正入口）。desk默认review=null，review模式不写数据。

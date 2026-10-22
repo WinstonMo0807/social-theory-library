@@ -10,8 +10,7 @@ import { projectReadingPath } from "@/components/admin/curation/reading-path-pre
 import { FixedPageEditor, type PreviewSelection } from "@/components/admin/curation/fixed-page-editor";
 import { PreviewSurface, type KnowledgePreviewPayload } from "@/components/admin/preview/knowledge-page-preview";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
-import { editorialHeaders } from "@/lib/editorial-version";
-import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
+import { KnowledgePublishControl, KnowledgePublicationContext } from "./knowledge-publish-control";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
 import { AsyncStatus } from "@/components/action-feedback";
@@ -78,21 +77,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const payload = resolved?.key === previewKey ? resolved.payload : null;
   const error = failure?.key === previewKey ? failure.message : "";
   const [evidenceDirty, setEvidenceDirty] = useState(false);
-  const canPublish = hasAdminCapability(useAdminSession(),"can_publish_authority");
-  const [publishing,setPublishing] = useState(false);
-  const [publicationMessage,setPublicationMessage] = useState("");
-  async function publishSaved() {
-    if(!objectId || !savedRecord || dirty || publishing || !canPublish)return;
-    const endpoint = ({scholar:"scholars",topic:"topics",discipline:"disciplines",subdiscipline:"subdisciplines",reading_path:"theory-system/reading-paths"} as Record<string,string>)[objectType] || "theory-system/nodes";
-    setPublishing(true);setPublicationMessage("");
-    try {
-      const field=["scholar","topic","discipline","subdiscipline"].includes(objectType)?"editorial_status":"status";
-      const saved=await apiRequest<{editorial_revision?:{id:string;status:string}}>(`/catalog/admin/${endpoint}/${objectId}/`,{method:"PATCH",headers:editorialHeaders(savedRecord),body:JSON.stringify({[field]:"published"})},getServerSessionCredential());
-      if(saved.editorial_revision?.status === "draft") await apiRequest(`/catalog/admin/editorial-revisions/${saved.editorial_revision.id}/publish/`,{method:"POST",body:"{}"},getServerSessionCredential());
-      setPublicationMessage("已提交发布。内容和检索更新结果可在发布记录中核对。");onPublished?.();
-    } catch(reason){setPublicationMessage(reason instanceof Error?reason.message:"发布失败，已保存草稿仍然保留。");}
-    finally{setPublishing(false);}
-  }
+  const [publicationLocked,setPublicationLocked] = useState(Boolean(objectId && savedRecord));
   const [localImage, setLocalImage] = useState("");
   useEffect(()=>{let active=true;const url=mediaFile?URL.createObjectURL(mediaFile):"";queueMicrotask(()=>{if(active)setLocalImage(url);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[mediaFile]);
   useEffect(() => {
@@ -118,16 +103,16 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const previewPayload = {...payload, object_type:objectType, object_id:objectId || "new", active_perspective:"draft", perspective:{source:"browser_input", available:true, serializer:payload?.perspective.serializer || "", data:live}} as KnowledgePreviewPayload;
   const page = objectType === "reading_path" ? selected : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works","sources","paths"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths","scholars","articles"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
   function changeSection(id: string) {
-    if (id === selected) return;
+    if (id === selected || (publicationLocked && id !== "publication")) return;
     if (selected === "passages" && evidenceDirty && !window.confirm("原文策展尚未保存，确定切换并放弃这些输入吗？")) return;
     setEvidenceDirty(false); setActive(id);
     const url = new URL(window.location.href); url.searchParams.set("section",id); window.history.replaceState(null,"",url.pathname+url.search);
   }
-  if (selected === "passages" && evidenceType) return <div className="knowledge-visual-editor">{objectId ? <EvidenceCurationEditor key={`${evidenceType}:${objectId}`} objectType={evidenceType} objectId={objectId} sections={sections} onSectionChange={changeSection} onDirtyChange={setEvidenceDirty} /> : <><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} onClick={() => changeSection(section.id)}>{section.label}</button>)}</nav><p className="admin-panel">请先保存当前对象，再选择馆内原文。当前基本信息输入仍然保留。</p></>}</div>;
-  return <div className="knowledge-visual-editor">{objectType === "scholar" && selected === "network" ? <section className="private-preview-label"><strong>规范学术关系</strong><p>两端学者共用同一关系、方向、说明和来源。下方历史关联阅读保持原记录。</p>{objectId ? <Link className="button secondary" href={`/admin/scholars/${objectId}/relations`}>进入学者关系图编辑</Link> : <p>请先保存学者草稿，再建立关系。</p>}</section> : null}<FixedPageEditor sections={sections} activeSection={selected} onSectionChange={changeSection} onPreviewSelect={onPreviewSelect} dirty={dirty} previewHref={objectId ? `/admin/preview/knowledge/${objectType}/${objectId}?page=${page}` : undefined}
-    fields={form ? cloneElement(form,{},<fieldset disabled={disabled} style={{display:"contents"}}>{groups.map(({node,section},index) => <div key={index} hidden={section !== selected && !alwaysVisible(node)} data-field-section={section}>{node}</div>)}</fieldset>) : children}
+  const evidenceEditor = evidenceType ? <div className="knowledge-visual-editor" inert={publicationLocked}>{objectId ? <EvidenceCurationEditor key={`${evidenceType}:${objectId}`} objectType={evidenceType} objectId={objectId} sections={sections} onSectionChange={changeSection} onDirtyChange={setEvidenceDirty} /> : <><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} onClick={() => changeSection(section.id)}>{section.label}</button>)}</nav><p className="admin-panel">请先保存当前对象，再选择馆内原文。当前基本信息输入仍然保留。</p></>}</div> : null;
+  return <KnowledgePublicationContext value={{locked:publicationLocked,requestReview:()=>setActive("publication")}}><div className="knowledge-visual-editor">{publicationLocked && selected !== "publication" ? <p role="status">发布记录正在核对，编辑暂时锁定。<button type="button" onClick={()=>setActive("publication")}>查看发布记录</button></p>:null}{objectType === "scholar" && selected === "network" ? <section className="private-preview-label"><strong>规范学术关系</strong><p>两端学者共用同一关系、方向、说明和来源。下方历史关联阅读保持原记录。</p>{objectId ? <Link className="button secondary" href={`/admin/scholars/${objectId}/relations`}>进入学者关系图编辑</Link> : <p>请先保存学者草稿，再建立关系。</p>}</section> : null}{selected === "passages" && evidenceType ? evidenceEditor : <FixedPageEditor sections={sections} activeSection={selected} onSectionChange={changeSection} onPreviewSelect={onPreviewSelect} dirty={dirty} previewHref={objectId ? `/admin/preview/knowledge/${objectType}/${objectId}?page=${page}` : undefined}
+    fields={form ? cloneElement(form,{},<fieldset disabled={disabled || publicationLocked} style={{display:"contents"}}>{groups.map(({node,section},index) => <div key={index} hidden={section !== selected && !alwaysVisible(node)} data-field-section={section}>{node}</div>)}</fieldset>) : children}
     toolbar={error ? <button type="button" className="button secondary" onClick={() => setPreviewRetry(value => value + 1)}>重新核对预览</button> : null}
-    preview={error ? <p className="form-message" role="alert">{error}。当前输入仍保留，本次选择尚未核对，请在左侧重新核对预览。</p> : objectId && !payload ? <p role="status">{objectType === "scholar" ? "正在核对本次选择的原文引语与阅读路径…" : "正在读取当前对象的受控预览…"}</p> : <div onClickCapture={event => {const target = event.target as HTMLElement; const row = target.closest<HTMLElement>("[data-edit-row]"); if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select",{detail:Number(row.dataset.editRow)})); if (target.closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId={page} previewStageId={previewStageId}/></div>}/>
-    <details className="knowledge-editor-support" hidden={!["publication","media","relations","versions"].includes(selected)} open><summary>{selected === "media" ? "选择图片" : selected === "relations" ? "管理共享关联" : "已保存草稿、发布与记录"}</summary>{selected === "publication" && objectId && savedRecord ? <section className="knowledge-publish-action"><button type="button" className="button" disabled={dirty || publishing || !canPublish} onClick={()=>void publishSaved()}>{publishing?"正在发布…":"发布已保存内容"}</button><p>{dirty?"当前输入尚未保存，请先保存草稿。":!canPublish?"当前账号没有正式发布权限。":"将已保存的当前对象内容发布给读者。"}</p>{publicationMessage?<p role="status">{publicationMessage}</p>:null}</section>:null}{rail}</details>
-  </div>;
+    preview={error ? <p className="form-message" role="alert">{error}。当前输入仍保留，本次选择尚未核对，请在左侧重新核对预览。</p> : objectId && !payload ? <p role="status">{objectType === "scholar" ? "正在核对本次选择的原文引语与阅读路径…" : "正在读取当前对象的受控预览…"}</p> : <div onClickCapture={event => {const target = event.target as HTMLElement; const row = target.closest<HTMLElement>("[data-edit-row]"); if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select",{detail:Number(row.dataset.editRow)})); if (target.closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId={page} previewStageId={previewStageId}/></div>}/> }
+    <details className="knowledge-editor-support" hidden={!["publication","media","relations","versions"].includes(selected)} open><summary>{selected === "media" ? "选择图片" : selected === "relations" ? "管理共享关联" : "已保存草稿、发布与记录"}</summary>{objectId && savedRecord ? <div hidden={selected !== "publication"}><KnowledgePublishControl objectType={objectType} objectId={objectId} savedRecord={savedRecord} dirty={dirty} onPublished={onPublished} onLockChange={setPublicationLocked}/></div>:null}<div inert={publicationLocked}>{rail}</div></details>
+  </div></KnowledgePublicationContext>;
 }

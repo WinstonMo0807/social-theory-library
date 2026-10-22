@@ -7,6 +7,10 @@ class RequiresCapability(BasePermission):
     capability = ""
 
     def has_permission(self, request, view):
+        owner = request.headers.get("X-Editor-Owner")
+        if owner is not None and owner != str(getattr(request.user, "pk", None)):
+            self.message = "登录账户已变化，请重新读取当前账户的资料。"
+            return False
         return bool(self.capability and has_capability(request.user, self.capability))
 
 
@@ -159,11 +163,9 @@ class CanManageUsers(RequiresCapability):
     message = "只有具备用户管理权限的管理员可以执行此操作。"
 
 
-class IsLibraryStaff(BasePermission):
+class IsLibraryStaff(RequiresCapability):
+    capability = Capability.ACCESS_BACK_OFFICE
     message = "仅管理员或编辑可执行此操作。"
-
-    def has_permission(self, request, view):
-        return has_capability(request.user, Capability.ACCESS_BACK_OFFICE)
 
 
 class IsLibraryAdmin(BasePermission):
@@ -183,11 +185,9 @@ class IsCatalogEditor(BasePermission):
         return has_capability(request.user, Capability.EDIT_METADATA)
 
 
-class IsKnowledgeEditor(BasePermission):
+class IsKnowledgeEditor(RequiresCapability):
+    capability = Capability.EDIT_DRAFT_AUTHORITY
     message = "仅 Editor 或 Administrator 可维护知识内容。"
-
-    def has_permission(self, request, view):
-        return has_capability(request.user, Capability.EDIT_DRAFT_AUTHORITY)
 
 
 class IsKnowledgeReviewer(BasePermission):

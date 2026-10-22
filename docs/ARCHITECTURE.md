@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 知识发布复用与账户校验
+
+KnowledgePublishControl作为原编辑器的确认/恢复组件，不建第二个发布服务。第一次公开调用规范保存CAS，已存在的不可变编辑修订直接走原发布事务，避免覆盖草稿撤回状态。sessionStorage按owner/对象保存非正文的准确请求阶段，恢复先检查原修订。两类旧知识权限继承RequiresCapability以共享可选owner校验，原capability保持。知识编辑器内发布入口共用上下文，待核对期间锁定写入；独立旧工作室与固定页面继续待接完整M17/M18。
+
 ## 2026-10-23 出版前检查与同版预览
 
 NEW-A16复用PublicationLedger的owner/未知命令回执/原维护服务，增加只读review呈现；后端review_details从prepare_revision、正式修订与当前资产状态生成检查信息。主校验仍为原publication_preflight，不以OCR就绪作为所有书目发布条件。iframe复用既有AdminWorkPagePreview/WorkDetailView，前后校验版本和指纹；消息确认限制同源、准确frame、Edition及两版本标识。EditionCompactSerializer仅在精确preview_edition上下文取已保存信息，公开调用保持正式快照。未新增持久化模型或发布任务。

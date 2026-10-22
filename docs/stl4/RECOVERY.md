@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-23 知识对象发布恢复
+
+前置ad1b230；本批白名单tmp/stl4-knowledge-publish-checkpoint-20261023.json，实际提交核对git log。读KNOWLEDGE_PUBLICATION_20261023。KnowledgePublishControl复用原规范保存/修订发布，已有修订不改写保存状态；prepare未知需人工核对，publish阶段先查原修订，禁止另建请求冒充恢复。RequiresCapability及IsLibraryStaff/IsKnowledgeEditor带可选owner守卫。统计96/26/87未变，无正式验收/迁移/生产。
+
+不要重跑tmp/stl4-knowledge-publish-wire/adjust/record-20261023.py，不暂存继承editorial_revision_views.py等改动。下一步继续知识对象完整M17、固定页面与M18其他对象；确认弹框不能代替整个页面实施或逐图验收。
+
 ## 2026-10-23 NEW-A16恢复
 
 前置791bd9b，本批白名单tmp/stl4-publication-review-checkpoint-20261023.json；核对git log确定检查点。读PUBLICATION_CHECK_20261023，统计96/26/87，正式验收未运行。/admin/publication/[itemId]默认为旧收件ID；object=edition为明确Edition；view=history为独立原发布账本。history?view=review复用desk投影，page-preview接受version/fingerprint与owner校验。不要重跑tmp/stl4-review-wire/adjust/record脚本，不暂存继承修改。下一步继续M17/M18知识对象及固定页面的发布/历史能力，必须先读取唯一PDF相应图。
