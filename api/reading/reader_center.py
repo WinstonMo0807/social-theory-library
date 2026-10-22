@@ -6,14 +6,14 @@ from django.db.models import CharField, F, OuterRef, Subquery, Value
 from rest_framework.exceptions import NotFound, ValidationError
 
 from . import research
-from .models import Annotation, CitationAudit, PersonalReadingPlan, ReadingList, ResearchMemory, ResearchProject, SavedItem
+from .models import Annotation, Bookmark, CitationAudit, PersonalReadingPlan, ReadingList, ResearchMemory, ResearchProject, SavedItem
 from .serializers import ReadingProgressSerializer, SavedItemSerializer
 from .services import decrypt_private_text, readable_progress_for_user
 
 PAGE_SIZE = 20
 SEARCH_LIMIT = 5000
-KINDS = {"research": "研究", "notes": "笔记", "plans": "计划", "lists": "书单", "audits": "引文体检", "confirmed": "已确认笔记", "saved": "选材"}
-MODELS = {"research": ResearchProject, "notes": Annotation, "plans": PersonalReadingPlan,
+KINDS = {"research": "研究", "notes": "笔记", "bookmarks": "书签", "plans": "计划", "lists": "书单", "audits": "引文体检", "confirmed": "已确认笔记", "saved": "选材"}
+MODELS = {"research": ResearchProject, "notes": Annotation, "bookmarks": Bookmark, "plans": PersonalReadingPlan,
           "lists": ReadingList, "audits": CitationAudit, "confirmed": ResearchMemory, "saved": SavedItem}
 
 
@@ -31,6 +31,8 @@ def collection(user, kind):
 
 
 def private_text(row, kind):
+    if kind == "bookmarks":
+        return row.label, ""
     if kind == "notes":
         return decrypt_private_text(row.body_ciphertext), ""
     if kind == "lists":
@@ -44,7 +46,7 @@ def private_text(row, kind):
 
 def material(user, kind, row, *, text=None):
     title, question = text if text is not None else private_text(row, kind)
-    title = title.strip().split("\n")[0][:160] or {"notes": "阅读标记", "plans": "未命名阅读计划", "lists": "未命名书单", "audits": "引文体检", "confirmed": "个人认识", "research": "未命名研究", "saved": "来源暂不可用"}[kind]
+    title = title.strip().split("\n")[0][:160] or {"notes": "阅读标记", "bookmarks": "页面书签", "plans": "未命名阅读计划", "lists": "未命名书单", "audits": "引文体检", "confirmed": "个人认识", "research": "未命名研究", "saved": "来源暂不可用"}[kind]
     state, path = "saved", ""
     if kind == "research":
         state = "archived" if row.archived else "saved"
@@ -52,6 +54,8 @@ def material(user, kind, row, *, text=None):
     elif kind == "notes":
         state = "source_unavailable" if row.orphaned else "saved"
         path = f"/account/notes?category=annotations&record={row.pk}"
+    elif kind == "bookmarks":
+        path = f"/account/notes?category=bookmarks&record={row.pk}"
     elif kind == "plans":
         data = research.unpack(row)
         items = data.get("items") or []
@@ -85,7 +89,7 @@ def ordered_materials(user, kinds, *, reverse=True):
 
 
 def materials(user, *, kind="all", q="", order="newest", page=1):
-    kinds = list(KINDS) if kind == "all" else [kind]
+    kinds = list(KINDS) if kind == "all" else ["notes", "bookmarks"] if kind == "notes" else [kind]
     counts = {name: collection(user, name).count() for name in KINDS}
     total = sum(counts[name] for name in kinds)
     start, stop = (page - 1) * PAGE_SIZE, page * PAGE_SIZE

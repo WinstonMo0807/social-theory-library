@@ -30,3 +30,7 @@ R28两视图仍记部分。统一读者总览原notes数量暂只统计Annotatio
 `tmp/stl4-notebook-static-20261023.py`：9 Python AST、SQLite/PostgreSQL 8次SQL编译，BaseDatabaseWrapper.ensure_connection强制阻断；reading迁移声明与模型一致；OpenAPI 0错误及10既有catalog提示。没有执行查询或测试。契约脚本保留原244路径并新增5条，CSS只解析；TypeScript noEmit与目标ESLint结果见VALIDATION最新条。
 
 恢复先核对CURRENT_PROGRESS和git；白名单`tmp/stl4-notebook-checkpoint-20261023.json`，不要重跑本批一次性文档前插/代码替换脚本。继承脏改和运行产物不纳入检查点。
+
+## af22a6f之后的计数接续
+
+读者总览已纳入Bookmark原数据，notes筛选合并Annotation/Bookmark并全量分页，导航数量相加；所选导出删除映射同步。旧#note-ID与record参数定位已接。上述待办中的这两项已在源码处理，仍未运行验收。249路径、96/38/75保持。

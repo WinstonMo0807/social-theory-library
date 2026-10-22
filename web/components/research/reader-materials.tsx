@@ -11,8 +11,8 @@ import styles from "./reader-overview.module.css";
 
 export type ReaderMaterial = { id: string; key: string; kind: string; kind_label: string; title: string; question: string; status: string; href: string; updated_at: string; revision: string };
 type Intent = { requestId: string; kind: "export" | "erase"; targets: PrivacyTarget[] };
-const leaves: Record<string, PrivacyTarget["category"]> = { research: "research", notes: "annotations", plans: "plans", lists: "reading_lists", audits: "audits", confirmed: "memories", saved: "saved_items" };
-const erasable = new Set(["notes", "plans", "lists", "confirmed", "saved"]);
+const leaves: Record<string, PrivacyTarget["category"]> = { research: "research", notes: "annotations", bookmarks: "bookmarks", plans: "plans", lists: "reading_lists", audits: "audits", confirmed: "memories", saved: "saved_items" };
+const erasable = new Set(["notes", "bookmarks", "plans", "lists", "confirmed", "saved"]);
 const statuses: Record<string, string> = { saved: "已保存", archived: "已归档", confirmed: "已确认", reading: "进行中", pending: "待开始", queued: "待处理", running: "处理中", completed: "已完成", complete: "已完成", partial: "部分完成", failed: "处理失败", cancelled: "已取消", canceled: "已取消", source_unavailable: "来源待核对" };
 
 export function ReaderMaterials({ rows, ownerId, cards, onChanged }: { rows: ReaderMaterial[]; ownerId: string; cards: boolean; onChanged: () => void }) {

@@ -11237,6 +11237,7 @@ export interface components {
         /**
          * @description * `research` - research
          *     * `notes` - notes
+         *     * `bookmarks` - bookmarks
          *     * `plans` - plans
          *     * `lists` - lists
          *     * `audits` - audits
@@ -11244,7 +11245,7 @@ export interface components {
          *     * `saved` - saved
          * @enum {string}
          */
-        ReaderMaterialOutputKindEnum: "research" | "notes" | "plans" | "lists" | "audits" | "confirmed" | "saved";
+        ReaderMaterialOutputKindEnum: "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
         /**
          * @description * `pause` - pause
          *     * `resume` - resume
@@ -21333,13 +21334,14 @@ export interface operations {
                  * @description * `all` - all
                  *     * `research` - research
                  *     * `notes` - notes
+                 *     * `bookmarks` - bookmarks
                  *     * `plans` - plans
                  *     * `lists` - lists
                  *     * `audits` - audits
                  *     * `confirmed` - confirmed
                  *     * `saved` - saved
                  */
-                kind?: "all" | "research" | "notes" | "plans" | "lists" | "audits" | "confirmed" | "saved";
+                kind?: "all" | "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
                 /**
                  * @description * `newest` - newest
                  *     * `oldest` - oldest

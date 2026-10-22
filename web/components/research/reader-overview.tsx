@@ -13,13 +13,13 @@ import { ReaderMaterials } from "./reader-materials";
 import { LocalResearchTransfer } from "./local-research-transfer";
 import styles from "./reader-overview.module.css";
 
-type Kind = "research" | "notes" | "plans" | "lists" | "audits" | "confirmed" | "saved";
+type Kind = "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
 type Material = { id: string; key: string; kind: Kind; kind_label: string; title: string; question: string; status: string; href: string; updated_at: string; revision: string };
 type Progress = { id: string; asset: string; work: ApiWork | null; current_page: number; progress_ratio: number; updated_at: string };
 type Pending = { id: string; title: string; question: string; status: string; updated_at: string; href: string };
 type Overview = { owner_id: string; counts: Record<Kind, number>; count: number; page: number; page_size: number; total_pages: number; results: Material[]; recent_reading: Progress[]; pending_tasks: Pending[] };
 const sections: Array<[Kind, string, string]> = [
-  ["research", "我的研究", "/account/research"], ["notes", "笔记", "/account/notes"], ["plans", "阅读计划", "/account/plans"],
+  ["research", "我的研究", "/account/research"], ["notes", "笔记、摘录与书签", "/account/notes"], ["plans", "阅读计划", "/account/plans"],
   ["lists", "书单", "/account/collections"], ["audits", "引文体检", "/account/citation-audits"], ["confirmed", "已确认笔记", "/account/confirmed-notes"],
 ];
 const statusNames: Record<string, string> = { saved: "已保存", archived: "已归档", confirmed: "已确认", reading: "进行中", pending: "待开始", queued: "待处理", running: "处理中", completed: "已完成", complete: "已完成", partial: "部分完成", failed: "处理失败", cancelled: "已取消", canceled: "已取消", source_unavailable: "来源待核对" };
@@ -54,7 +54,7 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
     filter({ q: String(new FormData(event.currentTarget).get("q") || "").trim() });
   }
   return <div className={styles.overview}>
-    <nav className={styles.sections} aria-label="我的资料类型">{sections.map(([key, label, href]) => <Link key={key} href={href}><FileText size={17} /><span>{label}</span><small>{data ? data.counts[key] : "—"}</small></Link>)}</nav>
+    <nav className={styles.sections} aria-label="我的资料类型">{sections.map(([key, label, href]) => <Link key={key} href={href}><FileText size={17} /><span>{label}</span><small>{data ? data.counts[key] + (key === "notes" ? data.counts.bookmarks : 0) : "—"}</small></Link>)}</nav>
     <div className={styles.localTransfer}><p>本机研究记录只有在你选择并确认后才会转存。</p><LocalResearchTransfer ownerId={ownerId} onChanged={workspace.reload} /></div>
     {workspace.error ? <section className={styles.state} role="alert"><h2>私人资料暂时无法读取</h2><p>{workspace.error}</p><div><button onClick={workspace.reload}><RefreshCw size={15} />重新读取</button>{page > 1 ? <button onClick={() => filter({ page: "1" })}>返回第一页</button> : null}{search || kind !== "all" ? <button onClick={() => filter({ q: "", material: "all" })}>清除筛选</button> : null}</div></section> : workspace.loading || !data ? <section className={styles.state} role="status"><p>正在读取你的资料…</p></section> : <>
       <section className={styles.section}><header><div><h2>继续阅读</h2><p>从上次离开的三个阅读位置继续。</p></div><Link href="/account?section=history">查看全部 <ArrowRight size={14} /></Link></header>

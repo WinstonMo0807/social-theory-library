@@ -16438,6 +16438,7 @@
                                 "all",
                                 "research",
                                 "notes",
+                                "bookmarks",
                                 "plans",
                                 "lists",
                                 "audits",
@@ -16448,7 +16449,7 @@
                             "default": "all",
                             "minLength": 1
                         },
-                        "description": "* `all` - all\n* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
+                        "description": "* `all` - all\n* `research` - research\n* `notes` - notes\n* `bookmarks` - bookmarks\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
                     },
                     {
                         "in": "query",
@@ -42734,6 +42735,7 @@
                 "enum": [
                     "research",
                     "notes",
+                    "bookmarks",
                     "plans",
                     "lists",
                     "audits",
@@ -42741,7 +42743,7 @@
                     "saved"
                 ],
                 "type": "string",
-                "description": "* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
+                "description": "* `research` - research\n* `notes` - notes\n* `bookmarks` - bookmarks\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
             },
             "ReaderOCRActionEnum": {
                 "enum": [

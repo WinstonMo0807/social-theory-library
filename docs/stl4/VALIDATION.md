@@ -1,5 +1,10 @@
 # 验收记录
 
+## 2026-10-23 总览书签计数与旧笔记定位
+
+前置af22a6f。原reader-center聚合加入Bookmark；笔记筛选同时包含笔记/摘录/书签，各分支仍本人过滤，导航数为两类之和。ReaderMaterials所选任务增加书签映射；旧#note-ID和当前record参数恢复原记录，清空搜索同步表单。无新路径/迁移，249路径、96/38/75。仅静态：schema/SQL/AST脚本与契约退出0；TS+目标ESLint 6e6413/37b3a8退出0。未测试/浏览器/业务运行。已实际读唯一PDF221–222，接着研究过程回放。
+
+
 ## 2026-10-23 R28仅静态检查
 
 前置a84e707，详见NOTEBOOK_WORKSPACE_20261023。`.venv/Scripts/python.exe tmp/stl4-notebook-static-20261023.py` 最近7d95e3及最终同命令退出0；9AST/8SQL编译/reading迁移声明一致，数据库连接强制阻断；OpenAPI0错误、10既有catalog提示。`node tmp/stl4-notebook-contracts-20261023.mjs` 646217及后续退出0，保留244并新增5路径，共249，CSS解析。

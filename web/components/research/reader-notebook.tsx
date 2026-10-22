@@ -39,6 +39,19 @@ function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: st
     return id && /^[\da-f-]{36}$/i.test(id) && (category === "annotations" || category === "bookmarks") ? { id, category } : null;
   });
   const [editing, setEditing] = useState<NotebookRecord | null>(null), [adding, setAdding] = useState(false), [preview, setPreview] = useState(false);
+  const linkedId = search?.get("record"), linkedCategory = search?.get("category");
+  useEffect(() => {
+    let active = true;
+    const locate = () => {
+      const legacy = /^#note-([\da-f-]{36})$/i.exec(window.location.hash);
+      const id = linkedId || legacy?.[1], category = linkedId ? linkedCategory : "annotations";
+      if (id && /^[\da-f-]{36}$/i.test(id) && (category === "annotations" || category === "bookmarks")) {
+        queueMicrotask(() => { if (active) { setFocus({ id, category }); setPreview(false); } });
+      }
+    };
+    locate(); window.addEventListener("hashchange", locate);
+    return () => { active = false; window.removeEventListener("hashchange", locate); };
+  }, [linkedId, linkedCategory]);
   const query = new URLSearchParams({ page: String(page), ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), ...(assetId ? { asset: assetId } : {}) });
   const load = useCallback((path: string, signal: AbortSignal) => notebookRequest<NotebookPage>(owner, path, { signal }), [owner]);
   const list = usePersistentWorkspace<NotebookPage>(`${notebookPath}?${query}`, owner, undefined, load);
@@ -56,7 +69,7 @@ function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: st
     <ResearchCenterNav active="notes" />
     <div className={styles.workspace}>
       <aside className={styles.filters} aria-label="筛选阅读记录"><div className={styles.sectionTitle}><strong>筛选条件</strong><button onClick={() => { setFilters({ q: "", kind: "all", order: "newest", work: "", project: "", start: "", end: "" }); setPage(1); setSelected([]); }}>清空</button></div>
-        <form onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); change("q", String(new FormData(event.currentTarget).get("q") || "")); }} className={styles.search}><input name="q" maxLength={180} placeholder="书名、作者、笔记内容…" aria-label="搜索自己的阅读记录" /><button aria-label="搜索"><Search size={16} /></button></form>
+        <form onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); change("q", String(new FormData(event.currentTarget).get("q") || "")); }} className={styles.search}><input key={filters.q} name="q" defaultValue={filters.q} maxLength={180} placeholder="书名、作者、笔记内容…" aria-label="搜索自己的阅读记录" /><button aria-label="搜索"><Search size={16} /></button></form>
         {assetId ? <p>当前限定此文件。<Link href="/account/notes">全部记录</Link></p> : null}
         <ChoicePicker owner={owner} kind="works" label="按作品" value={filters.work} onChange={value => change("work", value)} />
         <ChoicePicker owner={owner} kind="projects" label="按问题" value={filters.project} onChange={value => change("project", value)} />
@@ -224,7 +237,7 @@ function ProjectForm({ owner, rows, onDone }: { owner: string; rows: NotebookRec
       setMessage(reason instanceof Error ? reason.message : "结果未确认，请使用原请求重试。");
     } finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
   }
-  return <form className={styles.editor} onSubmit={event => void submit(event)}><p>将明确选择的 {rows.length} 条记录对应的原文加入研究，并关联这些记录。私人笔记正文不会自动复制或授权给模型。</p><fieldset disabled={busy || uncertain || broken}><ChoicePicker owner={owner} kind="projects" label="选择我的研究" value={project?.id || ""} onChange={(_, row) => setProject(row || null)} /><label>新增选材备注（已有材料备注保留）<textarea maxLength={200} value={note} onChange={event => setNote(event.target.value)} /></label></fieldset>{message ? <p role="alert">{message}</p> : null}<button className={styles.primary} disabled={busy || broken || !!recovery && !project?.revision || !project?.revision}>{busy ? "正在保存…" : uncertain ? "重试原请求" : "加入研究"}</button>{recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>核对原回执</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的研究核对原操作。确认结束此请求的恢复？已保存内容不会删除。")) { clear(); setBroken(false); } }}>已核对，结束恢复</button> : null}<Link href="/account/research">管理我的研究</Link></form>;
+  return <form className={styles.editor} onSubmit={event => void submit(event)}><p>将明确选择的 {rows.length} 条记录对应的原文加入研究，并关联这些记录。私人笔记正文不会自动复制或授权给模型。</p><fieldset disabled={busy || uncertain || broken}><ChoicePicker owner={owner} kind="projects" label="选择我的研究" value={project?.id || ""} onChange={(_, row) => setProject(row || null)} /><label>新增选材备注（已有材料备注保留）<textarea maxLength={200} value={note} onChange={event => setNote(event.target.value)} /></label></fieldset>{message ? <p role="alert">{message}</p> : null}<button className={styles.primary} disabled={busy || broken || !project?.revision}>{busy ? "正在保存…" : uncertain ? "重试原请求" : "加入研究"}</button>{recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>核对原回执</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的研究核对原操作。确认结束此请求的恢复？已保存内容不会删除。")) { clear(); setBroken(false); } }}>已核对，结束恢复</button> : null}<Link href="/account/research">管理我的研究</Link></form>;
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) { return <Dialog open onRequestClose={onClose} className={styles.modal} aria-label={title}><header><h2>{title}</h2><button type="button" aria-label="关闭" onClick={onClose}><X size={18} /></button></header>{children}</Dialog>; }
