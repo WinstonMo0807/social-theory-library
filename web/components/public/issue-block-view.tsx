@@ -18,7 +18,10 @@ export function IssueBlockView({ block }: { block: IssueBlock }) {
   if (block.type === "image") return <figure className={styles.inlineImage}><EditorialImage key={block.image_url} src={block.image_url || ""} className={styles.articleImage} retry /><figcaption><strong><IssueInline block={block}/></strong><p>{block.alt_text}</p>{block.source ? <cite>{block.source}</cite> : null}</figcaption></figure>;
   if (block.source_status === "unavailable") return <p>本段来源当前不可访问，原文与定位暂不展示。</p>;
   const sources = block.resolved_sources || [];
-  if (block.type === "heading" || (block.type === "analysis" && block.style === "heading")) return <h3><IssueInline block={block}/></h3>;
+  if (block.type === "heading" || (block.type === "analysis" && block.style === "heading")) {
+    const Heading=block.heading_level===3?"h5":block.heading_level===2?"h4":"h3";
+    return <Heading><IssueInline block={block}/></Heading>;
+  }
   if (block.type === "quote") return <blockquote><IssueProse block={block}/><cite>{block.source}</cite></blockquote>;
   if (block.type === "link") return <p><a href={block.url} rel="noopener noreferrer"><IssueInline block={block}/></a></p>;
   if (block.type === "evidence") {

@@ -1,5 +1,14 @@
 # 验收记录
 
+## 2026-10-22 关联材料与人工审阅
+
+- `.venv/Scripts/python.exe tmp/stl4-related-static.py`（PYTHONIOENCODING=utf-8），88144e退出0：7文件AST、两数据库共10次查询编译；ensure_connection阻断，0数据库连接，未执行功能测试。
+- 完整`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：40533/a9820b及最终61377/46da8a退出0。
+- `node node_modules/eslint/bin/eslint.js components/admin/curation/issue-related-materials.tsx components/admin/curation/issue-assistance-review.tsx components/admin/curation/issue-selection-workbench.tsx components/admin/curation/article-body-fields.tsx components/public/issue-block-view.tsx components/public/recommendation-issue-view.tsx lib/api/curation-workspace.client.ts lib/api/recommendation-issues.types.ts components/admin/curation/use-issue-draft.ts tests/issue-selection-atlas.spec.ts`，8d2295退出0，1项既有img建议。
+- `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-related-schema.json --validate`（SQLite内存URL、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true），0f42cb退出0；0错误、10项既有serializer类型警告。未将严格--fail-on-warn记为通过。`node tmp/stl4-related-contracts.mjs` a2599f退出0，保留225路径，重生契约，两CSS77/196顶层节点可解析。
+- `git diff --check`限定本批源码路径，569acd退出0。新增6后端函数+3浏览器场景仅定义（选材文件共9场景）；未运行正式测试、E2E、浏览器、构建、迁移、OCR、模型、检索质量评测或生产操作。
+
+
 ## 2026-10-22 来源信息与真实缩略图接入
 
 - `tmp/stl4-source-details-static.py`：80e427、最终0087e6退出0。4文件AST、SQLite/PostgreSQL共6次SQL编译，ensure_connection阻断且连接0；不运行测试或解析真实馆藏。

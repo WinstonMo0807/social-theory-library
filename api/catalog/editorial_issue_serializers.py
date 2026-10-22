@@ -16,6 +16,7 @@ class IssueBodyBlockSerializer(serializers.Serializer):
     id = serializers.UUIDField(required=False)
     type = serializers.ChoiceField(choices=["paragraph", "heading", "quote", "link", "image", "evidence", "work", "person", "concept", "node", "timeline", "reading_path", "comparison", "analysis"])
     text = serializers.CharField(allow_blank=True)
+    heading_level = serializers.ChoiceField(choices=[1, 2, 3], required=False)
     text_style = serializers.ChoiceField(choices=["paragraph", "ordered", "unordered"], required=False)
     text_marks = IssueTextMarkSerializer(many=True, required=False)
     source = serializers.CharField(required=False, allow_blank=True)

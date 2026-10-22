@@ -1,5 +1,14 @@
 # 中断恢复最短路径
 
+## 2026-10-22 关联材料与审阅恢复
+
+本批前置f07d121，白名单tmp/stl4-related-checkpoint.json（实际提交看Git）。editorial_selection.related与IssueRelatedMaterials接正式关联；assistant候选保存层级/准确段落/原文字；正文heading_level保存、恢复、预览、公开目录一致。225契约已重生。6后端函数/新增3浏览器场景仅定义；TS61377/46da8a退出0。96/19/94保持，M16整组仍部分；下一步继续逐图源码核对并推进下一组。不要重跑tmp修改/记录脚本，不暂存继承脏改，不运行正式验收/生产操作。
+
+
+## 2026-10-22 f07d121后关联与审阅接续中
+
+来源细节已保存f07d121（24路径）。本批接最终PDF128–130：已有选材的正式署名/版本知识节点/已发布关系，提纲1–3层级，建议关联人工段落并保存生成时文字。仍走原sources/assistant与ProcessingJob，无新模型或检索评测。当前前后端写入中，尚未静态收口；96/19/94保持。不要重跑tmp编辑/记录脚本，不暂存继承改动。下一步补测试定义、契约、静态校验和白名单检查点。
+
 ## 2026-10-22 来源信息与真实缩略图接入
 
 前置e14c6ac。本批白名单tmp/stl4-source-details-checkpoint.json，实际提交看Git。新issue-source-summary，原content_placements/editorial_blocks共用展示字段，移除editorial_suggestions重复图片拼接；原文链接含准确修订。source picker/portal增加disabled并守卫更新/移动/追加。完整TS67526/15b29d退出0。4后端测试函数+新增1浏览器仅定义；编辑器场景18。96/19/94不变，接着做M16关联/提纲/正文对比。不要重复运行tmp编辑或记录脚本，不暂存继承脏改。

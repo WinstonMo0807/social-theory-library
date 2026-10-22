@@ -16,7 +16,7 @@ export function issueInput(value:IssueDraft):IssueDraft {
   return {...pick(value,["id","slug","title","issue_label","introduction","public_byline","display_from","article_metadata","cover_rendition_id","edit_version","restore_revision_id"]),
     ...(value.selection_workspace?{selection_workspace:pick(value.selection_workspace,["question","query","filters","references"])}:{}),
     cover_url:value.cover_rendition_id ? "" : value.cover_url,
-    body_blocks:value.body_blocks.map(row=>pick(row,["id","type","text","text_style","text_marks","url","source","target","references","style","dimensions","rows","image_rendition_id","alt_text"]) as IssueBlock),
+    body_blocks:value.body_blocks.map(row=>pick(row,["id","type","text","text_style","text_marks","heading_level","url","source","target","references","style","dimensions","rows","image_rendition_id","alt_text"]) as IssueBlock),
     items:value.items.map(row=>pick(row,["id","kind","work_id","edition_id","title","authors","version_note","isbn","doi","note","position","section_id"]) as IssueItem),
   } as IssueDraft;
 }

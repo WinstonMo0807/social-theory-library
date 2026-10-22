@@ -18,6 +18,7 @@ from common.permissions import CanAccessBackOffice, CanEditMetadata
 class IssueSourceChoiceSerializer(serializers.Serializer):
     target = serializers.DictField()
     source = serializers.DictField()
+    reasons = serializers.ListField(child=serializers.CharField(), required=False)
 
 
 class IssueSourcesPageSerializer(serializers.Serializer):
@@ -25,14 +26,22 @@ class IssueSourcesPageSerializer(serializers.Serializer):
     next = serializers.CharField(allow_null=True)
     previous = serializers.CharField(allow_null=True)
     results = IssueSourceChoiceSerializer(many=True)
+    edit_version = serializers.CharField(required=False)
+    truncated = serializers.BooleanField(required=False)
+    unavailable_count = serializers.IntegerField(required=False)
+    notice = serializers.CharField(required=False)
 
 
 class IssueSourcesView(PlacementSourcesView):
     permission_classes = [CanEditMetadata]
 
-    @extend_schema(responses=IssueSourcesPageSerializer, parameters=[OpenApiParameter(key, type=str) for key in ("type", "q", "page", "work_id", "edition_id", "node_type", "id", "document_revision_id")])
+    @extend_schema(responses=IssueSourcesPageSerializer, parameters=[OpenApiParameter(key, type=str) for key in ("type", "q", "page", "work_id", "edition_id", "node_type", "id", "document_revision_id", "related")])
     def get(self, request, issue_id):
-        get_object_or_404(RecommendationIssue, pk=issue_id)
+        issue = get_object_or_404(RecommendationIssue, pk=issue_id)
+        if request.query_params.get("related"):
+            from catalog.services.editorial_selection import related
+            rows, details = related(issue, request.query_params["related"])
+            return Response({**_page(request, rows, lambda row: row), **details})
         kind = request.query_params.get("type", "edition")
         if request.query_params.get("id"):
             target, source = resolve_target({"type": kind, "id": request.query_params["id"],

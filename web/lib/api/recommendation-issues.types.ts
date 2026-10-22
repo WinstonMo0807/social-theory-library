@@ -11,6 +11,7 @@ export type IssueBlock = {
   image_rendition_id?: string | null; image_url?: string; alt_text?: string;
   text: string; url?: string; source?: string; target?: IssueSourceReference; references?: IssueSourceReference[];
   text_style?: "paragraph"|"ordered"|"unordered"; text_marks?:IssueTextMark[];
+  heading_level?:1|2|3;
   style?: "paragraph" | "heading"; source_status?: "available" | "unavailable"; resolved_sources?: IssueResolvedSource[];
   dimensions?: string[]; rows?: Array<{ person_id: string; cells: Array<{ dimension: string; text: string; evidence: IssueSourceReference[]; missing: boolean }> }>;
 };

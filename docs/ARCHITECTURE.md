@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-22 关联选材与正文建议
+
+选材关联复用正式edition snapshot/ContributionProjection/public scholar及已发布KnowledgeRelation/PersonNodeRelation，读取原文章保存选材，返回有界一跳关联和具体依据。后台只读请求不写关系；不新增搜索、模型、表或私人资料副本。助手原ProcessingJob候选JSON保存提纲级别和所指人工段落快照；正文原JSON保存heading_level，前台/预览共同渲染。采用只追加，依旧按原父锁/CAS/准确公开来源校验。
+
+
 ## 2026-10-22 来源信息与真实缩略图接入
 
 content_placements._source与editorial_blocks.resolve_target统一提供准确版本的只读书目信息/图片，复用原public_editions、正式snapshot、贡献范围与公开媒体授权。选材、材料建议和正文来源共享输出，不新增图片或来源副本。展示字段不进入EditorialRevision的区块持久化；编辑器/portal遵循同一保存锁。无schema或服务变化。

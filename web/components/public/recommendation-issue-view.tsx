@@ -54,11 +54,11 @@ function exhibits(issue: RecommendationIssue): Exhibit[] {
 export function RecommendationIssueView({ issue, preview = false, selectedExhibit = "" }: { issue: RecommendationIssue; preview?: boolean; selectedExhibit?: string }) {
   const [commentCount, setCommentCount] = useState<number|null>(null);
   const [notice, setNotice] = useState(""), [citations, setCitations] = useState(false);
-  const isExhibition = issue.article_metadata?.kind === "exhibition", headings = issue.body_blocks.flatMap((block,index) => heading(block) ? [{ id:anchor(block,index),text:block.text || "来源暂不可用的章节" }] : []);
+  const isExhibition = issue.article_metadata?.kind === "exhibition", headings = issue.body_blocks.flatMap((block,index) => heading(block) ? [{ id:anchor(block,index),text:block.text || "来源暂不可用的章节",level:block.heading_level||1 }] : []);
   const materials = [...issue.body_blocks.flatMap(block => block.resolved_sources || []), ...issue.items.flatMap(item => { const source=itemSource(item); return source ? [source] : []; })].filter((source,index,rows) => rows.findIndex(row => row.type === source.type && row.id === source.id) === index);
   const exhibitRows = isExhibition ? exhibits(issue) : [], selected = exhibitRows.find(row => row.id === selectedExhibit);
   const base = `/recommendations/${encodeURIComponent(issue.slug)}`;
-  const toc = <nav aria-label={isExhibition ? "展项章节" : "文章章节"}>{headings.length ? headings.map((row,index) => <a key={row.id} href={`#${row.id}`}><span>{String(index+1).padStart(2,"0")}</span>{row.text}</a>) : <a href="#article-body">{isExhibition ? "全部展项" : "正文与材料"}</a>}</nav>;
+  const toc = <nav aria-label={isExhibition ? "展项章节" : "文章章节"}>{headings.length ? headings.map((row,index) => <a key={row.id} href={`#${row.id}`} data-level={row.level}><span>{String(index+1).padStart(2,"0")}</span>{row.text}</a>) : <a href="#article-body">{isExhibition ? "全部展项" : "正文与材料"}</a>}</nav>;
   async function share() {
     try { const url = new URL(base, window.location.origin).href; if (navigator.share) await navigator.share({title:issue.title,url}); else { await navigator.clipboard.writeText(url); setNotice("文章链接已复制。"); } }
     catch (reason) { if (!(reason instanceof DOMException && reason.name === "AbortError")) setNotice("未能分享链接，可以复制浏览器地址。"); }

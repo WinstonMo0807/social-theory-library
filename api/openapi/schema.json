@@ -3999,6 +3999,13 @@
                     },
                     {
                         "in": "query",
+                        "name": "related",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "type",
                         "schema": {
                             "type": "string"
@@ -22862,6 +22869,19 @@
                     },
                     "gap": {
                         "type": "string"
+                    },
+                    "level": {
+                        "type": "integer",
+                        "maximum": 3,
+                        "minimum": 0
+                    },
+                    "target_block_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "original_text": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -24656,6 +24676,15 @@
                     "year"
                 ]
             },
+            "HeadingLevelEnum": {
+                "enum": [
+                    1,
+                    2,
+                    3
+                ],
+                "type": "integer",
+                "description": "* `1` - 1\n* `2` - 2\n* `3` - 3"
+            },
             "HomeResponse": {
                 "type": "object",
                 "properties": {
@@ -25004,6 +25033,9 @@
                     "text": {
                         "type": "string"
                     },
+                    "heading_level": {
+                        "$ref": "#/components/schemas/HeadingLevelEnum"
+                    },
                     "text_style": {
                         "$ref": "#/components/schemas/TextStyleEnum"
                     },
@@ -25091,6 +25123,9 @@
                     },
                     "text": {
                         "type": "string"
+                    },
+                    "heading_level": {
+                        "$ref": "#/components/schemas/HeadingLevelEnum"
                     },
                     "text_style": {
                         "$ref": "#/components/schemas/TextStyleEnum"
@@ -25229,6 +25264,18 @@
                         "items": {
                             "$ref": "#/components/schemas/IssueHistoryItem"
                         }
+                    },
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    },
+                    "unavailable_count": {
+                        "type": "integer"
+                    },
+                    "notice": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -25505,6 +25552,12 @@
                     "source": {
                         "type": "object",
                         "additionalProperties": {}
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 },
                 "required": [
@@ -25531,6 +25584,18 @@
                         "items": {
                             "$ref": "#/components/schemas/IssueSourceChoice"
                         }
+                    },
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    },
+                    "unavailable_count": {
+                        "type": "integer"
+                    },
+                    "notice": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -25550,6 +25615,12 @@
                     "source": {
                         "type": "object",
                         "additionalProperties": {}
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     },
                     "key": {
                         "type": "string"

@@ -5426,6 +5426,10 @@ export interface components {
             text: string;
             source_keys: string[];
             gap: string;
+            level?: number;
+            /** Format: uuid */
+            target_block_id?: string | null;
+            original_text?: string;
         };
         /**
          * @description * `heading` - heading
@@ -5949,6 +5953,13 @@ export interface components {
             detail_href: string | null;
             version_label: string;
         };
+        /**
+         * @description * `1` - 1
+         *     * `2` - 2
+         *     * `3` - 3
+         * @enum {integer}
+         */
+        HeadingLevelEnum: 1 | 2 | 3;
         HomeResponse: {
             schema_version: string;
             visibility: components["schemas"]["HomeResponseVisibilityEnum"];
@@ -6051,6 +6062,7 @@ export interface components {
             id?: string;
             type: components["schemas"]["IssueBodyBlockTypeEnum"];
             text: string;
+            heading_level?: components["schemas"]["HeadingLevelEnum"];
             text_style?: components["schemas"]["TextStyleEnum"];
             text_marks?: components["schemas"]["IssueTextMark"][];
             source?: string;
@@ -6080,6 +6092,7 @@ export interface components {
             id?: string;
             type: components["schemas"]["IssueBodyBlockTypeEnum"];
             text: string;
+            heading_level?: components["schemas"]["HeadingLevelEnum"];
             text_style?: components["schemas"]["TextStyleEnum"];
             text_marks?: components["schemas"]["IssueTextMarkRequest"][];
             source?: string;
@@ -6134,6 +6147,10 @@ export interface components {
             next: string | null;
             previous: string | null;
             results: components["schemas"]["IssueHistoryItem"][];
+            edit_version?: string;
+            truncated?: boolean;
+            unavailable_count?: number;
+            notice?: string;
         };
         IssueItem: {
             /** Format: uuid */
@@ -6227,12 +6244,17 @@ export interface components {
             source: {
                 [key: string]: unknown;
             };
+            reasons?: string[];
         };
         IssueSourcesPage: {
             count: number;
             next: string | null;
             previous: string | null;
             results: components["schemas"]["IssueSourceChoice"][];
+            edit_version?: string;
+            truncated?: boolean;
+            unavailable_count?: number;
+            notice?: string;
         };
         IssueSuggestion: {
             target: {
@@ -6241,6 +6263,7 @@ export interface components {
             source: {
                 [key: string]: unknown;
             };
+            reasons?: string[];
             key: string;
             token: string;
             kind: components["schemas"]["IssueSuggestionKindEnum"];
@@ -14341,6 +14364,7 @@ export interface operations {
                 node_type?: string;
                 page?: string;
                 q?: string;
+                related?: string;
                 type?: string;
                 work_id?: string;
             };

@@ -36,6 +36,9 @@ class EditorialSuggestionSerializer(serializers.Serializer):
     text = serializers.CharField()
     source_keys = serializers.ListField(child=serializers.CharField())
     gap = serializers.CharField(allow_blank=True)
+    level = serializers.IntegerField(required=False, min_value=0, max_value=3)
+    target_block_id = serializers.UUIDField(required=False, allow_null=True)
+    original_text = serializers.CharField(required=False, allow_blank=True)
 
 
 class EditorialAssistanceSerializer(serializers.Serializer):

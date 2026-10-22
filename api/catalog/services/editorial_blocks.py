@@ -26,6 +26,11 @@ def normalize_text_format(row, block):
     Offsets follow DOM UTF-16 selection. Trimming is accounted for explicitly
     so a saved mark cannot drift onto a different word or split an emoji.
     """
+    if "heading_level" in row:
+        level = row["heading_level"]
+        if type(level) is not int or level not in {1, 2, 3} or not (block["type"] == "heading" or block["type"] == "analysis" and block.get("style") == "heading"):
+            raise ValidationError({"body_blocks": "只有章节标题可以设置1至3级层次。"})
+        block = {**block, "heading_level": level}
     if "text_style" not in row and "text_marks" not in row:
         return block
     style = row.get("text_style", "paragraph")

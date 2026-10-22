@@ -1,5 +1,10 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 关联选材与提纲审阅
+
+原sources GET增加related=person|node；结果含reasons及edit_version/truncated/unavailable_count/notice。来源公开校验、CanEditMetadata和private,no-store保持。候选增加可选level(0–3)、target_block_id、original_text；正文增加heading_level(1–3，仅标题)，旧块默认一级。采用仍走原CAS追加与幂等回执。225路径保持，OpenAPI/schema.ts同步生成，0错误/10项既有警告；严格--fail-on-warn检查未标通过。
+
+
 ## 2026-10-22 来源信息与真实缩略图接入
 
 原source字典增加只读authors/image_url/publication_year/publisher/section，前端IssueResolvedSource同步；无新增路由或serializer字段，225契约结构不变。准确版本名称与媒体走已发布snapshot；原文作者复用ContributionProjection.for_range，整书作者仅edition_author_projection，原文reader_url含页码及document_revision_id。未公开资料缺少公开图片/署名时不回退新草稿，不把来源展示信息接受为可写正文。
