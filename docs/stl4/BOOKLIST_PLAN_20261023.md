@@ -9,7 +9,7 @@
 3. 原PlanSettingsForm接目标、基础、时间预算、语言及明确选定的已确认笔记。默认保留书单顺序，生成后仍可在原计划里明确优化；固定顺序时不显示无效的优先未读选项，也不向后端提交这一选项为true。
 4. 原规则负责估计和预算，未知时长保持未知；原建议任务在事务提交后启动，不调用另一检索方案，不运行测评。来源存入计划origin，计划独立保存，后续书单编辑/删除不连带删除计划。
 5. 原PlanCommandReceipt在相同User锁事务写入，先查回执再判断当前书单；同请求不同内容409。计划被删除后回执record为null，重试不会创建第二份；回执查询仅本人且不返回正文。本机仅存请求ID，刷新后先查原结果，表单正文留当前页面内存。
-6. 新API必需X-Reader-Owner，复用private/no-store。关停plans保留偏好阻断新保存；个人笔记默认不使用，明确ID允许列表仍按原owner/confirmed核对。管理员不扩大访问。
+6. 新API必需X-Reader-Owner，复用private/no-store。计划沿原明确创建与分类删除，原设置没有计划保留开关；个人笔记默认不使用，明确ID允许列表仍按原owner/confirmed核对。管理员不扩大访问。
 
 接口为GET `/reading/lists/{id}/plan-preview/`、POST `create-plan/`、GET `/reading/lists/plan-receipt/`。原241路径保留，共244。删去已退役的ReaderCenter内旧书单创建/删除/追加UI函数，原对外追加接口继续供公共作品页使用。
 

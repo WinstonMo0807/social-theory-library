@@ -80,7 +80,8 @@ def create(user, pk, data):
         return output(user, receipt)
     if PersonalReadingPlan.objects.filter(user=user, request_id=data["request_id"]).exists():
         raise research.ResearchConflict("这个请求标识已经用于其他计划。")
-    privacy.require_retention(user, "plans")
+    # Plans are explicitly created and individually erased in the existing privacy
+    # model; RETENTION has no plans switch. Never invent a gate or reuse notes' gate.
     source = preview(user, pk, data["expected_version"], data.get("item_ids"))
     if source["source_token"] != data["source_token"]:
         raise research.ResearchConflict("作品的公开版本或可读状态已变化，请重新预览材料。")
