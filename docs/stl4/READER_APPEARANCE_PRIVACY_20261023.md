@@ -64,3 +64,7 @@
 不要重新运行本单元的一次性颜色替换或代码替换片段。原 `web/styles/tokens/design.css`、`web/styles/features/admin/workspace-v307.css` 及其他继承脏改未暂存。
 
 只做源码静态检查：7 Python 文件 AST、TypeScript noEmit、目标 ESLint。详细执行结果记录在 VALIDATION。没有运行测试、构建、浏览器、模型/检索质量评测、数据库迁移或生产操作。交互 HTML 与 imagegen 输出保留在本地，源码检查点只纳入明确代码和文档白名单。
+
+## R22接口接续
+
+详见READER_OVERVIEW_20261023与READER_MATERIALS_20261023。读者总览真实七类owner聚合；所选导出/删除复用原隐私任务；作品收藏纳入数据管理；本机研究显式转存复用原import并补删除后最小回执。reading0022迁移尚未执行，运行边界待统一验收。

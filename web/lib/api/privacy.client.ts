@@ -3,7 +3,7 @@ import { ApiRequestError, apiRequest, getServerSessionCredential } from "../api"
 export type RetentionKey = "reading_history" | "search_history" | "personal_notes" | "followed_topics" | "source_follows" | "saved_knowledge";
 export type ExportCategory = "article_comments" | "research" | "notes" | "plans" | "audits" | "source_follows" | "saved_knowledge";
 export type EraseCategory = "article_comments" | "reading_history" | "search_history" | "personal_notes" | "reading_plans" | "followed_topics" | "source_follows" | "saved_knowledge";
-export type PrivacyLeaf = "article_comments" | "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists";
+export type PrivacyLeaf = "article_comments" | "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists" | "saved_items" | "research" | "audits" | "citation_sources";
 export type PrivacyTarget = { category: PrivacyLeaf; id: string; revision: string };
 export type PrivacyItem = PrivacyTarget & { title: string; updated_at: string; impact: string; source: { path?: string; title?: string; authors?: string[]; edition?: string; cover_url?: string | null; pdf_page?: number; printed_label?: string } };
 export type PrivacyItems = { owner_id: string; count: number; page: number; page_size: number; results: PrivacyItem[] };
@@ -38,7 +38,7 @@ async function privacyOwnerRequest<T extends { owner_id: string }>(ownerId: stri
 export function savePrivacyPreferences(ownerId: string, expectedRevision: number, retention: Record<RetentionKey, boolean>, signal?: AbortSignal) {
   return privacyOwnerRequest<PrivacySummary>(ownerId, privacyPath, { method: "PATCH", signal, body: JSON.stringify({ expected_revision: expectedRevision, retention }) });
 }
-export function preparePrivacyOperation(ownerId: string, requestId: string, input: { kind: "export"; categories: ExportCategory[] } | { kind: "erase"; targets: PrivacyTarget[] }, signal?: AbortSignal) {
+export function preparePrivacyOperation(ownerId: string, requestId: string, input: { kind: "export"; categories: ExportCategory[] } | { kind: "export" | "erase"; targets: PrivacyTarget[] }, signal?: AbortSignal) {
   return privacyOwnerRequest<PrivacyOperation>(ownerId, operationPath(), { method: "POST", signal, body: JSON.stringify({ request_id: requestId, ...input }) });
 }
 export function commandPrivacyOperation(ownerId: string, id: string, expectedRevision: number, action: "confirm" | "cancel" | "retry", signal?: AbortSignal) {

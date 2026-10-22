@@ -19,7 +19,7 @@ from catalog.models import EvidenceSpan, Page
 from catalog.services.discovery_sources import source_queryset
 from catalog.services.discovery_sessions import normalize_filters, request_access
 
-from .models import (Annotation, LibraryConversation, PersonalReadingPlan, ResearchMemory,
+from .models import (Annotation, LibraryConversation, PersonalReadingPlan, ResearchImportReceipt, ResearchMemory,
                      ResearchProject, ResearchTurn)
 from .services import decrypt_private_text, encrypt_private_text
 
@@ -308,9 +308,18 @@ def import_project(user, data):
     get_user_model().objects.select_for_update().get(pk=user.pk)
     fingerprint = request_fingerprint(data, ("schema_version", "local_id", "title", "question", "scope",
         "selections", "notes", "layout", "comparison", "turns"))
+    receipt = ResearchImportReceipt.objects.filter(user=user, request_id=request_id).first()
+    if receipt:
+        if receipt.fingerprint != fingerprint:
+            raise ResearchConflict("原转存请求的内容已变化，请先核对已保存的研究。")
+        if not receipt.project_id:
+            raise ResearchConflict("原转存研究已删除，旧请求不能重新创建该资料。")
+        return owned(ResearchProject, user, receipt.project_id)
     existing = ResearchProject.objects.filter(user=user, request_id=request_id).first()
     if existing:
-        return same_request(existing, fingerprint)
+        same_request(existing, fingerprint)
+        ResearchImportReceipt.objects.create(user=user, project=existing, request_id=request_id, fingerprint=fingerprint)
+        return existing
     warnings = []
 
     def imported_references(values):
@@ -388,7 +397,9 @@ def import_project(user, data):
     payload["imported_turns"] = {local_id: str(turn.id) for local_id, turn in imported.items()}
     if imported:
         payload["last_turn_id"] = str(next(reversed(imported.values())).id)
-    return save_data(project, payload)
+    save_data(project, payload)
+    ResearchImportReceipt.objects.create(user=user, project=project, request_id=request_id, fingerprint=fingerprint)
+    return project
 
 
 @transaction.atomic
@@ -1629,8 +1640,14 @@ def command_plan(request, pk, data):
 
 @transaction.atomic
 def delete_project(user, pk, expected_revision):
+    from .privacy import lock_owner
+    lock_owner(user)
     project = owned(ResearchProject, user, pk, lock=True)
     expect(project, expected_revision)
+    payload = unpack(project)
+    if payload.get("import_origin", {}).get("kind") == "guest_transfer":
+        ResearchImportReceipt.objects.get_or_create(user=user, request_id=project.request_id,
+            defaults={"project": project, "fingerprint": payload.get("request_fingerprint", "")})
     for turn in project.turns.filter(status__in=ACTIVE):
         cancel_turn(user, turn.id)
     from catalog.discovery_models import DiscoverySearchSession

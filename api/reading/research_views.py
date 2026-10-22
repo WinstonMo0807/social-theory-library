@@ -128,11 +128,11 @@ class PrivateRecordViewSet(PrivateResponses, viewsets.GenericViewSet):
     def destroy(self, request, pk=None):
         record = self.get_object()
         data = command(request, RevisionInput)
-        record = research.owned(self.model, request.user, record.id, lock=True)
-        research.expect(record, data.get("expected_revision"))
         if self.model is ResearchProject:
             research.delete_project(request.user, record.id, data["expected_revision"])
         else:
+            record = research.owned(self.model, request.user, record.id, lock=True)
+            research.expect(record, data.get("expected_revision"))
             # Worker writes use generation + active-status checks, and never recreate missing rows.
             record.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

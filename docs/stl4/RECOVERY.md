@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 R22批量与转存恢复
+
+前置cde09db，见READER_MATERIALS_20261023；白名单tmp/stl4-reader-materials-checkpoint-20261023.json。新增reading0022回执迁移文件但没有执行，必须在后续统一验收环境应用后启用转存。原资料任务支持targets导出，ReaderMaterials复用OperationDialog。LocalResearchTransfer显式读取原本机研究，不删原件，固定请求身份并保留回执。保留继承脏改、96/28/85；继续认证与剩余读者页，不运行测试/浏览器/生产。
+
 ## 2026-10-23 R22总览恢复
 
 前置840ad60，新实现见READER_OVERVIEW_20261023。reader_center.py/views、ReaderOverview复用原私人对象，只读聚合。白名单tmp/stl4-reader-overview-checkpoint-20261023.json；核对git log确认本批提交。96/28/85，R22仍部分，继续批量操作与访客转存。静态脚本reader-center-static/contracts可按需使用；不重跑颜色替换或记录前插，不暂存继承脏改，不运行测试/浏览器/生产。

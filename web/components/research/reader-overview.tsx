@@ -9,6 +9,8 @@ import type { ApiWork } from "@/lib/api/public-catalog";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { adaptApiWork } from "@/lib/public-data-adapters";
 import { BookCover } from "@/components/ui";
+import { ReaderMaterials } from "./reader-materials";
+import { LocalResearchTransfer } from "./local-research-transfer";
 import styles from "./reader-overview.module.css";
 
 type Kind = "research" | "notes" | "plans" | "lists" | "audits" | "confirmed" | "saved";
@@ -53,6 +55,7 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
   }
   return <div className={styles.overview}>
     <nav className={styles.sections} aria-label="我的资料类型">{sections.map(([key, label, href]) => <Link key={key} href={href}><FileText size={17} /><span>{label}</span><small>{data ? data.counts[key] : "—"}</small></Link>)}</nav>
+    <div className={styles.localTransfer}><p>本机研究记录只有在你选择并确认后才会转存。</p><LocalResearchTransfer ownerId={ownerId} onChanged={workspace.reload} /></div>
     {workspace.error ? <section className={styles.state} role="alert"><h2>私人资料暂时无法读取</h2><p>{workspace.error}</p><div><button onClick={workspace.reload}><RefreshCw size={15} />重新读取</button>{page > 1 ? <button onClick={() => filter({ page: "1" })}>返回第一页</button> : null}{search || kind !== "all" ? <button onClick={() => filter({ q: "", material: "all" })}>清除筛选</button> : null}</div></section> : workspace.loading || !data ? <section className={styles.state} role="status"><p>正在读取你的资料…</p></section> : <>
       <section className={styles.section}><header><div><h2>继续阅读</h2><p>从上次离开的三个阅读位置继续。</p></div><Link href="/account?section=history">查看全部 <ArrowRight size={14} /></Link></header>
         {data.recent_reading.length ? <div className={styles.reading}>{data.recent_reading.map(row => {
@@ -66,10 +69,7 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
     </>}
     <section className={styles.section}><header><div><h2>我的资料</h2><p>筛选、打开和管理你创建或保存的资料。</p></div><div className={styles.view}><button aria-label="列表查看" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={16} /></button><button aria-label="卡片查看" aria-pressed={view === "cards"} onClick={() => setView("cards")}><Grid2X2 size={16} /></button></div></header>
       <div className={styles.filters}><label><span className="sr-only">资料类型</span><select value={kind} onChange={event => filter({ material: event.target.value })}><option value="all">全部资料</option>{sections.map(([key, label]) => <option key={key} value={key}>{label}</option>)}<option value="saved">选材收藏</option></select></label><form onSubmit={submit} key={search}><Search size={15} /><input aria-label="搜索我的资料" name="q" type="search" maxLength={180} defaultValue={search} placeholder="搜索标题或私人正文…" /><button type="submit">搜索</button></form><label><span className="sr-only">排序</span><select value={order} onChange={event => filter({ order: event.target.value })}><option value="newest">最近更新</option><option value="oldest">最早更新</option></select></label></div>
-      {data ? data.results.length ? <><div className={`${styles.materials} ${view === "cards" ? styles.cards : ""}`}>
-        <div className={styles.tableHead}><span>标题</span><span>类型</span><span>关联问题</span><span>最近更新</span><span>状态</span><span>操作</span></div>
-        {data.results.map(row => <article key={row.key}><Link className={styles.materialTitle} href={row.href}><FileText size={18} /><strong>{row.title}</strong></Link><span className={styles.kind}>{row.kind_label}</span><p className={styles.question}>{row.question || "—"}</p><time dateTime={row.updated_at}>{dateLabel(row.updated_at)}</time><span className={styles.status} data-state={row.status}>{statusNames[row.status] || "待核对"}</span><Link className={styles.open} href={row.href} aria-label={`打开${row.title}`}>打开 <ArrowRight size={14} /></Link></article>)}
-      </div><nav className={styles.paging} aria-label="资料分页"><span>共 {data.count} 项</span><button disabled={data.page <= 1} onClick={() => filter({ page: String(data.page - 1) })} aria-label="上一页"><ChevronLeft size={16} /></button><span>{data.page} / {data.total_pages}</span><button disabled={data.page >= data.total_pages} onClick={() => filter({ page: String(data.page + 1) })} aria-label="下一页"><ChevronRight size={16} /></button></nav></> : <div className={styles.empty}><FileText size={24} /><strong>{search || kind !== "all" ? "没有匹配的资料" : "这里还没有资料"}</strong><p>{search || kind !== "all" ? "可以调整关键词或资料类型，现有资料没有被删除。" : "保存研究、笔记、计划或书单后，就能在这里继续。"}</p>{search || kind !== "all" ? <button onClick={() => filter({ q: "", material: "all" })}>查看全部资料</button> : <Link href="/explore">从探索开始 <ArrowRight size={14} /></Link>}</div> : null}
+      {data ? data.results.length ? <><ReaderMaterials key={`${ownerId}:${query}`} rows={data.results} ownerId={ownerId} cards={view === "cards"} onChanged={workspace.reload} /><nav className={styles.paging} aria-label="资料分页"><span>共 {data.count} 项</span><button disabled={data.page <= 1} onClick={() => filter({ page: String(data.page - 1) })} aria-label="上一页"><ChevronLeft size={16} /></button><span>{data.page} / {data.total_pages}</span><button disabled={data.page >= data.total_pages} onClick={() => filter({ page: String(data.page + 1) })} aria-label="下一页"><ChevronRight size={16} /></button></nav></> : <div className={styles.empty}><FileText size={24} /><strong>{search || kind !== "all" ? "没有匹配的资料" : "这里还没有资料"}</strong><p>{search || kind !== "all" ? "可以调整关键词或资料类型，现有资料没有被删除。" : "保存研究、笔记、计划或书单后，就能在这里继续。"}</p>{search || kind !== "all" ? <button onClick={() => filter({ q: "", material: "all" })}>查看全部资料</button> : <Link href="/explore">从探索开始 <ArrowRight size={14} /></Link>}</div> : null}
     </section>
   </div>;
 }

@@ -12,7 +12,7 @@ from rest_framework.exceptions import NotFound, Throttled, ValidationError
 from accounts.models import ReaderProfile
 from . import research
 from .models import (Annotation, CitationAudit, PersonalReadingPlan, ReaderDataOperation,
-                     ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic, ReadingList)
+                     ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic, ReadingList, SavedItem)
 from .services import decrypt_private_text
 from .source_models import SourceFollow
 from .parallel_models import ParallelReadingTask
@@ -24,14 +24,14 @@ RETENTION = {"reading_history": True, "search_history": False, "personal_notes":
 RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "收藏的主题", "source_follows": "来源、学者与主题关注", "saved_knowledge": "知识条目、图谱视图与私人书单"}
 EXPORT_GROUPS = {"article_comments": ("article_comments",), "research": ("research",), "notes": ("annotations", "memories", "parallel_alignments"),
                  "plans": ("plans",), "audits": ("audits", "citation_sources"), "source_follows": ("source_follows",),
-                 "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists")}
+                 "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists", "saved_items")}
 ERASE_GROUPS = {"article_comments": ("article_comments",), "reading_history": ("reading_history",), "search_history": ("search_history",),
                 "personal_notes": ("annotations", "memories", "parallel_alignments"), "reading_plans": ("plans",),
-                "followed_topics": ("followed_topics",), "source_follows": ("source_follows",), "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists")}
+                "followed_topics": ("followed_topics",), "source_follows": ("source_follows",), "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists", "saved_items")}
 MODELS = {"article_comments": EditorialComment, "research": ResearchProject, "annotations": Annotation, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
           "plans": PersonalReadingPlan, "audits": CitationAudit, "citation_sources": CitationAudit,
           "reading_history": ReadingHistory, "search_history": ReaderSearchRecord, "followed_topics": SavedTopic,
-          "source_follows": SourceFollow, "saved_knowledge": SavedKnowledgeNode, "graph_views": SavedGraphView, "reading_lists": ReadingList}
+          "source_follows": SourceFollow, "saved_knowledge": SavedKnowledgeNode, "graph_views": SavedGraphView, "reading_lists": ReadingList, "saved_items": SavedItem}
 MAX_ITEMS = 500
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -162,6 +162,11 @@ def annotation_export(user, row):
 
 
 def export_item(user, category, row):
+    if category == "saved_items":
+        from types import SimpleNamespace
+        from .serializers import SavedItemSerializer
+        # Recheck public availability through the same serializer as reader collections.
+        return dict(SavedItemSerializer(row, context={"request": SimpleNamespace(user=user)}).data)
     if category == "article_comments":
         from .editorial_comments import record
         return {**record(row, private=True), "issue_id": str(row.issue_id)}
@@ -202,7 +207,7 @@ def erase_impact(user, category, row, *, contexts=None):
         scopes = [{"kind": kind, "id": str(context.id)} for kind, context in contexts
                   if str(memory.id) in research.unpack(context).get("confirmed_memory_ids", [])]
         affected.append({"id": str(memory.id), "revision": memory.revision, "scopes": scopes})
-    message = {"article_comments": "删除本人评论与公开署名，已公开评论立即撤下；文章和其他读者评论保留，只留防止旧提交复活的最少回执。", "annotations": "删除原笔记，保留独立确认的认识，并撤销关联认识的使用范围。",
+    message = {"saved_items": "取消这项作品收藏；阅读进度、独立笔记、书单及公开馆藏原件保留。", "article_comments": "删除本人评论与公开署名，已公开评论立即撤下；文章和其他读者评论保留，只留防止旧提交复活的最少回执。", "annotations": "删除原笔记，保留独立确认的认识，并撤销关联认识的使用范围。",
                "memories": "删除此条认识、修改历史与派生向量，撤销使用范围；原阅读笔记保留。",
                "parallel_alignments": "删除此组私人对齐、术语笔记与阅读位置，并保留防止旧请求重新创建资料所需的最少记录；已提交的公共校准记录独立保留，馆藏原文与账户保留。",
                "plans": "删除此阅读计划或公共路径跟读及其中的进度、笔记与建议；原文和独立研究、笔记保留。未完成任务将失效，仅保留防止旧请求重新创建资料所需的最少回执。",
@@ -219,7 +224,12 @@ def erase_impact(user, category, row, *, contexts=None):
 def describe_item(user, category, row):
     payload = research.unpack(row) if hasattr(row, "data_ciphertext") else {}
     source = {}
-    if category == "article_comments":
+    if category == "saved_items":
+        current = export_item(user, category, row)
+        title = current.get("title") or "作品收藏"
+        work = current.get("work_data") or {}
+        source = {"title": title, "path": f"/works/{work['slug']}" if work.get("slug") else "/account?section=saved"}
+    elif category == "article_comments":
         title = payload.get("body", "")[:120] or "文章评论"
         source = {"title": "本人投稿评论（含待审核与已公开）", "path": f"/recommendations/{row.issue.slug}#article-comments"}
     elif category == "reading_lists":
@@ -398,9 +408,25 @@ def create_operation(user, data):
     kind, targets, impacts = data.get("kind"), [], {}
     categories = data.get("categories", [])
     if kind == "export":
-        if not categories or set(categories) - EXPORT_GROUPS.keys() or len(set(categories)) != len(categories):
+        raw = data.get("targets", [])
+        if raw:
+            if categories or not isinstance(raw, list) or not 1 <= len(raw) <= MAX_ITEMS:
+                raise ValidationError({"targets": f"按项目导出请选择1至{MAX_ITEMS}项，不能同时选择整类。"})
+            allowed = {leaf for leaves in EXPORT_GROUPS.values() for leaf in leaves}
+            seen = set()
+            for target in raw:
+                if not isinstance(target, dict) or target.get("category") not in allowed:
+                    raise ValidationError({"targets": "所选资料不支持导出。"})
+                current = verify_target(user, target, lock=True)
+                key = (target["category"], str(current.pk))
+                if key in seen:
+                    raise ValidationError({"targets": "选中资料不能重复。"})
+                seen.add(key)
+                targets.append(target_of(current, target["category"]))
+            categories = sorted({target["category"] for target in targets})
+        elif not categories or set(categories) - EXPORT_GROUPS.keys() or len(set(categories)) != len(categories):
             raise ValidationError({"categories": "请选择至少一种导出资料。"})
-        for category in categories:
+        for category in [] if raw else categories:
             for leaf in EXPORT_GROUPS[category]:
                 for row in rows(user, leaf).order_by("id")[:MAX_ITEMS + 1]:
                     targets.append(target_of(row, leaf))

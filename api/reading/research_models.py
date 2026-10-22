@@ -29,6 +29,18 @@ class ResearchProject(PrivateResearchRecord):
         constraints = [models.UniqueConstraint(fields=["user", "request_id"], name="research_project_request_unique")]
 
 
+class ResearchImportReceipt(UUIDTimeStampedModel):
+    """No private body; an erased transfer cannot be recreated by its old POST."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    project = models.ForeignKey(ResearchProject, null=True, blank=True, on_delete=models.SET_NULL,
+                               related_name="import_receipts")
+    request_id = models.UUIDField()
+    fingerprint = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "request_id"], name="research_import_request_unique")]
+
+
 class ResearchTurn(UUIDTimeStampedModel):
     project = models.ForeignKey(ResearchProject, on_delete=models.CASCADE, related_name="turns")
     parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="branches")

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 转存回执与资料任务复用
+
+ResearchImportReceipt为原私人研究的最小请求回执，user/request_id唯一、project删除置空、只存摘要不存正文；reading0022仅新增表，未执行。原ReaderDataOperation同时接受整类和所选导出，继续单队列/版本复核/权限/取消及下载资格；作品收藏接原SavedItem投影。不是新的馆藏或账户库。
+
 ## 2026-10-23 原私人资料的总览投影
 
 reader_center只聚合原七种owner对象，UNION仅身份和时间、数据库分页后读取正文；正文检索在本人范围解密，不接公开索引。最近阅读沿原来源可读性过滤，待办沿原计划。未新建资料库或迁移。原账户页按所需模块读取，总览不再拉九组全量列表。

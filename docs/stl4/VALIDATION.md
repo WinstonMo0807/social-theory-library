@@ -1,5 +1,12 @@
 # 验收记录
 
+## 2026-10-23 资料批量与转存静态记录
+
+- `.venv/Scripts/python.exe tmp/stl4-reader-materials-static-20261023.py` 123355退出0：7文件AST、34次两数据库SQL编译，禁止连接；MigrationLoader(None)与ProjectState比较reading声明一致，没有执行迁移；OpenAPI0错误/10既有提示。
+- web完整`tsc --noEmit --incremental false` a96c88/27b1cd及77f675/6447d8均退出0。7目标ESLint b91607退出0，原privacy img性能建议1项；最新两新增组件ESLint随77f675返回0。
+- `node tmp/stl4-reader-center-contracts-20261023.mjs` 025d26退出0，228路径保持，生成类型/CSS解析。
+- 没有运行测试、浏览器、真实业务、构建、迁移、模型或生产操作。后续待完整资料权限/删除影响/异步恢复/多标签转存的正式验收。
+
 ## 2026-10-23 R22静态检查（未运行测试）
 
 - `.venv/Scripts/python.exe tmp/stl4-reader-center-static-20261023.py` b2e08a退出0：4文件AST、20次SQL编译、0连接，OpenAPI0错误/10既有提示。

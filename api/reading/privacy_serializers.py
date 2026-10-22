@@ -7,7 +7,7 @@ class PrivacyPreferencesInput(serializers.Serializer):
 
 
 class PrivacyTargetInput(serializers.Serializer):
-    category = serializers.ChoiceField(choices=["article_comments", "reading_history", "search_history", "annotations", "memories", "parallel_alignments", "plans", "followed_topics", "source_follows", "saved_knowledge", "graph_views", "reading_lists"])
+    category = serializers.ChoiceField(choices=["article_comments", "reading_history", "search_history", "annotations", "memories", "parallel_alignments", "plans", "followed_topics", "source_follows", "saved_knowledge", "graph_views", "reading_lists", "saved_items", "research", "audits", "citation_sources"])
     id = serializers.UUIDField()
     revision = serializers.CharField(max_length=80)
 
@@ -19,8 +19,8 @@ class PrivacyOperationInput(serializers.Serializer):
     targets = PrivacyTargetInput(many=True, required=False)
 
     def validate(self, attrs):
-        if attrs["kind"] == "export" and (not attrs.get("categories") or attrs.get("targets")):
-            raise serializers.ValidationError("导出需要明确选择资料类型。")
+        if attrs["kind"] == "export" and (bool(attrs.get("categories")) == bool(attrs.get("targets")) or len(attrs.get("targets", [])) > 500):
+            raise serializers.ValidationError("导出需要选择资料类型，或明确选择1至500项本人资料，二者不能混用。")
         if attrs["kind"] == "erase" and (not attrs.get("targets") or attrs.get("categories") or len(attrs["targets"]) > 500):
             raise serializers.ValidationError("删除预览需要明确选择 1 至 500 项本人资料。")
         return attrs

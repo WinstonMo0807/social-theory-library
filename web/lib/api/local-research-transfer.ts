@@ -10,9 +10,11 @@ type PreviewStore = { version: 1; research: PreviewResearch[]; comparison?: Reco
 export function readLocalResearchSnapshot(storage: Pick<Storage, "getItem"> = localStorage) {
   const raw = storage.getItem(previewStoreKey);
   if (!raw) return null;
+  if (raw.length > 5_000_000) throw new Error("本机研究记录超过本页读取范围，请先保留原始导出，不能自动截断转存。");
   const parsed: unknown = JSON.parse(raw);
   if (!parsed || typeof parsed !== "object" || !("version" in parsed) || parsed.version !== 1 ||
       !("research" in parsed) || !Array.isArray(parsed.research)) throw new Error("本机研究资料格式不受支持，原记录已保留。");
+  if (parsed.research.length > 100 || parsed.research.some(row => !row || typeof row.id !== "string" || typeof row.title !== "string") || new Set(parsed.research.map(row => row.id)).size !== parsed.research.length) throw new Error("本机研究记录身份不完整、重复或超过100项，请保留原始记录后整理。");
   return { raw, store: parsed as PreviewStore };
 }
 

@@ -165,8 +165,10 @@ export type LocalResearchImport = NewRequest & {
   notes?: string; layout?: Record<string, unknown>; comparison?: { dimensions: string[]; cells: ComparisonCell[] };
   turns?: Array<{ local_id: string; parent_local_id?: string; question: string; scope?: QueryScope; references?: EvidenceReference[]; selected_references?: EvidenceReference[]; notes?: string; created_at?: string; status?: string }>;
 };
-export function importLocalResearch(data: LocalResearchImport) {
-  return write<ResearchRecord<ProjectData & { imported_turns: Record<string, string>; import_warnings: unknown[] }>>(`${researchRecordPath("research-projects")}import/`, data);
+export function importLocalResearch(data: LocalResearchImport, ownerId?: string, signal?: AbortSignal) {
+  return privateRequest<ResearchRecord<ProjectData & { imported_turns: Record<string, string>; import_warnings: unknown[] }>>(`${researchRecordPath("research-projects")}import/`, {
+    method: "POST", body: JSON.stringify(data), signal, ...(ownerId ? { headers: { "X-Reader-Owner": ownerId } } : {}),
+  });
 }
 export function updateResearchProject(id: string, data: Revision & Partial<Pick<ProjectData, "title" | "question" | "notes" | "scope" | "layout">> & { archived?: boolean }) {
   return write<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), data, "PATCH");

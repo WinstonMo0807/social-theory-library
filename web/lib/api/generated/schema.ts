@@ -9596,9 +9596,13 @@ export interface components {
          *     * `saved_knowledge` - saved_knowledge
          *     * `graph_views` - graph_views
          *     * `reading_lists` - reading_lists
+         *     * `saved_items` - saved_items
+         *     * `research` - research
+         *     * `audits` - audits
+         *     * `citation_sources` - citation_sources
          * @enum {string}
          */
-        PrivacyTargetInputCategoryEnum: "article_comments" | "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists";
+        PrivacyTargetInputCategoryEnum: "article_comments" | "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists" | "saved_items" | "research" | "audits" | "citation_sources";
         PrivacyTargetInputRequest: {
             category: components["schemas"]["PrivacyTargetInputCategoryEnum"];
             /** Format: uuid */

@@ -15,10 +15,10 @@ import styles from "./privacy.module.css";
 
 const retentionLabels: Record<RetentionKey, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", followed_topics: "收藏的主题", source_follows: "来源、学者与主题关注", saved_knowledge: "知识条目、图谱视图与私人书单" };
 const retentionCopy: Record<RetentionKey, string> = { reading_history: "保存以后阅读的位置记录，阅读进度单独保留。", search_history: "仅在开启后保存新的检索词与筛选条件。", personal_notes: "允许新建阅读笔记、个人认识与私人并读对齐（含术语笔记），已有内容仍可编辑。", followed_topics: "允许新增主题收藏，已有收藏不会自动删除；主题档案更新关注单独管理。", source_follows: "允许关注公开来源、学者与主题档案，并保存后续正式更新。关闭后停止记录更新，已有记录仍保留。", saved_knowledge: "允许收藏理论、概念与争论，以及保存私人图谱范围、布局和文章书单。关闭后不新增，已有记录仍可取消或删除。" };
-const exportLabels: Record<ExportCategory, string> = { article_comments: "文章评论", research: "研究资料", notes: "笔记内容", plans: "阅读计划与公共跟读", audits: "引文报告", source_follows: "来源、学者与主题关注", saved_knowledge: "知识条目、图谱视图与私人书单" };
-const exportCopy: Record<ExportCategory, string> = { article_comments: "本人明确提交的评论、公开署名及审核状态，包含已公开与未公开内容", research: "研究问题、选材与轮次（含来源与版本）", notes: "阅读笔记、已保存认识与私人并读对齐及术语笔记", plans: "本人创建或另存的阅读计划、公共路径收藏及跟读进度与笔记", audits: "引文报告与本人来源信息（不含原件）", source_follows: "本人来源、学者与主题关注及站内状态历史（不含原文）", saved_knowledge: "本人收藏的理论与概念入口，以及私人图谱名称、范围和布局，以及私人书单与作品顺序；不含来源正文或候选关系。" };
-const eraseLabels: Record<EraseCategory, string> = { article_comments: "文章评论", reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", reading_plans: "阅读计划与公共跟读", followed_topics: "收藏的主题", source_follows: "来源、学者与主题关注", saved_knowledge: "知识条目、图谱视图与私人书单" };
-const leafLabels: Record<string, string> = { article_comments: "文章评论", reading_history: "阅读历史", search_history: "搜索记录", annotations: "阅读笔记", memories: "个人认识", parallel_alignments: "私人并读对齐与术语笔记", plans: "阅读计划与公共跟读", followed_topics: "收藏的主题", source_follows: "来源、学者与主题关注", research: "研究资料", audits: "引文报告", citation_sources: "本人来源信息", graph_views: "私人图谱视图", reading_lists: "私人书单", saved_knowledge: "知识条目、图谱视图与私人书单" };
+const exportLabels: Record<ExportCategory, string> = { article_comments: "文章评论", research: "研究资料", notes: "笔记内容", plans: "阅读计划与公共跟读", audits: "引文报告", source_follows: "来源、学者与主题关注", saved_knowledge: "作品收藏、知识条目、图谱与书单" };
+const exportCopy: Record<ExportCategory, string> = { article_comments: "本人明确提交的评论、公开署名及审核状态，包含已公开与未公开内容", research: "研究问题、选材与轮次（含来源与版本）", notes: "阅读笔记、已保存认识与私人并读对齐及术语笔记", plans: "本人创建或另存的阅读计划、公共路径收藏及跟读进度与笔记", audits: "引文报告与本人来源信息（不含原件）", source_follows: "本人来源、学者与主题关注及站内状态历史（不含原文）", saved_knowledge: "本人收藏的作品、理论与概念入口，以及私人图谱名称、范围和布局，以及私人书单与作品顺序；不含来源正文或候选关系。" };
+const eraseLabels: Record<EraseCategory, string> = { article_comments: "文章评论", reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "个人笔记", reading_plans: "阅读计划与公共跟读", followed_topics: "收藏的主题", source_follows: "来源、学者与主题关注", saved_knowledge: "作品收藏、知识条目、图谱与书单" };
+const leafLabels: Record<string, string> = { saved_items: "作品收藏", article_comments: "文章评论", reading_history: "阅读历史", search_history: "搜索记录", annotations: "阅读笔记", memories: "个人认识", parallel_alignments: "私人并读对齐与术语笔记", plans: "阅读计划与公共跟读", followed_topics: "收藏的主题", source_follows: "来源、学者与主题关注", research: "研究资料", audits: "引文报告", citation_sources: "本人来源信息", graph_views: "私人图谱视图", reading_lists: "私人书单", saved_knowledge: "作品收藏、知识条目、图谱与书单" };
 const statusLabels: Record<PrivacyOperation["status"], string> = { preview: "等待确认影响", queued: "等待处理", running: "处理中", completed: "已完成", partial: "部分完成", failed: "未能完成", canceled: "已取消" };
 const failureLabels: Record<string, string> = { revision_changed: "内容已修改，请重新预览", record_unavailable: "资料已删除或不可用", content_limit: "内容超过单次限制", preparation_failed: "处理失败，可重试", queue_unavailable: "任务暂未进入队列，可重试", task_interrupted: "处理已中断，可恢复剩余项目" };
 const dateLabel = (value: string) => Number.isNaN(Date.parse(value)) ? "时间未记录" : new Date(value).toLocaleString("zh-CN", { dateStyle: "medium", timeStyle: "short" });
@@ -131,7 +131,7 @@ function OperationStrip({ operation: row, onOpen }: { operation: PrivacyOperatio
   return <div className={styles.operationStrip} data-state={row.status}><Info size={17} /><div><strong>{row.kind === "export" ? "资料导出" : "资料删除"} · {statusLabels[row.status]}</strong><p>已完成 {row.completed} 项{row.failed ? `，${row.failed} 项未完成` : ""}{row.remaining ? `，剩余 ${row.remaining} 项` : ""}。{privacyActive(row.status) ? "可以离开后继续查看。" : ""}</p></div><button onClick={onOpen}>查看任务</button></div>;
 }
 
-function OperationDialog({ id, ownerId, titles, onClose, onChanged, onInvalid }: { id: string; ownerId: string; titles: Record<string, string>; onClose: () => void; onChanged: () => void; onInvalid: (reason: unknown) => void }) {
+export function OperationDialog({ id, ownerId, titles, onClose, onChanged, onInvalid }: { id: string; ownerId: string; titles: Record<string, string>; onClose: () => void; onChanged: () => void; onInvalid: (reason: unknown) => void }) {
   const workspace = usePersistentWorkspace<PrivacyOperation>(operationPath(id), ownerId, data => privacyActive(data.status) ? 2000 : null);
   const [acknowledgedRevision, setAcknowledgedRevision] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -139,7 +139,7 @@ function OperationDialog({ id, ownerId, titles, onClose, onChanged, onInvalid }:
   const alive = useRef(true);
   const requestAbort = useRef<AbortController | null>(null);
   useEffect(() => { alive.current = true; requestAbort.current = new AbortController(); return () => { alive.current = false; requestAbort.current?.abort(); }; }, []);
-  const row = workspace.data;
+  const row = workspace.error ? null : workspace.data;
   async function command(action: "confirm" | "cancel" | "retry") {
     if (!row) return;
     try {

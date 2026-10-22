@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 原资料操作的所选导出
+
+POST /reading/privacy/operations/ export支持categories或targets二选一，1至500条；targets新增research/audits/citation_sources/saved_items类型，erase仍受服务端允许集合限制。saved_items复用原收藏/来源规则。228路径保持。原research-projects/import新增持久回执，已删除转存的旧请求409，不重建；读者须先应用新增0022迁移（本轮未执行）。
+
 ## 2026-10-23 读者总览投影
 
 新增GET /api/reading/reader-center/：kind七类或all、q≤180、order newest/oldest、page≥1、overview默认true。响应owner_id/count/page/page_size/total_pages/counts/results及可选recent_reading/pending_tasks。每页20，私人全文搜索最多5000项范围，超过明确400，不截断；并发删除409，页越界404。原权限/no-store/owner保护；无写入，无新表。227旧路径保留，共228。

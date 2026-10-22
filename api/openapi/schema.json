@@ -36456,10 +36456,14 @@
                     "source_follows",
                     "saved_knowledge",
                     "graph_views",
-                    "reading_lists"
+                    "reading_lists",
+                    "saved_items",
+                    "research",
+                    "audits",
+                    "citation_sources"
                 ],
                 "type": "string",
-                "description": "* `article_comments` - article_comments\n* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge\n* `graph_views` - graph_views\n* `reading_lists` - reading_lists"
+                "description": "* `article_comments` - article_comments\n* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge\n* `graph_views` - graph_views\n* `reading_lists` - reading_lists\n* `saved_items` - saved_items\n* `research` - research\n* `audits` - audits\n* `citation_sources` - citation_sources"
             },
             "PrivacyTargetInputRequest": {
                 "type": "object",
