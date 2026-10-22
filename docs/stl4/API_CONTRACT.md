@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M21概念编辑
+
+原content-placements命令增加可选publish.confirmed_only及内部意见/译义候选。新commands/{request_id}/支持GET本人回执和POST cancel_pending（已有则查回、未执行则锁内记录停止）；revision_id可null，state applied/cancelled。写入及回执必需owner，原权限/CAS保留。公开concept_usage允许字段不含内部说明或译义候选。282路径，保留281；类型同步。
+
 ## 2026-10-23 M20学者公开编辑
 
 新增学者commands/{request_id}与{scholar_id}/work-selection两GET，原279条路径保留共281；原学者POST可绑定existing_person_id，正文保存固定UUID回执及If-Match，原预览POST增加有界Scholar选择。公共ScholarWork/Detail同步推荐数据。具体身份、参数、失败和恢复见SCHOLAR_EDITOR_20261023；契约生成不等于接口运行。

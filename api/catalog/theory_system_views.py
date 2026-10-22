@@ -28,7 +28,7 @@ from common.permissions import (
 )
 from ingestion.models import AuditEvent
 
-from .editorial_read import AdminEditorialDraftReadMixin
+from .editorial_read import AdminEditorialDraftReadMixin, AdminPrivateResponseMixin
 from .relation_editorial_views import StagedRelationEditorMixin
 
 from .models import (
@@ -752,7 +752,8 @@ class AdminKnowledgeNodeDetailView(
             return super().update(request, *args, **kwargs)
 
         partial = kwargs.pop("partial", False)
-        serializer = self.get_serializer(node, data=request.data, partial=partial)
+        serializer = self.get_serializer(node, data=request.data, partial=partial,
+            context={**self.get_serializer_context(), "defer_authority_publication": True})
         serializer.is_valid(raise_exception=True)
         values = dict(serializer.validated_data)
         aliases = values.get("aliases")
@@ -869,7 +870,7 @@ class AdminKnowledgeNodeDetailView(
         )
 
 
-class AdminKnowledgeNodeVersionListView(TheorySystemFeatureMixin, generics.ListAPIView):
+class AdminKnowledgeNodeVersionListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = KnowledgeNodeVersionSerializer
 
@@ -879,7 +880,7 @@ class AdminKnowledgeNodeVersionListView(TheorySystemFeatureMixin, generics.ListA
         )
 
 
-class AdminKnowledgeNodeMergePreviewView(TheorySystemFeatureMixin, APIView):
+class AdminKnowledgeNodeMergePreviewView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
     permission_classes = [CanMergeAuthority]
 
     def get(self, request, pk):
@@ -887,7 +888,7 @@ class AdminKnowledgeNodeMergePreviewView(TheorySystemFeatureMixin, APIView):
         return Response({"source": str(source.id), "affected": merge_preview(source)})
 
 
-class AdminKnowledgeNodeMergeView(TheorySystemFeatureMixin, APIView):
+class AdminKnowledgeNodeMergeView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
     permission_classes = [CanMergeAuthority]
 
     def post(self, request, pk):
@@ -909,7 +910,7 @@ class AdminKnowledgeNodeMergeView(TheorySystemFeatureMixin, APIView):
         )
 
 
-class AdminKnowledgeNodeMergeRollbackView(TheorySystemFeatureMixin, APIView):
+class AdminKnowledgeNodeMergeRollbackView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
     permission_classes = [CanRunSystemRecovery]
 
     def post(self, request, record_id):
@@ -969,7 +970,7 @@ class AdminKnowledgeRelationDetailView(
         return super().destroy(request, *args, **kwargs)
 
 
-class AdminKnowledgeRelationVersionListView(TheorySystemFeatureMixin, generics.ListAPIView):
+class AdminKnowledgeRelationVersionListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = KnowledgeRelationVersionSerializer
 
@@ -979,7 +980,7 @@ class AdminKnowledgeRelationVersionListView(TheorySystemFeatureMixin, generics.L
         ).select_related("created_by")
 
 
-class AdminWorkNodeRelationListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminWorkNodeRelationListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminWorkNodeRelationSerializer
 
@@ -1017,6 +1018,7 @@ class AdminWorkNodeRelationListView(TheorySystemFeatureMixin, generics.ListCreat
 
 
 class AdminWorkNodeRelationDetailView(
+    AdminPrivateResponseMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
 ):
@@ -1067,7 +1069,7 @@ class AdminWorkNodeRelationDetailView(
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AdminEvidenceListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminEvidenceListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = EvidenceSnippetSerializer
 
@@ -1087,6 +1089,7 @@ class AdminEvidenceListView(TheorySystemFeatureMixin, generics.ListCreateAPIView
 
 
 class AdminEvidenceDetailView(
+    AdminPrivateResponseMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
 ):
@@ -1098,7 +1101,7 @@ class AdminEvidenceDetailView(
         return {**super().get_serializer_context(), "include_unpublished_items": True}
 
 
-class AdminTheoryReviewTaskListView(TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminTheoryReviewTaskListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = TheoryReviewTaskSerializer
 
@@ -1123,6 +1126,7 @@ class AdminTheoryReviewTaskListView(TheorySystemFeatureMixin, generics.ListCreat
 
 
 class AdminTheoryReviewTaskDetailView(
+    AdminPrivateResponseMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
 ):
@@ -1157,7 +1161,7 @@ class AdminTheoryReviewTaskDetailView(
         )
 
 
-class AdminTheoryReviewActionView(TheorySystemFeatureMixin, APIView):
+class AdminTheoryReviewActionView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
     permission_classes = [IsKnowledgeReviewer]
 
     @staticmethod

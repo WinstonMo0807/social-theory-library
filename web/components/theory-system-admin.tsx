@@ -33,7 +33,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { adminListHref, adminPageNumber } from "@/lib/admin-route-context";
 import { KnowledgeImagePanel } from "./admin/media/knowledge-image-panel";
 import type { FormEvent, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
 import { asRecord, asString } from "@/components/admin/workflow/workflow-types";
@@ -43,7 +43,9 @@ import {
   StringListEditor,
   StructuredRowsEditor,
 } from "@/components/structured-editors";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { apiRequest as baseApiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { withPrivateOwner } from "@/lib/api/private-owner";
+import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import {
@@ -248,39 +250,33 @@ function asDate(value?: string | null) {
   });
 }
 
-function useAdminData<T>(path: string | null) {
-  const [result, setResult] = useState<{ path: string | null; data: T | null; error: string }>({ path: null, data: null, error: "" });
-  const [loading, setLoading] = useState(Boolean(path));
-  const [revision, setRevision] = useState(0);
-  const refresh = useCallback(() => setRevision((value) => value + 1), []);
+function useEditorAccountKey() {
+  const user = useAdminSession(), [epoch, setEpoch] = useState(0);
+  useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
+  return `${user?.id || ""}:${epoch}`;
+}
 
+function useEditorRequest() {
+  const user = useAdminSession(), owner = String(user?.id || ""), lifetime = useRef<AbortController | null>(null);
   useEffect(() => {
-    if (!path) return;
-    let active = true;
-    const token = getServerSessionCredential();
-    if (!token) return;
-    Promise.resolve()
-      .then(() => {
-        if (!active) return null;
-        setLoading(true);
-        return apiRequest<T>(path, {}, token);
-      })
-      .then((payload) => {
-        if (!active || !payload) return;
-        setResult({ path, data: payload, error: "" });
-      })
-      .catch((reason) => {
-        if (!active) return;
-        setResult((previous) => ({ path, data: previous.path === path ? previous.data : null, error: reason instanceof Error ? reason.message : "读取失败" }));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
-  }, [path, revision]);
+    const controller = new AbortController(); lifetime.current = controller;
+    const unsubscribe = subscribeToSessionChanges(() => controller.abort());
+    return () => { controller.abort(); unsubscribe(); };
+  }, [owner]);
+  return useCallback(<T,>(path: string, options: RequestInit = {}, credential?: string | null): Promise<T> => {
+    const controller = lifetime.current;
+    if (!owner || !controller || controller.signal.aborted) return Promise.reject(Error("编辑账户已变化，请重新打开当前资料。"));
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(60000), ...(options.signal ? [options.signal] : [])]);
+    const headers = new Headers(options.headers); headers.set("X-Editor-Owner", owner);
+    return withPrivateOwner(owner, () => baseApiRequest<T>(path, {...options, headers, signal, cache:"no-store"}, credential || getServerSessionCredential(), false), signal);
+  }, [owner]);
+}
 
-  const current = result.path === path;
-  return { data: current ? result.data : null, loading: Boolean(path && (loading || !current)), error: current ? result.error : "", refresh };
+function useAdminData<T>(path: string | null) {
+  const user = useAdminSession(), owner = String(user?.id || "");
+  const load = useCallback((url: string, signal: AbortSignal) => baseApiRequest<T>(url, {signal,cache:"no-store",headers:{"X-Editor-Owner":owner}}, getServerSessionCredential()), [owner]);
+  const resource = usePersistentWorkspace<T>(path || "", owner, undefined, load);
+  return { data: resource.error ? null : resource.data, loading: resource.loading, error: resource.error, refresh: resource.reload };
 }
 
 function AdminFrame({ eyebrow, title, description, actions, children }: {
@@ -390,14 +386,16 @@ function nodeToDraft(node: KnowledgeNode): NodeDraft {
 }
 
 export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: string }) {
+  const account = useEditorAccountKey();
   const search = useSearchParams();
   const nodeId = initialNodeId || search.get("node") || "";
   const legacyId = search.get("legacy_id") || "";
-  if (search.get("section") === "timeline") return <TimelineEditor key={`${nodeId}:${search.get("event") || "list"}`} nodeId={nodeId} requestedId={search.get("event") || ""} />;
-  return <TheoryNodesEditor key={`${nodeId}:${legacyId}`} initialNodeId={nodeId} initialLegacyId={legacyId} />;
+  if (search.get("section") === "timeline") return <TimelineEditor key={`${account}:${nodeId}:${search.get("event") || "list"}`} nodeId={nodeId} requestedId={search.get("event") || ""} />;
+  return <TheoryNodesEditor key={`${account}:${nodeId}:${legacyId}`} initialNodeId={nodeId} initialLegacyId={legacyId} />;
 }
 
 function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: string; initialLegacyId: string }) {
+  const apiRequest = useEditorRequest();
   const theoryLocation = useEditorListLocation();
   const nodePage = adminPageNumber(theoryLocation.search.get("page"));
   const [editConflict, setEditConflict] = useState(false);
@@ -930,11 +928,14 @@ const knowledgeRelationOptions = [
 ] as const;
 
 export function TheoryRelationsAdmin() {
+  const account = useEditorAccountKey();
   const search = useSearchParams();
-  return <TheoryRelationsEditor key={search.get("relation") || "list"} requestedId={search.get("relation") || ""} />;
+  return <TheoryRelationsEditor key={`${account}:${search.get("relation") || "list"}:${search.get("node") || "all"}`} requestedId={search.get("relation") || ""} />;
 }
 
 function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
+  const opened = useRef(false);
+  const apiRequest = useEditorRequest();
   const location = useEditorListLocation();
   const taskPage = adminPageNumber(location.search.get("review_page"));
   const relationPage = adminPageNumber(location.search.get("relations_page"));
@@ -975,12 +976,13 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
   const relationParams = new URLSearchParams({ page: String(relationPage) });
   if (relationFilter) relationParams.set("q", relationFilter);
   if (relationStatus) relationParams.set("status", relationStatus);
+  if (location.search.get("node")) relationParams.set("node", location.search.get("node")!);
   const relations = useAdminData<Page<KnowledgeRelation>>(`/catalog/admin/theory-system/relations/?${relationParams}`);
   const requested = useAdminData<KnowledgeRelation>(requestedId ? `/catalog/admin/theory-system/relations/${requestedId}/` : null);
   useEffect(() => {
-    if (!requested.data) return;
+    if (!requested.data || opened.current) return;
     const selected=requested.data;
-    const timer=window.setTimeout(()=>{setEditingRelation(selected);setRelationDraft(relationToDraft(selected));},0);
+    const timer=window.setTimeout(()=>{opened.current=true;setEditingRelation(selected);setRelationDraft(relationToDraft(selected));},0);
     return()=>window.clearTimeout(timer);
   }, [requested.data]);
 
@@ -1485,11 +1487,14 @@ function TimelineEvidenceFields({ draft, saved, workName, onChange, onLabels }: 
 }
 
 export function NormalizedTimelineAdmin() {
+  const account = useEditorAccountKey();
   const search = useSearchParams();
-  return <TimelineEditor key={`${search.get("node") || "all"}:${search.get("event") || "list"}`} nodeId={search.get("node") || ""} requestedId={search.get("event") || ""} />;
+  return <TimelineEditor key={`${account}:${search.get("node") || "all"}:${search.get("event") || "list"}`} nodeId={search.get("node") || ""} requestedId={search.get("event") || ""} />;
 }
 
 function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nodeId?: string }) {
+  const opened = useRef(false);
+  const apiRequest = useEditorRequest();
   const location = useEditorListLocation();
   const page = adminPageNumber(location.search.get("page"));
   const [editConflict, setEditConflict] = useState(false);
@@ -1531,9 +1536,9 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const requested = useAdminData<TimelineEvent>(requestedId ? `/catalog/admin/theory-timeline/${requestedId}/` : null);
   const wrongNode = Boolean(nodeId && requested.data && !requested.data.relations.some((row) => row.node === nodeId));
   useEffect(() => {
-    if (!requested.data || wrongNode) return;
+    if (!requested.data || wrongNode || opened.current) return;
     const selected=requested.data;
-    const timer=window.setTimeout(()=>{setEditing(selected);setDraft(timelineToDraft(selected));},0);
+    const timer=window.setTimeout(()=>{opened.current=true;setEditing(selected);setDraft(timelineToDraft(selected));},0);
     return()=>window.clearTimeout(timer);
   }, [requested.data, wrongNode]);
 

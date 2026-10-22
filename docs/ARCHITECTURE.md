@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M21概念编辑
+
+M21复用content_placement类型EditorialRevision和原AuditEvent，不新增业务表。概念用法公开字段与内部编辑字段在公共读取边界分开；confirmed_only选择性发布使用原版本和公开过滤。取消未知请求以同一User锁与AuditEvent停止记录阻止迟到写入。详见docs/stl4/CONCEPT_EDITOR_20261023.md。
+
 ## 2026-10-23 M20学者公开编辑
 
 M20保持原Person/ScholarProfile/EditorialRevision/AuditEvent。新建可关联既有人物，账户锁内权限与UUID审计回执包裹原保存；选书读取原正式出版快照，顺序和推荐理由归原curation/发布修订，无平行馆藏/新表。共享后台响应补可选编辑账户比对及private/no-store/Vary，学者只读预览POST与主题共原预览服务。

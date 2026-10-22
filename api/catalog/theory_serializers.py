@@ -286,7 +286,7 @@ class KnowledgeNodeDisciplineSerializer(serializers.ModelSerializer):
 
     def validate_status(self, value):
         request = self.context.get("request")
-        if value in {"published", "archived"} and not has_capability(
+        if value in {"published", "archived"} and not self.context.get("defer_authority_publication", False) and not has_capability(
             getattr(request, "user", None),
             Capability.PUBLISH_AUTHORITY,
         ):
@@ -329,7 +329,7 @@ class KnowledgeNodeSubdisciplineSerializer(serializers.ModelSerializer):
 
     def validate_status(self, value):
         request = self.context.get("request")
-        if value in {"published", "archived"} and not has_capability(
+        if value in {"published", "archived"} and not self.context.get("defer_authority_publication", False) and not has_capability(
             getattr(request, "user", None),
             Capability.PUBLISH_AUTHORITY,
         ):
@@ -369,7 +369,7 @@ class KnowledgeNodeTopicSerializer(serializers.ModelSerializer):
 
     def validate_status(self, value):
         request = self.context.get("request")
-        if value in {"published", "archived"} and not has_capability(
+        if value in {"published", "archived"} and not self.context.get("defer_authority_publication", False) and not has_capability(
             getattr(request, "user", None),
             Capability.PUBLISH_AUTHORITY,
         ):
@@ -964,7 +964,7 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
     def validate_status(self, value):
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if value in {"published", "archived"} and not has_capability(user, Capability.PUBLISH_AUTHORITY):
+        if value in {"published", "archived"} and (self.instance is None or value != self.instance.status) and not has_capability(user, Capability.PUBLISH_AUTHORITY):
             raise serializers.ValidationError("只有管理员可以发布或下线理论节点。")
         return value
 

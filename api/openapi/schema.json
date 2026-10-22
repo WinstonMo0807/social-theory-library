@@ -1384,6 +1384,136 @@
                 }
             }
         },
+        "/api/catalog/admin/content-placements/{page_type}/{page_id}/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_content_placements_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "page_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "page_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlacementReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_content_placements_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "page_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "page_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PlacementCancelRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PlacementCancelRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PlacementCancelRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlacementReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/content-placements/{page_type}/{page_id}/history/": {
             "get": {
                 "operationId": "catalog_admin_content_placements_history_retrieve",
@@ -41619,6 +41749,24 @@
                     "results"
                 ]
             },
+            "PlacementCancelActionEnum": {
+                "enum": [
+                    "cancel_pending"
+                ],
+                "type": "string",
+                "description": "* `cancel_pending` - cancel_pending"
+            },
+            "PlacementCancelRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PlacementCancelActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
             "PlacementCommandActionEnum": {
                 "enum": [
                     "save",
@@ -41683,6 +41831,9 @@
                     "revision_id": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "confirmed_only": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
@@ -41835,6 +41986,16 @@
                     "can_publish": {
                         "type": "boolean"
                     },
+                    "can_publish_confirmed": {
+                        "type": "boolean"
+                    },
+                    "confirmed_publication_blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
                     "impact": {
                         "type": "string"
                     },
@@ -41883,6 +42044,53 @@
                     "document_revision_id",
                     "pdf_page"
                 ]
+            },
+            "PlacementReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/PlacementReceiptStateEnum"
+                    },
+                    "page_type": {
+                        "type": "string"
+                    },
+                    "page_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "exists",
+                    "page_id",
+                    "page_type",
+                    "request_id",
+                    "revision_id",
+                    "state"
+                ]
+            },
+            "PlacementReceiptStateEnum": {
+                "enum": [
+                    "applied",
+                    "cancelled"
+                ],
+                "type": "string",
+                "description": "* `applied` - applied\n* `cancelled` - cancelled"
             },
             "PlacementRequest": {
                 "type": "object",
@@ -42069,6 +42277,20 @@
                             }
                         ],
                         "nullable": true
+                    },
+                    "image_url": {
+                        "type": "string"
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
                     }
                 },
                 "required": [

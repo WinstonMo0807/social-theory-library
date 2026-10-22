@@ -1,8 +1,11 @@
 """Protected editing, exact-revision preview, and public placement reads."""
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -46,6 +49,7 @@ class PlacementCommandSerializer(serializers.Serializer):
     group = serializers.CharField(max_length=240, allow_blank=True, required=False)
     patch = serializers.DictField(required=False)
     revision_id = serializers.UUIDField(required=False)
+    confirmed_only = serializers.BooleanField(required=False)
 
 
 class PlacementReaderTargetSerializer(serializers.Serializer):
@@ -82,6 +86,9 @@ class PlacementSourceSerializer(serializers.Serializer):
     document_revision_id = serializers.UUIDField(required=False, allow_null=True)
     reader_target = PlacementReaderTargetSerializer(required=False)
     usage_author = PlacementUsageAuthorSerializer(required=False, allow_null=True)
+    image_url = serializers.CharField(required=False, allow_blank=True)
+    publication_year = serializers.IntegerField(required=False, allow_null=True)
+    authors = serializers.ListField(child=serializers.DictField(), required=False)
 
 
 class PlacementResultItemSerializer(PlacementSerializer):
@@ -163,6 +170,8 @@ class PlacementReadSerializer(serializers.Serializer):
     publication_blockers = serializers.ListField(child=serializers.DictField(), required=False)
     state = serializers.CharField(required=False)
     can_publish = serializers.BooleanField(required=False)
+    can_publish_confirmed = serializers.BooleanField(required=False)
+    confirmed_publication_blockers = serializers.ListField(child=serializers.DictField(), required=False)
     impact = serializers.CharField(required=False)
     title = serializers.CharField(required=False)
     replayed = serializers.BooleanField(required=False)
@@ -230,11 +239,73 @@ class AdminPlacementView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
 
     @extend_schema(request=PlacementCommandSerializer, responses=PlacementReadSerializer)
     def post(self, request, page_type, page_id):
+        if request.headers.get("X-Editor-Owner") != str(request.user.pk):
+            raise PermissionDenied("编辑账户已变化，请重新读取编排内容。")
         incoming = PlacementCommandSerializer(data=request.data)
         incoming.is_valid(raise_exception=True)
         # Keep the original JSON: the service rejects source/body fields that
         # DRF would otherwise silently discard as unknown serializer fields.
         return Response(service.command(page_type, page_id, request.data, request.user))
+
+
+class PlacementReceiptSerializer(serializers.Serializer):
+    actor_id = serializers.CharField()
+    request_id = serializers.UUIDField()
+    revision_id = serializers.UUIDField(allow_null=True)
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
+    page_type = serializers.CharField()
+    page_id = serializers.UUIDField()
+    exists = serializers.BooleanField()
+
+
+class PlacementCancelSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+
+class PlacementReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [IsKnowledgeEditor | CanEditMetadata]
+
+    @staticmethod
+    def response(receipt, page_type, page_id):
+        return Response(PlacementReceiptSerializer({"actor_id": str(receipt.actor_id), "request_id": receipt.request_id,
+            "revision_id": receipt.after.get("revision_id"), "page_type": page_type, "page_id": page_id,
+            "state": "cancelled" if receipt.after.get("operation") == "cancelled" else "applied",
+            "exists": service.PAGES[page_type][0].objects.filter(pk=page_id).exists()}).data)
+
+    @extend_schema(responses=PlacementReceiptSerializer)
+    def get(self, request, page_type, page_id, request_id):
+        from ingestion.models import AuditEvent
+        if request.headers.get("X-Editor-Owner") != str(request.user.pk):
+            raise PermissionDenied("编辑账户已变化，请重新读取原请求。")
+        service.authorize(request.user, page_type)
+        receipt = get_object_or_404(AuditEvent, action="content_placement.command", object_type=service.KIND,
+            object_id=str(service.target_id(page_type, page_id)), request_id=str(request_id), actor=request.user)
+        return self.response(receipt, page_type, page_id)
+
+    @extend_schema(request=PlacementCancelSerializer, responses=PlacementReceiptSerializer)
+    @transaction.atomic
+    def post(self, request, page_type, page_id, request_id):
+        from accounts.models import User
+        from ingestion.models import AuditEvent
+        if request.headers.get("X-Editor-Owner") != str(request.user.pk):
+            raise PermissionDenied("编辑账户已变化，请重新读取原请求。")
+        if not isinstance(request.data, dict) or request.data != {"action": "cancel_pending"}:
+            return Response({"detail": "只接受停止未确认请求。"}, status=400)
+        # Share the exact actor lock with command(): either the original finishes,
+        # or this durable receipt prevents it from writing if it arrives later.
+        actor = get_object_or_404(User.objects.select_for_update(), pk=request.user.pk, is_active=True)
+        if actor.token_version != request.user.token_version:
+            raise PermissionDenied("账户会话已变化，请重新核对编辑身份。")
+        service.authorize(actor, page_type)
+        key = str(service.target_id(page_type, page_id))
+        receipt = AuditEvent.objects.filter(action="content_placement.command", object_type=service.KIND,
+            object_id=key, request_id=str(request_id), actor=actor).first()
+        if receipt is None:
+            service.parent_object(page_type, page_id, lock=True)
+            receipt = AuditEvent.objects.create(actor=actor, action="content_placement.command", object_type=service.KIND,
+                object_id=key, request_id=str(request_id), before={},
+                after={"operation": "cancelled", "revision_id": None, "fingerprint": ""})
+        return self.response(receipt, page_type, page_id)
 
 
 class PlacementHistoryView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):

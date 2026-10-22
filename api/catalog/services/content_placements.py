@@ -190,13 +190,13 @@ def _landing(value, reference, *, public=False):
 
 def _concept_usage(value, reference, page_type):
     fields = {"term", "language", "usage_type", "interpretation", "source_person_id", "attribution_note", "review_status",
-              "title", "explanatory_object", "period", "context"}
+              "title", "explanatory_object", "period", "context", "internal_note", "review_note", "translations"}
     if page_type != "node" or reference["type"] != "span" or not isinstance(value, dict) or set(value) - fields:
         raise ValidationError({"concept_usage": "概念用法须保存在理论或概念页，并关联准确原文。"})
     usage_type, review = value.get("usage_type", "application"), value.get("review_status", "candidate")
     if (not isinstance(usage_type, str) or not isinstance(review, str)
             or usage_type not in {"definition", "application", "criticism", "translation", "other"}
-            or review not in {"candidate", "confirmed"}):
+            or review not in {"candidate", "confirmed", "conflict"}):
         raise ValidationError({"concept_usage": "概念用法类型或人工确认状态无效。"})
     term = ledger._text(value.get("term", ""), 240)
     if not term:
@@ -207,9 +207,24 @@ def _concept_usage(value, reference, page_type):
     note = ledger._text(value.get("attribution_note", ""), 3000)
     if review == "confirmed" and (not person_id or not note):
         raise ValidationError({"concept_usage": "确认用法前须明确作者与归属依据，不能仅由书目作者推定。"})
+    translations = value.get("translations", [])
+    if not isinstance(translations, list) or len(translations) > 20:
+        raise ValidationError({"concept_usage": "每段原文最多记录20个译义候选。"})
+    cleaned, seen = [], set()
+    for row in translations:
+        if not isinstance(row, dict) or set(row) != {"id", "term", "interpretation", "confirmed"} or not isinstance(row["confirmed"], bool):
+            raise ValidationError({"concept_usage": "译义候选只接受编号、术语、解释和明确确认状态。"})
+        identifier = str(shared_curation.identifier(row["id"]))
+        candidate = ledger._text(row["term"], 240)
+        if identifier in seen or not candidate:
+            raise ValidationError({"concept_usage": "每个译义候选须有不同编号和术语。"})
+        seen.add(identifier)
+        cleaned.append({"id": identifier, "term": candidate, "interpretation": ledger._text(row["interpretation"], 2000), "confirmed": row["confirmed"]})
     return {"term": term, "language": ledger._text(value.get("language", ""), 32),
             "usage_type": usage_type, "interpretation": ledger._text(value.get("interpretation", ""), 6000),
             "source_person_id": person_id or None, "attribution_note": note, "review_status": review,
+            "internal_note": ledger._text(value.get("internal_note", ""), 500),
+            "review_note": ledger._text(value.get("review_note", ""), 500), "translations": cleaned,
             **{key: ledger._text(value.get(key, ""), limit) for key, limit in
                (("title", 240), ("explanatory_object", 1200), ("period", 120), ("context", 240))}}
 
@@ -281,7 +296,12 @@ def _resolved_items(items, *, public=False):
                 source.pop("edit_url", None)
             elif not source["public_eligible"]:
                 problems.append({"item_id": item["id"], "code": "source_not_public", "detail": "该来源尚未公开或已撤回。", "edit_url": source.get("edit_url", "")})
-            output.append({**item, "source": source})
+            row = {**item, "source": source}
+            if public and usage:
+                # Editorial opinions and alternative translations never become public by publication.
+                row["concept_usage"] = {key: value for key, value in usage.items()
+                    if key in {"term", "language", "usage_type", "interpretation", "source_person_id", "attribution_note", "review_status", "title", "explanatory_object", "period", "context"}}
+            output.append(row)
         except (Http404, ValidationError):
             if not public:
                 output.append({**item, "source": None})
@@ -328,6 +348,13 @@ def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
                       can_publish=may_publish and not blockers and bool(selected and latest and selected.pk == latest.pk and latest.status == "draft"),
                       state="saved_unpublished" if latest and latest.status == "draft" else "withdrawn" if data.get("withdrawn") else "published" if published else "empty",
                       impact="本页文案和位置只影响此页面；修改题名、作者或原文须进入来源编辑。")
+        excluded = {row["id"] for row in data.get("items", []) if row.get("concept_usage")
+                    and row["concept_usage"].get("review_status") != "confirmed"}
+        confirmed_blockers = [problem for problem in blockers if problem.get("item_id") not in excluded]
+        result.update(confirmed_publication_blockers=confirmed_blockers,
+            can_publish_confirmed=may_publish and not confirmed_blockers and bool(items)
+                and any(row["id"] not in excluded for row in items)
+                and bool(selected and latest and selected.pk == latest.pk and latest.status == "draft"))
     return result
 
 
@@ -379,11 +406,23 @@ def _move(items, item_id, data):
 
 @transaction.atomic
 def command(page_type, page_id, data, actor):
+    from accounts.models import User
+    previous_actor = actor
+    actor = get_object_or_404(User.objects.select_for_update(), pk=actor.pk, is_active=True)
+    if actor.token_version != previous_actor.token_version:
+        raise PermissionDenied("账户会话已变化，请重新核对编辑身份。")
     if not isinstance(data, dict):
         raise ValidationError("请提交编排操作对象。")
     action = data.get("action")
     if action not in ACTIONS:
         raise ValidationError({"action": "未知编排操作。"})
+    allowed = {"action", "request_id", "expected_revision"} | {
+        "save": {"items"}, "add": {"item", "position"}, "move": {"item_id", "position", "area", "group"},
+        "update": {"item_id", "patch"}, "remove": {"item_id"}, "undo": set(),
+        "restore": {"revision_id"}, "publish": {"confirmed_only"}, "withdraw": set(),
+    }[action]
+    if set(data) - allowed or "confirmed_only" in data and not isinstance(data["confirmed_only"], bool):
+        raise ValidationError("编排请求包含不支持的字段。")
     authorize(actor, page_type, publishing=action in {"publish", "withdraw"})
     parent = parent_object(page_type, page_id, lock=True)
     request_id = str(shared_curation.identifier(data.get("request_id")))
@@ -392,6 +431,8 @@ def command(page_type, page_id, data, actor):
     receipts = AuditEvent.objects.filter(action="content_placement.command", object_type=KIND, object_id=str(key), request_id=request_id, actor=actor)
     receipt = receipts.first()
     if receipt:
+        if receipt.after.get("operation") == "cancelled":
+            raise ledger.EditConflict("这次未确认的请求已停止。请读取当前编排后发起新操作。")
         if receipt.after.get("fingerprint") != fingerprint:
             raise ledger.EditConflict("此请求编号已经用于另一组修改，请使用新的请求编号。")
         return {**read(page_type, page_id, actor=actor), "replayed": True, "applied_revision_id": receipt.after["revision_id"]}
@@ -440,13 +481,16 @@ def command(page_type, page_id, data, actor):
             parent_object(page_type, page_id, public=True)
         except Http404:
             raise ValidationError({"page": "所属页面尚未公开，请先发布页面。"})
-        _, problems = _resolved_items(items)
+        publishable = [row for row in items if not row.get("concept_usage") or row["concept_usage"].get("review_status") == "confirmed"] if data.get("confirmed_only") else items
+        if data.get("confirmed_only") and not publishable:
+            raise ValidationError("尚无已确认的内容可以发布。")
+        _, problems = _resolved_items(publishable)
         if problems:
             raise ValidationError({"source_problems": problems})
         # Re-read through the public boundary: a source may be hidden even if
         # its bibliographic record exists (exact OCR revision, access, file).
-        visible, _ = _resolved_items(items, public=True)
-        if len(visible) != len(items):
+        visible, _ = _resolved_items(publishable, public=True)
+        if len(visible) != len(publishable):
             raise ValidationError("存在不可公开的准确来源，请核对原文或版本。")
         revision = latest
         ledger._publish_revision(revision, actor)

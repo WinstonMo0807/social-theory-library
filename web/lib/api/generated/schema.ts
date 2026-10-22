@@ -336,6 +336,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/content-placements/{page_type}/{page_id}/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_content_placements_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_content_placements_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/content-placements/{page_type}/{page_id}/history/": {
         parameters: {
             query?: never;
@@ -10745,6 +10761,14 @@ export interface components {
             has_more: boolean;
         };
         /**
+         * @description * `cancel_pending` - cancel_pending
+         * @enum {string}
+         */
+        PlacementCancelActionEnum: "cancel_pending";
+        PlacementCancelRequest: {
+            action: components["schemas"]["PlacementCancelActionEnum"];
+        };
+        /**
          * @description * `save` - save
          *     * `add` - add
          *     * `move` - move
@@ -10774,6 +10798,7 @@ export interface components {
             };
             /** Format: uuid */
             revision_id?: string;
+            confirmed_only?: boolean;
         };
         PlacementHistoryItem: {
             /** Format: uuid */
@@ -10824,6 +10849,10 @@ export interface components {
             }[];
             state?: string;
             can_publish?: boolean;
+            can_publish_confirmed?: boolean;
+            confirmed_publication_blockers?: {
+                [key: string]: unknown;
+            }[];
             impact?: string;
             title?: string;
             replayed?: boolean;
@@ -10838,6 +10867,24 @@ export interface components {
             document_revision_id: string;
             pdf_page: number;
         };
+        PlacementReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            revision_id: string | null;
+            state: components["schemas"]["PlacementReceiptStateEnum"];
+            page_type: string;
+            /** Format: uuid */
+            page_id: string;
+            exists: boolean;
+        };
+        /**
+         * @description * `applied` - applied
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        PlacementReceiptStateEnum: "applied" | "cancelled";
         PlacementRequest: {
             /** Format: uuid */
             id?: string;
@@ -10897,6 +10944,11 @@ export interface components {
             document_revision_id?: string | null;
             reader_target?: components["schemas"]["PlacementReaderTarget"];
             usage_author?: components["schemas"]["PlacementUsageAuthor"] | null;
+            image_url?: string;
+            publication_year?: number | null;
+            authors?: {
+                [key: string]: unknown;
+            }[];
         };
         PlacementSourceChoice: {
             target: components["schemas"]["PlacementTarget"];
@@ -15660,6 +15712,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlacementRead"];
+                };
+            };
+        };
+    };
+    catalog_admin_content_placements_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+                page_type: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_content_placements_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+                page_type: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlacementCancelRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PlacementCancelRequest"];
+                "multipart/form-data": components["schemas"]["PlacementCancelRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementReceipt"];
                 };
             };
         };
