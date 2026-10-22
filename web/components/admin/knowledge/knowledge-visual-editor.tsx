@@ -3,7 +3,10 @@
 import { Children, Fragment, cloneElement, isValidElement, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { projectScholar, scholarPreviewQuery } from "./scholar-preview";
+import { ScholarCanonicalSections } from "./scholar-canonical-sections";
+import type { PublicScholarDetail } from "@/lib/api/scholars.types";
+import { ScholarEditorFrame, scholarEditorSection, scholarEditorSections } from "./scholar-editor-frame";
+import { projectScholar, scholarPreviewBody } from "./scholar-preview";
 import { projectTopic, topicPreviewBody } from "./topic-preview";
 import type { TopicCurationFields } from "./topic-fields";
 import { projectReadingPath } from "@/components/admin/curation/reading-path-preview";
@@ -19,7 +22,7 @@ import { AsyncStatus } from "@/components/action-feedback";
 import { EvidenceCurationEditor } from "@/components/admin/curation/evidence-curation-editor";
 import type { EvidenceCurationType } from "@/lib/api/evidence-curation.types";
 
-type Props = {objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; previewStageId?: string; onPreviewSelect?: (selection: PreviewSelection) => void};
+type Props = {portrait?: ReactNode; objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; previewStageId?: string; onPreviewSelect?: (selection: PreviewSelection) => void};
 type FieldProps = {children?: ReactNode; label?: string; className?: string; type?: string; role?: string; disabled?: boolean; style?: {display?: string}; "data-editor-section"?: string};
 const sectionLabels: Record<string, string> = {identity:"基本信息", biography:"传记与机构", questions:"研究问题", scholars:"相关学者", articles:"策划文章", history:"形成与发展", dimensions:"研究维度", methods:"研究方法 / 工具", concepts:"关键概念", timeline:"生平与事件", "concept-map":"概念图", network:"学术关系", content:"内容与说明", relations:"人物与馆藏关联", works:"代表作品", paths:"阅读路径", passages:"原文策展", media:"图片", learning:"学习问题与争论", curation:"策划说明与署名", versions:"版本记录", sources:"资料来源与路径", publication:"保存与发布"};
 function textOf(node: ReactNode): string { if (typeof node === "string") return node; if (!isValidElement<FieldProps>(node)) return ""; return node.props.label || Children.toArray(node.props.children).map(textOf).join(" "); }
@@ -67,7 +70,7 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
 }
 
 /** Public components project local fields and server-verified, unsaved selections. */
-export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, previewStageId, onPreviewSelect}: Props) {
+export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, previewStageId, onPreviewSelect, portrait}: Props) {
   const searchParams = useSearchParams();
   const pathname=usePathname();
   const user=useAdminSession(),owner=user?String(user.id):"",savedVersion=(savedRecord as {edit_version?:string}|null)?.edit_version||"";
@@ -75,8 +78,8 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const [resolved, setResolved] = useState<{ key: string; payload: KnowledgePreviewPayload } | null>(null);
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
   const [previewRetry, setPreviewRetry] = useState(0);
-  const previewQuery = objectType === "scholar" ? scholarPreviewQuery(draft as Row) : "";
-  const previewBody = objectType === "topic" ? topicPreviewBody(draft as TopicCurationFields) : "";
+  const previewQuery = "";
+  const previewBody = objectType === "scholar" ? scholarPreviewBody(draft as Row) : objectType === "topic" ? topicPreviewBody(draft as TopicCurationFields) : "";
   const previewKey = JSON.stringify([objectType, objectId, refreshKey, previewQuery, previewBody, previewRetry, owner, savedVersion]);
   const payload = resolved?.key === previewKey ? resolved.payload : null;
   const error = failure?.key === previewKey ? failure.message : "";
@@ -101,10 +104,11 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const originalFields = form ? Children.toArray(form.props.children) : [];
   const disabled = originalFields.some(node => isValidElement<FieldProps>(node) && node.props.disabled);
   const fields = form ? flatten(form.props.children) : [];
-  const groups = fields.map(node => ({node, section:sectionFor(node)}));
+  const groups = fields.map(node => ({node, section:sectionFor(node), persistent:alwaysVisible(node)}));
   const evidenceType: EvidenceCurationType | null = objectType === "scholar" || objectType === "topic" ? objectType : ["theory", "concept", "debate", "research_problem"].includes(objectType) ? "node" : null;
-  const sections = Object.entries(sectionLabels).filter(([id]) => groups.some(row => row.section === id) || ["publication","media"].includes(id) || (id === "versions" && objectId) || (id === "passages" && evidenceType)).map(([id,label]) => ({id,label}));
-  const selected = sections.some(row => row.id === active) ? active : "identity";
+  const sections = objectType === "scholar" ? scholarEditorSections : Object.entries(sectionLabels).filter(([id]) => groups.some(row => row.section === id) || ["publication","media"].includes(id) || (id === "versions" && objectId) || (id === "passages" && evidenceType)).map(([id,label]) => ({id,label}));
+  const activeSection = objectType === "scholar" ? scholarEditorSection(active) : active;
+  const selected = sections.some(row => row.id === activeSection) ? activeSection : "identity";
   const live = useMemo(() => {const projected=project(objectType,payload?.perspective.data,draft as Record<string,unknown>);return localImage ? {...projected,hero_image:localImage,cover_url:localImage,cover_media:null,...(objectType === "scholar" ? {person:{...(projected.person as Row),portrait:localImage,portrait_media:null}} : {})}:projected;},[objectType,payload,draft,localImage]);
   const previewPayload = {...payload, object_type:objectType, object_id:objectId || "new", active_perspective:"draft", perspective:{source:"browser_input", available:true, serializer:payload?.perspective.serializer || "", data:live}} as KnowledgePreviewPayload;
   const page = objectType === "reading_path" ? selected : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works","sources","paths"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths","scholars","articles"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
@@ -115,6 +119,11 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
     const url = new URL(window.location.href); url.searchParams.set("section",id); window.history.replaceState(null,"",url.pathname+url.search);
   }
   const evidenceEditor = evidenceType ? <div className="knowledge-visual-editor" inert={publicationLocked}>{objectId ? <EvidenceCurationEditor key={`${evidenceType}:${objectId}`} objectType={evidenceType} objectId={objectId} sections={sections} onSectionChange={changeSection} onDirtyChange={setEvidenceDirty} /> : <><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} onClick={() => changeSection(section.id)}>{section.label}</button>)}</nav><p className="admin-panel">请先保存当前对象，再选择馆内原文。当前基本信息输入仍然保留。</p></>}</div> : null;
+  if (objectType === "scholar" && form) {
+    const publish = objectId && savedRecord ? <KnowledgePublishControl embedded objectType={objectType} objectId={objectId} savedRecord={savedRecord} dirty={dirty || evidenceDirty} onPublished={onPublished} onLockChange={setPublicationLocked} reviewHref={`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",edit_version:savedVersion,return_to:`${pathname}?${searchParams}`})}`} /> : null;
+    const renderedPreview = error ? <p role="alert">{error}。当前输入仍然保留。</p> : objectId && !payload ? <p role="status">正在核对已选馆藏与正式来源…</p> : <div onClickCapture={event => {if ((event.target as Element).closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId="overview" /></div>;
+    return <KnowledgePublicationContext value={{locked:publicationLocked,requestReview:()=>setActive("publication"),requestHistory:()=>setActive("versions")}}><ScholarEditorFrame canonical={objectId ? <ScholarCanonicalSections section={selected} scholarId={objectId} data={payload ? live as unknown as PublicScholarDetail : null} error={error} reload={() => setPreviewRetry(value => value + 1)} /> : null} form={form} groups={groups} active={selected} changeSection={changeSection} dirty={dirty} disabled={disabled} locked={publicationLocked} saved={savedRecord} portrait={portrait} publication={publish} preview={renderedPreview} rail={rail} previewError={error ? <button type="button" onClick={() => setPreviewRetry(value => value + 1)}>重新核对预览</button> : null} extra={<>{selected === "passages" ? evidenceEditor : null}{selected === "versions" && objectId ? <section className="private-preview-label"><h2>完整版本记录</h2>{dirty || evidenceDirty || publicationLocked ? <p>请先保存当前填写，并核对未完成的发布操作。</p> : <Link href={`/admin/publication/knowledge/scholar/${objectId}?${new URLSearchParams({return_to:`${pathname}?${searchParams}`})}`}>查看原版本历史、撤回与恢复 →</Link>}</section> : null}</>} /></KnowledgePublicationContext>;
+  }
   return <KnowledgePublicationContext value={{locked:publicationLocked,requestReview:()=>setActive("publication"),requestHistory:()=>setActive("versions")}}><div className="knowledge-visual-editor">{selected==="versions"&&objectId?<section className="private-preview-label"><strong>完整版本历史</strong>{dirty||evidenceDirty||publicationLocked?<p>请先保存当前填写并核对待处理操作，再进入版本历史。</p>:<Link className="button secondary" href={`/admin/publication/knowledge/${objectType}/${objectId}?${new URLSearchParams({return_to:`${pathname}?${searchParams}`})}`}>查看历史、撤回与恢复 →</Link>}</section>:null}{publicationLocked && selected !== "publication" ? <p role="status">发布记录正在核对，编辑暂时锁定。<button type="button" onClick={()=>setActive("publication")}>查看发布记录</button></p>:null}{objectType === "scholar" && selected === "network" ? <section className="private-preview-label"><strong>规范学术关系</strong><p>两端学者共用同一关系、方向、说明和来源。下方历史关联阅读保持原记录。</p>{objectId ? <Link className="button secondary" href={`/admin/scholars/${objectId}/relations`}>进入学者关系图编辑</Link> : <p>请先保存学者草稿，再建立关系。</p>}</section> : null}{selected === "passages" && evidenceType ? evidenceEditor : <FixedPageEditor sections={sections} activeSection={selected} onSectionChange={changeSection} onPreviewSelect={onPreviewSelect} dirty={dirty} previewHref={objectId ? `/admin/preview/knowledge/${objectType}/${objectId}?page=${page}${savedVersion ? `&edit_version=${encodeURIComponent(savedVersion)}` : ""}` : undefined}
     fields={form ? cloneElement(form,{},<fieldset disabled={disabled || publicationLocked} style={{display:"contents"}}>{groups.map(({node,section},index) => <div key={index} hidden={section !== selected && !alwaysVisible(node)} data-field-section={section}>{node}</div>)}</fieldset>) : children}
     toolbar={error ? <button type="button" className="button secondary" onClick={() => setPreviewRetry(value => value + 1)}>重新核对预览</button> : null}

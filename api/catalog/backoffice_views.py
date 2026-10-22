@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, PolymorphicProxySerializer, extend_schema
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -500,7 +500,20 @@ class TopicPreviewRequestSerializer(serializers.Serializer):
         return result
 
 
-class AdminKnowledgeObjectPreviewView(APIView):
+class ScholarPreviewRequestSerializer(serializers.Serializer):
+    featured_source_id = serializers.UUIDField(allow_null=True, required=False)
+    reading_path_ids = serializers.ListField(child=serializers.UUIDField(), max_length=100, required=False)
+    essential_work_ids = serializers.ListField(child=serializers.UUIDField(), max_length=100, required=False)
+    recommended_work_ids = serializers.ListField(child=serializers.UUIDField(), max_length=24, required=False)
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict) or set(data) - set(self.fields):
+            raise ValidationError("学者预览只接受原文、作品和阅读路径选择。")
+        values = super().to_internal_value(data)
+        return {key: [str(item) for item in value] if isinstance(value, list) else str(value) if value else None for key, value in values.items()}
+
+
+class AdminKnowledgeObjectPreviewView(AdminPrivateResponseMixin, APIView):
     """Protected draft/public preview backed by the public serializer contract."""
 
     permission_classes = [CanViewEvidence]
@@ -580,26 +593,27 @@ class AdminKnowledgeObjectPreviewView(APIView):
 
     @extend_schema(
         operation_id="admin_topic_selection_preview",
-        request=TopicPreviewRequestSerializer,
+        request=PolymorphicProxySerializer(component_name="KnowledgeSelectionPreviewRequest", serializers=[TopicPreviewRequestSerializer, ScholarPreviewRequestSerializer], resource_type_field_name=None),
         parameters=[OpenApiParameter("object_type", OpenApiTypes.STR, OpenApiParameter.PATH),
             OpenApiParameter("object_id", OpenApiTypes.UUID, OpenApiParameter.PATH),
             OpenApiParameter("edit_version", OpenApiTypes.STR, description="Optional exact saved version. Overrides remain unsaved; response includes edit_version. Stale or repeated versions return 409.")],
         responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT, 409: OpenApiTypes.OBJECT},
-        description="Read-only Topic selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written.",
+        description="Read-only Topic or Scholar selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written.",
     )
     def post(self, request, object_type, object_id):
         from catalog.services.knowledge_studio import knowledge_object_preview_payload
 
-        if object_type != "topic" or set(request.query_params) - {"edit_version"}:
-            raise ValidationError("此操作只支持主题的只读选择预览。")
+        if object_type not in {"topic", "scholar"} or set(request.query_params) - {"edit_version"}:
+            raise ValidationError("此操作只支持主题或学者的只读选择预览。")
         version = self._version(object_type, object_id)
         conflict = self._expected(request, version)
         if conflict is not None:
             return conflict
-        body = TopicPreviewRequestSerializer(data=request.data)
+        body = (ScholarPreviewRequestSerializer if object_type == "scholar" else TopicPreviewRequestSerializer)(data=request.data)
         body.is_valid(raise_exception=True)
-        payload = knowledge_object_preview_payload(object_type="topic", object_id=str(object_id),
-            reviewer=request.user, topic_preview_overrides=body.validated_data)
+        overrides = {"scholar_preview_overrides" if object_type == "scholar" else "topic_preview_overrides": body.validated_data}
+        payload = knowledge_object_preview_payload(object_type=object_type, object_id=str(object_id),
+            reviewer=request.user, **overrides)
         return self._response(payload, object_type, object_id, version)
 
 

@@ -40,7 +40,7 @@ export type ScholarWork = {
   href: string; cover_url: string; document_type: string; language: string; publication_year: number | null;
   version_label: string; roles: string[]; role_labels: string[];
   contributions: { person_id: string; name: string; role: string; role_label: string; scope: ScholarContributionScope }[];
-  source_status: "available" | "no_fulltext"; reader_href: string; is_essential: boolean;
+  source_status: "available" | "no_fulltext"; reader_href: string; is_essential: boolean; is_recommended?: boolean; recommendation_reason?: string;
 };
 export type ScholarKnowledge = ScholarLink & {
   node_type: string; summary: string; relation_label: string; relation_source: "person_relation" | "published_work_relation";
@@ -56,7 +56,7 @@ export type PublicScholarDetail = PublicScholarCard & {
   public_revision: ScholarRevision; period_notice: string;
   graph_href: string; research_href: string;
   counts: Record<Exclude<ScholarSection, "overview">, number>;
-  works: ScholarPage<ScholarWork>; concepts: ScholarPage<ScholarKnowledge>; questions: ScholarPage<ScholarKnowledge>;
+  recommended_works: ScholarWork[]; works: ScholarPage<ScholarWork>; concepts: ScholarPage<ScholarKnowledge>; questions: ScholarPage<ScholarKnowledge>;
   timeline: ScholarPage<TimelineEvent>; relations: ScholarPage<ScholarRelationRow>;
   topics: ScholarPage<ScholarLink & { description: string }>; paths: ScholarPage<PublicReadingPath>;
   sources: ScholarPage<ScholarProfileSource>; evidence: ScholarPage<EvidenceCurationItem>;

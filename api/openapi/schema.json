@@ -2898,7 +2898,7 @@
             },
             "post": {
                 "operationId": "admin_topic_selection_preview",
-                "description": "Read-only Topic selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written.",
+                "description": "Read-only Topic or Scholar selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written.",
                 "parameters": [
                     {
                         "in": "query",
@@ -2933,17 +2933,17 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/TopicPreviewRequestRequest"
+                                "$ref": "#/components/schemas/KnowledgeSelectionPreviewRequestRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/TopicPreviewRequestRequest"
+                                "$ref": "#/components/schemas/KnowledgeSelectionPreviewRequestRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/TopicPreviewRequestRequest"
+                                "$ref": "#/components/schemas/KnowledgeSelectionPreviewRequestRequest"
                             }
                         }
                     }
@@ -5658,6 +5658,116 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ScholarPortraitState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/scholars/{scholar_id}/work-selection/": {
+            "get": {
+                "operationId": "catalog_admin_scholars_work_selection_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "ids",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "essential",
+                                "recommended"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "scholar_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ScholarWorkSelectionPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/scholars/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_scholars_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ScholarSaveReceipt"
                                 }
                             }
                         },
@@ -32639,6 +32749,16 @@
                     "request_id"
                 ]
             },
+            "KnowledgeSelectionPreviewRequestRequest": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/TopicPreviewRequestRequest"
+                    },
+                    {
+                        "$ref": "#/components/schemas/ScholarPreviewRequestRequest"
+                    }
+                ]
+            },
             "LanguagesEnum": {
                 "enum": [
                     "ch",
@@ -48848,6 +48968,40 @@
                     "scholar_id"
                 ]
             },
+            "ScholarPreviewRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "featured_source_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "reading_path_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 100
+                    },
+                    "essential_work_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 100
+                    },
+                    "recommended_work_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 24
+                    }
+                }
+            },
             "ScholarProfile": {
                 "type": "object",
                 "properties": {
@@ -49085,6 +49239,170 @@
                     "published_at",
                     "token"
                 ]
+            },
+            "ScholarSaveReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "scholar_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "saved_version": {
+                        "type": "string"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "request_id",
+                    "saved_version",
+                    "scholar_id"
+                ]
+            },
+            "ScholarWork": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "original_title": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "role_labels": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "contributions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ScholarContribution"
+                        }
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/ScholarWorkSourceStatusEnum"
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    },
+                    "is_essential": {
+                        "type": "boolean"
+                    },
+                    "is_recommended": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "recommendation_reason": {
+                        "type": "string",
+                        "default": ""
+                    }
+                },
+                "required": [
+                    "catalog_revision_id",
+                    "contributions",
+                    "cover_url",
+                    "document_type",
+                    "edition_id",
+                    "href",
+                    "id",
+                    "is_essential",
+                    "language",
+                    "original_title",
+                    "publication_year",
+                    "reader_href",
+                    "role_labels",
+                    "roles",
+                    "source_status",
+                    "title",
+                    "version_label"
+                ]
+            },
+            "ScholarWorkSelectionPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ScholarWork"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "ScholarWorkSourceStatusEnum": {
+                "enum": [
+                    "available",
+                    "no_fulltext"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `no_fulltext` - no_fulltext"
             },
             "ScopedSearchContextEnum": {
                 "enum": [
@@ -54123,6 +54441,14 @@
                     },
                     "is_essential": {
                         "type": "boolean"
+                    },
+                    "is_recommended": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "recommendation_reason": {
+                        "type": "string",
+                        "default": ""
                     },
                     "source_notice": {
                         "type": "string"

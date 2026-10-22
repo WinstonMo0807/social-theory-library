@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M20学者公开编辑
+
+新增学者commands/{request_id}与{scholar_id}/work-selection两GET，原279条路径保留共281；原学者POST可绑定existing_person_id，正文保存固定UUID回执及If-Match，原预览POST增加有界Scholar选择。公共ScholarWork/Detail同步推荐数据。具体身份、参数、失败和恢复见SCHOLAR_EDITOR_20261023；契约生成不等于接口运行。
+
 ## 2026-10-23 M19人物规范与身份核对源码接入
 
 catalog/admin/people新增workspace目录、{id}/workspace详情、workspace/preview、workspace/command、workspace/receipts/{id}共五路径，总279。严格操作字段、owner头、版本/预览/明确确认/请求回执；原归并及撤回写入口同样必需X-Editor-Owner。返回当前User绑定，不读取读者私有记录。

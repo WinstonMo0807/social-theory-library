@@ -698,7 +698,7 @@ export interface paths {
         /** @description Protected KnowledgePreviewPayload envelope with existing draft/published perspectives and their public serializer data. Optional scholar selections affect only an in-memory draft copy; no data is saved. */
         get: operations["admin_knowledge_object_preview"];
         put?: never;
-        /** @description Read-only Topic selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written. */
+        /** @description Read-only Topic or Scholar selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written. */
         post: operations["admin_topic_selection_preview"];
         delete?: never;
         options?: never;
@@ -1293,6 +1293,38 @@ export interface paths {
         get: operations["catalog_admin_scholars_portrait_retrieve"];
         put?: never;
         post: operations["catalog_admin_scholars_portrait_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/scholars/{scholar_id}/work-selection/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholars_work_selection_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/scholars/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholars_commands_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8018,6 +8050,7 @@ export interface components {
             request_id: string;
             applied_saved: boolean;
         };
+        KnowledgeSelectionPreviewRequestRequest: components["schemas"]["TopicPreviewRequestRequest"] | components["schemas"]["ScholarPreviewRequestRequest"];
         /**
          * @description * `ch` - ch
          *     * `en` - en
@@ -12932,6 +12965,13 @@ export interface components {
             editor_url: string;
             fingerprint: string;
         };
+        ScholarPreviewRequestRequest: {
+            /** Format: uuid */
+            featured_source_id?: string | null;
+            reading_path_ids?: string[];
+            essential_work_ids?: string[];
+            recommended_work_ids?: string[];
+        };
         ScholarProfile: {
             /** Format: uuid */
             readonly id: string;
@@ -13003,6 +13043,55 @@ export interface components {
             published_at: string | null;
             change_note: string;
         };
+        ScholarSaveReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            scholar_id: string;
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ScholarWork: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            catalog_revision_id: string;
+            title: string;
+            original_title: string;
+            href: string;
+            cover_url: string;
+            document_type: string;
+            language: string;
+            publication_year: number | null;
+            version_label: string;
+            roles: string[];
+            role_labels: string[];
+            contributions: components["schemas"]["ScholarContribution"][];
+            source_status: components["schemas"]["ScholarWorkSourceStatusEnum"];
+            reader_href: string;
+            is_essential: boolean;
+            /** @default false */
+            is_recommended: boolean;
+            /** @default  */
+            recommendation_reason: string;
+        };
+        ScholarWorkSelectionPage: {
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["ScholarWork"][];
+        };
+        /**
+         * @description * `available` - available
+         *     * `no_fulltext` - no_fulltext
+         * @enum {string}
+         */
+        ScholarWorkSourceStatusEnum: "available" | "no_fulltext";
         /**
          * @description * `works` - works
          *     * `scholars` - scholars
@@ -14389,6 +14478,10 @@ export interface components {
             source_status: components["schemas"]["TopicWorkSourceStatusEnum"];
             reader_href: string;
             is_essential: boolean;
+            /** @default false */
+            is_recommended: boolean;
+            /** @default  */
+            recommendation_reason: string;
             source_notice: string;
             selection: components["schemas"]["SelectionEnum"];
             /** Format: uuid */
@@ -16309,9 +16402,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["TopicPreviewRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["TopicPreviewRequestRequest"];
-                "multipart/form-data": components["schemas"]["TopicPreviewRequestRequest"];
+                "application/json": components["schemas"]["KnowledgeSelectionPreviewRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["KnowledgeSelectionPreviewRequestRequest"];
+                "multipart/form-data": components["schemas"]["KnowledgeSelectionPreviewRequestRequest"];
             };
         };
         responses: {
@@ -17645,6 +17738,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarPortraitState"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholars_work_selection_retrieve: {
+        parameters: {
+            query?: {
+                ids?: string;
+                kind?: "essential" | "recommended";
+                page?: number;
+                q?: string;
+            };
+            header?: never;
+            path: {
+                scholar_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarWorkSelectionPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholars_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarSaveReceipt"];
                 };
             };
         };

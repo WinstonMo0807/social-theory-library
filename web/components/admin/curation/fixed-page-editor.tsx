@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /** An isolated viewport keeps public media queries and typography identical to the page. */
-function PreviewViewport({ children }: { children: ReactNode }) {
+export function PreviewViewport({ children }: { children: ReactNode }) {
   const [width, setWidth] = useState(1120);
   const [fitWidth, setFitWidth] = useState(true);
   const [availableWidth, setAvailableWidth] = useState(0);

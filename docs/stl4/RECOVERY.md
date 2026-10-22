@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 M20学者公开编辑
+
+M20原Person→Scholar、保存回执与选书/排序/理由/预览已接；281契约、96/52/61。详见SCHOLAR_EDITOR_20261023，白名单tmp/stl4-scholar-checkpoint-20261023.json。不重跑tmp/stl4-m20-*.py一次性替换或记录脚本。所有正式验收及迁移仍待，接续M21–M24及其他全站视图。
+
 ## 2026-10-23 编辑预览继承日夜外观
 
 前置413522b。FixedPageEditor预览iframe现复制并观察原appearance.ts实际写入的data-theme/theme-choice/text-size/font-family及class/lang；日夜/字号/字体变更同步到原公共预览组件，卸载清理观察器。只做TypeScript noEmit及目标ESLint，不测试/浏览器/业务操作。96/50/63、279契约保持。

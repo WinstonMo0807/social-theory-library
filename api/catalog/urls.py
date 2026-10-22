@@ -1,3 +1,4 @@
+from catalog.scholar_work_views import ScholarWorkSelectionView
 from django.urls import path
 from .home_views import HomeView
 from .knowledge_citation_views import KnowledgeEntryCitationView
@@ -35,6 +36,7 @@ from .person_resolution_views import (
     AdminPersonMergeRecordView, AdminPersonMergeRollbackView,
 )
 from .person_authority_views import (AuthorityDirectoryView, AuthorityDetailView, AuthorityPreviewView, AuthorityCommandView, AuthorityReceiptView)
+from .scholar_commands import ScholarSaveReceiptView
 from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView, MediaCollectionView
 from .scholar_media_views import ScholarPortraitSelectionView, PublicPersonPortraitView
 from .knowledge_media_views import KnowledgeImageSelectionView, PublicKnowledgeImageView
@@ -815,6 +817,8 @@ urlpatterns = [
     path("admin/topics/<uuid:pk>/merge-preview/", AdminTopicMergePreviewView.as_view(), name="admin-topic-merge-preview"),
     path("admin/topics/<uuid:pk>/merge/", AdminTopicMergeView.as_view(), name="admin-topic-merge"),
     path("admin/scholars/", AdminScholarListView.as_view(), name="admin-scholar-list"),
+    path("admin/scholars/<uuid:scholar_id>/work-selection/", ScholarWorkSelectionView.as_view(), name="scholar-work-selection"),
+    path("admin/scholars/commands/<uuid:request_id>/", ScholarSaveReceiptView.as_view(), name="scholar-save-receipt"),
     path("admin/scholars/<uuid:pk>/", AdminScholarDetailView.as_view(), name="admin-scholar-detail"),
     path("works/", WorkListView.as_view(), name="work-list"),
     path("works/<uuid:work_id>/cover/", PublicWorkCoverView.as_view(), name="public-work-cover"),

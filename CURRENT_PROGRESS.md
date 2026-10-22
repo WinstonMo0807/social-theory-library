@@ -1,5 +1,15 @@
 # Social Theory Library 当前进度
 
+## 2026-10-23 M20学者公开页编辑源码接入
+
+前置ac28461。实际读取唯一PDF142–143，原Person/ScholarProfile建档、固定请求回执、账户绑定、原版本保存与发布、真实馆藏选书/排序/理由及六栏编辑布局已接。只读预览新增有界POST并继承日夜样式；旧关系/生平笔记保留，详细正式编辑沿原服务。见SCHOLAR_EDITOR_20261023。
+
+281契约，96源码/52部分/61待实施。本单元无新迁移，catalog0075与reading0022/23/24仍未执行。仅静态语法/类型/SQL编译/声明比较/契约/CSS；无测试、浏览器、实际业务/账户操作、迁移或生产。富文本工具栏、完整原位关系/事件状态和精确视觉仍待，不能写为M20全量完成。继续M21知识编辑与其余全站功能。
+
+## 2026-10-23 M20学者编辑实施中
+
+前置ac28461。实际读取唯一PDF142–143。新增scholar_commands包装原学者保存与原修订服务，User锁内会话/权限、固定请求UUID/原AuditEvent回执及查回接口；前端useScholarSave接内存原请求和账号隔离，保存后刷新原详情。原AdminScholarSerializer已增加从existing_person_id建立同一Person档案及防更换身份校验。当前尚未提交，既有人物的前端入口、终稿页面布局、契约生成及静态检查继续处理中。没有运行测试/浏览器/业务/迁移/生产。279契约与96/50/63暂保持，不能把本条写为完成。
+
 ## 2026-10-23 编辑预览继承日夜外观
 
 前置413522b。FixedPageEditor预览iframe现复制并观察原appearance.ts实际写入的data-theme/theme-choice/text-size/font-family及class/lang；日夜/字号/字体变更同步到原公共预览组件，卸载清理观察器。只做TypeScript noEmit及目标ESLint，不测试/浏览器/业务操作。96/50/63、279契约保持。

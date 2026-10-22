@@ -134,6 +134,8 @@ class ScholarWorkSerializer(serializers.Serializer):
     source_status = serializers.ChoiceField(choices=("available", "no_fulltext"))
     reader_href = serializers.CharField(allow_blank=True)
     is_essential = serializers.BooleanField()
+    is_recommended = serializers.BooleanField(required=False, default=False)
+    recommendation_reason = serializers.CharField(allow_blank=True, required=False, default="")
 
 
 class ScholarKnowledgeSerializer(ScholarLinkSerializer):
@@ -213,6 +215,7 @@ class PublicScholarDetailSerializer(PublicScholarCardSerializer):
     research_href = serializers.CharField()
     counts = serializers.DictField(child=serializers.IntegerField())
     works = ScholarWorkPage()
+    recommended_works = ScholarWorkSerializer(many=True)
     concepts = ScholarKnowledgePage()
     questions = ScholarKnowledgePage()
     timeline = ScholarTimelinePage()

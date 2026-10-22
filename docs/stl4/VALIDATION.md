@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-23 M20学者公开编辑
+
+仅静态：64d009退出0，46AST/48禁止数据库的SQL编译/迁移声明一致/OpenAPI0错误10既有提示/281契约/CSS解析。3ef178：TS与目标ESLint退出0，3条受控img提示。其后推荐理由范围条件已在b47797重新解析本单元Python语法，a4ad97/后续返回中TypeScript和目标ESLint退出0。无测试、浏览器、实际业务或迁移。未来验收场景见SCHOLAR_EDITOR_20261023。
+
 ## 2026-10-23 编辑预览继承日夜外观
 
 前置413522b。FixedPageEditor预览iframe现复制并观察原appearance.ts实际写入的data-theme/theme-choice/text-size/font-family及class/lang；日夜/字号/字体变更同步到原公共预览组件，卸载清理观察器。只做TypeScript noEmit及目标ESLint，不测试/浏览器/业务操作。96/50/63、279契约保持。

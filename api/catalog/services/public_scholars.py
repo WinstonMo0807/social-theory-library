@@ -21,7 +21,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from catalog.models import (Contribution, EditorialRevision, EvidenceCurationReference,
     KnowledgeNode, Page, PersonNameVariant, PersonNodeRelation, PersonSubdisciplineRelation,
     PersonTopicRelation, ReadingPath, ScholarProfile, ScholarRelation, Subdiscipline, Topic,
-    WorkNodeRelation)
+    Work, WorkNodeRelation)
 from catalog.services.publication_eligibility import public_editions
 from catalog.services.scoped_search import public_scholar_queryset
 from catalog.services.query_lexicon.registry import FORMAL_PERSON_VARIANT_SOURCES
@@ -313,11 +313,20 @@ def _curated_topics():
         for row in snapshot.items.filter(topic__editorial_status="published").select_related("topic").order_by("position", "pk")[:8]]
 
 
+def selectable_works(profile, kind):
+    rows = scholar_editions(profile.person_id) if kind == "essential" else public_editions()
+    primary = rows.filter(work_id=OuterRef("work_id")).order_by("-is_primary", "pk").values("pk")[:1]
+    return rows.filter(pk=Subquery(primary)).order_by("work_id", "pk")
+
+
 def _work_rows(editions, profile):
     from catalog.services.contribution_scope import public_contribution_scope
     result = []
     curation = profile.curation if isinstance(profile.curation, dict) else {}
     essential = set(_strings(curation.get("essential_work_ids")))
+    recommended = set(_strings(curation.get("recommended_work_ids")))
+    reasons = curation.get("work_recommendations", {})
+    reasons = reasons if isinstance(reasons, dict) else {}
     labels = dict(Contribution.Role.choices)
     for edition in editions:
         revision = edition.active_catalog_revision
@@ -351,7 +360,8 @@ def _work_rows(editions, profile):
             "language": work.get("language", ""), "publication_year": version.get("publication_year"), "version_label": version.get("version_label", ""),
             "roles": roles, "role_labels": [labels.get(role, "其他贡献者") for role in roles], "contributions": contributions,
             "source_status": "available" if readable else "no_fulltext", "reader_href": f"/reader/{reader.pk}?revision={revision.document_revision_id}" if readable else "",
-            "is_essential": str(edition.work_id) in essential})
+            "is_essential": str(edition.work_id) in essential, "is_recommended": str(edition.work_id) in recommended,
+            "recommendation_reason": str(reasons.get(str(edition.work_id), ""))[:2000] if str(edition.work_id) in essential | recommended else ""})
     return result
 
 
@@ -554,7 +564,13 @@ def public_scholar_detail(slug, params=None, *, request=None, preview_profile=No
     result = _cards([profile])[0]
     path = f"/api/catalog/scholars/{profile.slug}/"
     editions = scholar_editions(profile.person_id)
-    works = scholar_editions(profile.person_id, roles).order_by("-is_primary", "work_id", "pk")
+    curation = profile.curation if isinstance(profile.curation, dict) else {}
+    essential = [key for key in _strings(curation.get("essential_work_ids"))[:100] if _uuid(key)]
+    works = scholar_editions(profile.person_id, roles)
+    if essential:
+        works = works.alias(editorial_order=Case(*[When(work_id=key, then=Value(index)) for index, key in enumerate(essential)], default=Value(len(essential)), output_field=IntegerField())).order_by("editorial_order", "-is_primary", "work_id", "pk")
+    else:
+        works = works.order_by("-is_primary", "work_id", "pk")
     result["works"] = _page(works, params, path, section="works", transform=lambda rows: _work_rows(rows, profile))
     nodes = _knowledge(profile, editions).order_by("sort_order", "canonical_name_zh", "pk")
     for name, types in (("concepts", ("concept",)), ("questions", ("research_problem", "debate"))):
@@ -562,6 +578,9 @@ def public_scholar_detail(slug, params=None, *, request=None, preview_profile=No
     topics = Topic.objects.filter(editorial_status="published", person_relations__person=profile.person, person_relations__review_status="approved").distinct().order_by("-curation_level", "name", "pk")
     result["topics"] = _page(topics, params, path, section="topics", transform=lambda rows: [{**_link(row, "topic"), "description": row.description} for row in rows])
     curation = profile.curation if isinstance(profile.curation, dict) else {}
+    recommended = [key for key in _strings(curation.get("recommended_work_ids"))[:24] if _uuid(key)]
+    recommended_rows = {row["id"]: row for row in _work_rows(selectable_works(profile, "recommended").filter(work_id__in=recommended), profile)}
+    result["recommended_works"] = [recommended_rows[key] for key in recommended if key in recommended_rows]
     result["paths"] = _related_path_page(profile, editions, nodes, params, path, request)
     from catalog.services.timeline_publication import public_events, scholar_match, ordered
     from catalog.theory_serializers import NormalizedTimelineEventSerializer
@@ -601,6 +620,28 @@ def validate_scholar_curation(value, profile=None):
     if not isinstance(value, dict):
         raise ValidationError({"curation": "策划内容须为对象。"})
     result = deepcopy(value)
+    for key, limit in (("essential_work_ids", 100), ("recommended_work_ids", 24)):
+        if key not in result:
+            continue
+        rows = result[key]
+        if not isinstance(rows, list) or len(rows) > limit or any(not isinstance(row, str) or not _uuid(row) for row in rows) or len(set(rows)) != len(rows):
+            raise ValidationError({key: f"请选择最多 {limit} 部不同的馆藏作品。"})
+        result[key] = [_uuid(row) for row in rows]
+        if Work.objects.filter(pk__in=result[key]).count() != len(rows):
+            raise ValidationError({key: "包含已不存在的作品，请核对原选择。"})
+        previous = profile.curation if profile is not None and isinstance(profile.curation, dict) else {}
+        added = set(result[key]) - set(_strings(previous.get(key)))
+        if added:
+            if profile is None:
+                raise ValidationError({key: "请先建立学者草稿，再从馆藏选书。"})
+            eligible = selectable_works(profile, "essential" if key == "essential_work_ids" else "recommended")
+            if eligible.filter(work_id__in=added).count() != len(added):
+                raise ValidationError({key: "新增作品当前不满足公开条件或人物贡献要求，请重新从馆藏选择。"})
+    if "work_recommendations" in result:
+        reasons = result["work_recommendations"]
+        selected = set(result.get("essential_work_ids", [])) | set(result.get("recommended_work_ids", []))
+        if not isinstance(reasons, dict) or len(reasons) > 124 or any(key not in selected or not isinstance(reason, str) or len(reason) > 2000 for key, reason in reasons.items()):
+            raise ValidationError({"work_recommendations": "推荐理由须对应已选作品，每项最多 2000 字。"})
     for key in ("nationalities", "occupations"):
         if key in result and (not isinstance(result[key], list) or len(result[key]) > 20 or any(not isinstance(row, str) or not row.strip() or len(row) > 120 for row in result[key])):
             raise ValidationError({key: "最多 20 项，每项须为 1–120 字。"})
@@ -645,9 +686,9 @@ def validate_scholar_curation(value, profile=None):
 
 
 def scholar_preview_overrides(params):
-    """Bound the two unsaved selector inputs; an explicit blank clears a choice."""
-    if set(params) - {"featured_source_id", "reading_path_ids"}:
-        raise ValidationError("学者预览只接受原文引用与阅读路径选择。")
+    """Bound the unsaved selector inputs; an explicit blank clears a choice."""
+    if set(params) - {"featured_source_id", "reading_path_ids", "essential_work_ids", "recommended_work_ids"}:
+        raise ValidationError("学者预览只接受原文引用、作品和阅读路径选择。")
     result = {}
     for key in params:
         values = params.getlist(key)
@@ -680,7 +721,7 @@ def preview_scholar(target, *, snapshot=None, request=None, curation_overrides=N
         if key in data:
             setattr(profile, key, deepcopy(data[key]))
     if curation_overrides is not None:
-        if set(curation_overrides) - {"featured_source_id", "reading_path_ids"}:
+        if set(curation_overrides) - {"featured_source_id", "reading_path_ids", "essential_work_ids", "recommended_work_ids"}:
             raise ValidationError("学者预览不接受其他策划字段覆盖。")
         selected = validate_scholar_curation(curation_overrides, profile)
         profile.curation = {**deepcopy(profile.curation or {}), **selected}

@@ -3154,6 +3154,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
 
 
 class AdminScholarSerializer(serializers.ModelSerializer):
+    existing_person_id = serializers.UUIDField(write_only=True, required=False)
     edit_version = serializers.CharField(read_only=True)
     person_id = serializers.UUIDField(source="person.id", read_only=True)
     preferred_name = serializers.CharField(source="person.preferred_name", max_length=240)
@@ -3173,6 +3174,7 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScholarProfile
         fields = (
+            "existing_person_id",
             "id",
             "edit_version",
             "person_id",
@@ -3281,6 +3283,11 @@ class AdminScholarSerializer(serializers.ModelSerializer):
         from catalog.services.public_scholars import validate_scholar_curation
         return validate_scholar_curation(value, self.instance)
 
+    def validate_existing_person_id(self, value):
+        if self.instance is not None:
+            raise serializers.ValidationError("已有学者不能通过保存更换人物身份，请使用原身份核对流程。")
+        return value
+
     def validate_birth_year(self, value):
         from catalog.models import validate_person_year
         validate_person_year(value)
@@ -3291,7 +3298,7 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     def validate_editorial_status(self, value):
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if value in {"published", "archived"} and not has_capability(
+        if value in {"published", "archived"} and (self.instance is None or value != self.instance.editorial_status) and not has_capability(
             user,
             Capability.PUBLISH_AUTHORITY,
         ):
@@ -3313,12 +3320,23 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         person_data = validated_data.pop("person")
         preferred_name = person_data["preferred_name"]
-        if validated_data.get("editorial_status") == "published":
-            person_data["authority_status"] = Person.AuthorityStatus.VERIFIED
-        person = Person.objects.create(
-            sort_name=preferred_name,
-            **person_data,
-        )
+        existing_id = validated_data.pop("existing_person_id", None)
+        if existing_id:
+            person = Person.objects.select_for_update().filter(pk=existing_id).first()
+            if person is None or person.authority_status in {"merged", "archived", "rejected"}:
+                raise serializers.ValidationError("请选择仍然有效的原人物规范。")
+            if ScholarProfile.objects.filter(person=person).exists():
+                raise serializers.ValidationError("此人物已有学者档案，请打开原档案编辑。")
+            if validated_data.get("editorial_status", "draft") != "draft":
+                raise serializers.ValidationError("从原人物新建学者时请先保存草稿，再核对发布。")
+            # Selecting an identity never silently overwrites its authority data.
+            for field, value in person_data.items():
+                if getattr(person, field) != value:
+                    raise serializers.ValidationError("原人物资料已变化或表单与原记录不一致，请重新读取人物后建档。")
+        else:
+            if validated_data.get("editorial_status") == "published":
+                person_data["authority_status"] = Person.AuthorityStatus.VERIFIED
+            person = Person.objects.create(sort_name=preferred_name, **person_data)
         validated_data["slug"] = validated_data.get("slug") or _available_slug(
             ScholarProfile,
             preferred_name,
@@ -3327,6 +3345,8 @@ class AdminScholarSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        if "existing_person_id" in validated_data:
+            raise serializers.ValidationError("已有学者不能通过保存更换人物身份，请使用原身份核对流程。")
         person_data = validated_data.pop("person", {})
         for field_name, value in person_data.items():
             setattr(instance.person, field_name, value)

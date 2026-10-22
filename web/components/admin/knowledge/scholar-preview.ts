@@ -6,8 +6,8 @@ const strings = (value: unknown): string[] => Array.isArray(value) ? value.filte
 const emptyPage = <T>(): ScholarPage<T> => ({ count: 0, page: 1, page_size: 12, total_pages: 0, next: null, previous: null, results: [] });
 const safeUrl = (value: unknown) => { try { const url = new URL(text(value)); return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.href : ""; } catch { return ""; } };
 
-export function scholarPreviewQuery(draft: Row): string {
-  return new URLSearchParams({ featured_source_id: text(draft.featuredSourceId), reading_path_ids: strings(draft.readingPathIds).join(",") }).toString();
+export function scholarPreviewBody(draft: Row): string {
+  return JSON.stringify({ featured_source_id: text(draft.featuredSourceId) || null, reading_path_ids: strings(draft.readingPathIds), essential_work_ids: strings(draft.essentialWorkIds), recommended_work_ids: strings(draft.recommendedWorkIds) });
 }
 
 /** Form-only draft projection; it never upgrades free-text notes into verified public evidence. */
@@ -15,9 +15,12 @@ export function projectScholar(base: Row, draft: Row): PublicScholarDetail {
   const saved = base as Partial<PublicScholarDetail>, person = saved.person;
   const sourceRows = Array.isArray(draft.profileSources) ? draft.profileSources as ScholarProfileSource[] : [];
   const sources = sourceRows.map(row => ({ ...row, url: safeUrl(row.url) }));
-  // Both selections are resolved by the protected preview endpoint, across all pages.
+  // The selections are resolved by the protected preview endpoint, across all pages.
   const paths = saved.paths || emptyPage<PublicScholarDetail["paths"]["results"][number]>();
   const quote = saved.featured_quote;
+  const reasons = (draft.workRecommendations || {}) as Record<string, string>;
+  const curated = new Set([...strings(draft.essentialWorkIds), ...strings(draft.recommendedWorkIds)]);
+  const withReason = (row: PublicScholarDetail["works"]["results"][number]) => ({...row, recommendation_reason: curated.has(row.id) ? reasons[row.id] || "" : ""});
   return {
     id: text(draft.id) || saved.id || "preview", person_id: text(draft.personId) || saved.person_id || "",
     slug: text(draft.slug), href: "", short_description: text(draft.description),
@@ -28,7 +31,8 @@ export function projectScholar(base: Row, draft: Row): PublicScholarDetail {
     fields: saved.fields || [], schools: saved.schools || [], work_count: saved.work_count || 0, authored_work_count: saved.authored_work_count || 0,
     matched_alias: "", profile_state: text(draft.biography) ? "available" : "sparse", graph_href: "", research_href: "",
     public_revision: { token: "preview", id: null, number: null, published_at: null, change_note: "当前表单草稿，尚未公开。" }, period_notice: saved.period_notice || "",
-    works: saved.works || emptyPage(), concepts: saved.concepts || emptyPage(), questions: saved.questions || emptyPage(),
+    recommended_works: (saved.recommended_works || []).map(withReason),
+    works: saved.works ? {...saved.works, results: saved.works.results.map(withReason)} : emptyPage(), concepts: saved.concepts || emptyPage(), questions: saved.questions || emptyPage(),
     timeline: saved.timeline || emptyPage(), relations: saved.relations || emptyPage(), topics: saved.topics || emptyPage(),
     paths, sources: { ...emptyPage(), count: sources.length, results: sources }, evidence: saved.evidence || emptyPage(),
     featured_quote: quote?.source.public_eligible ? quote : null, disambiguation: [],

@@ -1,5 +1,9 @@
 "use client";
 
+import { ExistingScholarStart } from "./admin/knowledge/existing-scholar-start";
+import { useScholarSave } from "./admin/knowledge/use-scholar-save";
+import { ScholarWorkEditor } from "./admin/knowledge/scholar-work-editor";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { ScholarProfileFieldsEditor, type ScholarProfileFields } from "./admin/knowledge/scholar-profile-fields";
 import { TopicFieldsEditor, topicCuration, topicFields, type TopicCurationFields } from "./admin/knowledge/topic-fields";
 import { KnowledgeImagePanel } from "./admin/media/knowledge-image-panel";
@@ -24,7 +28,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
@@ -830,6 +834,8 @@ type ScholarDraft = ScholarProfileFields & {
   keyConcepts: string;
   conceptMap: string;
   essentialWorkIds: string[];
+  recommendedWorkIds: string[];
+  workRecommendations: Record<string, string>;
   networkScholarIds: string[];
   networkRelations: Record<string, RelationMetadata>;
   frequentScholarIds: string[];
@@ -858,7 +864,7 @@ const emptyScholar: ScholarDraft = {
   timeline: "",
   keyConcepts: "",
   conceptMap: "",
-  essentialWorkIds: [],
+  essentialWorkIds: [], recommendedWorkIds: [], workRecommendations: {},
   networkScholarIds: [],
   networkRelations: {},
   frequentScholarIds: [],
@@ -871,6 +877,16 @@ const emptyScholar: ScholarDraft = {
 };
 
 export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
+  const user = useAdminSession(), params = useSearchParams(), [epoch, setEpoch] = useState(0);
+  useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
+  if (!user) return <p role="status">正在核对编辑账户…</p>;
+  if (scholarId === "new" && params.get("person")) return <ExistingScholarStart key={`${user.id}:${epoch}:${params.get("person")}`} owner={String(user.id)} personId={params.get("person")!} />;
+  return <ScholarWorkspace key={`${user.id}:${epoch}:${scholarId || "list"}`} scholarId={scholarId} owner={String(user.id)} />;
+}
+
+function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: string }) {
+  const editor = useAdminSession(), canEdit = hasAdminCapability(editor, "can_edit_draft_authority") && (scholarId !== "new" || hasAdminCapability(editor, "can_create_authority"));
+  const command = useScholarSave(owner);
   const paging = useAdminListPage();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -951,6 +967,8 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
         "description",
       ),
       essentialWorkIds: stringArray(curation.essential_work_ids),
+      recommendedWorkIds: stringArray(curation.recommended_work_ids),
+      workRecommendations: curation.work_recommendations && typeof curation.work_recommendations === "object" ? Object.fromEntries(Object.entries(curation.work_recommendations).filter((entry): entry is [string, string] => typeof entry[1] === "string")) : {},
       networkScholarIds: network.flatMap((item) => (
         item && typeof item === "object" && "scholar_id" in item
           ? [String((item as Record<string, unknown>).scholar_id)]
@@ -984,7 +1002,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   async function save(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token || savingRef.current || (editorOnly && scholarId !== "new" && draft.id !== scholarId)) return false;
+    if (!canEdit || !token || savingRef.current || (editorOnly && scholarId !== "new" && draft.id !== scholarId)) return false;
     savingRef.current = true;
     setSaving(true);
     setEditConflict(false);
@@ -994,7 +1012,8 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
       ...draft.baseCuration,
       profile_sources: draft.profileSources, nationalities: draft.nationalities.map(s=>s.trim()).filter(Boolean), occupations: draft.occupations.map(s=>s.trim()).filter(Boolean),
       featured_source_id: draft.featuredSourceId || null, reading_path_ids: draft.readingPathIds,
-      essential_work_ids: draft.essentialWorkIds,
+      essential_work_ids: draft.essentialWorkIds, recommended_work_ids: draft.recommendedWorkIds,
+      work_recommendations: Object.fromEntries(Object.entries(draft.workRecommendations).filter(([id]) => draft.essentialWorkIds.includes(id) || draft.recommendedWorkIds.includes(id))),
       key_concepts: parseStructuredLines(
         draft.keyConcepts,
         ["name", "description", "source"],
@@ -1015,12 +1034,9 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
     };
     if (!draftOnly && draft.status === "published" && detail.data?.editorial_status !== "published" && !window.confirm("保存并公开这位学者的资料？读者将看到本页内容。")) { savingRef.current = false; setSaving(false); return false; }
     try {
-      const saved = await apiRequest<AdminScholar>(
+      const saved = await command.save<AdminScholar & { save_replayed?: boolean }>(
         `/catalog/admin/scholars/${draft.id ? `${draft.id}/` : ""}`,
-        {
-          method: draft.id ? "PATCH" : "POST",
-          headers: draft.id ? editorialHeaders(draft) : undefined,
-          body: JSON.stringify({
+        JSON.stringify({
             slug: draft.slug,
             preferred_name: draft.name,
             assisted_candidates: prefills.ids,
@@ -1041,10 +1057,9 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             featured_quote: draft.quote,
             quote_source: draft.quoteSource,
             editorial_status: draftOnly ? (detail.data?.editorial_status ?? "draft") : draft.status,
-          }),
-        },
-        token,
+          }), draft.id ? editorialHeaders(draft) : {}, draft.id ? "PATCH" : "POST",
       );
+      if (saved.save_replayed) { unsaved.current = false; setHasUnsaved(false); edit(saved); detail.refresh(); router.replace(`/admin/scholars/${saved.id}`); setMessage("已查回原保存，并重新读取当前版本，没有重复写入。"); return true; }
       setDraftState((current) => ({
         ...current,
         id: saved.id,
@@ -1058,6 +1073,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
       prefills.clear();
       setMessage(`学者资料已保存（${new Date().toLocaleTimeString("zh-CN")}）。${saved.editorial_revision ? "尚未发布，读者看到的内容未改变。" : saved.editorial_status === "published" ? "此资料已公开。" : "尚未公开。"}${scholarId === "new" ? "已打开新建学者的编辑页。" : "你仍在当前编辑页。"}`);
       resource.refresh();
+      if (editorOnly && scholarId !== "new") detail.refresh();
       if (editorOnly && scholarId === "new") {
         router.replace(`/admin/scholars/${saved.id}`);
       }
@@ -1074,7 +1090,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
 
   async function refreshScholarSuggestion() {
     if (!draft.id) return;
-    const updated = await apiRequest<AdminScholar>(`/catalog/admin/scholars/${draft.id}/`, {}, getServerSessionCredential());
+    const updated = await withPrivateOwner(owner, () => apiRequest<AdminScholar>(`/catalog/admin/scholars/${draft.id}/`, {cache:"no-store", headers:{"X-Editor-Owner":owner}}, getServerSessionCredential()));
     setDraftState((current) => current.id === updated.id ? {
       ...current, edit_version: updated.edit_version,
       baseCuration: updated.curation ?? current.baseCuration,
@@ -1095,7 +1111,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   }
 
   return (
-    <AdminPageFrame eyebrow="人物资料" title="学者" description="中文名、原名、译名和作者身份分别保存。学者馆藏作品从真实作者关系汇总。">
+    <AdminPageFrame eyebrow="页面编排 / 学者与知识" title={editorOnly ? "学者公开页编辑" : "学者"} description={editorOnly ? "编辑人物的公共学术面貌，同时保留规范身份和出处。" : "中文名、原名、译名和作者身份分别保存。学者馆藏作品从真实作者关系汇总。"}>
       {!editorOnly ? <Toolbar query={query} onQueryChange={setQuery} onSubmit={() => { const normalized = query.trim(); setSubmittedQuery(normalized); router.replace(normalized ? `/admin/scholars?q=${encodeURIComponent(normalized)}` : "/admin/scholars"); }} onCreate={() => router.push("/admin/scholars/new")} createLabel="新建学者" /> : null}
       <div className={`admin-master-detail ${editorOnly ? "editor-only" : ""}`}>
         {!editorOnly ? <section className="admin-entity-table scholar-admin-table admin-panel">
@@ -1113,14 +1129,17 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
           {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{ q: submittedQuery }} />
         </section> : null}
-        {editorOnly ? <KnowledgeVisualEditor objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
-          <p>保存这位学者的姓名、传记和本页编排，不合并人物。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
+        {command.recovery ? <aside className="form-message" role="status"><p>有一次保存需要核对。表单正文只在当前页面内存中，刷新后只读取回执，不重复创建。</p><button type="button" disabled={saving} onClick={() => void command.lookup().then(receipt => { if (receipt?.exists) { unsaved.current = false; setHasUnsaved(false); detail.refresh(); router.replace(`/admin/scholars/${receipt.scholar_id}`); } else if (receipt) setMessage("原保存已完成，但学者后来已删除；未重复创建。"); })}>读取原保存回执</button>{command.canRetry ? <button type="button" disabled={saving} onClick={() => void save(undefined, true)}>按原请求重试保存</button> : null}</aside> : null}{command.error ? <p role="alert">{command.error}</p> : null}
+
+        {editorOnly ? <KnowledgeVisualEditor portrait={draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => { setPortraitRevision(value => value + 1); detail.refresh(); }} /> : null} objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
+
+                    <fieldset disabled={!canEdit || saving || !command.ready || Boolean(command.recovery)} style={{ display: "contents" }}>
           <EditorialPrefillNotice state={prefills} />
-          <header><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2>{draft.id ? <RecycleControl kind="scholar" id={draft.id} name={draft.name} onDeleted={() => window.location.assign("/admin/scholars")} /> : null}</div>{draft.personId ? <Link className="button secondary" href={`/admin/scholars/people?source=${encodeURIComponent(draft.personId)}`}>检查重复人物</Link> : null}</header>
-          <ResourceState loading={detail.loading} error={detail.error} empty={false} />
+          <header data-editor-section="publication"><div><Link href="/admin/scholars">返回列表</Link><h2>{draft.id ? "编辑学者" : "新建学者"}</h2>{draft.id ? <RecycleControl kind="scholar" id={draft.id} name={draft.name} onDeleted={() => router.replace("/admin/scholars")} /> : null}</div>{draft.personId ? <Link className="button secondary" href={`/admin/scholars/people?source=${encodeURIComponent(draft.personId)}`}>检查重复人物</Link> : null}</header>
+          <section data-editor-section="feedback"><ResourceState loading={detail.loading} error={detail.error} empty={false} /></section>
           {detail.data?.editorial_status === "published" && !detail.data.public_eligible ? <AsyncStatus state="error" message="学者档案已标记发布，但人物身份尚待确认。完成确认后才会出现在公开站点。" /> : null}
-          <label><span>主要显示名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
-          <CurationFieldAssistant
+          <label data-editor-section="identity-name"><span>姓名</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
+          <section data-editor-section="assistance"><CurationFieldAssistant
             label="学者姓名"
             scopeId={draft.id || "new"}
             affectedFields={["主要显示名", "原名"]}
@@ -1131,14 +1150,14 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
               prefills.fill("", (current) => ({ ...current, name: suggestion.label || current.name,
                 originalName: suggestion.originalName || current.originalName }));
             }}
-          />
-          <label><span>原名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
+          /></section>
+          <label data-editor-section="identity-original"><span>外文名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
           <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
-          <p>肖像在右侧媒体面板中选择。新建学者请先保存资料。</p>
-          <div className="inline-fields"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
-          <label><span>页面简介</span><textarea aria-label="页面简介" aria-describedby="scholar-description-help" rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small id="scholar-description-help">用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
-          <label><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于人物简介与资料来源栏目。正式事件在时间线中绑定学者与准确来源，并单独发布。</small></label>
-          <CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
+
+          <div data-editor-section="identity-years" className="scholar-years"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
+          <label data-editor-section="biography"><h2>二、导读</h2><span>页面简介</span><textarea aria-label="页面简介" aria-describedby="scholar-description-help" rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small id="scholar-description-help">用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
+          <label data-editor-section="biography"><h2>三、生平说明</h2><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于人物简介与资料来源栏目。正式事件在时间线中绑定学者与准确来源，并单独发布。</small></label>
+          <section data-editor-section="assistance"><CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="译名或别名"
             targetType="person"
             targetId={draft.personId}
@@ -1152,9 +1171,9 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
               return Boolean(name) && prefills.fill(candidateId, (current) => ({ ...current, aliases: mergeUniqueStrings(editorLines(current.aliases), [name]).join("\n") }));
             }}
             onAccepted={refreshScholarSuggestion}
-          />
+          /></section>
           <StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" />
-          <CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
+          <section data-editor-section="assistance"><CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="外部标识"
             targetType="person"
             targetId={draft.personId}
@@ -1162,8 +1181,8 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             query={draft.originalName.trim() || draft.name}
             formContext={{ language: "zh", name: draft.name, original_name: draft.originalName, birth_year: Number(draft.birthYear) || null, death_year: Number(draft.deathYear) || null }}
             onAccepted={refreshScholarSuggestion}
-          />
-          <CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
+          /></section>
+          <section data-editor-section="assistance"><CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="机构"
             targetType="person"
             targetId={draft.personId}
@@ -1181,7 +1200,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
               return Boolean(name) && prefills.fill(candidateId, (current) => ({ ...current, affiliations: mergeUniqueStrings(editorLines(current.affiliations), [name]).join("\n") }));
             }}
             onAccepted={refreshScholarSuggestion}
-          />
+          /></section>
           <StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" />
           <StructuredRowsEditor focused
             label="生平与重要发表"
@@ -1248,12 +1267,8 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             <p>重要文献须有当前正式版本的明确贡献记录才公开。其余历史关联选择保留供编辑核对，不自动成为已确认的学术关系。</p>
             <section data-editor-section="timeline"><Link href="/admin/theories/timeline">管理正式生平与发表事件</Link></section>
             <section data-editor-section="concepts"><Link href="/admin/theories/relations">管理规范知识关系</Link></section>
-            <CuratedSelector
-              label="重要文献"
-              options={draft.suggestions.works ?? []}
-              selected={draft.essentialWorkIds}
-              onChange={(essentialWorkIds) => setDraft({ ...draft, essentialWorkIds })}
-            />
+            <section data-editor-section="works"><ScholarWorkEditor profileId={draft.id} kind="essential" selected={draft.essentialWorkIds} reasons={draft.workRecommendations} onChange={(essentialWorkIds, workRecommendations) => setDraft({ ...draft, essentialWorkIds, workRecommendations })} /></section>
+            <section data-editor-section="paths"><ScholarWorkEditor profileId={draft.id} kind="recommended" selected={draft.recommendedWorkIds} reasons={draft.workRecommendations} onChange={(recommendedWorkIds, workRecommendations) => setDraft({ ...draft, recommendedWorkIds, workRecommendations })} /></section>
             <CuratedSelector
               label="历史关联阅读"
               options={draft.suggestions.related_scholars ?? []}
@@ -1281,7 +1296,9 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
               onChange={(relatedTheoryIds) => setDraft({ ...draft, relatedTheoryIds })}
             />
           </fieldset>
-          <section data-editor-section="sources"><ScholarProfileFieldsEditor profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
+          <section data-editor-section="identity-tags"><ScholarProfileFieldsEditor section="identity" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
+          <section data-editor-section="sources"><h2>四、规范信息与来源</h2><ScholarProfileFieldsEditor section="sources" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
+          <section data-editor-section="paths"><ScholarProfileFieldsEditor section="paths" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
           <section data-editor-section="sources"><details><summary>历史语录文字（保留原记录）</summary><p>这些自由文字继续保存供编辑核对；新版公开页的引语只使用上方绑定的正式原文。</p>
           <label><span>代表语录</span><textarea rows={3} value={draft.quote} onChange={(event) => setDraft({ ...draft, quote: event.target.value })} /></label>
           <label><span>语录来源</span><input value={draft.quoteSource} onChange={(event) => setDraft({ ...draft, quoteSource: event.target.value })} /></label></details></section>
@@ -1298,7 +1315,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
             onChanged={(snapshot) => setDraft((current) => ({ ...current, status: snapshot.status }))}
             onDeleted={() => router.replace("/admin/scholars")}
           /> : null}
-        </form><div className="knowledge-object-editor-rail">{draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => setPortraitRevision((value) => value + 1)} /> : null}<KnowledgeObjectContextPanel
+        </fieldset></form><div className="knowledge-object-editor-rail"><KnowledgeObjectContextPanel
           objectType="scholar"
           hasUnsavedChanges={hasUnsaved}
           objectId={draft.id}

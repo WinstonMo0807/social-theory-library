@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M20学者公开编辑
+
+M20保持原Person/ScholarProfile/EditorialRevision/AuditEvent。新建可关联既有人物，账户锁内权限与UUID审计回执包裹原保存；选书读取原正式出版快照，顺序和推荐理由归原curation/发布修订，无平行馆藏/新表。共享后台响应补可选编辑账户比对及private/no-store/Vary，学者只读预览POST与主题共原预览服务。
+
 ## 2026-10-23 M19人物规范与身份核对源码接入
 
 人物规范继续使用原Person、PersonNameVariant、Contribution、ScholarProfile、AuditEvent、QueryLexicon与知识发布事件。0075仅为原Person追加语言/国别/内部说明/标识来源五字段，不新建人物库。规范编辑与学者发布版本分开；存在学者草稿先完成版本核对。新字段默认空，旧归并回执只在新增字段仍为空时兼容，真实后续改动仍阻止撤回。

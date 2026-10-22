@@ -1402,7 +1402,10 @@ class AdminTopicDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpdate
         )
 
 
-class AdminScholarListView(AdminEditorialDraftReadMixin, generics.ListCreateAPIView):
+from catalog.scholar_commands import ScholarCommandMixin
+
+
+class AdminScholarListView(ScholarCommandMixin, AdminEditorialDraftReadMixin, generics.ListCreateAPIView):
     editorial_target_type = "scholar_profile"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminScholarSerializer
@@ -1448,7 +1451,7 @@ class AdminScholarListView(AdminEditorialDraftReadMixin, generics.ListCreateAPIV
             )
 
 
-class AdminScholarDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpdateDestroyAPIView):
+class AdminScholarDetailView(ScholarCommandMixin, AdminEditorialDraftReadMixin, generics.RetrieveUpdateDestroyAPIView):
     editorial_target_type = "scholar_profile"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminScholarSerializer

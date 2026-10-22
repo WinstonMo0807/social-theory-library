@@ -10,6 +10,7 @@ from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.response import Response
 
 from common.capabilities import Capability, has_capability
+from common.private_responses import PrivateAccountResponses
 
 from catalog.models import CanonicalObjectRevision, EditorialRevision, Person
 
@@ -46,7 +47,13 @@ def current_editorial_version(target_type, object_id):
     return editorial_edit_version(target_type, target, revision=revision, canonical_revision=canonical)
 
 
-class AdminPrivateResponseMixin:
+class AdminPrivateResponseMixin(PrivateAccountResponses):
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        expected = request.headers.get("X-Editor-Owner")
+        if expected is not None and expected != str(request.user.pk):
+            raise PermissionDenied("编辑账户已变化，请重新读取当前资料。")
+
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
         response["Cache-Control"] = "private, no-store"
