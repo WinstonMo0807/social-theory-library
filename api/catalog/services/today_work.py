@@ -23,7 +23,7 @@ from ingestion.models import ProcessingJob
 FIELDS = ("t_id", "t_object_id", "t_type", "t_title", "t_label", "t_updated", "t_url", "t_state", "t_bucket", "t_kind")
 CATEGORIES = {"all": "全部", "editing": "最近编辑", "intake": "待继续收件", "catalog": "待校准目录", "problems": "待处理问题", "publication": "待发布核对"}
 KINDS = {"": "全部任务类型", "catalog": "书目处理", "curation": "策划与知识", "processing": "数字化处理"}
-STATES = {"": "全部状态", "draft": "已保存 · 未发布", "changes_pending": "已发布 · 有草稿", "pending": "等待处理", "running": "处理中", "paused": "已暂停", "partial": "部分完成", "attention": "待核对", "failed": "处理失败", "ready": "待发布核对"}
+STATES = {"": "全部状态", "draft": "已保存 · 未发布", "changes_pending": "已发布 · 有草稿", "pending": "等待处理", "running": "处理中", "paused": "已暂停", "partial": "部分完成", "attention": "待核对", "failed": "处理失败", "ready": "待发布核对", "published": "已发布", "withdrawn": "已撤回", "succeeded": "已完成", "completed": "已完成", "canceled": "已取消", "approved": "已确认", "suggested": "待确认", "rejected": "已否决", "archived": "已归档"}
 COMPACT_UUID = re.compile(r"\b[0-9a-fA-F]{32}\b")
 
 
@@ -46,10 +46,10 @@ def current_processing_jobs():
     ).exclude(upload_item__status="deleted")
 
 
-def _search(queryset, query, title, extra=()):
+def _search(queryset, query, title, extra=(), condition=None):
     if not query:
         return queryset
-    condition = Q(**{f"{title}__icontains": query})
+    condition = (condition or Q()) | Q(**{f"{title}__icontains": query})
     for key in extra:
         condition |= Q(**{f"{key}__icontains": query})
     try:
@@ -61,13 +61,13 @@ def _search(queryset, query, title, extra=()):
     return queryset.filter(condition)
 
 
-def work_querysets(user, *, query="", owner="all", kind="", state=""):
+def work_querysets(user, *, query="", owner="all", kind="", state="", search_all=False):
     can_catalog = has_capability(user, Capability.EDIT_METADATA)
     can_processing = has_capability(user, Capability.VIEW_SYSTEM_STATUS)
     mine = user.pk if owner == "me" else None
     rows = []
     if can_catalog:
-        editions, uploads = inventory()
+        editions, uploads = inventory(publication_scope=search_all)
         if mine is not None:
             sessions = models.CatalogingSession.objects.filter(edition_id=OuterRef("pk"), created_by_id=mine)
             drafts = models.EditorialRevision.objects.filter(created_by_id=mine).filter(
@@ -75,7 +75,9 @@ def work_querysets(user, *, query="", owner="all", kind="", state=""):
             editions = editions.annotate(t_my_session=Exists(sessions), t_my_draft=Exists(drafts)).filter(
                 Q(t_my_session=True) | Q(t_my_draft=True) | Q(uploaditem__batch__created_by_id=mine)).distinct()
             uploads = uploads.filter(batch__created_by_id=mine)
-        editions = _search(editions, query, "work__title", ("work__original_title", "uploaditem__source_filename", "contributions__person__preferred_name")).distinct()
+        from ingestion.services.processing_identity import draft_title_work_ids
+        changed_titles = draft_title_work_ids(query) if query else models.Work.objects.none().values("pk")
+        editions = _search(editions, query, "work__title", ("work__original_title", "uploaditem__source_filename", "contributions__person__preferred_name"), Q(work_id__in=changed_titles)).distinct()
         uploads = _search(uploads, query, "source_filename")
         open_sessions = models.CatalogingSession.objects.filter(edition_id=OuterRef("pk"), status__in=OPEN_STATUSES).order_by("-updated_at", "pk")
         from ingestion.models import UploadItem
@@ -87,7 +89,7 @@ def work_querysets(user, *, query="", owner="all", kind="", state=""):
                 When(t_session__isnull=False, then=Concat(Value("/admin/cataloging/"), Cast("t_session", CharField()))),
                 When(t_intake__isnull=False, then=Concat(Value("/admin/intake/"), Cast("t_intake", CharField()))),
                 default=Concat(Value("/admin/library/works/"), Cast("work_id", CharField()), Value("?edition="), Cast("pk", CharField())), output_field=CharField()),
-            t_state=Case(When(q_exception=True, then=Value("failed")), When(q_ready=True, then=Value("ready")), When(q_preparing=True, then=Value("running")), default=Value("attention"), output_field=CharField()),
+            t_state=Case(*([When(state="withdrawn", then=Value("withdrawn")), When(q_active=True, q_draft=True, then=Value("changes_pending")), When(q_active=True, then=Value("published"))] if search_all else []), When(q_exception=True, then=Value("failed")), When(q_ready=True, then=Value("ready")), When(q_preparing=True, then=Value("running")), default=Value("attention"), output_field=CharField()),
             t_bucket=Case(When(q_exception=True, then=Value("problems")), When(q_ready=True, then=Value("publication")), When(q_pending_upload=True, then=Value("intake")), default=Value("catalog"), output_field=CharField()),
             t_kind=Value("catalog"),
         ).values(*FIELDS))
@@ -98,7 +100,7 @@ def work_querysets(user, *, query="", owner="all", kind="", state=""):
             t_state=Case(When(status="failed", then=Value("failed")), default=Value("pending"), output_field=CharField()),
             t_bucket=Case(When(status="failed", then=Value("problems")), default=Value("intake"), output_field=CharField()), t_kind=Value("catalog"),
         ).values(*FIELDS))
-    for drafts in draft_querysets(user, owner_id=mine):
+    for drafts in draft_querysets(user, owner_id=mine, pending_only=not search_all):
         if query:
             drafts = drafts.filter(Q(q_title__icontains=query) | Q(q_object_id__icontains=query.replace("-", "")) | Q(q_object_id__icontains=query))
         rows.append(drafts.annotate(
@@ -106,15 +108,19 @@ def work_querysets(user, *, query="", owner="all", kind="", state=""):
             t_updated=F("q_updated"), t_url=F("q_url"), t_state=F("q_state"), t_bucket=Value("editing"), t_kind=Value("curation"),
         ).values(*FIELDS))
     if can_processing:
-        jobs = current_processing_jobs()
-        semantic = models.SemanticIndexJob.objects.filter(Q(asset__is_current=True) | Q(asset__isnull=True), status__in=("queued", "running", "partial", "failed", "paused"))
-        newer_semantic = _newer(models.SemanticIndexJob.objects.filter(asset_id=OuterRef("asset_id"), operation=OuterRef("operation")))
-        semantic = semantic.annotate(t_newer=Exists(newer_semantic)).filter(Q(t_newer=False) | Q(status__in=("queued", "running", "paused")))
+        jobs = ProcessingJob.objects.all() if search_all else current_processing_jobs()
+        semantic = models.SemanticIndexJob.objects.all()
+        if not search_all:
+            semantic = semantic.filter(Q(asset__is_current=True) | Q(asset__isnull=True), status__in=("queued", "running", "partial", "failed", "paused"))
+            newer_semantic = _newer(models.SemanticIndexJob.objects.filter(asset_id=OuterRef("asset_id"), operation=OuterRef("operation")))
+            semantic = semantic.annotate(t_newer=Exists(newer_semantic)).filter(Q(t_newer=False) | Q(status__in=("queued", "running", "paused")))
         if mine is not None:
             jobs = jobs.filter(created_by_id=mine)
             semantic = semantic.filter(requested_by_id=mine)
-        jobs = _search(jobs, query, "edition__work__title", ("asset__edition__work__title", "upload_item__source_filename", "job_type", "task_id"))
-        semantic = _search(semantic, query, "asset__edition__work__title", ("asset__original_filename",))
+        from ingestion.services.processing_identity import draft_title_work_ids
+        changed_titles = draft_title_work_ids(query) if query else models.Work.objects.none().values("pk")
+        jobs = _search(jobs, query, "edition__work__title", ("asset__edition__work__title", "upload_item__source_filename", "job_type", "task_id"), Q(edition__work_id__in=changed_titles) | Q(asset__edition__work_id__in=changed_titles) | Q(upload_item__edition__work_id__in=changed_titles))
+        semantic = _search(semantic, query, "asset__edition__work__title", ("asset__original_filename", "task_id"), Q(asset__edition__work_id__in=changed_titles))
         for queryset, ordinary in ((jobs, True), (semantic, False)):
             source = "processing_job" if ordinary else "semantic_index_job"
             rows.append(queryset.order_by().annotate(
@@ -136,29 +142,19 @@ def _union(rows):
     return rows[0].union(*rows[1:], all=True)
 
 
-def today_work_page(user, options):
-    rows = work_querysets(user, query=options["q"], owner=options["owner"], kind=options["kind"], state=options["state"])
-    counts = {key: _union([row.filter(t_bucket=key) for row in rows]).count() for key in CATEGORIES if key != "all"}
+def today_work_page(user, options, *, search_all=False):
+    rows = work_querysets(user, query=options["q"], owner=options["owner"], kind="" if search_all else options["kind"], state=options["state"], search_all=search_all)
+    if search_all and not options["q"]:
+        rows = [row.none() for row in rows]
+    counts = {key: _union([row.filter(**{("t_kind" if search_all else "t_bucket"): key}) for row in rows]).count() for key in (KINDS if search_all else CATEGORIES) if key not in ("all", "")}
     counts["all"] = sum(counts.values())
-    if options["category"] != "all":
+    if search_all and options["kind"]:
+        rows = [row.filter(t_kind=options["kind"]) for row in rows]
+    if not search_all and options["category"] != "all":
         rows = [row.filter(t_bucket=options["category"]) for row in rows]
     paginator = Paginator(_union(rows).order_by("-t_updated" if options["ordering"].startswith("-") else "t_updated", "t_id"), 20)
     page = paginator.get_page(options["page"])
-    results = []
-    for row in page.object_list:
-        value = dict(zip(("id", "object_id", "object_type", "title", "label", "updated_at", "url", "state", "category", "kind"), (row[key] for key in FIELDS)))
-        for key in ("id", "object_id", "url"):
-            value[key] = COMPACT_UUID.sub(lambda match: str(UUID(match.group())), value[key])
-        value["state_label"] = STATES.get(value["state"], "状态待核对")
-        value["action_label"] = "继续编辑" if value["category"] == "editing" else "核对发布" if value["category"] == "publication" else "继续处理" if value["kind"] == "processing" else "查看详情"
-        value["summary"] = {
-            "editing": "继续已有编辑，保存与发布分别处理。", "intake": "核对来源文件与书目信息，继续收件。",
-            "catalog": "核对书目资料、目录和关联信息。", "publication": "检查资料与预览，确认后再发布。",
-            "problems": "查看当前处理记录及原因，再决定下一步。",
-        }[value["category"]]
-        value["thumbnail_url"] = ""
-        results.append(value)
-    _thumbnails(results)
+    results = _project_rows(page.object_list, search_all=search_all)
     return {"results": results, "count": paginator.count, "page": page.number, "page_size": paginator.per_page,
             "total_pages": paginator.num_pages, "counts": counts, "checked_at": timezone.now(),
             "restricted": not has_capability(user, Capability.VIEW_SYSTEM_STATUS),
@@ -166,12 +162,40 @@ def today_work_page(user, options):
             "ordering": options["ordering"], "can_upload": has_capability(user, Capability.UPLOAD), "can_create_issue": has_capability(user, Capability.EDIT_METADATA)}
 
 
+def work_notices(user):
+    rows = [row.filter(t_state__in=("failed", "paused", "partial")) for row in work_querysets(user)]
+    records = _union(rows).order_by("-t_updated", "t_id")
+    return {"count": records.count(), "checked_at": timezone.now(), "results": _project_rows(records[:5])}
+
+
+def _project_rows(records, *, search_all=False):
+    results = []
+    for row in records:
+        value = dict(zip(("id", "object_id", "object_type", "title", "label", "updated_at", "url", "state", "category", "kind"), (row[key] for key in FIELDS)))
+        for key in ("id", "object_id", "url"):
+            value[key] = COMPACT_UUID.sub(lambda match: str(UUID(match.group())), value[key])
+        value["state_label"] = STATES.get(value["state"], "状态待核对")
+        value["action_label"] = "查看详情" if search_all else "继续编辑" if value["category"] == "editing" else "核对发布" if value["category"] == "publication" else "继续处理" if value["kind"] == "processing" else "查看详情"
+        value["summary"] = {
+            "editing": "继续已有编辑，保存与发布分别处理。", "intake": "核对来源文件与书目信息，继续收件。",
+            "catalog": "核对书目资料、目录和关联信息。", "publication": "检查资料与预览，确认后再发布。",
+            "problems": "查看当前处理记录及原因，再决定下一步。",
+        }[value["category"]]
+        if search_all:
+            value["summary"] = "打开对应资料与记录；保存和公开状态以工作页为准。"
+        value["thumbnail_url"] = ""
+        results.append(value)
+    _thumbnails(results)
+    return results
+
+
 def _thumbnails(rows):
     """Reuse protected media renditions; missing images remain an honest blank."""
     ids = {kind: [row["object_id"] for row in rows if row["object_type"] == kind] for kind in {row["object_type"] for row in rows}}
     images = {}
     legacy = {}
-    for edition in models.Edition.objects.filter(pk__in=ids.get("edition", [])).select_related("work"):
+    editions = list(models.Edition.objects.filter(pk__in=ids.get("edition", [])).select_related("work"))
+    for edition in editions:
         images[("edition", str(edition.pk))] = edition.work.cover_rendition_id
         if edition.work.cover:
             legacy[("edition", str(edition.pk))] = edition.work.cover.url
@@ -188,14 +212,18 @@ def _thumbnails(rows):
             images[key] = UUID(str(image or ""))
         except ValueError:
             images[key] = None
-    from ingestion.services.processing_identity import task_titles, processing_identity
+    from ingestion.services.processing_identity import edition_titles, task_titles, processing_identity
     jobs = list(ProcessingJob.objects.filter(pk__in=ids.get("processing_job", [])).select_related("edition__work", "asset__edition__work", "upload_item__edition__work"))
     jobs += list(models.SemanticIndexJob.objects.filter(pk__in=ids.get("semantic_index_job", [])).select_related("asset__edition__work"))
+    catalog_titles = edition_titles(editions)
+    edition_labels = {str(edition.pk): catalog_titles[str(edition.work_id)]["title"] for edition in editions}
     titles = task_titles(jobs)
     job_titles = {( "processing_job" if isinstance(job, ProcessingJob) else "semantic_index_job", str(job.pk)): processing_identity(job, titles)["title"] for job in jobs}
     for row in rows:
         key = (row["object_type"], row["object_id"])
         rendition = images.get(key)
+        if row["object_type"] == "edition" and row["object_id"] in edition_labels:
+            row["title"] = edition_labels[row["object_id"]]
         if key in job_titles:
             row["title"] = job_titles[key]
         if rendition:

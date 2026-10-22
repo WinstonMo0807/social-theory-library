@@ -963,6 +963,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/search/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_search_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/site-content/": {
         parameters: {
             query?: never;
@@ -1123,6 +1139,22 @@ export interface paths {
         head?: never;
         /** @description Opt-in only on protected Admin views, never public catalog views. */
         patch: operations["catalog_admin_topics_partial_update"];
+        trace?: never;
+    };
+    "/api/catalog/admin/work-notices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_work_notices_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/catalog/admin/works/{work_id}/editions/": {
@@ -12019,6 +12051,12 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        WorkNotices: {
+            count: number;
+            /** Format: date-time */
+            checked_at: string;
+            results: components["schemas"]["TodayWorkItem"][];
+        };
         WorkRelatedConcept: {
             /** Format: uuid */
             id: string;
@@ -14199,6 +14237,67 @@ export interface operations {
             };
         };
     };
+    catalog_admin_search_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `` -
+                 *     * `catalog` - catalog
+                 *     * `curation` - curation
+                 *     * `processing` - processing
+                 */
+                kind?: "" | "catalog" | "curation" | "processing";
+                /**
+                 * @description * `-updated_at` - -updated_at
+                 *     * `updated_at` - updated_at
+                 */
+                ordering?: "-updated_at" | "updated_at";
+                /**
+                 * @description * `all` - all
+                 *     * `me` - me
+                 */
+                owner?: "all" | "me";
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `` -
+                 *     * `draft` - draft
+                 *     * `changes_pending` - changes_pending
+                 *     * `pending` - pending
+                 *     * `running` - running
+                 *     * `paused` - paused
+                 *     * `partial` - partial
+                 *     * `attention` - attention
+                 *     * `failed` - failed
+                 *     * `ready` - ready
+                 *     * `published` - published
+                 *     * `withdrawn` - withdrawn
+                 *     * `succeeded` - succeeded
+                 *     * `completed` - completed
+                 *     * `canceled` - canceled
+                 *     * `approved` - approved
+                 *     * `suggested` - suggested
+                 *     * `rejected` - rejected
+                 *     * `archived` - archived
+                 */
+                state?: "" | "draft" | "changes_pending" | "pending" | "running" | "paused" | "partial" | "attention" | "failed" | "ready" | "published" | "withdrawn" | "succeeded" | "completed" | "canceled" | "approved" | "suggested" | "rejected" | "archived";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayWorkPage"];
+                };
+            };
+        };
+    };
     catalog_admin_site_content_retrieve: {
         parameters: {
             query?: never;
@@ -14602,8 +14701,17 @@ export interface operations {
                  *     * `attention` - attention
                  *     * `failed` - failed
                  *     * `ready` - ready
+                 *     * `published` - published
+                 *     * `withdrawn` - withdrawn
+                 *     * `succeeded` - succeeded
+                 *     * `completed` - completed
+                 *     * `canceled` - canceled
+                 *     * `approved` - approved
+                 *     * `suggested` - suggested
+                 *     * `rejected` - rejected
+                 *     * `archived` - archived
                  */
-                state?: "" | "draft" | "changes_pending" | "pending" | "running" | "paused" | "partial" | "attention" | "failed" | "ready";
+                state?: "" | "draft" | "changes_pending" | "pending" | "running" | "paused" | "partial" | "attention" | "failed" | "ready" | "published" | "withdrawn" | "succeeded" | "completed" | "canceled" | "approved" | "suggested" | "rejected" | "archived";
             };
             header?: never;
             path?: never;
@@ -14763,6 +14871,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminTopic"];
+                };
+            };
+        };
+    };
+    catalog_admin_work_notices_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkNotices"];
                 };
             };
         };

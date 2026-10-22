@@ -12,7 +12,7 @@ from .discovery_index_views import DiscoveryIndexView
 from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, DiscoverySearchExpandView,
     DiscoverySearchCancelView, DiscoverySearchContextView, DiscoverySearchRetryView, DiscoverySearchRemoveDocumentView, LegacyDiscoverySearchView)
 from .curation_queue_views import CurationDraftQueueView
-from .today_work_views import TodayWorkView
+from .today_work_views import AdminSearchView, TodayWorkView, WorkNoticesView
 from .editorial_assistance_views import EditorialAssistanceDetailView, EditorialAssistanceListView
 from .shared_curation_views import (CurationSourcesView, AdminEvidenceCurationView, PublishEvidenceCurationView,
     PublicEvidenceCurationView, AdminScholarRelationListView, AdminScholarRelationDetailView,
@@ -239,6 +239,8 @@ urlpatterns = [
     path("admin/scholar-relations/<uuid:pk>/archive/", ArchiveScholarRelationView.as_view(), name="admin-scholar-relation-archive"),
     path("scholar-relations/", PublicScholarRelationListView.as_view(), name="public-scholar-relation-list"),
     path("admin/today-work/", TodayWorkView.as_view(), name="admin-today-work"),
+    path("admin/search/", AdminSearchView.as_view(), name="admin-global-search"),
+    path("admin/work-notices/", WorkNoticesView.as_view(), name="admin-work-notices"),
     path("admin/curation-drafts/", CurationDraftQueueView.as_view(), name="admin-curation-drafts"),
     path("admin/recommendation-issues/<uuid:issue_id>/assistant/", EditorialAssistanceListView.as_view(), name="editorial-assistance-list"),
     path("admin/recommendation-issues/<uuid:issue_id>/assistant/<uuid:job_id>/", EditorialAssistanceDetailView.as_view(), name="editorial-assistance-detail"),

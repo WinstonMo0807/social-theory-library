@@ -274,3 +274,7 @@ PDF18继续使用现有公开会话、GET /explore?q=、/account?section=setting
 - `GET {id}/original/` 返回本人加密记录解密后的原始文件附件；按需 PDF 预览使用本地 blob URL 与已有 PdfCanvas，关闭或会话变化时回收。DOCX 预览只显示实际识别的引文附近文本和位置，精确字体/分页仍通过下载原稿查看，不调用外部文档预览服务。
 - `GET {id}/ocr/` 返回真实OCR进度和单元状态；带 `unit_id` 可取该单元解析记录。`GET {id}/export/` 返回 `schema_version=1` 的私人记录JSON并重新校验来源；前端保留报告JSON，并在重新核对owner后读取完整export快照，提供打印/保存PDF；打印包含全部引文、书目、实际来源、人工修正与历史，不受当前分页筛选限制。不可访问来源不打印旧片段，会话变化/权限失效/afterprint清除打印快照；打印版式与分页仍待统一验证，不写回Word/PDF原稿。
 - 待实施/待验证必须分开保留：私人材料匹配、稿件新版本差异及增量重查、DOCX精确排版/原稿编辑回写尚未覆盖；PDF209的完整三栏解析流程仍需逐图核实。真实设备内存与排队负载、真实OCR/模型、权限与恢复、导出内容及全部桌面/移动视觉验收未运行。B03、B04、B05、B06不能据本次源码接入标记通过。
+
+## 2026-10-22 管理跨对象搜索与异常工作提醒
+
+GET /api/catalog/admin/search/ 使用TodayWorkPage投影，q≤200、kind(catalog/curation/processing)、state、owner(all/me)、ordering及page，20条一页；空q返回空结果。counts为当前q/state/owner下各类型全量数量，kind仅筛选结果页，不截断分面。包括已发布/已确认资料与历史任务。GET /api/catalog/admin/work-notices/ 返回count/checked_at/results（最多5条），当前failed/paused/partial才提醒。两者CanAccessBackOffice、private/no-store，处理任务仍需VIEW_SYSTEM_STATUS；编辑不可获隐藏计数。均只读、不创建任务/新索引。通知不存在伪造已读状态。

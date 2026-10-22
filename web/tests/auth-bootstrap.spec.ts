@@ -87,6 +87,10 @@ async function mockApi(page: Page, options: MockAuthOptions = {}) {
         ordering: "-updated_at", can_upload: true, can_create_issue: true });
       return;
     }
+    if (path === "/api/catalog/admin/work-notices/") {
+      await fulfillJson(route, 200, { count: 0, checked_at: "2026-10-22T00:00:00Z", results: [] });
+      return;
+    }
     if (path === "/api/ingestion/dashboard/") {
       await fulfillJson(route, 200, {
         documents: { total: 0, published: 0, withdrawn: 0 },

@@ -13,6 +13,8 @@ async function setup(page: Page, result: typeof data = data, fail = false) {
     const url = new URL(route.request().url());
     if (url.pathname === "/api/auth/me/") return route.fulfill({ json: { id: 1, email: "today@example.test", display_name: "验收编辑", role: result.restricted ? "editor" : "admin", capabilities: ["access_back_office", "can_edit_metadata", "can_upload", "can_publish_work", ...(result.restricted ? [] : ["can_view_system_status", "can_manage_users"])], reading_preferences: {} } });
     if (url.pathname === "/api/catalog/admin/today-work/") return route.fulfill({ status: fail ? 503 : 200, json: fail ? { detail: "工作记录暂不可读取" } : result });
+    if (url.pathname === "/api/catalog/admin/search/") return route.fulfill({ status: fail ? 503 : 200, json: fail ? { detail: "搜索暂不可读取" } : { ...result, counts: { all: result.count, catalog: 0, curation: result.count, processing: 0 } } });
+    if (url.pathname === "/api/catalog/admin/work-notices/") return route.fulfill({ status: fail ? 503 : 200, json: fail ? { detail: "提醒暂不可读取" } : { count: 1, checked_at: data.checked_at, results: [{ ...row, state: "failed", state_label: "处理失败" }] } });
     return route.fulfill({ json: { results: [] } });
   });
 }
@@ -73,4 +75,39 @@ test("mobile task actions and keyboard navigation remain reachable", async ({ pa
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "后台导航" })).toHaveCount(0);
   await expect(page.getByRole("list", { name: "待处理任务" }).getByRole("link", { name: "继续编辑" })).toBeVisible();
+});
+
+test("global search preserves its own return path and existing query", async ({ page }) => {
+  await setup(page);
+  await page.goto("/admin/search?q=检索词&kind=curation&page=2");
+  await expect(page.getByLabel("搜索后台书名、作者、主题或任务编号")).toHaveValue("检索词");
+  const href = await page.getByRole("list", { name: "搜索结果" }).getByRole("link", { name: row.title }).getAttribute("href");
+  expect(new URL(href!, "https://test.invalid").searchParams.get("return_to")).toBe("/admin/search?q=%E6%A3%80%E7%B4%A2%E8%AF%8D&kind=curation&page=2");
+});
+
+test("notice badge opens real rows and failure remains visible", async ({ page }) => {
+  await setup(page);
+  await page.goto("/admin");
+  await page.getByLabel("工作提醒，1项需要处理").click();
+  const panel = page.getByRole("region", { name: "工作提醒", exact: true });
+  await expect(panel).toContainText("处理失败");
+  await expect(panel.getByRole("link", { name: "查看待处理问题" })).toHaveAttribute("href", "/admin?category=problems");
+  await page.route("**/api/catalog/admin/work-notices/", route => route.fulfill({ status: 503, json: { detail: "提醒暂不可读取" } }));
+  await panel.getByRole("button", { name: "刷新工作提醒" }).click();
+  await expect(page.getByLabel("工作提醒读取失败")).toBeVisible();
+  await expect(panel.getByRole("alert")).toContainText("提醒暂不可读取");
+  await expect(panel.getByText("当前没有需要处理的提醒。", { exact: true })).toHaveCount(0);
+});
+
+test("mobile global search expands from the top icon", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page);
+  await page.goto("/admin");
+  const input = page.getByLabel("搜索后台书名、作者、主题或任务编号");
+  await expect(input).toBeHidden();
+  await page.getByRole("button", { name: "打开后台搜索" }).click();
+  await expect(input).toBeVisible();
+  await input.fill("主题");
+  await page.locator("#admin-global-search").getByRole("button", { name: "搜索", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/search\?q=/);
 });

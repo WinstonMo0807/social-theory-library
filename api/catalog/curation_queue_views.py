@@ -58,13 +58,20 @@ def _draft_result(row):
     return result
 
 
-def _objects(queryset, kind, label, title, title_key, state_field, url_prefix, *, url_suffix="", url_expression=None, can_edit=True, query=""):
+def _objects(queryset, kind, label, title, title_key, state_field, url_prefix, *, url_suffix="", url_expression=None, can_edit=True, query="", pending_only=True):
     latest = models.EditorialRevision.objects.filter(target_type=kind, target_id=OuterRef("pk")).order_by("-revision")
     queryset = queryset.order_by().annotate(q_revision_state=Subquery(latest.values("status")[:1]))
     pending = Q(q_revision_state="draft")
     if state_field:
         pending |= Q(**{f"{state_field}__in": ["draft", "pending", "suggested"]})
-    queryset = queryset.filter(pending)
+    if pending_only:
+        queryset = queryset.filter(pending)
+    formal = Q(**{f"{state_field}__in": ["published", "approved"]}) if state_field else Q(active_revision__isnull=False) if hasattr(queryset.model, "active_revision") else Q(q_revision_state="published")
+    state = Case(When(formal, then=Value("changes_pending")), default=Value("draft"), output_field=CharField())
+    if not pending_only:
+        state = Case(When(formal & Q(q_revision_state="draft"), then=Value("changes_pending")),
+                     When(q_revision_state="draft", then=Value("draft")),
+                     default=F(state_field) if state_field else Case(When(formal, then=Value("published")), default=Value("draft")), output_field=CharField())
     draft_value = "materialized_preview"
     for key in (title_key or "").split("."):
         draft_value = KeyTextTransform(key, draft_value)
@@ -77,7 +84,7 @@ def _objects(queryset, kind, label, title, title_key, state_field, url_prefix, *
         q_title=Case(When(q_revision_state="draft", then=Coalesce(draft_title, canonical_title)), default=canonical_title, output_field=TextField()),
         q_updated=Greatest(F("updated_at"), Coalesce(draft_date, F("updated_at"))),
         q_url=url_expression if url_expression is not None else Concat(Value(url_prefix), Cast("pk", CharField()), Value(url_suffix)),
-        q_state=Case(When(**{f"{state_field}__in": ["published", "approved"]}, then=Value("changes_pending")), default=Value("draft"), output_field=CharField()) if state_field else Value("changes_pending" if kind == "site_content" else "draft"),
+        q_state=state,
         q_can_edit=Value(can_edit, output_field=BooleanField()),
         q_owner=Subquery(latest.values("created_by_id")[:1]),
     )
@@ -86,7 +93,7 @@ def _objects(queryset, kind, label, title, title_key, state_field, url_prefix, *
     return queryset.values(*FIELDS)
 
 
-def _placements(user, *, query=""):
+def _placements(user, *, query="", pending_only=True):
     allowed = []
     if has_capability(user, Capability.EDIT_DRAFT_AUTHORITY):
         allowed += ["scholar", "node", "topic", "discipline", "subdiscipline", "reading_path", "timeline_event"]
@@ -95,14 +102,20 @@ def _placements(user, *, query=""):
     if capability_snapshot(user).access_level in {"admin", "superadmin"}:
         allowed.append("site")
     published = models.EditorialRevision.objects.filter(target_type="content_placement", target_id=OuterRef("target_id"), status="published")
-    rows = models.EditorialRevision.objects.filter(target_type="content_placement", status="draft", materialized_preview__page_type__in=allowed).order_by().annotate(
+    rows = models.EditorialRevision.objects.filter(target_type="content_placement", materialized_preview__page_type__in=allowed)
+    if pending_only:
+        rows = rows.filter(status="draft")
+    else:
+        latest = models.EditorialRevision.objects.filter(target_type="content_placement", target_id=OuterRef("target_id")).order_by("-revision")
+        rows = rows.annotate(q_latest=Subquery(latest.values("pk")[:1])).filter(pk=F("q_latest"))
+    rows = rows.order_by().annotate(
         q_has_published=Exists(published),
         q_id=Concat(Value("content_placement:"), Cast("target_id", CharField())),
         q_object_id=Cast(KeyTextTransform("page_id", "materialized_preview"), CharField()),
         q_type=Value("content_placement"), q_label=Value("页面内容编排"),
         q_title=Cast(KeyTextTransform("title", "materialized_preview"), TextField()),
         q_updated=F("updated_at"), q_url=Cast(KeyTextTransform("edit_url", "materialized_preview"), CharField()),
-        q_state=Case(When(q_has_published=True, then=Value("changes_pending")), default=Value("draft"), output_field=CharField()),
+        q_state=Case(When(status="published", then=Value("published")), When(q_has_published=True, then=Value("changes_pending")), default=Value("draft"), output_field=CharField()),
         q_can_edit=Value(True, output_field=BooleanField()), q_owner=F("created_by_id"),
     )
     if query:
@@ -110,32 +123,32 @@ def _placements(user, *, query=""):
     return rows.values(*FIELDS)
 
 
-def draft_querysets(user, *, query="", owner_id=None):
+def draft_querysets(user, *, query="", owner_id=None, pending_only=True):
     # These read permissions mirror the existing object editors. An object
     # which the user cannot open is not exposed merely through this inventory.
     staff = has_capability(user, Capability.ACCESS_BACK_OFFICE)
     knowledge = has_capability(user, Capability.EDIT_DRAFT_AUTHORITY)
     rows = [
-        _objects(models.ScholarProfile.objects.all(), "scholar_profile", "学者", F("person__preferred_name"), "person.preferred_name", "editorial_status", "/admin/scholars/", can_edit=staff, query=query),
-        _objects(models.Topic.objects.exclude(curation__has_key="topic_merge"), "topic", "主题", F("name"), "name", "editorial_status", "/admin/topics/", can_edit=staff, query=query),
-        _objects(models.Discipline.objects.all(), "discipline", "学科", F("name"), "name", "editorial_status", "/admin/theories/disciplines?discipline=", can_edit=staff, query=query),
-        _objects(models.Subdiscipline.objects.all(), "subdiscipline", "子学科", F("name"), "name", "editorial_status", "/admin/theories/subdisciplines?subdiscipline=", can_edit=staff, query=query),
-        _objects(models.RecommendationIssue.objects.all(), "recommendation_issue", "推荐期", F("title"), "title", None, "/admin/recommendations/issues/", can_edit=has_capability(user, Capability.EDIT_METADATA), query=query),
+        _objects(models.ScholarProfile.objects.all(), "scholar_profile", "学者", F("person__preferred_name"), "person.preferred_name", "editorial_status", "/admin/scholars/", can_edit=staff, query=query, pending_only=pending_only),
+        _objects(models.Topic.objects.exclude(curation__has_key="topic_merge"), "topic", "主题", F("name"), "name", "editorial_status", "/admin/topics/", can_edit=staff, query=query, pending_only=pending_only),
+        _objects(models.Discipline.objects.all(), "discipline", "学科", F("name"), "name", "editorial_status", "/admin/theories/disciplines?discipline=", can_edit=staff, query=query, pending_only=pending_only),
+        _objects(models.Subdiscipline.objects.all(), "subdiscipline", "子学科", F("name"), "name", "editorial_status", "/admin/theories/subdisciplines?subdiscipline=", can_edit=staff, query=query, pending_only=pending_only),
+        _objects(models.RecommendationIssue.objects.all(), "recommendation_issue", "推荐期", F("title"), "title", None, "/admin/recommendations/issues/", can_edit=has_capability(user, Capability.EDIT_METADATA), query=query, pending_only=pending_only),
     ]
     if knowledge:
         rows += [
-            _objects(models.KnowledgeNode.objects.all(), "knowledge_node", "理论与概念", F("canonical_name_zh"), "canonical_name_zh", "status", "/admin/theories/", query=query),
-            _objects(models.KnowledgeRelation.objects.all(), "knowledge_relation", "理论关系", Concat("source_node__canonical_name_zh", Value(" → "), "target_node__canonical_name_zh"), None, "status", "/admin/theories/relations?relation=", query=query),
-            _objects(models.ReadingPath.objects.all(), "reading_path", "阅读路径", F("title"), "title", "status", "/admin/theories/reading-paths?path=", query=query),
-            _objects(models.TheoryTimelineEvent.objects.all(), "timeline_event", "时间线事件", F("title"), "title", "review_status", "/admin/theories/timeline?event=", query=query),
-            _objects(models.ScholarRelation.objects.all(), "scholar_relation", "学者关系", Concat("source_scholar__person__preferred_name", Value(" → "), "target_scholar__person__preferred_name"), None, "status", "", query=query, url_expression=Concat(Value("/admin/scholars/"), Cast("source_scholar_id", CharField()), Value("/relations?relation="), Cast("pk", CharField()))),
-            _objects(models.EvidenceCuration.objects.all(), "evidence_curation", "原文策展", Value("原文策展"), "title", None, "", query=query, url_expression=Concat(
+            _objects(models.KnowledgeNode.objects.all(), "knowledge_node", "理论与概念", F("canonical_name_zh"), "canonical_name_zh", "status", "/admin/theories/", query=query, pending_only=pending_only),
+            _objects(models.KnowledgeRelation.objects.all(), "knowledge_relation", "理论关系", Concat("source_node__canonical_name_zh", Value(" → "), "target_node__canonical_name_zh"), None, "status", "/admin/theories/relations?relation=", query=query, pending_only=pending_only),
+            _objects(models.ReadingPath.objects.all(), "reading_path", "阅读路径", F("title"), "title", "status", "/admin/theories/reading-paths?path=", query=query, pending_only=pending_only),
+            _objects(models.TheoryTimelineEvent.objects.all(), "timeline_event", "时间线事件", F("title"), "title", "review_status", "/admin/theories/timeline?event=", query=query, pending_only=pending_only),
+            _objects(models.ScholarRelation.objects.all(), "scholar_relation", "学者关系", Concat("source_scholar__person__preferred_name", Value(" → "), "target_scholar__person__preferred_name"), None, "status", "", query=query, pending_only=pending_only, url_expression=Concat(Value("/admin/scholars/"), Cast("source_scholar_id", CharField()), Value("/relations?relation="), Cast("pk", CharField()))),
+            _objects(models.EvidenceCuration.objects.all(), "evidence_curation", "原文策展", Value("原文策展"), "title", None, "", query=query, pending_only=pending_only, url_expression=Concat(
                 Case(When(object_type="topic", then=Value("/admin/topics/")), When(object_type="scholar", then=Value("/admin/scholars/")), default=Value("/admin/theories/"), output_field=CharField()),
                 Cast("object_id", CharField()), Value("?section=passages"))),
         ]
     if capability_snapshot(user).access_level in {"admin", "superadmin"}:
-        rows.append(_objects(models.SiteSetting.objects.filter(key="site_config"), "site_content", "网站与关于书库", Value("网站与关于书库"), None, None, "/admin/about?config=", query=query))
-    rows.append(_placements(user, query=query))
+        rows.append(_objects(models.SiteSetting.objects.filter(key="site_config"), "site_content", "网站与关于书库", Value("网站与关于书库"), None, None, "/admin/about?config=", query=query, pending_only=pending_only))
+    rows.append(_placements(user, query=query, pending_only=pending_only))
     if owner_id is not None:
         rows = [row.filter(q_owner=owner_id) for row in rows]
     return rows

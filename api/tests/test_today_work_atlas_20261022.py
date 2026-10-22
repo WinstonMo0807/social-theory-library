@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from accounts.models import User
-from catalog.models import Asset, CatalogingSession, Edition, EditorialRevision, SemanticIndexJob, Topic, Work
+from catalog.models import Asset, CatalogingSession, Contribution, Edition, EditorialRevision, Person, SemanticIndexJob, Topic, Work
 from ingestion.models import ProcessingJob, UploadBatch, UploadItem
 from ingestion.services.processing_center import processing_task_page
 
@@ -122,3 +122,64 @@ def test_obsolete_asset_job_does_not_reappear(api_client, admin_user):
 def test_bad_filters_fail_explicitly(api_client, admin_user, parameters):
     api_client.force_authenticate(admin_user)
     assert api_client.get(URL, parameters).status_code == 400
+
+
+def test_global_search_includes_formal_topics_and_completed_tasks(api_client, admin_user):
+    topic = Topic.objects.create(name="正式检索主题", slug=f"search-{uuid4()}", editorial_status="published")
+    job = SemanticIndexJob.objects.create(operation="build", status="completed", requested_by=admin_user, task_id="retained-complete-job")
+    api_client.force_authenticate(admin_user)
+    result = api_client.get("/api/catalog/admin/search/", {"q": "正式检索主题"})
+    assert result.status_code == 200 and result["Cache-Control"] == "private, no-store"
+    assert result.data["results"][0]["object_id"] == str(topic.pk)
+    assert result.data["results"][0]["state"] == "published"
+    assert api_client.get(URL, {"q": "正式检索主题"}).data["count"] == 0
+    task = api_client.get("/api/catalog/admin/search/", {"q": "retained-complete-job"}).data
+    assert task["count"] == 1 and task["results"][0]["object_id"] == str(job.pk)
+    assert task["results"][0]["state"] == "completed"
+
+
+def test_global_search_author_and_work_draft_title_reuse_existing_identity(api_client, admin_user):
+    work = Work.objects.create(title="原有书名")
+    edition = Edition.objects.create(work=work, publication_mode="bibliographic")
+    person = Person.objects.create(preferred_name="检索作者")
+    Contribution.objects.create(edition=edition, person=person, role="author", approved=True)
+    EditorialRevision.objects.create(target_type="work", target_id=work.pk, revision=1, created_by=admin_user,
+        materialized_preview={"title": "更正后题名"}, idempotency_key=f"search:{uuid4()}")
+    api_client.force_authenticate(admin_user)
+    for query in ("检索作者", "更正后题名", str(edition.pk)):
+        data = api_client.get("/api/catalog/admin/search/", {"q": query, "kind": "catalog"}).data
+        assert data["count"] == 1
+        assert data["results"][0]["object_id"] == str(edition.pk)
+        assert data["results"][0]["title"] == "更正后题名"
+
+
+def test_global_search_blank_is_empty_and_kind_counts_are_before_tab_filter(api_client, admin_user):
+    Topic.objects.create(name="共同查询词", slug=f"search-{uuid4()}", editorial_status="published")
+    edition = Edition.objects.create(work=Work.objects.create(title="共同查询词"))
+    ProcessingJob.objects.create(edition=edition, job_type="ocr", status="succeeded")
+    api_client.force_authenticate(admin_user)
+    assert api_client.get("/api/catalog/admin/search/").data["count"] == 0
+    data = api_client.get("/api/catalog/admin/search/", {"q": "共同查询词", "kind": "curation"}).data
+    assert data["count"] == 1 and data["counts"] == {"all": 3, "catalog": 1, "curation": 1, "processing": 1}
+
+
+def test_notices_count_every_current_problem_but_return_only_five(api_client, admin_user):
+    for index in range(7):
+        ProcessingJob.objects.create(job_type="ocr", status="paused" if index % 2 else "failed", created_by=admin_user)
+    ProcessingJob.objects.create(job_type="text_extraction", status="running", created_by=admin_user)
+    api_client.force_authenticate(admin_user)
+    result = api_client.get("/api/catalog/admin/work-notices/")
+    assert result.status_code == 200 and result["Cache-Control"] == "private, no-store"
+    assert result.data["count"] == 7 and len(result.data["results"]) == 5
+    assert all(row["state"] in {"failed", "paused", "partial"} for row in result.data["results"])
+
+
+def test_search_and_notices_never_expose_forbidden_tasks(api_client, admin_user, reader_user):
+    job = ProcessingJob.objects.create(job_type="ocr", status="failed", created_by=admin_user)
+    editor = User.objects.create_user(username="search-editor", role="editor")
+    for url in ("/api/catalog/admin/search/", "/api/catalog/admin/work-notices/"):
+        api_client.force_authenticate(editor)
+        response = api_client.get(url, {"q": str(job.pk)})
+        assert response.status_code == 200 and response.data["count"] == 0
+        api_client.force_authenticate(reader_user)
+        assert api_client.get(url).status_code == 403

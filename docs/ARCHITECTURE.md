@@ -665,3 +665,7 @@ The post-cutover release uses one `2.7-87251cb` image family for API, Worker, In
 General-web source discovery uses one internal-only SearXNG service pinned to `2026.8.4-c63835bd2`. The container exposes port 8080 only on the Compose backend network and enables JSON output for `WebSearchAdapter`; it is not routed through Edge or Cloudflare. SearXNG discovers URLs only. `SafeWebFetcher` still fetches the actual public page, applies SSRF and size limits, and requires a supporting passage before an EnrichmentEvidence can be stored.
 
 The verified production engine is Baidu because it returned results from the current NAS egress while the default Western engines timed out without a container proxy. A live adapter smoke stored five discovery rows, then fetched a separate university source page with HTTP 200, bounded text and checksum. This is runtime evidence for the discovery/fetch path, not a trust exemption for Baidu snippets.
+
+## 2026-10-22 后台搜索和提醒的读模型
+
+管理统一搜索复用today_work SQL并集，按权限连接现有馆藏、策展对象/修订和两类任务；搜索允许正式记录和任务历史，今日工作继续筛当前待办。提醒复用当前异常工作集的完整计数和5条投影，无第二消息库/索引或定时探测。公共Discovery检索方案不改，本单元不做检索质量评测。

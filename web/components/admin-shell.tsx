@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BookOpen, Boxes, ChartNoAxesCombined, CircleDot, ChevronDown, LayoutDashboard, ListTodo, Menu, RefreshCw, Search, Sparkles, Upload, Users, X, LockKeyhole, CircleHelp, MoreHorizontal } from "lucide-react";
+import { BookOpen, Boxes, ChartNoAxesCombined, CircleDot, ChevronDown, LayoutDashboard, ListTodo, Menu, RefreshCw, Search, Sparkles, Upload, Users, X, LockKeyhole, CircleHelp, MoreHorizontal } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
@@ -9,10 +9,11 @@ import { ADMIN_VERSION_LABEL } from "@/lib/version";
 import { AdminSessionContext } from "@/lib/admin-session";
 import { adminLoginHref, adminTaskScope, safeAdminHref } from "@/lib/admin-route-context";
 import { Wordmark } from "./site-header";
+import { AdminWorkNotices } from "./admin/admin-work-notices";
 
 const navigationGroups = [
   { label: "工作", entries: [
-    { href: "/admin", title: "今日工作", Icon: LayoutDashboard, paths: ["/admin"], children: [] },
+    { href: "/admin", title: "今日工作", Icon: LayoutDashboard, paths: ["/admin", "/admin/search"], children: [] },
     { href: "/admin/uploads", title: "收件与编目", Icon: Upload, paths: ["/admin/uploads", "/admin/intake", "/admin/cataloging", "/admin/review"], children: [["/admin/uploads", "上传与收件"], ["/admin/review", "待办与复核"], ["/admin/cataloging/new", "手工编目"]] },
     { href: "/admin/library", title: "馆藏目录", Icon: BookOpen, paths: ["/admin/library"], children: [] },
     { href: "/admin/processing", title: "文件与处理", Icon: ListTodo, paths: ["/admin/processing"], children: [["/admin/processing?surface=documents", "OCR 与文档"], ["/admin/processing?surface=workers", "后台任务"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"]] },
@@ -79,8 +80,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const curationReturn = returnHref && new URL(returnHref, "https://admin.invalid");
   const returnToCuration = curationReturn && curationReturn.pathname === "/admin/review" && curationReturn.searchParams.get("workspace") === "curation";
   const returnToToday = curationReturn && curationReturn.pathname === "/admin";
+  const returnToSearch = curationReturn && curationReturn.pathname === "/admin/search";
   const focusMode = false;
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [compactNavigation, setCompactNavigation] = useState(false);
   const { state: session, retry: retrySession } = useSessionBootstrap(staffRoles);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -221,14 +224,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
             onClick={() => setOpen(true)}
           ><Menu size={20} /></button>
           <Link className="stl4-mobile-brand" href="/admin" aria-label="管理首页"><Wordmark /></Link><span className="sr-only">{scope.title}</span>
-          <form action="/admin/library" className="stl4-admin-search">
-            <label><Search size={15} /><input type="search" name="q" placeholder="搜索馆藏书名、作者…" aria-label="搜索后台馆藏" /></label>
+          <button className="stl4-mobile-search-toggle" type="button" aria-label="打开后台搜索" aria-controls="admin-global-search" aria-expanded={searchOpen} onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
+          <form action="/admin/search" id="admin-global-search" className={`stl4-admin-search ${searchOpen ? "is-open" : ""}`} key={pathname === "/admin/search" ? searchParams.get("q") || "" : pathname}>
+            <label><Search size={15} /><input type="search" name="q" defaultValue={pathname === "/admin/search" ? searchParams.get("q") || "" : ""} maxLength={200} placeholder="搜索书名、作者、主题、任务编号…" aria-label="搜索后台书名、作者、主题或任务编号" /></label>
             <button className="stl4-search-submit" type="submit">搜索</button>
           </form>
-          {canViewRoute("/admin/processing") ? <Link className="admin-processing-link" href="/admin/processing" prefetch={false} aria-label="打开处理中心"><Bell size={18} /></Link> : null}
+          <AdminWorkNotices key={String(user.id)} />
           <details className="stl4-admin-account" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label="账户菜单"><span>{user.display_name.slice(0, 1)}</span><ChevronDown size={13} /></summary><div><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small><Link href="/account">读者中心与账户</Link><Link href="/">返回前台</Link></div></details>
         </header> : null}
-        <div className="admin-content" key={String(user.id)}>{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{returnToToday ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回今日工作</Link> : null}{canViewRoute(pathname) ? children : <section className="stl4-admin-denied" role="alert"><LockKeyhole size={28} /><h1>当前账户没有此项管理权限</h1><p>你可以返回今日工作，继续处理有权访问的条目。</p><Link href="/admin">返回今日工作</Link><Link href="/feedback?category=usage">申请权限</Link></section>}</div>
+        <div className="admin-content" key={String(user.id)}>{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{returnToToday ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回今日工作</Link> : null}{returnToSearch ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回搜索结果</Link> : null}{canViewRoute(pathname) ? children : <section className="stl4-admin-denied" role="alert"><LockKeyhole size={28} /><h1>当前账户没有此项管理权限</h1><p>你可以返回今日工作，继续处理有权访问的条目。</p><Link href="/admin">返回今日工作</Link><Link href="/feedback?category=usage">申请权限</Link></section>}</div>
       </div>
       <nav className="stl4-admin-mobile-nav" aria-label="移动端管理导航" inert={compactNavigation && open}>{navigationGroups[0].entries.map(entry => canViewRoute(entry.href) ? <Link href={entry.href} key={entry.href} prefetch={false} aria-current={entry.paths.some(path => pathname === path || path !== "/admin" && pathname.startsWith(`${path}/`)) ? "page" : undefined}><entry.Icon size={19} /><span>{entry.title}</span></Link> : <span key={entry.href} aria-disabled="true"><LockKeyhole size={17} /><span>{entry.title}</span></span>)}<button type="button" onClick={() => setOpen(true)} aria-controls="admin-navigation" aria-expanded={open}><MoreHorizontal size={20} /><span>更多</span></button></nav>
     </div>

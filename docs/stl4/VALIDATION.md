@@ -280,3 +280,11 @@ Python ast.parse八路径退出0；web下目标ESLint五路径退出0（两个im
 本单元51文件准确白名单核验及`git diff --cached --check`退出0；限定private-key/provider-token/credential-url模式扫描无命中。ATLAS_INDEX保持209行22字段，仅205–215记录更新，图像来源身份字段与其他行不变。检查点1d19dd5。
 
 - 2026-10-21阅读路径最终预览补查：8文件ESLint e5869a退出0（2个既有img建议）；全量TS session56556最终205061退出0；差异检查b3e533退出0。阶段和材料双向选择按稳定ID同步，新增两条管理场景后本单元浏览器定义14条，均未运行。
+
+## 2026-10-22 搜索与提醒静态检查
+
+- `.venv/Scripts/python.exe tmp/stl4-today-static.py`：24组SQLite/PostgreSQL SQL编译，ensure_connection强制阻断，0连接；6改动Python文件ast.parse。未执行接口或数据库功能。
+- `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-admin-search-schema.json --validate`，DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true：50bdba退出0，0错误/10既有Home/Scholar/Topic类型提示。按已有openapi-typescript生成法同步，221路径保留原219。
+- `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：38293/61b156退出0。
+- ESLint目标admin-dashboard/admin-shell/admin-work-notices/search/page/today-work-atlas与auth-bootstrap：a6b0ee/fac9a7退出0，1img提示。postcss解析stl4-admin.css54、today-work.module.css62顶层节点。git diff --check 945234退出0。
+- 后端新增5函数、前端新增3场景仅定义，所有正式测试/E2E/浏览器/构建/迁移/生产均未运行。PDF124–127为只读源图，未截图实现或宣称逐图通过。

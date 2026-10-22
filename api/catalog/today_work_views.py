@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.editorial_read import AdminPrivateResponseMixin
-from catalog.services.today_work import CATEGORIES, KINDS, STATES, today_work_page
+from catalog.services.today_work import CATEGORIES, KINDS, STATES, today_work_page, work_notices
 from common.permissions import CanAccessBackOffice
 
 
@@ -58,3 +58,31 @@ class TodayWorkView(AdminPrivateResponseMixin, APIView):
         options = TodayWorkQuerySerializer(data=request.query_params)
         options.is_valid(raise_exception=True)
         return Response(today_work_page(request.user, options.validated_data))
+
+
+class AdminSearchQuerySerializer(TodayWorkQuerySerializer):
+    category = None
+
+
+class AdminSearchView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(parameters=[AdminSearchQuerySerializer], responses=TodayWorkPageSerializer)
+    def get(self, request):
+        options = AdminSearchQuerySerializer(data=request.query_params)
+        options.is_valid(raise_exception=True)
+        return Response(today_work_page(request.user, options.validated_data, search_all=True))
+
+
+class WorkNoticesSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    checked_at = serializers.DateTimeField()
+    results = TodayWorkItemSerializer(many=True)
+
+
+class WorkNoticesView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(responses=WorkNoticesSerializer)
+    def get(self, request):
+        return Response(work_notices(request.user))
