@@ -19,16 +19,19 @@ from .parallel_models import ParallelReadingTask
 from .knowledge_models import SavedKnowledgeNode
 from .graph_models import SavedGraphView
 from .editorial_comment_models import EditorialComment
+from .sharing_models import ReaderGroup, ReaderGroupMember, ReaderGroupInvite, ReaderShare, ReaderShareNotice
+from .sharing_models import COLLABORATION_CATEGORIES
 
 RETENTION = {"reading_history": True, "search_history": False, "personal_notes": True, "followed_topics": True, "source_follows": True, "saved_knowledge": True}
 RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "笔记、摘录与书签", "followed_topics": "收藏的主题", "source_follows": "来源、学者与主题关注", "saved_knowledge": "知识条目、图谱视图与私人书单"}
-EXPORT_GROUPS = {"article_comments": ("article_comments",), "research": ("research",), "notes": ("annotations", "bookmarks", "memories", "parallel_alignments"),
+EXPORT_GROUPS = {"collaboration": COLLABORATION_CATEGORIES, "article_comments": ("article_comments",), "research": ("research",), "notes": ("annotations", "bookmarks", "memories", "parallel_alignments"),
                  "plans": ("plans",), "audits": ("audits", "citation_sources"), "source_follows": ("source_follows",),
                  "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists", "saved_items")}
-ERASE_GROUPS = {"article_comments": ("article_comments",), "reading_history": ("reading_history",), "search_history": ("search_history",),
+ERASE_GROUPS = {"collaboration": COLLABORATION_CATEGORIES, "article_comments": ("article_comments",), "reading_history": ("reading_history",), "search_history": ("search_history",),
                 "personal_notes": ("annotations", "bookmarks", "memories", "parallel_alignments"), "reading_plans": ("plans",),
                 "followed_topics": ("followed_topics",), "source_follows": ("source_follows",), "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists", "saved_items")}
-MODELS = {"article_comments": EditorialComment, "research": ResearchProject, "annotations": Annotation, "bookmarks": Bookmark, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
+MODELS = {"reader_groups": ReaderGroup, "group_memberships": ReaderGroupMember, "group_invitations": ReaderGroupInvite, "reader_shares": ReaderShare, "share_notices": ReaderShareNotice,
+          "article_comments": EditorialComment, "research": ResearchProject, "annotations": Annotation, "bookmarks": Bookmark, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
           "plans": PersonalReadingPlan, "audits": CitationAudit, "citation_sources": CitationAudit,
           "reading_history": ReadingHistory, "search_history": ReaderSearchRecord, "followed_topics": SavedTopic,
           "source_follows": SourceFollow, "saved_knowledge": SavedKnowledgeNode, "graph_views": SavedGraphView, "reading_lists": ReadingList, "saved_items": SavedItem}
@@ -131,6 +134,14 @@ def rows(user, category):
     if category not in MODELS:
         raise ValidationError({"category": "资料类型无效。"})
     result = MODELS[category].objects.filter(user=user)
+    if category == "reader_groups":
+        result = result.filter(archived=False)
+    elif category in {"group_memberships", "group_invitations"}:
+        result = result.filter(group__archived=False)
+        if category == "group_invitations":
+            result = result.filter(revoked_at__isnull=True)
+    elif category == "reader_shares":
+        result = result.filter(revoked_at__isnull=True)
     if category in {"audits", "citation_sources"}:
         result = result.filter(purpose="manuscript" if category == "audits" else "private_source").defer("original_ciphertext", "preview_ciphertext")
     return result
@@ -142,6 +153,10 @@ def version(row):
 
 def item(user, category, pk, *, lock=False):
     query = rows(user, category)
+    if lock and category in {"group_memberships", "group_invitations"}:
+        group_id = query.filter(pk=research.identifier(pk)).values_list("group_id", flat=True).first()
+        if group_id:
+            ReaderGroup.objects.select_for_update().get(pk=group_id)
     row = (query.select_for_update() if lock else query).filter(pk=research.identifier(pk)).first()
     if row is None:
         raise NotFound("这项本人资料已不存在。")
@@ -178,6 +193,9 @@ def annotation_export(user, row):
 
 
 def export_item(user, category, row):
+    if category in COLLABORATION_CATEGORIES:
+        from .sharing_privacy import export
+        return export(user, category, row)
     if category == "bookmarks":
         from .notebook import record
         return record(user, category, row)
@@ -220,6 +238,9 @@ def linked_memories(user, annotation_id):
 
 
 def erase_impact(user, category, row, *, contexts=None):
+    if category in COLLABORATION_CATEGORIES:
+        from .sharing_privacy import impact
+        return impact(category, row)
     if category == "bookmarks":
         return {"message": "删除本人这条页面书签；独立笔记、摘录、研究与原始馆藏仍保留。", "memories": [], "scope_count": 0}
     related = linked_memories(user, row.id) if category == "annotations" else [row] if category == "memories" else []
@@ -246,7 +267,10 @@ def erase_impact(user, category, row, *, contexts=None):
 def describe_item(user, category, row):
     payload = research.unpack(row) if hasattr(row, "data_ciphertext") else {}
     source = {}
-    if category == "bookmarks":
+    if category in COLLABORATION_CATEGORIES:
+        from .sharing_privacy import describe
+        title, source = describe(user, category, row)
+    elif category == "bookmarks":
         from .notebook import record
         current = record(user, category, row)
         title = row.label or "页面书签"
@@ -553,6 +577,10 @@ def command_operation(user, pk, data):
 def erase_item(user, target, row, impact, *, contexts):
     if erase_impact(user, target["category"], row, contexts=contexts) != impact:
         raise research.ResearchConflict("关联内容已变化，需重新预览影响。")
+    if target["category"] in COLLABORATION_CATEGORIES:
+        from .sharing_privacy import erase
+        erase(target["category"], row)
+        return
     if target["category"] == "memories":
         research.revoke_memory_contexts(row, contexts)
     elif target["category"] == "annotations":

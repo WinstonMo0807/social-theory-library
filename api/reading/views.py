@@ -349,7 +349,8 @@ class ReaderDataExportView(PrivateAccountResponses, APIView):
     def get(self, request):
         context = {"request": request}
         from .research import research_export, serialize_record
-        from .privacy import annotation_export, operation_output, profile_data, export_item
+        from .privacy import annotation_export, operation_output, profile_data, export_item, rows
+        from .sharing_models import COLLABORATION_CATEGORIES
         from .editorial_comment_models import EditorialComment
         from .models import ReaderDataOperation, ReaderSearchRecord
         conversations = request.user.library_conversations.prefetch_related(
@@ -359,6 +360,8 @@ class ReaderDataExportView(PrivateAccountResponses, APIView):
         return Response(
             {
                 "research_data": research_export(request.user),
+                "collaboration": {category: [export_item(request.user, category, row)
+                    for row in rows(request.user, category)] for category in COLLABORATION_CATEGORIES},
                 "article_comments": [export_item(request.user, "article_comments", row) for row in EditorialComment.objects.filter(user=request.user)],
                 "search_history": [serialize_record(row, request.user) for row in ReaderSearchRecord.objects.filter(user=request.user)],
                 "data_operations": [operation_output(row) for row in ReaderDataOperation.objects.filter(user=request.user)],

@@ -12758,6 +12758,372 @@
                 }
             }
         },
+        "/api/reading/groups/": {
+            "get": {
+                "operationId": "reader_groups_list",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "invitation_page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "campus",
+                                "team"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `campus` - campus\n* `team` - team"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "tab",
+                        "schema": {
+                            "enum": [
+                                "own",
+                                "received",
+                                "proposals"
+                            ],
+                            "type": "string",
+                            "default": "own",
+                            "minLength": 1
+                        },
+                        "description": "* `own` - own\n* `received` - received\n* `proposals` - proposals"
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reader_groups_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupCreateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupCreateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupCreateInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/groups/{id}/": {
+            "get": {
+                "operationId": "reader_groups_detail",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reader_groups_command",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupCommandInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupCommandInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupCommandInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/groups/accept/": {
+            "post": {
+                "operationId": "reader_groups_accept",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupAcceptInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupAcceptInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupAcceptInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupAcceptOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/groups/receipt/": {
+            "get": {
+                "operationId": "reader_group_receipt",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "group_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/history/": {
             "get": {
                 "operationId": "reading_history_list",
@@ -19401,6 +19767,672 @@
                 }
             }
         },
+        "/api/reading/share-links/{id}/": {
+            "get": {
+                "operationId": "public_share_content",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Share-Key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareContent"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/shares/": {
+            "get": {
+                "operationId": "reader_shares_list",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "invitation_page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "campus",
+                                "team"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `campus` - campus\n* `team` - team"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "tab",
+                        "schema": {
+                            "enum": [
+                                "own",
+                                "received",
+                                "proposals"
+                            ],
+                            "type": "string",
+                            "default": "own",
+                            "minLength": 1
+                        },
+                        "description": "* `own` - own\n* `received` - received\n* `proposals` - proposals"
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reader_shares_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareCreateInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareCreateInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareCreateInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/shares/{id}/": {
+            "get": {
+                "operationId": "reader_share_detail",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reader_share_command",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareCommandInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareCommandInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareCommandInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareCommandResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/shares/notices/": {
+            "get": {
+                "operationId": "reader_share_notices",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "invitation_page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "campus",
+                                "team"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `campus` - campus\n* `team` - team"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "tab",
+                        "schema": {
+                            "enum": [
+                                "own",
+                                "received",
+                                "proposals"
+                            ],
+                            "type": "string",
+                            "default": "own",
+                            "minLength": 1
+                        },
+                        "description": "* `own` - own\n* `received` - received\n* `proposals` - proposals"
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareNoticePage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reader_share_mark_read",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NoticeReadInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NoticeReadInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NoticeReadInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareNoticeRead"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/shares/preview/": {
+            "post": {
+                "operationId": "reader_share_preview",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SharePreviewInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SharePreviewInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SharePreviewInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SharePreviewOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/shares/receipt/": {
+            "get": {
+                "operationId": "reader_share_receipt",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/shares/selection/": {
+            "post": {
+                "operationId": "reader_share_selection",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareSelectionInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareSelectionInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareSelectionInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareSelectionOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/shares/sources/": {
+            "get": {
+                "operationId": "reader_share_sources",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "source_kind",
+                        "schema": {
+                            "enum": [
+                                "research",
+                                "booklist"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `research` - research\n* `booklist` - booklist",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareSourcesPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/source-follows/": {
             "get": {
                 "operationId": "reading_source_follows_list",
@@ -22599,6 +23631,7 @@
             },
             "CategoriesEnum": {
                 "enum": [
+                    "collaboration",
                     "article_comments",
                     "research",
                     "notes",
@@ -22608,7 +23641,7 @@
                     "saved_knowledge"
                 ],
                 "type": "string",
-                "description": "* `article_comments` - article_comments\n* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge"
+                "description": "* `collaboration` - collaboration\n* `article_comments` - article_comments\n* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `audits` - audits\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge"
             },
             "ChecksEnum": {
                 "enum": [
@@ -27538,6 +28571,322 @@
                     "year"
                 ]
             },
+            "GroupAcceptInputRequest": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string",
+                        "minLength": 32,
+                        "maxLength": 80
+                    },
+                    "invitation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "GroupAcceptOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "group_id",
+                    "owner_id"
+                ]
+            },
+            "GroupCommandInputActionEnum": {
+                "enum": [
+                    "rename",
+                    "archive",
+                    "leave",
+                    "remove",
+                    "invite",
+                    "revoke_invite"
+                ],
+                "type": "string",
+                "description": "* `rename` - rename\n* `archive` - archive\n* `leave` - leave\n* `remove` - remove\n* `invite` - invite\n* `revoke_invite` - revoke_invite"
+            },
+            "GroupCommandInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/GroupCommandInputActionEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "username": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 150
+                    },
+                    "membership_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "invitation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_revision",
+                    "request_id"
+                ]
+            },
+            "GroupCreateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderGroupKindEnum"
+                    }
+                },
+                "required": [
+                    "kind",
+                    "request_id",
+                    "title"
+                ]
+            },
+            "GroupDetail": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "$ref": "#/components/schemas/GroupSummary"
+                    },
+                    "members": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GroupMember"
+                        }
+                    },
+                    "invitations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GroupInvite"
+                        }
+                    }
+                },
+                "required": [
+                    "group",
+                    "invitations",
+                    "members",
+                    "owner_id"
+                ]
+            },
+            "GroupDirectory": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "groups": {
+                        "$ref": "#/components/schemas/GroupPage"
+                    },
+                    "invitations": {
+                        "$ref": "#/components/schemas/InvitePage"
+                    }
+                },
+                "required": [
+                    "groups",
+                    "invitations",
+                    "owner_id"
+                ]
+            },
+            "GroupInvite": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "recipient": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "accepted": {
+                        "type": "boolean"
+                    },
+                    "revoked": {
+                        "type": "boolean"
+                    },
+                    "expired": {
+                        "type": "boolean"
+                    },
+                    "token": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "accepted",
+                    "expired",
+                    "expires_at",
+                    "group_id",
+                    "id",
+                    "recipient",
+                    "revoked",
+                    "token"
+                ]
+            },
+            "GroupMember": {
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string"
+                    },
+                    "membership_id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "is_owner": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "is_owner",
+                    "membership_id",
+                    "name",
+                    "user_id"
+                ]
+            },
+            "GroupPage": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GroupSummary"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "GroupResult": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "group": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/GroupSummary"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "available",
+                    "group",
+                    "group_id",
+                    "owner_id",
+                    "request_id"
+                ]
+            },
+            "GroupSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderGroupKindEnum"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "is_owner": {
+                        "type": "boolean"
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "member_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "archived",
+                    "id",
+                    "is_owner",
+                    "kind",
+                    "member_count",
+                    "revision",
+                    "title"
+                ]
+            },
             "HeadingLevelEnum": {
                 "enum": [
                     1,
@@ -27880,6 +29229,32 @@
                     "results",
                     "summary",
                     "warnings"
+                ]
+            },
+            "InvitePage": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GroupInvite"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "results",
+                    "total_pages"
                 ]
             },
             "IssueBodyBlock": {
@@ -33322,6 +34697,23 @@
                     "tags",
                     "updated_at",
                     "work"
+                ]
+            },
+            "NoticeReadInputRequest": {
+                "type": "object",
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 100,
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "ids"
                 ]
             },
             "OCRCommandActionEnum": {
@@ -39462,7 +40854,7 @@
                         "items": {
                             "$ref": "#/components/schemas/CategoriesEnum"
                         },
-                        "maxItems": 7
+                        "maxItems": 8
                     },
                     "targets": {
                         "type": "array",
@@ -39694,6 +41086,11 @@
             },
             "PrivacyTargetInputCategoryEnum": {
                 "enum": [
+                    "reader_groups",
+                    "group_memberships",
+                    "group_invitations",
+                    "reader_shares",
+                    "share_notices",
                     "article_comments",
                     "reading_history",
                     "search_history",
@@ -39713,7 +41110,7 @@
                     "citation_sources"
                 ],
                 "type": "string",
-                "description": "* `article_comments` - article_comments\n* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `bookmarks` - bookmarks\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge\n* `graph_views` - graph_views\n* `reading_lists` - reading_lists\n* `saved_items` - saved_items\n* `research` - research\n* `audits` - audits\n* `citation_sources` - citation_sources"
+                "description": "* `reader_groups` - reader_groups\n* `group_memberships` - group_memberships\n* `group_invitations` - group_invitations\n* `reader_shares` - reader_shares\n* `share_notices` - share_notices\n* `article_comments` - article_comments\n* `reading_history` - reading_history\n* `search_history` - search_history\n* `annotations` - annotations\n* `bookmarks` - bookmarks\n* `memories` - memories\n* `parallel_alignments` - parallel_alignments\n* `plans` - plans\n* `followed_topics` - followed_topics\n* `source_follows` - source_follows\n* `saved_knowledge` - saved_knowledge\n* `graph_views` - graph_views\n* `reading_lists` - reading_lists\n* `saved_items` - saved_items\n* `research` - research\n* `audits` - audits\n* `citation_sources` - citation_sources"
             },
             "PrivacyTargetInputRequest": {
                 "type": "object",
@@ -43209,6 +44606,14 @@
                     "width"
                 ]
             },
+            "ReaderGroupKindEnum": {
+                "enum": [
+                    "campus",
+                    "team"
+                ],
+                "type": "string",
+                "description": "* `campus` - campus\n* `team` - team"
+            },
             "ReaderMaterialOutput": {
                 "type": "object",
                 "properties": {
@@ -43785,6 +45190,41 @@
                     "snippet",
                     "width"
                 ]
+            },
+            "ReaderShareDestinationEnum": {
+                "enum": [
+                    "group",
+                    "public",
+                    "proposal"
+                ],
+                "type": "string",
+                "description": "* `group` - group\n* `public` - public\n* `proposal` - proposal"
+            },
+            "ReaderShareReviewStateEnum": {
+                "enum": [
+                    "submitted",
+                    "considering",
+                    "declined"
+                ],
+                "type": "string",
+                "description": "* `submitted` - submitted\n* `considering` - considering\n* `declined` - declined"
+            },
+            "ReaderShareSectionEnum": {
+                "enum": [
+                    "questions",
+                    "materials",
+                    "notes"
+                ],
+                "type": "string",
+                "description": "* `questions` - questions\n* `materials` - materials\n* `notes` - notes"
+            },
+            "ReaderShareSourceKindEnum": {
+                "enum": [
+                    "research",
+                    "booklist"
+                ],
+                "type": "string",
+                "description": "* `research` - research\n* `booklist` - booklist"
             },
             "ReaderTextBlock": {
                 "type": "object",
@@ -46080,20 +47520,6 @@
                     "results"
                 ]
             },
-            "SectionEnum": {
-                "enum": [
-                    "overview",
-                    "questions",
-                    "works",
-                    "scholars",
-                    "concepts",
-                    "articles",
-                    "paths",
-                    "evidence"
-                ],
-                "type": "string",
-                "description": "* `overview` - overview\n* `questions` - questions\n* `works` - works\n* `scholars` - scholars\n* `concepts` - concepts\n* `articles` - articles\n* `paths` - paths\n* `evidence` - evidence"
-            },
             "SelectionEnum": {
                 "enum": [
                     "related",
@@ -46174,6 +47600,875 @@
                 ],
                 "type": "string",
                 "description": "* `cookie` - cookie\n* `token` - token"
+            },
+            "ShareBrief": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "destination": {
+                        "$ref": "#/components/schemas/ReaderShareDestinationEnum"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "revoked": {
+                        "type": "boolean"
+                    },
+                    "is_owner": {
+                        "type": "boolean"
+                    },
+                    "review_state": {
+                        "$ref": "#/components/schemas/ReaderShareReviewStateEnum"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "destination",
+                    "expires_at",
+                    "id",
+                    "is_owner",
+                    "request_id",
+                    "review_state",
+                    "revision",
+                    "revoked",
+                    "source_id",
+                    "source_kind",
+                    "title"
+                ]
+            },
+            "ShareCandidateItem": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "work": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "reference": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "available",
+                    "id",
+                    "text",
+                    "title",
+                    "version"
+                ]
+            },
+            "ShareCandidateSections": {
+                "type": "object",
+                "properties": {
+                    "questions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareCandidateItem"
+                        }
+                    },
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareCandidateItem"
+                        }
+                    },
+                    "notes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareCandidateItem"
+                        }
+                    }
+                },
+                "required": [
+                    "materials",
+                    "notes",
+                    "questions"
+                ]
+            },
+            "ShareCommandInputActionEnum": {
+                "enum": [
+                    "revoke",
+                    "notify",
+                    "review"
+                ],
+                "type": "string",
+                "description": "* `revoke` - revoke\n* `notify` - notify\n* `review` - review"
+            },
+            "ShareCommandInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/ShareCommandInputActionEnum"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/ReaderShareReviewStateEnum"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_revision"
+                ]
+            },
+            "ShareCommandResult": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/ShareBrief"
+                    },
+                    {
+                        "$ref": "#/components/schemas/ShareNotifyResult"
+                    }
+                ]
+            },
+            "ShareContent": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/ShareSourceTitle"
+                    },
+                    "sections": {
+                        "$ref": "#/components/schemas/ShareContentSections"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "excluded": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "destination": {
+                        "$ref": "#/components/schemas/ReaderShareDestinationEnum"
+                    },
+                    "review_state": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "destination",
+                    "excluded",
+                    "expires_at",
+                    "id",
+                    "message",
+                    "review_state",
+                    "revision",
+                    "sections",
+                    "source"
+                ]
+            },
+            "ShareContentItem": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "work": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "reference": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "available",
+                    "text",
+                    "title"
+                ]
+            },
+            "ShareContentSections": {
+                "type": "object",
+                "properties": {
+                    "questions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareContentItem"
+                        }
+                    },
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareContentItem"
+                        }
+                    },
+                    "notes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareContentItem"
+                        }
+                    }
+                },
+                "required": [
+                    "materials",
+                    "notes",
+                    "questions"
+                ]
+            },
+            "ShareCreateInputRequest": {
+                "type": "object",
+                "properties": {
+                    "source_kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    },
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    },
+                    "notes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    },
+                    "destination": {
+                        "$ref": "#/components/schemas/ReaderShareDestinationEnum"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "group_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "member_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[1-9][0-9]{0,19}$"
+                        },
+                        "maxItems": 100,
+                        "minItems": 1
+                    },
+                    "message": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 200
+                    },
+                    "expires_days": {
+                        "type": "integer",
+                        "maximum": 365,
+                        "minimum": 1,
+                        "default": 30
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "preview_hash": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "destination",
+                    "expected_version",
+                    "preview_hash",
+                    "request_id",
+                    "source_id",
+                    "source_kind"
+                ]
+            },
+            "ShareDestination": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderShareDestinationEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "members": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareRecipientBinding"
+                        }
+                    },
+                    "sender_binding": {
+                        "$ref": "#/components/schemas/ShareRecipientBinding"
+                    }
+                },
+                "required": [
+                    "group_id",
+                    "kind",
+                    "members",
+                    "title"
+                ]
+            },
+            "ShareDetail": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "share": {
+                        "$ref": "#/components/schemas/ShareBrief"
+                    },
+                    "content": {
+                        "$ref": "#/components/schemas/ShareContent"
+                    }
+                },
+                "required": [
+                    "content",
+                    "owner_id",
+                    "share"
+                ]
+            },
+            "ShareDirectory": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareBrief"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "owner_id",
+                    "page",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "ShareNotice": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "share_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "read_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "read_at",
+                    "share_id"
+                ]
+            },
+            "ShareNoticePage": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "unread": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareNotice"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "owner_id",
+                    "page",
+                    "results",
+                    "total_pages",
+                    "unread"
+                ]
+            },
+            "ShareNoticeRead": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "marked": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "marked",
+                    "owner_id"
+                ]
+            },
+            "ShareNotifyResult": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "created": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "channel": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "channel",
+                    "created",
+                    "message",
+                    "owner_id",
+                    "total"
+                ]
+            },
+            "SharePreviewInputRequest": {
+                "type": "object",
+                "properties": {
+                    "source_kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    },
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    },
+                    "notes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    },
+                    "destination": {
+                        "$ref": "#/components/schemas/ReaderShareDestinationEnum"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "group_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "member_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[1-9][0-9]{0,19}$"
+                        },
+                        "maxItems": 100,
+                        "minItems": 1
+                    },
+                    "message": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 200
+                    },
+                    "expires_days": {
+                        "type": "integer",
+                        "maximum": 365,
+                        "minimum": 1,
+                        "default": 30
+                    }
+                },
+                "required": [
+                    "destination",
+                    "expected_version",
+                    "source_id",
+                    "source_kind"
+                ]
+            },
+            "SharePreviewOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/ShareSource"
+                    },
+                    "sections": {
+                        "$ref": "#/components/schemas/ShareCandidateSections"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "excluded": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "destination": {
+                        "$ref": "#/components/schemas/ShareDestination"
+                    },
+                    "expires_days": {
+                        "type": "integer"
+                    },
+                    "preview_hash": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "destination",
+                    "excluded",
+                    "expires_days",
+                    "message",
+                    "owner_id",
+                    "preview_hash",
+                    "sections",
+                    "source"
+                ]
+            },
+            "ShareReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "share": {
+                        "$ref": "#/components/schemas/ShareBrief"
+                    },
+                    "token": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "owner_id",
+                    "request_id",
+                    "share",
+                    "token"
+                ]
+            },
+            "ShareRecipientBinding": {
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string"
+                    },
+                    "membership_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "membership_id",
+                    "user_id"
+                ]
+            },
+            "ShareSelectionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "source_kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "section": {
+                        "$ref": "#/components/schemas/ReaderShareSectionEnum"
+                    },
+                    "page": {
+                        "type": "integer",
+                        "maximum": 10000,
+                        "minimum": 1,
+                        "default": 1
+                    }
+                },
+                "required": [
+                    "section",
+                    "source_id",
+                    "source_kind"
+                ]
+            },
+            "ShareSelectionOutput": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/ShareSource"
+                    },
+                    "section": {
+                        "$ref": "#/components/schemas/ReaderShareSectionEnum"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareCandidateItem"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "owner_id",
+                    "page",
+                    "results",
+                    "section",
+                    "source",
+                    "total_pages"
+                ]
+            },
+            "ShareSource": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "title",
+                    "version"
+                ]
+            },
+            "ShareSourceTitle": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "kind",
+                    "title"
+                ]
+            },
+            "ShareSourcesPage": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareSource"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "owner_id",
+                    "page",
+                    "results",
+                    "total_pages"
+                ]
             },
             "SiteConfig": {
                 "type": "object",
@@ -49175,7 +51470,7 @@
                 "type": "object",
                 "properties": {
                     "section": {
-                        "$ref": "#/components/schemas/SectionEnum"
+                        "$ref": "#/components/schemas/TopicDetailFiltersSectionEnum"
                     },
                     "question_type": {
                         "$ref": "#/components/schemas/QuestionTypeEnum"
@@ -49197,6 +51492,20 @@
                     "section",
                     "sort"
                 ]
+            },
+            "TopicDetailFiltersSectionEnum": {
+                "enum": [
+                    "overview",
+                    "questions",
+                    "works",
+                    "scholars",
+                    "concepts",
+                    "articles",
+                    "paths",
+                    "evidence"
+                ],
+                "type": "string",
+                "description": "* `overview` - overview\n* `questions` - questions\n* `works` - works\n* `scholars` - scholars\n* `concepts` - concepts\n* `articles` - articles\n* `paths` - paths\n* `evidence` - evidence"
             },
             "TopicDetailFiltersSortEnum": {
                 "enum": [

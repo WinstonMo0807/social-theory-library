@@ -2744,6 +2744,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/groups/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_groups_list"];
+        put?: never;
+        post: operations["reader_groups_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/groups/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_groups_detail"];
+        put?: never;
+        post: operations["reader_groups_command"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/groups/accept/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reader_groups_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/groups/receipt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_group_receipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/history/": {
         parameters: {
             query?: never;
@@ -4149,6 +4213,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/share-links/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["public_share_content"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/shares/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_shares_list"];
+        put?: never;
+        post: operations["reader_shares_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/shares/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_share_detail"];
+        put?: never;
+        post: operations["reader_share_command"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/shares/notices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_share_notices"];
+        put?: never;
+        post: operations["reader_share_mark_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/shares/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reader_share_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/shares/receipt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_share_receipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/shares/selection/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reader_share_selection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/shares/sources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_share_sources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/source-follows/": {
         parameters: {
             query?: never;
@@ -5129,7 +5321,8 @@ export interface components {
          */
         CatalogingSourceTypeEnum: "upload" | "manual" | "import" | "existing";
         /**
-         * @description * `article_comments` - article_comments
+         * @description * `collaboration` - collaboration
+         *     * `article_comments` - article_comments
          *     * `research` - research
          *     * `notes` - notes
          *     * `plans` - plans
@@ -5138,7 +5331,7 @@ export interface components {
          *     * `saved_knowledge` - saved_knowledge
          * @enum {string}
          */
-        CategoriesEnum: "article_comments" | "research" | "notes" | "plans" | "audits" | "source_follows" | "saved_knowledge";
+        CategoriesEnum: "collaboration" | "article_comments" | "research" | "notes" | "plans" | "audits" | "source_follows" | "saved_knowledge";
         /**
          * @description * `citation_identification` - citation_identification
          *     * `bibliography_identity` - bibliography_identity
@@ -6619,6 +6812,100 @@ export interface components {
             detail_href: string | null;
             version_label: string;
         };
+        GroupAcceptInputRequest: {
+            token?: string;
+            /** Format: uuid */
+            invitation_id?: string;
+        };
+        GroupAcceptOutput: {
+            owner_id: string;
+            /** Format: uuid */
+            group_id: string;
+        };
+        /**
+         * @description * `rename` - rename
+         *     * `archive` - archive
+         *     * `leave` - leave
+         *     * `remove` - remove
+         *     * `invite` - invite
+         *     * `revoke_invite` - revoke_invite
+         * @enum {string}
+         */
+        GroupCommandInputActionEnum: "rename" | "archive" | "leave" | "remove" | "invite" | "revoke_invite";
+        GroupCommandInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_revision: number;
+            action: components["schemas"]["GroupCommandInputActionEnum"];
+            title?: string;
+            username?: string;
+            /** Format: uuid */
+            membership_id?: string;
+            /** Format: uuid */
+            invitation_id?: string;
+        };
+        GroupCreateInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            title: string;
+            kind: components["schemas"]["ReaderGroupKindEnum"];
+        };
+        GroupDetail: {
+            owner_id: string;
+            group: components["schemas"]["GroupSummary"];
+            members: components["schemas"]["GroupMember"][];
+            invitations: components["schemas"]["GroupInvite"][];
+        };
+        GroupDirectory: {
+            owner_id: string;
+            groups: components["schemas"]["GroupPage"];
+            invitations: components["schemas"]["InvitePage"];
+        };
+        GroupInvite: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            group_id: string;
+            recipient: string;
+            /** Format: date-time */
+            expires_at: string;
+            accepted: boolean;
+            revoked: boolean;
+            expired: boolean;
+            token: string | null;
+            title?: string;
+        };
+        GroupMember: {
+            user_id: string;
+            membership_id: string;
+            name: string;
+            is_owner: boolean;
+        };
+        GroupPage: {
+            page: number;
+            count: number;
+            total_pages: number;
+            results: components["schemas"]["GroupSummary"][];
+        };
+        GroupResult: {
+            owner_id: string;
+            /** Format: uuid */
+            group_id: string;
+            /** Format: uuid */
+            request_id: string;
+            available: boolean;
+            group: components["schemas"]["GroupSummary"] | null;
+        };
+        GroupSummary: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            kind: components["schemas"]["ReaderGroupKindEnum"];
+            revision: number;
+            is_owner: boolean;
+            archived: boolean;
+            member_count: number;
+        };
         /**
          * @description * `1` - 1
          *     * `2` - 2
@@ -6722,6 +7009,12 @@ export interface components {
             results: unknown[];
             jobs: unknown[];
             warnings: unknown[];
+        };
+        InvitePage: {
+            page: number;
+            count: number;
+            total_pages: number;
+            results: components["schemas"]["GroupInvite"][];
         };
         IssueBodyBlock: {
             /** Format: uuid */
@@ -8278,6 +8571,9 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        NoticeReadInputRequest: {
+            ids: string[];
         };
         /**
          * @description * `save` - save
@@ -10352,7 +10648,12 @@ export interface components {
             notice: string;
         };
         /**
-         * @description * `article_comments` - article_comments
+         * @description * `reader_groups` - reader_groups
+         *     * `group_memberships` - group_memberships
+         *     * `group_invitations` - group_invitations
+         *     * `reader_shares` - reader_shares
+         *     * `share_notices` - share_notices
+         *     * `article_comments` - article_comments
          *     * `reading_history` - reading_history
          *     * `search_history` - search_history
          *     * `annotations` - annotations
@@ -10371,7 +10672,7 @@ export interface components {
          *     * `citation_sources` - citation_sources
          * @enum {string}
          */
-        PrivacyTargetInputCategoryEnum: "article_comments" | "reading_history" | "search_history" | "annotations" | "bookmarks" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists" | "saved_items" | "research" | "audits" | "citation_sources";
+        PrivacyTargetInputCategoryEnum: "reader_groups" | "group_memberships" | "group_invitations" | "reader_shares" | "share_notices" | "article_comments" | "reading_history" | "search_history" | "annotations" | "bookmarks" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists" | "saved_items" | "research" | "audits" | "citation_sources";
         PrivacyTargetInputRequest: {
             category: components["schemas"]["PrivacyTargetInputCategoryEnum"];
             /** Format: uuid */
@@ -11337,6 +11638,12 @@ export interface components {
             locator_kind?: string;
             locators?: unknown[];
         };
+        /**
+         * @description * `campus` - campus
+         *     * `team` - team
+         * @enum {string}
+         */
+        ReaderGroupKindEnum: "campus" | "team";
         ReaderMaterialOutput: {
             /** Format: uuid */
             id: string;
@@ -11520,6 +11827,33 @@ export interface components {
             rank: number;
             occurrence_count: number;
         };
+        /**
+         * @description * `group` - group
+         *     * `public` - public
+         *     * `proposal` - proposal
+         * @enum {string}
+         */
+        ReaderShareDestinationEnum: "group" | "public" | "proposal";
+        /**
+         * @description * `submitted` - submitted
+         *     * `considering` - considering
+         *     * `declined` - declined
+         * @enum {string}
+         */
+        ReaderShareReviewStateEnum: "submitted" | "considering" | "declined";
+        /**
+         * @description * `questions` - questions
+         *     * `materials` - materials
+         *     * `notes` - notes
+         * @enum {string}
+         */
+        ReaderShareSectionEnum: "questions" | "materials" | "notes";
+        /**
+         * @description * `research` - research
+         *     * `booklist` - booklist
+         * @enum {string}
+         */
+        ReaderShareSourceKindEnum: "research" | "booklist";
         ReaderTextBlock: {
             /** @description [x0,y0,x1,y1] in displayed cropped/rotated page fractions, or [] when coordinates are unknown. */
             normalized_bbox: number[];
@@ -12248,18 +12582,6 @@ export interface components {
             notice: string;
         };
         /**
-         * @description * `overview` - overview
-         *     * `questions` - questions
-         *     * `works` - works
-         *     * `scholars` - scholars
-         *     * `concepts` - concepts
-         *     * `articles` - articles
-         *     * `paths` - paths
-         *     * `evidence` - evidence
-         * @enum {string}
-         */
-        SectionEnum: "overview" | "questions" | "works" | "scholars" | "concepts" | "articles" | "paths" | "evidence";
-        /**
          * @description * `related` - related
          *     * `foundational` - foundational
          *     * `disputed` - disputed
@@ -12297,6 +12619,235 @@ export interface components {
          * @enum {string}
          */
         SessionEnum: "cookie" | "token";
+        ShareBrief: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            title: string;
+            /** Format: uuid */
+            request_id: string | null;
+            source_kind: components["schemas"]["ReaderShareSourceKindEnum"];
+            /** Format: uuid */
+            source_id: string | null;
+            destination: components["schemas"]["ReaderShareDestinationEnum"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            revoked: boolean;
+            is_owner: boolean;
+            review_state: components["schemas"]["ReaderShareReviewStateEnum"];
+        };
+        ShareCandidateItem: {
+            title: string;
+            text: string;
+            available: boolean;
+            truncated?: boolean;
+            tags?: string[];
+            work?: {
+                [key: string]: unknown;
+            };
+            reference?: {
+                [key: string]: unknown;
+            } | null;
+            id: string;
+            version: string;
+        };
+        ShareCandidateSections: {
+            questions: components["schemas"]["ShareCandidateItem"][];
+            materials: components["schemas"]["ShareCandidateItem"][];
+            notes: components["schemas"]["ShareCandidateItem"][];
+        };
+        /**
+         * @description * `revoke` - revoke
+         *     * `notify` - notify
+         *     * `review` - review
+         * @enum {string}
+         */
+        ShareCommandInputActionEnum: "revoke" | "notify" | "review";
+        ShareCommandInputRequest: {
+            action: components["schemas"]["ShareCommandInputActionEnum"];
+            expected_revision: number;
+            state?: components["schemas"]["ReaderShareReviewStateEnum"];
+        };
+        ShareCommandResult: components["schemas"]["ShareBrief"] | components["schemas"]["ShareNotifyResult"];
+        ShareContent: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            source: components["schemas"]["ShareSourceTitle"];
+            sections: components["schemas"]["ShareContentSections"];
+            message: string;
+            excluded: string[];
+            /** Format: date-time */
+            expires_at: string;
+            destination: components["schemas"]["ReaderShareDestinationEnum"];
+            review_state: string;
+        };
+        ShareContentItem: {
+            title: string;
+            text: string;
+            available: boolean;
+            truncated?: boolean;
+            tags?: string[];
+            work?: {
+                [key: string]: unknown;
+            };
+            reference?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        ShareContentSections: {
+            questions: components["schemas"]["ShareContentItem"][];
+            materials: components["schemas"]["ShareContentItem"][];
+            notes: components["schemas"]["ShareContentItem"][];
+        };
+        ShareCreateInputRequest: {
+            source_kind: components["schemas"]["ReaderShareSourceKindEnum"];
+            /** Format: uuid */
+            source_id: string;
+            expected_version: string;
+            questions?: string[];
+            materials?: string[];
+            notes?: string[];
+            destination: components["schemas"]["ReaderShareDestinationEnum"];
+            /** Format: uuid */
+            group_id?: string;
+            group_revision?: number;
+            member_ids?: string[];
+            /** @default  */
+            message: string;
+            /** @default 30 */
+            expires_days: number;
+            /** Format: uuid */
+            request_id: string;
+            preview_hash: string;
+            confirmed: boolean;
+        };
+        ShareDestination: {
+            kind: components["schemas"]["ReaderShareDestinationEnum"];
+            title: string;
+            /** Format: uuid */
+            group_id: string | null;
+            members: components["schemas"]["ShareRecipientBinding"][];
+            sender_binding?: components["schemas"]["ShareRecipientBinding"];
+        };
+        ShareDetail: {
+            owner_id: string;
+            share: components["schemas"]["ShareBrief"];
+            content: components["schemas"]["ShareContent"];
+        };
+        ShareDirectory: {
+            page: number;
+            count: number;
+            total_pages: number;
+            owner_id: string;
+            results: components["schemas"]["ShareBrief"][];
+        };
+        ShareNotice: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            share_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            read_at: string | null;
+        };
+        ShareNoticePage: {
+            page: number;
+            count: number;
+            total_pages: number;
+            owner_id: string;
+            unread: number;
+            results: components["schemas"]["ShareNotice"][];
+        };
+        ShareNoticeRead: {
+            owner_id: string;
+            marked: number;
+        };
+        ShareNotifyResult: {
+            owner_id: string;
+            created: number;
+            total: number;
+            channel: string;
+            message: string;
+        };
+        SharePreviewInputRequest: {
+            source_kind: components["schemas"]["ReaderShareSourceKindEnum"];
+            /** Format: uuid */
+            source_id: string;
+            expected_version: string;
+            questions?: string[];
+            materials?: string[];
+            notes?: string[];
+            destination: components["schemas"]["ReaderShareDestinationEnum"];
+            /** Format: uuid */
+            group_id?: string;
+            group_revision?: number;
+            member_ids?: string[];
+            /** @default  */
+            message: string;
+            /** @default 30 */
+            expires_days: number;
+        };
+        SharePreviewOutput: {
+            owner_id: string;
+            source: components["schemas"]["ShareSource"];
+            sections: components["schemas"]["ShareCandidateSections"];
+            message: string;
+            excluded: string[];
+            destination: components["schemas"]["ShareDestination"];
+            expires_days: number;
+            preview_hash: string;
+        };
+        ShareReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            share: components["schemas"]["ShareBrief"];
+            token: string | null;
+        };
+        ShareRecipientBinding: {
+            user_id: string;
+            membership_id: string;
+        };
+        ShareSelectionInputRequest: {
+            source_kind: components["schemas"]["ReaderShareSourceKindEnum"];
+            /** Format: uuid */
+            source_id: string;
+            expected_version?: string;
+            section: components["schemas"]["ReaderShareSectionEnum"];
+            /** @default 1 */
+            page: number;
+        };
+        ShareSelectionOutput: {
+            page: number;
+            count: number;
+            total_pages: number;
+            owner_id: string;
+            source: components["schemas"]["ShareSource"];
+            section: components["schemas"]["ReaderShareSectionEnum"];
+            results: components["schemas"]["ShareCandidateItem"][];
+        };
+        ShareSource: {
+            kind: components["schemas"]["ReaderShareSourceKindEnum"];
+            title: string;
+            /** Format: uuid */
+            id: string;
+            version: string;
+        };
+        ShareSourceTitle: {
+            kind: components["schemas"]["ReaderShareSourceKindEnum"];
+            title: string;
+        };
+        ShareSourcesPage: {
+            page: number;
+            count: number;
+            total_pages: number;
+            owner_id: string;
+            results: components["schemas"]["ShareSource"][];
+        };
         SiteConfig: {
             /** @default  */
             home_hero_image: string;
@@ -13083,12 +13634,24 @@ export interface components {
             results: components["schemas"]["TopicArticle"][];
         };
         TopicDetailFilters: {
-            section: components["schemas"]["SectionEnum"];
+            section: components["schemas"]["TopicDetailFiltersSectionEnum"];
             question_type: components["schemas"]["QuestionTypeEnum"];
             availability: components["schemas"]["AvailabilityEnum"];
             reading: components["schemas"]["ReadingEnum"];
             sort: components["schemas"]["TopicDetailFiltersSortEnum"];
         };
+        /**
+         * @description * `overview` - overview
+         *     * `questions` - questions
+         *     * `works` - works
+         *     * `scholars` - scholars
+         *     * `concepts` - concepts
+         *     * `articles` - articles
+         *     * `paths` - paths
+         *     * `evidence` - evidence
+         * @enum {string}
+         */
+        TopicDetailFiltersSectionEnum: "overview" | "questions" | "works" | "scholars" | "concepts" | "articles" | "paths" | "evidence";
         /**
          * @description * `relevance` - relevance
          *     * `published` - published
@@ -19787,6 +20350,172 @@ export interface operations {
             };
         };
     };
+    reader_groups_list: {
+        parameters: {
+            query?: {
+                invitation_page?: number;
+                /**
+                 * @description * `` -
+                 *     * `campus` - campus
+                 *     * `team` - team
+                 */
+                kind?: "" | "campus" | "team";
+                page?: number;
+                /**
+                 * @description * `own` - own
+                 *     * `received` - received
+                 *     * `proposals` - proposals
+                 */
+                tab?: "own" | "received" | "proposals";
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupDirectory"];
+                };
+            };
+        };
+    };
+    reader_groups_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupCreateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["GroupCreateInputRequest"];
+                "multipart/form-data": components["schemas"]["GroupCreateInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResult"];
+                };
+            };
+        };
+    };
+    reader_groups_detail: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupDetail"];
+                };
+            };
+        };
+    };
+    reader_groups_command: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["GroupCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["GroupCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResult"];
+                };
+            };
+        };
+    };
+    reader_groups_accept: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GroupAcceptInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["GroupAcceptInputRequest"];
+                "multipart/form-data": components["schemas"]["GroupAcceptInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupAcceptOutput"];
+                };
+            };
+        };
+    };
+    reader_group_receipt: {
+        parameters: {
+            query: {
+                group_id?: string;
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResult"];
+                };
+            };
+        };
+    };
     reading_history_list: {
         parameters: {
             query?: {
@@ -22952,6 +23681,312 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchRecordsPage"];
+                };
+            };
+        };
+    };
+    public_share_content: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Share-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareContent"];
+                };
+            };
+        };
+    };
+    reader_shares_list: {
+        parameters: {
+            query?: {
+                invitation_page?: number;
+                /**
+                 * @description * `` -
+                 *     * `campus` - campus
+                 *     * `team` - team
+                 */
+                kind?: "" | "campus" | "team";
+                page?: number;
+                /**
+                 * @description * `own` - own
+                 *     * `received` - received
+                 *     * `proposals` - proposals
+                 */
+                tab?: "own" | "received" | "proposals";
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareDirectory"];
+                };
+            };
+        };
+    };
+    reader_shares_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareCreateInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ShareCreateInputRequest"];
+                "multipart/form-data": components["schemas"]["ShareCreateInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareReceipt"];
+                };
+            };
+        };
+    };
+    reader_share_detail: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareDetail"];
+                };
+            };
+        };
+    };
+    reader_share_command: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ShareCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["ShareCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareCommandResult"];
+                };
+            };
+        };
+    };
+    reader_share_notices: {
+        parameters: {
+            query?: {
+                invitation_page?: number;
+                /**
+                 * @description * `` -
+                 *     * `campus` - campus
+                 *     * `team` - team
+                 */
+                kind?: "" | "campus" | "team";
+                page?: number;
+                /**
+                 * @description * `own` - own
+                 *     * `received` - received
+                 *     * `proposals` - proposals
+                 */
+                tab?: "own" | "received" | "proposals";
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareNoticePage"];
+                };
+            };
+        };
+    };
+    reader_share_mark_read: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeReadInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NoticeReadInputRequest"];
+                "multipart/form-data": components["schemas"]["NoticeReadInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareNoticeRead"];
+                };
+            };
+        };
+    };
+    reader_share_preview: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharePreviewInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SharePreviewInputRequest"];
+                "multipart/form-data": components["schemas"]["SharePreviewInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharePreviewOutput"];
+                };
+            };
+        };
+    };
+    reader_share_receipt: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareReceipt"];
+                };
+            };
+        };
+    };
+    reader_share_selection: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareSelectionInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ShareSelectionInputRequest"];
+                "multipart/form-data": components["schemas"]["ShareSelectionInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareSelectionOutput"];
+                };
+            };
+        };
+    };
+    reader_share_sources: {
+        parameters: {
+            query: {
+                page?: number;
+                /**
+                 * @description * `research` - research
+                 *     * `booklist` - booklist
+                 */
+                source_kind: "research" | "booklist";
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareSourcesPage"];
                 };
             };
         };

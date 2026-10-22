@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 R34受限分享契约
+
+新增groups与shares及share-links共12路径、合计266。见SHARING_WORKSPACE_20261023。私人必需owner头，分享源绑定本人/版本，公开token不进入查询字符串；允许review_candidate仅读明确提案。原privacy collaboration五类与旧export同步，0契约错误/10旧catalog警告；迁移0024仅声明。
+
 ## 2026-10-23 引用加入本人书单
 
 原252路径保留，新增lists/{id}/citation（GET回执/POST保存）及undo-citation（POST），共254。强制owner/本人范围、版本、公开来源及回执；签名撤销保护后续编辑和研究/记忆关联。详见CITATION_BOOKLISTS_20261023及生成契约。

@@ -16,8 +16,8 @@ async function mockPrivacy(page: Page, empty = false) {
   const row: PrivacyItem = { id: itemId, category: "reading_history", revision: stamp, title: "合成私人阅读记录", updated_at: stamp, source: {}, impact: "阅读进度保留。" };
   const summary: PrivacySummary = { owner_id: "1", revision: 1, retention: { reading_history: true, search_history: false, personal_notes: true, followed_topics: true, source_follows: true, saved_knowledge: true },
     automatic_memory_use: false, confirmed_notes: empty ? 0 : 1, authorized_contexts: 0,
-    export_counts: { article_comments: 0, research: 0, notes: empty ? 0 : 1, plans: 0, audits: 0, source_follows: 0, saved_knowledge: 0 },
-    erase_counts: { article_comments: 0, reading_history: empty ? 0 : 1, search_history: 0, personal_notes: 0, reading_plans: 0, followed_topics: 0, source_follows: 0, saved_knowledge: 0 },
+    export_counts: { collaboration: 0, article_comments: 0, research: 0, notes: empty ? 0 : 1, plans: 0, audits: 0, source_follows: 0, saved_knowledge: 0 },
+    erase_counts: { collaboration: 0, article_comments: 0, reading_history: empty ? 0 : 1, search_history: 0, personal_notes: 0, reading_plans: 0, followed_topics: 0, source_follows: 0, saved_knowledge: 0 },
     operations: [], preference_history: [], max_operation_items: 500, export_formats: ["json"], notice: "只处理本人资料。" };
   const state = { owner: 1, summary, job: null as PrivacyOperation | null, failNextCreate: false,
     switchOwnerAt: null as string | null, unauthorizedAt: null as string | null, refreshCount: 0,

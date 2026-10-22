@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from .sharing_models import COLLABORATION_CATEGORIES
 
 
 class PrivacyPreferencesInput(serializers.Serializer):
@@ -7,7 +8,7 @@ class PrivacyPreferencesInput(serializers.Serializer):
 
 
 class PrivacyTargetInput(serializers.Serializer):
-    category = serializers.ChoiceField(choices=["article_comments", "reading_history", "search_history", "annotations", "bookmarks", "memories", "parallel_alignments", "plans", "followed_topics", "source_follows", "saved_knowledge", "graph_views", "reading_lists", "saved_items", "research", "audits", "citation_sources"])
+    category = serializers.ChoiceField(choices=[*COLLABORATION_CATEGORIES, "article_comments", "reading_history", "search_history", "annotations", "bookmarks", "memories", "parallel_alignments", "plans", "followed_topics", "source_follows", "saved_knowledge", "graph_views", "reading_lists", "saved_items", "research", "audits", "citation_sources"])
     id = serializers.UUIDField()
     revision = serializers.CharField(max_length=80)
 
@@ -15,7 +16,7 @@ class PrivacyTargetInput(serializers.Serializer):
 class PrivacyOperationInput(serializers.Serializer):
     request_id = serializers.UUIDField()
     kind = serializers.ChoiceField(choices=["export", "erase"])
-    categories = serializers.ListField(child=serializers.ChoiceField(choices=["article_comments", "research", "notes", "plans", "audits", "source_follows", "saved_knowledge"]), max_length=7, required=False)
+    categories = serializers.ListField(child=serializers.ChoiceField(choices=["collaboration", "article_comments", "research", "notes", "plans", "audits", "source_follows", "saved_knowledge"]), max_length=8, required=False)
     targets = PrivacyTargetInput(many=True, required=False)
 
     def validate(self, attrs):

@@ -186,6 +186,11 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "ReaderGroupKindEnum": ["campus", "team"],
+        "ReaderShareSourceKindEnum": ["research", "booklist"],
+        "ReaderShareDestinationEnum": ["group", "public", "proposal"],
+        "ReaderShareReviewStateEnum": ["submitted", "considering", "declined"],
+        "ReaderShareSectionEnum": ["questions", "materials", "notes"],
         "TopicKnowledgeNodeTypeEnum": ["research_problem", "debate", "concept"],
         "KnowledgeNodeTypeEnum": [("discipline", "学科"), ("theory_tradition", "理论传统"), ("subdiscipline", "子学科"), ("concept", "核心概念"), ("debate", "理论争论"), ("research_problem", "研究问题"), ("topic", "主题")],
         "PathReadingProgressEnum": ["pending", "reading", "completed", "skipped"],

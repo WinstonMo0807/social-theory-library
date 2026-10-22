@@ -1,0 +1,157 @@
+"use client";
+
+import Link from "next/link";
+import { CheckCircle2, Copy, Mail } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ApiRequestError } from "@/lib/api";
+import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
+import { sharingRequest, shareLink, sectionLabels, type ShareSection, type ShareSelection, type SharePreview,
+  type SharePreviewInput, type ShareCreateInput, type ShareReceipt, type GroupDirectory, type GroupDetail, type ShareNotifyResult } from "@/lib/api/sharing.client";
+import { SharingAccount, SharingPagination, SharedSummary, useSharingAction } from "./sharing-common";
+import styles from "./sharing.module.css";
+
+type SourceKind = "research" | "booklist";
+type SourcePage = { count: number; total_pages: number; results: Array<{ id: string; title: string; version: string }> };
+type Prepared = { input: SharePreviewInput; output: SharePreview };
+
+export function ShareComposer({ sourceId = "", sourceKind = "research" }: { sourceId?: string; sourceKind?: SourceKind }) {
+  return <SharingAccount next="/account/sharing/new">{owner => <Composer owner={owner} initialId={sourceId} initialKind={sourceKind} />}</SharingAccount>;
+}
+
+function Composer({ owner, initialId, initialKind }: { owner: string; initialId: string; initialKind: SourceKind }) {
+  const [kind, setKind] = useState<SourceKind>(initialKind), [id, setId] = useState(initialId), [sourcePage, setSourcePage] = useState(1);
+  const [section, setSection] = useState<ShareSection>("materials"), [page, setPage] = useState(1), [phase, setPhase] = useState(1);
+  const [selected, setSelected] = useState<Record<ShareSection, string[]>>({ questions: [], materials: [], notes: [] });
+  const [destination, setDestination] = useState<"public" | "proposal" | "campus" | "team" | "">("");
+  const [groupId, setGroupId] = useState(""), [groupPage, setGroupPage] = useState(1), [members, setMembers] = useState<string[]>([]);
+  const [message, setMessage] = useState(""), [expires, setExpires] = useState(30), [prepared, setPrepared] = useState<Prepared | null>(null), [confirmed, setConfirmed] = useState(false);
+  const [receipt, setReceipt] = useState<ShareReceipt | null>(null), [recovery, setRecovery] = useState<string | null>(null), [retryReady, setRetryReady] = useState(false);
+  const [reviewed, setReviewed] = useState(false), [manual, setManual] = useState("");
+  const pending = useRef<ShareCreateInput | null>(null), action = useSharingAction(owner), setActionMessage = action.setMessage;
+  const storageKey = `stl-share-request:${owner}`;
+  const loadSources = useCallback((path: string, signal: AbortSignal) => sharingRequest<SourcePage>(owner, path, { signal }), [owner]);
+  const sources = usePersistentWorkspace<SourcePage>(`/reading/shares/sources/?source_kind=${kind}&page=${sourcePage}`, owner, undefined, loadSources);
+  const loadChoices = useCallback((_: string, signal: AbortSignal) => sharingRequest<ShareSelection>(owner, "/reading/shares/selection/", {
+    method: "POST", signal, body: JSON.stringify({ source_kind: kind, source_id: id, section, page }) }), [owner, kind, id, section, page]);
+  const choices = usePersistentWorkspace<ShareSelection>(id ? `share-selection:${kind}:${id}:${section}:${page}` : "", owner, undefined, loadChoices);
+  const data = choices.error ? null : choices.data;
+  const loadGroups = useCallback((path: string, signal: AbortSignal) => sharingRequest<GroupDirectory>(owner, path, { signal }), [owner]);
+  const groups = usePersistentWorkspace<GroupDirectory>(destination === "campus" || destination === "team" ? `/reading/groups/?page=${groupPage}&kind=${destination}` : "", owner, undefined, loadGroups);
+  const loadGroup = useCallback((path: string, signal: AbortSignal) => sharingRequest<GroupDetail>(owner, path, { signal }), [owner]);
+  const group = usePersistentWorkspace<GroupDetail>(groupId ? `/reading/groups/${groupId}/` : "", owner, undefined, loadGroup);
+  const groupData = group.error ? null : group.data;
+  const selectedCount = selected.questions.length + selected.materials.length + selected.notes.length;
+  const blocked = action.busy || Boolean(recovery) || Boolean(receipt);
+  useEffect(() => {
+    const restore = () => {
+      try {
+        const requestId = sessionStorage.getItem(storageKey);
+        if (requestId && /^[\da-f-]{36}$/i.test(requestId)) setRecovery(requestId);
+      } catch { setActionMessage("恢复标识无法读取，请先核对分享记录。"); }
+    };
+    restore(); window.addEventListener("storage", restore);
+    return () => window.removeEventListener("storage", restore);
+  }, [storageKey, setActionMessage]);
+  function remember(value: string | null) {
+    setRecovery(value);
+    try { if (value) sessionStorage.setItem(storageKey, value); else sessionStorage.removeItem(storageKey); }
+    catch { setActionMessage("浏览器未能保存请求标识，请保持本页直到取得回执。"); }
+  }
+  function invalidate() { setPrepared(null); setConfirmed(false); }
+  function chooseSource(nextKind: SourceKind, nextId = "") {
+    setKind(nextKind); setId(nextId); setPage(1); setSelected({ questions: [], materials: [], notes: [] }); invalidate();
+  }
+  function input(): SharePreviewInput | null {
+    if (!data || data.source.id !== id) return null;
+    return { source_kind: kind, source_id: id, expected_version: data.source.version, ...selected,
+      destination: destination === "campus" || destination === "team" ? "group" : destination || "public",
+      ...(destination === "campus" || destination === "team" ? { group_id: groupId, group_revision: groupData?.group.revision, member_ids: members } : {}),
+      message, expires_days: expires };
+  }
+  const currentInput = input();
+  const ready = Boolean(prepared && currentInput && JSON.stringify(currentInput) === JSON.stringify(prepared.input) && destination);
+  function preview(nextPhase = 2) {
+    if (!currentInput) return;
+    const captured = currentInput;
+    void action.run(signal => sharingRequest<SharePreview>(owner, "/reading/shares/preview/", { method: "POST", body: JSON.stringify(captured), signal }), output => {
+      setPrepared({ input: captured, output }); setConfirmed(false); setPhase(nextPhase);
+    });
+  }
+  function finish(value: ShareReceipt) {
+    pending.current = null; setRetryReady(false); remember(null); setReceipt(value); setPhase(4);
+    setActionMessage(value.share.revoked ? "原提交后来已撤回，旧请求不会重新建立授权。" : "已取得真实提交回执，请查看接收范围与有效期。");
+  }
+  function send(original?: ShareCreateInput) {
+    if (pending.current && original !== pending.current) return;
+    if (!original && (!prepared || !ready || !confirmed)) return;
+    const body: ShareCreateInput = original || { ...prepared!.input, request_id: crypto.randomUUID(), preview_hash: prepared!.output.preview_hash, confirmed: true };
+    pending.current = body; setRetryReady(true); remember(body.request_id);
+    void action.run(signal => sharingRequest<ShareReceipt>(owner, "/reading/shares/", { method: "POST", body: JSON.stringify(body), signal }), finish, reason => {
+      if (reason instanceof ApiRequestError && reason.status >= 400 && reason.status < 500) {
+        pending.current = null; setRetryReady(false); remember(null); setConfirmed(false); choices.reload(); group.reload();
+      }
+    });
+  }
+  function copyLink() {
+    if (!receipt) return;
+    void action.run(async signal => {
+      const current = await sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${receipt.request_id}`, { signal });
+      if (!current.token) throw Error("此分享的公开链接已经到期或撤回。");
+      return shareLink(current.share.id, current.token);
+    }, link => { void navigator.clipboard.writeText(link).then(() => { setManual(""); setActionMessage("分享链接已复制。持有链接的人可查看已确认的内容摘要。"); }).catch(() => setManual(link)); });
+  }
+  if (action.invalid) return <div className={styles.empty} role="alert"><p>账户或权限需要重新核对，已隐藏原账户内容。</p><button onClick={() => window.location.reload()}>重新核对账户</button></div>;
+  return <>
+    <header className={styles.heading}><div><h1>分享或提交策划的内容范围</h1><p>选择要分享的内容，预览将公开的范围，明确目的地或接收范围。私人正文与 PDF 原件始终不包含在内。</p></div></header>
+    {action.message ? <p className={styles.feedback} role="status">{action.message}</p> : null}
+    {recovery ? <section className={styles.recovery}><h2>核对原提交结果</h2><p>已保留请求标识，尚未收到明确回执时不会再次建立分享。刷新后可查回结果。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${recovery}`, { signal }), finish)}>查回原结果</button>{retryReady ? <button disabled={action.busy} onClick={() => { if (pending.current) send(pending.current); }}>重试原提交</button> : <><Link href="/account/sharing">查看分享记录</Link><label><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />我已核对原结果</label><button disabled={action.busy || !reviewed} onClick={() => { remember(null); setReviewed(false); }}>结束恢复</button></>}</div></section> : null}
+    <nav className={styles.mobileSteps} aria-label="分享步骤">{["选择内容", "预览", "选择目的地", "确认提交"].map((label, index) => <button key={label} aria-current={phase === index + 1 ? "step" : undefined} disabled={action.busy} onClick={() => setPhase(index + 1)}>{index + 1} {label}</button>)}</nav>
+    <div className={styles.steps} data-phase={phase}>
+      <section className={styles.step}><h2><span>1</span>选择当前研究或书单对象</h2><div className={styles.stepBody}>
+        <div className={styles.tabs}>{(["research", "booklist"] as const).map(value => <button key={value} aria-pressed={kind === value} disabled={blocked} onClick={() => { chooseSource(value); setSourcePage(1); }}>{value === "research" ? "我的研究" : "我的书单"}</button>)}</div>
+        {sources.error ? <p role="alert">{sources.error}<button onClick={sources.reload}>重新读取</button></p> : sources.data ? <><div className={styles.objectList}>{sources.data.results.map(row => <button key={row.id} aria-pressed={id === row.id} disabled={blocked} onClick={() => chooseSource(kind, row.id)}><strong>{row.title}</strong><small>仅本人 · 明确选择后才会加入预览</small></button>)}</div>{!sources.data.results.length ? <p className={styles.muted}>没有可选择的{kind === "research" ? "研究" : "书单"}。</p> : null}<SharingPagination page={sourcePage} total={sources.data.total_pages} disabled={blocked} onPage={setSourcePage} /></> : <p role="status">正在读取本人对象…</p>}
+        {data ? <p className={styles.muted}>当前选择：{data.source.title}</p> : null}
+      </div></section>
+      <section className={styles.step}><h2><span>2</span>选择要包含的内容项</h2><div className={styles.stepBody}>
+        <div className={styles.tabs}>{(Object.keys(sectionLabels) as ShareSection[]).map(key => <button key={key} aria-pressed={section === key} disabled={blocked} onClick={() => { setSection(key); setPage(1); }}>{sectionLabels[key]} {selected[key].length || ""}</button>)}</div>
+        {!id ? <p className={styles.muted}>先选择一个本人研究或书单。</p> : choices.error ? <p role="alert">{choices.error}<button onClick={choices.reload}>重新读取</button></p> : !data ? <p role="status">正在读取可选内容…</p> : <>
+          {data.results.map(row => <label className={styles.choice} key={row.id}><input type="checkbox" checked={selected[section].includes(row.id)} disabled={blocked || !row.available || selected[section].length >= 20 && !selected[section].includes(row.id)} onChange={event => { const checked = event.target.checked; setSelected(value => ({ ...value, [section]: checked ? [...value[section], row.id] : value[section].filter(key => key !== row.id) })); invalidate(); }} /><span><strong>{row.title}</strong>{row.text ? <p>{row.text}</p> : null}<small>{row.available ? row.truncated ? "只分享预览显示的前 2000 字" : "只包含本项明确选择的内容" : "当前不可分享"}</small></span></label>)}
+          {!data.results.length ? <p className={styles.muted}>当前对象没有此类内容。</p> : null}
+          <SharingPagination page={page} total={data.total_pages} disabled={blocked} onPage={setPage} />
+          {selected[section].length ? <button disabled={blocked} onClick={() => { setSelected(value => ({ ...value, [section]: [] })); invalidate(); }}>清空本类选择</button> : null}
+        </>}
+        <div className={styles.excluded}><div><input type="checkbox" disabled checked={false} readOnly />私人正文 · 不包含</div><div><input type="checkbox" disabled checked={false} readOnly />PDF 原件 · 不包含</div><p>本人笔记需逐项勾选。未选中的内容不会分享。</p></div>
+      </div></section>
+      <section className={styles.step}><h2><span>3</span>预览将公开或提交的内容</h2><div className={styles.stepBody}><div className={styles.summaryBox}>{prepared ? <SharedSummary value={prepared.output} /> : <p className={styles.muted}>已选择 {selectedCount} 项。生成预览后，请逐项核对实际文字和来源。</p>}</div><button disabled={blocked || !data || !selectedCount} onClick={() => preview()}>生成或更新预览</button></div></section>
+      <section className={styles.step}><h2><span>4</span>选择目的地或接收范围</h2><div className={styles.stepBody}>
+        <div className={styles.destinations}>{([
+          ["campus", "学术小组", "仅本次明确选择的成员可见"], ["team", "合作研究团队", "仅本次明确选择的成员可见"],
+          ["public", "公开分享链接（仅内容摘要）", "任何获得链接的人均可查看所选内容"], ["proposal", "提交为策划提案", "仅本站具有提案审核权限的编辑可查看"],
+        ] as const).map(([value, title, copy]) => <label key={value}><input type="radio" name="share-destination" checked={destination === value} disabled={blocked} onChange={() => { setDestination(value); setGroupPage(1); setGroupId(""); setMembers([]); invalidate(); }} /><span>{title}<small>{copy}</small></span></label>)}</div>
+        {(destination === "campus" || destination === "team") ? <div className={styles.destinationFields}>
+          {groups.error ? <p role="alert">{groups.error}<button onClick={groups.reload}>重新读取小组</button></p> : <label>选择小组<select disabled={blocked} value={groupId} onChange={event => { setGroupId(event.target.value); setMembers([]); invalidate(); }}><option value="">请选择</option>{groups.data?.groups.results.filter(row => row.kind === destination).map(row => <option value={row.id} key={row.id}>{row.title}</option>)}</select></label>}
+          {groups.data ? <SharingPagination page={groupPage} total={groups.data.groups.total_pages} disabled={blocked} onPage={setGroupPage} /> : null}
+          <Link href="/account/groups">管理小组与邀请</Link>
+          {group.error ? <p role="alert">{group.error}<button onClick={group.reload}>重新读取成员</button></p> : groupData ? <><p>明确选择接收成员</p><div className={styles.receiverList}>{groupData.members.map(member => <label key={member.membership_id}><input type="checkbox" checked={members.includes(member.user_id)} disabled={blocked} onChange={event => { setMembers(values => event.target.checked ? [...values, member.user_id] : values.filter(value => value !== member.user_id)); invalidate(); }} />{member.name}{member.user_id === owner ? "（自己）" : ""}</label>)}</div></> : null}
+        </div> : null}
+        <div className={styles.destinationFields}><label>附言（可选）<textarea value={message} maxLength={200} disabled={blocked} onChange={event => { setMessage(event.target.value); invalidate(); }} /><small>{message.length}/200</small></label><label>分享有效期<select value={expires} disabled={blocked} onChange={event => { setExpires(Number(event.target.value)); invalidate(); }}>{[7, 30, 90, 365].map(days => <option key={days} value={days}>{days} 天</option>)}</select></label></div>
+      </div></section>
+      <section className={styles.step}><h2><span>5</span>确认并提交</h2><div className={styles.stepBody}>
+        <dl className={styles.confirmation}><div><dt>对象</dt><dd>{data?.source.title || "尚未选择"}</dd></div><div><dt>包含内容</dt><dd>{(Object.keys(sectionLabels) as ShareSection[]).map(key => `${sectionLabels[key]} ${selected[key].length} 项`).join(" · ")}</dd></div><div><dt>不包含</dt><dd>私人正文、PDF 原件、未选中的笔记</dd></div><div><dt>目的地</dt><dd>{destination ? prepared?.output.destination.title || "请更新预览核对" : "尚未选择"}</dd></div><div><dt>有效期</dt><dd>{expires} 天</dd></div></dl>
+        {!ready ? <><p className={styles.muted}>请选择目的地，并更新预览核对当前内容。</p><button disabled={blocked || !destination || !selectedCount || !data} onClick={() => preview(4)}>更新预览并核对</button></> : null}
+        <label className={styles.check}><input type="checkbox" checked={confirmed} disabled={blocked || !ready} onChange={event => setConfirmed(event.target.checked)} />我已核对以上内容，并同意仅分享所选内容。</label>
+        <div className={styles.actions}><Link href="/account/sharing">取消</Link><button className={styles.primary} disabled={blocked || !ready || !confirmed} onClick={() => send()}>确认提交</button></div>
+      </div></section>
+      <section className={styles.step}><h2><span>6</span>提交结果 · 返回原位置</h2><div className={styles.stepBody}>
+        {receipt ? <><div className={styles.receipt}><CheckCircle2 size={40} /><h3>{receipt.share.revoked ? "原分享已撤回" : "已取得提交回执"}</h3><p>有效至 {new Date(receipt.share.expires_at).toLocaleString("zh-CN")}。接收方仅能查看确认范围内的内容。</p></div><div className={styles.objectList}>
+          {receipt.token ? <button disabled={action.busy} onClick={copyLink}><Copy size={15} />复制分享链接</button> : null}
+          {receipt.share.destination === "group" && !receipt.share.revoked ? <button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareNotifyResult>(owner, `/reading/shares/${receipt.share.id}/`, { method: "POST", signal, body: JSON.stringify({ action: "notify", expected_revision: receipt.share.revision }) }), value => setActionMessage(`${value.message} 新增 ${value.created} 条，共 ${value.total} 位接收者已有通知。`))}><Mail size={15} />发送站内通知</button> : null}
+          <Link href={`/account/sharing/${receipt.share.id}`}>查看内容与授权</Link><Link href="/account/sharing">查看提交记录</Link>
+          {receipt.share.source_id ? <Link href={receipt.share.source_kind === "research" ? `/account/research/${receipt.share.source_id}` : `/account/collections/${receipt.share.source_id}`}>返回原位置</Link> : null}
+        </div></> : <p className={styles.muted}>确认提交后，这里显示真实回执、链接与后续操作。</p>}
+        {manual ? <label className={styles.manual}>手动复制分享链接<textarea readOnly value={manual} onFocus={event => event.currentTarget.select()} /></label> : null}
+      </div></section>
+    </div>
+    <div className={styles.mobileNext}>{phase > 1 ? <button disabled={action.busy} onClick={() => setPhase(value => value - 1)}>上一步</button> : null}{phase < 4 ? <button className={styles.primary} disabled={blocked || phase === 1 && (!data || !selectedCount)} onClick={() => phase === 1 ? preview(2) : phase === 3 ? preview(4) : setPhase(value => value + 1)}>{phase === 1 ? "下一步：预览内容" : phase === 2 ? "下一步：选择目的地" : "下一步：确认范围"}</button> : null}</div>
+  </>;
+}

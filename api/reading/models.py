@@ -281,3 +281,4 @@ from .graph_models import GraphViewReceipt, SavedGraphView  # noqa: E402,F401
 from .path_models import PlanCommandReceipt  # noqa: E402,F401
 
 from .editorial_comment_models import EditorialComment  # noqa: E402,F401
+from .sharing_models import ReaderGroup, ReaderGroupMember, ReaderGroupInvite, ReaderShare, ReaderShareNotice  # noqa: E402,F401

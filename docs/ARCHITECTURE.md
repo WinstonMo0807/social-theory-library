@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 原账户上的受限分享
+
+新ReaderGroup/Member/Invite与ReaderShare/Notice归reading，与管理权限组分离。原项目/书单/笔记是权威内容，分享只存加密范围/版本/接收身份；读取重新投影，原文按匿名可见性。原privacy导出删除接五类协作资料，旧同步导出同源。新0024迁移未执行，账号凭据和角色不变；详见docs/stl4/SHARING_WORKSPACE_20261023.md。
+
 ## 2026-10-23 R34引用书单
 
 引用抽屉书单命令沿原User→ReadingList锁、原Annotation加密笔记和KnowledgeSaveReceipt；不新增数据副本或模型。选文保存保留文件/修订/范围身份，原annotation_source做严格当前来源复核。签名撤销仅ID/版本，关联研究/记忆时拒绝整批撤销。

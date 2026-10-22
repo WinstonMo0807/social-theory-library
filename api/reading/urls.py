@@ -37,6 +37,8 @@ from .shared_citation_views import PublicCitationPreviewView
 from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView, SourceFollowReceiptView
 from .search_record_views import ReaderSearchRecordsView
 from .knowledge_save_views import KnowledgeSaveView
+from .sharing_views import (ReaderGroupsView, ReaderGroupDetailView, ReaderGroupAcceptView, ReaderGroupReceiptView, ShareSelectionView,
+    SharePreviewView, ShareSourcesView, ReaderSharesView, ShareReceiptView, ShareDetailView, ShareNoticesView, PublicShareView)
 from .graph_views import SavedGraphViewSet
 from .path_views import PathFollowViewSet
 from .parallel_views import (AdminParallelCalibrationViewSet, ParallelCalibrationViewSet,
@@ -73,6 +75,18 @@ router.register(
 )
 
 urlpatterns = [
+    path("groups/", ReaderGroupsView.as_view(), name="reader-groups"),
+    path("groups/accept/", ReaderGroupAcceptView.as_view(), name="reader-group-accept"),
+    path("groups/receipt/", ReaderGroupReceiptView.as_view(), name="reader-group-receipt"),
+    path("groups/<uuid:pk>/", ReaderGroupDetailView.as_view(), name="reader-group-detail"),
+    path("shares/selection/", ShareSelectionView.as_view(), name="reader-share-selection"),
+    path("shares/sources/", ShareSourcesView.as_view(), name="reader-share-sources"),
+    path("shares/preview/", SharePreviewView.as_view(), name="reader-share-preview"),
+    path("shares/receipt/", ShareReceiptView.as_view(), name="reader-share-receipt"),
+    path("shares/notices/", ShareNoticesView.as_view(), name="reader-share-notices"),
+    path("shares/", ReaderSharesView.as_view(), name="reader-shares"),
+    path("shares/<uuid:pk>/", ShareDetailView.as_view(), name="reader-share-detail"),
+    path("share-links/<uuid:pk>/", PublicShareView.as_view(), name="public-share-link"),
     path("notebook/", NotebookView.as_view(), name="reader-notebook"),
     path("notebook/choices/<str:kind>/", NotebookChoicesView.as_view(), name="reader-notebook-choices"),
     path("notebook/add-to-project/", NotebookProjectView.as_view(), name="reader-notebook-project"),
