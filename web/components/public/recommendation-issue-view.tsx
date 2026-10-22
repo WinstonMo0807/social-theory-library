@@ -7,6 +7,7 @@ import type { RecommendationIssue, IssueItem, IssueBlock, IssueResolvedSource } 
 import { SaveIssueList } from "@/components/save-issue-list";
 import { Dialog } from "@/components/ui/dialog";
 import { IssueBlockView } from "./issue-block-view";
+import { IssueProse } from "./issue-prose";
 import { EditorialByline, EditorialImage, EditorialRelated } from "./editorial-directory";
 import { EditorialSource, EditorialSourceContent } from "./editorial-source";
 import { ArticleComments } from "./article-comments";
@@ -37,7 +38,7 @@ function ExhibitionBody({issue,rows,base}:{issue:RecommendationIssue;rows:Exhibi
     const prose=group.blocks.filter(block=>!cards.some(row=>row.block===block));
     if(!group.heading&&!cards.length&&!prose.length)return null;
     return <section key={group.id} id={group.id || "exhibit-introduction"} className={styles.exhibitGroup}>{group.heading?<IssueBlockView block={group.heading}/>:null}{prose.map((block,index)=><IssueBlockView key={block.id || index} block={block}/>)}<div className={styles.exhibitGrid}>{cards.map(row=><article key={row.id} className={styles.exhibitCard}>
-      {row.item?<IssueItemCard item={row.item}/>:row.block?.type==="image"?<IssueBlockView block={row.block}/>:<><BookOpen size={25}/><h2>{row.title}</h2><p>{row.block?.text}</p></>}
+      {row.item?<IssueItemCard item={row.item}/>:row.block?.type==="image"?<IssueBlockView block={row.block}/>:<><BookOpen size={25}/><h2>{row.title}</h2>{row.block?<IssueProse block={row.block}/>:null}</>}
       <Link href={`${base}?exhibit=${encodeURIComponent(row.id)}`}>{row.block?.type==="image"?"查看图像与资料":"进入展项"}<ArrowRight size={15}/></Link>
     </article>)}</div></section>;
   })}</>;

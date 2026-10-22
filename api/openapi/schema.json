@@ -3824,6 +3824,65 @@
                 }
             }
         },
+        "/api/catalog/admin/recommendation-issues/{issue_id}/presence/": {
+            "post": {
+                "operationId": "catalog_admin_recommendation_issues_presence_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssuePresenceCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssuePresenceCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssuePresenceCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssuePresence"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/recommendation-issues/{issue_id}/publish/": {
             "post": {
                 "operationId": "catalog_admin_recommendation_issues_publish_create",
@@ -3956,6 +4015,123 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/IssueSourcesPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recommendation-issues/{issue_id}/suggestions/": {
+            "get": {
+                "operationId": "catalog_admin_recommendation_issues_suggestions_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "batch",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssueSuggestions"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_recommendation_issues_suggestions_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DismissIssueSuggestionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DismissIssueSuggestionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DismissIssueSuggestionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssueSuggestionDismissed"
                                 }
                             }
                         },
@@ -21866,6 +22042,24 @@
                     "title"
                 ]
             },
+            "DismissIssueSuggestionRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "token": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                    }
+                },
+                "required": [
+                    "request_id",
+                    "token"
+                ]
+            },
             "DocumentRevisionApplyModeEnum": {
                 "enum": [
                     "publish",
@@ -24754,6 +24948,15 @@
                     "text": {
                         "type": "string"
                     },
+                    "text_style": {
+                        "$ref": "#/components/schemas/TextStyleEnum"
+                    },
+                    "text_marks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueTextMark"
+                        }
+                    },
                     "source": {
                         "type": "string"
                     },
@@ -24832,6 +25035,15 @@
                     },
                     "text": {
                         "type": "string"
+                    },
+                    "text_style": {
+                        "$ref": "#/components/schemas/TextStyleEnum"
+                    },
+                    "text_marks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueTextMarkRequest"
+                        }
                     },
                     "source": {
                         "type": "string"
@@ -25135,6 +25347,98 @@
                     "kind"
                 ]
             },
+            "IssueParticipant": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "is_self": {
+                        "type": "boolean"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/IssueParticipantModeEnum"
+                    },
+                    "last_seen": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "is_self",
+                    "last_seen",
+                    "mode",
+                    "name"
+                ]
+            },
+            "IssueParticipantModeEnum": {
+                "enum": [
+                    "editing",
+                    "viewing"
+                ],
+                "type": "string",
+                "description": "* `editing` - editing\n* `viewing` - viewing"
+            },
+            "IssuePresence": {
+                "type": "object",
+                "properties": {
+                    "participants": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueParticipant"
+                        }
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expires_after_seconds": {
+                        "type": "integer"
+                    },
+                    "shared": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "checked_at",
+                    "expires_after_seconds",
+                    "notice",
+                    "participants",
+                    "shared"
+                ]
+            },
+            "IssuePresenceCommandModeEnum": {
+                "enum": [
+                    "editing",
+                    "viewing",
+                    "leave"
+                ],
+                "type": "string",
+                "description": "* `editing` - editing\n* `viewing` - viewing\n* `leave` - leave"
+            },
+            "IssuePresenceCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/IssuePresenceCommandModeEnum"
+                    }
+                },
+                "required": [
+                    "mode",
+                    "session_id"
+                ]
+            },
             "IssueSourceChoice": {
                 "type": "object",
                 "properties": {
@@ -25178,6 +25482,166 @@
                     "next",
                     "previous",
                     "results"
+                ]
+            },
+            "IssueSuggestion": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "source": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "key": {
+                        "type": "string"
+                    },
+                    "token": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/IssueSuggestionKindEnum"
+                    },
+                    "reason": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "key",
+                    "kind",
+                    "reason",
+                    "source",
+                    "target",
+                    "token"
+                ]
+            },
+            "IssueSuggestionDismissed": {
+                "type": "object",
+                "properties": {
+                    "dismissed": {
+                        "type": "boolean"
+                    },
+                    "key": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "dismissed",
+                    "key"
+                ]
+            },
+            "IssueSuggestionKindEnum": {
+                "enum": [
+                    "work",
+                    "person",
+                    "concept"
+                ],
+                "type": "string",
+                "description": "* `work` - work\n* `person` - person\n* `concept` - concept"
+            },
+            "IssueSuggestions": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueSuggestion"
+                        }
+                    },
+                    "query": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "batch": {
+                        "type": "integer"
+                    },
+                    "has_more": {
+                        "type": "boolean"
+                    },
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "batch",
+                    "checked_at",
+                    "edit_version",
+                    "has_more",
+                    "kind",
+                    "notice",
+                    "query",
+                    "results"
+                ]
+            },
+            "IssueTextMark": {
+                "type": "object",
+                "properties": {
+                    "start": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "end": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/IssueTextMarkKindEnum"
+                    },
+                    "href": {
+                        "type": "string",
+                        "maxLength": 1500
+                    }
+                },
+                "required": [
+                    "end",
+                    "kind",
+                    "start"
+                ]
+            },
+            "IssueTextMarkKindEnum": {
+                "enum": [
+                    "strong",
+                    "em",
+                    "link"
+                ],
+                "type": "string",
+                "description": "* `strong` - strong\n* `em` - em\n* `link` - link"
+            },
+            "IssueTextMarkRequest": {
+                "type": "object",
+                "properties": {
+                    "start": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "end": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/IssueTextMarkKindEnum"
+                    },
+                    "href": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1500
+                    }
+                },
+                "required": [
+                    "end",
+                    "kind",
+                    "start"
                 ]
             },
             "ItemEstimateInputRequest": {
@@ -42218,6 +42682,15 @@
                 ],
                 "type": "string",
                 "description": "* `none` - 尚无文字\n* `embedded` - PDF 原生文本\n* `ocr` - OCR\n* `hybrid` - 混合"
+            },
+            "TextStyleEnum": {
+                "enum": [
+                    "paragraph",
+                    "ordered",
+                    "unordered"
+                ],
+                "type": "string",
+                "description": "* `paragraph` - paragraph\n* `ordered` - ordered\n* `unordered` - unordered"
             },
             "TheoryBrowseCounts": {
                 "type": "object",

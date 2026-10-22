@@ -1,6 +1,7 @@
 """Typed issue blocks reference canonical sources; they do not copy source text."""
 from copy import deepcopy
 from uuid import uuid4
+from urllib.parse import urlsplit
 
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -17,6 +18,59 @@ def _text(value, limit=6000):
     if not isinstance(value, str) or len(value) > limit:
         raise ValidationError("内容必须为长度适当的文字。")
     return value.strip()
+
+
+def normalize_text_format(row, block):
+    """Bounded formatting of editorial prose, never of resolved source text.
+
+    Offsets follow DOM UTF-16 selection. Trimming is accounted for explicitly
+    so a saved mark cannot drift onto a different word or split an emoji.
+    """
+    if "text_style" not in row and "text_marks" not in row:
+        return block
+    style = row.get("text_style", "paragraph")
+    if style not in ("paragraph", "unordered", "ordered"):
+        raise ValidationError({"body_blocks": "导读段落格式无效。"})
+    original = row.get("text", "")
+    if not isinstance(original, str):
+        raise ValidationError({"body_blocks": "导读文字格式无效。"})
+    offsets, position = {0}, 0
+    for character in original:
+        position += 2 if ord(character) > 0xFFFF else 1
+        offsets.add(position)
+    trim = sum(2 if ord(character) > 0xFFFF else 1 for character in original[:len(original) - len(original.lstrip())])
+    length = sum(2 if ord(character) > 0xFFFF else 1 for character in block["text"])
+    values = row.get("text_marks", [])
+    if not isinstance(values, list) or len(values) > 200:
+        raise ValidationError({"body_blocks": "每段最多保留200处文字格式。"})
+    marks, seen = [], set()
+    for value in values:
+        if not isinstance(value, dict) or set(value) - {"start", "end", "kind", "href"}:
+            raise ValidationError({"body_blocks": "文字格式标记无效。"})
+        start, end, kind = value.get("start"), value.get("end"), value.get("kind")
+        if type(start) is not int or type(end) is not int or start not in offsets or end not in offsets or start >= end or kind not in ("strong", "em", "link"):
+            raise ValidationError({"body_blocks": "请重新选择要设置格式的导读文字。"})
+        href = value.get("href", "")
+        if kind == "link":
+            if not isinstance(href, str) or len(href) > 1500 or "\\" in href or any(ord(c) < 32 for c in href):
+                raise ValidationError({"body_blocks": "导读链接地址无效。"})
+            try:
+                parsed = urlsplit(href)
+            except ValueError:
+                raise ValidationError({"body_blocks": "导读链接地址无效。"})
+            if not ((parsed.scheme in {"http", "https"} and parsed.netloc) or (href.startswith("/") and not href.startswith("//"))):
+                raise ValidationError({"body_blocks": "导读链接须为本站路径或完整http/https地址。"})
+        start, end = max(0, start - trim), min(length, end - trim)
+        if start >= end:
+            continue
+        mark = {"start": start, "end": end, "kind": kind, **({"href": href} if kind == "link" else {})}
+        identity = (start, end, kind, href if kind == "link" else "")
+        if identity not in seen:
+            if kind == "link" and any(old["kind"] == "link" and start < old["end"] and end > old["start"] for old in marks):
+                raise ValidationError({"body_blocks": "同一段文字不能重叠引用多个链接。"})
+            marks.append(mark)
+            seen.add(identity)
+    return {**block, "text_style": style, "text_marks": marks}
 
 
 def resolve_target(raw, *, public=False):

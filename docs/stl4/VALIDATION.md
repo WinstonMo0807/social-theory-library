@@ -1,5 +1,16 @@
 # 验收记录
 
+## 2026-10-22 PDF127第二批静态记录
+
+- Python ast.parse 9个源码/测试文件：69214d、最终fb0a39退出0；测试定义未执行。新9个后端函数、6个浏览器场景仅定义，现issue-editor-atlas共13场景。
+- `tmp/stl4-issue-editor-details-static.py` 7e010f退出0：公开作品/学者/概念查询、准确版本、JSON放弃回执、当前可用账号，共6组SQLite/PostgreSQL编译12次。ensure_connection明确阻断、连接0；仅在编译时stub词表返回ID，不执行查询或检索评测。
+- 完整 `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：79226/2c0171、57006/78a3f5、最终19654/5fdb13均退出0。
+- 目标ESLint初次7f1908因渲染回调里递增offset退出1，改为渲染前计算行偏移；11目标ec47a0退出0（3项img建议）。素材图片后改为复用EditorialImage缺失/失败处理，最终3目标e13647退出0、无提示，其他2项原img建议保留。无禁用检查规则。
+- PostCSS e13647退出0：176个顶层节点、本批48个直接类引用均存在。CSS不证明实际像素或交互。
+- 隔离进程环境DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8；`api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-issue-editor-details-schema.json --validate` d8cee1退出0，0错误/10项既有Home Scholar/Topic类型提示。dbbdbf生成225路径、原223全保留及TS同步。
+- ATLAS辅助首次983b81因CSV头BOM未剥离退出1，改为utf-8-sig后fb0a39退出0：209行、仅M15四行细节修改，page/id/hash/source_page及实施/验收状态不变；空暂存区、34路径白名单diff检查0（既有CRLF提示）。
+- 未正式测试、浏览器、E2E、构建、迁移、OCR/模型调用、检索质量测评、索引重建、生产发布或清理。
+
 ## 2026-10-22 专题编辑器第一批静态记录
 
 - Python ast.parse 8个源码/测试文件：a148f8退出0。未执行测试模块。

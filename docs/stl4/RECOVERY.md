@@ -1,5 +1,16 @@
 # 中断恢复最短路径
 
+## 2026-10-22 PDF127第二批恢复
+
+前置3136d5c，当前批白名单tmp/stl4-issue-editor-details-checkpoint.json，实际提交号看Git。新IssueTextEditor/IssueProse、IssueSuggestions/editorial_suggestions、IssueCollaboration/editorial_presence，原issue保存/发布/历史继续复用。225契约。不要重跑此前或本批文档prepend辅助。当前96/16/97；M15仍部分，下一步先补就地富文本编辑/选区与撤销，再读取唯一PDF128–130并接现有editorial_assistance。格式选择与右侧预览已真实接通，但不能写已达到完全所见即所得或视觉无差异。
+
+协作缓存TTL90秒，原Redis共享，LocMem明确仅本进程；观察不写正文、不代替CAS锁。建议只匹配公开资料，原推荐检索方案与质量评测不动。新增测试9后端函数和6浏览器场景仅定义；实际正式验收未运行。保留所有其他脏改，不接生产、不执行清理/迁移/模型。
+
+## 2026-10-22 3136d5c后继续实施
+
+结构编辑/草稿恢复第一批已保存3136d5c（32路径）。当前正补PDF127导读富文本与材料建议，尚未静态收口或计完整。来源原文不允许格式编辑；文字格式仅持久化在当前内容块，复用前台/预览渲染，不增加HTML执行。保持96/16/97，正式验收未运行。
+
+
 ## 2026-10-22 编辑器第一批恢复
 
 前置f94545e。本批白名单tmp/stl4-issue-editor-checkpoint.json，实际提交号看Git。恢复结构编辑器、useIssueDraft/IssueHistory/IssueSourcePicker、历史/来源/只读POST preview、保存回执及223契约一体；不覆盖其他继承修改。源PDF124–127图在tmp/pdfs/stl4-editor-20261022，均已实际读取。

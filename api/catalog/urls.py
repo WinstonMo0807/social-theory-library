@@ -13,7 +13,7 @@ from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, Di
     DiscoverySearchCancelView, DiscoverySearchContextView, DiscoverySearchRetryView, DiscoverySearchRemoveDocumentView, LegacyDiscoverySearchView)
 from .curation_queue_views import CurationDraftQueueView
 from .today_work_views import AdminSearchView, TodayWorkView, WorkNoticesView
-from .editorial_workbench_views import IssueHistoryView, IssueSourcesView
+from .editorial_workbench_views import IssueHistoryView, IssueSourcesView, IssueSuggestionsView, IssuePresenceView
 from .editorial_assistance_views import EditorialAssistanceDetailView, EditorialAssistanceListView
 from .shared_curation_views import (CurationSourcesView, AdminEvidenceCurationView, PublishEvidenceCurationView,
     PublicEvidenceCurationView, AdminScholarRelationListView, AdminScholarRelationDetailView,
@@ -255,6 +255,8 @@ urlpatterns = [
     path("admin/recommendation-issues/<uuid:issue_id>/preview/", AdminIssuePreviewView.as_view(), name="admin-recommendation-issue-preview"),
     path("admin/recommendation-issues/<uuid:issue_id>/history/", IssueHistoryView.as_view(), name="admin-issue-history"),
     path("admin/recommendation-issues/<uuid:issue_id>/sources/", IssueSourcesView.as_view(), name="admin-issue-sources"),
+    path("admin/recommendation-issues/<uuid:issue_id>/suggestions/", IssueSuggestionsView.as_view(), name="admin-issue-suggestions"),
+    path("admin/recommendation-issues/<uuid:issue_id>/presence/", IssuePresenceView.as_view(), name="admin-issue-presence"),
     path("admin/recommendation-issues/<uuid:issue_id>/publish/", AdminIssuePublishView.as_view(), name="admin-recommendation-issue-publish"),
     path("admin/recommendation-issues/<uuid:issue_id>/items/<uuid:item_id>/link/", AdminIssueLinkView.as_view(), name="admin-recommendation-issue-link"),
     path("admin/recommendation-issues/<uuid:issue_id>/items/<uuid:item_id>/cover/", AdminIssueItemCoverView.as_view(), name="admin-recommendation-issue-item-cover"),

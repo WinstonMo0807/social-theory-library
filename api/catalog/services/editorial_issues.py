@@ -106,7 +106,7 @@ def _text(value, maximum=30000):
 
 
 def _body(value, *, retained=()):
-    from catalog.services.editorial_blocks import REFERENCE_TYPES, block_references, normalize_typed_block
+    from catalog.services.editorial_blocks import REFERENCE_TYPES, block_references, normalize_typed_block, normalize_text_format
     if not isinstance(value, list) or len(value) > 150:
         raise ValidationError({"body_blocks": "正文最多150个固定段落。"})
     blocks, block_ids, reference_count = [], set(), 0
@@ -115,7 +115,7 @@ def _body(value, *, retained=()):
             raise ValidationError({"body_blocks": "文章区块类型无效。"})
         if isinstance(row, dict) and row.get("type") in {*REFERENCE_TYPES, "comparison", "analysis"}:
             previous = next((old for old in retained if old.get("id") == row.get("id") and old.get("type") == row.get("type")), None)
-            block = normalize_typed_block(row, retained=previous)
+            block = normalize_text_format(row, normalize_typed_block(row, retained=previous))
             reference_count += len(block_references(block))
             if block["id"] in block_ids or reference_count > 400:
                 raise ValidationError({"body_blocks": "区块身份不能重复，引用总数不能超过400项。"})
@@ -145,7 +145,7 @@ def _body(value, *, retained=()):
             if not ((parsed.scheme in {"http", "https"} and parsed.netloc) or (link.startswith("/") and not link.startswith("//"))) or "\\" in link:
                 raise ValidationError({"body_blocks": "链接地址无效。"})
             block["url"] = link
-        blocks.append(block)
+        blocks.append(normalize_text_format(row, block))
     return blocks
 
 

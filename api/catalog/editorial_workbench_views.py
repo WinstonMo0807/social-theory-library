@@ -86,3 +86,84 @@ class IssueHistoryView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
             "note": row.change_note, "is_current": row.pk == latest,
             "block_count": len(row.materialized_preview.get("body_blocks", [])),
         }))
+
+
+class IssueSuggestionSerializer(IssueSourceChoiceSerializer):
+    key = serializers.CharField()
+    token = serializers.CharField()
+    kind = serializers.ChoiceField(choices=["work", "person", "concept"])
+    reason = serializers.CharField()
+
+
+class IssueSuggestionsSerializer(serializers.Serializer):
+    results = IssueSuggestionSerializer(many=True)
+    query = serializers.CharField(allow_blank=True)
+    kind = serializers.CharField()
+    batch = serializers.IntegerField()
+    has_more = serializers.BooleanField()
+    edit_version = serializers.CharField()
+    checked_at = serializers.DateTimeField()
+    notice = serializers.CharField()
+
+
+class DismissIssueSuggestionSerializer(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    token = serializers.CharField(max_length=4000)
+
+
+class IssueSuggestionDismissedSerializer(serializers.Serializer):
+    dismissed = serializers.BooleanField()
+    key = serializers.CharField()
+
+
+class IssueSuggestionsView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanEditMetadata]
+
+    @extend_schema(responses=IssueSuggestionsSerializer, parameters=[OpenApiParameter(key, type=str) for key in ("q", "kind", "batch")])
+    def get(self, request, issue_id):
+        from catalog.services.editorial_suggestions import suggestions
+        issue = get_object_or_404(RecommendationIssue, pk=issue_id)
+        try:
+            batch = int(request.query_params.get("batch", "1"))
+        except (TypeError, ValueError):
+            raise ValidationError("材料批次无效。")
+        return Response(suggestions(issue, request.user, query=request.query_params.get("q", ""), kind=request.query_params.get("kind", "all"), batch=batch))
+
+    @extend_schema(request=DismissIssueSuggestionSerializer, responses=IssueSuggestionDismissedSerializer)
+    def post(self, request, issue_id):
+        from catalog.services.editorial_suggestions import dismiss
+        data = DismissIssueSuggestionSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(dismiss(issue_id, request.user, data.validated_data))
+
+
+class IssuePresenceCommandSerializer(serializers.Serializer):
+    session_id = serializers.UUIDField()
+    mode = serializers.ChoiceField(choices=["editing", "viewing", "leave"])
+
+
+class IssueParticipantSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+    is_self = serializers.BooleanField()
+    mode = serializers.ChoiceField(choices=["editing", "viewing"])
+    last_seen = serializers.DateTimeField()
+
+
+class IssuePresenceSerializer(serializers.Serializer):
+    participants = IssueParticipantSerializer(many=True)
+    checked_at = serializers.DateTimeField()
+    expires_after_seconds = serializers.IntegerField()
+    shared = serializers.BooleanField()
+    notice = serializers.CharField()
+
+
+class IssuePresenceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(request=IssuePresenceCommandSerializer, responses=IssuePresenceSerializer)
+    def post(self, request, issue_id):
+        from catalog.services.editorial_presence import observe
+        data = IssuePresenceCommandSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(observe(issue_id, request.user, data.validated_data))

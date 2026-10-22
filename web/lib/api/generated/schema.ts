@@ -883,6 +883,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/presence/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_presence_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recommendation-issues/{issue_id}/publish/": {
         parameters: {
             query?: never;
@@ -909,6 +925,22 @@ export interface paths {
         get: operations["catalog_admin_recommendation_issues_sources_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/suggestions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_suggestions_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_suggestions_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5160,6 +5192,11 @@ export interface components {
             title: string;
             slug?: string;
         };
+        DismissIssueSuggestionRequest: {
+            /** Format: uuid */
+            request_id: string;
+            token: string;
+        };
         /**
          * @description * `publish` - publish
          *     * `apply_draft` - apply_draft
@@ -6001,6 +6038,8 @@ export interface components {
             id?: string;
             type: components["schemas"]["IssueBodyBlockTypeEnum"];
             text: string;
+            text_style?: components["schemas"]["TextStyleEnum"];
+            text_marks?: components["schemas"]["IssueTextMark"][];
             source?: string;
             url?: string;
             /** Format: uuid */
@@ -6028,6 +6067,8 @@ export interface components {
             id?: string;
             type: components["schemas"]["IssueBodyBlockTypeEnum"];
             text: string;
+            text_style?: components["schemas"]["TextStyleEnum"];
+            text_marks?: components["schemas"]["IssueTextMarkRequest"][];
             source?: string;
             url?: string;
             /** Format: uuid */
@@ -6132,6 +6173,40 @@ export interface components {
             section_id?: string;
             document_type?: string;
         };
+        IssueParticipant: {
+            id: string;
+            name: string;
+            is_self: boolean;
+            mode: components["schemas"]["IssueParticipantModeEnum"];
+            /** Format: date-time */
+            last_seen: string;
+        };
+        /**
+         * @description * `editing` - editing
+         *     * `viewing` - viewing
+         * @enum {string}
+         */
+        IssueParticipantModeEnum: "editing" | "viewing";
+        IssuePresence: {
+            participants: components["schemas"]["IssueParticipant"][];
+            /** Format: date-time */
+            checked_at: string;
+            expires_after_seconds: number;
+            shared: boolean;
+            notice: string;
+        };
+        /**
+         * @description * `editing` - editing
+         *     * `viewing` - viewing
+         *     * `leave` - leave
+         * @enum {string}
+         */
+        IssuePresenceCommandModeEnum: "editing" | "viewing" | "leave";
+        IssuePresenceCommandRequest: {
+            /** Format: uuid */
+            session_id: string;
+            mode: components["schemas"]["IssuePresenceCommandModeEnum"];
+        };
         IssueSourceChoice: {
             target: {
                 [key: string]: unknown;
@@ -6145,6 +6220,59 @@ export interface components {
             next: string | null;
             previous: string | null;
             results: components["schemas"]["IssueSourceChoice"][];
+        };
+        IssueSuggestion: {
+            target: {
+                [key: string]: unknown;
+            };
+            source: {
+                [key: string]: unknown;
+            };
+            key: string;
+            token: string;
+            kind: components["schemas"]["IssueSuggestionKindEnum"];
+            reason: string;
+        };
+        IssueSuggestionDismissed: {
+            dismissed: boolean;
+            key: string;
+        };
+        /**
+         * @description * `work` - work
+         *     * `person` - person
+         *     * `concept` - concept
+         * @enum {string}
+         */
+        IssueSuggestionKindEnum: "work" | "person" | "concept";
+        IssueSuggestions: {
+            results: components["schemas"]["IssueSuggestion"][];
+            query: string;
+            kind: string;
+            batch: number;
+            has_more: boolean;
+            edit_version: string;
+            /** Format: date-time */
+            checked_at: string;
+            notice: string;
+        };
+        IssueTextMark: {
+            start: number;
+            end: number;
+            kind: components["schemas"]["IssueTextMarkKindEnum"];
+            href?: string;
+        };
+        /**
+         * @description * `strong` - strong
+         *     * `em` - em
+         *     * `link` - link
+         * @enum {string}
+         */
+        IssueTextMarkKindEnum: "strong" | "em" | "link";
+        IssueTextMarkRequest: {
+            start: number;
+            end: number;
+            kind: components["schemas"]["IssueTextMarkKindEnum"];
+            href?: string;
         };
         ItemEstimateInputRequest: {
             /** Format: uuid */
@@ -11256,6 +11384,13 @@ export interface components {
          * @enum {string}
          */
         TextSourceEnum: "none" | "embedded" | "ocr" | "hybrid";
+        /**
+         * @description * `paragraph` - paragraph
+         *     * `ordered` - ordered
+         *     * `unordered` - unordered
+         * @enum {string}
+         */
+        TextStyleEnum: "paragraph" | "ordered" | "unordered";
         TheoryBrowseCounts: {
             theory_traditions: number;
             subdisciplines: number;
@@ -14122,6 +14257,33 @@ export interface operations {
             };
         };
     };
+    catalog_admin_recommendation_issues_presence_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssuePresenceCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IssuePresenceCommandRequest"];
+                "multipart/form-data": components["schemas"]["IssuePresenceCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuePresence"];
+                };
+            };
+        };
+    };
     catalog_admin_recommendation_issues_publish_create: {
         parameters: {
             query?: never;
@@ -14173,6 +14335,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueSourcesPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_suggestions_retrieve: {
+        parameters: {
+            query?: {
+                batch?: string;
+                kind?: string;
+                q?: string;
+            };
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueSuggestions"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_suggestions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissIssueSuggestionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DismissIssueSuggestionRequest"];
+                "multipart/form-data": components["schemas"]["DismissIssueSuggestionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueSuggestionDismissed"];
                 };
             };
         };

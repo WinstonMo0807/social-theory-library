@@ -1,5 +1,13 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 PDF127格式、素材建议与协作
+
+IssueBodyBlock新增可选text_style(paragraph/ordered/unordered)与text_marks（最多200处，start/end为UTF-16边界，kind=strong/em/link，link只接受本站路径或http/https）。原格式缺省保留兼容；保存时同步裁切空白偏移，原始来源不接受改写。后端拒绝非整数/表情中间位置/重叠链接/非法地址，不存任意HTML。
+
+GET catalog/admin/recommendation-issues/{id}/suggestions/，q≤200、kind(all/work/person/concept)、batch1–100；默认已保存关键词/标题，公开匹配，准确target/source/reason/key/token及edit_version/checked_at/has_more/notice。全部类型最多每类1项，分类型每批3项。POST同路径request_id+token：明确放弃候选，令牌绑定actor/issue/version/key/target，一小时有效，重放先查固定回执再校验当前版本；不保存文章。CanEditMetadata。
+
+POST catalog/admin/recommendation-issues/{id}/presence/，session_id UUID、mode(editing/viewing/leave)，CanAccessBackOffice，editing另需CanEditMetadata。返回participants(id/name/is_self/mode/last_seen)、checked_at、expires_after_seconds=90、shared、notice。每专题最多100个短期连接，只保留身份/模式/时间；失联503，本地进程模式明确降级。全部继承owner header/private,no-store。无migration；225契约路径保留223。
+
 ## 2026-10-22 专题编辑器第一批
 
 GET admin/recommendation-issues/{id}/history/：24项分页、真实revision/status/created_at/created_by/note/is_current/block_count。GET sources/：type/q/page/work_id/edition_id及node_type=concept，复用准确来源分页。GET原detail支持revision/request_id互斥，跨issue历史404、回执actor隔离。

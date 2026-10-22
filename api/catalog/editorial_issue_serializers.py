@@ -5,10 +5,19 @@ from drf_spectacular.helpers import lazy_serializer
 from catalog.serializers import SiteConfigSerializer, AboutPageBlockSerializer
 
 
+class IssueTextMarkSerializer(serializers.Serializer):
+    start = serializers.IntegerField(min_value=0)
+    end = serializers.IntegerField(min_value=1)
+    kind = serializers.ChoiceField(choices=["strong", "em", "link"])
+    href = serializers.CharField(max_length=1500, required=False)
+
+
 class IssueBodyBlockSerializer(serializers.Serializer):
     id = serializers.UUIDField(required=False)
     type = serializers.ChoiceField(choices=["paragraph", "heading", "quote", "link", "image", "evidence", "work", "person", "concept", "node", "timeline", "reading_path", "comparison", "analysis"])
     text = serializers.CharField(allow_blank=True)
+    text_style = serializers.ChoiceField(choices=["paragraph", "ordered", "unordered"], required=False)
+    text_marks = IssueTextMarkSerializer(many=True, required=False)
     source = serializers.CharField(required=False, allow_blank=True)
     url = serializers.CharField(required=False, allow_blank=True)
     image_rendition_id = serializers.UUIDField(required=False, allow_null=True)
