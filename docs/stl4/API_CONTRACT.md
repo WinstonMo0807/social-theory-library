@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 知识对象M18
+
+GET/POST /api/catalog/admin/knowledge-publications/{object_type}/{object_id}/history/，九种KnowledgeObjectEditorAdapter页面类型（排除work），节点细分类型必须匹配。GET后台权限/private,no-store，可选page(20条)/selected(必须本对象)，返回edit_version、当前状态、history、selected、changes、dependencies、最近20任务与scope。生成前后保存版本不符409，错误对象/页404。
+
+POST另要求PUBLISH_AUTHORITY；action=withdraw|restore、request_key UUID、expected_version精确64位、reason 1–400字符；restore必须source_revision_id，withdraw禁止该字段。锁主体/学者Person，先查原修订+审计摘要回执，再核对版本/人工草稿/主题合并；历史必须本对象曾公开修订，只恢复当时捕获的可编辑字段。202返回原/新revision_id、revision、status、edit_version，不自动发布。冲突409，无效历史400。X-Editor-Owner沿PublicationReadView。新增KnowledgeHistoryResult/Command/Receipt强类型，227路径。
+
 ## 2026-10-23 知识M17只读检查投影
 
 既有GET /catalog/admin/knowledge-preview/{object_type}/{object_id}/可携review=1，必须同时携精确edit_version；重复review、非1、缺版本或混入未保存学者选择返回400。版本过期/生成期间改变仍409；主题选择POST不接受review。CanViewEvidence、owner与private/no-store保持。

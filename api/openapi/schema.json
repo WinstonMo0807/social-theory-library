@@ -2457,6 +2457,132 @@
                 }
             }
         },
+        "/api/catalog/admin/knowledge-publications/{object_type}/{object_id}/history/": {
+            "get": {
+                "operationId": "catalog_admin_knowledge_publications_history_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "selected",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeHistoryResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_knowledge_publications_history_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeHistoryCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeHistoryCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeHistoryCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeHistoryReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/media/": {
             "get": {
                 "operationId": "catalog_admin_media_list",
@@ -26165,6 +26291,243 @@
                     "title",
                     "updated_at",
                     "url"
+                ]
+            },
+            "KnowledgeHistoryCommandActionEnum": {
+                "enum": [
+                    "withdraw",
+                    "restore"
+                ],
+                "type": "string",
+                "description": "* `withdraw` - withdraw\n* `restore` - restore"
+            },
+            "KnowledgeHistoryCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/KnowledgeHistoryCommandActionEnum"
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                    },
+                    "source_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "reason",
+                    "request_key"
+                ]
+            },
+            "KnowledgeHistoryPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeHistoryRow"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "results"
+                ]
+            },
+            "KnowledgeHistoryReceipt": {
+                "type": "object",
+                "properties": {
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "object_type": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edit_version": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "edit_version",
+                    "object_id",
+                    "object_type",
+                    "revision",
+                    "revision_id",
+                    "status"
+                ]
+            },
+            "KnowledgeHistoryResult": {
+                "type": "object",
+                "properties": {
+                    "object_type": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "is_public": {
+                        "type": "boolean"
+                    },
+                    "has_draft": {
+                        "type": "boolean"
+                    },
+                    "draft_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "can_withdraw": {
+                        "type": "boolean"
+                    },
+                    "history": {
+                        "$ref": "#/components/schemas/KnowledgeHistoryPage"
+                    },
+                    "selected": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/KnowledgeHistoryRow"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "dependencies": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "events": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "scope": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "can_withdraw",
+                    "changes",
+                    "dependencies",
+                    "draft_id",
+                    "edit_version",
+                    "events",
+                    "has_draft",
+                    "history",
+                    "is_public",
+                    "object_id",
+                    "object_type",
+                    "scope",
+                    "selected",
+                    "status",
+                    "title"
+                ]
+            },
+            "KnowledgeHistoryRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "snapshot_public": {
+                        "type": "boolean"
+                    },
+                    "matches_current": {
+                        "type": "boolean"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "actor": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "can_restore": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "actor",
+                    "can_restore",
+                    "created_at",
+                    "id",
+                    "matches_current",
+                    "note",
+                    "published_at",
+                    "revision",
+                    "snapshot_public",
+                    "status"
                 ]
             },
             "KnowledgeImageRequestRequest": {

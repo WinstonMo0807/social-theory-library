@@ -2,10 +2,11 @@
 
 import { Archive, ExternalLink, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { use, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { RecycleControl } from "./admin/recycle-control";
 import { ConfirmDialog } from "./confirm-dialog";
+import { KnowledgePublicationContext } from "./admin/knowledge/knowledge-publish-control";
 
 type Dependency = {
   key: string;
@@ -64,6 +65,7 @@ export function EntityLifecycleActions({
   onChanged?: (snapshot: LifecycleSnapshot) => void;
   onDeleted?: () => void;
 }) {
+  const publication = use(KnowledgePublicationContext);
   const [snapshot, setSnapshot] = useState<LifecycleSnapshot | null>(null);
   const [message, setMessage] = useState("");
   const [working, setWorking] = useState(false);
@@ -123,7 +125,7 @@ export function EntityLifecycleActions({
       </header>
       <div className="entity-lifecycle-actions">
         <button type="button" disabled={working} onClick={() => void loadImpact()}><RefreshCw size={14} />查看影响范围</button>
-        <button type="button" disabled={working} onClick={() => setConfirmation(archived ? "restore" : "archive")}><Archive size={14} />{archived ? "恢复为草稿" : "下线"}</button>
+        {publication?.requestHistory ? <button type="button" disabled={working||publication.locked} onClick={publication.requestHistory}><Archive size={14}/>历史、撤回与恢复</button> : <button type="button" disabled={working} onClick={() => setConfirmation(archived ? "restore" : "archive")}><Archive size={14} />{archived ? "恢复为草稿" : "下线"}</button>}
         <RecycleControl kind={kind} id={id} name={name} disabled={working} onDeleted={onDeleted} />
       </div>
       {snapshot ? (

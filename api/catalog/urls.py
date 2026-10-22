@@ -39,6 +39,7 @@ from .scholar_media_views import ScholarPortraitSelectionView, PublicPersonPortr
 from .knowledge_media_views import KnowledgeImageSelectionView, PublicKnowledgeImageView
 from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView, WorkRecommendationMediaSelectionView, PublicRecommendationMetadataView, RecommendationImageMetadataView
 from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
+from .knowledge_history_views import KnowledgeHistoryView
 
 from .cataloging_views import CatalogingSessionListView, CatalogingSessionDetailView, CatalogingSessionAbandonView, CatalogingCandidateDecisionView, CatalogFieldContractView
 from .cataloging_views import CatalogingMetadataDecisionView, CatalogingMetadataImportView
@@ -309,6 +310,7 @@ urlpatterns = [
     path("admin/cataloging-sessions/<uuid:session_id>/candidates/<uuid:candidate_id>/decision/", CatalogingCandidateDecisionView.as_view(), name="cataloging-candidate-decision"),
     path("admin/editions/<uuid:edition_id>/knowledge-status/", AdminKnowledgePublicationStatusView.as_view(), name="admin-edition-knowledge-status"),
     path("admin/knowledge-publications/status/", AdminKnowledgePublicationStatusView.as_view(), name="admin-knowledge-publication-status"),
+    path("admin/knowledge-publications/<str:object_type>/<uuid:object_id>/history/", KnowledgeHistoryView.as_view(), name="admin-knowledge-publication-history"),
     path("admin/knowledge-publications/<uuid:event_id>/retry/", AdminKnowledgePublicationRetryView.as_view(), name="admin-knowledge-publication-retry"),
     path(
         "admin/field-assistant/lookup/",

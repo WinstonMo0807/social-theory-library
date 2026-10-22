@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-23 知识历史静态记录（不代表验收）
+
+- `.venv/Scripts/python.exe tmp/stl4-knowledge-history-static-20261023.py`：最终86c87c退出0，5文件AST、20次SQLite/PostgreSQL SQL编译，数据库连接被禁止、0连接；九类型可编辑字段均有中文标题。spectacular 0错误/10条既有类型提示。
+- `node tmp/stl4-knowledge-history-contracts-20261023.mjs`：776910退出0，226旧路径保持、227总路径；生成schema.json/schema.ts，新增CSS解析通过。
+- web全量`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：首轮11477/945dde退出0；后续42037在新输入后无法取得最终状态，不记通过。最后增量涉及文案/回执清除与上下文入口，待静态收口。
+- web10目标ESLint c28481退出0无警告。初轮35540/3713b2发现reload手动依赖4项，补稳定setter依赖后4目标3ed63c及10目标c28481通过，没有忽略规则。
+- 7后端函数（首函数6类型，共12参数案例）及6浏览器场景只定义，涵盖只读、原回执、恢复编辑、草稿保护、分页/对象归属、owner权限、取消/确认/移动内容。没有执行测试、浏览器、构建、迁移、真实服务或生产。
+
 ## 2026-10-23 知识M17四区工作台静态检查
 
 - `.venv/Scripts/python.exe tmp/stl4-knowledge-review-static-20261023.py`（PYTHONIOENCODING=utf-8），e64eb9退出0：3文件AST、18次SQLite/PostgreSQL SQL编译，ensure_connection禁止连接，0数据库连接。只导入检查服务，不执行预检业务。脚本内spectacular生成/验证0错误、10条既有提示。

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 知识历史命令适配
+
+knowledge_history作为现有EditorialRevision和KnowledgePublicationEvent的M18投影/命令入口，无新表。恢复和撤回都调用create_editorial_revision，不直接写公开状态。AuditEvent保存请求意图摘要，原revision.idempotency_key保存actor+request UUID；重试在锁定目标后先查原回执，才核对当前保存版本。人工待发布稿保持独立，不被覆盖。编辑器/预览/历史共用原owner和edit_version；真实关联计数不能当作完整引用网络或页面访问量。
+
 ## 2026-10-23 知识发布检查沿用规范服务
 
 knowledge_publication_review为原KnowledgePreviewPayload的只读聚合，读取原草稿、正式修订与所选媒体不可变元数据；复用editorial_revision内既有patch/关联校验，在内存目标上做字段及model校验，不调用save、迁移、模型或任务。公开序列化分组比较，未建另一发布模型。

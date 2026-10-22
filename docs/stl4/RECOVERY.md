@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 知识对象M18恢复
+
+前置4f6e2bd，读KNOWLEDGE_HISTORY_20261023与CURRENT_PROGRESS顶部，核对git log确认本批提交。白名单tmp/stl4-knowledge-history-checkpoint-20261023.json。新工作台/admin/publication/knowledge/{type}/{id}，history GET/POST沿原修订与审计，不建表。保留继承editorial_revision_views.py等脏改；不要重跑history-record或以前wire/record脚本。正式测试/浏览器均未执行，96/26/87不变。最新用户要求继续全站、不测试/不浏览器，补账号读者中心接口核对、夜间模式参考和可交互页面；下一单元先完成这些新增交付，再推进剩余模块。
+
 ## 2026-10-23 知识M17工作台恢复
 
 前置d82b148；本批白名单tmp/stl4-knowledge-review-checkpoint-20261023.json，实际提交核对git log。阅读KNOWLEDGE_REVIEW_20261023及CURRENT_PROGRESS最上项。原preview页面?review=1为检查工作台，?frame=1为受认证保护的公开组件子视口；接口review=1强制保存版本、只读预检。发布仍原KnowledgePublishControl与既有修订事务。

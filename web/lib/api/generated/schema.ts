@@ -546,6 +546,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/knowledge-publications/{object_type}/{object_id}/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_knowledge_publications_history_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_knowledge_publications_history_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/media/": {
         parameters: {
             query?: never;
@@ -6383,6 +6399,77 @@ export interface components {
             accessed_on: string;
             text: string;
             notice: string;
+        };
+        /**
+         * @description * `withdraw` - withdraw
+         *     * `restore` - restore
+         * @enum {string}
+         */
+        KnowledgeHistoryCommandActionEnum: "withdraw" | "restore";
+        KnowledgeHistoryCommandRequest: {
+            action: components["schemas"]["KnowledgeHistoryCommandActionEnum"];
+            /** Format: uuid */
+            request_key: string;
+            expected_version: string;
+            reason: string;
+            /** Format: uuid */
+            source_revision_id?: string;
+        };
+        KnowledgeHistoryPage: {
+            count: number;
+            page: number;
+            pages: number;
+            results: components["schemas"]["KnowledgeHistoryRow"][];
+        };
+        KnowledgeHistoryReceipt: {
+            /** Format: uuid */
+            revision_id: string;
+            revision: number;
+            status: string;
+            object_type: string;
+            /** Format: uuid */
+            object_id: string;
+            edit_version: string;
+        };
+        KnowledgeHistoryResult: {
+            object_type: string;
+            /** Format: uuid */
+            object_id: string;
+            edit_version: string;
+            title: string;
+            status: string;
+            is_public: boolean;
+            has_draft: boolean;
+            /** Format: uuid */
+            draft_id: string | null;
+            can_withdraw: boolean;
+            history: components["schemas"]["KnowledgeHistoryPage"];
+            selected: components["schemas"]["KnowledgeHistoryRow"] | null;
+            changes: {
+                [key: string]: unknown;
+            }[];
+            dependencies: {
+                [key: string]: unknown;
+            }[];
+            events: {
+                [key: string]: unknown;
+            }[];
+            scope: string;
+        };
+        KnowledgeHistoryRow: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            status: string;
+            snapshot_public: boolean;
+            matches_current: boolean;
+            note: string;
+            actor: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            published_at: string | null;
+            can_restore: boolean;
         };
         KnowledgeImageRequestRequest: {
             /** Format: uuid */
@@ -13780,6 +13867,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    catalog_admin_knowledge_publications_history_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                selected?: string;
+            };
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeHistoryResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_knowledge_publications_history_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeHistoryCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["KnowledgeHistoryCommandRequest"];
+                "multipart/form-data": components["schemas"]["KnowledgeHistoryCommandRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeHistoryReceipt"];
                 };
             };
         };

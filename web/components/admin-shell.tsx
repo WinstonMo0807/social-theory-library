@@ -33,6 +33,7 @@ const navigationGroups = [
 const routeCapabilities: Record<string, string[]> = {
   "/admin/processing": ["can_view_system_status"],
   "/admin/publication": ["can_publish_work"],
+  "/admin/publication/knowledge": ["can_edit_draft_authority", "can_publish_authority", "can_view_evidence"],
   "/admin/uploads": ["can_upload"],
   "/admin/cataloging": ["can_edit_metadata"],
   "/admin/recycle": ["can_edit_metadata"],

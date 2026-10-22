@@ -29,7 +29,7 @@ function validCommand(value:unknown,owner:string,objectType:string,objectId:stri
   return command.format===1&&command.owner===owner&&command.objectType===objectType&&command.objectId===objectId&&uuid.test(objectId)&&typeof command.version==="string"&&/^[a-f0-9]{64}$/.test(command.version)&&(command.phase==="prepare"?command.revisionId===null:command.phase==="publish"&&typeof command.revisionId==="string"&&uuid.test(command.revisionId));
 }
 type Props={objectType:string;objectId:string;savedRecord:object;dirty:boolean;onPublished?:()=>void;onLockChange:(locked:boolean)=>void;blockedReason?:string;reviewHref?:string;embedded?:boolean};
-export const KnowledgePublicationContext=createContext<{locked:boolean;requestReview:()=>void}|null>(null);
+export const KnowledgePublicationContext=createContext<{locked:boolean;requestReview:()=>void;requestHistory?:()=>void}|null>(null);
 export function KnowledgePublishEntry({disabled,onFallback}:{disabled:boolean;onFallback:()=>void}) {
   const publication=use(KnowledgePublicationContext);
   return <button type="button" className="button" disabled={disabled||Boolean(publication?.locked)} onClick={()=>publication?publication.requestReview():onFallback()}>进入发布前检查</button>;
