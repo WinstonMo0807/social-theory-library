@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-10-22 PDF128–130选材与助手第一批（部分接入）
+
+选材范围与准确来源身份保存在原EditorialRevision JSON，不新增表或并行馆藏；当前来源仅输出时解析，公开响应剔除选材状态。原Discovery服务负责候选检索，原ProcessingJob/Celery/CURATION_REASONING负责显式助手生成。
+
+采用复用文章父锁、修订CAS及原save_issue；候选修改不能替换来源，公开资格重核后仅追加。忽略/重试/取消复用AuditEvent回执，重试保存上一轮错误及候选快照，task_token隔离后续轮次。前端共享编辑器动作锁，原草稿恢复与助手内存pending分别说明，无新队列、索引或迁移。
+
 ## 2026-10-22 编辑器材料建议和短期协作
 
 候选继续依赖SearchService公开查询、准确来源解析和原EditorialRevision版本。放弃复用AuditEvent幂等回执，不建候选库；采用仍走原草稿保存/发布检查。新增文字格式为内容块JSON内有界区间，预览/前台共享固定元素渲染，无HTML持久化。

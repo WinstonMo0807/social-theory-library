@@ -163,6 +163,7 @@ class PublicEditorialDirectorySerializer(serializers.Serializer):
 
 
 class RecommendationIssueSerializer(serializers.Serializer):
+    selection_workspace = serializers.DictField(required=False, help_text="仅后台：策划问题、筛选范围与准确选材；materials为只读当前解析。公开响应不含此字段。")
     id = serializers.UUIDField(read_only=True)
     slug = serializers.CharField(required=False)
     title = serializers.CharField()

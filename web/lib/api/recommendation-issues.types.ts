@@ -23,6 +23,7 @@ export type IssueItem = {
   linked_edition_id?: string | null;
 };
 export type RecommendationIssue = {
+  selection_workspace?: IssueSelection;
   id: string; slug: string; title: string; issue_label: string; introduction: string;
   body_blocks: IssueBlock[]; public_byline: string; cover_url: string; display_from: string | null;
   published_at: string | null; items: IssueItem[]; edit_version: string; draft_revision_id?: string | null;
@@ -33,6 +34,7 @@ export type RecommendationIssue = {
   viewed_revision_id?: string; viewed_revision?: number; request_found?: boolean; applied_revision_id?: string; is_current_revision?: boolean;
   restore_revision_id?: string;
 };
+export type IssueSelection = {question:string;query:string;filters:Record<string,string|string[]|number>;references:IssueSourceReference[];materials?:Array<{target:IssueSourceReference;source:IssueResolvedSource|null;available:boolean;public_eligible:boolean}>};
 export type ArticleMetadata = {
   kind: "article" | "research" | "exhibition"; keywords: string[]; topic_ids: string[]; scholar_ids: string[]; reading_path_ids: string[];
   curator_role: string; curator_affiliation: string; curator_portrait_id: string | null;

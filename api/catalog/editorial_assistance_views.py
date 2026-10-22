@@ -22,10 +22,12 @@ class EditorialAssistanceInput(serializers.Serializer):
 
 
 class EditorialAssistanceCommand(serializers.Serializer):
-    action = serializers.ChoiceField(choices=["retry", "cancel", "adopt"])
+    action = serializers.ChoiceField(choices=["retry", "cancel", "adopt", "dismiss"])
     request_id = serializers.UUIDField(required=False)
     edit_version = serializers.CharField(required=False)
     suggestion_ids = serializers.ListField(child=serializers.UUIDField(), required=False, max_length=40)
+    edits = serializers.DictField(child=serializers.CharField(max_length=6000), required=False)
+    task_token = serializers.CharField(required=False, allow_blank=True)
 
 
 class EditorialSuggestionSerializer(serializers.Serializer):
@@ -52,6 +54,12 @@ class EditorialAssistanceSerializer(serializers.Serializer):
     sources = serializers.ListField(child=serializers.DictField())
     suggestions = EditorialSuggestionSerializer(many=True)
     adopted_ids = serializers.ListField(child=serializers.UUIDField())
+    dismissed_ids = serializers.ListField(child=serializers.UUIDField())
+    question = serializers.CharField(allow_blank=True)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+    created_by = serializers.CharField(allow_blank=True)
+    task_token = serializers.CharField(allow_blank=True)
     model = serializers.DictField(allow_null=True)
     poll_after_ms = serializers.IntegerField(allow_null=True)
 

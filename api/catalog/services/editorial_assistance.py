@@ -112,6 +112,7 @@ def run_assistance(job_id, task_id):
         stats={**job.stats, "stage": "generating"}, heartbeat_at=timezone.now(), updated_at=timezone.now(),
     ):
         return ProcessingJob.objects.get(pk=job.pk)
+    suggestions, model = [], None
     try:
         issue = RecommendationIssue.objects.get(pk=job.stats["issue_id"])
         _authorize(job.created_by)
@@ -132,7 +133,6 @@ def run_assistance(job_id, task_id):
             payload={"operation": job.stats["assistant_operation"], "question": job.stats["question"],
                 "issue": {"title": payload["title"], "introduction": payload["introduction"],
                           "body_blocks": payload.get("body_blocks", [])}, "sources": sources}, schema=schema)
-        suggestions = []
         incoming = result.get("suggestions")
         if not isinstance(incoming, list) or not 1 <= len(incoming) <= 40:
             raise ValidationError("本地模型未返回可采用的候选。")
@@ -161,6 +161,8 @@ def run_assistance(job_id, task_id):
     except Exception as exc:
         ProcessingJob.objects.filter(pk=job.pk, task_id=task_id, status="running").update(
             status="failed", error_code=type(exc).__name__, error_message="候选生成未完成；来源和人工草稿保留，请核对本地模型及当前修订。",
+            stats={**job.stats, "suggestions": suggestions, "model": model,
+                   "stage": "partial" if suggestions else "failed"},
             finished_at=timezone.now(), updated_at=timezone.now())
         return ProcessingJob.objects.get(pk=job.pk)
 
@@ -182,9 +184,12 @@ def assistance_payload(job, actor):
     return {"id": str(job.pk), "issue_id": job.stats["issue_id"], "operation": job.stats["assistant_operation"],
             "status": job.status, "stage": job.stats.get("stage"), "progress": job.progress,
             "error_code": job.error_code, "error_message": job.error_message, "source_available": available,
-            "draft_changed": changed, "can_adopt": job.status == "succeeded" and available and not changed,
+            "draft_changed": changed, "can_adopt": job.status in {"succeeded", "failed", "canceled"} and bool(job.stats.get("suggestions")) and available and not changed,
             "sources": sources, "edit_version": job.stats.get("adoption_version", job.stats["edit_version"]),
             "suggestions": job.stats.get("suggestions", []), "adopted_ids": job.stats.get("adopted_ids", []),
+            "dismissed_ids": job.stats.get("dismissed_ids", []), "question": job.stats.get("question", ""),
+            "created_at": job.created_at, "updated_at": job.updated_at,
+            "created_by": job.created_by.get_username() if job.created_by else "", "task_token": job.task_id,
             "model": job.stats.get("model"), "poll_after_ms": 1500 if job.status in {"pending", "running"} else None}
 
 
@@ -195,7 +200,17 @@ def assistance_action(job_id, data, actor):
     issue = get_object_or_404(RecommendationIssue.objects.select_for_update(), pk=target.stats["issue_id"])
     job = ProcessingJob.objects.select_for_update().get(pk=target.pk)
     action = data.get("action")
+    request_id = str(identifier(data["request_id"])) if data.get("request_id") else ""
+    fingerprint = _fingerprint(data)
+    if request_id:
+        receipt = AuditEvent.objects.filter(actor=actor, request_id=request_id, action=f"editorial.assistance.{action}", object_id=str(job.pk)).first()
+        if receipt:
+            if receipt.after.get("fingerprint") != fingerprint:
+                raise ledger.EditConflict("这个操作编号已用于另一组输入。")
+            return job
     if action in {"retry", "cancel"}:
+        if "task_token" in data and data["task_token"] != job.task_id:
+            raise ledger.EditConflict("任务轮次已经变化，请读取最新状态。")
         before = {"status": job.status, "error_code": job.error_code, "attempt": job.attempt}
         if action == "cancel":
             if job.status == "succeeded":
@@ -204,42 +219,60 @@ def assistance_action(job_id, data, actor):
         else:
             if job.status != "failed":
                 raise ledger.EditConflict("只有失败任务可以重试。")
+            if job.stats.get("adopted_ids"):
+                raise ledger.EditConflict("已有建议被采用，请基于当前草稿重新生成，保留已采用的文字。")
             ledger._check_version("recommendation_issue", issue.pk, job.stats["edit_version"])
             _sources(job.stats["references"])
+            # Preserve validated partial output and failure evidence before
+            # replacing this attempt; only the new attempt becomes actionable.
+            before.update({"task_token": job.task_id, "error_message": job.error_message,
+                           "suggestions": deepcopy(job.stats.get("suggestions", [])),
+                           "dismissed_ids": list(job.stats.get("dismissed_ids", [])),
+                           "model": job.stats.get("model")})
             job.status, job.task_id, job.attempt = "pending", str(uuid4()), 0
             job.error_code, job.error_message, job.finished_at = "", "", None
-        job.save(update_fields=["status", "task_id", "attempt", "error_code", "error_message", "finished_at", "updated_at"])
+            job.stats = {**job.stats, "suggestions": [], "dismissed_ids": [], "stage": "queued"}
+        job.save(update_fields=["status", "task_id", "attempt", "error_code", "error_message", "finished_at", "stats", "updated_at"])
         AuditEvent.objects.create(actor=actor, action=f"editorial.assistance.{action}", object_type="ProcessingJob",
-                                  object_id=str(job.pk), before=before, after={"status": job.status})
+                                  object_id=str(job.pk), request_id=request_id, before=before,
+                                  after={"status": job.status, "fingerprint": fingerprint})
         if action == "retry":
             transaction.on_commit(lambda: dispatch_assistance(str(job.pk), job.task_id))
         return job
-    if action != "adopt":
-        raise ValidationError("请选择 adopt、retry 或 cancel。")
-    request_id, fingerprint = str(identifier(data.get("request_id"))), _fingerprint(data)
-    receipt = AuditEvent.objects.filter(actor=actor, request_id=request_id, action="editorial.assistance.adopt", object_id=str(job.pk)).first()
-    if receipt:
-        if receipt.after.get("fingerprint") != fingerprint:
-            raise ledger.EditConflict("这个采用编号已用于另一组输入。")
-        return job
-    if job.status != "succeeded":
-        raise ledger.EditConflict("本次候选尚未成功生成。")
-    expected = job.stats.get("adoption_version", job.stats["edit_version"])
-    if data.get("edit_version") != expected:
-        raise ledger.EditConflict("请先核对候选所依据的草稿版本。")
-    ledger._check_version("recommendation_issue", issue.pk, expected)
-    sources = {row["source_key"]: row["target"] for row in _sources(job.stats["references"])}
+    if action not in {"adopt", "dismiss"}:
+        raise ValidationError("请选择 adopt、dismiss、retry 或 cancel。")
+    request_id = str(identifier(data.get("request_id")))
+    if job.status not in {"succeeded", "failed", "canceled"} or not job.stats.get("suggestions"):
+        raise ledger.EditConflict("本次任务尚无可审阅的完整候选。")
     ids = data.get("suggestion_ids")
     if not isinstance(ids, list) or not 1 <= len(ids) <= 40 or any(not isinstance(value, str) for value in ids) or len(set(ids)) != len(ids):
         raise ValidationError("请逐项选择要采用的候选。")
     suggestions = {row["id"]: row for row in job.stats["suggestions"]}
     adopted = set(job.stats.get("adopted_ids", []))
-    if any(value not in suggestions or value in adopted for value in ids):
-        raise ValidationError("候选不存在或已经采用。")
+    dismissed = set(job.stats.get("dismissed_ids", []))
+    if any(value not in suggestions or value in adopted or value in dismissed for value in ids):
+        raise ValidationError("候选不存在或已经处理。")
+    if action == "dismiss":
+        job.stats = {**job.stats, "dismissed_ids": sorted(dismissed | set(ids))}
+        job.save(update_fields=["stats", "updated_at"])
+        AuditEvent.objects.create(actor=actor, action="editorial.assistance.dismiss", object_type="ProcessingJob",
+            object_id=str(job.pk), request_id=request_id, after={"fingerprint": fingerprint, "suggestion_ids": ids})
+        return job
+    expected = job.stats.get("adoption_version", job.stats["edit_version"])
+    if data.get("edit_version") != expected:
+        raise ledger.EditConflict("请先核对候选所依据的草稿版本。")
+    ledger._check_version("recommendation_issue", issue.pk, expected)
+    sources = {row["source_key"]: row["target"] for row in _sources(job.stats["references"])}
+    edits = data.get("edits", {})
+    if not isinstance(edits, dict) or set(edits) - set(ids):
+        raise ValidationError("只能修改本次已选建议的文字，不能替换其原文来源。")
+    edits = {key: ledger._text(value, 6000) for key, value in edits.items()}
+    if any(not value for value in edits.values()):
+        raise ValidationError("修改后的建议文字不能为空。")
     payload = ledger.issue_draft_payload(issue)
     blocks = deepcopy(payload.get("body_blocks", []))
     for value in ids:
-        suggestion = suggestions[value]
+        suggestion = {**suggestions[value], "text": edits.get(value, suggestions[value]["text"])}
         if suggestion["source_keys"]:
             blocks.append({"type": "analysis", "style": suggestion["kind"], "text": suggestion["text"],
                            "references": [sources[key] for key in suggestion["source_keys"]]})
@@ -252,5 +285,5 @@ def assistance_action(job_id, data, actor):
                  "adoption_version": ledger.edit_version("recommendation_issue", issue.pk)}
     job.save(update_fields=["stats", "updated_at"])
     AuditEvent.objects.create(actor=actor, action="editorial.assistance.adopt", object_type="ProcessingJob", object_id=str(job.pk),
-        request_id=request_id, after={"fingerprint": fingerprint, "suggestion_ids": ids, "draft_version": job.stats["adoption_version"]})
+        request_id=request_id, after={"fingerprint": fingerprint, "suggestion_ids": ids, "edited_ids": sorted(edits), "draft_version": job.stats["adoption_version"]})
     return job

@@ -195,6 +195,8 @@ def save_issue(identifier, data, actor):
     payload["slug"] = issue.slug
     from catalog.services.public_editorial import metadata_input
     payload["article_metadata"] = metadata_input(values.get("article_metadata", {}))
+    from catalog.services.editorial_selection import normalize as selection_input
+    payload["selection_workspace"] = selection_input(values.get("selection_workspace", {}), (restored.materialized_preview if restored else previous).get("selection_workspace"))
     payload["body_blocks"] = _body(values.get("body_blocks", []), retained=(restored.materialized_preview if restored else previous).get("body_blocks", []))
     rendition = _rendition(values.get("cover_rendition_id"))
     payload["cover_rendition_id"] = str(rendition.pk) if rendition else None
@@ -356,6 +358,11 @@ def public_issue_revision(issue):
 def issue_payload(issue, *, public=False, include_cover_storage=False, revision=None, include_body=True):
     revision = public_issue_revision(issue) if public else revision
     payload = deepcopy(revision.materialized_preview) if revision else issue_draft_payload(issue)
+    if public or not include_body:
+        payload.pop("selection_workspace", None)
+    else:
+        from catalog.services.editorial_selection import present as selection_payload
+        payload["selection_workspace"] = selection_payload(payload.get("selection_workspace"))
     from catalog.services.editorial_blocks import body_payload
     payload["body_blocks"], body_problems = body_payload(payload.get("body_blocks", []) if include_body else [], public=public)
     if not public and include_body:

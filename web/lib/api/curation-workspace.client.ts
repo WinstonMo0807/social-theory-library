@@ -1,6 +1,7 @@
 import { apiRequest, getServerSessionCredential } from "../api";
 import type { Paginated } from "./pagination";
 import type { OutlineNode } from "./document-outline";
+import type { IssueResolvedSource, IssueSourceReference } from "./recommendation-issues.types";
 
 const segment = encodeURIComponent;
 function request<T>(path: string, options: RequestInit = {}) {
@@ -38,9 +39,9 @@ export function changePlacements(type: PlacementPage, id: string, body: Placemen
 export function listPlacementSources(type: PlacementTarget["type"], q: string, page = 1, signal?: AbortSignal) { return request<Paginated<{ target: PlacementTarget; source: PlacementSource }>>(`/catalog/admin/content-placements/sources/?${new URLSearchParams({ type, q, page: String(page) })}`, { signal }); }
 export function readPlacementHistory(type: PlacementPage, id: string, page = 1, signal?: AbortSignal) { return request<Paginated<{ id: string; revision: number; base_revision: number; status: string; created_at: string; published_at: string | null; item_count: number; withdrawn: boolean }>>(`${placementsPath(type, id)}history/?page=${page}`, { signal }); }
 
-export type EditorialAssistance = { id: string; issue_id: string; operation: "outline" | "guide" | "comparison"; status: string; stage: string; progress: number; error_code: string; error_message: string; source_available: boolean; draft_changed: boolean; can_adopt: boolean; edit_version: string; sources: Array<Record<string, unknown>>; suggestions: Array<{ id: string; kind: "heading" | "paragraph"; text: string; source_keys: string[]; gap: string }>; adopted_ids: string[]; model: Record<string, unknown> | null; poll_after_ms: number | null };
+export type EditorialAssistance = { id: string; issue_id: string; operation: "outline" | "guide" | "comparison"; status: string; stage: string; progress: number; error_code: string; error_message: string; source_available: boolean; draft_changed: boolean; can_adopt: boolean; edit_version: string; sources: Array<{source_key:string;target:IssueSourceReference;source:IssueResolvedSource}>; suggestions: Array<{ id: string; kind: "heading" | "paragraph"; text: string; source_keys: string[]; gap: string }>; adopted_ids: string[]; dismissed_ids:string[]; question:string; created_at:string;updated_at:string;created_by:string;task_token:string; model: Record<string, unknown> | null; poll_after_ms: number | null };
 export const editorialAssistancePath = (issueId: string, jobId?: string) => `/catalog/admin/recommendation-issues/${segment(issueId)}/assistant/${jobId ? `${segment(jobId)}/` : ""}`;
 export function listEditorialAssistance(issueId: string, page = 1, signal?: AbortSignal) { return request<{ count: number; page: number; total_pages: number; results: EditorialAssistance[] }>(`${editorialAssistancePath(issueId)}?page=${page}`, { signal }); }
 export function readEditorialAssistance(issueId: string, jobId: string, signal?: AbortSignal) { return request<EditorialAssistance>(editorialAssistancePath(issueId, jobId), { signal }); }
 export function startEditorialAssistance(issueId: string, body: { request_id: string; edit_version: string; operation: EditorialAssistance["operation"]; question: string; references: Record<string, unknown>[] }) { return command<EditorialAssistance>(editorialAssistancePath(issueId), body); }
-export function actOnEditorialAssistance(issueId: string, jobId: string, body: { action: "retry" | "cancel" | "adopt"; request_id?: string; edit_version?: string; suggestion_ids?: string[] }) { return command<EditorialAssistance>(editorialAssistancePath(issueId, jobId), body); }
+export function actOnEditorialAssistance(issueId: string, jobId: string, body: { action: "retry" | "cancel" | "adopt" | "dismiss"; request_id?: string; edit_version?: string; suggestion_ids?: string[]; edits?:Record<string,string>;task_token?:string }) { return command<EditorialAssistance>(editorialAssistancePath(issueId, jobId), body); }

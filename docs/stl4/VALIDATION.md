@@ -1,5 +1,15 @@
 # 验收记录
 
+## 2026-10-22 PDF128–130选材与助手第一批（部分接入）
+
+- 记录辅助d57914因旧索引使用多种“已接入”状态措辞，按单一前缀统计而退出1；未涉及业务运行。仅续写白名单与校验的3b7146退出0，保留CSV原BOM及209组身份/哈希/验收状态，只改M16三行，重新核对为96接入/19部分/94待实施。暂存区为空、30路径白名单差异检查通过；未重复执行文档插入。
+- Python AST与安全SQL编译：`$env:PYTHONIOENCODING='utf-8'; .venv/Scripts/python.exe tmp/stl4-selection-static.py`，93bb41、8e4553及范围修订后重跑退出0。7文件AST、SQLite/PostgreSQL各5查询，共10编译；ensure_connection阻断，连接0。
+- 完整`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：初次e742b3因JSX缺失空分支退出1，修复后96160/d8cb32、41295/79a198、最终84124/4615a6退出0。
+- 8目标ESLint：`node node_modules/eslint/bin/eslint.js components/admin/recommendation-issue-editor.tsx components/admin/curation/use-issue-draft.ts components/admin/curation/issue-selection-workbench.tsx components/admin/curation/issue-assistance-review.tsx components/admin/curation/issue-discovery-materials.tsx lib/api/recommendation-issues.types.ts lib/api/curation-workspace.client.ts tests/issue-selection-atlas.spec.ts`。最终fb47d6退出0，仅1处既有img提示；初次轮询依赖提示已修正。
+- PostCSS解析7148d8退出0：67顶层节点、20直接引用类齐全。未执行页面渲染。
+- 隔离DATABASE_URL=sqlite:///:memory:、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true、PYTHONIOENCODING=utf-8；`api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-selection-schema.json --validate`，e9a5c4退出0，0错误/10项既有HomeScholar/Topic类型提示；32e348同步225路径及TS，原225全保留。
+- 新`api/tests/test_issue_selection_20261022.py`10个函数，`web/tests/issue-selection-atlas.spec.ts`6场景，仅定义未运行。无正式测试/E2E/浏览器/构建/迁移/OCR/模型调用/检索质量评测/索引/生产。
+
 ## 2026-10-22 富文本第三批静态记录
 
 完整 `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：57312/014c6d、65605/3f0d02退出0；最终57499/e767ca退出0。目标ESLint a85c5f退出0但多一项composing依赖提示，去除无用依赖后aca4ab退出0，仅保留2处既有img提示。PostCSS 568bcc退出0，185顶层节点可解析。新增4浏览器场景、现17场景仅定义，未运行正式测试/浏览器/构建/模型/检索质量评测/生产。

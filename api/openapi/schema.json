@@ -3948,7 +3948,21 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "document_revision_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "edition_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "id",
                         "schema": {
                             "type": "string"
                         }
@@ -22343,6 +22357,30 @@
                             "format": "uuid"
                         }
                     },
+                    "dismissed_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "question": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by": {
+                        "type": "string"
+                    },
+                    "task_token": {
+                        "type": "string"
+                    },
                     "model": {
                         "type": "object",
                         "additionalProperties": {},
@@ -22356,6 +22394,9 @@
                 "required": [
                     "adopted_ids",
                     "can_adopt",
+                    "created_at",
+                    "created_by",
+                    "dismissed_ids",
                     "draft_changed",
                     "edit_version",
                     "error_code",
@@ -22366,21 +22407,25 @@
                     "operation",
                     "poll_after_ms",
                     "progress",
+                    "question",
                     "source_available",
                     "sources",
                     "stage",
                     "status",
-                    "suggestions"
+                    "suggestions",
+                    "task_token",
+                    "updated_at"
                 ]
             },
             "EditorialAssistanceCommandActionEnum": {
                 "enum": [
                     "retry",
                     "cancel",
-                    "adopt"
+                    "adopt",
+                    "dismiss"
                 ],
                 "type": "string",
-                "description": "* `retry` - retry\n* `cancel` - cancel\n* `adopt` - adopt"
+                "description": "* `retry` - retry\n* `cancel` - cancel\n* `adopt` - adopt\n* `dismiss` - dismiss"
             },
             "EditorialAssistanceCommandRequest": {
                 "type": "object",
@@ -22403,6 +22448,17 @@
                             "format": "uuid"
                         },
                         "maxItems": 40
+                    },
+                    "edits": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 6000
+                        }
+                    },
+                    "task_token": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -39665,6 +39721,11 @@
             "RecommendationIssue": {
                 "type": "object",
                 "properties": {
+                    "selection_workspace": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "仅后台：策划问题、筛选范围与准确选材；materials为只读当前解析。公开响应不含此字段。"
+                    },
                     "id": {
                         "type": "string",
                         "format": "uuid",
@@ -39874,6 +39935,11 @@
             "RecommendationIssueRequest": {
                 "type": "object",
                 "properties": {
+                    "selection_workspace": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "仅后台：策划问题、筛选范围与准确选材；materials为只读当前解析。公开响应不含此字段。"
+                    },
                     "slug": {
                         "type": "string",
                         "minLength": 1

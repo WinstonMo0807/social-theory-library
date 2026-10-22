@@ -1,5 +1,15 @@
 # 中断恢复最短路径
 
+## 2026-10-22 PDF128–130选材与助手第一批（部分接入）
+
+本批前置155c107，白名单tmp/stl4-selection-checkpoint.json，提交号以Git为准。M16第一批在原编辑器内接IssueSelectionWorkbench/IssueDiscoveryMaterials/IssueAssistanceReview，新增editorial_selection，原assistant服务扩展候选审阅与回执；225契约。96/19/94，M16三图仍部分，继续其关联/提纲/细致对比与M15来源布局。
+
+静态检查已收口；10后端函数与6浏览器场景仅定义。不要重跑本记录脚本，不暂存其他继承修改。助手pending仅组件内，外部导航有提醒，刷新后读任务历史；文章草稿独立有原恢复机制。无迁移/数据清理/正式测试/浏览器/模型/检索质量评测/生产操作。
+
+## 2026-10-22 155c107后接续M16选材工作台
+
+富文本第三批已保存155c107（16路径）。当前按唯一PDF128–130接选材工作台，问题/范围/准确引用保存到原issue修订的selection_workspace，公开payload剔除；接既有Discovery会话、原ProcessingJob助手及逐项修改/采用/忽略。前后端源码写入中，尚未静态收口，不能计完成。不要重跑本次修改脚本或覆盖其他继承脏改。下一步收口权限、任务回执、重试和测试定义，再保存明确白名单。
+
 ## 2026-10-22 富文本第三批恢复
 
 前置c79756e。本批白名单tmp/stl4-rich-input-checkpoint.json，实际提交看Git。当前IssueTextEditor使用contentEditable，固定模型/DOM文字，不保存HTML；50步本块历史；同步组合输入保护及纯文字粘贴。完整TS、ESLint、CSS仅静态；17浏览器场景只定义。96/16/97不变，M15来源行/块缩略图仍需细化。唯一PDF128–130已实际读取，图在tmp/pdfs/stl4-authoring-20261022，下一步接M16原editorial_assistance。不要重复运行本记录脚本；不要暂存其他继承改动。

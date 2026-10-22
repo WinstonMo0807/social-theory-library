@@ -1,5 +1,13 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 PDF128–130选材与助手第一批（部分接入）
+
+原issue DTO增加仅后台selection_workspace(question≤4000/query≤200/filters/references≤40)，materials只读重新解析，回传忽略；公开/列表剔除。范围继续原Discovery规范，拒绝access等越权条件；主题/理论规范slug支持再保存。
+
+原sources GET增加id/document_revision_id用于准确引用核对。原assistant POST命令增加dismiss、edits(id→文字≤6000)、task_token；采用/忽略必须request_id，重试/取消保留旧调用兼容。响应增加dismissed_ids/question/created_at/updated_at/created_by/task_token，failed+stage=partial可保留完整候选供采用。
+
+225路径全部保留，CanEditMetadata、owner header/private,no-store沿原权限。所有写入沿RecommendationIssue/EditorialRevision/AuditEvent和ProcessingJob，无schema迁移。公开文章绝不包含策划问题/内部选材状态。
+
 ## 2026-10-22 就地富文本输入
 
 沿用c79756e的text/text_marks/text_style与225路径，无新增接口、模型字段或迁移。客户端固定格式的DOM只用于输入，保存仍只发送UTF-16位置和纯文字。撤销为本块50步本地输入历史，不替代后端正式修订历史；中文组合输入结束前不提交保存。

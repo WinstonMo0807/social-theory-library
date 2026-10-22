@@ -30,10 +30,14 @@ class IssueSourcesPageSerializer(serializers.Serializer):
 class IssueSourcesView(PlacementSourcesView):
     permission_classes = [CanEditMetadata]
 
-    @extend_schema(responses=IssueSourcesPageSerializer, parameters=[OpenApiParameter(key, type=str) for key in ("type", "q", "page", "work_id", "edition_id", "node_type")])
+    @extend_schema(responses=IssueSourcesPageSerializer, parameters=[OpenApiParameter(key, type=str) for key in ("type", "q", "page", "work_id", "edition_id", "node_type", "id", "document_revision_id")])
     def get(self, request, issue_id):
         get_object_or_404(RecommendationIssue, pk=issue_id)
         kind = request.query_params.get("type", "edition")
+        if request.query_params.get("id"):
+            target, source = resolve_target({"type": kind, "id": request.query_params["id"],
+                **{key: request.query_params[key] for key in ("edition_id", "document_revision_id") if request.query_params.get(key)}})
+            return Response({"count": 1, "next": None, "previous": None, "results": [{"target": target, "source": source}]})
         if kind in {"work", "edition", "span"} or kind == "node" and request.query_params.get("node_type") != "concept":
             return super().get(request)
         if kind not in {"person", "timeline", "reading_path", "node"}:

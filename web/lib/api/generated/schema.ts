@@ -5287,6 +5287,14 @@ export interface components {
             }[];
             suggestions: components["schemas"]["EditorialSuggestion"][];
             adopted_ids: string[];
+            dismissed_ids: string[];
+            question: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            created_by: string;
+            task_token: string;
             model: {
                 [key: string]: unknown;
             } | null;
@@ -5296,15 +5304,20 @@ export interface components {
          * @description * `retry` - retry
          *     * `cancel` - cancel
          *     * `adopt` - adopt
+         *     * `dismiss` - dismiss
          * @enum {string}
          */
-        EditorialAssistanceCommandActionEnum: "retry" | "cancel" | "adopt";
+        EditorialAssistanceCommandActionEnum: "retry" | "cancel" | "adopt" | "dismiss";
         EditorialAssistanceCommandRequest: {
             action: components["schemas"]["EditorialAssistanceCommandActionEnum"];
             /** Format: uuid */
             request_id?: string;
             edit_version?: string;
             suggestion_ids?: string[];
+            edits?: {
+                [key: string]: string;
+            };
+            task_token?: string;
         };
         EditorialAssistanceInputRequest: {
             /** Format: uuid */
@@ -10507,6 +10520,10 @@ export interface components {
             detail: string;
         };
         RecommendationIssue: {
+            /** @description 仅后台：策划问题、筛选范围与准确选材；materials为只读当前解析。公开响应不含此字段。 */
+            selection_workspace?: {
+                [key: string]: unknown;
+            };
             /** Format: uuid */
             readonly id: string;
             slug?: string;
@@ -10557,6 +10574,10 @@ export interface components {
         };
         RecommendationIssueListing: components["schemas"]["RecommendationIssueCollection"] | components["schemas"]["PublicEditorialDirectory"];
         RecommendationIssueRequest: {
+            /** @description 仅后台：策划问题、筛选范围与准确选材；materials为只读当前解析。公开响应不含此字段。 */
+            selection_workspace?: {
+                [key: string]: unknown;
+            };
             slug?: string;
             title: string;
             issue_label?: string;
@@ -14314,7 +14335,9 @@ export interface operations {
     catalog_admin_recommendation_issues_sources_retrieve: {
         parameters: {
             query?: {
+                document_revision_id?: string;
                 edition_id?: string;
+                id?: string;
                 node_type?: string;
                 page?: string;
                 q?: string;

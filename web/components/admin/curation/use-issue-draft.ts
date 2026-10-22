@@ -14,6 +14,7 @@ const pick = <T extends object>(value:T, keys:readonly (keyof T)[]) => Object.fr
 /** Store/send editable fields only; never cache source excerpts, cookies or task output. */
 export function issueInput(value:IssueDraft):IssueDraft {
   return {...pick(value,["id","slug","title","issue_label","introduction","public_byline","display_from","article_metadata","cover_rendition_id","edit_version","restore_revision_id"]),
+    ...(value.selection_workspace?{selection_workspace:pick(value.selection_workspace,["question","query","filters","references"])}:{}),
     cover_url:value.cover_rendition_id ? "" : value.cover_url,
     body_blocks:value.body_blocks.map(row=>pick(row,["id","type","text","text_style","text_marks","url","source","target","references","style","dimensions","rows","image_rendition_id","alt_text"]) as IssueBlock),
     items:value.items.map(row=>pick(row,["id","kind","work_id","edition_id","title","authors","version_note","isbn","doi","note","position","section_id"]) as IssueItem),
@@ -156,8 +157,17 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     setManualRequired(true);
     setMessage(`修订 ${value.viewed_revision} 已放入编辑区，明确保存后才成为新草稿。`);
   }
+  async function auxiliary<T>(url:string, body:string, refresh=false):Promise<T> {
+    if(action.current || compositionActive.current || dirty || pending || conflict || recovery || sessionInvalid)throw new ApiRequestError("请先保存并核对当前草稿，再处理助手建议。",409);
+    const lifetime=active.current;action.current=true;setBusy("assistant");
+    try {
+      const result=await request<T>(url,{method:"POST",body});
+      if(refresh){const next=await request<IssueDraft>(endpoint);if(!lifetime?.signal.aborted)accept(next);}
+      return result;
+    } finally {if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
+  }
   return {draft,saved,dirty,busy,composing,setComposing,message,initialError,conflict,pending,recovery,autosave,storageError,sessionInvalid,
-    disabled:Boolean(busy||pending||recovery||sessionInvalid),update,save,lookup,command,recheck,recoverLocal,restoreHistory,request,
+    disabled:Boolean(busy||pending||recovery||sessionInvalid),update,save,lookup,command,recheck,recoverLocal,restoreHistory,request,auxiliary,
     setAutosave,retryLoad:()=>setAttempt(value=>value+1),discardRecovery:()=>{setRecovery(null);try{sessionStorage.removeItem(key);}catch{setStorageError(true);}},
     useRemote:accept,keepLocal:(remote:IssueDraft)=>{setSaved(remote);setDraft(value=>value?{...value,edit_version:remote.edit_version}:value);setConflict(false);setPending(null);setAutoBlocked(true);setManualRequired(true);},
   };
