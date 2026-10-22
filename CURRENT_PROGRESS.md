@@ -1,5 +1,17 @@
 # Social Theory Library 当前进度
 
+## 2026-10-23 R30研究过程回放源码接入
+
+前置bf44e7d，实际读取唯一PDF221–222。原ResearchTurn起始选材/范围接20轮分页、材料与范围比较、本人回放笔记和新轮次起始笔记快照；独立研究分支复用原ResearchProject/ResearchImportReceipt，明确材料、无默认模型记忆授权、不自动检索，删除后不因旧请求重建。旧缺失快照不补造。详见docs/stl4/RESEARCH_REPLAY_20261023.md。
+
+源码部分接入，252路径、96源码/40部分/73待实施，无新迁移。仅静态AST/SQL编译/契约/CSS/TS/目标ESLint，不测试/浏览器/业务运行。0022/0023仍待。R30分享/深层分支与全量视觉业务验收仍待，继续R34分享和全站余项。
+
+
+## 2026-10-23 R30研究回放实施中
+
+前置bf44e7d。已实际读唯一PDF221–222。新research_replay/services/views基于原ResearchTurn初始选材和scope读取回放、比较、编辑本人回放笔记；独立分支复用原ResearchProject及ResearchImportReceipt，默认不继承模型记忆授权，不重跑检索。后端初稿尚未检查点，前端与契约仍在接入。无新迁移/测试/浏览器/业务运行，249路径和96/38/75暂保持。
+
+
 ## 2026-10-23 总览书签计数与旧笔记定位
 
 前置af22a6f。原reader-center聚合加入Bookmark；笔记筛选同时包含笔记/摘录/书签，各分支仍本人过滤，导航数为两类之和。ReaderMaterials所选任务增加书签映射；旧#note-ID和当前record参数恢复原记录，清空搜索同步表单。无新路径/迁移，249路径、96/38/75。仅静态：schema/SQL/AST脚本与契约退出0；TS+目标ESLint 6e6413/37b3a8退出0。未测试/浏览器/业务运行。已实际读唯一PDF221–222，接着研究过程回放。

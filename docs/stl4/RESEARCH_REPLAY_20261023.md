@@ -1,0 +1,39 @@
+# R30 研究过程回放
+
+2026-10-23，前置bf44e7d。已实际读取唯一最终PDF221–222。源码部分接入，尚未运行、视觉或功能验收。
+
+## 实际页面与数据
+
+`/account/research/{id}/history` 从原研究工作区进入。左侧20轮分页，中央轮次信息、材料与笔记、范围和材料增减比较、起始快照，右侧本轮回放笔记和下一步。移动同站纸白/夜间变量；来源预览复用原CitationSourcePreview与PDF阅读器。
+
+复用原ResearchProject、ResearchTurn和加密payload。已有selected_refs是轮次开始时的选材，scope是真实原条件；页面明确显示保存时点，不把最新项目选材伪装成过去某轮的成果，也不以父子材料数简单相加充当累计材料。source查看时经原resolve_reference重新核对公开文件、文字修订和页码，撤下来源不返回原文。
+
+从本批开始，新轮次额外保存当时项目题名、私人项目笔记project_snapshot；旧轮次缺少时显示缺失，不回填当前状态。回放笔记/replay_title是本人后来编写的文字，与初始问题、材料和快照分开；处理中轮次暂不可编辑，避免与原worker覆盖。原worker仅按原问题/条件/已授权提醒工作，新增快照不会自动送模型。
+
+比较使用同项目两个已保存轮次的引用身份差集、交集和scope，来源失效仍保留身份和个人文字。没有重新检索、没有生成模拟被引量/主题/历史时间。
+
+## 独立分支
+
+本人明确选全部、两轮比较新增或列表中已选择的1–400条材料，填写新主题和可选问题；复制回放笔记默认关闭。后端核对owner、原项目版本、轮次版本、所选身份及来源，创建原ResearchProject，scope严格限定所选原文，allow_neighbors关闭，个人记忆授权关闭，不立即启动检索。
+
+创建前后重新核对来源；原ResearchImportReceipt复用于私人研究创建回执，fingerprint带replay_fork操作域。事务包括新项目与回执，删除后的SET_NULL回执阻止原请求重建。原导入接口遇到不同指纹不会复用。浏览器sessionStorage只保存owner范围内request_id，完整私人输入仅在当前内存。未知响应可查回或原请求重试，不自动换ID。
+
+## 接口与权限
+
+- GET/PATCH `/reading/research-projects/{id}/replay/`：不带turn_id时分页路径，带turn_id/compare_id时读取真实输入和比较；PATCH期望轮次revision后改本人回放文字。
+- POST `/reading/research-projects/{id}/fork-from-replay/`：明确范围和版本，原请求幂等。
+- GET `/reading/research-projects/replay-fork-receipt/?request_id=...`：本人原创建结果，已删除只返回最少回执。
+
+三路径均依赖原PrivateRecordViewSet身份和no-store响应，另强制X-Reader-Owner。管理员角色不扩大本人研究范围。分支不授予公开访问或其他账户权限，不复制其他用户内容。
+
+## 尚未完成
+
+R30仍标部分，显式分享依赖R34、深层分支折叠/跨项目树、主题标签和完整的手动快照编辑历史尚待。历史快照当前仅展现确已保存的轮次初始输入，不声称有未开发的任意版本回滚。布局与键盘/真实任务/来源撤回/并发/业务功能待统一验收。
+
+无新模型或迁移，已有reading0022/0023仍未执行。原249路径保留，新增3路径，共252；索引96源码/40部分/73待实施，共209。
+
+## 静态记录与恢复
+
+`tmp/stl4-replay-static-20261023.py`：13 AST、SQLite/PostgreSQL共12 SQL编译，数据库连接硬阻断，reading迁移声明一致，OpenAPI0错误/10既有catalog提示。契约和CSS静态解析通过。TypeScript noEmit df75c9/057f1c退出0；5文件ESLint b252b8退出0。未测试、浏览器、实际业务/队列/模型、构建、迁移或生产。
+
+白名单tmp/stl4-replay-checkpoint-20261023.json，先核对CURRENT_PROGRESS与git。勿重跑本批一次性代码替换/文档前插。继承未提交修改及所有运行产物保留且未纳入本批。

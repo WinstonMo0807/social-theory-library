@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-23 私人轮次回放
+
+R30读取原ResearchTurn.selected_refs/scope；新轮次加密保存题名/项目笔记起始快照，不回填旧历史。回放笔记不进入原worker模型上下文。明确分支新建原ResearchProject，选材限定原文且无记忆授权，原ResearchImportReceipt复用最少创建回执保护删除后不重建。无平行研究库和新迁移。见docs/stl4/RESEARCH_REPLAY_20261023.md。
+
+
 ## 2026-10-23 阅读记录投影与最少回执
 
 R28统一原Annotation/Bookmark，无复制库或新迁移；公开来源另外复核，私有正文搜索在5000条本人范围内解密，索引只合并ID/时间/类型。研究关联写入原加密项目，独立笔记不自动授权模型。KnowledgeSaveReceipt命名空间回执阻止已删笔记迟到重建；原隐私任务身份改category+id，兼容唯一ID旧影响。详见docs/stl4/NOTEBOOK_WORKSPACE_20261023.md。

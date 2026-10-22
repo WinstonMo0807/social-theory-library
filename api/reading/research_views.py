@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from common.private_responses import PrivateAccountResponses
 
 from . import research
+from .research_replay_views import ReplayActions
 from .path_serializers import PathCommandOutput
 from .citation_audit import audit_capabilities, audit_versions, create_audit, original_document, update_audit
 from .citation_sources import paginated_units
@@ -138,7 +139,7 @@ class PrivateRecordViewSet(PrivateResponses, viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ResearchProjectViewSet(PrivateRecordViewSet):
+class ResearchProjectViewSet(ReplayActions, PrivateRecordViewSet):
     model = ResearchProject
 
     @extend_schema(request=ProjectImportInput, responses={201: PrivateRecordSerializer})

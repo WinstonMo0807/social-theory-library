@@ -32,7 +32,7 @@ export function ReaderNotebook({ assetId, initialKind = "all" }: { assetId?: str
 
 function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: string; initialKind: string }) {
   const search = useSearchParams();
-  const [filters, setFilters] = useState({ q: "", kind: ["all", "note", "excerpt", "bookmark"].includes(search?.get("kind") || "") ? search!.get("kind")! : initialKind, order: "newest", work: "", project: "", start: "", end: "" });
+  const [filters, setFilters] = useState({ q: "", kind: ["all", "note", "excerpt", "bookmark"].includes(search?.get("kind") || "") ? search!.get("kind")! : initialKind, order: "newest", work: "", project: /^[\da-f-]{36}$/i.test(search?.get("project") || "") ? search!.get("project")! : "", start: "", end: "" });
   const [page, setPage] = useState(1), [selected, setSelected] = useState<string[]>([]);
   const [focus, setFocus] = useState<{ category: "annotations" | "bookmarks"; id: string } | null>(() => {
     const id = search?.get("record"), category = search?.get("category");

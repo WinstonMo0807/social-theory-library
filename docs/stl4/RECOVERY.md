@@ -1,5 +1,10 @@
 # 中断恢复最短路径
 
+## 2026-10-23 R30回放恢复
+
+前置bf44e7d，见RESEARCH_REPLAY_20261023及tmp/stl4-replay-checkpoint-20261023.json。原轮次初始输入与新project_snapshot，旧缺失不回填；fork创建原项目并复用原ResearchImportReceipt，默认关闭记忆授权，no自动检索。252路径、96/40/73，无新迁移，未测试/浏览器/业务运行。继续分享及余项，勿重跑一次性替换/记录脚本。
+
+
 ## 2026-10-23 R28恢复
 
 见NOTEBOOK_WORKSPACE_20261023与CURRENT_PROGRESS顶部。前置a84e707，白名单tmp/stl4-notebook-checkpoint-20261023.json。新notebook服务复用原记录、研究和隐私任务；category+id处理跨类型同UUID，旧歧义影响须重新预览；annotation删除最少回执防迟到创建。无新迁移、未测试/浏览器/业务运行。96/38/75、249路径；继续计数/导出/档案/分享和全站余项，勿重跑一次性替换/记录脚本。

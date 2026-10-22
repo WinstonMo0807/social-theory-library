@@ -1,0 +1,146 @@
+"""Replay existing private turn inputs; never reconstruct missing history from live state."""
+import hashlib
+import json
+
+from django.db import transaction
+from rest_framework.exceptions import NotFound, ValidationError
+
+from . import privacy, research
+from .models import ResearchImportReceipt, ResearchProject, ResearchTurn
+
+
+def turn_for(user, project, pk):
+    turn = research.owned(ResearchTurn, user, pk)
+    if turn.project_id != project.pk:
+        raise NotFound("该轮次不属于这份研究。")
+    return turn
+
+
+def inputs(turn):
+    data = research.unpack(turn)
+    return {"title": data.get("replay_title") or data.get("question") or "未命名轮次",
+        "question": data.get("question", ""), "scope": data.get("scope", {}),
+        "selections": data.get("selected_refs", []), "notes": data.get("replay_note", ""),
+        "project_snapshot": data.get("project_snapshot"), "mode": data.get("mode", "search")}
+
+
+def descriptor(turn):
+    data = inputs(turn)
+    return {"id": str(turn.pk), "parent_id": str(turn.parent_id) if turn.parent_id else None,
+        "revision": turn.revision, "title": data["title"], "question": data["question"], "status": turn.status,
+        "created_at": turn.created_at, "updated_at": turn.updated_at,
+        "material_count": len({research.reference_identity(ref) for ref in data["selections"]}),
+        "snapshot_available": data["project_snapshot"] is not None}
+
+
+def timeline(user, project_id, page):
+    project = research.owned(ResearchProject, user, project_id)
+    rows = project.turns.order_by("-created_at", "-id")
+    count, start = rows.count(), (page - 1) * 20
+    if page > 1 and start >= count:
+        raise NotFound("这一页已没有轮次，请返回第一页。")
+    payload = research.unpack(project)
+    return {"owner_id": str(user.pk), "project": {"id": str(project.pk), "title": payload.get("title") or "未命名研究", "revision": project.revision, "archived": project.archived},
+        "count": count, "page": page, "total_pages": max(1, (count + 19) // 20),
+        "current_turn_id": payload.get("last_turn_id"), "results": [descriptor(row) for row in rows[start:start + 20]]}
+
+
+def references(turn):
+    seen, result = set(), []
+    for ref in inputs(turn)["selections"]:
+        key = research.reference_identity(ref)
+        if key not in seen:
+            seen.add(key)
+            result.append(ref)
+    return result
+
+
+def detail(user, project_id, turn_id, compare_id=None):
+    project = research.owned(ResearchProject, user, project_id)
+    turn = turn_for(user, project, turn_id)
+    compared = turn_for(user, project, compare_id) if compare_id else turn_for(user, project, turn.parent_id) if turn.parent_id else None
+    data = inputs(turn)
+    current, previous = references(turn), references(compared) if compared else []
+    before, after = {research.reference_identity(ref) for ref in previous}, {research.reference_identity(ref) for ref in current}
+    resolved = [research.resolve_reference(ref, user) for ref in current]
+    removed = [research.resolve_reference(ref, user) for ref in previous if research.reference_identity(ref) not in after]
+    snapshot = data["project_snapshot"]
+    # Snapshot selections are locators, never cached source paragraphs or model authorization.
+    return {"owner_id": str(user.pk), "project_id": str(project.pk), "project_revision": project.revision,
+        "turn": descriptor(turn), "scope": data["scope"], "materials": resolved,
+        "added_ids": sorted(after - before), "unchanged_ids": sorted(after & before), "removed": removed,
+        "compared": descriptor(compared) if compared else None,
+        "scope_changed": compared is not None and data["scope"] != inputs(compared)["scope"],
+        "previous_scope": inputs(compared)["scope"] if compared else None,
+        "notes": data["notes"], "snapshot_notes": snapshot.get("notes", "") if snapshot else None,
+        "snapshot_title": snapshot.get("title", "") if snapshot else None,
+        "unavailable_count": sum(ref.get("source_status") != "available" for ref in resolved),
+        "notice": "材料与范围来自本轮开始时实际保存的输入；来源在查看时重新核对。当前选材的后来变化不会补写为过去的历史。"}
+
+
+@transaction.atomic
+def edit_turn(user, project_id, turn_id, data):
+    privacy.lock_owner(user)
+    project = research.owned(ResearchProject, user, project_id, lock=True)
+    turn = turn_for(user, project, turn_id)
+    turn = research.owned(ResearchTurn, user, turn.pk, lock=True)
+    payload = research.unpack(turn)
+    if turn.revision != data["expected_revision"] and all(
+            payload.get("replay_title" if key == "title" else "replay_note", "") == data[key]
+            for key in ("title", "notes") if key in data):
+        return detail(user, project.pk, turn.pk)
+    research.expect(turn, data["expected_revision"])
+    if turn.status in research.ACTIVE:
+        raise research.ResearchConflict("本轮仍在处理中，完成或取消后再编辑回放笔记。")
+    if "title" in data:
+        payload["replay_title"] = data["title"]
+    if "notes" in data:
+        payload["replay_note"] = data["notes"]
+    research.save_data(turn, payload)
+    return detail(user, project.pk, turn.pk)
+
+
+def fork_receipt(user, request_id):
+    row = ResearchImportReceipt.objects.filter(user=user, request_id=request_id).first()
+    if row is None:
+        raise NotFound("尚未找到此账户的原创建回执。")
+    if row.project_id and not research.unpack(row.project).get("replay_origin"):
+        raise NotFound("此回执不属于研究回放的创建操作。")
+    # The caller learns only its own original project identity, never another owner's record.
+    return {"owner_id": str(user.pk), "request_id": str(request_id), "project_id": str(row.project_id) if row.project_id else None,
+        "deleted": row.project_id is None}
+
+
+@transaction.atomic
+def fork_project(user, project_id, turn_id, data):
+    privacy.lock_owner(user)
+    fingerprint = hashlib.sha256(json.dumps({"operation": "replay_fork", "project_id": str(project_id), "turn_id": str(turn_id), **data}, sort_keys=True, default=str).encode()).hexdigest()
+    previous = ResearchImportReceipt.objects.filter(user=user, request_id=data["request_id"]).first()
+    if previous:
+        if previous.fingerprint != fingerprint:
+            raise research.ResearchConflict("原创建请求已用于不同内容，请核对原结果。")
+        return fork_receipt(user, data["request_id"])
+    project = research.owned(ResearchProject, user, project_id, lock=True)
+    research.expect(project, data["expected_project_revision"])
+    turn = turn_for(user, project, turn_id)
+    research.expect(turn, data["expected_revision"])
+    all_refs = {research.reference_identity(ref): ref for ref in references(turn)}
+    ids = data["reference_ids"]
+    if not ids or len(set(ids)) != len(ids) or any(key not in all_refs for key in ids):
+        raise ValidationError("请选择本轮实际保存的1至400项材料，不能混入其他轮次。")
+    refs = [research.compact_reference(research.resolve_reference(all_refs[key], user, strict=True)) for key in ids]
+    if ResearchProject.objects.filter(user=user, request_id=data["request_id"]).exists():
+        raise research.ResearchConflict("此请求标识已用于另一研究创建，请核对原操作。")
+    # New research is constrained to the explicitly selected passages. It does not
+    # enqueue a query or carry forward any private-memory grants.
+    result = research.create_project(user, {"request_id": data["request_id"], "title": data["title"], "question": data.get("question", ""),
+        "scope": {"kind": "passages", "references": refs, "allow_neighbors": False}})
+    payload = research.unpack(result)
+    payload.update(selections=refs, notes=inputs(turn)["notes"] if data["include_notes"] else "",
+        replay_origin={"project_id": str(project.pk), "turn_id": str(turn.pk), "turn_revision": turn.revision},
+        use_confirmed_memories=False, confirmed_memory_ids=[])
+    research.save_data(result, payload)
+    for ref in refs:
+        research.resolve_reference(ref, user, strict=True)
+    ResearchImportReceipt.objects.create(user=user, project=result, request_id=data["request_id"], fingerprint=fingerprint)
+    return fork_receipt(user, data["request_id"])

@@ -3778,6 +3778,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/research-projects/{id}/fork-from-replay/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        post: operations["reading_research_projects_fork_from_replay_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/research-projects/{id}/replay/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        get: operations["reading_research_projects_replay_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        patch: operations["reading_research_projects_replay_partial_update"];
+        trace?: never;
+    };
     "/api/reading/research-projects/{id}/selections/": {
         parameters: {
             query?: never;
@@ -3824,6 +3859,23 @@ export interface paths {
         put?: never;
         /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_projects_import_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/research-projects/replay-fork-receipt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        get: operations["reading_research_projects_replay_fork_receipt_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9351,6 +9403,13 @@ export interface components {
             progress_ratio?: number;
             last_position?: unknown;
         };
+        PatchedReplayEditRequest: {
+            /** Format: uuid */
+            turn_id?: string;
+            expected_revision?: number;
+            title?: string;
+            notes?: string;
+        };
         PatchedResearchPreferenceInputRequest: {
             research_personalization?: boolean;
         };
@@ -11764,6 +11823,70 @@ export interface components {
             display_name: string;
             password: string;
             username?: string;
+        };
+        ReplayForkOutput: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            project_id: string | null;
+            deleted: boolean;
+        };
+        ReplayForkRequest: {
+            /** Format: uuid */
+            turn_id: string;
+            expected_revision: number;
+            expected_project_revision: number;
+            /** Format: uuid */
+            request_id: string;
+            title: string;
+            question?: string;
+            reference_ids: string[];
+            /** @default false */
+            include_notes: boolean;
+        };
+        ReplayOutput: {
+            owner_id: string;
+            project?: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            project_id?: string;
+            project_revision?: number;
+            count?: number;
+            page?: number;
+            total_pages?: number;
+            /** Format: uuid */
+            current_turn_id?: string | null;
+            results?: {
+                [key: string]: unknown;
+            }[];
+            turn?: {
+                [key: string]: unknown;
+            };
+            scope?: {
+                [key: string]: unknown;
+            };
+            materials?: {
+                [key: string]: unknown;
+            }[];
+            added_ids?: string[];
+            unchanged_ids?: string[];
+            removed?: {
+                [key: string]: unknown;
+            }[];
+            compared?: {
+                [key: string]: unknown;
+            } | null;
+            scope_changed?: boolean;
+            previous_scope?: {
+                [key: string]: unknown;
+            } | null;
+            notes?: string;
+            snapshot_notes?: string | null;
+            snapshot_title?: string | null;
+            unavailable_count?: number;
+            notice?: string;
         };
         ResearchAccountCountsOutput: {
             readonly research: number;
@@ -22023,6 +22146,88 @@ export interface operations {
             };
         };
     };
+    reading_research_projects_fork_from_replay_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 research project 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayForkRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReplayForkRequest"];
+                "multipart/form-data": components["schemas"]["ReplayForkRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayForkOutput"];
+                };
+            };
+        };
+    };
+    reading_research_projects_replay_retrieve: {
+        parameters: {
+            query?: {
+                compare_id?: string;
+                page?: number;
+                turn_id?: string;
+            };
+            header?: never;
+            path: {
+                /** @description 标识此 research project 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayOutput"];
+                };
+            };
+        };
+    };
+    reading_research_projects_replay_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 research project 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedReplayEditRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedReplayEditRequest"];
+                "multipart/form-data": components["schemas"]["PatchedReplayEditRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayOutput"];
+                };
+            };
+        };
+    };
     reading_research_projects_selections_create: {
         parameters: {
             query?: never;
@@ -22140,6 +22345,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivateRecord"];
+                };
+            };
+        };
+    };
+    reading_research_projects_replay_fork_receipt_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayForkOutput"];
                 };
             };
         };

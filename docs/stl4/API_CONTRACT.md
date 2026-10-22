@@ -1,5 +1,10 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 R30回放三路径
+
+原249保留；research-projects/{id}/replay（GET/PATCH）、fork-from-replay（POST）、replay-fork-receipt（GET），共252。强制owner，版本及范围核对；详细字段见生成契约与RESEARCH_REPLAY_20261023。
+
+
 ## 2026-10-23 R28五条路径
 
 原244保留，增加notebook列表、choices/{kind}、{category}/{id}、bookmarks/{id}/note、add-to-project，共249。后者GET查回/POST加入研究；全部必需X-Reader-Owner，owner/version/source范围固定。原隐私targets增加bookmarks；原work字段明确可空、书签输出updated_at。见NOTEBOOK_WORKSPACE_20261023。

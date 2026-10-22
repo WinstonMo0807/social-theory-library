@@ -607,6 +607,7 @@ def start_turn(request, project_id, data):
         "statement": statement, "subclaims": subclaims, "active_subclaim_id": active_subclaim_id,
         "search_question": search_question, **({"query_plan": query_plan} if query_plan else {}),
         "analysis_statement": statement, "input_revision": project.revision, "selected_refs": payload.get("selections", []),
+        "project_snapshot": {"title": payload.get("title", ""), "notes": payload.get("notes", "")},
         "result_refs": unpack(parent).get("result_refs", []) if parent and data.get("expand_from_parent") is True else [],
         "analysis": [], "warnings": [], "parent_id": str(parent.id) if parent else None,
         "memory_reminder_revisions": {str(row.id): row.revision for row in reminders},
