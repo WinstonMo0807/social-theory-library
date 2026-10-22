@@ -1,5 +1,12 @@
 # 验收记录
 
+## 2026-10-23 R22静态检查（未运行测试）
+
+- `.venv/Scripts/python.exe tmp/stl4-reader-center-static-20261023.py` b2e08a退出0：4文件AST、20次SQL编译、0连接，OpenAPI0错误/10既有提示。
+- `node tmp/stl4-reader-center-contracts-20261023.mjs` d63253退出0：保留227旧路径，共228，CSS解析。
+- web完整`tsc --noEmit --incremental false`首轮a19d49发现旧局部变量移除和参数重名，已修；4b46a6退出0。最新含笔记和导航修改38d123/b1acb1退出0。
+- web6目标ESLint b755f6退出0，已确认笔记旧img性能建议1项。无测试、浏览器、构建、业务调用、迁移或生产。
+
 ## 2026-10-23 外观与账户源码静态核查（没有测试）
 
 - 最终7文件AST 9c7d92退出0；14目标ESLint ad5357退出0，保留reader-shell既有img建议。14 CSS与2 JS仅解析385791退出0，包括交互HTML内脚本，不执行页面。45路径白名单git diff --check cf37c7退出0（换行提示不影响结果）。

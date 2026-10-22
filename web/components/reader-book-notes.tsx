@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { CollectionLink } from "@/components/collection-link";
 import { ArrowLeft, ArrowRight, BookOpen, RefreshCw, StickyNote, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   apiRequest,
+  subscribeToSessionChanges,
   clearStoredSession,
   getServerSessionCredential,
   isUnauthenticatedError,
 } from "@/lib/api";
 import { adaptApiWork as adaptWork } from "@/lib/public-data-adapters";
 import type { ApiWork } from "@/lib/api/public-catalog";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { readAllPages } from "@/lib/api/read-all-pages";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { useActionGuard } from "@/lib/use-action-guard";
@@ -29,12 +31,24 @@ type AnnotationRow = {
   created_at: string;
 };
 
-async function loadAllBookNotes(assetId: string, token: string, owner: string) {
-  return readAllPages<AnnotationRow>(`/reading/annotations/?asset=${encodeURIComponent(assetId)}&kind=note`, token, undefined, owner);
+async function loadAllBookNotes(assetId: string, token: string, owner: string, signal: AbortSignal) {
+  return readAllPages<AnnotationRow>(`/reading/annotations/?asset=${encodeURIComponent(assetId)}&kind=note`, token, signal, owner);
 }
 
 export function ReaderBookNotes({ assetId }: { assetId: string }) {
-  const { state: session, retry: retrySession } = useSessionBootstrap();
+  const bootstrap = useSessionBootstrap();
+  const owner = bootstrap.state.status === "authenticated" ? bootstrap.state.user?.id : bootstrap.state.status;
+  return <BookNotesWorkspace key={`${owner}:${assetId}`} assetId={assetId} bootstrap={bootstrap} />;
+}
+
+function BookNotesWorkspace({ assetId, bootstrap }: { assetId: string; bootstrap: ReturnType<typeof useSessionBootstrap> }) {
+  const { state: session, retry: retrySession } = bootstrap;
+  const requests = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const controller = new AbortController(); requests.current = controller;
+    const unsubscribe = subscribeToSessionChanges(() => controller.abort());
+    return () => { controller.abort(); unsubscribe(); };
+  }, []);
   const [notes, setNotes] = useState<AnnotationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadedOwnerId, setLoadedOwnerId] = useState<number | null>(null);
@@ -54,6 +68,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
     const credential = getServerSessionCredential();
     if (!credential) return;
     let mounted = true;
+    const controller = new AbortController();
     Promise.resolve().then(() => {
       if (!mounted) return;
       setLoading(true);
@@ -61,7 +76,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
       setMessage("");
       setMessageState("pending");
     });
-    loadAllBookNotes(assetId, credential, String(session.user.id))
+    withPrivateOwner(String(session.user.id), () => loadAllBookNotes(assetId, credential, String(session.user!.id), controller.signal), controller.signal)
       .then((rows) => {
         if (mounted) {
           setNotes(rows);
@@ -83,6 +98,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
       });
     return () => {
       mounted = false;
+      controller.abort();
     };
   }, [assetId, loadAttempt, session.status, session.user]);
 
@@ -95,7 +111,10 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
     setMessage("正在删除笔记……");
     setMessageState("pending");
     try {
-      await apiRequest(`/reading/annotations/${id}/`, { method: "DELETE" }, token);
+      const owner = session.user?.id, controller = requests.current;
+      if (owner === undefined || !controller || controller.signal.aborted) throw new Error("请重新确认登录账户。");
+      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]);
+      await withPrivateOwner(String(owner), () => apiRequest(`/reading/annotations/${id}/`, { method: "DELETE", signal, headers: { "X-Reader-Owner": String(owner) } }, token), signal);
       setNotes((current) => current.filter((item) => item.id !== id));
       setMessage("笔记已删除。");
       setMessageState("success");
@@ -132,7 +151,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
         <div>
           <p className="eyebrow">个人阅读资料</p>
           <h1>{work?.title ?? "作品笔记"}</h1>
-          <p>{notes.length} 条笔记。点击一条记录可回到 PDF 的对应页面。</p>
+          <p>{messageState === "error" ? "笔记未能完整读取，请重试。" : `${notes.length} 条笔记。点击一条记录可回到 PDF 的对应页面。`}</p>
         </div>
       </header>
       <section className="reader-book-note-list">
@@ -159,7 +178,7 @@ export function ReaderBookNotes({ assetId }: { assetId: string }) {
             </span>
           </article>
         ))}
-        {!notes.length ? <p className="empty-state">这本书目前没有笔记，可能已经被删除。</p> : null}
+        {!notes.length && messageState !== "error" ? <p className="empty-state">这本书目前没有笔记，可能已经被删除。</p> : null}
       </section>
       {message ? <div className="reader-book-notes-feedback"><AsyncStatus state={messageState} message={message} />{messageState === "error" ? <button type="button" onClick={() => {
         setLoading(true);

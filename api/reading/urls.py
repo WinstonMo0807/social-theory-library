@@ -30,6 +30,7 @@ from .runtime_views import (
 from .research_views import (CitationAuditViewSet, CitationSourceViewSet, PersonalReadingPlanViewSet, ResearchAccountView,
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
 from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView
+from .reader_center_views import ReaderCenterView
 from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 from .shared_citation_views import PublicCitationPreviewView
 from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView, SourceFollowReceiptView
@@ -71,6 +72,7 @@ router.register(
 )
 
 urlpatterns = [
+    path("reader-center/", ReaderCenterView.as_view(), name="reader-center"),
     path("article-comments/public/<uuid:issue_id>/", PublicArticleCommentsView.as_view(), name="article-comments-public"),
     path("article-comments/admin/<uuid:issue_id>/", AdminArticleCommentsView.as_view(), name="article-comments-admin"),
     path("article-comments/<uuid:issue_id>/", OwnArticleCommentsView.as_view(), name="article-comments-own"),

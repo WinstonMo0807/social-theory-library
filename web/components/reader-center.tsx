@@ -13,12 +13,13 @@ import {
   Highlighter,
   List,
   LogOut,
+  LockKeyhole,
   Mail,
   RefreshCw,
   Settings,
   StickyNote,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   apiRequest,
@@ -39,6 +40,7 @@ import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "./action-feedback";
 import { BookCard, BookCover, SectionHeading } from "./ui";
 import { DisplayPreferences } from "./display-preferences";
+import { ReaderOverview } from "./research/reader-overview";
 import { ResearchCenterNav } from "./research/research-center-nav";
 import { SaveTopicButton, useTopicSaveCommands } from "./save-topic-button";
 
@@ -189,7 +191,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   const topicCommands = useTopicSaveCommands(session.status === "authenticated" && session.user ? String(session.user.id) : null);
   const section = searchParams.get("section");
   const [selectedTab, selectTab] = useState<{ section: string | null; label: string } | null>(null);
-  const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : "概览";
+  const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : section === "history" ? "阅读历史" : section === "saved" ? "收藏" : "概览";
   const setActive = (label: string) => selectTab({ section, label });
   const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
@@ -245,7 +247,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   }, [session.status, session.user]);
 
   useEffect(() => {
-    if (session.status !== "authenticated" || !session.user) return;
+    if (active === "概览" || session.status !== "authenticated" || !session.user) return;
     const credential = getServerSessionCredential();
     if (!credential) return;
     const owner = String(session.user.id);
@@ -340,44 +342,9 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
       mounted = false;
       controller.abort();
     };
-  }, [resourceAttempt, session.status, session.user]);
+  }, [active, resourceAttempt, session.status, session.user]);
 
-  const recentProgress = useMemo(
-    () => [...readerData.progress]
-      .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
-      .slice(0, 5),
-    [readerData.progress],
-  );
-  const savedWorks = readerData.saved.flatMap((item, index) => item.work_data ? [adaptWork(item.work_data, index)] : []);
   const recentSavedWork = readerData.saved.find(item => item.work_data)?.work_data;
-  const pendingTasks = useMemo(
-    () => readerData.plans.flatMap((plan) => (plan.data?.items ?? [])
-      .filter((item) => item.status === "pending" || item.status === "reading")
-      .map((item) => ({ ...item, planId: plan.id, goal: plan.data?.goal ?? "阅读计划" })))
-      .slice(0, 6),
-    [readerData.plans],
-  );
-  const materialRows = useMemo(
-    () => [
-      ...readerData.saved.slice(0, 4).map((item) => ({
-        id: `saved-${item.id}`,
-        title: item.work_data?.title ?? "来源暂不可用",
-        kind: "收藏",
-        updated: item.created_at,
-        href: item.work_data && item.reading_progress
-          ? `/reader/${item.reading_progress.asset}?page=${item.reading_progress.current_page}`
-          : "/account",
-      })),
-      ...noteGroups.slice(0, 4).map((item) => ({
-        id: `notes-${item.asset}`,
-        title: item.work.title,
-        kind: "笔记",
-        updated: item.latest_at,
-        href: `/account/notes/${item.asset}`,
-      })),
-    ].slice(0, 6),
-    [noteGroups, readerData.saved],
-  );
 
   async function logout() {
     const actionKey = "logout";
@@ -576,7 +543,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
     );
   }
 
-  if (!profile || dataOwnerId !== session.user?.id) {
+  if (!profile || (active !== "概览" && dataOwnerId !== session.user?.id)) {
     return <div className="account-loading">正在读取账户资料……</div>;
   }
 
@@ -586,7 +553,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
     <div className="reader-center">
       <div className="account-content">
         <header className="reader-center-heading">
-          <div><p className="eyebrow">读者中心</p><h1>读者中心</h1><p>继续阅读，整理笔记与研究。</p></div>
+          <div><p className="eyebrow">读者中心</p><h1>读者中心 <small className="reader-center-private"><LockKeyhole size={13} />仅本人可见</small></h1><p>继续阅读，整理笔记与研究。</p></div>
           <div className="reader-center-heading-actions">
             <div className="reader-center-create-links" aria-label="创建资料">
               <Link href="/explore/opinions">＋ 新建研究</Link>
@@ -596,12 +563,12 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
             <div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div>
           </div>
         </header>
-        <ResearchCenterNav active={active === "书单" ? "lists" : undefined} counts={{ notes: resourceErrors.noteGroups ? undefined : noteGroups.length, plans: resourceErrors.plans ? undefined : readerData.plans.length, lists: resourceErrors.lists ? undefined : readerData.lists.length }} />
+        {active !== "概览" ? <ResearchCenterNav active={active === "书单" ? "lists" : undefined} counts={{ notes: resourceErrors.noteGroups ? undefined : noteGroups.length, plans: resourceErrors.plans ? undefined : readerData.plans.length, lists: resourceErrors.lists ? undefined : readerData.lists.length }} /> : null}
         <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav></details>
         {Array.from(topicCommands.memory.current.entries()).filter(([id, operation]) => operation.owner === String(session.user?.id) && (active !== "收藏" || !readerData.savedTopics.some(row => row.topic === id))).map(([id]) => <section key={id} className="form-message"><p>有一项主题收藏操作尚待核对，原请求与期望版本仍保留。</p><SaveTopicButton topicId={id} commands={topicCommands} onChange={() => setResourceAttempt(value => value + 1)} /></section>)}
 
-        {resourcesLoading ? <p className="form-message" role="status">正在读取个人阅读资料……</p> : null}
-        {Object.keys(resourceErrors).length ? (
+        {active !== "概览" && resourcesLoading ? <p className="form-message" role="status">正在读取个人阅读资料……</p> : null}
+        {active !== "概览" && Object.keys(resourceErrors).length ? (
           <section className="form-message error" role="status" data-error-category="resource_error">
             <strong>部分内容暂时无法加载</strong>
             <ul>
@@ -615,89 +582,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
           </section>
         ) : null}
 
-        {active === "概览" ? (
-          <>
-            <section className="account-stats">
-              {[
-                [String(readerData.progress.length), "正在阅读"],
-                [String(readerData.saved.length + readerData.savedTopics.length), "收藏"],
-                [String(readerData.bookmarks.length), "书签"],
-                [String(readerData.annotations.filter((item) => item.kind !== "note").length), "高亮"],
-                [String(readerData.annotations.filter((item) => item.kind === "note").length), "笔记"],
-              ].map(([value, label]) => (
-                <div key={label}><strong>{value}</strong><span>{label}</span></div>
-              ))}
-            </section>
-            <section className="continue-reading panel">
-              <SectionHeading title="继续阅读" />
-              <p className="continue-reading-note">按最后阅读时间保留最近 5 项。</p>
-              {recentProgress.length ? (
-                <div className="continue-reading-list">
-                  {recentProgress.map((progress) => {
-                    const ratio = Math.round(progress.progress_ratio * 100);
-                    return (
-                      <article className="continue-reading-entry" key={progress.id}>
-                        <BookCard work={adaptWork(progress.work)} dense />
-                        <div className="continue-reading-progress">
-                          <span>第 {progress.current_page} 页</span>
-                          <i aria-label={`阅读进度 ${ratio}%`}><b style={{ width: `${ratio}%` }} /></i>
-                          <strong>{ratio}%</strong>
-                        </div>
-                        <CollectionLink className="button" href={`/reader/${progress.asset}?page=${progress.current_page}`}>
-                          继续阅读 <ArrowRight size={16} />
-                        </CollectionLink>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : <p className="empty-state">开始在线阅读后，最近进度会显示在这里。</p>}
-            </section>
-            <section className="reader-pending-tasks panel">
-              <SectionHeading title="待继续任务" />
-              <p className="continue-reading-note">来自你的阅读计划与私人研究资料。</p>
-              {pendingTasks.length ? (
-                <div className="reader-task-list">
-                  {pendingTasks.map((task, index) => {
-                    const href = task.reader_url || "/account/plans";
-                    return (
-                      <article className="reader-task-row" key={`${task.planId}-${task.id ?? index}`}>
-                        <span className="reader-task-check" aria-hidden="true" />
-                        <FileText size={15} />
-                        <div><strong>{task.title || task.goal}</strong><small>{task.note || task.goal}</small></div>
-                        <span className={`reader-task-status ${task.status === "reading" ? "is-reading" : ""}`}>{task.status === "reading" ? "进行中" : "待开始"}</span>
-                        <Link href={href} aria-label={`继续${task.title || task.goal}`}><ArrowRight size={15} /></Link>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : <p className="empty-state">创建阅读计划后，待继续任务会显示在这里。</p>}
-            </section>
-            <section className="reader-materials panel">
-              <SectionHeading title="我的资料" />
-              <p className="continue-reading-note">仅显示属于你的收藏与阅读笔记。</p>
-              {materialRows.length ? (
-                <div className="reader-material-table" role="table" aria-label="我的资料">
-                  <div className="reader-material-head" role="row"><span>标题</span><span>类型</span><span>最近更新</span><span>操作</span></div>
-                  {materialRows.map((row) => (
-                    <div className="reader-material-row" role="row" key={row.id}>
-                      <Link href={row.href}>{row.title}</Link><span>{row.kind}</span><time dateTime={row.updated}>{new Date(row.updated).toLocaleDateString("zh-CN")}</time><Link href={row.href} aria-label={`打开${row.title}`}><ArrowRight size={14} /></Link>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="empty-state">收藏或保存笔记后，资料会显示在这里。</p>}
-            </section>
-            <section className="account-books panel">
-              <SectionHeading title="最近收藏" />
-              <div>{savedWorks.slice(0, 3).map((work) => <BookCard work={work} dense key={work.id} />)}</div>
-              {readerData.savedTopics.slice(0, 3).map((topic) => (
-                <Link className="reader-saved-topic" href={`/topics/${topic.slug}`} key={topic.id}>
-                  <strong>{topic.name}</strong><span>收藏主题</span><ArrowRight size={14} />
-                </Link>
-              ))}
-              {!readerData.saved.length && !readerData.savedTopics.length ? <p className="empty-state">你还没有收藏文献或主题。</p> : null}
-            </section>
-          </>
-        ) : null}
+        {active === "概览" ? <ReaderOverview ownerId={String(session.user!.id)} /> : null}
 
         {active === "收藏" ? (
           <DataPanel title="收藏">
@@ -798,7 +683,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
           <DataPanel title="书单">
             <form className="reading-list-create" onSubmit={createReadingList}><input value={newListTitle} onChange={(event) => setNewListTitle(event.target.value)} placeholder="新书单名称" required /><ActionButton className="button secondary" type="submit" state={pendingAction === "create-reading-list" ? "pending" : "idle"} pendingLabel="正在创建" disabled={Boolean(pendingAction) && pendingAction !== "create-reading-list"}>创建书单</ActionButton></form>
             {readerData.lists.map((list) => (
-              <article className="reader-data-row" key={list.id}>
+              <article className="reader-data-row" key={list.id} id={`list-${list.id}`}>
                 <List size={17} /><div><strong>{list.title}</strong><p>{list.description}</p><small>{list.items.length} 部文献</small>{list.items.map((item) => <span className="reading-list-item" key={item.id}>{item.title}</span>)}</div>
                 <span className="reader-data-actions">
                   {recentSavedWork ? <ActionButton type="button" state={pendingAction === `add-to-list:${list.id}:${recentSavedWork.id}` ? "pending" : "idle"} pendingLabel="加入中" disabled={Boolean(pendingAction) && pendingAction !== `add-to-list:${list.id}:${recentSavedWork.id}`} onClick={() => void addSavedWorkToList(list.id, recentSavedWork.id)}>加入最近收藏</ActionButton> : null}

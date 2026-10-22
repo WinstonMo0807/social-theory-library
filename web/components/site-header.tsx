@@ -84,6 +84,11 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
     ["/topics", config.navigation.topics],
     ["/recommendations", "特别策划"],
   ] as const;
+  const readerCenterRoute = pathname === "/account" && !preview;
+  const headerNavigation = readerCenterRoute ? [
+    ["/account/research", "我的研究"], ["/account/notes", "笔记"], ["/account/plans", "阅读计划"],
+    ["/account?section=lists", "书单"], ["/account/citation-audits", "引文体检"], ["/account/confirmed-notes", "已确认笔记"],
+  ] : navigation;
 
   useEffect(() => {
     document.body.classList.toggle("menu-open", open);
@@ -123,6 +128,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
     <header
       data-edit-section={preview ? "brand" : undefined}
       data-stl-home={pathname === "/" || preview ? "true" : undefined}
+      data-stl-account={readerCenterRoute ? "true" : undefined}
       className={exploreRoute ? "site-header" : "site-header site-header--editorial"}
       data-ui-scope={exploreRoute ? "explore-frozen" : "editorial-v2"}
     >
@@ -130,8 +136,8 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
         <Wordmark config={config} />
       </Link>
       <nav className="desktop-nav" aria-label="主导航">
-        {navigation.map(([href, label]) => {
-          const active = isActive(href);
+        {headerNavigation.map(([href, label]) => {
+          const active = href.includes("?") ? `${pathname}?${searchParams}` === href : isActive(href);
           return (
             <Link
               aria-current={active ? "page" : undefined}

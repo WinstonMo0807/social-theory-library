@@ -7466,6 +7466,7 @@
         "/api/catalog/recommendation-issues/{slug}/save-list/": {
             "get": {
                 "operationId": "catalog_recommendation_issues_save_list_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -7526,6 +7527,7 @@
             },
             "post": {
                 "operationId": "catalog_recommendation_issues_save_list_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -10265,6 +10267,7 @@
         "/api/reading/article-comments/{issue_id}/": {
             "get": {
                 "operationId": "reading_article_comments_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -10324,6 +10327,7 @@
             },
             "post": {
                 "operationId": "reading_article_comments_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -10391,6 +10395,7 @@
         "/api/reading/article-comments/{issue_id}/{comment_id}/": {
             "delete": {
                 "operationId": "reading_article_comments_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -10440,6 +10445,7 @@
         "/api/reading/article-comments/{issue_id}/requests/{request_id}/": {
             "get": {
                 "operationId": "reading_article_comments_requests_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -10496,6 +10502,7 @@
         "/api/reading/article-comments/admin/{issue_id}/": {
             "get": {
                 "operationId": "reading_article_comments_admin_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -10547,6 +10554,7 @@
             },
             "post": {
                 "operationId": "reading_article_comments_admin_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -10972,6 +10980,7 @@
         "/api/reading/citation-audits/": {
             "get": {
                 "operationId": "reading_citation_audits_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "name": "ordering",
@@ -11027,6 +11036,7 @@
             },
             "post": {
                 "operationId": "reading_citation_audits_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -11065,6 +11075,7 @@
         "/api/reading/citation-audits/{id}/": {
             "get": {
                 "operationId": "reading_citation_audits_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11103,6 +11114,7 @@
             },
             "delete": {
                 "operationId": "reading_citation_audits_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11136,6 +11148,7 @@
         "/api/reading/citation-audits/{id}/command/": {
             "post": {
                 "operationId": "reading_citation_audits_command_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11196,6 +11209,7 @@
         "/api/reading/citation-audits/{id}/export/": {
             "get": {
                 "operationId": "reading_citation_audits_export_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11236,6 +11250,7 @@
         "/api/reading/citation-audits/{id}/manuscript/": {
             "get": {
                 "operationId": "reading_citation_audits_manuscript_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11276,6 +11291,7 @@
         "/api/reading/citation-audits/{id}/ocr/": {
             "get": {
                 "operationId": "reading_citation_audits_ocr_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11316,6 +11332,7 @@
         "/api/reading/citation-audits/{id}/original/": {
             "get": {
                 "operationId": "reading_citation_audits_original_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11357,6 +11374,7 @@
         "/api/reading/citation-audits/{id}/preview/": {
             "get": {
                 "operationId": "reading_citation_audits_preview_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11394,6 +11412,7 @@
             },
             "post": {
                 "operationId": "reading_citation_audits_preview_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11453,6 +11472,7 @@
         "/api/reading/citation-audits/{id}/preview/file/": {
             "get": {
                 "operationId": "reading_citation_audits_preview_file_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -11501,6 +11521,7 @@
         "/api/reading/citation-audits/{id}/versions/": {
             "get": {
                 "operationId": "reading_citation_audits_versions_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11539,6 +11560,7 @@
             },
             "post": {
                 "operationId": "reading_citation_audits_versions_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11589,6 +11611,7 @@
         "/api/reading/citation-audits/capabilities/": {
             "get": {
                 "operationId": "reading_citation_audits_capabilities_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -11665,6 +11688,7 @@
         "/api/reading/citation-sources/": {
             "get": {
                 "operationId": "reading_citation_sources_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "name": "ordering",
@@ -11720,6 +11744,7 @@
             },
             "post": {
                 "operationId": "reading_citation_sources_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -11758,6 +11783,7 @@
         "/api/reading/citation-sources/{id}/": {
             "get": {
                 "operationId": "reading_citation_sources_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11796,6 +11822,7 @@
             },
             "delete": {
                 "operationId": "reading_citation_sources_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11829,6 +11856,7 @@
         "/api/reading/citation-sources/{id}/command/": {
             "post": {
                 "operationId": "reading_citation_sources_command_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11889,6 +11917,7 @@
         "/api/reading/citation-sources/{id}/export/": {
             "get": {
                 "operationId": "reading_citation_sources_export_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11929,6 +11958,7 @@
         "/api/reading/citation-sources/{id}/ocr/": {
             "get": {
                 "operationId": "reading_citation_sources_ocr_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11969,6 +11999,7 @@
         "/api/reading/citation-sources/{id}/original/": {
             "get": {
                 "operationId": "reading_citation_sources_original_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12010,6 +12041,7 @@
         "/api/reading/citation-sources/{id}/preview/": {
             "get": {
                 "operationId": "reading_citation_sources_preview_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12047,6 +12079,7 @@
             },
             "post": {
                 "operationId": "reading_citation_sources_preview_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12106,6 +12139,7 @@
         "/api/reading/citation-sources/{id}/preview/file/": {
             "get": {
                 "operationId": "reading_citation_sources_preview_file_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -12154,6 +12188,7 @@
         "/api/reading/citation-sources/{id}/segments/": {
             "get": {
                 "operationId": "reading_citation_sources_segments_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12194,6 +12229,7 @@
         "/api/reading/graph-views/": {
             "get": {
                 "operationId": "reading_graph_views_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -12255,6 +12291,7 @@
             },
             "post": {
                 "operationId": "reading_graph_views_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -12313,6 +12350,7 @@
         "/api/reading/graph-views/{id}/": {
             "get": {
                 "operationId": "reading_graph_views_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -12359,6 +12397,7 @@
             },
             "patch": {
                 "operationId": "reading_graph_views_partial_update",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -12424,6 +12463,7 @@
             },
             "delete": {
                 "operationId": "reading_graph_views_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -12481,6 +12521,7 @@
         "/api/reading/graph-views/by-request/": {
             "get": {
                 "operationId": "reading_graph_views_by_request_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -12630,6 +12671,7 @@
         "/api/reading/parallel-calibrations/": {
             "get": {
                 "operationId": "reading_parallel_calibrations_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "name": "ordering",
@@ -12685,6 +12727,7 @@
             },
             "post": {
                 "operationId": "reading_parallel_calibrations_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -12733,6 +12776,7 @@
         "/api/reading/parallel-calibrations/{id}/": {
             "get": {
                 "operationId": "reading_parallel_calibrations_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12773,6 +12817,7 @@
         "/api/reading/parallel-calibrations/admin/": {
             "get": {
                 "operationId": "reading_parallel_calibrations_admin_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "name": "ordering",
@@ -12835,6 +12880,7 @@
         "/api/reading/parallel-calibrations/admin/{id}/": {
             "get": {
                 "operationId": "reading_parallel_calibrations_admin_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12875,6 +12921,7 @@
         "/api/reading/parallel-calibrations/admin/{id}/publish/": {
             "post": {
                 "operationId": "reading_parallel_calibrations_admin_publish_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12935,6 +12982,7 @@
         "/api/reading/parallel-calibrations/admin/{id}/reject/": {
             "post": {
                 "operationId": "reading_parallel_calibrations_admin_reject_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12995,6 +13043,7 @@
         "/api/reading/parallel-calibrations/admin/{id}/review/": {
             "post": {
                 "operationId": "reading_parallel_calibrations_admin_review_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -13055,6 +13104,7 @@
         "/api/reading/parallel-calibrations/by-request/": {
             "get": {
                 "operationId": "reading_parallel_calibrations_by_request_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -13205,6 +13255,7 @@
         "/api/reading/parallel-tasks/": {
             "get": {
                 "operationId": "reading_parallel_tasks_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -13265,6 +13316,7 @@
             },
             "post": {
                 "operationId": "reading_parallel_tasks_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -13313,6 +13365,7 @@
         "/api/reading/parallel-tasks/{id}/": {
             "get": {
                 "operationId": "reading_parallel_tasks_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -13351,6 +13404,7 @@
             },
             "patch": {
                 "operationId": "reading_parallel_tasks_partial_update",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -13408,6 +13462,7 @@
             },
             "delete": {
                 "operationId": "reading_parallel_tasks_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -13449,6 +13504,7 @@
         "/api/reading/parallel-tasks/by-request/": {
             "get": {
                 "operationId": "reading_parallel_tasks_by_request_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -13487,6 +13543,7 @@
         "/api/reading/path-follows/": {
             "get": {
                 "operationId": "reading_path_follows_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -13548,6 +13605,7 @@
             },
             "post": {
                 "operationId": "reading_path_follows_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -13606,6 +13664,7 @@
         "/api/reading/path-follows/{id}/": {
             "get": {
                 "operationId": "reading_path_follows_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -13652,6 +13711,7 @@
             },
             "patch": {
                 "operationId": "reading_path_follows_partial_update",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -13717,6 +13777,7 @@
             },
             "delete": {
                 "operationId": "reading_path_follows_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -13774,6 +13835,7 @@
         "/api/reading/path-follows/{id}/copy-plan/": {
             "post": {
                 "operationId": "reading_path_follows_copy_plan_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -13842,6 +13904,7 @@
         "/api/reading/path-follows/{id}/upgrade/": {
             "post": {
                 "operationId": "reading_path_follows_upgrade_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -13910,6 +13973,7 @@
         "/api/reading/path-follows/{id}/upgrade-preview/": {
             "get": {
                 "operationId": "reading_path_follows_upgrade_preview_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -13966,6 +14030,7 @@
         "/api/reading/path-follows/by-path/": {
             "get": {
                 "operationId": "reading_path_follows_by_path_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -14012,6 +14077,7 @@
         "/api/reading/path-follows/by-request/": {
             "get": {
                 "operationId": "reading_path_follows_by_request_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -14058,6 +14124,7 @@
         "/api/reading/privacy/": {
             "get": {
                 "operationId": "reading_privacy_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -14084,6 +14151,7 @@
             },
             "patch": {
                 "operationId": "reading_privacy_partial_update",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -14131,6 +14199,7 @@
         "/api/reading/privacy/items/": {
             "get": {
                 "operationId": "reading_privacy_items_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -14159,6 +14228,7 @@
         "/api/reading/privacy/operations/": {
             "get": {
                 "operationId": "reading_privacy_operations_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "name": "ordering",
@@ -14214,6 +14284,7 @@
             },
             "post": {
                 "operationId": "reading_privacy_operations_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -14262,6 +14333,7 @@
         "/api/reading/privacy/operations/{id}/": {
             "get": {
                 "operationId": "reading_privacy_operations_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -14302,6 +14374,7 @@
         "/api/reading/privacy/operations/{id}/command/": {
             "post": {
                 "operationId": "reading_privacy_operations_command_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -14362,6 +14435,7 @@
         "/api/reading/privacy/operations/{id}/download/": {
             "get": {
                 "operationId": "reading_privacy_operations_download_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -14689,9 +14763,100 @@
                 }
             }
         },
+        "/api/reading/reader-center/": {
+            "get": {
+                "operationId": "reading_reader_center_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "research",
+                                "notes",
+                                "plans",
+                                "lists",
+                                "audits",
+                                "confirmed",
+                                "saved"
+                            ],
+                            "type": "string",
+                            "default": "all",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
+                    },
+                    {
+                        "in": "query",
+                        "name": "order",
+                        "schema": {
+                            "enum": [
+                                "newest",
+                                "oldest"
+                            ],
+                            "type": "string",
+                            "default": "newest",
+                            "minLength": 1
+                        },
+                        "description": "* `newest` - newest\n* `oldest` - oldest"
+                    },
+                    {
+                        "in": "query",
+                        "name": "overview",
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 180
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderCenterOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/reading-plans/": {
             "get": {
                 "operationId": "reading_reading_plans_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "name": "ordering",
@@ -14747,6 +14912,7 @@
             },
             "post": {
                 "operationId": "reading_reading_plans_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -14805,6 +14971,7 @@
         "/api/reading/reading-plans/{id}/": {
             "get": {
                 "operationId": "reading_reading_plans_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -14843,6 +15010,7 @@
             },
             "patch": {
                 "operationId": "reading_reading_plans_partial_update",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -14900,6 +15068,7 @@
             },
             "delete": {
                 "operationId": "reading_reading_plans_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -14943,6 +15112,7 @@
         "/api/reading/reading-plans/{id}/command/": {
             "post": {
                 "operationId": "reading_reading_plans_command_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15003,6 +15173,7 @@
         "/api/reading/reading-plans/{id}/export/": {
             "get": {
                 "operationId": "reading_reading_plans_export_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15043,6 +15214,7 @@
         "/api/reading/research-account/": {
             "get": {
                 "operationId": "reading_research_account_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -15069,6 +15241,7 @@
             },
             "patch": {
                 "operationId": "reading_research_account_partial_update",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -15116,6 +15289,7 @@
         "/api/reading/research-memories/": {
             "get": {
                 "operationId": "reading_research_memories_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -15241,6 +15415,7 @@
             },
             "post": {
                 "operationId": "reading_research_memories_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -15289,6 +15464,7 @@
         "/api/reading/research-memories/{id}/": {
             "get": {
                 "operationId": "reading_research_memories_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15327,6 +15503,7 @@
             },
             "patch": {
                 "operationId": "reading_research_memories_partial_update",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15384,6 +15561,7 @@
             },
             "delete": {
                 "operationId": "reading_research_memories_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15417,6 +15595,7 @@
         "/api/reading/research-memories/{id}/export/": {
             "get": {
                 "operationId": "reading_research_memories_export_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15457,6 +15636,7 @@
         "/api/reading/research-memories/{id}/usage/": {
             "get": {
                 "operationId": "reading_research_memories_usage_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15496,6 +15676,7 @@
             },
             "post": {
                 "operationId": "reading_research_memories_usage_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15556,6 +15737,7 @@
         "/api/reading/research-memories/search/": {
             "post": {
                 "operationId": "reading_research_memories_search_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -15604,6 +15786,7 @@
         "/api/reading/research-projects/": {
             "get": {
                 "operationId": "reading_research_projects_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "name": "ordering",
@@ -15659,6 +15842,7 @@
             },
             "post": {
                 "operationId": "reading_research_projects_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -15707,6 +15891,7 @@
         "/api/reading/research-projects/{id}/": {
             "get": {
                 "operationId": "reading_research_projects_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15745,6 +15930,7 @@
             },
             "patch": {
                 "operationId": "reading_research_projects_partial_update",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15802,6 +15988,7 @@
             },
             "delete": {
                 "operationId": "reading_research_projects_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15835,6 +16022,7 @@
         "/api/reading/research-projects/{id}/comparison/": {
             "post": {
                 "operationId": "reading_research_projects_comparison_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15895,6 +16083,7 @@
         "/api/reading/research-projects/{id}/export/": {
             "get": {
                 "operationId": "reading_research_projects_export_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15935,6 +16124,7 @@
         "/api/reading/research-projects/{id}/selections/": {
             "post": {
                 "operationId": "reading_research_projects_selections_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -15995,6 +16185,7 @@
         "/api/reading/research-projects/{id}/turns/": {
             "get": {
                 "operationId": "reading_research_projects_turns_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16087,6 +16278,7 @@
             },
             "post": {
                 "operationId": "reading_research_projects_turns_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16147,6 +16339,7 @@
         "/api/reading/research-projects/import/": {
             "post": {
                 "operationId": "reading_research_projects_import_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "tags": [
                     "reading"
                 ],
@@ -16195,6 +16388,7 @@
         "/api/reading/research-turns/": {
             "get": {
                 "operationId": "reading_research_turns_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "name": "ordering",
@@ -16252,6 +16446,7 @@
         "/api/reading/research-turns/{id}/": {
             "get": {
                 "operationId": "reading_research_turns_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16292,6 +16487,7 @@
         "/api/reading/research-turns/{id}/cancel/": {
             "post": {
                 "operationId": "reading_research_turns_cancel_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16332,6 +16528,7 @@
         "/api/reading/research-turns/{id}/decision/": {
             "post": {
                 "operationId": "reading_research_turns_decision_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16392,6 +16589,7 @@
         "/api/reading/research-turns/{id}/expand/": {
             "post": {
                 "operationId": "reading_research_turns_expand_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16452,6 +16650,7 @@
         "/api/reading/research-turns/{id}/export/": {
             "get": {
                 "operationId": "reading_research_turns_export_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16492,6 +16691,7 @@
         "/api/reading/research-turns/{id}/retry/": {
             "post": {
                 "operationId": "reading_research_turns_retry_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16552,6 +16752,7 @@
         "/api/reading/research-turns/{id}/subclaims/": {
             "post": {
                 "operationId": "reading_research_turns_subclaims_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "path",
@@ -16612,6 +16813,7 @@
         "/api/reading/saved-knowledge/{node_id}/": {
             "get": {
                 "operationId": "reading_saved_knowledge_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -16664,6 +16866,7 @@
             },
             "post": {
                 "operationId": "reading_saved_knowledge_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -17069,6 +17272,7 @@
         "/api/reading/search-records/": {
             "get": {
                 "operationId": "reading_search_records_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -17121,6 +17325,7 @@
         "/api/reading/source-follows/": {
             "get": {
                 "operationId": "reading_source_follows_list",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -17177,6 +17382,7 @@
             },
             "post": {
                 "operationId": "reading_source_follows_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -17235,6 +17441,7 @@
         "/api/reading/source-follows/{id}/": {
             "get": {
                 "operationId": "reading_source_follows_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -17279,6 +17486,7 @@
             },
             "delete": {
                 "operationId": "reading_source_follows_destroy",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -17319,6 +17527,7 @@
         "/api/reading/source-follows/by-request/": {
             "get": {
                 "operationId": "reading_source_follows_by_request_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "header",
@@ -17365,6 +17574,7 @@
         "/api/reading/source-status/": {
             "get": {
                 "operationId": "reading_source_status_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
                         "in": "query",
@@ -39587,6 +39797,59 @@
                     "url"
                 ]
             },
+            "ReaderCenterOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderMaterialOutput"
+                        }
+                    },
+                    "recent_reading": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReadingProgress"
+                        }
+                    },
+                    "pending_tasks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderPendingOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "counts",
+                    "owner_id",
+                    "page",
+                    "page_size",
+                    "results",
+                    "total_pages"
+                ]
+            },
             "ReaderDocumentSearch": {
                 "type": "object",
                 "properties": {
@@ -39691,6 +39954,68 @@
                     "title",
                     "width"
                 ]
+            },
+            "ReaderMaterialOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "key": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderMaterialOutputKindEnum"
+                    },
+                    "kind_label": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "question": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "revision": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "key",
+                    "kind",
+                    "kind_label",
+                    "question",
+                    "revision",
+                    "status",
+                    "title",
+                    "updated_at"
+                ]
+            },
+            "ReaderMaterialOutputKindEnum": {
+                "enum": [
+                    "research",
+                    "notes",
+                    "plans",
+                    "lists",
+                    "audits",
+                    "confirmed",
+                    "saved"
+                ],
+                "type": "string",
+                "description": "* `research` - research\n* `notes` - notes\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
             },
             "ReaderOCRActionEnum": {
                 "enum": [
@@ -40037,6 +40362,38 @@
                     "text_available",
                     "text_source",
                     "width"
+                ]
+            },
+            "ReaderPendingOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "question": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "question",
+                    "status",
+                    "title",
+                    "updated_at"
                 ]
             },
             "ReaderPrivacyOperationKindEnum": {

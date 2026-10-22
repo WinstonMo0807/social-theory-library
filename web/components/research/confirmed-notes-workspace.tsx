@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { BookOpen, Check, ChevronRight, Download, FileText, LockKeyhole, MoreVertical, Plus, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
@@ -35,6 +36,7 @@ export function ConfirmedNotesWorkspace() {
 }
 
 function MemoryCollection({ ownerId }: { ownerId: string }) {
+  const locationParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [state, setState] = useState("");
@@ -44,7 +46,10 @@ function MemoryCollection({ ownerId }: { ownerId: string }) {
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
-  const [inspect, setInspect] = useState<string | null>(null);
+  const [inspect, setInspect] = useState<string | null>(() => {
+    const id = locationParams.get("memory") || "";
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : null;
+  });
   const [usage, setUsage] = useState<string | null>(null);
   const [create, setCreate] = useState(false);
   const [notice, setNotice] = useState("");

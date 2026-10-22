@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 原私人资料的总览投影
+
+reader_center只聚合原七种owner对象，UNION仅身份和时间、数据库分页后读取正文；正文检索在本人范围解密，不接公开索引。最近阅读沿原来源可读性过滤，待办沿原计划。未新建资料库或迁移。原账户页按所需模块读取，总览不再拉九组全量列表。
+
 ## 2026-10-23 共用外观与私人响应
 
 AppearanceProvider 是唯一浏览器外观状态，原字号/字体与新增theme落在原ReaderProfile JSON；预绘制脚本应用非敏感本机选择，登录后按当前owner读取。User→ReaderProfile事务锁防止偏好合并丢失。common.private_responses.PrivateAccountResponses收敛原Reading私人响应，保留各服务实际权限和user查询；前端账户key、发起owner、请求取消与前后身份验证互相补充。没有引入独立账号/馆藏/问答库。夜间不反色原PDF或书封。

@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 读者总览投影
+
+新增GET /api/reading/reader-center/：kind七类或all、q≤180、order newest/oldest、page≥1、overview默认true。响应owner_id/count/page/page_size/total_pages/counts/results及可选recent_reading/pending_tasks。每页20，私人全文搜索最多5000项范围，超过明确400，不截断；并发删除409，页越界404。原权限/no-store/owner保护；无写入，无新表。227旧路径保留，共228。
+
 ## 2026-10-23 外观与私人接口边界
 
 原 PATCH /api/auth/me/ reading_preferences 增加 theme=light|dark|system，text_size/font_family保持；其他JSON键不能通过此接口写入，原隐私/研究键合并保留。原身份/能力/退出、阅读历史/导出/荐书、个人模型配置/检测、旧问答会话/消息/流加入可选 X-Reader-Owner 校验，不匹配403，private/no-store及Vary Cookie/Authorization；保持原权限、owner queryset及流no-transform。没有新增路由，原227路径契约不变，JSON字段原来就是开放对象，无生成类型变化。详见READER_APPEARANCE_PRIVACY_20261023。

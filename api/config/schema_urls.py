@@ -66,7 +66,7 @@ urlpatterns = [
         if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views", "reading.parallel_views", "reading.graph_views", "reading.path_views"}
         or pattern.name in {"annotations-list", "annotations-detail", "bookmarks-list", "bookmarks-detail", "progress-list", "progress-detail", "reading-history-list", "reading-history-detail", "saved-topics-list", "saved-topics-detail", "saved-topics-state", "saved-topics-command"}
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
-        "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
+        "reader-center", "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
         "citation-source-preview", "citation-source-preview-file",
         "article-comments-public", "article-comments-admin", "article-comments-own", "article-comment-receipt", "article-comment-delete",
         "public-citation-preview", "public-source-status", "source-follows", "source-follow-detail", "source-follow-receipt", "saved-knowledge-node",

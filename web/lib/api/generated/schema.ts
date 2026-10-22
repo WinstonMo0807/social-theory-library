@@ -1644,8 +1644,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["catalog_recommendation_issues_save_list_retrieve"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["catalog_recommendation_issues_save_list_create"];
         delete?: never;
         options?: never;
@@ -2150,8 +2152,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_article_comments_retrieve"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_article_comments_create"];
         delete?: never;
         options?: never;
@@ -2169,6 +2173,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_article_comments_destroy"];
         options?: never;
         head?: never;
@@ -2182,6 +2187,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_article_comments_requests_retrieve"];
         put?: never;
         post?: never;
@@ -2198,8 +2204,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_article_comments_admin_retrieve"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_article_comments_admin_create"];
         delete?: never;
         options?: never;
@@ -2262,8 +2270,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_citation_audits_create"];
         delete?: never;
         options?: never;
@@ -2278,9 +2288,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_citation_audits_destroy"];
         options?: never;
         head?: never;
@@ -2296,6 +2308,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_citation_audits_command_create"];
         delete?: never;
         options?: never;
@@ -2310,6 +2323,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_export_retrieve"];
         put?: never;
         post?: never;
@@ -2326,6 +2340,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_manuscript_retrieve"];
         put?: never;
         post?: never;
@@ -2342,6 +2357,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_ocr_retrieve"];
         put?: never;
         post?: never;
@@ -2358,6 +2374,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_original_retrieve"];
         put?: never;
         post?: never;
@@ -2374,8 +2391,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_preview_retrieve"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_citation_audits_preview_create"];
         delete?: never;
         options?: never;
@@ -2390,6 +2409,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_preview_file_retrieve"];
         put?: never;
         post?: never;
@@ -2406,8 +2426,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_versions_retrieve"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_citation_audits_versions_create"];
         delete?: never;
         options?: never;
@@ -2422,6 +2444,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_audits_capabilities_retrieve"];
         put?: never;
         post?: never;
@@ -2454,8 +2477,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_sources_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_citation_sources_create"];
         delete?: never;
         options?: never;
@@ -2470,9 +2495,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_sources_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_citation_sources_destroy"];
         options?: never;
         head?: never;
@@ -2488,6 +2515,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_citation_sources_command_create"];
         delete?: never;
         options?: never;
@@ -2502,6 +2530,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_sources_export_retrieve"];
         put?: never;
         post?: never;
@@ -2518,6 +2547,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_sources_ocr_retrieve"];
         put?: never;
         post?: never;
@@ -2534,6 +2564,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_sources_original_retrieve"];
         put?: never;
         post?: never;
@@ -2550,8 +2581,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_sources_preview_retrieve"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_citation_sources_preview_create"];
         delete?: never;
         options?: never;
@@ -2566,6 +2599,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_sources_preview_file_retrieve"];
         put?: never;
         post?: never;
@@ -2582,6 +2616,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_citation_sources_segments_retrieve"];
         put?: never;
         post?: never;
@@ -2598,8 +2633,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_graph_views_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_graph_views_create"];
         delete?: never;
         options?: never;
@@ -2614,12 +2651,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_graph_views_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_graph_views_destroy"];
         options?: never;
         head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         patch: operations["reading_graph_views_partial_update"];
         trace?: never;
     };
@@ -2630,6 +2670,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_graph_views_by_request_retrieve"];
         put?: never;
         post?: never;
@@ -2662,8 +2703,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_parallel_calibrations_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_parallel_calibrations_create"];
         delete?: never;
         options?: never;
@@ -2678,6 +2721,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_parallel_calibrations_retrieve"];
         put?: never;
         post?: never;
@@ -2694,6 +2738,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_parallel_calibrations_admin_list"];
         put?: never;
         post?: never;
@@ -2710,6 +2755,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_parallel_calibrations_admin_retrieve"];
         put?: never;
         post?: never;
@@ -2728,6 +2774,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_parallel_calibrations_admin_publish_create"];
         delete?: never;
         options?: never;
@@ -2744,6 +2791,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_parallel_calibrations_admin_reject_create"];
         delete?: never;
         options?: never;
@@ -2760,6 +2808,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_parallel_calibrations_admin_review_create"];
         delete?: never;
         options?: never;
@@ -2774,6 +2823,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_parallel_calibrations_by_request_retrieve"];
         put?: never;
         post?: never;
@@ -2822,8 +2872,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_parallel_tasks_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_parallel_tasks_create"];
         delete?: never;
         options?: never;
@@ -2838,12 +2890,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_parallel_tasks_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_parallel_tasks_destroy"];
         options?: never;
         head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         patch: operations["reading_parallel_tasks_partial_update"];
         trace?: never;
     };
@@ -2854,6 +2909,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_parallel_tasks_by_request_retrieve"];
         put?: never;
         post?: never;
@@ -2870,8 +2926,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_path_follows_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_path_follows_create"];
         delete?: never;
         options?: never;
@@ -2886,12 +2944,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_path_follows_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_path_follows_destroy"];
         options?: never;
         head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         patch: operations["reading_path_follows_partial_update"];
         trace?: never;
     };
@@ -2904,6 +2965,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_path_follows_copy_plan_create"];
         delete?: never;
         options?: never;
@@ -2920,6 +2982,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_path_follows_upgrade_create"];
         delete?: never;
         options?: never;
@@ -2934,6 +2997,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_path_follows_upgrade_preview_retrieve"];
         put?: never;
         post?: never;
@@ -2950,6 +3014,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_path_follows_by_path_retrieve"];
         put?: never;
         post?: never;
@@ -2966,6 +3031,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_path_follows_by_request_retrieve"];
         put?: never;
         post?: never;
@@ -2982,12 +3048,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_privacy_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         patch: operations["reading_privacy_partial_update"];
         trace?: never;
     };
@@ -2998,6 +3066,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_privacy_items_retrieve"];
         put?: never;
         post?: never;
@@ -3014,8 +3083,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_privacy_operations_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_privacy_operations_create"];
         delete?: never;
         options?: never;
@@ -3030,6 +3101,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_privacy_operations_retrieve"];
         put?: never;
         post?: never;
@@ -3048,6 +3120,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_privacy_operations_command_create"];
         delete?: never;
         options?: never;
@@ -3062,6 +3135,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_privacy_operations_download_retrieve"];
         put?: never;
         post?: never;
@@ -3103,6 +3177,22 @@ export interface paths {
         patch: operations["reading_progress_partial_update"];
         trace?: never;
     };
+    "/api/reading/reader-center/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_reader_center_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/reading-plans/": {
         parameters: {
             query?: never;
@@ -3110,8 +3200,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_reading_plans_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_reading_plans_create"];
         delete?: never;
         options?: never;
@@ -3126,12 +3218,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_reading_plans_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_reading_plans_destroy"];
         options?: never;
         head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         patch: operations["reading_reading_plans_partial_update"];
         trace?: never;
     };
@@ -3144,6 +3239,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_reading_plans_command_create"];
         delete?: never;
         options?: never;
@@ -3158,6 +3254,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_reading_plans_export_retrieve"];
         put?: never;
         post?: never;
@@ -3174,12 +3271,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_account_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         patch: operations["reading_research_account_partial_update"];
         trace?: never;
     };
@@ -3190,8 +3289,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_memories_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_memories_create"];
         delete?: never;
         options?: never;
@@ -3206,12 +3307,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_memories_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_research_memories_destroy"];
         options?: never;
         head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         patch: operations["reading_research_memories_partial_update"];
         trace?: never;
     };
@@ -3222,6 +3326,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_memories_export_retrieve"];
         put?: never;
         post?: never;
@@ -3238,8 +3343,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_memories_usage_retrieve"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_memories_usage_create"];
         delete?: never;
         options?: never;
@@ -3256,6 +3363,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_memories_search_create"];
         delete?: never;
         options?: never;
@@ -3270,8 +3378,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_projects_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_projects_create"];
         delete?: never;
         options?: never;
@@ -3286,12 +3396,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_projects_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_research_projects_destroy"];
         options?: never;
         head?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         patch: operations["reading_research_projects_partial_update"];
         trace?: never;
     };
@@ -3304,6 +3417,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_projects_comparison_create"];
         delete?: never;
         options?: never;
@@ -3318,6 +3432,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_projects_export_retrieve"];
         put?: never;
         post?: never;
@@ -3336,6 +3451,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_projects_selections_create"];
         delete?: never;
         options?: never;
@@ -3350,8 +3466,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_projects_turns_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_projects_turns_create"];
         delete?: never;
         options?: never;
@@ -3368,6 +3486,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_projects_import_create"];
         delete?: never;
         options?: never;
@@ -3382,6 +3501,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_turns_list"];
         put?: never;
         post?: never;
@@ -3398,6 +3518,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_turns_retrieve"];
         put?: never;
         post?: never;
@@ -3416,6 +3537,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_turns_cancel_create"];
         delete?: never;
         options?: never;
@@ -3432,6 +3554,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_turns_decision_create"];
         delete?: never;
         options?: never;
@@ -3448,6 +3571,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_turns_expand_create"];
         delete?: never;
         options?: never;
@@ -3462,6 +3586,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_research_turns_export_retrieve"];
         put?: never;
         post?: never;
@@ -3480,6 +3605,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_turns_retry_create"];
         delete?: never;
         options?: never;
@@ -3496,6 +3622,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_research_turns_subclaims_create"];
         delete?: never;
         options?: never;
@@ -3510,8 +3637,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_saved_knowledge_retrieve"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_saved_knowledge_create"];
         delete?: never;
         options?: never;
@@ -3590,6 +3719,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_search_records_retrieve"];
         put?: never;
         post?: never;
@@ -3606,8 +3736,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_source_follows_list"];
         put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         post: operations["reading_source_follows_create"];
         delete?: never;
         options?: never;
@@ -3622,9 +3754,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_source_follows_retrieve"];
         put?: never;
         post?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         delete: operations["reading_source_follows_destroy"];
         options?: never;
         head?: never;
@@ -3638,6 +3772,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_source_follows_by_request_retrieve"];
         put?: never;
         post?: never;
@@ -3654,6 +3789,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
         get: operations["reading_source_status_retrieve"];
         put?: never;
         post?: never;
@@ -10382,6 +10518,19 @@ export interface components {
             page_label_status: string;
             semantic_index_status: string;
         };
+        ReaderCenterOutput: {
+            owner_id: string;
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            counts: {
+                [key: string]: number;
+            };
+            results: components["schemas"]["ReaderMaterialOutput"][];
+            recent_reading?: components["schemas"]["ReadingProgress"][];
+            pending_tasks?: components["schemas"]["ReaderPendingOutput"][];
+        };
         ReaderDocumentSearch: {
             /** Format: uuid */
             asset_id: string;
@@ -10415,6 +10564,31 @@ export interface components {
             locator_kind?: string;
             locators?: unknown[];
         };
+        ReaderMaterialOutput: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            kind: components["schemas"]["ReaderMaterialOutputKindEnum"];
+            kind_label: string;
+            title: string;
+            question: string;
+            status: string;
+            href: string;
+            /** Format: date-time */
+            updated_at: string;
+            revision: string;
+        };
+        /**
+         * @description * `research` - research
+         *     * `notes` - notes
+         *     * `plans` - plans
+         *     * `lists` - lists
+         *     * `audits` - audits
+         *     * `confirmed` - confirmed
+         *     * `saved` - saved
+         * @enum {string}
+         */
+        ReaderMaterialOutputKindEnum: "research" | "notes" | "plans" | "lists" | "audits" | "confirmed" | "saved";
         /**
          * @description * `pause` - pause
          *     * `resume` - resume
@@ -10521,6 +10695,15 @@ export interface components {
             geometry: unknown;
             text: string;
             blocks: components["schemas"]["ReaderTextBlock"][];
+        };
+        ReaderPendingOutput: {
+            id: string;
+            title: string;
+            question: string;
+            status: string;
+            /** Format: date-time */
+            updated_at: string;
+            href: string;
         };
         /**
          * @description * `export` - export
@@ -19641,6 +19824,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadingProgress"];
+                };
+            };
+        };
+    };
+    reading_reader_center_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `all` - all
+                 *     * `research` - research
+                 *     * `notes` - notes
+                 *     * `plans` - plans
+                 *     * `lists` - lists
+                 *     * `audits` - audits
+                 *     * `confirmed` - confirmed
+                 *     * `saved` - saved
+                 */
+                kind?: "all" | "research" | "notes" | "plans" | "lists" | "audits" | "confirmed" | "saved";
+                /**
+                 * @description * `newest` - newest
+                 *     * `oldest` - oldest
+                 */
+                order?: "newest" | "oldest";
+                overview?: boolean;
+                page?: number;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderCenterOutput"];
                 };
             };
         };
