@@ -6,6 +6,199 @@
         "description": "Canonical catalog, editorial processes and permission-scoped reading APIs."
     },
     "paths": {
+        "/api/auth/login/": {
+            "get": {
+                "operationId": "auth_login_retrieve",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthEntryOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "auth_login_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LoginOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/password/confirm/": {
+            "post": {
+                "operationId": "auth_password_confirm_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PasswordResetConfirmRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PasswordResetConfirmRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PasswordResetConfirmRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthNoticeOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/password/request/": {
+            "post": {
+                "operationId": "auth_password_request_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PasswordResetRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PasswordResetRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PasswordResetRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthNoticeOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/register/": {
+            "post": {
+                "operationId": "auth_register_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/assets/{asset_id}/outline/": {
             "get": {
                 "operationId": "catalog_admin_assets_outline_retrieve",
@@ -19412,6 +19605,44 @@
                     "versions"
                 ]
             },
+            "AuthEntryOutput": {
+                "type": "object",
+                "properties": {
+                    "csrf_ready": {
+                        "type": "boolean"
+                    },
+                    "password_login": {
+                        "type": "boolean"
+                    },
+                    "remember_days": {
+                        "type": "integer"
+                    },
+                    "recovery_mode": {
+                        "type": "string"
+                    },
+                    "recovery_minutes": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "csrf_ready",
+                    "password_login",
+                    "recovery_minutes",
+                    "recovery_mode",
+                    "remember_days"
+                ]
+            },
+            "AuthNoticeOutput": {
+                "type": "object",
+                "properties": {
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail"
+                ]
+            },
             "AuthorityStatusEnum": {
                 "enum": [
                     "draft",
@@ -28115,6 +28346,50 @@
                     "work_count"
                 ]
             },
+            "LoginOutput": {
+                "type": "object",
+                "properties": {
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "session": {
+                        "$ref": "#/components/schemas/SessionEnum"
+                    },
+                    "access": {
+                        "type": "string"
+                    },
+                    "refresh": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "session",
+                    "user"
+                ]
+            },
+            "LoginRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 254
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1
+                    },
+                    "remember_me": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "required": [
+                    "email",
+                    "password"
+                ]
+            },
             "MappingAsset": {
                 "type": "object",
                 "properties": {
@@ -32861,6 +33136,44 @@
                 "required": [
                     "code",
                     "message"
+                ]
+            },
+            "PasswordResetConfirmRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "minLength": 6,
+                        "maxLength": 12
+                    },
+                    "new_password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "code",
+                    "email",
+                    "new_password"
+                ]
+            },
+            "PasswordResetRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "email"
                 ]
             },
             "PatchedAdminReadingPathRequest": {
@@ -41574,6 +41887,37 @@
                     "title"
                 ]
             },
+            "RegisterRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1
+                    },
+                    "username": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20,
+                        "pattern": "^[A-Za-z0-9_\\u4e00-\\u9fff]{4,20}$"
+                    }
+                },
+                "required": [
+                    "display_name",
+                    "email",
+                    "password"
+                ]
+            },
             "ResearchAccountCountsOutput": {
                 "type": "object",
                 "properties": {
@@ -41689,19 +42033,6 @@
                 ],
                 "type": "string",
                 "description": "* `suggested` - 系统建议\n* `approved` - 人工确认\n* `rejected` - 人工拒绝"
-            },
-            "RoleEnum": {
-                "enum": [
-                    "foundational_work",
-                    "systematic_exposition",
-                    "theoretical_development",
-                    "empirical_application",
-                    "comparative_study",
-                    "critique",
-                    "general_mention"
-                ],
-                "type": "string",
-                "description": "* `foundational_work` - 奠基性原著\n* `systematic_exposition` - 系统阐释\n* `theoretical_development` - 理论发展\n* `empirical_application` - 经验应用\n* `comparative_study` - 比较研究\n* `critique` - 批评反思\n* `general_mention` - 一般提及"
             },
             "SaveIssueListCommandRequest": {
                 "type": "object",
@@ -42587,6 +42918,14 @@
                     "action",
                     "expected_revision"
                 ]
+            },
+            "SessionEnum": {
+                "enum": [
+                    "cookie",
+                    "token"
+                ],
+                "type": "string",
+                "description": "* `cookie` - cookie\n* `token` - token"
             },
             "SiteConfig": {
                 "type": "object",
@@ -46578,6 +46917,87 @@
                     "request_id"
                 ]
             },
+            "User": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true,
+                        "title": "邮箱"
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "title": "显示名称",
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UserRoleEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "角色"
+                    },
+                    "locale": {
+                        "type": "string",
+                        "title": "界面语言",
+                        "maxLength": 16
+                    },
+                    "email_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "邮箱验证时间"
+                    },
+                    "reading_preferences": {},
+                    "is_library_owner": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "access_level": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true
+                    },
+                    "system_owner_label": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "access_level",
+                    "capabilities",
+                    "email",
+                    "email_verified_at",
+                    "id",
+                    "is_library_owner",
+                    "role",
+                    "system_owner_label"
+                ]
+            },
+            "UserRoleEnum": {
+                "enum": [
+                    "admin",
+                    "editor",
+                    "reviewer",
+                    "reader"
+                ],
+                "type": "string",
+                "description": "* `admin` - 管理员\n* `editor` - 编辑\n* `reviewer` - 审核者\n* `reader` - 读者"
+            },
             "ViewModeEnum": {
                 "enum": [
                     "graph",
@@ -47470,7 +47890,7 @@
                     "role": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/RoleEnum"
+                                "$ref": "#/components/schemas/WorkNodeRelationRoleEnum"
                             }
                         ],
                         "default": "general_mention"
@@ -47533,6 +47953,19 @@
                     "work",
                     "work_data"
                 ]
+            },
+            "WorkNodeRelationRoleEnum": {
+                "enum": [
+                    "foundational_work",
+                    "systematic_exposition",
+                    "theoretical_development",
+                    "empirical_application",
+                    "comparative_study",
+                    "critique",
+                    "general_mention"
+                ],
+                "type": "string",
+                "description": "* `foundational_work` - 奠基性原著\n* `systematic_exposition` - 系统阐释\n* `theoretical_development` - 理论发展\n* `empirical_application` - 经验应用\n* `comparative_study` - 比较研究\n* `critique` - 批评反思\n* `general_mention` - 一般提及"
             },
             "WorkNotices": {
                 "type": "object",

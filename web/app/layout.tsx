@@ -15,6 +15,7 @@ import { SiteHeader } from "@/components/site-header";
 import { loadSiteChromeConfig } from "@/lib/api/site.server";
 import { RouteTransition } from "@/components/route-transition";
 import { PublicSessionProvider } from "@/components/public-session-provider";
+import { AuthSessionDialog } from "@/components/auth-session-dialog";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { config } = await loadSiteChromeConfig();
@@ -62,6 +63,7 @@ export default async function RootLayout({
           <SiteHeader config={config} />
           {unavailable ? <p className="site-config-unavailable" role="status">网站设置暂时无法加载，当前使用默认导航。</p> : null}
           <main id="main-content"><RouteTransition>{children}</RouteTransition></main>
+          <AuthSessionDialog />
         </AppearanceProvider>
         </PublicSessionProvider>
       </body>

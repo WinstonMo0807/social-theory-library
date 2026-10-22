@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 认证入口与过期Cookie
+
+AuthEntryView仅用于原登录/注册/找回入口，避免默认JWT读取过期cookie先失败；Cookie模式写入仍显式CSRF。GET login提供CSRF初始化；成功登录轮换CSRF。remember_session作为签名令牌声明在续期时沿用，未扩展期限或权限。重置确认按User→RecoveryCode锁序消费。公开登录浮层共用AuthForm，私人工具不自动重放业务。
+
 ## 2026-10-23 转存回执与资料任务复用
 
 ResearchImportReceipt为原私人研究的最小请求回执，user/request_id唯一、project删除置空、只存摘要不存正文；reading0022仅新增表，未执行。原ReaderDataOperation同时接受整类和所选导出，继续单队列/版本复核/权限/取消及下载资格；作品收藏接原SavedItem投影。不是新的馆藏或账户库。

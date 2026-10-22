@@ -109,6 +109,12 @@ export function markSessionActive() {
   writeStorage(SESSION_HINT_KEY, "1");
 }
 
+/** Explicit sign-in clears old account views even when the hint was already set. */
+export function announceAuthenticatedSession() {
+  markSessionActive();
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
+}
+
 export function subscribeToSessionChanges(listener: () => void) {
   if (typeof window === "undefined") return () => undefined;
   const handleStorage = (event: StorageEvent) => {
@@ -188,6 +194,7 @@ async function refreshAccessToken() {
       // cookie is missing and 401 when it is expired or invalid; both mean
       // there is no recoverable browser session, not a service outage.
       if (response.status === 400 || response.status === 401) {
+        if (readStorage(SESSION_HINT_KEY)) window.dispatchEvent(new Event("stl:auth-required"));
         clearStoredSession();
         return null;
       }

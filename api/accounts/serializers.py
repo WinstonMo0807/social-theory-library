@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib.auth import authenticate, password_validation
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -58,16 +58,16 @@ class UserSerializer(serializers.ModelSerializer):
                 )
         return attrs
 
-    def get_is_library_owner(self, instance):
+    def get_is_library_owner(self, instance) -> bool:
         return is_library_owner_identity(instance)
 
-    def get_access_level(self, instance):
+    def get_access_level(self, instance) -> str:
         return capability_snapshot(instance).access_level
 
-    def get_capabilities(self, instance):
+    def get_capabilities(self, instance) -> list[str]:
         return list(capability_snapshot(instance).capabilities)
 
-    def get_system_owner_label(self, instance):
+    def get_system_owner_label(self, instance) -> str:
         return library_owner_display_name() if is_library_owner_identity(instance) else ""
 
     def validate_reading_preferences(self, value):
@@ -215,6 +215,13 @@ class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     display_name = serializers.CharField(max_length=120)
     password = serializers.CharField(write_only=True, trim_whitespace=False)
+    username = serializers.RegexField(r"^[A-Za-z0-9_\u4e00-\u9fff]{4,20}$", required=False, max_length=20)
+
+    def validate_username(self, value):
+        value = value.casefold()
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("这个用户名已经被使用。")
+        return value
 
     def validate_email(self, value):
         value = normalize_email_identity(value)
@@ -231,40 +238,48 @@ class RegisterSerializer(serializers.Serializer):
     @transaction.atomic
     def create(self, validated_data):
         email = validated_data["email"]
-        username = email
+        username = validated_data.get("username") or email
         suffix = 1
-        while User.objects.filter(username=username).exists():
+        while "username" not in validated_data and User.objects.filter(username=username).exists():
             suffix += 1
             username = f"{email}-{suffix}"
-        return User.objects.create_user(
-            username=username,
-            email=email,
-            display_name=validated_data["display_name"],
-            password=validated_data["password"],
-        )
+        try:
+            return User.objects.create_user(
+                username=username, email=email, display_name=validated_data["display_name"], password=validated_data["password"],
+            )
+        except IntegrityError as exc:
+            raise serializers.ValidationError("邮箱或用户名已被使用，请检查后重试。") from exc
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.CharField(max_length=254)
     password = serializers.CharField(write_only=True, trim_whitespace=False)
+    remember_me = serializers.BooleanField(default=True)
 
     def validate(self, attrs):
-        user = User.objects.filter(email__iexact=normalize_email_identity(attrs["email"])).first()
+        identity = attrs["email"].strip()
+        matches = User.objects.filter(email__iexact=normalize_email_identity(identity)) if "@" in identity else User.objects.filter(username__iexact=identity)
+        users = list(matches[:2])
+        user = users[0] if len(users) == 1 else None
         if user is None:
-            raise serializers.ValidationError("邮箱或密码不正确。")
+            # Match the normal password hashing work without disclosing account existence.
+            User().set_password(attrs["password"])
+            raise serializers.ValidationError("邮箱、用户名或密码不正确。")
         authenticated = authenticate(
             request=self.context.get("request"),
             username=user.username,
             password=attrs["password"],
         )
         if authenticated is None or not authenticated.is_active:
-            raise serializers.ValidationError("邮箱或密码不正确。")
+            raise serializers.ValidationError("邮箱、用户名或密码不正确。")
         refresh = RefreshToken.for_user(authenticated)
         refresh["token_version"] = authenticated.token_version
+        refresh["remember_session"] = attrs["remember_me"]
         return {
             "access": str(refresh.access_token),
             "refresh": str(refresh),
             "user": UserSerializer(authenticated).data,
+            "remember_session": attrs["remember_me"],
         }
 
 
@@ -291,7 +306,9 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
             except TokenError:
                 pass
             raise InvalidToken("密码已变更，请重新登录。")
-        return super().validate(attrs)
+        tokens = super().validate(attrs)
+        tokens["remember_session"] = refresh.get("remember_session", True) is True
+        return tokens
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -330,15 +347,16 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         password_validation.validate_password(value)
         return value
 
+    @transaction.atomic
     def save(self):
-        user = User.objects.filter(
+        user = User.objects.select_for_update().filter(
             email__iexact=normalize_email_identity(self.validated_data["email"]),
             is_active=True,
         ).first()
         if user is None:
             raise serializers.ValidationError({"code": "验证码无效或已过期。"})
 
-        candidates = user.recovery_codes.filter(
+        candidates = user.recovery_codes.select_for_update().filter(
             used_at__isnull=True,
             expires_at__gt=timezone.now(),
         ).order_by("-created_at")[:5]

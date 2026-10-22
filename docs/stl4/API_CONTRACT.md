@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 原认证接口契约
+
+原228路径保留，新增覆盖/api/auth/login/、register/、password/request/、password/confirm/，共232。GET login初始化CSRF且返回真实密码登录/保持天数/验证码20分钟能力；Cookie模式POST必须先初始化并携CSRF头。POST login原email参数兼容邮箱/用户名，新增remember_me默认true；Register可选username，旧调用兼容。其余业务接口权限不变。受保护私有字段只在有效密码认证后返回。
+
 ## 2026-10-23 原资料操作的所选导出
 
 POST /reading/privacy/operations/ export支持categories或targets二选一，1至500条；targets新增research/audits/citation_sources/saved_items类型，erase仍受服务端允许集合限制。saved_items复用原收藏/来源规则。228路径保持。原research-projects/import新增持久回执，已删除转存的旧请求409，不重建；读者须先应用新增0022迁移（本轮未执行）。

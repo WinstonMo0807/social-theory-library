@@ -8,6 +8,7 @@ from catalog.urls import urlpatterns as catalog_patterns
 from distribution.urls import urlpatterns as distribution_patterns
 from ingestion.urls import urlpatterns as ingestion_patterns
 from reading.urls import router as reading_router, urlpatterns as reading_patterns
+from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
@@ -56,6 +57,7 @@ VERIFIED_NAMES = {
     "edition-file-request", "edition-generate-reader", "edition-file-adopt", "edition-file-content", "edition-file-rights", "edition-file-prepare-public",
 }
 urlpatterns = [
+    path("api/auth/", include([pattern for pattern in account_patterns if pattern.name in {"login", "register", "password-reset-request", "password-reset-confirm"}])),
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
     path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name in {
         "asset-access", "asset-file", "admin-asset-preview", "backup-job-list", "reader-ocr-status",

@@ -1,5 +1,69 @@
 /** Generated from DRF/OpenAPI. Do not edit by hand. */
 export interface paths {
+    "/api/auth/login/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_login_retrieve"];
+        put?: never;
+        post: operations["auth_login_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/password/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_password_confirm_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/password/request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_password_request_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/register/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_register_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/assets/{asset_id}/outline/": {
         parameters: {
             query?: never;
@@ -4383,6 +4447,16 @@ export interface components {
             readonly notice: string;
             readonly truncated: boolean;
         };
+        AuthEntryOutput: {
+            csrf_ready: boolean;
+            password_login: boolean;
+            remember_days: number;
+            recovery_mode: string;
+            recovery_minutes: number;
+        };
+        AuthNoticeOutput: {
+            detail: string;
+        };
         /**
          * @description * `draft` - 草稿
          *     * `needs_review` - 待消歧
@@ -7008,6 +7082,18 @@ export interface components {
                 }[];
             };
         };
+        LoginOutput: {
+            user: components["schemas"]["User"];
+            session: components["schemas"]["SessionEnum"];
+            access?: string;
+            refresh?: string;
+        };
+        LoginRequest: {
+            email: string;
+            password: string;
+            /** @default true */
+            remember_me: boolean;
+        };
         MappingAsset: {
             /** Format: uuid */
             id: string;
@@ -8469,6 +8555,16 @@ export interface components {
         ParallelWarning: {
             code: string;
             message: string;
+        };
+        PasswordResetConfirmRequest: {
+            /** Format: email */
+            email: string;
+            code: string;
+            new_password: string;
+        };
+        PasswordResetRequestRequest: {
+            /** Format: email */
+            email: string;
         };
         PatchedAdminReadingPathRequest: {
             title?: string;
@@ -11073,6 +11169,13 @@ export interface components {
             restore_revision_id?: string;
             autosave?: boolean;
         };
+        RegisterRequest: {
+            /** Format: email */
+            email: string;
+            display_name: string;
+            password: string;
+            username?: string;
+        };
         ResearchAccountCountsOutput: {
             readonly research: number;
             readonly memories: number;
@@ -11125,17 +11228,6 @@ export interface components {
          * @enum {string}
          */
         ReviewStatusEnum: "suggested" | "approved" | "rejected";
-        /**
-         * @description * `foundational_work` - 奠基性原著
-         *     * `systematic_exposition` - 系统阐释
-         *     * `theoretical_development` - 理论发展
-         *     * `empirical_application` - 经验应用
-         *     * `comparative_study` - 比较研究
-         *     * `critique` - 批评反思
-         *     * `general_mention` - 一般提及
-         * @enum {string}
-         */
-        RoleEnum: "foundational_work" | "systematic_exposition" | "theoretical_development" | "empirical_application" | "comparative_study" | "critique" | "general_mention";
         SaveIssueListCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -11429,6 +11521,12 @@ export interface components {
             reference_id?: string;
             order?: string[];
         };
+        /**
+         * @description * `cookie` - cookie
+         *     * `token` - token
+         * @enum {string}
+         */
+        SessionEnum: "cookie" | "token";
         SiteConfig: {
             /** @default  */
             home_hero_image: string;
@@ -12493,6 +12591,38 @@ export interface components {
             /** Format: uuid */
             request_id: string;
         };
+        User: {
+            readonly id: number;
+            /**
+             * 邮箱
+             * Format: email
+             */
+            readonly email: string;
+            /** 显示名称 */
+            display_name?: string;
+            /** 角色 */
+            readonly role: components["schemas"]["UserRoleEnum"];
+            /** 界面语言 */
+            locale?: string;
+            /**
+             * 邮箱验证时间
+             * Format: date-time
+             */
+            readonly email_verified_at: string | null;
+            reading_preferences?: unknown;
+            readonly is_library_owner: boolean;
+            readonly access_level: string;
+            readonly capabilities: string[];
+            readonly system_owner_label: string;
+        };
+        /**
+         * @description * `admin` - 管理员
+         *     * `editor` - 编辑
+         *     * `reviewer` - 审核者
+         *     * `reader` - 读者
+         * @enum {string}
+         */
+        UserRoleEnum: "admin" | "editor" | "reviewer" | "reader";
         /**
          * @description * `graph` - graph
          *     * `list` - list
@@ -12739,7 +12869,7 @@ export interface components {
             readonly node_name: string;
             readonly node_slug: string;
             /** @default general_mention */
-            role: components["schemas"]["RoleEnum"];
+            role: components["schemas"]["WorkNodeRelationRoleEnum"];
             readonly role_label: string;
             is_primary?: boolean;
             strength?: components["schemas"]["StrengthEnum"];
@@ -12755,6 +12885,17 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /**
+         * @description * `foundational_work` - 奠基性原著
+         *     * `systematic_exposition` - 系统阐释
+         *     * `theoretical_development` - 理论发展
+         *     * `empirical_application` - 经验应用
+         *     * `comparative_study` - 比较研究
+         *     * `critique` - 批评反思
+         *     * `general_mention` - 一般提及
+         * @enum {string}
+         */
+        WorkNodeRelationRoleEnum: "foundational_work" | "systematic_exposition" | "theoretical_development" | "empirical_application" | "comparative_study" | "critique" | "general_mention";
         WorkNotices: {
             count: number;
             /** Format: date-time */
@@ -12828,6 +12969,125 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    auth_login_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthEntryOutput"];
+                };
+            };
+        };
+    };
+    auth_login_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LoginRequest"];
+                "multipart/form-data": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginOutput"];
+                };
+            };
+        };
+    };
+    auth_password_confirm_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirmRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetConfirmRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetConfirmRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthNoticeOutput"];
+                };
+            };
+        };
+    };
+    auth_password_request_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetRequestRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthNoticeOutput"];
+                };
+            };
+        };
+    };
+    auth_register_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RegisterRequest"];
+                "multipart/form-data": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
     catalog_admin_assets_outline_retrieve: {
         parameters: {
             query?: never;

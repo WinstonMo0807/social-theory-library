@@ -1,5 +1,12 @@
 # 验收记录
 
+## 2026-10-23 认证源码静态记录
+
+- `.venv/Scripts/python.exe tmp/stl4-auth-static-20261023.py` 最终76244d退出0：5文件AST、8次SQL编译含锁，0数据库连接；OpenAPI0错误/10既有提示。首轮911b8a新增UserSerializer四项类型提示，补准确返回类型后消除。没有认证、验证码、邮件或Cookie实际请求。
+- `node tmp/stl4-auth-contracts-20261023.mjs` 53c163退出0：228旧路径保留、4原auth路径纳入，共232；CSS解析。
+- web11目标ESLint 058bb0/9e13e6退出0；最终3修改组件8cb1c9退出0。完整TS d55e16/98a433及5d14ad/f75a1b均退出0。
+- 唯一PDF186–190实际已读，PDF187只提取注册局部照片9a95a4并查看；无实现页截图或浏览器检查，无测试/构建/迁移/生产。
+
 ## 2026-10-23 资料批量与转存静态记录
 
 - `.venv/Scripts/python.exe tmp/stl4-reader-materials-static-20261023.py` 123355退出0：7文件AST、34次两数据库SQL编译，禁止连接；MigrationLoader(None)与ProjectState比较reading声明一致，没有执行迁移；OpenAPI0错误/10既有提示。

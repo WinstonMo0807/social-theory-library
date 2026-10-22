@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 认证入口恢复
+
+前置bec5634，详见AUTH_ENTRY_20261023，白名单tmp/stl4-auth-checkpoint-20261023.json。AuthEntryView为登录/注册/恢复的明确匿名+CSRF入口，前端先GET /auth/login/初始化；保护原其他认证。PDF186–190五图部分接入，96/33/80，共232契约路径。新增照片只取最终PDF187局部装饰，不重跑样式追加/记录脚本。此前reading0022未执行，后续运行前须应用。继续读者书单/笔记/研究档案，不测试/浏览器/部署，保留继承脏改。
+
 ## 2026-10-23 R22批量与转存恢复
 
 前置cde09db，见READER_MATERIALS_20261023；白名单tmp/stl4-reader-materials-checkpoint-20261023.json。新增reading0022回执迁移文件但没有执行，必须在后续统一验收环境应用后启用转存。原资料任务支持targets导出，ReaderMaterials复用OperationDialog。LocalResearchTransfer显式读取原本机研究，不删原件，固定请求身份并保留回执。保留继承脏改、96/28/85；继续认证与剩余读者页，不运行测试/浏览器/生产。

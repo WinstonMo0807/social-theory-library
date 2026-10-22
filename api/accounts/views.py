@@ -7,11 +7,13 @@ from common.private_responses import PrivateAccountResponses
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import serializers
+from drf_spectacular.utils import extend_schema
 
 from common.permissions import CanManageUsers
 from common.capabilities import capability_snapshot
 
-from .cookies import clear_auth_cookies, expose_csrf_cookie, set_auth_cookies
+from .cookies import clear_auth_cookies, enforce_cookie_csrf, expose_csrf_cookie, set_auth_cookies
 from .models import User
 from .ownership import is_library_owner, is_library_owner_identity
 from .serializers import (
@@ -27,10 +29,41 @@ from .serializers import (
 )
 
 
-class RegisterView(APIView):
+class AuthEntryView(PrivateAccountResponses, APIView):
+    # Credentials are verified by the operation, so an expired access cookie
+    # cannot prevent login/recovery. Anonymous browser writes still require CSRF.
+    authentication_classes = []
     permission_classes = [AllowAny]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if settings.JWT_COOKIE_AUTH_ENABLED and request.method not in {"GET", "HEAD", "OPTIONS"}:
+            enforce_cookie_csrf(request)
+
+
+class AuthNoticeOutput(serializers.Serializer):
+    detail = serializers.CharField()
+
+
+class LoginOutput(serializers.Serializer):
+    user = UserSerializer()
+    session = serializers.ChoiceField(choices=["cookie", "token"])
+    access = serializers.CharField(required=False)
+    refresh = serializers.CharField(required=False)
+
+
+class AuthEntryOutput(serializers.Serializer):
+    csrf_ready = serializers.BooleanField()
+    password_login = serializers.BooleanField()
+    remember_days = serializers.IntegerField()
+    recovery_mode = serializers.CharField()
+    recovery_minutes = serializers.IntegerField()
+
+
+class RegisterView(AuthEntryView):
     throttle_scope = "register"
 
+    @extend_schema(request=RegisterSerializer, responses={201: UserSerializer})
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -38,10 +71,17 @@ class RegisterView(APIView):
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
-class LoginView(APIView):
-    permission_classes = [AllowAny]
+class LoginView(AuthEntryView):
     throttle_scope = "login"
 
+    @extend_schema(responses=AuthEntryOutput)
+    def get(self, request):
+        expose_csrf_cookie(request)
+        return Response({"csrf_ready": True, "password_login": True,
+            "remember_days": settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].days,
+            "recovery_mode": "email_code", "recovery_minutes": 20})
+
+    @extend_schema(request=LoginSerializer, responses=LoginOutput)
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
@@ -58,7 +98,10 @@ class LoginView(APIView):
             access=payload["access"],
             refresh=payload["refresh"],
             request=request,
+            remember=payload["remember_session"],
         )
+        from django.middleware.csrf import rotate_token
+        rotate_token(request)
         expose_csrf_cookie(request)
         return response
 
@@ -99,10 +142,10 @@ class CurrentCapabilitiesView(PrivateAccountResponses, APIView):
         return Response(capability_snapshot(request.user).as_dict())
 
 
-class PasswordResetRequestView(APIView):
-    permission_classes = [AllowAny]
+class PasswordResetRequestView(AuthEntryView):
     throttle_scope = "password_reset"
 
+    @extend_schema(request=PasswordResetRequestSerializer, responses=AuthNoticeOutput)
     def post(self, request):
         serializer = PasswordResetRequestSerializer(
             data=request.data,
@@ -113,10 +156,10 @@ class PasswordResetRequestView(APIView):
         return Response({"detail": "如果邮箱存在，验证码已发送。"})
 
 
-class PasswordResetConfirmView(APIView):
-    permission_classes = [AllowAny]
+class PasswordResetConfirmView(AuthEntryView):
     throttle_scope = "password_reset"
 
+    @extend_schema(request=PasswordResetConfirmSerializer, responses=AuthNoticeOutput)
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

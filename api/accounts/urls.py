@@ -41,7 +41,7 @@ class ThrottledTokenRefreshView(TokenRefreshView):
             access = tokens.get("access")
             refresh = tokens.get("refresh") or payload.get("refresh")
             if access and refresh:
-                set_auth_cookies(response, access=access, refresh=refresh, request=request)
+                set_auth_cookies(response, access=access, refresh=refresh, request=request, remember=tokens.get("remember_session", True))
                 expose_csrf_cookie(request)
             return response
         except get_user_model().DoesNotExist as exc:

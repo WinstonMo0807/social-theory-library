@@ -22,7 +22,7 @@ def enforce_cookie_csrf(request) -> None:
         raise PermissionDenied("安全校验失败，请刷新页面后重试。")
 
 
-def set_auth_cookies(response, *, access: str, refresh: str, request=None) -> None:
+def set_auth_cookies(response, *, access: str, refresh: str, request=None, remember=True) -> None:
     if not settings.JWT_COOKIE_AUTH_ENABLED:
         return
     trusted_lan = bool(request and getattr(request, "library_trusted_lan_http", False))
@@ -34,7 +34,7 @@ def set_auth_cookies(response, *, access: str, refresh: str, request=None) -> No
     response.set_cookie(
         settings.JWT_ACCESS_COOKIE_NAME,
         access,
-        max_age=_seconds(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"]),
+        max_age=_seconds(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"]) if remember else None,
         path="/",
         samesite="Lax",
         **common,
@@ -42,7 +42,7 @@ def set_auth_cookies(response, *, access: str, refresh: str, request=None) -> No
     response.set_cookie(
         settings.JWT_REFRESH_COOKIE_NAME,
         refresh,
-        max_age=_seconds(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]),
+        max_age=_seconds(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]) if remember else None,
         path="/api/auth/",
         samesite="Strict",
         **common,

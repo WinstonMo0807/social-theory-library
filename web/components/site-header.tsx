@@ -63,7 +63,6 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
-  const authRoute = pathname === "/login" || pathname === "/register" || pathname === "/reset-password";
   const [open, setOpen] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const { pendingAction, startAction, finishAction } = useActionGuard();
@@ -120,7 +119,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
     }
   }
 
-  if (!preview && ((pathname.startsWith("/reader/") && !reader) || pathname.startsWith("/admin") || authRoute)) {
+  if (!preview && ((pathname.startsWith("/reader/") && !reader) || pathname.startsWith("/admin"))) {
     return null;
   }
 
