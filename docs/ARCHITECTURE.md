@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-22 来源信息与真实缩略图接入
+
+content_placements._source与editorial_blocks.resolve_target统一提供准确版本的只读书目信息/图片，复用原public_editions、正式snapshot、贡献范围与公开媒体授权。选材、材料建议和正文来源共享输出，不新增图片或来源副本。展示字段不进入EditorialRevision的区块持久化；编辑器/portal遵循同一保存锁。无schema或服务变化。
+
 ## 2026-10-22 PDF128–130选材与助手第一批（部分接入）
 
 选材范围与准确来源身份保存在原EditorialRevision JSON，不新增表或并行馆藏；当前来源仅输出时解析，公开响应剔除选材状态。原Discovery服务负责候选检索，原ProcessingJob/Celery/CURATION_REASONING负责显式助手生成。

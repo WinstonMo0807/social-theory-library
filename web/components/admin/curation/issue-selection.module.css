@@ -28,6 +28,7 @@
 .scope dt { color:var(--muted); }.scope dd { margin:0; overflow-wrap:anywhere; }
 .selected article { display:flex; gap:12px; border-bottom:1px solid #eeeae3; padding:12px 0; }
 .selected article > svg { color:#a9987c; flex-shrink:0; margin-top:5px; }
+.selected .selectedImage { width:45px; height:64px; }
 .selected article > div { flex:1; min-width:0; }.selected article > button { align-self:flex-start; padding:2px; min-height:24px; border:0; }
 .selected article > div > div { display:flex; gap:4px; margin-top:6px; }.selected article > div button { min-height:24px; padding:3px; }
 .selected > button { width:100%; margin-top:14px; display:flex; align-items:center; justify-content:center; gap:6px; }

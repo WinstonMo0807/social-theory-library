@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-22 来源信息与真实缩略图接入
+
+- `tmp/stl4-source-details-static.py`：80e427、最终0087e6退出0。4文件AST、SQLite/PostgreSQL共6次SQL编译，ensure_connection阻断且连接0；不运行测试或解析真实馆藏。
+- 完整`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：6424/11c19a退出0；后续11405会话恢复时不可查，未作为通过记录；最终67526/15b29d退出0。
+- `node node_modules/eslint/bin/eslint.js components/admin/curation/issue-source-summary.tsx components/admin/curation/article-body-fields.tsx components/admin/curation/issue-source-picker.tsx components/admin/curation/issue-selection-workbench.tsx lib/api/recommendation-issues.types.ts tests/issue-editor-atlas.spec.ts`，09bf48退出0，1处既有img建议。PostCSS 5e979b退出0，两CSS202/68顶层节点可解析。
+- 新test_issue_source_details_20261022.py四函数与编辑器新增一场景、来源断言更新仅定义，未执行；18浏览器场景不是通过数量。source扩展位于既有DictField内，225契约不变。
+- 未执行正式测试/E2E/浏览器/构建/迁移/OCR/模型/检索质量评测/索引重建/生产操作。
+
 ## 2026-10-22 PDF128–130选材与助手第一批（部分接入）
 
 - 记录辅助d57914因旧索引使用多种“已接入”状态措辞，按单一前缀统计而退出1；未涉及业务运行。仅续写白名单与校验的3b7146退出0，保留CSV原BOM及209组身份/哈希/验收状态，只改M16三行，重新核对为96接入/19部分/94待实施。暂存区为空、30路径白名单差异检查通过；未重复执行文档插入。

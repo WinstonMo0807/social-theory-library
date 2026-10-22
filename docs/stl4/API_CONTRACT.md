@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 来源信息与真实缩略图接入
+
+原source字典增加只读authors/image_url/publication_year/publisher/section，前端IssueResolvedSource同步；无新增路由或serializer字段，225契约结构不变。准确版本名称与媒体走已发布snapshot；原文作者复用ContributionProjection.for_range，整书作者仅edition_author_projection，原文reader_url含页码及document_revision_id。未公开资料缺少公开图片/署名时不回退新草稿，不把来源展示信息接受为可写正文。
+
 ## 2026-10-22 PDF128–130选材与助手第一批（部分接入）
 
 原issue DTO增加仅后台selection_workspace(question≤4000/query≤200/filters/references≤40)，materials只读重新解析，回传忽略；公开/列表剔除。范围继续原Discovery规范，拒绝access等越权条件；主题/理论规范slug支持再保存。

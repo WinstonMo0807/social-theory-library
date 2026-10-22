@@ -8,7 +8,7 @@ async function selectGuide(locator:Locator,start:number,end:number){
 }
 async function setup(page:Page, options:{unknown?:boolean;conflict?:boolean;source?:boolean;unknownDiscard?:boolean;presenceFailure?:boolean}={}) {
   let value=structuredClone(initial);const writes:Record<string,unknown>[]=[];let fail=Boolean(options.unknown),discardFail=Boolean(options.unknownDiscard);const dismissals:Record<string,unknown>[]=[];let discarded=false;
-  if(options.source)value.body_blocks=[{id:blockId,type:"evidence",text:"本页解释",target:{type:"span",id:oldId},resolved_sources:[{type:"span",id:oldId,title:"验收原文",text:"真实来源只读",page_start:3,reader_url:"/reader/test?page=3"}],source_status:"available"}];
+  if(options.source)value.body_blocks=[{id:blockId,type:"evidence",text:"本页解释",target:{type:"span",id:oldId},resolved_sources:[{type:"span",id:oldId,title:"验收原文",text:"真实来源只读",page_start:3,printed_label:"iv",edition_label:"准确修订版",authors:["验收作者"],publisher:"验收出版社",publication_year:2001,section:"已核实章节",reader_url:"/reader/test?page=3"}],source_status:"available"}];
   await page.context().addCookies([{name:"stl_access",value:"opaque-editor-contract",domain:"127.0.0.1",path:"/",httpOnly:true,sameSite:"Lax"}]);
   await page.route("**/api/**",async route=>{
     const req=route.request(),url=new URL(req.url());
@@ -71,10 +71,19 @@ test("reload offers local input without caching readonly source excerpts",async(
 });
 test("source text stays readonly while guide remains editable",async({page})=>{
   await setup(page,{source:true});
-  await page.getByRole("button",{name:/原文 本页解释/}).click();
+  await page.getByRole("button",{name:/原文 验收原文/}).click();
   await expect(page.getByText("真实来源只读",{exact:true}).first()).toBeVisible();
+  const source=page.getByRole("region",{name:"来源信息：验收原文"});await expect(source.getByText("iv",{exact:true})).toBeVisible();await expect(source.getByText("验收作者",{exact:true})).toBeVisible();await expect(source.getByText("准确修订版 · 验收出版社 · 2001",{exact:true})).toBeVisible();await expect(source.getByRole("link",{name:/查看原文/})).toHaveAttribute("href","/reader/test?page=3");
   await expect(page.getByRole("textbox",{name:"本页导读 / 说明"})).toHaveText("本页解释");
   expect(await page.locator("textarea,[contenteditable=true]").evaluateAll(rows=>rows.some(row=>(row instanceof HTMLTextAreaElement?row.value:row.textContent)==="真实来源只读"))).toBe(false);
+});
+test("a source picker opened before autosave follows the pending save lock",async({page})=>{
+  await page.clock.install();const state=await setup(page,{unknown:true});
+  await page.route(`**/api/catalog/admin/recommendation-issues/${issueId}/sources/**`,route=>route.fulfill({json:{count:1,next:null,previous:null,results:[{target:{type:"work",id:oldId,edition_id:oldId},source:{type:"work",id:oldId,title:"待插入验收材料",public_eligible:true}}]}}));
+  await page.getByRole("textbox",{name:"标题",exact:true}).fill("即将自动保存");await page.getByRole("button",{name:"插入内容块",exact:true}).click();
+  const picker=page.getByRole("dialog",{name:"插入内容块"});await picker.getByRole("button",{name:/^馆藏/}).click();await expect(picker.getByRole("button",{name:"使用这份材料"})).toBeEnabled();
+  await page.clock.fastForward(10050);await expect.poll(()=>state.writes.length).toBe(1);await expect(picker.getByRole("button",{name:"使用这份材料"})).toBeDisabled();
+  expect((state.writes[0].body_blocks as unknown[])).toHaveLength(1);
 });
 test("historical restore remains unsaved until explicit save",async({page})=>{
   await page.clock.install();const state=await setup(page);
@@ -107,7 +116,7 @@ test("mobile edit preview structure and modal focus remain reachable",async({pag
 });
 
 test("formatting is saved on guide only and shared by the article preview",async({page})=>{
-  const state=await setup(page,{source:true});await page.getByRole("button",{name:/原文 本页解释/}).click();
+  const state=await setup(page,{source:true});await page.getByRole("button",{name:/原文 验收原文/}).click();
   const guide=page.getByRole("textbox",{name:"本页导读 / 说明"});await guide.fill("中文😀导读");
   await selectGuide(guide,0,4);
   await page.getByRole("button",{name:"加粗所选文字"}).click();
@@ -148,7 +157,7 @@ test("mobile suggestions expose real material and close detail with keyboard",as
 });
 
 test("inline rich formatting and text can be undone without changing readonly material",async({page})=>{
-  await setup(page,{source:true});await page.getByRole("button",{name:/原文 本页解释/}).click();const guide=page.getByRole("textbox",{name:"本页导读 / 说明"});
+  await setup(page,{source:true});await page.getByRole("button",{name:/原文 验收原文/}).click();const guide=page.getByRole("textbox",{name:"本页导读 / 说明"});
   await guide.fill("中文😀导读");await selectGuide(guide,0,4);await page.getByRole("button",{name:"加粗所选文字"}).click();await expect(guide.locator("strong,b")).toHaveText("中文😀");
   await page.getByRole("button",{name:"撤销",exact:true}).click();await expect(guide.locator("strong,b")).toHaveCount(0);await expect(guide).toHaveText("中文😀导读");
   await page.getByRole("button",{name:"重做",exact:true}).click();await expect(guide.locator("strong,b")).toHaveText("中文😀");await expect(page.getByText("真实来源只读",{exact:true}).first()).toBeVisible();

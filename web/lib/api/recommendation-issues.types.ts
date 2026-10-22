@@ -3,7 +3,7 @@ import type { AboutPageBlock } from "./site.types";
 import type { PublicScholarCard } from "./scholars.types";
 
 export type IssueSourceReference = { type: "work" | "edition" | "span" | "node" | "person" | "timeline" | "reading_path"; id: string; edition_id?: string; document_revision_id?: string };
-export type IssueResolvedSource = IssueSourceReference & { title: string; text?: string; reader_url?: string; work_url?: string; printed_label?: string; page_start?: number; source_type?: string; asset_id?: string; work_id?: string; href?: string; summary?: string; edition_label?: string; public_eligible?: boolean; edit_url?: string };
+export type IssueResolvedSource = IssueSourceReference & { title: string; text?: string; reader_url?: string; work_url?: string; printed_label?: string; page_start?: number; source_type?: string; asset_id?: string; work_id?: string; href?: string; summary?: string; edition_label?: string; public_eligible?: boolean; edit_url?: string; image_url?:string;authors?:string[];publication_year?:number|null;publisher?:string;section?:string };
 export type IssueTextMark = {start:number;end:number;kind:"strong"|"em"|"link";href?:string};
 export type IssueBlock = {
   id?: string;

@@ -104,11 +104,14 @@ def resolve_target(raw, *, public=False):
     name = row.preferred_name if kind == "person" else row.title
     target = {"type": kind, "id": str(key)}
     source = {**target, "title": name}
-    if public and kind == "person":
+    if kind == "person":
         from catalog.services.public_scholars import _base, _formal_profile
-        profile = get_object_or_404(_base(), person_id=key)
-        profile = _formal_profile(profile, profile.public_snapshot or {})
-        source.update(title=profile.person.preferred_name, summary=profile.short_description, href=f"/scholars/{profile.slug}")
+        from catalog.serializers import PersonCompactSerializer
+        profile = get_object_or_404(_base(), person_id=key) if public else _base().filter(person_id=key).first()
+        if profile:
+            profile = _formal_profile(profile, profile.public_snapshot or {})
+            source.update(title=profile.person.preferred_name, summary=profile.short_description,
+                          href=f"/scholars/{profile.slug}", image_url=PersonCompactSerializer().get_portrait(profile.person))
     if kind == "reading_path" and public:
         from catalog.models import EditorialRevision
         revision = EditorialRevision.objects.filter(target_type="reading_path", target_id=key, status="published",

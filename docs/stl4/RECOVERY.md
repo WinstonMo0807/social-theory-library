@@ -1,5 +1,13 @@
 # 中断恢复最短路径
 
+## 2026-10-22 来源信息与真实缩略图接入
+
+前置e14c6ac。本批白名单tmp/stl4-source-details-checkpoint.json，实际提交看Git。新issue-source-summary，原content_placements/editorial_blocks共用展示字段，移除editorial_suggestions重复图片拼接；原文链接含准确修订。source picker/portal增加disabled并守卫更新/移动/追加。完整TS67526/15b29d退出0。4后端测试函数+新增1浏览器仅定义；编辑器场景18。96/19/94不变，接着做M16关联/提纲/正文对比。不要重复运行tmp编辑或记录脚本，不暂存继承脏改。
+
+## 2026-10-22 e14c6ac后来源细节接续中
+
+最新e14c6ac，M16第一批已保存30路径。当前第二批改content_placements/editorial_blocks统一来源展示字段，移除editorial_suggestions重复图片拼接；新IssueSourceSummary与缩略图接文章和选材，原材料选择器补disabled。新增3后端测试函数、原浏览器文件增1场景，仅定义。不要重跑tmp记录/编辑脚本。静态收尾后保存明确白名单；96/19/94不变，继续M16关联/提纲/细致对比。
+
 ## 2026-10-22 PDF128–130选材与助手第一批（部分接入）
 
 本批前置155c107，白名单tmp/stl4-selection-checkpoint.json，提交号以Git为准。M16第一批在原编辑器内接IssueSelectionWorkbench/IssueDiscoveryMaterials/IssueAssistanceReview，新增editorial_selection，原assistant服务扩展候选审阅与回执；225契约。96/19/94，M16三图仍部分，继续其关联/提纲/细致对比与M15来源布局。

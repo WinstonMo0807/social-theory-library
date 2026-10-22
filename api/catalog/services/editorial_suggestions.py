@@ -64,19 +64,6 @@ def suggestions(issue, actor, *, query="", kind="all", batch=1):
                     continue
                 if json.dumps(target, sort_keys=True) in known:
                     continue
-                if category == "work":
-                    snapshot = edition.active_catalog_revision.snapshot or {}
-                    work = snapshot.get("work", {})
-                    cover = work.get("cover_media") or {}
-                    if work.get("cover") or cover:
-                        source["image_url"] = f"/api/catalog/works/{edition.work_id}/cover/?edition_id={edition.pk}"
-                        if cover.get("primary_rendition_id"):
-                            source["image_url"] += f"&rendition={cover['primary_rendition_id']}"
-                elif category == "person":
-                    from catalog.services.public_scholars import _formal_profile
-                    from catalog.serializers import PersonCompactSerializer
-                    profile = _formal_profile(row, row.public_snapshot or {})
-                    source["image_url"] = PersonCompactSerializer().get_portrait(profile.person)
                 key = sha256(json.dumps([version, target], sort_keys=True).encode()).hexdigest()
                 token = signing.dumps({"actor": str(actor.pk), "issue": str(issue.pk), "version": version, "key": key, "target": target}, salt=SALT)
                 output.append({"key": key, "token": token, "kind": category, "target": target, "source": source,

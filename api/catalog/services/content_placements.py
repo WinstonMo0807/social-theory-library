@@ -102,6 +102,23 @@ def _index(value, size):
     return value
 
 
+def _edition_details(edition, source, *, span=None):
+    """Readonly labels/media from this exact activated edition, never draft media."""
+    if not source.get("public_eligible"):
+        return {"authors": [], "publication_year": None, "publisher": "", "image_url": ""}
+    from catalog.services.contribution_projection import contribution_projection, edition_author_projection
+    snapshot = edition.active_catalog_revision.snapshot or {}
+    work, data = snapshot.get("work") or {}, snapshot.get("edition") or {}
+    authors = contribution_projection(edition).for_range(
+        span.page.asset_id, span.document_revision_id, span.page_number)["authors"] if span else edition_author_projection(snapshot)["authors"]
+    media = work.get("cover_media") or {}
+    image = f"/api/catalog/works/{edition.work_id}/cover/?edition_id={edition.pk}" if work.get("cover") or media else ""
+    if image and media.get("primary_rendition_id"):
+        image += f"&rendition={media['primary_rendition_id']}"
+    return {"authors": authors, "publication_year": data.get("publication_year"),
+            "publisher": data.get("publisher") or "", "image_url": image}
+
+
 def _source(target, *, public=False):
     """Resolve current permission and labels without copying catalog text into a draft."""
     kind = target.get("type")
@@ -116,8 +133,8 @@ def _source(target, *, public=False):
             raise ValidationError("出版版本不属于所选作品。")
         eligible = public_editions().filter(pk=edition.pk).exists()
         snapshot = (edition.active_catalog_revision.snapshot or {}) if eligible else {}
-        title = snapshot.get("work", {}).get("title", "") if public else edition.work.title
-        label = snapshot.get("edition", {}).get("version_label", "") if public else edition.version_label
+        title = snapshot.get("work", {}).get("title", "") if eligible else edition.work.title
+        label = snapshot.get("edition", {}).get("version_label", "") if eligible else edition.version_label
         reader = edition.active_catalog_revision.reader_asset if eligible else None
         from catalog.services.publication_eligibility import current_retrieval_source_q
         readable = bool(reader and public_editions().filter(pk=edition.pk).filter(current_retrieval_source_q(
@@ -130,6 +147,7 @@ def _source(target, *, public=False):
                   "asset_id": str(reader.pk) if readable else "", "document_revision_id": document_id,
                   "work_url": f"/works/{edition.public_slug}" if eligible and edition.public_slug else "",
                   "edit_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}"}
+        source.update(_edition_details(edition, source))
         return {"type": kind, "id": str(key), "edition_id": str(edition.pk)}, source
     if kind == "node":
         rows = KnowledgeNode.objects.filter(status="published") if public else KnowledgeNode.objects.all()
@@ -146,6 +164,9 @@ def _source(target, *, public=False):
         if target.get("document_revision_id") and str(target["document_revision_id"]) != reference["document_revision_id"]:
             raise ValidationError("原文修订已改变，不能自动改绑来源。")
         source = shared_curation.source_payload("span", row, public=public)
+        source.update(_edition_details(row.page.asset.edition, source, span=row), section=row.section)
+        if source["reader_url"]:
+            source["reader_url"] += f"&revision={reference['document_revision_id']}"
         source["reader_target"] = {"asset_id": source["asset_id"], "document_revision_id": source["document_revision_id"], "pdf_page": source["page_start"]}
         source.update(type=kind, title=source["work_title"], edit_url=f"/admin/library/works/{source['work_id']}?edition={source['edition_id']}")
         return reference, source

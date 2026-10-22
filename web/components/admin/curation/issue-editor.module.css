@@ -70,6 +70,22 @@
 .sourceReadOnly a { display:inline-block; margin:4px 0; border-bottom:1px solid #b79969; }
 .sourceReadOnly small { display:block; margin-top:8px; color:var(--muted); }
 .imagePreview { max-height:240px; width:auto; max-width:100%; object-fit:contain; }
+.sourceThumbnail { width:38px; height:40px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid #e6e1d8; border-radius:2px; color:#686359; background:#fbfaf7; overflow:hidden; }
+.sourceThumbnail > img,.sourceThumbnail > span { width:100%; height:100%; object-fit:contain; }
+.blockFields > .sourceReadOnly { padding:0; background:transparent; }
+.sourceReadOnly .sourceSummary { display:grid; grid-template-columns:minmax(0,1fr); gap:10px 14px; padding:10px 0; margin:0; }
+.sourceSummary:has(.sourceCover) { grid-template-columns:90px minmax(0,1fr); }
+.sourceCover { width:90px; height:126px; align-self:start; }
+.sourceMetadata { margin:0; min-width:0; display:grid; gap:4px; align-content:start; font-size:12px; line-height:1.7; }
+.sourceMetadata > div { display:grid; grid-template-columns:70px minmax(0,1fr); gap:8px; }
+.sourceMetadata dt { color:#79736a; }.sourceMetadata dd { margin:0; min-width:0; overflow-wrap:anywhere; }
+.sourceExcerpt { grid-column:1/-1; display:grid; grid-template-columns:70px minmax(0,1fr); gap:8px; font-size:12px; }
+.sourceExcerpt > span { padding-top:7px; color:#79736a; }
+.sourceReadOnly .sourceExcerpt blockquote { margin:0; padding:8px 10px; border:0; border-radius:2px; background:#f6f5f2; }
+.sourceActions { grid-column:1/-1; display:flex; justify-content:flex-end; }
+.sourceReadOnly .sourceActions a { display:inline-flex; align-items:center; gap:6px; border:1px solid #d8d3ca; padding:5px 10px; border-radius:3px; color:inherit; margin:0; font-size:12px; }
+.sourceReadOnly .sourceActions a:hover { background:#f7f4ee; }
+@media(max-width:760px) { .sourceThumbnail { width:30px; height:32px; }.sourceSummary:has(.sourceCover) { grid-template-columns:54px minmax(0,1fr); }.sourceCover { width:54px; height:78px; }.sourceMetadata > div { grid-template-columns:60px minmax(0,1fr); gap:6px; }.sourceExcerpt { grid-template-columns:1fr; gap:4px; }.sourceActions { justify-content:flex-start; } }
 .dimension { display:flex; gap:8px; margin:8px 0; }
 .comparisonRow { border-top:1px solid var(--line); padding:12px 0; margin-top:12px; }
 .comparisonRow label { display:grid; gap:6px; margin-top:12px; }
