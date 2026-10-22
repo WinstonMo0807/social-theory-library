@@ -1,5 +1,14 @@
 # 验收记录
 
+## 2026-10-23 外观与账户源码静态核查（没有测试）
+
+- 最终7文件AST 9c7d92退出0；14目标ESLint ad5357退出0，保留reader-shell既有img建议。14 CSS与2 JS仅解析385791退出0，包括交互HTML内脚本，不执行页面。45路径白名单git diff --check cf37c7退出0（换行提示不影响结果）。
+- web完整 TypeScript `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`：24665/a4ddf3、56164/7488b9均退出0；无构建产物。
+- 7个Python源码文件仅 ast.parse，2a0394退出0；不import应用，不连接数据库。
+- 14目标ESLint首轮a09105发现旧ReaderCenter直接赋值window.location.href，改为校验mailto并location.assign。后续4目标744d9d退出0。reader-shell原img性能建议仍待正式验收时评估，不隐藏。
+- 参考PDF本单元实际查看10/18/183/185/189。3张imagegen扩展示意与纯HTML交互文件不作为像素对照结果。未运行浏览器或交互文件。
+- 用户禁止本轮测试：没有单元/E2E/业务运行/视觉回归/检索测评、构建、迁移或生产操作。当前仅静态证据，不能称验收通过。
+
 ## 2026-10-23 知识历史静态记录（不代表验收）
 
 - `.venv/Scripts/python.exe tmp/stl4-knowledge-history-static-20261023.py`：最终86c87c退出0，5文件AST、20次SQLite/PostgreSQL SQL编译，数据库连接被禁止、0连接；九类型可编辑字段均有中文标题。spectacular 0错误/10条既有类型提示。

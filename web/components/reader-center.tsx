@@ -18,10 +18,11 @@ import {
   Settings,
   StickyNote,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   apiRequest,
+  subscribeToSessionChanges,
   classifyClientError,
   clearStoredSession,
   getServerSessionCredential,
@@ -160,9 +161,31 @@ const emptyData: ReaderData = {
 };
 
 export function ReaderCenter() {
+  const bootstrap = useSessionBootstrap();
+  const key = bootstrap.state.status === "authenticated" ? String(bootstrap.state.user?.id) : bootstrap.state.status;
+  return <ReaderCenterWorkspace key={key} bootstrap={bootstrap} />;
+}
+
+function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof useSessionBootstrap> }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { state: session, retry: retrySession } = useSessionBootstrap();
+  const { state: session, retry: retrySession } = bootstrap;
+  const requests = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    requests.current = controller;
+    const unsubscribe = subscribeToSessionChanges(() => controller.abort());
+    return () => { controller.abort(); unsubscribe(); };
+  }, []);
+  async function privateRequest<T>(path: string, options: RequestInit = {}, credential?: string | null): Promise<T> {
+    const owner = session.user?.id;
+    const controller = requests.current;
+    if (session.status !== "authenticated" || owner === undefined || !controller || controller.signal.aborted) throw new Error("登录账户需要重新确认。");
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000), ...(options.signal ? [options.signal] : [])]);
+    const headers = new Headers(options.headers);
+    headers.set("X-Reader-Owner", String(owner));
+    return withPrivateOwner(String(owner), () => apiRequest<T>(path, { ...options, headers, signal, cache: "no-store" }, credential), signal);
+  }
   const topicCommands = useTopicSaveCommands(session.status === "authenticated" && session.user ? String(session.user.id) : null);
   const section = searchParams.get("section");
   const [selectedTab, selectTab] = useState<{ section: string | null; label: string } | null>(null);
@@ -360,7 +383,7 @@ export function ReaderCenter() {
     const actionKey = "logout";
     if (!beginReaderAction(actionKey, "正在退出登录……")) return;
     try {
-      await logoutCurrentSession();
+      await logoutCurrentSession(session.user ? String(session.user.id) : undefined);
       finishReaderAction(actionKey, "success", "已退出登录，正在返回书库首页……");
       router.push("/");
     } catch (error) {
@@ -375,7 +398,7 @@ export function ReaderCenter() {
     const actionKey = "submit-recommendation";
     if (!beginReaderAction(actionKey, "正在准备投稿邮件……")) return;
     try {
-      const result = await apiRequest<{ detail: string; mailto: string; email: string }>(
+      const result = await privateRequest<{ detail: string; mailto: string; email: string }>(
         "/reading/submit/",
         {
           method: "POST",
@@ -384,7 +407,8 @@ export function ReaderCenter() {
         token,
       );
       finishReaderAction(actionKey, "success", result.detail);
-      window.location.href = result.mailto;
+      if (!result.mailto.startsWith("mailto:")) throw new Error("投稿邮件链接无效，请稍后重试。");
+      window.location.assign(result.mailto);
     } catch (error) {
       finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "投稿邮件发送失败。");
     }
@@ -396,7 +420,7 @@ export function ReaderCenter() {
     const actionKey = "export-reader-data";
     if (!beginReaderAction(actionKey, "正在导出个人数据……")) return;
     try {
-      const payload = await withPrivateOwner(String(session.user.id), () => apiRequest<Record<string, unknown>>("/reading/export/", { cache: "no-store" }, token));
+      const payload = await privateRequest<Record<string, unknown>>("/reading/export/", { cache: "no-store" }, token);
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json;charset=utf-8",
       });
@@ -420,7 +444,7 @@ export function ReaderCenter() {
     const actionKey = `delete-record:${kind}:${id}`;
     if (!beginReaderAction(actionKey, "正在删除个人阅读记录……")) return;
     try {
-      await apiRequest(`/reading/${kind}/${id}/`, { method: "DELETE" }, token);
+      await privateRequest(`/reading/${kind}/${id}/`, { method: "DELETE" }, token);
       setReaderData((current) => ({
         ...current,
         saved: kind === "saved" ? current.saved.filter((item) => item.id !== id) : current.saved,
@@ -431,7 +455,7 @@ export function ReaderCenter() {
         const groups = await readAllPages<NoteGroupRow>(
           "/reading/annotations/note-groups/",
           token,
-          undefined,
+          requests.current?.signal,
           String(owner),
         );
         setNoteGroups(groups);
@@ -449,7 +473,7 @@ export function ReaderCenter() {
     const actionKey = "create-reading-list";
     if (!beginReaderAction(actionKey, "正在创建书单……")) return;
     try {
-      const created = await apiRequest<ReadingListRow>(
+      const created = await privateRequest<ReadingListRow>(
         "/reading/lists/",
         {
           method: "POST",
@@ -471,7 +495,7 @@ export function ReaderCenter() {
     const actionKey = `add-to-list:${listId}:${workId}`;
     if (!beginReaderAction(actionKey, "正在加入书单……")) return;
     try {
-      const item = await apiRequest<{ id: string; work: string; title: string }>(
+      const item = await privateRequest<{ id: string; work: string; title: string }>(
         `/reading/lists/${listId}/add_item/`,
         { method: "POST", body: JSON.stringify({ work: workId }) },
         token,
@@ -491,12 +515,13 @@ export function ReaderCenter() {
   }
 
   async function deleteReadingList(id: string) {
+    if (!window.confirm("删除这份私人书单及其条目？馆藏原件与笔记会保留。")) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = `delete-reading-list:${id}`;
     if (!beginReaderAction(actionKey, "正在删除书单……")) return;
     try {
-      await apiRequest(`/reading/lists/${id}/`, { method: "DELETE" }, token);
+      await privateRequest(`/reading/lists/${id}/`, { method: "DELETE" }, token);
       setReaderData((current) => ({ ...current, lists: current.lists.filter((list) => list.id !== id) }));
       finishReaderAction(actionKey, "success", "书单已删除。");
     } catch (error) {
@@ -511,7 +536,7 @@ export function ReaderCenter() {
     const actionKey = "update-profile";
     if (!beginReaderAction(actionKey, "正在保存显示名称……")) return;
     try {
-      const updated = await apiRequest<{ display_name: string; email: string }>(
+      const updated = await privateRequest<{ display_name: string; email: string }>(
         "/auth/me/",
         { method: "PATCH", body: JSON.stringify({ display_name: profileName }) },
         token,
@@ -571,7 +596,7 @@ export function ReaderCenter() {
             <div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div>
           </div>
         </header>
-        <ResearchCenterNav active={active === "书单" ? "lists" : "research"} counts={{ notes: noteGroups.length, plans: readerData.plans.length, lists: readerData.lists.length }} />
+        <ResearchCenterNav active={active === "书单" ? "lists" : undefined} counts={{ notes: resourceErrors.noteGroups ? undefined : noteGroups.length, plans: resourceErrors.plans ? undefined : readerData.plans.length, lists: resourceErrors.lists ? undefined : readerData.lists.length }} />
         <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav></details>
         {Array.from(topicCommands.memory.current.entries()).filter(([id, operation]) => operation.owner === String(session.user?.id) && (active !== "收藏" || !readerData.savedTopics.some(row => row.topic === id))).map(([id]) => <section key={id} className="form-message"><p>有一项主题收藏操作尚待核对，原请求与期望版本仍保留。</p><SaveTopicButton topicId={id} commands={topicCommands} onChange={() => setResourceAttempt(value => value + 1)} /></section>)}
 
@@ -815,7 +840,9 @@ export function ReaderCenter() {
             <DisplayPreferences />
             <Link className="button secondary" href="/reset-password">重置密码</Link>
             <Link className="button secondary" href="/account/settings/privacy"><Settings size={16} /> 隐私与资料</Link>
+            <Link className="button secondary" href="/account/settings/privacy/export"><Download size={16} /> 按类别导出与删除资料</Link>
             <Link className="button secondary" href="/account/source-updates"><RefreshCw size={16} /> 来源更新</Link>
+            <Link className="button secondary" href="/explore?mode=ask"><Settings size={16} /> 个人模型服务与书库问答</Link>
             <ActionButton className="button secondary" type="button" state={pendingAction === "export-reader-data" ? "pending" : "idle"} pendingLabel="正在导出" disabled={Boolean(pendingAction) && pendingAction !== "export-reader-data"} onClick={() => void exportReaderData()}><Download size={16} /> 导出个人数据</ActionButton>
           </DataPanel>
         ) : null}

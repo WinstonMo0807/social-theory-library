@@ -13,6 +13,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.private_responses import PrivateAccountResponses
+
 from . import research
 from .path_serializers import PathCommandOutput
 from .citation_audit import audit_capabilities, audit_versions, create_audit, original_document, update_audit
@@ -77,18 +79,9 @@ class MemoryListOutput(serializers.Serializer):
         help_text="q/kind/source_status 范围内、state 过滤前的 total/confirmed/proposed/ignored 真实总数。")
 
 
-class PrivateResponses:
-    def initial(self, request, *args, **kwargs):
-        super().initial(request, *args, **kwargs)
-        expected = request.headers.get("X-Reader-Owner")
-        if expected is not None and expected != str(request.user.pk):
-            raise PermissionDenied("登录账户已变化，请重新读取当前账户的资料。")
+class PrivateResponses(PrivateAccountResponses):
+    """Compatibility name used by the existing owner-scoped workspaces."""
 
-    def finalize_response(self, request, response, *args, **kwargs):
-        response = super().finalize_response(request, response, *args, **kwargs)
-        response["Cache-Control"] = "private, no-store"
-        response["Vary"] = "Cookie, Authorization"
-        return response
 
 
 def command(request, schema=None):

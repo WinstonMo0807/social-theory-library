@@ -1,3 +1,4 @@
+from common.private_responses import PrivateAccountResponses
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, F, Max, OuterRef, Subquery
@@ -40,19 +41,8 @@ from .library_serializers import (
 )
 
 
-class OwnedModelViewSet(viewsets.ModelViewSet):
+class OwnedModelViewSet(PrivateAccountResponses, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-
-    def initial(self, request, *args, **kwargs):
-        super().initial(request, *args, **kwargs)
-        expected = request.headers.get("X-Reader-Owner")
-        if expected is not None and expected != str(request.user.pk):
-            raise PermissionDenied("登录账户已变化，请重新读取当前账户的资料。")
-
-    def finalize_response(self, request, response, *args, **kwargs):
-        response = super().finalize_response(request, response, *args, **kwargs)
-        response["Cache-Control"] = "private, no-store"
-        return response
 
     def get_queryset(self):
         rows = self.queryset.filter(user=self.request.user)
@@ -321,6 +311,7 @@ class ReadingListViewSet(OwnedModelViewSet):
 
 
 class ReadingHistoryViewSet(
+    PrivateAccountResponses,
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
@@ -341,14 +332,8 @@ class ReadingHistoryViewSet(
         return super().create(request, *args, **kwargs)
 
 
-class ReaderDataExportView(APIView):
+class ReaderDataExportView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
-
-    def finalize_response(self, request, response, *args, **kwargs):
-        response = super().finalize_response(request, response, *args, **kwargs)
-        response["Cache-Control"] = "private, no-store"
-        response["Vary"] = "Cookie, Authorization"
-        return response
 
     def get(self, request):
         context = {"request": request}
@@ -431,7 +416,7 @@ class ReaderDataExportView(APIView):
         )
 
 
-class ReaderSubmissionView(APIView):
+class ReaderSubmissionView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

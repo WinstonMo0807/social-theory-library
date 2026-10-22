@@ -3,6 +3,7 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework import generics
+from common.private_responses import PrivateAccountResponses
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -62,7 +63,7 @@ class LoginView(APIView):
         return response
 
 
-class LogoutView(APIView):
+class LogoutView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "token_refresh"
 
@@ -78,7 +79,7 @@ class LogoutView(APIView):
         return response
 
 
-class CurrentUserView(APIView):
+class CurrentUserView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -91,7 +92,7 @@ class CurrentUserView(APIView):
         return Response(serializer.data)
 
 
-class CurrentCapabilitiesView(APIView):
+class CurrentCapabilitiesView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

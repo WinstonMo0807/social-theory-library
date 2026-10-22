@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArchitecturalImage } from "./ui";
+import { ThemeToggle } from "./theme-toggle";
 
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -15,7 +16,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           <div><dt>登录保存</dt><dd>批注、笔记、收藏、进度</dd></div>
         </dl>
       </section>
-      <section className="auth-form-side">{children}</section>
+      <section className="auth-form-side"><div className="auth-appearance"><ThemeToggle /></div>{children}</section>
     </div>
   );
 }

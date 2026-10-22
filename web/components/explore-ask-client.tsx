@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -19,8 +19,9 @@ import {
   Square,
   UserRound,
 } from "lucide-react";
-import { ApiRequestError, apiRequest, apiStreamRequest, getServerSessionCredential } from "@/lib/api";
+import { ApiRequestError, apiRequest, apiStreamRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { SearchModeSwitch } from "@/components/search-mode-switch";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 
 type AssistMode = "auto" | "on" | "off";
@@ -200,14 +201,46 @@ function ReaderConnectionForm({
   );
 }
 
-export function ExploreAskClient({
-  initialQuestion = "",
-  initialScope = GLOBAL_LIBRARY_SCOPE,
-}: {
-  initialQuestion?: string;
-  initialScope?: LibraryScope;
-}) {
-  const { state: sessionState, retry: retrySession } = useSessionBootstrap();
+type ExploreAskProps = { initialQuestion?: string; initialScope?: LibraryScope };
+
+export function ExploreAskClient(props: ExploreAskProps) {
+  const bootstrap = useSessionBootstrap();
+  const key = bootstrap.state.status === "authenticated" ? String(bootstrap.state.user?.id) : bootstrap.state.status;
+  return <ExploreAskWorkspace key={key} {...props} bootstrap={bootstrap} />;
+}
+
+function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRARY_SCOPE, bootstrap }: ExploreAskProps & { bootstrap: ReturnType<typeof useSessionBootstrap> }) {
+  const { state: sessionState, retry: retrySession } = bootstrap;
+  const owner = sessionState.status === "authenticated" && sessionState.user ? String(sessionState.user.id) : null;
+  const accountRequests = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    accountRequests.current = controller;
+    const unsubscribe = subscribeToSessionChanges(() => controller.abort());
+    return () => { controller.abort(); unsubscribe(); };
+  }, []);
+  const privateRequest = useCallback(async <T,>(path: string, options: RequestInit = {}, credential?: string | null): Promise<T> => {
+    const controller = accountRequests.current;
+    if (!owner || !controller || controller.signal.aborted) throw new Error("请重新确认登录账户。");
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000), ...(options.signal ? [options.signal] : [])]);
+    const headers = new Headers(options.headers);
+    headers.set("X-Reader-Owner", owner);
+    return withPrivateOwner(owner, () => apiRequest<T>(path, { ...options, headers, signal, cache: "no-store" }, credential), signal);
+  }, [owner]);
+  async function privateStreamRequest(path: string, options: RequestInit, credential: string) {
+    const controller = accountRequests.current;
+    if (!owner || !controller || controller.signal.aborted) throw new Error("请重新确认登录账户。");
+    const signal = AbortSignal.any([controller.signal, ...(options.signal ? [options.signal] : [])]);
+    const headers = new Headers(options.headers);
+    headers.set("X-Reader-Owner", owner);
+    let response: Response | undefined;
+    try {
+      return await withPrivateOwner(owner, async () => { response = await apiStreamRequest(path, { ...options, headers, signal, cache: "no-store" }, credential); return response; }, signal);
+    } catch (reason) {
+      await response?.body?.cancel().catch(() => undefined);
+      throw reason;
+    }
+  }
   const [state, setState] = useState<"checking" | "unauthenticated" | "forbidden" | "unconfigured" | "unavailable" | "ready" | "error">("checking");
   const [statusDetail, setStatusDetail] = useState("");
   const [modelLabel, setModelLabel] = useState("");
@@ -232,7 +265,7 @@ export function ExploreAskClient({
   const abortRef = useRef<AbortController | null>(null);
 
   async function loadMessages(conversationId: string, token: string) {
-    const payload = await apiRequest<Collection<LibraryMessage>>(
+    const payload = await privateRequest<Collection<LibraryMessage>>(
       `/reading/library-conversations/${conversationId}/messages/`,
       {},
       token,
@@ -241,7 +274,7 @@ export function ExploreAskClient({
   }
 
   async function loadConversationList(token: string, selectFirst = false) {
-    const payload = await apiRequest<Collection<Conversation>>("/reading/library-conversations/", {}, token);
+    const payload = await privateRequest<Collection<Conversation>>("/reading/library-conversations/", {}, token);
     const items = collectionResults(payload);
     setConversations(items);
     if (selectFirst && items[0]) {
@@ -285,7 +318,7 @@ export function ExploreAskClient({
     (async () => {
       let serviceState: typeof state = "ready";
       try {
-        const service = await apiRequest<AssistantStatus>("/reading/library-assistant/status/", {}, token);
+        const service = await privateRequest<AssistantStatus>("/reading/library-assistant/status/", {}, token);
         if (cancelled) return;
         setStatusDetail(service.detail ?? "");
         setModelLabel([service.provider, service.model].filter(Boolean).join(" · "));
@@ -327,7 +360,7 @@ export function ExploreAskClient({
         }
       }
       try {
-        const conversationPayload = await apiRequest<Collection<Conversation>>(
+        const conversationPayload = await privateRequest<Collection<Conversation>>(
           "/reading/library-conversations/",
           {},
           token,
@@ -336,7 +369,7 @@ export function ExploreAskClient({
         if (cancelled) return;
         setConversations(conversationItems);
         if (conversationItems[0]) {
-          const messagePayload = await apiRequest<Collection<LibraryMessage>>(
+          const messagePayload = await privateRequest<Collection<LibraryMessage>>(
             `/reading/library-conversations/${conversationItems[0].id}/messages/`,
             {},
             token,
@@ -366,7 +399,7 @@ export function ExploreAskClient({
       cancelled = true;
       abortRef.current?.abort();
     };
-  }, [initialScope, retrySession, sessionState.message, sessionState.status, sessionState.user?.role]);
+  }, [initialScope, retrySession, sessionState.message, sessionState.status, sessionState.user?.role, privateRequest]);
 
   async function savePersonalConnection() {
     const token = getServerSessionCredential();
@@ -377,13 +410,13 @@ export function ExploreAskClient({
     setConnectionBusy("save");
     setError("");
     try {
-      const saved = await apiRequest<AssistantStatus>(
+      const saved = await privateRequest<AssistantStatus>(
         "/reading/library-assistant/connection/",
         { method: "PUT", body: JSON.stringify({ ...connectionDraft, enabled: true }) },
         token,
       );
       setConnectionDraft((current) => ({ ...current, api_key: "" }));
-      const tested = await apiRequest<AssistantStatus>(
+      const tested = await privateRequest<AssistantStatus>(
         "/reading/library-assistant/connection/test/",
         { method: "POST" },
         token,
@@ -409,7 +442,7 @@ export function ExploreAskClient({
     if (!token) return;
     setConnectionBusy("delete");
     try {
-      await apiRequest("/reading/library-assistant/connection/", { method: "DELETE" }, token);
+      await privateRequest("/reading/library-assistant/connection/", { method: "DELETE" }, token);
       setConnectionDraft({ provider: "openai_compatible", base_url: "", model: "", api_key: "" });
       setStatusDetail("个人模型服务已删除。");
       setEffectiveSource("reader_required");
@@ -443,7 +476,7 @@ export function ExploreAskClient({
       return null;
     }
     const title = question?.trim().slice(0, 36) || "新对话";
-    const conversation = await apiRequest<Conversation>(
+    const conversation = await privateRequest<Conversation>(
       "/reading/library-conversations/",
       { method: "POST", body: JSON.stringify({ title, assist_mode: assistMode, scope }) },
       token,
@@ -470,7 +503,7 @@ export function ExploreAskClient({
     if (!token) return setState("unauthenticated");
     setSources({ messageId, loading: true, items: [] });
     try {
-      const payload = await apiRequest<Collection<LibrarySource> & { evidence?: LibrarySource[] }>(
+      const payload = await privateRequest<Collection<LibrarySource> & { evidence?: LibrarySource[] }>(
         `/reading/library-messages/${messageId}/sources/`,
         {},
         token,
@@ -491,7 +524,7 @@ export function ExploreAskClient({
     if (!token) return setState("unauthenticated");
     if (!sourceId) return;
     try {
-      const detail = await apiRequest<LibrarySource>(
+      const detail = await privateRequest<LibrarySource>(
         `/reading/library-messages/${messageId}/sources/${sourceId}/`,
         {},
         token,
@@ -511,7 +544,7 @@ export function ExploreAskClient({
     const token = getServerSessionCredential();
     if (token && streamingMessageId && !streamingMessageId.startsWith("assistant-")) {
       try {
-        await apiRequest(
+        await privateRequest(
           `/reading/library-messages/${streamingMessageId}/cancel/`,
           { method: "POST", body: JSON.stringify({}) },
           token,
@@ -549,7 +582,7 @@ export function ExploreAskClient({
 
       const controller = new AbortController();
       abortRef.current = controller;
-      const response = await apiStreamRequest(`/reading/library-conversations/${conversation.id}/messages/stream/`, {
+      const response = await privateStreamRequest(`/reading/library-conversations/${conversation.id}/messages/stream/`, {
         method: "POST",
         signal: controller.signal,
         headers: {

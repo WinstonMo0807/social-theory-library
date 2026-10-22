@@ -1,21 +1,21 @@
 /* Final atlas 198–200: one manuscript condition strip, evidence rows, and an adjoining correction pane. */
-.stl4-counter-page { --counter-paper: #f7f4ee; --counter-line: #e3ded5; --counter-ink: #292723; --counter-muted: #7d776e; --counter-gold: #b38d54; }
+.stl4-counter-page { --counter-paper: var(--night-paper, #f7f4ee); --counter-line: #e3ded5; --counter-ink: #292723; --counter-muted: #7d776e; --counter-gold: #b38d54; }
 .stl4-counter-heading { display: grid; grid-template-columns: minmax(0, 1fr) 265px; align-items: center; gap: 36px; margin: 28px 0 22px; }
 .stl4-counter-heading > div { padding-left: 13px; border-left: 2px solid #d8bb8d; }
 .stl4-counter-heading h1 { margin: 0; font: 500 clamp(27px, 3.1vw, 39px)/1.35 var(--serif); letter-spacing: -.025em; }
 .stl4-counter-heading p { margin: 6px 0 0; color: #6c665e; font: 15px/1.65 var(--serif); }
 .stl4-counter-heading aside { padding-left: 16px; border-left: 1px solid #ddccb3; color: var(--counter-muted); font: 11px/1.85 var(--sans); }
-.stl4-counter-page :is(button, .stl4-counter-button), .stl4-counter-dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; border: 1px solid #d4cec3; border-radius: 2px; padding: 6px 11px; background: #fff; color: var(--counter-ink, #292723); font: 11px/1.5 var(--sans); text-decoration: none; cursor: pointer; }
+.stl4-counter-page :is(button, .stl4-counter-button), .stl4-counter-dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; border: 1px solid #d4cec3; border-radius: 2px; padding: 6px 11px; background: var(--night-white, #fff); color: var(--counter-ink, #292723); font: 11px/1.5 var(--sans); text-decoration: none; cursor: pointer; }
 .stl4-counter-page button:disabled, .stl4-counter-dialog button:disabled { opacity: .48; cursor: not-allowed; }
-.stl4-counter-page button.is-primary, .stl4-counter-dialog button.is-primary { border-color: #292723; background: #292723; color: #fff; }
+.stl4-counter-page button.is-primary, .stl4-counter-dialog button.is-primary { border-color: #292723; background: #292723; color: var(--night-white, #fff); }
 .stl4-counter-page button:not(:disabled):hover, .stl4-counter-dialog button:not(:disabled):hover { border-color: #a98956; }
-.stl4-counter-conditions { padding: 18px 20px 12px; border: 1px solid var(--counter-line); background: #fff; }
+.stl4-counter-conditions { padding: 18px 20px 12px; border: 1px solid var(--counter-line); background: var(--night-white, #fff); }
 .stl4-counter-conditions > header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .stl4-counter-conditions h2, .stl4-counter-results h2, .stl4-counter-editor h2, .stl4-counter-history h2 { margin: 0; font: 500 20px/1.4 var(--serif); }
 .stl4-counter-conditions > header small { display: inline-flex; align-items: center; gap: 4px; color: var(--counter-muted); font: 10px/1.4 var(--sans); }
 .stl4-counter-conditions > header button { margin-left: auto; border: 0; background: transparent; color: #736c61; }
 .stl4-counter-statement label, .stl4-counter-editor form > label, .stl4-counter-dialog form > label { display: grid; gap: 5px; color: #6d665e; font: 11px/1.5 var(--sans); }
-.stl4-counter-page :is(input:not([type=checkbox], [type=radio]), textarea, select), .stl4-counter-dialog :is(textarea, select, input:not([type=checkbox], [type=radio])) { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid #dbd6cd; border-radius: 2px; background: #fff; padding: 8px 10px; color: #38332b; font: 12px/1.6 var(--sans); }
+.stl4-counter-page :is(input:not([type=checkbox], [type=radio]), textarea, select), .stl4-counter-dialog :is(textarea, select, input:not([type=checkbox], [type=radio])) { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid #dbd6cd; border-radius: 2px; background: var(--night-white, #fff); padding: 8px 10px; color: #38332b; font: 12px/1.6 var(--sans); }
 .stl4-counter-page textarea, .stl4-counter-dialog textarea { resize: vertical; }
 .stl4-counter-statement .stl4-counter-proposition { gap: 4px; font-size: 10px; }
 .stl4-counter-statement .stl4-counter-proposition textarea { min-height: 44px; font: 14px/1.7 var(--serif); }
@@ -73,7 +73,7 @@
 .stl4-counter-evidence[data-compact=true] .stl4-counter-reason, .stl4-counter-evidence[data-compact=true] .stl4-counter-evidence-actions { display: none; }
 .stl4-counter-evidence[data-compact=true] blockquote { -webkit-line-clamp: 3; }
 .stl4-counter-more { margin-top: 14px; }
-.stl4-counter-editor { min-width: 0; border: 1px solid var(--counter-line); padding: 18px 20px; background: #fff; }
+.stl4-counter-editor { min-width: 0; border: 1px solid var(--counter-line); padding: 18px 20px; background: var(--night-white, #fff); }
 .stl4-counter-editor > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .stl4-counter-editor > header button { padding: 4px 0; border: 0; font-size: 10px; }
 .stl4-counter-editor h3 { margin: 12px 0 6px; font: 500 14px/1.6 var(--serif); }
@@ -89,7 +89,7 @@
 .stl4-counter-editor legend { margin-bottom: 9px; font: 500 13px/1.5 var(--serif); }
 .stl4-counter-editor fieldset label { display: inline-flex; align-items: center; gap: 5px; font: 11px/1.5 var(--sans); }
 .stl4-counter-editor form > label { margin: 11px 0; }
-.stl4-counter-editor label.stl4-counter-note-choice { display: flex; align-items: start; gap: 7px; padding: 10px; background: #f7f5ef; }
+.stl4-counter-editor label.stl4-counter-note-choice { display: flex; align-items: start; gap: 7px; padding: 10px; background: var(--night-paper, #f7f5ef); }
 .stl4-counter-note-choice small { display: block; }
 .stl4-counter-editor footer, .stl4-counter-dialog footer { display: flex; flex-wrap: wrap; justify-content: end; gap: 8px; margin-top: 16px; }
 .stl4-counter-previous { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--counter-line); }
@@ -97,7 +97,7 @@
 .stl4-counter-previous button { margin-top: 8px; }
 .stl4-counter-editor details { margin-top: 15px; }
 .stl4-counter-warning { padding: 12px; border-left: 2px solid #bb9561; background: #faf6ed; }
-.stl4-counter-history { margin-top: 12px; padding: 17px; border: 1px solid var(--counter-line); background: #fff; }
+.stl4-counter-history { margin-top: 12px; padding: 17px; border: 1px solid var(--counter-line); background: var(--night-white, #fff); }
 .stl4-counter-history > button { display: flex; justify-content: space-between; width: 100%; margin-top: 8px; text-align: left; }
 .stl4-counter-history > button strong { font-weight: 500; }
 .stl4-counter-history > button span { flex-shrink: 0; color: #8a7d69; font-size: 10px; }

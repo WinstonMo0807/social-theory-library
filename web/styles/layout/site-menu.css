@@ -173,7 +173,7 @@
 .site-menu-nav a[aria-current="page"], .site-menu-tools a[aria-current="page"] { color: #77582b; background: #f4ebda; }
 .site-menu-nav a:focus-visible, .site-menu-tools a:focus-visible, .site-menu-search button:focus-visible { outline: 2px solid #aa884b; outline-offset: 2px; }
 .header-return { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
-.site-navigation-returned { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); z-index: var(--stl-z-menu); transform: translateX(-50%); margin: 0; padding: 10px 18px; border-radius: 5px; color: #fff; background: #292b28; box-shadow: 0 4px 18px #0002; font-size: 13px; }
+.site-navigation-returned { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); z-index: var(--stl-z-menu); transform: translateX(-50%); margin: 0; padding: 10px 18px; border-radius: 5px; color: var(--night-white, #fff); background: #292b28; box-shadow: 0 4px 18px #0002; font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) { .site-menu-layer, .site-menu-panel { animation: none; } }
 

@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 夜间外观与读者接口接续
+
+最新工作见 CURRENT_PROGRESS 顶部与 READER_APPEARANCE_PRIVACY_20261023。新增 AppearanceProvider、主题按钮、共享 PrivateAccountResponses，复用原 ReaderProfile、问答与私人服务；无表迁移。交互预览 output/preview/stl4-appearance-preview.html，三个生成概念图在本机 Codex generated_images 中。禁止重跑一次性颜色/代码替换；继承脏改不纳入本批。后续按PDF183–190、216–222收口读者全流程。第189图是过期登录浮层，索引route不作为另建会话管理页的依据。不运行测试、浏览器或生产。
+
 ## 2026-10-23 知识对象M18恢复
 
 前置4f6e2bd，读KNOWLEDGE_HISTORY_20261023与CURRENT_PROGRESS顶部，核对git log确认本批提交。白名单tmp/stl4-knowledge-history-checkpoint-20261023.json。新工作台/admin/publication/knowledge/{type}/{id}，history GET/POST沿原修订与审计，不建表。保留继承editorial_revision_views.py等脏改；不要重跑history-record或以前wire/record脚本。正式测试/浏览器均未执行，96/26/87不变。最新用户要求继续全站、不测试/不浏览器，补账号读者中心接口核对、夜间模式参考和可交互页面；下一单元先完成这些新增交付，再推进剩余模块。

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 共用外观与私人响应
+
+AppearanceProvider 是唯一浏览器外观状态，原字号/字体与新增theme落在原ReaderProfile JSON；预绘制脚本应用非敏感本机选择，登录后按当前owner读取。User→ReaderProfile事务锁防止偏好合并丢失。common.private_responses.PrivateAccountResponses收敛原Reading私人响应，保留各服务实际权限和user查询；前端账户key、发起owner、请求取消与前后身份验证互相补充。没有引入独立账号/馆藏/问答库。夜间不反色原PDF或书封。
+
 ## 2026-10-23 知识历史命令适配
 
 knowledge_history作为现有EditorialRevision和KnowledgePublicationEvent的M18投影/命令入口，无新表。恢复和撤回都调用create_editorial_revision，不直接写公开状态。AuditEvent保存请求意图摘要，原revision.idempotency_key保存actor+request UUID；重试在锁定目标后先查原回执，才核对当前保存版本。人工待发布稿保持独立，不被覆盖。编辑器/预览/历史共用原owner和edit_version；真实关联计数不能当作完整引用网络或页面访问量。

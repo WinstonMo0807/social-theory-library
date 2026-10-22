@@ -13,7 +13,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import RecoveryCode, User
+from .models import ReaderProfile, RecoveryCode, User
 from .ownership import (
     is_library_owner,
     is_library_owner_email,
@@ -73,14 +73,16 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_reading_preferences(self, value):
         if not isinstance(value, dict):
             raise serializers.ValidationError("显示偏好必须是对象。")
-        allowed = {"text_size", "font_family"}
+        allowed = {"text_size", "font_family", "theme"}
         unknown = set(value) - allowed
         if unknown:
             raise serializers.ValidationError("显示偏好包含不支持的设置。")
-        if value.get("text_size") not in {None, "standard", "comfortable", "large"}:
+        if value.get("text_size") not in (None, "standard", "comfortable", "large"):
             raise serializers.ValidationError("字号设置无效。")
-        if value.get("font_family") not in {None, "sans", "serif"}:
+        if value.get("font_family") not in (None, "sans", "serif"):
             raise serializers.ValidationError("字体设置无效。")
+        if "theme" in value and value["theme"] not in ("light", "dark", "system"):
+            raise serializers.ValidationError("外观设置无效。")
         return value
 
     def to_representation(self, instance):
@@ -97,11 +99,14 @@ class UserSerializer(serializers.ModelSerializer):
         )
         return data
 
+    @transaction.atomic
     def update(self, instance, validated_data):
+        # Serialize profile changes with the existing reader privacy operations.
+        instance = User.objects.select_for_update().get(pk=instance.pk)
         preferences = validated_data.pop("reading_preferences", None)
         instance = super().update(instance, validated_data)
         if preferences is not None:
-            profile = instance.reader_profile
+            profile = ReaderProfile.objects.select_for_update().get(user=instance)
             current = (
                 profile.reading_preferences
                 if isinstance(profile.reading_preferences, dict)
@@ -109,6 +114,7 @@ class UserSerializer(serializers.ModelSerializer):
             )
             profile.reading_preferences = {**current, **preferences}
             profile.save(update_fields=["reading_preferences", "updated_at"])
+            instance.reader_profile = profile
         return instance
 
 

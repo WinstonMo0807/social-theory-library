@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from common.private_responses import PrivateAccountResponses
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
@@ -97,7 +98,7 @@ class AdminAIRuntimeProfileTestView(APIView):
         return Response(result)
 
 
-class ReaderAIConnectionView(APIView):
+class ReaderAIConnectionView(PrivateAccountResponses, APIView):
     """Per-reader provider connection; the encrypted key is never serialized."""
 
     permission_classes = [IsAuthenticated]
@@ -120,7 +121,7 @@ class ReaderAIConnectionView(APIView):
         return Response({"configured": False, "status": "not_configured"})
 
 
-class ReaderAIConnectionTestView(APIView):
+class ReaderAIConnectionTestView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "library_qa"
 

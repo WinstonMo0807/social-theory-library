@@ -9,6 +9,8 @@ import "../styles/features/admin/workspace-v307.css";
 import "../styles/features/admin/evidence-curation.css";
 import "../styles/knowledge-v307.css";
 import "../styles/features/home/home-stl4.css";
+import "../styles/tokens/appearance.css";
+import { AppearanceProvider } from "@/components/appearance-provider";
 import { SiteHeader } from "@/components/site-header";
 import { loadSiteChromeConfig } from "@/lib/api/site.server";
 import { RouteTransition } from "@/components/route-transition";
@@ -46,18 +48,21 @@ export default async function RootLayout({
 }>) {
   const { config, unavailable } = await loadSiteChromeConfig();
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
       <head>
         <Script src="/runtime-config.js" strategy="beforeInteractive" />
+        <Script src="/appearance-init.js" strategy="beforeInteractive" />
       </head>
       <body>
         <PublicSessionProvider>
+        <AppearanceProvider>
           <a className="skip-link" href="#main-content">
             跳到主要内容
           </a>
           <SiteHeader config={config} />
           {unavailable ? <p className="site-config-unavailable" role="status">网站设置暂时无法加载，当前使用默认导航。</p> : null}
           <main id="main-content"><RouteTransition>{children}</RouteTransition></main>
+        </AppearanceProvider>
         </PublicSessionProvider>
       </body>
     </html>

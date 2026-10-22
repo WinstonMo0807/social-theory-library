@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.capabilities import Capability, has_capability
+from common.private_responses import PrivateAccountResponses
 
 from .library_assistant import assistant_status, stream_conversation_answer
 from .library_serializers import (
@@ -22,6 +23,7 @@ from .models import LibraryConversation, LibraryMessage, LibraryMessageSource
 
 
 class LibraryConversationViewSet(
+    PrivateAccountResponses,
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
@@ -39,7 +41,7 @@ class LibraryConversationViewSet(
         )
 
 
-class LibraryConversationMessagesView(APIView):
+class LibraryConversationMessagesView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, conversation_id):
@@ -56,7 +58,7 @@ class LibraryConversationMessagesView(APIView):
         return Response({"count": len(serializer.data), "results": serializer.data})
 
 
-class LibraryConversationStreamView(APIView):
+class LibraryConversationStreamView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "library_qa"
 
@@ -100,7 +102,7 @@ class LibraryConversationStreamView(APIView):
         return response
 
 
-class LibraryMessageSourcesView(APIView):
+class LibraryMessageSourcesView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, message_id):
@@ -124,7 +126,7 @@ class LibraryMessageSourcesView(APIView):
         )
 
 
-class LibraryMessageSourceDetailView(APIView):
+class LibraryMessageSourceDetailView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, message_id, source_id):
@@ -138,7 +140,7 @@ class LibraryMessageSourceDetailView(APIView):
         return Response(serializer.data)
 
 
-class LibraryMessageCancelView(APIView):
+class LibraryMessageCancelView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, message_id):
@@ -158,7 +160,7 @@ class LibraryMessageCancelView(APIView):
         return Response({"detail": "已请求停止生成。", "status": message.status})
 
 
-class LibraryAssistantStatusView(APIView):
+class LibraryAssistantStatusView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

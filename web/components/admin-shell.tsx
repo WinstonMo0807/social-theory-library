@@ -9,6 +9,7 @@ import { ADMIN_VERSION_LABEL } from "@/lib/version";
 import { AdminSessionContext } from "@/lib/admin-session";
 import { adminLoginHref, adminTaskScope, safeAdminHref } from "@/lib/admin-route-context";
 import { Wordmark } from "./site-header";
+import { ThemeToggle } from "./theme-toggle";
 import { AdminWorkNotices } from "./admin/admin-work-notices";
 
 const navigationGroups = [
@@ -234,6 +235,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <button className="stl4-search-submit" type="submit">搜索</button>
           </form>
           <AdminWorkNotices key={String(user.id)} />
+          <ThemeToggle />
           <details className="stl4-admin-account" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label="账户菜单"><span>{user.display_name.slice(0, 1)}</span><ChevronDown size={13} /></summary><div><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small><Link href="/account">读者中心与账户</Link><Link href="/">返回前台</Link></div></details>
         </header> : null}
         <div className="admin-content" key={String(user.id)}>{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{returnToToday ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回今日工作</Link> : null}{returnToSearch ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回搜索结果</Link> : null}{canViewRoute(pathname) ? children : <section className="stl4-admin-denied" role="alert"><LockKeyhole size={28} /><h1>当前账户没有此项管理权限</h1><p>你可以返回今日工作，继续处理有权访问的条目。</p><Link href="/admin">返回今日工作</Link><Link href="/feedback?category=usage">申请权限</Link></section>}</div>

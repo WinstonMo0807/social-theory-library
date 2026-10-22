@@ -436,7 +436,7 @@ export function getServerSessionCredential() {
   return typeof window === "undefined" ? null : COOKIE_SESSION;
 }
 
-export async function logoutCurrentSession() {
+export async function logoutCurrentSession(expectedOwner?: string) {
   if (typeof window === "undefined") return;
   let failure: unknown;
   try {
@@ -444,6 +444,7 @@ export async function logoutCurrentSession() {
       "/auth/logout/",
       {
         method: "POST",
+        ...(expectedOwner ? { headers: { "X-Reader-Owner": expectedOwner } } : {}),
         body: JSON.stringify({}),
       },
       COOKIE_SESSION,

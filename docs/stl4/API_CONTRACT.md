@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 外观与私人接口边界
+
+原 PATCH /api/auth/me/ reading_preferences 增加 theme=light|dark|system，text_size/font_family保持；其他JSON键不能通过此接口写入，原隐私/研究键合并保留。原身份/能力/退出、阅读历史/导出/荐书、个人模型配置/检测、旧问答会话/消息/流加入可选 X-Reader-Owner 校验，不匹配403，private/no-store及Vary Cookie/Authorization；保持原权限、owner queryset及流no-transform。没有新增路由，原227路径契约不变，JSON字段原来就是开放对象，无生成类型变化。详见READER_APPEARANCE_PRIVACY_20261023。
+
 ## 2026-10-23 知识对象M18
 
 GET/POST /api/catalog/admin/knowledge-publications/{object_type}/{object_id}/history/，九种KnowledgeObjectEditorAdapter页面类型（排除work），节点细分类型必须匹配。GET后台权限/private,no-store，可选page(20条)/selected(必须本对象)，返回edit_version、当前状态、history、selected、changes、dependencies、最近20任务与scope。生成前后保存版本不符409，错误对象/页404。

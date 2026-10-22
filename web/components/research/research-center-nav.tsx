@@ -4,7 +4,7 @@ export type ReaderCenterSection = "research" | "notes" | "plans" | "lists" | "ci
 export type ReaderCenterCounts = Partial<Record<ReaderCenterSection, number>>;
 
 const sections: Array<{ key: ReaderCenterSection; label: string; href: string }> = [
-  { key: "research", label: "我的研究", href: "/account" },
+  { key: "research", label: "我的研究", href: "/account/research" },
   { key: "notes", label: "笔记", href: "/account/notes" },
   { key: "plans", label: "阅读计划", href: "/account/plans" },
   { key: "lists", label: "书单", href: "/account?section=lists" },
@@ -13,7 +13,7 @@ const sections: Array<{ key: ReaderCenterSection; label: string; href: string }>
   { key: "sources", label: "来源更新", href: "/account/source-updates" },
 ];
 
-export function ResearchCenterNav({ active, counts }: { active: ReaderCenterSection; counts?: ReaderCenterCounts }) {
+export function ResearchCenterNav({ active, counts }: { active?: ReaderCenterSection; counts?: ReaderCenterCounts }) {
   return (
     <nav className="stl4-reader-tabs" aria-label="读者中心">
       {sections.map((section) => (

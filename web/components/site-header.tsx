@@ -22,6 +22,7 @@ import { useActionGuard } from "@/lib/use-action-guard";
 import { usePublicNavigationReturn } from "@/lib/public-navigation-return";
 import { ActionButton, AsyncStatus } from "./action-feedback";
 import { DisplayPreferences } from "./display-preferences";
+import { ThemeToggle } from "./theme-toggle";
 import { usePublicSession } from "./public-session-provider";
 import { Drawer } from "./ui/dialog";
 import { IconButton } from "./ui/controls";
@@ -105,7 +106,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
     if (!startAction(actionKey)) return;
     setLogoutError("");
     try {
-      await logoutCurrentSession();
+      await logoutCurrentSession(user ? String(user.id) : undefined);
       closeMenu();
     } catch (error) {
       setLogoutError(error instanceof Error ? error.message : "退出登录失败，请重试。");
@@ -150,6 +151,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>
         </Link>
+        <ThemeToggle />
         <IconButton
           ref={menuButtonRef}
           className="icon-button menu-button"

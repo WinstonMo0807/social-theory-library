@@ -1,0 +1,62 @@
+/* Night appearance extends the final atlas; light declarations keep their exact defaults. */
+:root { color-scheme: light; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --stl-surface-paper: #201f1d;
+  --stl-surface-default: #292724;
+  --stl-surface-wash: #35312b;
+  --stl-surface-admin: #201f1d;
+  --stl-sidebar: #25231f;
+  --stl-ink-primary: #eee9df;
+  --stl-ink-muted: #b9b1a6;
+  --stl-ink-inverse: #201f1d;
+  --stl-border-default: #49443c;
+  --stl-border-strong: #938675;
+  --stl-accent-annotation: #d9b568;
+  --stl-accent-danger: #f0a296;
+  --stl-accent-success: #add2b2;
+  --stl-accent-info: #b9ccc8;
+  --stl-accent-warning: #e5c88b;
+  --stl-accent-focus: #dec28b;
+  --text-primary: #eee9df;
+  --text-secondary: #b9b1a6;
+  --text-muted: #b9b1a6;
+  --border: #49443c;
+  --brand-accent: #d3ae6b;
+  --night-white: #292724;
+  --night-paper: #201f1d;
+  --night-wash: #35312b;
+  --night-ink: #eee9df;
+  --night-muted: #b9b1a6;
+  --night-line: #49443c;
+  --night-gold: #d3ae6b;
+  --night-tint: #40382a;
+  --night-overlay: rgb(41 39 36 / 96%);
+  --night-danger: #f0a296;
+  --night-success: #add2b2;
+}
+:root[data-theme="dark"] :is([data-ui-scope="editorial-v2"], [data-ui-scope="explore-frozen"]) {
+  --stl2-ink-soft: #c9c0b3;
+  --stl2-accent: #d3ae6b;
+}
+.theme-toggle { position: relative; display: inline-grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; padding: 0; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 50%; cursor: pointer; }
+.theme-toggle:hover { border-color: var(--line); background: var(--wash); }
+.theme-toggle:focus-visible { outline: 2px solid var(--stl-accent-focus); outline-offset: 3px; }
+.theme-toggle svg { grid-area: 1/1; }
+.theme-toggle .theme-sun { display: none; }
+[data-theme="dark"] .theme-toggle .theme-sun { display: block; }
+[data-theme="dark"] .theme-toggle .theme-moon { display: none; }
+.header-actions:has(.theme-toggle) { gap: clamp(8px, 1.6vw, 22px); }
+.display-preferences .appearance-choices button { display: inline-flex; gap: 6px; align-items: center; justify-content: center; min-height: 40px; }
+.display-preferences .appearance-choices button.active { background: var(--night-tint, #f3e8d4); border-color: var(--night-gold, #a48146); color: var(--night-gold, #785d30); }
+.display-preferences button:focus-visible { outline: 2px solid var(--stl-accent-focus); outline-offset: 3px; }
+.auth-form-side { position: relative; }
+.auth-appearance { position: absolute; top: 18px; right: 18px; }
+@media (max-width: 700px) {
+  .header-actions:has(.theme-toggle) { gap: 4px; }
+  .site-header .theme-toggle { width: 36px; height: 40px; flex-basis: 36px; }
+}
+@media (forced-colors: active) {
+  .theme-toggle, .display-preferences button { border: 1px solid ButtonText; }
+  .display-preferences button[aria-pressed="true"] { outline: 2px solid Highlight; }
+}

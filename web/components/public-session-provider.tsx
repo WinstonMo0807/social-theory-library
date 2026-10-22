@@ -9,8 +9,9 @@ type PublicSessionValue = ReturnType<typeof useSessionBootstrap>;
 const PublicSessionContext = createContext<PublicSessionValue | null>(null);
 
 function isPublicSessionRoute(pathname: string) {
-  return !pathname.startsWith("/admin")
-    && !["/login", "/register", "/reset-password"].includes(pathname);
+  // Shared appearance also belongs to the signed-in account in the back office.
+  // AdminShell independently enforces its role/capability permissions.
+  return !["/login", "/register", "/reset-password"].includes(pathname);
 }
 
 export function PublicSessionProvider({ children }: { children: ReactNode }) {
