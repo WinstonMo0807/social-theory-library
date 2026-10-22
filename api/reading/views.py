@@ -272,9 +272,16 @@ class SavedTopicViewSet(OwnedModelViewSet):
         return Response(status=204)
 
 
-class ReadingListViewSet(OwnedModelViewSet):
+from .booklist_views import BooklistActions
+
+
+class ReadingListViewSet(BooklistActions, OwnedModelViewSet):
     queryset = ReadingList.objects.prefetch_related("items__work")
     serializer_class = ReadingListSerializer
+
+    def get_queryset(self):
+        rows = super().get_queryset()
+        return rows.prefetch_related(None) if self.action in {"workspace", "directory", "export"} else rows
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -285,28 +292,30 @@ class ReadingListViewSet(OwnedModelViewSet):
     @transaction.atomic
     @action(detail=True, methods=["post"])
     def add_item(self, request, pk=None):
-        from .privacy import lock_owner
-        lock_owner(request.user)
+        from .privacy import require_retention
+        from .booklists import add_work
+        require_retention(request.user, "saved_knowledge")
         reading_list = self.get_object()
         serializer = ReadingListItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        item, created = ReadingListItem.objects.get_or_create(
-            reading_list=reading_list,
-            work=serializer.validated_data["work"],
-            defaults={"order": serializer.validated_data.get("order", reading_list.items.count())},
-        )
+        item, created = add_work(reading_list, serializer.validated_data["work"].pk)
         return Response(
-            ReadingListItemSerializer(item).data,
+            ReadingListItemSerializer(item, context={"request": request}).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
     @transaction.atomic
+    @extend_schema(parameters=[OpenApiParameter("item_id", str, location=OpenApiParameter.PATH)])
     @action(detail=True, methods=["delete"], url_path=r"items/(?P<item_id>[^/.]+)")
     def remove_item(self, request, pk=None, item_id=None):
         from .privacy import lock_owner
         lock_owner(request.user)
         reading_list = self.get_object()
-        reading_list.items.filter(pk=item_id).delete()
+        from django.utils import timezone
+        from .booklists import touch
+        changed = reading_list.items.filter(pk=item_id, removed_at__isnull=True).update(removed_at=timezone.now())
+        if changed:
+            touch(reading_list)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

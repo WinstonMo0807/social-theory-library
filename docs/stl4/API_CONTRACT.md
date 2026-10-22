@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 R29书单契约
+
+新增纳入9条原/新书单路径：/reading/lists/及{id}/、add_item/、items/{item_id}/、directory/、{id}/workspace/、command/、receipt/、{id}/export/。共241路径，232旧契约保留。工作台必需owner头；command显式UUID/版本/动作，receipt查回后删除不重建；export为private二进制响应、私人内容显式opt-in。详细限制与0023见BOOKLIST_WORKSPACE_20261023。
+
 ## 2026-10-23 原认证接口契约
 
 原228路径保留，新增覆盖/api/auth/login/、register/、password/request/、password/confirm/，共232。GET login初始化CSRF且返回真实密码登录/保持天数/验证码20分钟能力；Cookie模式POST必须先初始化并携CSRF头。POST login原email参数兼容邮箱/用户名，新增remember_me默认true；Register可选username，旧调用兼容。其余业务接口权限不变。受保护私有字段只在有效密码认证后返回。

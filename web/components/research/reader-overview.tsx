@@ -20,7 +20,7 @@ type Pending = { id: string; title: string; question: string; status: string; up
 type Overview = { owner_id: string; counts: Record<Kind, number>; count: number; page: number; page_size: number; total_pages: number; results: Material[]; recent_reading: Progress[]; pending_tasks: Pending[] };
 const sections: Array<[Kind, string, string]> = [
   ["research", "我的研究", "/account/research"], ["notes", "笔记", "/account/notes"], ["plans", "阅读计划", "/account/plans"],
-  ["lists", "书单", "/account?section=lists"], ["audits", "引文体检", "/account/citation-audits"], ["confirmed", "已确认笔记", "/account/confirmed-notes"],
+  ["lists", "书单", "/account/collections"], ["audits", "引文体检", "/account/citation-audits"], ["confirmed", "已确认笔记", "/account/confirmed-notes"],
 ];
 const statusNames: Record<string, string> = { saved: "已保存", archived: "已归档", confirmed: "已确认", reading: "进行中", pending: "待开始", queued: "待处理", running: "处理中", completed: "已完成", complete: "已完成", partial: "部分完成", failed: "处理失败", cancelled: "已取消", canceled: "已取消", source_unavailable: "来源待核对" };
 const dateLabel = (value: string) => Number.isNaN(Date.parse(value)) ? "时间未记录" : new Date(value).toLocaleDateString("zh-CN");

@@ -59,7 +59,7 @@ def material(user, kind, row, *, text=None):
         state = "completed" if statuses and all(value in {"completed", "skipped"} for value in statuses) else "reading" if "reading" in statuses else "pending"
         path = f"/account/plans/{row.pk}"
     elif kind == "lists":
-        path = f"/account?section=lists#list-{row.pk}"
+        path = f"/account/collections/{row.pk}"
     elif kind == "audits":
         state = row.status
         path = f"/account/citation-audits/{row.pk}"

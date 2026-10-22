@@ -68,3 +68,8 @@
 ## R22接口接续
 
 详见READER_OVERVIEW_20261023与READER_MATERIALS_20261023。读者总览真实七类owner聚合；所选导出/删除复用原隐私任务；作品收藏纳入数据管理；本机研究显式转存复用原import并补删除后最小回执。reading0022迁移尚未执行，运行边界待统一验收。
+
+
+## R29书单补充
+
+2026-10-23：/account/collections直接使用本人原书单，directory/workspace/command/receipt/export必需owner；笔记/进度导出默认不勾选，原来源授权复核。书单移除只影响关联、30天内可恢复，整单删除不删独立计划/笔记。新的0023未执行；复制私人入口不公开，显式分享仍待。见BOOKLIST_WORKSPACE_20261023，未测试或运行验收。

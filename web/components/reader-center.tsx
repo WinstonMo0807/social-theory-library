@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ReaderBooklists } from "./research/reader-booklists";
 import { CollectionLink } from "@/components/collection-link";
 import {
   ArrowRight,
@@ -164,8 +165,9 @@ const emptyData: ReaderData = {
 
 export function ReaderCenter() {
   const bootstrap = useSessionBootstrap();
+  const params = useSearchParams();
   const key = bootstrap.state.status === "authenticated" ? String(bootstrap.state.user?.id) : bootstrap.state.status;
-  return <ReaderCenterWorkspace key={key} bootstrap={bootstrap} />;
+  return params.get("section") === "lists" ? <ReaderBooklists /> : <ReaderCenterWorkspace key={key} bootstrap={bootstrap} />;
 }
 
 function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof useSessionBootstrap> }) {
@@ -192,7 +194,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   const section = searchParams.get("section");
   const [selectedTab, selectTab] = useState<{ section: string | null; label: string } | null>(null);
   const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : section === "history" ? "阅读历史" : section === "saved" ? "收藏" : "概览";
-  const setActive = (label: string) => selectTab({ section, label });
+  const setActive = (label: string) => { if (label === "书单") router.push("/account/collections"); else selectTab({ section, label }); };
   const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
   const [noteGroups, setNoteGroups] = useState<NoteGroupRow[]>([]);

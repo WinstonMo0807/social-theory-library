@@ -86,7 +86,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   const readerCenterRoute = pathname === "/account" && !preview;
   const headerNavigation = readerCenterRoute ? [
     ["/account/research", "我的研究"], ["/account/notes", "笔记"], ["/account/plans", "阅读计划"],
-    ["/account?section=lists", "书单"], ["/account/citation-audits", "引文体检"], ["/account/confirmed-notes", "已确认笔记"],
+    ["/account/collections", "书单"], ["/account/citation-audits", "引文体检"], ["/account/confirmed-notes", "已确认笔记"],
   ] : navigation;
 
   useEffect(() => {

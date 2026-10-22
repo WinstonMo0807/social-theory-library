@@ -308,7 +308,7 @@ class SavedItemSerializer(OwnedSerializer):
             )
         return cache[obj.work_id]
 
-    def get_title(self, obj):
+    def get_title(self, obj) -> str:
         data = self.get_work_data(obj)
         return data["title"] if data else "来源暂不可用"
 
@@ -406,18 +406,28 @@ class ReadingListItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("该文献当前未公开，不能加入书单。")
         return value
 
-    def get_title(self, obj):
+    def get_title(self, obj) -> str:
         if not obj.work.editions.filter(public_edition_q(), is_primary=True).exists():
             return "来源暂不可用"
         return WorkCardSerializer(obj.work, context=self.context).data["title"]
 
 
 class ReadingListSerializer(OwnedSerializer):
-    items = ReadingListItemSerializer(many=True, read_only=True)
+    items = serializers.SerializerMethodField()
+    tags = serializers.ListField(child=serializers.CharField(max_length=40), max_length=12, required=False)
+
+    @extend_schema_field(ReadingListItemSerializer(many=True))
+    def get_items(self, obj):
+        return ReadingListItemSerializer(obj.items.filter(removed_at__isnull=True), many=True, context=self.context).data
+
+    def update(self, instance, validated_data):
+        from .booklists import preserve_origin
+        preserve_origin(instance)
+        return super().update(instance, validated_data)
 
     class Meta:
         model = ReadingList
-        fields = ("id", "title", "description", "is_default", "items", "created_at", "updated_at")
+        fields = ("id", "title", "description", "goal", "tags", "is_default", "items", "created_at", "updated_at")
         read_only_fields = ("id", "created_at", "updated_at")
 
 

@@ -2760,6 +2760,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/lists/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_list"];
+        put?: never;
+        post: operations["reading_lists_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_retrieve"];
+        put: operations["reading_lists_update"];
+        post?: never;
+        delete: operations["reading_lists_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["reading_lists_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/lists/{id}/add_item/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_lists_add_item_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/{id}/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_lists_export_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/{id}/items/{item_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["reading_lists_items_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/{id}/workspace/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_workspace_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/command/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_lists_command_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/directory/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_directory_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/receipt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_receipt_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/parallel-calibrations/": {
         parameters: {
             query?: never;
@@ -5962,6 +6106,14 @@ export interface components {
             reader_bookmarks: number;
             reader_progress: number;
         };
+        /**
+         * @description * `pdf` - pdf
+         *     * `bibtex` - bibtex
+         *     * `ris` - ris
+         *     * `csv` - csv
+         * @enum {string}
+         */
+        FormatEnum: "pdf" | "bibtex" | "ris" | "csv";
         GenerateReaderInputRequest: {
             /** Format: uuid */
             request_key: string;
@@ -7082,6 +7234,110 @@ export interface components {
                 }[];
             };
         };
+        /**
+         * @description * `create` - create
+         *     * `edit` - edit
+         *     * `add` - add
+         *     * `remove` - remove
+         *     * `restore` - restore
+         *     * `purge` - purge
+         *     * `move` - move
+         *     * `delete` - delete
+         * @enum {string}
+         */
+        ListCommandActionEnum: "create" | "edit" | "add" | "remove" | "restore" | "purge" | "move" | "delete";
+        /**
+         * @description * `-1` - -1
+         *     * `1` - 1
+         * @enum {integer}
+         */
+        ListCommandDirectionEnum: -1 | 1;
+        ListCommandRequest: {
+            /** Format: uuid */
+            list_id: string;
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            action: components["schemas"]["ListCommandActionEnum"];
+            title?: string;
+            description?: string;
+            goal?: string;
+            tags?: string[];
+            /** Format: uuid */
+            work_id?: string;
+            /** Format: uuid */
+            item_id?: string;
+            item_ids?: string[];
+            direction?: components["schemas"]["ListCommandDirectionEnum"];
+        };
+        ListDirectory: {
+            owner_id: string;
+            count: number;
+            page: number;
+            total_pages: number;
+            results: components["schemas"]["ListSummary"][];
+        };
+        ListExportRequest: {
+            expected_version: string;
+            format: components["schemas"]["FormatEnum"];
+            /** @default false */
+            include_progress: boolean;
+            /** @default false */
+            include_notes: boolean;
+            item_ids?: string[];
+        };
+        ListItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            work_id: string;
+            order: number;
+            work: components["schemas"]["WorkCard"] | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            removed_at: string | null;
+            /** Format: date-time */
+            expires_at: string | null;
+            /** Format: double */
+            progress_ratio: number | null;
+            reader_url: string | null;
+        };
+        ListReceipt: {
+            /** Format: uuid */
+            request_id: string;
+        };
+        ListResult: {
+            owner_id: string;
+            /** Format: uuid */
+            id: string;
+            exists: boolean;
+            receipt: components["schemas"]["ListReceipt"];
+        };
+        ListSummary: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: string;
+            goal: string;
+            tags: string[];
+            version: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            item_count: number;
+        };
+        ListWorkspace: {
+            owner_id: string;
+            list: components["schemas"]["ListSummary"];
+            items: components["schemas"]["ListItem"][];
+            count: number;
+            page: number;
+            total_pages: number;
+            active_count: number;
+            trash_count: number;
+        };
         LoginOutput: {
             user: components["schemas"]["User"];
             session: components["schemas"]["SessionEnum"];
@@ -8107,6 +8363,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["ReadingHistory"][];
         };
+        PaginatedReadingListList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ReadingList"][];
+        };
         PaginatedReadingProgressList: {
             /** @example 123 */
             count: number;
@@ -8786,6 +9057,13 @@ export interface components {
             scope?: components["schemas"]["QueryScopeInputRequest"];
             archived?: boolean;
             layout?: unknown;
+        };
+        PatchedReadingListRequest: {
+            title?: string;
+            description?: string;
+            goal?: string;
+            tags?: string[];
+            is_default?: boolean;
         };
         PatchedReadingProgressRequest: {
             /** Format: uuid */
@@ -10896,6 +11174,38 @@ export interface components {
             page_index?: number;
             /** Format: int64 */
             session_seconds?: number;
+        };
+        ReadingList: {
+            /** Format: uuid */
+            readonly id: string;
+            title: string;
+            description?: string;
+            goal?: string;
+            tags?: string[];
+            is_default?: boolean;
+            readonly items: components["schemas"]["ReadingListItem"][];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        ReadingListItem: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            work: string;
+            readonly title: string;
+            /** Format: int64 */
+            order?: number;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        ReadingListRequest: {
+            title: string;
+            description?: string;
+            goal?: string;
+            tags?: string[];
+            is_default?: boolean;
         };
         ReadingPaceInputRequest: {
             cjk_chars_per_minute?: number;
@@ -19064,6 +19374,368 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadingHistory"];
+                };
+            };
+        };
+    };
+    reading_lists_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedReadingListList"];
+                };
+            };
+        };
+    };
+    reading_lists_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingListRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReadingListRequest"];
+                "multipart/form-data": components["schemas"]["ReadingListRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingList"];
+                };
+            };
+        };
+    };
+    reading_lists_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingList"];
+                };
+            };
+        };
+    };
+    reading_lists_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingListRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReadingListRequest"];
+                "multipart/form-data": components["schemas"]["ReadingListRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingList"];
+                };
+            };
+        };
+    };
+    reading_lists_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_lists_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedReadingListRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedReadingListRequest"];
+                "multipart/form-data": components["schemas"]["PatchedReadingListRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingList"];
+                };
+            };
+        };
+    };
+    reading_lists_add_item_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingListRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReadingListRequest"];
+                "multipart/form-data": components["schemas"]["ReadingListRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingList"];
+                };
+            };
+        };
+    };
+    reading_lists_export_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListExportRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ListExportRequest"];
+                "multipart/form-data": components["schemas"]["ListExportRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    reading_lists_items_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reading_lists_workspace_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `` -
+                 *     * `book` - book
+                 *     * `journal_article` - journal_article
+                 *     * `journal_issue` - journal_issue
+                 *     * `thesis` - thesis
+                 *     * `report` - report
+                 */
+                kind?: "" | "book" | "journal_article" | "journal_issue" | "thesis" | "report";
+                /**
+                 * @description * `manual` - manual
+                 *     * `newest` - newest
+                 */
+                order?: "manual" | "newest";
+                page?: number;
+                q?: string;
+                trash?: boolean;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListWorkspace"];
+                };
+            };
+        };
+    };
+    reading_lists_command_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ListCommandRequest"];
+                "multipart/form-data": components["schemas"]["ListCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListResult"];
+                };
+            };
+        };
+    };
+    reading_lists_directory_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `` -
+                 *     * `book` - book
+                 *     * `journal_article` - journal_article
+                 *     * `journal_issue` - journal_issue
+                 *     * `thesis` - thesis
+                 *     * `report` - report
+                 */
+                kind?: "" | "book" | "journal_article" | "journal_issue" | "thesis" | "report";
+                /**
+                 * @description * `manual` - manual
+                 *     * `newest` - newest
+                 */
+                order?: "manual" | "newest";
+                page?: number;
+                q?: string;
+                trash?: boolean;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListDirectory"];
+                };
+            };
+        };
+    };
+    reading_lists_receipt_retrieve: {
+        parameters: {
+            query: {
+                list_id: string;
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListResult"];
                 };
             };
         };

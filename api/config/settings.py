@@ -389,6 +389,8 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "retry_on_timeout": True,
 }
 CELERY_BEAT_SCHEDULE = {
+    "purge-expired-booklist-items": {"task": "reading.tasks.purge_expired_booklist_items", "schedule": 3600,
+        "options": {"queue": "celery", "expires": 3500}},
     "refresh-source-follows": {"task": "reading.refresh_source_follows", "schedule": 15 * 60},
     "recover-private-research-tasks": {
         "task": "reading.tasks.recover_private_research_tasks", "schedule": 120,

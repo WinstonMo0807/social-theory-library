@@ -3,6 +3,7 @@ from hashlib import sha256
 import json
 
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -17,10 +18,14 @@ def identity(issue, revision):
     return sha256(f"issue-list:{issue.pk}:{revision}".encode()).hexdigest()
 
 
+def source_copy(user, key):
+    return ReadingList.objects.filter(user=user).filter(Q(origin_key=key) | Q(origin_key="", description=f"专题书目副本 / {key}")).first()
+
+
 def output(user, key, receipt=None):
-    row = ReadingList.objects.filter(user=user, description=f"专题书目副本 / {key}").first()
+    row = source_copy(user, key)
     return {"owner_id": str(user.pk), "id": str(row.pk) if row else None, "title": row.title if row else "",
-        "item_count": row.items.count() if row else 0, "saved": row is not None,
+        "item_count": row.items.filter(removed_at__isnull=True).count() if row else 0, "saved": row is not None,
         "receipt": {"request_id": str(receipt.request_id)} if receipt else None,
         "notice": "书单按作品保存，不记录原文版本、页码或阅读进度。原文引用请使用文章中的引用入口。"}
 
@@ -60,9 +65,12 @@ def save(user, slug, data):
     work_ids = list(dict.fromkeys(row["available_work_id"] for row in payload["items"] if row.get("available_work_id")))
     if not work_ids:
         raise ValidationError("本期没有可加入私人书单的公开馆藏。计划上架项不会自动变成馆藏。")
-    row = ReadingList.objects.filter(user=user, description=f"专题书目副本 / {key}").first()
+    row = source_copy(user, key)
     if row is None:
-        row = ReadingList.objects.create(user=user, title=payload["title"][:240], description=f"专题书目副本 / {key}")
+        row = ReadingList.objects.create(user=user, title=payload["title"][:240], origin_key=key)
         ReadingListItem.objects.bulk_create([ReadingListItem(reading_list=row, work_id=value, order=index) for index, value in enumerate(work_ids)])
+    elif not row.origin_key:
+        row.origin_key = key
+        row.save(update_fields=["origin_key", "updated_at"])
     receipt = KnowledgeSaveReceipt.objects.create(user=user, request_id=data["request_id"], target_key=key, fingerprint=fingerprint, applied_saved=True)
     return output(user, key, receipt)

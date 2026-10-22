@@ -138,7 +138,7 @@ def target_of(row, category):
     if category == "research":
         target["children"] = {str(turn.id): turn.revision for turn in row.turns.all()}
     if category == "reading_lists":
-        target["children"] = {str(value.pk): f"{value.work_id}:{value.order}" for value in row.items.all()}
+        target["children"] = {str(value.pk): f"{value.work_id}:{value.order}:{value.removed_at.isoformat() if value.removed_at else ''}" for value in row.items.all()}
     return target
 
 
@@ -172,7 +172,8 @@ def export_item(user, category, row):
         return {**record(row, private=True), "issue_id": str(row.issue_id)}
     if category == "reading_lists":
         return {"id": str(row.pk), "title": row.title, "description": row.description, "created_at": row.created_at.isoformat(),
-            "items": [{"work_id": str(item.work_id), "order": item.order} for item in row.items.all()]}
+            "goal": row.goal, "tags": row.tags,
+            "items": [{"work_id": str(item.work_id), "order": item.order, "removed_at": item.removed_at.isoformat() if item.removed_at else None} for item in row.items.all()]}
     if category == "graph_views":
         from .graph_saves import record_output
         return record_output(row, user)
@@ -234,7 +235,7 @@ def describe_item(user, category, row):
         source = {"title": "本人投稿评论（含待审核与已公开）", "path": f"/recommendations/{row.issue.slug}#article-comments"}
     elif category == "reading_lists":
         title = row.title
-        source = {"title": "私人书单", "path": "/account?section=lists"}
+        source = {"title": "私人书单", "path": f"/account/collections/{row.pk}"}
     elif category == "graph_views":
         title = payload.get("title") or "未命名图谱视图"
         source = {"title": "本人保存的图谱视图", "path": f"/theories/graph?saved_view={row.pk}"}

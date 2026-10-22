@@ -82,12 +82,16 @@ class ReadingList(UUIDTimeStampedModel):
     title = models.CharField(max_length=240)
     description = models.TextField(blank=True)
     is_default = models.BooleanField(default=False)
+    goal = models.CharField(max_length=2000, blank=True)
+    tags = models.JSONField(default=list, blank=True)
+    origin_key = models.CharField(max_length=64, blank=True, db_index=True)
 
 
 class ReadingListItem(UUIDTimeStampedModel):
     reading_list = models.ForeignKey(ReadingList, on_delete=models.CASCADE, related_name="items")
     work = models.ForeignKey("catalog.Work", on_delete=models.CASCADE)
     order = models.PositiveIntegerField(default=0)
+    removed_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
         ordering = ["order", "created_at"]

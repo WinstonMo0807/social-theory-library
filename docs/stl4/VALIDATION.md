@@ -1,5 +1,12 @@
 # 验收记录
 
+## 2026-10-23 R29书单静态记录
+
+- `.venv/Scripts/python.exe tmp/stl4-booklist-static-20261023.py` aedeca退出0：12文件AST、10次两数据库SQL编译，禁止所有数据库连接；MigrationLoader(None)/ProjectState比较reading声明一致；OpenAPI0错误/10既有catalog类型提示。reader_center另外AST解析，未运行。
+- `node tmp/stl4-booklist-contracts-20261023.mjs` 819ef0退出0：232原路径保留，纳入9书单路径，共241，CSS仅解析。后续相同契约重新生成。
+- 完整TS 2c316e/7ef64e、c70fd6退出0；最终`tsc --noEmit --incremental false` f65874及后续完成记录见工具输出。10个目标ESLint05f80e退出0；新增组件曾报render读ref，已改显式状态与事件内读取。7917f2是在错误cwd启动ESLint，没有检查文件，已在web目录重跑。
+- 最终PDF218、219、220实际已读取。没有测试、浏览器、真实导出/渲染、业务操作、构建、模型测评、迁移/周期任务执行或生产操作。0023仅文件，0022亦未执行。
+
 ## 2026-10-23 认证源码静态记录
 
 - `.venv/Scripts/python.exe tmp/stl4-auth-static-20261023.py` 最终76244d退出0：5文件AST、8次SQL编译含锁，0数据库连接；OpenAPI0错误/10既有提示。首轮911b8a新增UserSerializer四项类型提示，补准确返回类型后消除。没有认证、验证码、邮件或Cookie实际请求。

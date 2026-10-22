@@ -18,6 +18,19 @@ from .source_follow import refresh_source_follows  # noqa: F401; bounded public-
 logger = logging.getLogger(__name__)
 
 
+@shared_task(soft_time_limit=240, time_limit=270)
+def purge_expired_booklist_items():
+    from django.contrib.auth import get_user_model
+    from .booklists import purge_expired_owner
+    from .models import ReadingListItem
+    owners = list(ReadingListItem.objects.filter(removed_at__lte=timezone.now() - timedelta(days=30))
+        .order_by().values_list("reading_list__user_id", flat=True).distinct()[:100])
+    removed = 0
+    for user in get_user_model().objects.filter(pk__in=owners).order_by("pk"):
+        removed += purge_expired_owner(user)
+    return {"expired_memberships_removed": removed}
+
+
 @shared_task(soft_time_limit=480, time_limit=540)
 def run_reader_data_operation(operation_id, generation, task_id):
     from .privacy import run_operation

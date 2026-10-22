@@ -34,6 +34,6 @@ export function SaveIssueList({ slug, revisionId }: { slug:string;revisionId?:st
   }
   return <section className="issue-save-banner"><div><h2>保存本期书单</h2><p>将已公开作品另存为私人书单。原文版本、页码和笔记请从文章的引用与阅读入口保存。</p></div>
     {session.status==="authenticated"?<>{command?<><button type="button" className="button" disabled={pending} onClick={()=>void act(true)}>核对原保存结果</button><button type="button" disabled={pending} onClick={()=>void act()}>使用原请求重试</button></>:<button type="button" className="button" disabled={pending||!revisionId||Boolean(currentResult)} onClick={()=>void act()}>{pending?"正在保存…":currentResult?"本次保存已核对":"保存书单 ＋"}</button>}</>:<Link href={`/login?next=${encodeURIComponent(`/recommendations/${slug}`)}`}>登录后保存书单</Link>}
-    {message && messageOwner===owner?<p role="status">{message}{currentResult?.saved?<Link href="/account?section=lists">打开我的书单</Link>:null}</p>:null}
+    {message && messageOwner===owner?<p role="status">{message}{currentResult?.saved?<Link href="/account/collections">打开我的书单</Link>:null}</p>:null}
   </section>;
 }

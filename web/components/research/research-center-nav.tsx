@@ -7,7 +7,7 @@ const sections: Array<{ key: ReaderCenterSection; label: string; href: string }>
   { key: "research", label: "我的研究", href: "/account/research" },
   { key: "notes", label: "笔记", href: "/account/notes" },
   { key: "plans", label: "阅读计划", href: "/account/plans" },
-  { key: "lists", label: "书单", href: "/account?section=lists" },
+  { key: "lists", label: "书单", href: "/account/collections" },
   { key: "citation", label: "引文核验", href: "/account/citation-audits" },
   { key: "confirmed", label: "已确认笔记", href: "/account/confirmed-notes" },
   { key: "sources", label: "来源更新", href: "/account/source-updates" },

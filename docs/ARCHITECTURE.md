@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 原私人书单扩展
+
+原ReadingList/Item增目标、标签、稳定专题来源与移除时间，通过0023声明；无第二馆藏。沿原KnowledgeSaveReceipt最小回执和User锁；每小时清理到期关联，正式启用前应用0022/0023并统一验收。公开书目读时复核、本人进度/笔记独立保存、导出不发布。见docs/stl4/BOOKLIST_WORKSPACE_20261023.md。
+
 ## 2026-10-23 认证入口与过期Cookie
 
 AuthEntryView仅用于原登录/注册/找回入口，避免默认JWT读取过期cookie先失败；Cookie模式写入仍显式CSRF。GET login提供CSRF初始化；成功登录轮换CSRF。remember_session作为签名令牌声明在续期时沿用，未扩展期限或权限。重置确认按User→RecoveryCode锁序消费。公开登录浮层共用AuthForm，私人工具不自动重放业务。
