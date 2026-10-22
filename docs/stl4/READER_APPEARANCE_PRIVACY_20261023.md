@@ -1,5 +1,11 @@
 # 读者账户、隐私接口与夜间外观
 
+## 2026-10-23 编辑预览继承日夜外观
+
+前置413522b。FixedPageEditor预览iframe现复制并观察原appearance.ts实际写入的data-theme/theme-choice/text-size/font-family及class/lang；日夜/字号/字体变更同步到原公共预览组件，卸载清理观察器。只做TypeScript noEmit及目标ESLint，不测试/浏览器/业务操作。96/50/63、279契约保持。
+
+M20接续：已直接读取唯一PDF142–143（tmp/pdfs/stl4-final-m20-20261023）。原ScholarsAdmin/KnowledgeVisualEditor、AdminScholarList/Detail/Serializer和原修订发布已审阅；待将新建学者关联既有Person、保存请求回执/账户隔离及终稿主栏/页签/侧栏整合，尚未计入新增完成。
+
 ## 2026-10-23 M19人物规范与身份核对源码接入
 
 M19人物是书目规范实体，沿原User编辑身份，未查阅读者笔记/书签/研究/密钥或私人数量。内部说明/标识来源不加入公开PersonCompact字段；后台private/no-store。规范写入、旧归并/撤回必需owner头，锁内重核token_version/能力；前端换账户清空，中断查回仅保存请求UUID。此为源码检查，不是多账户安全验收。

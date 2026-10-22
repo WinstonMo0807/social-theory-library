@@ -25,6 +25,16 @@ function PreviewViewport({ children }: { children: ReactNode }) {
     if (!mount) return;
     const frameDocument = frameRef.current?.contentDocument;
     if (!frameDocument) return;
+    const copyAppearance = () => {
+      const source = document.documentElement, target = frameDocument.documentElement;
+      target.className = source.className;
+      target.lang = source.lang || "zh-CN";
+      for (const name of ["data-theme", "data-theme-choice", "data-text-size", "data-font-family"]) {
+        const value = source.getAttribute(name);
+        if (value === null) target.removeAttribute(name);
+        else target.setAttribute(name, value);
+      }
+    };
     const copyStyles = () => {
       frameDocument.head.querySelectorAll("[data-preview-stylesheet]").forEach(element => element.remove());
       document.head.querySelectorAll<HTMLLinkElement | HTMLStyleElement>('link[rel="stylesheet"],style').forEach(source => {
@@ -33,15 +43,16 @@ function PreviewViewport({ children }: { children: ReactNode }) {
         if (source instanceof HTMLLinkElement) (clone as HTMLLinkElement).href = source.href;
         frameDocument.head.appendChild(clone);
       });
-      frameDocument.documentElement.className = document.documentElement.className;
-      frameDocument.documentElement.lang = document.documentElement.lang || "zh-CN";
+      copyAppearance();
     };
     copyStyles();
     const styles = new MutationObserver(copyStyles);
     styles.observe(document.head, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["href", "media", "disabled"] });
+    const appearance = new MutationObserver(copyAppearance);
+    appearance.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "lang", "data-theme", "data-theme-choice", "data-text-size", "data-font-family"] });
     const content = new ResizeObserver(() => setHeight(Math.max(320, Math.ceil(mount.scrollHeight))));
     content.observe(mount);
-    return () => { styles.disconnect(); content.disconnect(); };
+    return () => { styles.disconnect(); appearance.disconnect(); content.disconnect(); };
   }, [mount]);
 
   const scale = fitWidth && availableWidth ? Math.min(1, availableWidth / width) : 1;

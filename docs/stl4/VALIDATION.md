@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-23 编辑预览继承日夜外观
+
+前置413522b。FixedPageEditor预览iframe现复制并观察原appearance.ts实际写入的data-theme/theme-choice/text-size/font-family及class/lang；日夜/字号/字体变更同步到原公共预览组件，卸载清理观察器。只做TypeScript noEmit及目标ESLint，不测试/浏览器/业务操作。96/50/63、279契约保持。
+
+M20接续：已直接读取唯一PDF142–143（tmp/pdfs/stl4-final-m20-20261023）。原ScholarsAdmin/KnowledgeVisualEditor、AdminScholarList/Detail/Serializer和原修订发布已审阅；待将新建学者关联既有Person、保存请求回执/账户隔离及终稿主栏/页签/侧栏整合，尚未计入新增完成。
+
 ## M19最终静态记录
 
 最终静态：014138为38 AST/44 SQL编译/三app迁移声明比较、279契约0错误10旧警告；8f93b4为TypeScript noEmit和目标ESLint退出0；e4df31为全部本单元Python语法/CSS2解析退出0。追加异名ID去重后仅重查AST，未执行业务或测试。旧错误诊断保留在上述记录。

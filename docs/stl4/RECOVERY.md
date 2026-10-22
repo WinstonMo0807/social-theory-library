@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-23 编辑预览继承日夜外观
+
+前置413522b。FixedPageEditor预览iframe现复制并观察原appearance.ts实际写入的data-theme/theme-choice/text-size/font-family及class/lang；日夜/字号/字体变更同步到原公共预览组件，卸载清理观察器。只做TypeScript noEmit及目标ESLint，不测试/浏览器/业务操作。96/50/63、279契约保持。
+
+M20接续：已直接读取唯一PDF142–143（tmp/pdfs/stl4-final-m20-20261023）。原ScholarsAdmin/KnowledgeVisualEditor、AdminScholarList/Detail/Serializer和原修订发布已审阅；待将新建学者关联既有Person、保存请求回执/账户隔离及终稿主栏/页签/侧栏整合，尚未计入新增完成。
+
 ## 2026-10-23 M19人物规范与身份核对源码接入
 
 前置d05fd41。PERSON_AUTHORITY_20261023及tmp/stl4-person-checkpoint-20261023.json。M19五个新契约共279，96/50/63；新catalog0075未执行，reading0022/23/24亦待。保留原未提交改动，勿重跑一次性替换/记录脚本。只静态检查，继续M20。
