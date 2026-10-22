@@ -1,5 +1,10 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 引用加入本人书单
+
+原252路径保留，新增lists/{id}/citation（GET回执/POST保存）及undo-citation（POST），共254。强制owner/本人范围、版本、公开来源及回执；签名撤销保护后续编辑和研究/记忆关联。详见CITATION_BOOKLISTS_20261023及生成契约。
+
+
 ## 2026-10-23 R30回放三路径
 
 原249保留；research-projects/{id}/replay（GET/PATCH）、fork-from-replay（POST）、replay-fork-receipt（GET），共252。强制owner，版本及范围核对；详细字段见生成契约与RESEARCH_REPLAY_20261023。

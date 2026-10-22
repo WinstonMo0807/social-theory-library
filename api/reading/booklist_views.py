@@ -111,6 +111,34 @@ class ListLookup(serializers.Serializer):
     request_id = serializers.UUIDField()
 
 
+class CitationListInput(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    expected_version = serializers.CharField(max_length=100)
+    edition_id = serializers.UUIDField()
+    reference = EvidenceReferenceInput(required=False)
+    save_excerpt = serializers.BooleanField(default=True)
+    note = serializers.CharField(max_length=200, allow_blank=True, default="", trim_whitespace=False)
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict) or set(data) - set(self.fields):
+            raise serializers.ValidationError("保存请求包含不支持的字段。")
+        return super().to_internal_value(data)
+
+
+class CitationListOutput(serializers.Serializer):
+    owner_id = serializers.CharField()
+    list_id = serializers.UUIDField()
+    request_id = serializers.UUIDField()
+    exists = serializers.BooleanField()
+    undone = serializers.BooleanField()
+    note_ids = serializers.ListField(child=serializers.UUIDField())
+    undo_token = serializers.CharField(allow_null=True)
+
+
+class CitationListUndo(serializers.Serializer):
+    token = serializers.CharField(max_length=12000)
+
+
 class ListExport(serializers.Serializer):
     expected_version = serializers.CharField(max_length=100)
     format = serializers.ChoiceField(choices=["pdf", "bibtex", "ris", "csv"])
@@ -180,6 +208,32 @@ class BooklistActions:
     def list_owner(self, request):
         if request.headers.get("X-Reader-Owner") != str(request.user.pk):
             raise PermissionDenied("请重新核对当前书单所属账户。")
+
+    @extend_schema(parameters=[OWNER, OpenApiParameter("request_id", str, required=True)], responses=CitationListOutput)
+    @action(detail=True, methods=["get"], url_path="citation")
+    def citation(self, request, pk=None):
+        from . import citation_booklists, research
+        self.list_owner(request)
+        return Response(citation_booklists.lookup(request.user, research.identifier(pk),
+            research.identifier(request.query_params.get("request_id"), "request_id")))
+
+    @citation.mapping.post
+    @extend_schema(parameters=[OWNER], request=CitationListInput, responses=CitationListOutput)
+    def save_citation(self, request, pk=None):
+        from . import citation_booklists, research
+        self.list_owner(request)
+        data = CitationListInput(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(citation_booklists.save(request, research.identifier(pk), data.validated_data))
+
+    @extend_schema(parameters=[OWNER], request=CitationListUndo, responses=CitationListOutput)
+    @action(detail=True, methods=["post"], url_path="undo-citation")
+    def undo_citation(self, request, pk=None):
+        from . import citation_booklists, research
+        self.list_owner(request)
+        data = CitationListUndo(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(citation_booklists.undo(request.user, research.identifier(pk), data.validated_data["token"]))
 
     @extend_schema(parameters=[OWNER, ListPlanPreviewInput], responses=ListPlanPreview)
     @action(detail=True, methods=["get"], url_path="plan-preview")

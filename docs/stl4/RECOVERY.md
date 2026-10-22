@@ -1,5 +1,10 @@
 # 中断恢复最短路径
 
+## 2026-10-23 R34书单引用恢复
+
+前置6024f12，见CITATION_BOOKLISTS_20261023与白名单tmp/stl4-citation-booklists-checkpoint-20261023.json。复用原书单/Annotation/KnowledgeSaveReceipt，签名撤销检查版本和关联；不重跑一次性源码/文档脚本。254契约、96/41/72，无新迁移/测试/浏览器/业务运行。继续分享和全站余项。
+
+
 ## 2026-10-23 R30回放恢复
 
 前置bf44e7d，见RESEARCH_REPLAY_20261023及tmp/stl4-replay-checkpoint-20261023.json。原轮次初始输入与新project_snapshot，旧缺失不回填；fork创建原项目并复用原ResearchImportReceipt，默认关闭记忆授权，no自动检索。252路径、96/40/73，无新迁移，未测试/浏览器/业务运行。继续分享及余项，勿重跑一次性替换/记录脚本。

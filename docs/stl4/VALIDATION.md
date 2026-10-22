@@ -1,5 +1,10 @@
 # 验收记录
 
+## 2026-10-23 R34引用书单
+
+R34书单引用只做静态：15AST/18SQL编译（禁止DB连接）、迁移声明对照、OpenAPI 0错误/10旧警告，3c3a8d退出0；契约/CSS d27496、TS e4342d、目标ESLint6ca668退出0。未测试/浏览器/业务/模型/迁移/生产。
+
+
 ## 2026-10-23 R30静态记录
 
 `.venv/Scripts/python.exe tmp/stl4-replay-static-20261023.py`退出0，13AST/12SQL编译、数据库连接硬阻断、reading迁移声明一致、OpenAPI0错误/10既有catalog提示。`node tmp/stl4-replay-contracts-20261023.mjs`退出0，249+3=252路径与CSS解析。web目录TypeScript noEmit df75c9/057f1c退出0，5文件ESLint b252b8退出0。未测试/浏览器/业务调用/模型/队列/构建/迁移/生产。

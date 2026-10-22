@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-23 R34引用书单
+
+引用抽屉书单命令沿原User→ReadingList锁、原Annotation加密笔记和KnowledgeSaveReceipt；不新增数据副本或模型。选文保存保留文件/修订/范围身份，原annotation_source做严格当前来源复核。签名撤销仅ID/版本，关联研究/记忆时拒绝整批撤销。
+
+
 ## 2026-10-23 私人轮次回放
 
 R30读取原ResearchTurn.selected_refs/scope；新轮次加密保存题名/项目笔记起始快照，不回填旧历史。回放笔记不进入原worker模型上下文。明确分支新建原ResearchProject，选材限定原文且无记忆授权，原ResearchImportReceipt复用最少创建回执保护删除后不重建。无平行研究库和新迁移。见docs/stl4/RESEARCH_REPLAY_20261023.md。

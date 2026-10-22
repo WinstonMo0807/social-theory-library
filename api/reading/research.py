@@ -931,6 +931,19 @@ def source_project(user, data):
 def annotation_source(user, note):
     if note.orphaned or note.asset_sha256 != note.asset.sha256 or note.page.asset_id != note.asset_id:
         return None
+    saved = note.selector.get("citation_reference") if isinstance(note.selector, dict) else None
+    if saved:
+        # Citation-drawer excerpts retain the exact file, text revision and range;
+        # old annotations continue through their original page-based resolver.
+        from django.contrib.auth.models import AnonymousUser
+        try:
+            current = resolve_reference(saved, AnonymousUser())
+        except ValidationError:
+            return None
+        if (current.get("source_status") != "available" or current.get("asset_id") != str(note.asset_id)
+                or current.get("pdf_page") != note.page.index or current.get("quote") != note.quote):
+            return None
+        return compact_reference(current)
     edition = source_queryset("edition", access_for(user)).filter(
         active_catalog_revision__reader_asset_id=note.asset_id).first()
     if edition is None:

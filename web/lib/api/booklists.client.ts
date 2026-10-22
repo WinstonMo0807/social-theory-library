@@ -1,6 +1,7 @@
 import { apiRequest, apiStreamRequest, getServerSessionCredential } from "../api";
 import type { ApiWork } from "./public-catalog";
 import { withPrivateOwner } from "./private-owner";
+import type { EvidenceReference } from "./research.client";
 
 export type BooklistSummary = { id: string; title: string; description: string; goal: string; tags: string[]; version: string; created_at: string; updated_at: string; item_count: number };
 export type BooklistItem = { id: string; work_id: string; order: number; work: ApiWork | null; created_at: string; removed_at: string | null; expires_at: string | null; progress_ratio: number | null; reader_url: string | null };
@@ -8,6 +9,8 @@ export type BooklistWorkspace = { owner_id: string; list: BooklistSummary; items
 export type BooklistDirectory = { owner_id: string; count: number; page: number; total_pages: number; results: BooklistSummary[] };
 export type BooklistCommand = { list_id: string; request_id: string; expected_version: string; action: "create" | "edit" | "add" | "remove" | "restore" | "purge" | "move" | "delete"; title?: string; description?: string; goal?: string; tags?: string[]; work_id?: string; item_id?: string; item_ids?: string[]; direction?: -1 | 1 };
 export type BooklistResult = { owner_id: string; id: string; exists: boolean; receipt: { request_id: string } };
+export type CitationBooklistInput = { request_id: string; expected_version: string; edition_id: string; reference?: EvidenceReference; save_excerpt: boolean; note: string };
+export type CitationBooklistResult = { owner_id: string; list_id: string; request_id: string; exists: boolean; undone: boolean; note_ids: string[]; undo_token: string | null };
 
 export function booklistRequest<T>(owner: string, path: string, options: RequestInit = {}) {
   const signal = AbortSignal.any([AbortSignal.timeout(30000), ...(options.signal ? [options.signal] : [])]);

@@ -13210,6 +13210,128 @@
                 }
             }
         },
+        "/api/reading/lists/{id}/citation/": {
+            "get": {
+                "operationId": "reading_lists_citation_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading list 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CitationListOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_lists_citation_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading list 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationListInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationListInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationListInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CitationListOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/lists/{id}/create-plan/": {
             "post": {
                 "operationId": "reading_lists_create_plan_create",
@@ -13451,6 +13573,74 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ListPlanPreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/lists/{id}/undo-citation/": {
+            "post": {
+                "operationId": "reading_lists_undo_citation_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading list 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationListUndoRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationListUndoRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CitationListUndoRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CitationListOutput"
                                 }
                             }
                         },
@@ -22429,6 +22619,96 @@
                 ],
                 "type": "string",
                 "description": "* `citation_identification` - citation_identification\n* `bibliography_identity` - bibliography_identity\n* `version_page` - version_page\n* `scan_ocr` - scan_ocr"
+            },
+            "CitationListInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "reference": {
+                        "$ref": "#/components/schemas/EvidenceReferenceInputRequest"
+                    },
+                    "save_excerpt": {
+                        "type": "boolean",
+                        "default": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 200
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "expected_version",
+                    "request_id"
+                ]
+            },
+            "CitationListOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "list_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "undone": {
+                        "type": "boolean"
+                    },
+                    "note_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "undo_token": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "exists",
+                    "list_id",
+                    "note_ids",
+                    "owner_id",
+                    "request_id",
+                    "undo_token",
+                    "undone"
+                ]
+            },
+            "CitationListUndoRequest": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 12000
+                    }
+                },
+                "required": [
+                    "token"
+                ]
             },
             "CitationOCROutput": {
                 "type": "object",

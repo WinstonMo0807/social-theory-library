@@ -2808,6 +2808,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/lists/{id}/citation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_citation_retrieve"];
+        put?: never;
+        post: operations["reading_lists_citation_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/lists/{id}/create-plan/": {
         parameters: {
             query?: never;
@@ -2866,6 +2882,22 @@ export interface paths {
         get: operations["reading_lists_plan_preview_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/{id}/undo-citation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_lists_undo_citation_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5115,6 +5147,32 @@ export interface components {
          * @enum {string}
          */
         ChecksEnum: "citation_identification" | "bibliography_identity" | "version_page" | "scan_ocr";
+        CitationListInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            /** Format: uuid */
+            edition_id: string;
+            reference?: components["schemas"]["EvidenceReferenceInputRequest"];
+            /** @default true */
+            save_excerpt: boolean;
+            /** @default  */
+            note: string;
+        };
+        CitationListOutput: {
+            owner_id: string;
+            /** Format: uuid */
+            list_id: string;
+            /** Format: uuid */
+            request_id: string;
+            exists: boolean;
+            undone: boolean;
+            note_ids: string[];
+            undo_token: string | null;
+        };
+        CitationListUndoRequest: {
+            token: string;
+        };
         CitationOCROutput: {
             readonly progress: unknown;
             readonly units: unknown;
@@ -19958,6 +20016,62 @@ export interface operations {
             };
         };
     };
+    reading_lists_citation_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitationListOutput"];
+                };
+            };
+        };
+    };
+    reading_lists_citation_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CitationListInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CitationListInputRequest"];
+                "multipart/form-data": components["schemas"]["CitationListInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitationListOutput"];
+                };
+            };
+        };
+    };
     reading_lists_create_plan_create: {
         parameters: {
             query?: never;
@@ -20063,6 +20177,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListPlanPreview"];
+                };
+            };
+        };
+    };
+    reading_lists_undo_citation_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CitationListUndoRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CitationListUndoRequest"];
+                "multipart/form-data": components["schemas"]["CitationListUndoRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitationListOutput"];
                 };
             };
         };
