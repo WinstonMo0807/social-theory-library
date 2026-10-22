@@ -7,6 +7,8 @@ from rest_framework.views import APIView
 from collections import Counter
 
 from common.permissions import CanAccessBackOffice, CanMergeAuthority
+from common.private_responses import PrivateAccountResponses
+from rest_framework.exceptions import PermissionDenied
 from catalog.models import Person, PersonMergeRecord
 from catalog.services.person_resolution import duplicate_people, person_merge_preview, person_business_impact
 from catalog.services.person_merges import merge_people, prepare_person_merge, rollback_person_merge, rollback_preview
@@ -40,7 +42,14 @@ class PersonSearchResponseSerializer(serializers.Serializer):
     has_more = serializers.BooleanField()
 
 
-class AdminPersonSearchView(APIView):
+class PersonPrivateView(PrivateAccountResponses, APIView):
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if request.method not in {"GET", "HEAD", "OPTIONS"} and request.headers.get("X-Editor-Owner") != str(request.user.pk):
+            raise PermissionDenied("请重新核对当前编辑账户后操作。")
+
+
+class AdminPersonSearchView(PersonPrivateView):
     permission_classes = [CanAccessBackOffice]
 
     @extend_schema(parameters=[PersonSearchQuerySerializer], responses=PersonSearchResponseSerializer)
@@ -189,7 +198,7 @@ def _record_response(record):
     return response
 
 
-class AdminPersonDuplicateView(APIView):
+class AdminPersonDuplicateView(PersonPrivateView):
     permission_classes = [CanAccessBackOffice]
 
     @extend_schema(parameters=[PersonDuplicateQuerySerializer], responses=PersonDuplicateResponseSerializer)
@@ -202,7 +211,7 @@ class AdminPersonDuplicateView(APIView):
         return response
 
 
-class AdminPersonMergePreviewView(APIView):
+class AdminPersonMergePreviewView(PersonPrivateView):
     permission_classes = [CanMergeAuthority]
 
     @extend_schema(parameters=[PersonMergePreviewQuerySerializer], responses=PersonMergePreviewResponseSerializer)
@@ -222,7 +231,7 @@ class AdminPersonMergePreviewView(APIView):
         return response
 
 
-class AdminPersonMergeView(APIView):
+class AdminPersonMergeView(PersonPrivateView):
     permission_classes = [CanMergeAuthority]
 
     @extend_schema(request=PersonMergeRequestSerializer, responses=PersonMergeRecordSerializer)
@@ -241,7 +250,7 @@ class AdminPersonMergeView(APIView):
         return _record_response(record)
 
 
-class AdminPersonMergeRecordView(APIView):
+class AdminPersonMergeRecordView(PersonPrivateView):
     permission_classes = [CanMergeAuthority]
 
     @extend_schema(responses=PersonMergeRecordSerializer)
@@ -261,7 +270,7 @@ class PersonMergeHistoryItemSerializer(serializers.Serializer):
     rolled_back_at = serializers.DateTimeField(allow_null=True)
 
 
-class AdminPersonMergeHistoryView(APIView):
+class AdminPersonMergeHistoryView(PersonPrivateView):
     permission_classes = [CanMergeAuthority]
 
     @extend_schema(parameters=[PersonMergeHistoryQuerySerializer], responses=PersonMergeHistoryItemSerializer(many=True))
@@ -278,7 +287,7 @@ class AdminPersonMergeHistoryView(APIView):
         return response
 
 
-class AdminPersonMergeRollbackView(APIView):
+class AdminPersonMergeRollbackView(PersonPrivateView):
     permission_classes = [CanMergeAuthority]
 
     @extend_schema(request=PersonMergeRollbackRequestSerializer, responses=PersonMergeRecordSerializer)

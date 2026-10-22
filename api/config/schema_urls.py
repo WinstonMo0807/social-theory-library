@@ -32,6 +32,7 @@ VERIFIED_NAMES = {
     "knowledge-image-selection",
     "scholar-portrait-selection",
     "person-search", "person-merge-history",
+    "person-authority-directory", "person-authority-preview", "person-authority-command", "person-authority-receipt", "person-authority-detail",
     "person-duplicates", "person-merge-preview",
     "person-merge", "person-merge-record", "person-merge-rollback",
     "cataloging-session-list", "cataloging-session-detail", "cataloging-session-abandon",

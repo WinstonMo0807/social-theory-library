@@ -883,6 +883,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/people/{person_id}/workspace/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["person_authority_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/people/merge-records/": {
         parameters: {
             query?: never;
@@ -925,6 +941,70 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["catalog_admin_people_merge_records_rollback_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/people/workspace/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["person_authority_directory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/people/workspace/command/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_people_workspace_command_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/people/workspace/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_people_workspace_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/people/workspace/receipts/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_people_workspace_receipts_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4869,15 +4949,6 @@ export interface components {
             editorial_status?: string;
         };
         /**
-         * @description * `alias` - 别名
-         *     * `translation` - 译名
-         *     * `abbreviation` - 简称
-         *     * `historical` - 历史名称
-         *     * `transliteration` - 音译
-         * @enum {string}
-         */
-        AliasTypeEnum: "alias" | "translation" | "abbreviation" | "historical" | "transliteration";
-        /**
          * @description * `confirm` - confirm
          *     * `clear` - clear
          * @enum {string}
@@ -5061,6 +5132,14 @@ export interface components {
          * @enum {string}
          */
         AuditCommandInputActionEnum: "cancel" | "match" | "match_private" | "sources" | "link" | "decision" | "analyze" | "retry";
+        /**
+         * @description * `accepted` - accepted
+         *     * `ignored` - ignored
+         *     * `corrected` - corrected
+         *     * `needs_review` - needs_review
+         * @enum {string}
+         */
+        AuditCommandInputDecisionEnum: "accepted" | "ignored" | "corrected" | "needs_review";
         AuditCommandInputRequest: {
             expected_revision: number;
             action: components["schemas"]["AuditCommandInputActionEnum"];
@@ -5075,7 +5154,7 @@ export interface components {
             occurrence_id?: string;
             occurrence_ids?: string[];
             entry_ids?: string[];
-            decision?: components["schemas"]["DecisionEnum"];
+            decision?: components["schemas"]["AuditCommandInputDecisionEnum"];
             note?: string;
             /** @description 仅保存本人的校正文案，不改写上传原稿或原始识别文字。 */
             corrected_text?: string;
@@ -5165,16 +5244,134 @@ export interface components {
         AuthNoticeOutput: {
             detail: string;
         };
+        AuthorityCommandRequest: {
+            operation: components["schemas"]["PersonAuthorityOperationEnum"];
+            /** Format: uuid */
+            person_id?: string;
+            expected_version?: string;
+            values?: components["schemas"]["AuthorityValuesRequest"];
+            variants?: components["schemas"]["AuthorityVariantRequest"][];
+            /** Format: uuid */
+            target_id?: string;
+            target_version?: string;
+            decision?: components["schemas"]["PersonIdentityDecisionEnum"];
+            reason: string;
+            /** Format: uuid */
+            request_id: string;
+            confirmed: boolean;
+            preview_hash: string;
+        };
+        AuthorityDetail: {
+            actor_id: string;
+            /** Format: uuid */
+            id: string;
+            version: string;
+            /** Format: date-time */
+            updated_at: string;
+            values: unknown;
+            variants: unknown[];
+            identifiers: unknown[];
+            can_edit: boolean;
+            can_verify: boolean;
+            /** Format: uuid */
+            scholar_id: string | null;
+            portrait_url: string;
+            portrait_notice: string;
+            public_url: string;
+            pending_draft: boolean;
+            impact: unknown;
+            impact_complete: boolean;
+            history: unknown[];
+        };
+        AuthorityDirectory: {
+            actor_id: string;
+            count: number;
+            page: number;
+            total_pages: number;
+            results: components["schemas"]["PersonResolutionSummary"][];
+        };
+        AuthorityInputRequest: {
+            operation: components["schemas"]["PersonAuthorityOperationEnum"];
+            /** Format: uuid */
+            person_id?: string;
+            expected_version?: string;
+            values?: components["schemas"]["AuthorityValuesRequest"];
+            variants?: components["schemas"]["AuthorityVariantRequest"][];
+            /** Format: uuid */
+            target_id?: string;
+            target_version?: string;
+            decision?: components["schemas"]["PersonIdentityDecisionEnum"];
+            reason: string;
+        };
         /**
-         * @description * `draft` - 草稿
-         *     * `needs_review` - 待消歧
-         *     * `verified` - 已核验
-         *     * `rejected` - 已拒绝
-         *     * `merged` - 已合并
-         *     * `archived` - 已归档
+         * @description * `alias` - 别名
+         *     * `translation` - 译名
+         *     * `abbreviation` - 简称
+         *     * `historical` - 历史名称
+         *     * `transliteration` - 音译
          * @enum {string}
          */
-        AuthorityStatusEnum: "draft" | "needs_review" | "verified" | "rejected" | "merged" | "archived";
+        AuthorityNameTypeEnum: "alias" | "translation" | "abbreviation" | "historical" | "transliteration";
+        AuthorityPreview: {
+            actor_id: string;
+            /** Format: uuid */
+            person_id: string | null;
+            preview_hash: string;
+            fields: string[];
+            edition_count: number;
+            profile_count: number;
+            public_update: boolean;
+            reason: string;
+            decision: string;
+            before: unknown;
+            after: unknown;
+        };
+        AuthorityReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            person_id: string;
+            /** Format: date-time */
+            created_at: string;
+            operation: string;
+            event_ids: string[];
+        };
+        /**
+         * @description * `draft` - draft
+         *     * `needs_review` - needs_review
+         *     * `verified` - verified
+         * @enum {string}
+         */
+        AuthorityValuesAuthorityStatusEnum: "draft" | "needs_review" | "verified";
+        AuthorityValuesRequest: {
+            preferred_name: string;
+            original_name: string;
+            preferred_language: string;
+            original_language: string;
+            country_region: string;
+            birth_year: number | null;
+            death_year: number | null;
+            biography: string;
+            authority_note: string;
+            external_ids: {
+                [key: string]: unknown;
+            };
+            identifier_sources: {
+                [key: string]: string;
+            };
+            authority_status: components["schemas"]["AuthorityValuesAuthorityStatusEnum"];
+        };
+        AuthorityVariantRequest: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            language: string;
+            variant_type: components["schemas"]["AuthorityNameTypeEnum"];
+            source_note: string;
+            is_verified: boolean;
+            displayable: boolean;
+        };
         /**
          * @description * `all` - all
          *     * `readable` - readable
@@ -5815,14 +6012,6 @@ export interface components {
          * @enum {string}
          */
         DatePrecisionEnum: "unknown" | "year" | "approximate" | "range";
-        /**
-         * @description * `accepted` - accepted
-         *     * `ignored` - ignored
-         *     * `corrected` - corrected
-         *     * `needs_review` - needs_review
-         * @enum {string}
-         */
-        DecisionEnum: "accepted" | "ignored" | "corrected" | "needs_review";
         DirectoryDiscipline: {
             /** Format: uuid */
             id: string;
@@ -7593,7 +7782,7 @@ export interface components {
             readonly id: string;
             alias: string;
             language?: string;
-            alias_type?: components["schemas"]["AliasTypeEnum"];
+            alias_type?: components["schemas"]["AuthorityNameTypeEnum"];
             readonly normalized_alias: string;
         };
         KnowledgeNodeDetail: {
@@ -10339,13 +10528,20 @@ export interface components {
             retained_completed: string[];
             retained_notes: string[];
         };
+        /**
+         * @description * `create` - create
+         *     * `update` - update
+         *     * `decision` - decision
+         * @enum {string}
+         */
+        PersonAuthorityOperationEnum: "create" | "update" | "decision";
         PersonCompact: {
             /** Format: uuid */
             readonly id: string;
             preferred_name: string;
             original_name?: string;
             readonly aliases: string[];
-            authority_status?: components["schemas"]["AuthorityStatusEnum"];
+            authority_status?: components["schemas"]["PersonCompactAuthorityStatusEnum"];
             /** Format: int64 */
             birth_year?: number | null;
             /** Format: int64 */
@@ -10355,6 +10551,16 @@ export interface components {
             readonly portrait_media: components["schemas"]["PublicCoverMedia"] | null;
             readonly scholar_slug: string | null;
         };
+        /**
+         * @description * `draft` - 草稿
+         *     * `needs_review` - 待消歧
+         *     * `verified` - 已核验
+         *     * `rejected` - 已拒绝
+         *     * `merged` - 已合并
+         *     * `archived` - 已归档
+         * @enum {string}
+         */
+        PersonCompactAuthorityStatusEnum: "draft" | "needs_review" | "verified" | "rejected" | "merged" | "archived";
         PersonDuplicateCandidate: {
             person: components["schemas"]["PersonResolutionSummary"];
             matches: unknown[];
@@ -10368,6 +10574,12 @@ export interface components {
             automatic_merge: boolean;
             matching_policy: string;
         };
+        /**
+         * @description * `independent` - independent
+         *     * `needs_evidence` - needs_evidence
+         * @enum {string}
+         */
+        PersonIdentityDecisionEnum: "independent" | "needs_evidence";
         PersonLexiconEntry: {
             /** Format: uuid */
             id: string;
@@ -16528,6 +16740,27 @@ export interface operations {
             };
         };
     };
+    person_authority_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorityDetail"];
+                };
+            };
+        };
+    };
     catalog_admin_people_merge_records_list: {
         parameters: {
             query: {
@@ -16593,6 +16826,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PersonMergeRecord"];
+                };
+            };
+        };
+    };
+    person_authority_directory: {
+        parameters: {
+            query?: {
+                page?: number;
+                search?: string;
+                /**
+                 * @description * `` -
+                 *     * `draft` - draft
+                 *     * `needs_review` - needs_review
+                 *     * `verified` - verified
+                 *     * `rejected` - rejected
+                 *     * `merged` - merged
+                 *     * `archived` - archived
+                 */
+                status?: "" | "draft" | "needs_review" | "verified" | "rejected" | "merged" | "archived";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorityDirectory"];
+                };
+            };
+        };
+    };
+    catalog_admin_people_workspace_command_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorityCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AuthorityCommandRequest"];
+                "multipart/form-data": components["schemas"]["AuthorityCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorityReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_people_workspace_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorityInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AuthorityInputRequest"];
+                "multipart/form-data": components["schemas"]["AuthorityInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorityPreview"];
+                };
+            };
+        };
+    };
+    catalog_admin_people_workspace_receipts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorityReceipt"];
                 };
             };
         };

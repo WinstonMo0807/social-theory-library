@@ -1,4 +1,5 @@
 import { apiRequest } from "../api";
+import { withPrivateOwner } from "./private-owner";
 import type { components } from "./generated/schema";
 
 export type PersonSummary = components["schemas"]["PersonResolutionSummary"];
@@ -60,14 +61,14 @@ export const personApi = {
   record: (id: string) => `/catalog/admin/people/merge-records/${encodeURIComponent(id)}/`,
 };
 
-export function mergePerson(source: string, input: MergeInput, credential: string) {
-  return apiRequest<PersonMerge>(`/catalog/admin/people/${encodeURIComponent(source)}/merge/`, {
-    method: "POST", body: JSON.stringify(input),
-  }, credential);
+export function mergePerson(source: string, input: MergeInput, credential: string, owner: string) {
+  return withPrivateOwner(owner, () => apiRequest<PersonMerge>(`/catalog/admin/people/${encodeURIComponent(source)}/merge/`, {
+    method: "POST", body: JSON.stringify(input), headers: { "X-Editor-Owner": owner }, signal: AbortSignal.timeout(60000),
+  }, credential));
 }
 
-export function rollbackPerson(id: string, input: RollbackInput, credential: string) {
-  return apiRequest<PersonMerge>(`${personApi.record(id)}rollback/`, {
-    method: "POST", body: JSON.stringify(input),
-  }, credential);
+export function rollbackPerson(id: string, input: RollbackInput, credential: string, owner: string) {
+  return withPrivateOwner(owner, () => apiRequest<PersonMerge>(`${personApi.record(id)}rollback/`, {
+    method: "POST", body: JSON.stringify(input), headers: { "X-Editor-Owner": owner }, signal: AbortSignal.timeout(60000),
+  }, credential));
 }

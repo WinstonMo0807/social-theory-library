@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M19人物规范与身份核对源码接入
+
+人物规范继续使用原Person、PersonNameVariant、Contribution、ScholarProfile、AuditEvent、QueryLexicon与知识发布事件。0075仅为原Person追加语言/国别/内部说明/标识来源五字段，不新建人物库。规范编辑与学者发布版本分开；存在学者草稿先完成版本核对。新字段默认空，旧归并回执只在新增字段仍为空时兼容，真实后续改动仍阻止撤回。
+
 ## 2026-10-23 M25账户管理
 
 M25唯一User与AuditEvent服务，HMAC版本+实际能力预览+升序User锁+UUID审计回执。旧账户写入地址收敛同一服务，角色/状态/密码变化统一token_version退役，inactive无后台能力。移除旧用户列表读者私人计数。没有新账户表、角色体系或迁移；见docs/stl4/ACCOUNT_MANAGEMENT_20261023.md。

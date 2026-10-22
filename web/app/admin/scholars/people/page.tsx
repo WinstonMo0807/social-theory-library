@@ -1,7 +1,7 @@
-import { PersonResolutionWorkspace } from "@/components/admin/knowledge/person-resolution-workspace";
+import { PersonAuthorityWorkspace } from "@/components/admin/knowledge/person-authority-workspace";
 
-export const metadata = { title: "人物查重与整理" };
+export const metadata = { title: "人物规范库与身份核对" };
 
 export default function PeoplePage() {
-  return <PersonResolutionWorkspace />;
+  return <PersonAuthorityWorkspace />;
 }

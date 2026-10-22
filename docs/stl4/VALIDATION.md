@@ -1,5 +1,13 @@
 # 验收记录
 
+## M19最终静态记录
+
+最终静态：014138为38 AST/44 SQL编译/三app迁移声明比较、279契约0错误10旧警告；8f93b4为TypeScript noEmit和目标ESLint退出0；e4df31为全部本单元Python语法/CSS2解析退出0。追加异名ID去重后仅重查AST，未执行业务或测试。旧错误诊断保留在上述记录。
+
+## 2026-10-23 M19人物规范与身份核对源码接入
+
+M19声明/SQL/契约静态记录见PERSON_AUTHORITY_20261023。首次TS5522bd发现三个nullable凭据参数，已改为等待有效会话；后续991349、9c4880、d96b91退出0。schema首次新增枚举/operationId警告，嵌套类override曾无法加载，现显式同序名称类型与唯一operationId，0966e9为0错误/10旧警告。8585e6 AST4/CSS2退出0。未运行测试/浏览器/业务/迁移，最终静态另记。
+
 ## 2026-10-23 NEW-R04研究总览源码接入
 
 ea404a：AST33/38次SQLite与PostgreSQL SQL编译/账户及reading迁移声明比较一致，禁止DB连接；274契约、CSS解析退出0，schema 0错误/10旧catalog警告。TypeScript noEmit及目标ESLint636d4f退出0。仅静态，无测试、浏览器、实际操作或视觉验收。

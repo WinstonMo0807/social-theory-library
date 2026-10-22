@@ -20,6 +20,14 @@
 .rows > li { display: grid; gap: 6px; border-bottom: 1px solid var(--line); padding: 12px 0; }
 .comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .comparison > section { min-width: 0; padding: 16px; border: 1px solid var(--line); }
+.identityCompare { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .7fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+.identityCompare > section { min-width: 0; padding: 16px; border: 1px solid var(--line); }
+.identityCompare h4 { font-family: var(--serif); font-size: 18px; margin: 12px 0; }
+.compareSource { grid-column: 1; grid-row: 1; }
+.compareTarget { grid-column: 3; grid-row: 1; }
+.compareResult { grid-column: 2; grid-row: 1; background: var(--paper); padding: 18px; border: 1px solid var(--line); font-size: 13px; }
+.compareResult p { margin: 12px 0; }
+@media (max-width: 850px) { .identityCompare { grid-template-columns: 1fr; } .compareSource, .compareTarget, .compareResult { grid-column: 1; grid-row: auto; } .compareSource { order: 0; } .compareResult { order: 1; } .compareTarget { order: 2; } }
 .fields { margin: 12px 0; font-size: .875rem; }
 .fields > div { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .fields dt { font-weight: 500; overflow-wrap: anywhere; }

@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import { ApiRequestError, getServerSessionCredential } from "@/lib/api";
 import { createRequestKey } from "@/lib/request-key";
+import { PrivateOwnerVerificationError } from "@/lib/api/private-owner";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import {
   asRecord, canConfirmPersonMerge, isPersonId, mergePerson, personApi, personPage, rollbackPerson,
@@ -46,7 +47,7 @@ function PersonLabel({ person }: { person: PersonSummary }) {
   return <><strong>{person.preferred_name}</strong><span>{[person.original_name, person.birth_year === null ? "出生年未填写" : `${person.birth_year}年出生`, statusLabels[person.authority_status] || person.authority_status].filter(Boolean).join(" · ")}</span></>;
 }
 
-function PersonPicker({ sourceId = "", credential }: { sourceId?: string; credential: string }) {
+export function PersonPicker({ sourceId = "", credential }: { sourceId?: string; credential: string }) {
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState("");
   const { data, error, loading, retry } = useApiResource<PersonSearch>(personApi.search(submitted), credential);
@@ -67,7 +68,7 @@ function Details({ value }: { value: unknown }) {
   return <dl className={styles.fields}>{Object.entries(asRecord(value)).map(([field, item]) => <div key={field}><dt>{fieldLabels[field] || field}</dt><dd>{textValue(item)}</dd></div>)}</dl>;
 }
 
-function History({ sourceId, credential }: { sourceId: string; credential: string }) {
+export function History({ sourceId, credential }: { sourceId: string; credential: string }) {
   const { data, error, loading, retry } = useApiResource<MergeHistory[]>(personApi.history(sourceId), credential);
   return <section className={`admin-panel ${styles.panel}`} aria-label="最近合并记录"><div className={styles.heading}><h2>最近合并记录</h2><ActionButton className="button secondary" onClick={retry}>刷新操作记录</ActionButton></div>
     <p>网络中断或重新打开页面后，可在这里核对已保存的操作。最多显示最近20次。</p>
@@ -98,7 +99,10 @@ function SourceWorkspace({ sourceId, targetId, allowed, credential }: { sourceId
 function PreviewFacts({ preview }: { preview: PersonPreview }) {
   const source = asRecord(preview.source), target = asRecord(preview.target);
   return <>
-    <div className={styles.comparison}>{[["来源人物", source, preview.source_profile], ["保留人物", target, preview.target_profile]].map(([label, person, profile]) => <section key={String(label)} aria-label={`核对${label}`}><h3>{String(label)}</h3><strong>{textValue(asRecord(person).preferred_name)}</strong><p>{textValue(asRecord(person).original_name)} · {textValue(asRecord(person).birth_year)}—{textValue(asRecord(person).death_year)}</p><p>{textValue(asRecord(person).biography)}</p><details><summary>名称、身份与技术明细</summary><Details value={Object.fromEntries(["id", "original_name", "birth_year", "death_year", "authority_status", "aliases", "external_ids", "biography"].map((field) => [field, asRecord(person)[field]]))} /></details>{profile ? <details><summary>查看学者档案</summary><Details value={profile} /></details> : <p>没有独立学者档案</p>}</section>)}</div>
+    <div className={styles.identityCompare}>
+      {[["候选 A · 待归并记录", source], ["候选 B · 保留人物", target]].map(([label, person], index) => <section key={String(label)} className={index ? styles.compareTarget : styles.compareSource}><h3>{String(label)}</h3><h4>{textValue(asRecord(person).preferred_name)}</h4><p>{textValue(asRecord(person).original_name)}</p><dl className={styles.fields}>{["birth_year", "death_year", "country_region", "biography", "external_ids"].map(field => <div key={field}><dt>{field === "country_region" ? "国别／地区" : fieldLabels[field]}</dt><dd>{textValue(asRecord(person)[field])}</dd></div>)}</dl><h4>已保存的异名与来源</h4>{preview.references.filter(group => asRecord(group).model === "catalog.PersonNameVariant").flatMap(group => { const rows = asRecord(group)[index ? "target_rows" : "source_rows"]; return Array.isArray(rows) ? rows : []; }).map((row, at) => <p key={at}>{textValue(asRecord(row).name)} · {asRecord(row).is_verified ? "已核验" : "待核验"}<br /><small>{textValue(asRecord(row).source_note)}</small></p>)}</section>)}
+      <aside className={styles.compareResult}><h3>身份差异核对</h3><p>{preview.identity_conflicts.length ? "身份信息存在差异" : "当前字段未发现明确冲突"}</p>{preview.identity_conflicts.map((item, index) => <p key={index}>{textValue(asRecord(item).field)}：{textValue(asRecord(item).source)} / {textValue(asRecord(item).target)}</p>)}<p>名称相近或字段相同都不能单独证明同一身份。请结合原始署名与来源再判断。</p><strong>保留方向</strong><p>候选 A 的无冲突引用 → 候选 B；双方原始基础资料和历史记录保留。</p></aside>
+    </div>
     <p>涉及 {preview.affected_works.length} 部作品、{preview.affected_edition_count} 个版本和 {preview.publication_revision_count} 条历史公开修订。历史修订不会被覆盖。</p>
     {preview.business_impact ? <BusinessImpact impact={preview.business_impact} /> : null}
     <details><summary>查看作品与版本</summary><ul className={styles.rows}>{preview.affected_works.map((value, i) => <li key={i}><strong>{textValue(asRecord(value).title)}</strong><small>{textValue(asRecord(value).id)}</small></li>)}</ul>{preview.affected_editions.map((value, i) => <details key={i}><summary>版本 {textValue(asRecord(value).id)}</summary><Details value={value} /></details>)}</details>
@@ -116,12 +120,12 @@ function PreviewFacts({ preview }: { preview: PersonPreview }) {
   </>;
 }
 
-function BusinessImpact({ impact }: { impact: PersonBusinessImpact }) {
+export function BusinessImpact({ impact }: { impact: PersonBusinessImpact }) {
   return <section aria-label="作品职责与公开位置"><h3>作品、职责与公开位置</h3><p>只归并人物身份；下列作者、译者及编者职责保持不变。相似名称不等于同一人物。</p><ul className={styles.rows}>{impact.editions.map((row) => <li key={row.edition_id}><strong>{row.title}</strong><span>{row.edition_label}</span><p>{row.roles.map((role) => `${role.name}：${role.role_label}${role.approved ? "（已确认）" : "（待确认）"}`).join("；") || "此版本通过其他规范关系受到影响"}</p><p>{row.publication.detail}</p><div className={styles.actions}><Link prefetch={false} href={row.editor_url}>核对当前版本与署名</Link><Link prefetch={false} href={row.publication_url}>查看发布更新</Link>{row.publication.public_url ? <Link prefetch={false} href={row.publication.public_url} target="_blank">核验公开位置</Link> : null}</div></li>)}</ul>{!impact.editions.length ? <p>没有需要更新的作品版本；人物和学者关系仍按影响预览处理。</p> : null}
     {impact.events.length ? <details open><summary>公开更新的实际处理结果</summary>{impact.events.map((event) => <article key={event.id}><strong>{event.title} · {event.status_label}</strong><p>{event.deliveries.map((row) => `${row.label}：${row.status}（来源修订${row.source_revision}）`).join("；")}</p>{event.error_code ? <p>异常 {event.error_code}，请从原发布记录检查并恢复。</p> : null}<Link prefetch={false} href={event.inspect_url}>查看关联处理</Link><small> 事件 {event.id}</small></article>)}</details> : null}</section>;
 }
 
-function PreviewLoader({ sourceId, targetId, credential }: { sourceId: string; targetId: string; credential: string }) {
+export function PreviewLoader({ sourceId, targetId, credential }: { sourceId: string; targetId: string; credential: string }) {
   const resource = useApiResource<PersonPreview>(personApi.preview(sourceId, targetId), credential);
   return <section className={`admin-panel ${styles.panel}`} aria-label="合并影响预览"><h2>合并影响预览</h2>
     {resource.error ? <Failure message={resource.error} retry={resource.retry} label="重新预览" /> : resource.loading ? <p role="status">正在核对双方资料与关联…</p> : resource.data ? <MergeReview key={resource.data.fingerprint} preview={resource.data} sourceId={sourceId} targetId={targetId} credential={credential} refresh={resource.retry} /> : null}
@@ -129,6 +133,7 @@ function PreviewLoader({ sourceId, targetId, credential }: { sourceId: string; t
 }
 
 function MergeReview({ preview, sourceId, targetId, credential, refresh }: { preview: PersonPreview; sourceId: string; targetId: string; credential: string; refresh: () => void }) {
+  const user = useAdminSession();
   const router = useRouter();
   const active = useActiveView();
   const sending = useRef(false);
@@ -145,14 +150,14 @@ function MergeReview({ preview, sourceId, targetId, credential, refresh }: { pre
     sending.current = true;
     setBusy(true); setFailure("");
     try {
-      const result = await mergePerson(sourceId, input, credential);
+      const result = await mergePerson(sourceId, input, credential, String(user?.id || ""));
       if (!active.current) return;
       router.replace(personPage(sourceId, "", result.id));
     } catch (reason) {
       if (!active.current) return;
       // An HTTP error after a committed write or a lost response is not proof
       // of failure. Reuse the exact body/key until the outcome is known.
-      const knownRejection = reason instanceof ApiRequestError && [400, 401, 403, 404, 409].includes(reason.status);
+      const knownRejection = reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400, 401, 403, 404, 409].includes(reason.status);
       setUncertain(!knownRejection);
       setFailure(reason instanceof Error ? reason.message : "未收到完整操作结果。");
       setConfirm(false);
@@ -169,7 +174,7 @@ function MergeReview({ preview, sourceId, targetId, credential, refresh }: { pre
   </>;
 }
 
-function RecordWorkspace({ recordId, credential }: { recordId: string; credential: string }) {
+export function RecordWorkspace({ recordId, credential }: { recordId: string; credential: string }) {
   const resource = useApiResource<PersonMerge>(personApi.record(recordId), credential);
   return <section className={`admin-panel ${styles.panel}`} aria-label="人物合并操作记录"><h2>人物合并操作记录</h2>
     {resource.error ? <Failure message={resource.error} retry={resource.retry} label="重新读取操作" /> : resource.loading ? <p role="status">正在核对操作与当前撤回条件…</p> : resource.data ? <RecordReview key={`${resource.data.id}:${resource.data.status}:${rollbackState(resource.data).fingerprint}`} record={resource.data} credential={credential} refresh={resource.retry} /> : null}
@@ -177,6 +182,7 @@ function RecordWorkspace({ recordId, credential }: { recordId: string; credentia
 }
 
 function RecordReview({ record, credential, refresh }: { record: PersonMerge; credential: string; refresh: () => void }) {
+  const user = useAdminSession();
   const active = useActiveView();
   const sending = useRef(false);
   const [busy, setBusy] = useState(false), [confirm, setConfirm] = useState(false), [failure, setFailure] = useState("");
@@ -184,7 +190,7 @@ function RecordReview({ record, credential, refresh }: { record: PersonMerge; cr
   async function rollback() {
     if (sending.current || !confirm || !reversal.canRollback) return;
     sending.current = true; setBusy(true); setFailure("");
-    try { await rollbackPerson(record.id, { confirmed: true, fingerprint: reversal.fingerprint }, credential); if (active.current) refresh(); }
+    try { await rollbackPerson(record.id, { confirmed: true, fingerprint: reversal.fingerprint }, credential, String(user?.id || "")); if (active.current) refresh(); }
     catch (reason) { if (active.current) { setFailure(reason instanceof Error ? reason.message : "未收到撤回结果。"); setConfirm(false); } }
     finally { sending.current = false; if (active.current) setBusy(false); }
   }

@@ -186,6 +186,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "PersonAuthorityOperationEnum": ["create", "update", "decision"],
+        "PersonIdentityDecisionEnum": ["independent", "needs_evidence"],
+        "AuthorityNameTypeEnum": [("alias", "别名"), ("translation", "译名"), ("abbreviation", "简称"), ("historical", "历史名称"), ("transliteration", "音译")],
         "AccountManagementOperationEnum": ["create", "update", "password"],
         "AssignableAccountRoleEnum": ["reader", "editor", "admin"],
         "EditorialAssistanceOperationEnum": ["outline", "guide", "comparison"],

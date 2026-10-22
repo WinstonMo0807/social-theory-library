@@ -26,6 +26,7 @@ from catalog.services.person_resolution import (
 from catalog.services.query_lexicon.mutations import acquire_entity_lock, acquire_generation_lock
 from catalog.services.topics import _has_identifier, _replace_identifier
 from ingestion.models import AuditEvent, EntityResolutionCandidate, FieldLock
+from accounts.models import User
 
 
 MERGE_VERSION = "person-merge-noncolliding-v1"
@@ -35,6 +36,14 @@ PERSON_FIELDS = {"authors", "translators"}
 def _owner(actor):
     if not has_capability(actor, Capability.MERGE_AUTHORITY):
         raise PermissionDenied("只有 System Owner 可以执行人物合并或回滚。")
+
+
+def _current_owner(actor):
+    current = User.objects.select_for_update().filter(pk=actor.pk, is_active=True).first()
+    if not current or current.token_version != actor.token_version:
+        raise PermissionDenied("账户会话已变化，请重新登录。")
+    _owner(current)
+    return current
 
 
 def _digest(value):
@@ -235,7 +244,7 @@ def _publish(source, target, edition_ids, actor, operation_id, *, rollback=False
 
 @transaction.atomic
 def merge_people(source_id, target_id, *, actor, expected_fingerprint, idempotency_key, confirmed=False, change_note=""):
-    _owner(actor)
+    actor = _current_owner(actor)
     if confirmed is not True:
         raise ValueError("请先预览并人工确认人物合并。")
     idempotency_key = str(idempotency_key or "").strip()
@@ -302,10 +311,26 @@ def merge_people(source_id, target_id, *, actor, expected_fingerprint, idempoten
     return record
 
 
+def _rollback_digest(record, state):
+    # 0075 adds empty context fields. Preserve earlier merge receipts without
+    # treating populated new fields as unchanged historical data.
+    defaults = {"preferred_language": "", "original_language": "", "country_region": "", "authority_note": "", "identifier_sources": {}}
+    old_fields = {key for key in defaults if key not in record.source_snapshot and key not in record.target_snapshot}
+    if old_fields:
+        state = _json(state)
+        rows = [state["source"], state["target"]]
+        rows += [row for model, _field, items in state["references"] if model == "catalog.Person" for row in items]
+        for row in rows:
+            for key in old_fields:
+                if key in row and row[key] == defaults[key]:
+                    row.pop(key)
+    return _digest(state)
+
+
 def rollback_preview(record):
     source, target = record.source_person, record.target_person
     state, pending, _, _ = _state(source, target, record.affected_edition_ids)
-    fingerprint = _digest(state)
+    fingerprint = _rollback_digest(record, state)
     blockers = []
     if record.rolled_back_at:
         blockers.append("该合并已经回滚。")
@@ -324,7 +349,7 @@ def rollback_preview(record):
 
 @transaction.atomic
 def rollback_person_merge(record_id, *, actor, expected_fingerprint, confirmed=False):
-    _owner(actor)
+    actor = _current_owner(actor)
     if confirmed is not True:
         raise ValueError("请先预览并人工确认人物合并回滚。")
     record = models.PersonMergeRecord.objects.select_for_update().get(pk=record_id)

@@ -3756,6 +3756,45 @@
                 }
             }
         },
+        "/api/catalog/admin/people/{person_id}/workspace/": {
+            "get": {
+                "operationId": "person_authority_detail",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "person_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthorityDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/people/merge-records/": {
             "get": {
                 "operationId": "catalog_admin_people_merge_records_list",
@@ -3888,6 +3927,208 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/PersonMergeRecord"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/people/workspace/": {
+            "get": {
+                "operationId": "person_authority_directory",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 200
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "draft",
+                                "needs_review",
+                                "verified",
+                                "rejected",
+                                "merged",
+                                "archived"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `draft` - draft\n* `needs_review` - needs_review\n* `verified` - verified\n* `rejected` - rejected\n* `merged` - merged\n* `archived` - archived"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthorityDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/people/workspace/command/": {
+            "post": {
+                "operationId": "catalog_admin_people_workspace_command_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthorityReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/people/workspace/preview/": {
+            "post": {
+                "operationId": "catalog_admin_people_workspace_preview_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthorityPreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/people/workspace/receipts/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_people_workspace_receipts_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthorityReceipt"
                                 }
                             }
                         },
@@ -22296,17 +22537,6 @@
                     "name"
                 ]
             },
-            "AliasTypeEnum": {
-                "enum": [
-                    "alias",
-                    "translation",
-                    "abbreviation",
-                    "historical",
-                    "transliteration"
-                ],
-                "type": "string",
-                "description": "* `alias` - 别名\n* `translation` - 译名\n* `abbreviation` - 简称\n* `historical` - 历史名称\n* `transliteration` - 音译"
-            },
             "AnalysisDecisionInputActionEnum": {
                 "enum": [
                     "confirm",
@@ -22825,6 +23055,16 @@
                 "type": "string",
                 "description": "* `cancel` - cancel\n* `match` - match\n* `match_private` - match_private\n* `sources` - sources\n* `link` - link\n* `decision` - decision\n* `analyze` - analyze\n* `retry` - retry"
             },
+            "AuditCommandInputDecisionEnum": {
+                "enum": [
+                    "accepted",
+                    "ignored",
+                    "corrected",
+                    "needs_review"
+                ],
+                "type": "string",
+                "description": "* `accepted` - accepted\n* `ignored` - ignored\n* `corrected` - corrected\n* `needs_review` - needs_review"
+            },
             "AuditCommandInputRequest": {
                 "type": "object",
                 "properties": {
@@ -22876,7 +23116,7 @@
                         "maxItems": 1000
                     },
                     "decision": {
-                        "$ref": "#/components/schemas/DecisionEnum"
+                        "$ref": "#/components/schemas/AuditCommandInputDecisionEnum"
                     },
                     "note": {
                         "type": "string",
@@ -23143,17 +23383,446 @@
                     "detail"
                 ]
             },
-            "AuthorityStatusEnum": {
+            "AuthorityCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "$ref": "#/components/schemas/PersonAuthorityOperationEnum"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "values": {
+                        "$ref": "#/components/schemas/AuthorityValuesRequest"
+                    },
+                    "variants": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AuthorityVariantRequest"
+                        }
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "decision": {
+                        "$ref": "#/components/schemas/PersonIdentityDecisionEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 1000
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "preview_hash": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "operation",
+                    "preview_hash",
+                    "reason",
+                    "request_id"
+                ]
+            },
+            "AuthorityDetail": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "values": {},
+                    "variants": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "identifiers": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "can_edit": {
+                        "type": "boolean"
+                    },
+                    "can_verify": {
+                        "type": "boolean"
+                    },
+                    "scholar_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "portrait_url": {
+                        "type": "string"
+                    },
+                    "portrait_notice": {
+                        "type": "string"
+                    },
+                    "public_url": {
+                        "type": "string"
+                    },
+                    "pending_draft": {
+                        "type": "boolean"
+                    },
+                    "impact": {},
+                    "impact_complete": {
+                        "type": "boolean"
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "can_edit",
+                    "can_verify",
+                    "history",
+                    "id",
+                    "identifiers",
+                    "impact",
+                    "impact_complete",
+                    "pending_draft",
+                    "portrait_notice",
+                    "portrait_url",
+                    "public_url",
+                    "scholar_id",
+                    "updated_at",
+                    "values",
+                    "variants",
+                    "version"
+                ]
+            },
+            "AuthorityDirectory": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PersonResolutionSummary"
+                        }
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "count",
+                    "page",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "AuthorityInputRequest": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "$ref": "#/components/schemas/PersonAuthorityOperationEnum"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "values": {
+                        "$ref": "#/components/schemas/AuthorityValuesRequest"
+                    },
+                    "variants": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AuthorityVariantRequest"
+                        }
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "decision": {
+                        "$ref": "#/components/schemas/PersonIdentityDecisionEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "operation",
+                    "reason"
+                ]
+            },
+            "AuthorityNameTypeEnum": {
+                "enum": [
+                    "alias",
+                    "translation",
+                    "abbreviation",
+                    "historical",
+                    "transliteration"
+                ],
+                "type": "string",
+                "description": "* `alias` - 别名\n* `translation` - 译名\n* `abbreviation` - 简称\n* `historical` - 历史名称\n* `transliteration` - 音译"
+            },
+            "AuthorityPreview": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "preview_hash": {
+                        "type": "string"
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "edition_count": {
+                        "type": "integer"
+                    },
+                    "profile_count": {
+                        "type": "integer"
+                    },
+                    "public_update": {
+                        "type": "boolean"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "decision": {
+                        "type": "string"
+                    },
+                    "before": {
+                        "nullable": true
+                    },
+                    "after": {
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "after",
+                    "before",
+                    "decision",
+                    "edition_count",
+                    "fields",
+                    "person_id",
+                    "preview_hash",
+                    "profile_count",
+                    "public_update",
+                    "reason"
+                ]
+            },
+            "AuthorityReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "operation": {
+                        "type": "string"
+                    },
+                    "event_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "event_ids",
+                    "operation",
+                    "person_id",
+                    "request_id"
+                ]
+            },
+            "AuthorityValuesAuthorityStatusEnum": {
                 "enum": [
                     "draft",
                     "needs_review",
-                    "verified",
-                    "rejected",
-                    "merged",
-                    "archived"
+                    "verified"
                 ],
                 "type": "string",
-                "description": "* `draft` - 草稿\n* `needs_review` - 待消歧\n* `verified` - 已核验\n* `rejected` - 已拒绝\n* `merged` - 已合并\n* `archived` - 已归档"
+                "description": "* `draft` - draft\n* `needs_review` - needs_review\n* `verified` - verified"
+            },
+            "AuthorityValuesRequest": {
+                "type": "object",
+                "properties": {
+                    "preferred_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "original_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "preferred_language": {
+                        "type": "string",
+                        "maxLength": 24
+                    },
+                    "original_language": {
+                        "type": "string",
+                        "maxLength": 24
+                    },
+                    "country_region": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "birth_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "death_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "biography": {
+                        "type": "string",
+                        "maxLength": 10000
+                    },
+                    "authority_note": {
+                        "type": "string",
+                        "maxLength": 5000
+                    },
+                    "external_ids": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "identifier_sources": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "maxLength": 2000
+                        }
+                    },
+                    "authority_status": {
+                        "$ref": "#/components/schemas/AuthorityValuesAuthorityStatusEnum"
+                    }
+                },
+                "required": [
+                    "authority_note",
+                    "authority_status",
+                    "biography",
+                    "birth_year",
+                    "country_region",
+                    "death_year",
+                    "external_ids",
+                    "identifier_sources",
+                    "original_language",
+                    "original_name",
+                    "preferred_language",
+                    "preferred_name"
+                ]
+            },
+            "AuthorityVariantRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "language": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 24
+                    },
+                    "variant_type": {
+                        "$ref": "#/components/schemas/AuthorityNameTypeEnum"
+                    },
+                    "source_note": {
+                        "type": "string",
+                        "maxLength": 5000
+                    },
+                    "is_verified": {
+                        "type": "boolean"
+                    },
+                    "displayable": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "displayable",
+                    "is_verified",
+                    "language",
+                    "name",
+                    "source_note",
+                    "variant_type"
+                ]
             },
             "AvailabilityEnum": {
                 "enum": [
@@ -25264,16 +25933,6 @@
                 ],
                 "type": "string",
                 "description": "* `unknown` - 精度未确认\n* `year` - 确切年份\n* `approximate` - 约年\n* `range` - 时间区间"
-            },
-            "DecisionEnum": {
-                "enum": [
-                    "accepted",
-                    "ignored",
-                    "corrected",
-                    "needs_review"
-                ],
-                "type": "string",
-                "description": "* `accepted` - accepted\n* `ignored` - ignored\n* `corrected` - corrected\n* `needs_review` - needs_review"
             },
             "DirectoryDiscipline": {
                 "type": "object",
@@ -31161,7 +31820,7 @@
                         "maxLength": 16
                     },
                     "alias_type": {
-                        "$ref": "#/components/schemas/AliasTypeEnum"
+                        "$ref": "#/components/schemas/AuthorityNameTypeEnum"
                     },
                     "normalized_alias": {
                         "type": "string",
@@ -40189,6 +40848,15 @@
                     "target_revision"
                 ]
             },
+            "PersonAuthorityOperationEnum": {
+                "enum": [
+                    "create",
+                    "update",
+                    "decision"
+                ],
+                "type": "string",
+                "description": "* `create` - create\n* `update` - update\n* `decision` - decision"
+            },
             "PersonCompact": {
                 "type": "object",
                 "properties": {
@@ -40213,7 +40881,7 @@
                         "readOnly": true
                     },
                     "authority_status": {
-                        "$ref": "#/components/schemas/AuthorityStatusEnum"
+                        "$ref": "#/components/schemas/PersonCompactAuthorityStatusEnum"
                     },
                     "birth_year": {
                         "type": "integer",
@@ -40259,6 +40927,18 @@
                     "preferred_name",
                     "scholar_slug"
                 ]
+            },
+            "PersonCompactAuthorityStatusEnum": {
+                "enum": [
+                    "draft",
+                    "needs_review",
+                    "verified",
+                    "rejected",
+                    "merged",
+                    "archived"
+                ],
+                "type": "string",
+                "description": "* `draft` - 草稿\n* `needs_review` - 待消歧\n* `verified` - 已核验\n* `rejected` - 已拒绝\n* `merged` - 已合并\n* `archived` - 已归档"
             },
             "PersonDuplicateCandidate": {
                 "type": "object",
@@ -40314,6 +40994,14 @@
                     "results",
                     "source"
                 ]
+            },
+            "PersonIdentityDecisionEnum": {
+                "enum": [
+                    "independent",
+                    "needs_evidence"
+                ],
+                "type": "string",
+                "description": "* `independent` - independent\n* `needs_evidence` - needs_evidence"
             },
             "PersonLexiconEntry": {
                 "type": "object",

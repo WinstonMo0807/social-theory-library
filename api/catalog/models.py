@@ -1712,6 +1712,11 @@ class Person(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     birth_year = models.SmallIntegerField(null=True, blank=True, validators=[validate_person_year])
     death_year = models.SmallIntegerField(null=True, blank=True, validators=[validate_person_year])
     biography = models.TextField(blank=True)
+    preferred_language = models.CharField(max_length=24, blank=True)
+    original_language = models.CharField(max_length=24, blank=True)
+    country_region = models.CharField(max_length=120, blank=True)
+    authority_note = models.TextField(blank=True)
+    identifier_sources = models.JSONField(default=dict, blank=True)
     portrait = models.ImageField(upload_to="public/people/%Y/%m/", blank=True)
     portrait_rendition = models.ForeignKey(
         "MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="person_portraits",

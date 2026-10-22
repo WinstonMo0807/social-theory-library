@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M19人物规范与身份核对源码接入
+
+catalog/admin/people新增workspace目录、{id}/workspace详情、workspace/preview、workspace/command、workspace/receipts/{id}共五路径，总279。严格操作字段、owner头、版本/预览/明确确认/请求回执；原归并及撤回写入口同样必需X-Editor-Owner。返回当前User绑定，不读取读者私有记录。
+
 ## 2026-10-23 NEW-R04研究总览源码接入
 
 原research-projects新增GET directory/，必需X-Reader-Owner，page与scope（active/archived/all），20条摘要及本人最近阅读；无新数据库模型。总274路径，保留此前273。
