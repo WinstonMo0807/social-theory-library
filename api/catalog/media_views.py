@@ -3,6 +3,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -59,13 +60,24 @@ class MediaCollectionSerializer(serializers.Serializer):
     results = MediaAssetSerializer(many=True)
 
 
-class MediaCollectionView(AdminPrivateResponseMixin, APIView):
+class MediaEditorView(AdminPrivateResponseMixin, APIView):
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        owner = request.headers.get("X-Editor-Owner")
+        if owner is not None and owner != str(request.user.pk):
+            raise PermissionDenied("登录账户已变化，请重新读取当前账户的素材。")
+
+
+class MediaCollectionView(MediaEditorView):
     permission_classes = [CanAccessBackOffice]
 
-    @extend_schema(responses=MediaCollectionSerializer)
+    @extend_schema(parameters=[OpenApiParameter("rendition_id", OpenApiTypes.UUID, description="仅返回此准确图片版本所属的素材，用于补充出处。")], responses=MediaCollectionSerializer)
     def get(self, request):
         from django.core.paginator import Paginator, InvalidPage
         rows = MediaAsset.objects.prefetch_related("renditions").order_by("-created_at", "pk")
+        if "rendition_id" in request.query_params:
+            rendition_id = serializers.UUIDField().run_validation(request.query_params["rendition_id"])
+            rows = rows.filter(renditions__pk=rendition_id)
         pagination = Paginator(rows, 30)
         try:
             page = pagination.page(request.query_params.get("page", 1))
@@ -82,7 +94,7 @@ class MediaDetailSerializer(MediaAssetSerializer):
         fields = MediaAssetSerializer.Meta.fields + ("references",)
 
 
-class MediaListView(AdminPrivateResponseMixin, APIView):
+class MediaListView(MediaEditorView):
     parser_classes = [MultiPartParser, FormParser]
 
     def get_permissions(self):
@@ -107,7 +119,7 @@ class MediaListView(AdminPrivateResponseMixin, APIView):
         return Response(MediaAssetSerializer(row).data, status=201 if created else 200)
 
 
-class MediaDetailView(AdminPrivateResponseMixin, APIView):
+class MediaDetailView(MediaEditorView):
     def get_permissions(self):
         return [CanEditMetadata()] if self.request.method == "PATCH" else [CanAccessBackOffice()]
 
@@ -136,7 +148,7 @@ class MediaRenditionRequestSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=["cover", "portrait", "hero", "card", "thumbnail"], default="cover")
 
 
-class MediaRenditionView(AdminPrivateResponseMixin, APIView):
+class MediaRenditionView(MediaEditorView):
     permission_classes = [CanEditMetadata]
 
     @extend_schema(request=MediaRenditionRequestSerializer, responses=MediaRenditionSerializer)

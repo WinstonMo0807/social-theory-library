@@ -207,6 +207,38 @@ class RecommendationIssueCollectionSerializer(serializers.Serializer):
     results = RecommendationIssueSerializer(many=True)
 
 
+class IssuePublicationCheckSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    severity = serializers.ChoiceField(choices=["blocking", "warning", "notice"])
+    title = serializers.CharField()
+    detail = serializers.CharField()
+    section = serializers.CharField()
+    block_id = serializers.CharField(allow_blank=True)
+    item_id = serializers.CharField(allow_blank=True)
+
+
+class IssuePublicationReviewSerializer(serializers.Serializer):
+    edit_version = serializers.CharField()
+    checked_at = serializers.DateTimeField()
+    draft_revision_id = serializers.UUIDField(allow_null=True)
+    current_revision_id = serializers.UUIDField(allow_null=True)
+    draft_at = serializers.DateTimeField(allow_null=True)
+    current_at = serializers.DateTimeField(allow_null=True)
+    checks = IssuePublicationCheckSerializer(many=True)
+    changes = serializers.SerializerMethodField()
+    blocking_count = serializers.IntegerField()
+    warning_count = serializers.IntegerField()
+    has_draft = serializers.BooleanField()
+    can_publish = serializers.BooleanField()
+    actor_label = serializers.CharField()
+    public_url = serializers.CharField()
+    reader_preview = RecommendationIssueSerializer()
+
+    @extend_schema_field(lazy_serializer("catalog.publication_command_views.PublicationFieldDiffSerializer")(many=True))
+    def get_changes(self, obj):
+        return obj["changes"]
+
+
 class AdminIssueSummarySerializer(serializers.Serializer):
     total = serializers.IntegerField()
     published = serializers.IntegerField()

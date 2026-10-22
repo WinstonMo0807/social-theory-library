@@ -185,6 +185,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return required.some((capability) => capabilities.has(capability));
   }
 
+  if (/^\/admin\/recommendations\/issues\/[0-9a-f-]+\/preview$/i.test(pathname) && searchParams.get("frame") === "1" && canViewRoute(pathname)) {
+    return <AdminSessionContext.Provider value={user}><div key={String(user.id)}>{children}</div></AdminSessionContext.Provider>;
+  }
   return (
     <AdminSessionContext.Provider value={user}>
     <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`}>

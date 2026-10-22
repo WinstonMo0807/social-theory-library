@@ -20,6 +20,6 @@ export function ArticleMetadataFields({ value, onChange, onPortrait }: { value?:
     <label>公开策划者身份<input maxLength={240} value={data.curator_role} onChange={event => update({ curator_role: event.target.value })} /></label>
     <label>公开策划者机构<input maxLength={240} value={data.curator_affiliation} onChange={event => update({ curator_affiliation: event.target.value })} /></label>
     <p>署名沿用上方公开署名。这里只填写可公开的资料，不读取或修改操作账户。关联未公开对象只留在草稿中。</p>
-    <details><summary>选择公开策划者头像</summary><InlineMediaPicker onSelect={(id, url) => onPortrait(id, url)} />{data.curator_portrait_id ? <button type="button" onClick={() => onPortrait(null, "")}>移除公开头像</button> : null}</details>
+    <details><summary>选择公开策划者头像</summary><InlineMediaPicker selectedRenditionId={data.curator_portrait_id} kind="portrait" onSelect={(id, url) => onPortrait(id, url)} />{data.curator_portrait_id ? <button type="button" onClick={() => onPortrait(null, "")}>移除公开头像</button> : null}</details>
   </section>;
 }

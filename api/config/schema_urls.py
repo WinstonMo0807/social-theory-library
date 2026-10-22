@@ -45,6 +45,7 @@ VERIFIED_NAMES = {
     "recommendation-image-metadata",
     "recommendation-issue-list", "recommendation-issue-detail", "recommendation-issue-save-list",
     "admin-recommendation-issue-list", "admin-recommendation-issue-detail", "admin-recommendation-issue-publish",
+    "admin-recommendation-issue-preview",
     "admin-issue-history", "admin-issue-sources", "admin-issue-suggestions", "admin-issue-presence",
     "admin-recommendation-issue-link", "admin-site-content", "admin-site-content-publish", "admin-bibliographic-candidates",
     "asset-outline", "admin-asset-outline", "admin-outline-rebuilds", "admin-outline-job", "admin-page-mapping",

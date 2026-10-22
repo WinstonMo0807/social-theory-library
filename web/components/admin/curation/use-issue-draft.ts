@@ -90,6 +90,10 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     if(action.current || pending || sessionInvalid || recovery)return;
     setDraft(value=>value?{...value,...patch}:value);setAutoBlocked(false);
   }
+  function discardChanges() {
+    if(action.current || compositionActive.current || pending || conflict || recovery || sessionInvalid || !saved)return;
+    accept(saved);setMessage("已放弃本次未保存修改，恢复到最近保存的版本。");
+  }
   const save=useCallback(async(automatic=false,retry=false)=>{
     if(!draft || action.current || compositionActive.current || sessionInvalid || conflict || recovery || (pending&&!retry) || (!dirty&&!pending) || automatic&&manualRequired)return;
     const lifetime=active.current;action.current=true;setBusy("save");setMessage("");
@@ -133,8 +137,8 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
   async function command(path:string, body:unknown, success:string) {
     if(action.current || compositionActive.current || !draft || dirty || pending || conflict || recovery || sessionInvalid)return;
     const lifetime=active.current;action.current=true;setBusy(path);setMessage("");
-    try {const next=await request<IssueDraft>(endpoint+path,{method:"POST",body:JSON.stringify(body)});if(!lifetime?.signal.aborted){accept(next);setMessage(success);}}
-    catch(reason){if(!lifetime?.signal.aborted){setConflict(!(reason instanceof ApiRequestError) || reason.status===0 || reason.status===409 || reason.status>=500);setMessage(`${reason instanceof Error?reason.message:"操作结果待核对"} 请读取最新版本核对后继续。`);}}
+    try {const next=await request<IssueDraft>(endpoint+path,{method:"POST",body:JSON.stringify(body)});if(!lifetime?.signal.aborted){accept(next);setMessage(success);return true;}}
+    catch(reason){if(!lifetime?.signal.aborted){setConflict(!(reason instanceof ApiRequestError) || reason.status===0 || reason.status===409 || reason.status>=500);setMessage(`${reason instanceof Error?reason.message:"操作结果待核对"} 请读取最新版本核对后继续。`);return false;}}
     finally{if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   }
   async function recheck() {
@@ -167,7 +171,7 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     } finally {if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   }
   return {draft,saved,dirty,busy,composing,setComposing,message,initialError,conflict,pending,recovery,autosave,storageError,sessionInvalid,
-    disabled:Boolean(busy||pending||recovery||sessionInvalid),update,save,lookup,command,recheck,recoverLocal,restoreHistory,request,auxiliary,
+    disabled:Boolean(busy||pending||recovery||sessionInvalid),update,save,lookup,command,recheck,recoverLocal,restoreHistory,request,auxiliary,discardChanges,
     setAutosave,retryLoad:()=>setAttempt(value=>value+1),discardRecovery:()=>{setRecovery(null);try{sessionStorage.removeItem(key);}catch{setStorageError(true);}},
     useRemote:accept,keepLocal:(remote:IssueDraft)=>{setSaved(remote);setDraft(value=>value?{...value,edit_version:remote.edit_version}:value);setConflict(false);setPending(null);setAutoBlocked(true);setManualRequired(true);},
   };

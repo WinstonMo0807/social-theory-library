@@ -1,5 +1,14 @@
 # 验收记录
 
+## 2026-10-22 M17发布检查静态记录
+
+- `.venv/Scripts/python.exe tmp/stl4-publish-review-static.py`（PYTHONIOENCODING=utf-8），efe16f退出0：7文件AST、两数据库共8次SQL编译；ensure_connection阻断，0连接。没有运行功能测试。
+- 完整`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`，最终35540会话退出0；此前70565/7b1139、41714/f40087亦退出0。
+- 10目标ESLint：`node node_modules/eslint/bin/eslint.js components/admin/curation/issue-publication-review.tsx components/admin/curation/issue-preview-frame.tsx components/admin/recommendation-issue-editor.tsx components/admin-shell.tsx components/admin/curation/use-issue-draft.ts components/admin/curation/inline-media-picker.tsx components/admin/curation/article-body-fields.tsx components/admin/curation/article-metadata-fields.tsx 'app/admin/recommendations/issues/[issueId]/preview/page.tsx' tests/issue-publication-atlas.spec.ts`，d64a0a退出0，3处既有img建议。追加放弃修改后复查review/hook/浏览器定义，20532d退出0。
+- `api/manage.py spectacular --urlconf config.schema_urls --format openapi-json --file tmp/stl4-publish-review-schema.json --validate`（SQLite内存URL、PUBLIC_DEPLOYMENT_MODE=false、DJANGO_DEBUG=true），d444d0退出0，0错误/10项既有serializer警告；未标严格fail-on-warn通过。
+- `node tmp/stl4-publish-review-contracts.mjs`，fdb976退出0，原225路径全保留、补已有preview覆盖共226，IssuePublicationReview存在；CSS68顶层节点可解析。此前仅225路径生成不含preview，已修正覆盖，不能用旧结果证明review契约存在。
+- 新增8后端函数、7浏览器场景只定义。未运行正式测试/E2E、浏览器、构建、迁移、OCR、模型/检索评测、索引任务或生产操作。
+
 ## 2026-10-22 关联材料与人工审阅
 
 - `.venv/Scripts/python.exe tmp/stl4-related-static.py`（PYTHONIOENCODING=utf-8），88144e退出0：7文件AST、两数据库共10次查询编译；ensure_connection阻断，0数据库连接，未执行功能测试。

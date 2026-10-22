@@ -2620,6 +2620,17 @@
         "/api/catalog/admin/media/collection/": {
             "get": {
                 "operationId": "catalog_admin_media_collection_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "rendition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "仅返回此准确图片版本所属的素材，用于补充出处。"
+                    }
+                ],
                 "tags": [
                     "catalog"
                 ],
@@ -3875,6 +3886,116 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/IssuePresence"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recommendation-issues/{issue_id}/preview/": {
+            "get": {
+                "operationId": "catalog_admin_recommendation_issues_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "edit_version",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "review",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssuePreviewResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_recommendation_issues_preview_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationIssueRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationIssueRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationIssueRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecommendationIssue"
                                 }
                             }
                         },
@@ -18353,7 +18474,7 @@
                         "nullable": true
                     },
                     "severity": {
-                        "$ref": "#/components/schemas/SeverityEnum"
+                        "$ref": "#/components/schemas/ApiErrorSeverityEnum"
                     },
                     "details": {}
                 },
@@ -18364,6 +18485,15 @@
                     "message",
                     "severity"
                 ]
+            },
+            "ApiErrorSeverityEnum": {
+                "enum": [
+                    "blocking",
+                    "warning",
+                    "info"
+                ],
+                "type": "string",
+                "description": "* `blocking` - blocking\n* `warning` - warning\n* `info` - info"
             },
             "ArticleMetadata": {
                 "type": "object",
@@ -25540,6 +25670,143 @@
                 "required": [
                     "mode",
                     "session_id"
+                ]
+            },
+            "IssuePreviewResponse": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/RecommendationIssue"
+                    },
+                    {
+                        "$ref": "#/components/schemas/IssuePublicationReview"
+                    }
+                ]
+            },
+            "IssuePublicationCheck": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "severity": {
+                        "$ref": "#/components/schemas/IssuePublicationCheckSeverityEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "section": {
+                        "type": "string"
+                    },
+                    "block_id": {
+                        "type": "string"
+                    },
+                    "item_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "block_id",
+                    "code",
+                    "detail",
+                    "item_id",
+                    "section",
+                    "severity",
+                    "title"
+                ]
+            },
+            "IssuePublicationCheckSeverityEnum": {
+                "enum": [
+                    "blocking",
+                    "warning",
+                    "notice"
+                ],
+                "type": "string",
+                "description": "* `blocking` - blocking\n* `warning` - warning\n* `notice` - notice"
+            },
+            "IssuePublicationReview": {
+                "type": "object",
+                "properties": {
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "draft_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "current_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "draft_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "current_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "checks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssuePublicationCheck"
+                        }
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicationFieldDiff"
+                        },
+                        "readOnly": true
+                    },
+                    "blocking_count": {
+                        "type": "integer"
+                    },
+                    "warning_count": {
+                        "type": "integer"
+                    },
+                    "has_draft": {
+                        "type": "boolean"
+                    },
+                    "can_publish": {
+                        "type": "boolean"
+                    },
+                    "actor_label": {
+                        "type": "string"
+                    },
+                    "public_url": {
+                        "type": "string"
+                    },
+                    "reader_preview": {
+                        "$ref": "#/components/schemas/RecommendationIssue"
+                    }
+                },
+                "required": [
+                    "actor_label",
+                    "blocking_count",
+                    "can_publish",
+                    "changes",
+                    "checked_at",
+                    "checks",
+                    "current_at",
+                    "current_revision_id",
+                    "draft_at",
+                    "draft_revision_id",
+                    "edit_version",
+                    "has_draft",
+                    "public_url",
+                    "reader_preview",
+                    "warning_count"
                 ]
             },
             "IssueSourceChoice": {
@@ -41092,15 +41359,6 @@
                     "action",
                     "expected_revision"
                 ]
-            },
-            "SeverityEnum": {
-                "enum": [
-                    "blocking",
-                    "warning",
-                    "info"
-                ],
-                "type": "string",
-                "description": "* `blocking` - blocking\n* `warning` - warning\n* `info` - info"
             },
             "SiteConfig": {
                 "type": "object",

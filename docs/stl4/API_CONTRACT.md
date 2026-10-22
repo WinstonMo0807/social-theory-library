@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-22 文章发布检查与素材修正
+
+原GET admin/recommendation-issues/{issue_id}/preview/?review=true&edit_version=返回IssuePublicationReview（checks/changes/当前与草稿修订/时间/can_publish/reader_preview），非review沿旧响应。生成契约IssuePreviewResponse为两种响应联合。原preview此前不在schema_urls覆盖中，本批补入，旧225路径全保留，共226；实际catalog路由没有新增。read权限CanAccessBackOffice，发布CanPublishAuthority；private,no-store及X-Editor-Owner沿原保护。preview POST仍只读。
+
+原媒体collection增加可选rendition_id UUID过滤，准确找回所选图片素材；原PATCH使用expected_updated_at，原renditions POST生成带immutable metadata_snapshot的新版本。collection/upload/detail/renditions补X-Editor-Owner核对。权限不放宽，无迁移；此前图片快照不变。
+
 ## 2026-10-22 关联选材与提纲审阅
 
 原sources GET增加related=person|node；结果含reasons及edit_version/truncated/unavailable_count/notice。来源公开校验、CanEditMetadata和private,no-store保持。候选增加可选level(0–3)、target_block_id、original_text；正文增加heading_level(1–3，仅标题)，旧块默认一级。采用仍走原CAS追加与幂等回执。225路径保持，OpenAPI/schema.ts同步生成，0错误/10项既有警告；严格--fail-on-warn检查未标通过。

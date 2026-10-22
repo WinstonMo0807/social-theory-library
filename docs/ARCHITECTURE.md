@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-22 文章发布检查
+
+issue_publication_review在原EditorialRevision账本上生成只读差异、发布检查和公开来源预览。实际publish_issue复用checks并保留原父锁、CAS、发布/定时指针；没有第二套发布服务或数据模型。iframe走既有后台preview页的frame模式，仅在AdminShell认证及路由权限后省略外壳，页面内容复用RecommendationIssueView/SiteHeader；版本或账户变化拒绝过期预览。素材修改沿原updated_at校验和不可变rendition快照，不覆盖公开引用的旧图。
+
 ## 2026-10-22 关联选材与正文建议
 
 选材关联复用正式edition snapshot/ContributionProjection/public scholar及已发布KnowledgeRelation/PersonNodeRelation，读取原文章保存选材，返回有界一跳关联和具体依据。后台只读请求不写关系；不新增搜索、模型、表或私人资料副本。助手原ProcessingJob候选JSON保存提纲级别和所指人工段落快照；正文原JSON保存heading_level，前台/预览共同渲染。采用只追加，依旧按原父锁/CAS/准确公开来源校验。

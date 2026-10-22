@@ -316,13 +316,10 @@ def publish_issue(identifier, expected, actor):
     if not revision or revision.status != "draft":
         raise ValidationError("没有待发布草稿。")
     payload = revision.materialized_preview
-    from catalog.services.editorial_blocks import body_payload, block_references
-    body_payload(payload.get("body_blocks", []), require_public=True)
-    if not payload.get("items") and not any(row.get("text", "").strip() or row.get("type") == "image" or block_references(row) for row in payload.get("body_blocks", [])):
-        raise ValidationError("至少需要一段正式文章内容或一项阅读推荐。")
-    for item in payload["items"]:
-        if item["kind"] == "catalog" and not public_editions().filter(pk=item["edition_id"], work_id=item["work_id"]).exists():
-            raise ValidationError("推荐馆藏已撤回或尚未公开，请重新核对。")
+    from catalog.services.issue_publication_review import checks
+    blocking = [row for row in checks(payload) if row["severity"] == "blocking"]
+    if blocking:
+        raise ValidationError({"publication_checks": blocking})
     _publish_revision(revision, actor)
     due = parse_datetime(payload["display_from"]) if payload.get("display_from") else revision.published_at
     if due > timezone.now():

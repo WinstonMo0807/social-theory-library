@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import OpenApiParameter, PolymorphicProxySerializer, extend_schema
 
 from catalog.editorial_read import AdminPrivateResponseMixin
+from catalog.editorial_issue_serializers import IssuePublicationReviewSerializer
 from catalog.models import EditorialRevision, RecommendationIssue, RecommendationIssueItem, MediaRendition, SiteSetting
 from catalog.services import editorial_issues as service
 from common.permissions import CanAccessBackOffice, CanEditMetadata, CanPublishAuthority, IsLibraryAdmin
@@ -168,6 +169,16 @@ class AdminIssuePreviewView(AdminIssueDetailView):
 
     def get_permissions(self):
         return [CanEditMetadata()] if self.request.method == "POST" else [CanAccessBackOffice()]
+
+    @extend_schema(responses=PolymorphicProxySerializer(component_name="IssuePreviewResponse", serializers=[RecommendationIssueSerializer, IssuePublicationReviewSerializer], resource_type_field_name=None), parameters=[OpenApiParameter("review", type=bool), OpenApiParameter("edit_version", type=str)])
+    def get(self, request, issue_id):
+        if request.query_params.get("review") != "true":
+            return super().get(request, issue_id)
+        from catalog.services.issue_publication_review import review
+        issue = get_object_or_404(RecommendationIssue, pk=issue_id)
+        if request.query_params.get("edit_version"):
+            service._check_version("recommendation_issue", issue.pk, request.query_params["edit_version"])
+        return Response(review(issue, request.user))
 
     @extend_schema(request=RecommendationIssueSerializer, responses=RecommendationIssueSerializer)
     def post(self, request, issue_id):

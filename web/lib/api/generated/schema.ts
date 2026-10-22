@@ -899,6 +899,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_preview_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recommendation-issues/{issue_id}/publish/": {
         parameters: {
             query?: never;
@@ -4039,9 +4055,16 @@ export interface components {
             code: string;
             message: string;
             field: string | null;
-            severity: components["schemas"]["SeverityEnum"];
+            severity: components["schemas"]["ApiErrorSeverityEnum"];
             details: unknown;
         };
+        /**
+         * @description * `blocking` - blocking
+         *     * `warning` - warning
+         *     * `info` - info
+         * @enum {string}
+         */
+        ApiErrorSeverityEnum: "blocking" | "warning" | "info";
         ArticleMetadata: {
             kind?: components["schemas"]["ArticleMetadataKindEnum"];
             keywords?: string[];
@@ -6236,6 +6259,45 @@ export interface components {
             /** Format: uuid */
             session_id: string;
             mode: components["schemas"]["IssuePresenceCommandModeEnum"];
+        };
+        IssuePreviewResponse: components["schemas"]["RecommendationIssue"] | components["schemas"]["IssuePublicationReview"];
+        IssuePublicationCheck: {
+            code: string;
+            severity: components["schemas"]["IssuePublicationCheckSeverityEnum"];
+            title: string;
+            detail: string;
+            section: string;
+            block_id: string;
+            item_id: string;
+        };
+        /**
+         * @description * `blocking` - blocking
+         *     * `warning` - warning
+         *     * `notice` - notice
+         * @enum {string}
+         */
+        IssuePublicationCheckSeverityEnum: "blocking" | "warning" | "notice";
+        IssuePublicationReview: {
+            edit_version: string;
+            /** Format: date-time */
+            checked_at: string;
+            /** Format: uuid */
+            draft_revision_id: string | null;
+            /** Format: uuid */
+            current_revision_id: string | null;
+            /** Format: date-time */
+            draft_at: string | null;
+            /** Format: date-time */
+            current_at: string | null;
+            checks: components["schemas"]["IssuePublicationCheck"][];
+            readonly changes: components["schemas"]["PublicationFieldDiff"][];
+            blocking_count: number;
+            warning_count: number;
+            has_draft: boolean;
+            can_publish: boolean;
+            actor_label: string;
+            public_url: string;
+            reader_preview: components["schemas"]["RecommendationIssue"];
         };
         IssueSourceChoice: {
             target: {
@@ -10977,13 +11039,6 @@ export interface components {
             reference_id?: string;
             order?: string[];
         };
-        /**
-         * @description * `blocking` - blocking
-         *     * `warning` - warning
-         *     * `info` - info
-         * @enum {string}
-         */
-        SeverityEnum: "blocking" | "warning" | "info";
         SiteConfig: {
             /** @default  */
             home_hero_image: string;
@@ -13709,7 +13764,10 @@ export interface operations {
     };
     catalog_admin_media_collection_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 仅返回此准确图片版本所属的素材，用于补充出处。 */
+                rendition_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -14324,6 +14382,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssuePresence"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_preview_retrieve: {
+        parameters: {
+            query?: {
+                edit_version?: string;
+                review?: boolean;
+            };
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuePreviewResponse"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationIssueRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecommendationIssueRequest"];
+                "multipart/form-data": components["schemas"]["RecommendationIssueRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationIssue"];
                 };
             };
         };
