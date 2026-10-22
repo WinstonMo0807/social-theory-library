@@ -1,5 +1,15 @@
 # 验收记录
 
+## 2026-10-23 知识M17四区工作台静态检查
+
+- `.venv/Scripts/python.exe tmp/stl4-knowledge-review-static-20261023.py`（PYTHONIOENCODING=utf-8），e64eb9退出0：3文件AST、18次SQLite/PostgreSQL SQL编译，ensure_connection禁止连接，0数据库连接。只导入检查服务，不执行预检业务。脚本内spectacular生成/验证0错误、10条既有提示。
+- `node tmp/stl4-knowledge-review-contracts-20261023.mjs`，e74d38退出0；226路径保留，review可选参数加入原GET；生成schema.json/schema.ts同步，未新增API路径。
+- 完整`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web），最终28088/da8aa1退出0，包含embedded样式参数；前次64459/1351f2、71837/6bc04d亦退出0。
+- 9目标ESLint（knowledge-publication-review、knowledge-publish-control、knowledge-page-preview、knowledge-visual-editor、knowledge-object-context-panel、knowledge-legacy-redirect、admin-shell、原预览route、knowledge-publication-atlas），9413bd退出0、无警告。前次dbdfb8的内部window.location.assign建议已改为useRouter.push，未忽略规则。复用原issue-publication.module.css，本次未改CSS。
+- 最终3 Python AST文件920650退出0；25路径记录脚本只更新明确文档和M17三行说明。209行22列及全部身份/来源/状态保持，96/26/87不变。目标git diff --check adea35退出0，只有已有CRLF换行提示。
+- 新增8后端函数（首函数6类型参数），浏览器文件扩充到11场景，仅定义未运行。覆盖只读无写入、版本/权限/原撤回、人物资格、图片不可变元数据、四区/设备、frame失败与伪造消息、旧链接准确返回。没有正式测试/E2E/浏览器/服务/构建/迁移/检索测评/生产操作。
+- 最后两组件ESLint62566/d347d7退出0；旧跳转明确选择优先列表筛选的修正及对应定义，d3ad62退出0。上述均无警告。
+
 ## 2026-10-23 知识预览保存版本静态检查
 
 - `.venv/Scripts/python.exe tmp/stl4-knowledge-preview-static-20261023.py`（PYTHONIOENCODING=utf-8），bd0c77退出0：3文件AST、16次SQLite/PostgreSQL SQL编译，ensure_connection禁止连接，0连接。脚本内spectacular生成与验证0错误/10既有警告；未运行测试。

@@ -38,6 +38,12 @@ type PreviewPerspective = {
 };
 
 export type KnowledgePreviewPayload = {
+  publication_review?: {
+    checked_at:string;saved_at:string;current_revision:number;draft_revision_id:string|null;
+    has_draft:boolean;withdrawing:boolean;actor_label:string;blocking_count:number;warning_count:number;can_publish:boolean;
+    checks:Array<{code:string;severity:"blocking"|"warning"|"notice";title:string;detail:string;section:string}>;
+    changes:Array<{key:string;label:string;before:Record<string,unknown>;after:Record<string,unknown>;changed:boolean}>;
+  };
   edit_version?: string;
   preview_mode: true;
   protected: true;
@@ -94,11 +100,19 @@ function disciplinePage(data: Discipline): TheoryDisciplinePage {
   };
 }
 
+function previewProblem(payload:KnowledgePreviewPayload):string {
+  const data=payload.perspective.data as Record<string,unknown>|null;
+  if(!data||typeof data!=="object"||Array.isArray(data))return "当前对象没有可渲染的草稿或公开内容。";
+  if(payload.object_type==="scholar"&&(!data.person||typeof data.person!=="object"))return "学者预览缺少身份，已保留草稿。";
+  if(payload.object_type==="topic"&&(!data.id||!data.slug||!data.name))return "主题预览缺少规范身份，已保留草稿。";
+  if(["theory","concept","debate","research_problem"].includes(payload.object_type)&&(!data.id||!data.slug||!data.canonical_name_zh))return "理论预览缺少规范身份，已保留草稿。";
+  if(!["discipline","subdiscipline","scholar","topic","reading_path","theory","concept","debate","research_problem"].includes(payload.object_type))return "该对象请使用专用预览。";
+  return "";
+}
+
 export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId = "" }: { payload: KnowledgePreviewPayload; pageId: string; moduleId?: string; previewStageId?: string }) {
-  const data = payload.perspective.data;
-  if (!data || typeof data !== "object") {
-    return <p className="admin-list-state is-unavailable">当前对象没有可渲染的草稿或公开内容。</p>;
-  }
+  const data = payload.perspective.data,problem=previewProblem(payload);
+  if(problem)return <p className="admin-list-state is-unavailable">{problem}</p>;
 
   const footer = null;
   switch (payload.object_type) {
@@ -112,16 +126,12 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
     }
     case "scholar": {
       const item = data as PublicScholarDetail;
-      if (!item.person || typeof item.person !== "object") return <p className="admin-list-state is-unavailable">学者预览缺少身份，已保留草稿。</p>;
       return pageId && pageId !== "overview"
         ? <ScholarSectionPublicView preview data={item} section={pageId} footer={footer} />
         : <ScholarPublicView preview data={item} footer={footer} />;
     }
     case "topic": {
       const item = data as PublicTopicDetail;
-      if (!item.id || !item.slug || !item.name) {
-        return <p className="admin-list-state is-unavailable">主题预览缺少规范身份，已停止渲染并保留草稿。</p>;
-      }
       return pageId && pageId !== "overview"
         ? <TopicSectionPublicView preview topic={item} section={pageId} />
         : <TopicPublicView preview topic={item} footer={footer} />;
@@ -133,9 +143,6 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
     case "debate":
     case "research_problem": {
       const raw = data as KnowledgeNodeDetail;
-      if (!raw.id || !raw.slug || !raw.canonical_name_zh) {
-        return <p className="admin-list-state is-unavailable">理论预览缺少规范身份，已停止渲染并保留草稿。</p>;
-      }
       const node = {
         ...raw,
         core_questions: raw.core_questions ?? [],
@@ -193,6 +200,7 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
   const searchParams = useSearchParams();
   const user=useAdminSession(),owner=user?String(user.id):"",expectedVersion=searchParams.get("edit_version")||"";
   const pageId = searchParams.get("page") || "overview";
+  const frame = searchParams.get("frame") === "1";
   const moduleId = searchParams.get("module") || "";
   const returnHref = safeAdminHref(searchParams.get("return_to"), `/admin/knowledge?selected_type=${encodeURIComponent(objectType)}&selected_id=${encodeURIComponent(objectId)}`);
   const [payload, setPayload] = useState<KnowledgePreviewPayload | null>(null);
@@ -216,6 +224,8 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
         getServerSessionCredential(),
       ),signal);
       if(result.object_id!==objectId||result.object_type!==objectType||!result.edit_version||!/^[a-f0-9]{64}$/.test(result.edit_version)||expectedVersion&&result.edit_version!==expectedVersion)throw Error("预览与当前对象或保存版本不一致，请返回编辑页重新检查。");
+      const problem=previewProblem(result);
+      if(!result.perspective.available || problem)throw Error(problem||"已保存内容尚不能生成有效预览。");
       if (requestRevision.current === revision) setPayload(result);
     } catch (reason) {
       if (requestRevision.current === revision) {
@@ -263,6 +273,13 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
     [payload],
   );
 
+  useEffect(()=>{
+    if(!frame || window.parent===window || !expectedVersion)return;
+    // A committed render is required; an API response alone is not readiness.
+    const timer=window.requestAnimationFrame(()=>window.parent.postMessage({type:"stl:knowledge-publication-preview",objectType,objectId,version:expectedVersion,owner,pageId,ok:Boolean(payload&&!loading&&!message),state:loading?"loading":payload&&!message?"ready":"error"},window.location.origin));
+    return()=>window.cancelAnimationFrame(timer);
+  },[frame,expectedVersion,objectType,objectId,owner,pageId,payload,loading,message]);
+
   if (!payload) {
     return (
       <div className="admin-page admin-page-preview-state">
@@ -276,6 +293,8 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
       </div>
     );
   }
+
+  if(frame)return <div className="admin-knowledge-page-preview-body" inert><PreviewSurface payload={payload} pageId={pageId} moduleId={moduleId}/></div>;
 
   return (
     <div className="admin-knowledge-page-preview">

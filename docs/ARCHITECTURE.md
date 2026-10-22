@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-10-23 知识发布检查沿用规范服务
+
+knowledge_publication_review为原KnowledgePreviewPayload的只读聚合，读取原草稿、正式修订与所选媒体不可变元数据；复用editorial_revision内既有patch/关联校验，在内存目标上做字段及model校验，不调用save、迁移、模型或任务。公开序列化分组比较，未建另一发布模型。
+
+原preview路由兼容完整预览、review工作台与frame模式。AdminShell只在原认证/路由授权后移除frame管理外框。知识编辑器及参考面板共用原KnowledgePublishControl；未知操作继续按原修订恢复。旧知识重定向兼容两组对象参数，版本记录分区可直接定位。该预览版本仍不包含所有独立关联对象；来源人工审阅与最后原事务校验继续保留。
+
 ## 2026-10-23 预览与编辑共用保存版本
 
 editorial_edit_version提取原AdminEditorialDraftReadMixin的哈希逻辑，current_editorial_version只读原主体/最新草稿/正式revision；不新建版本表。知识preview读前/读后比对同一版本并回传，未保存选择仍只作原serializer内存投影。前端按账户/对象/保存版本隔离读取，失败清空旧预览；全屏链接携原保存版本。相关馆藏与关联对象自身版本不纳入此哈希，正式来源资格仍由原业务服务核验，不把此保护当全站快照。

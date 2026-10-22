@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-23 知识M17工作台恢复
+
+前置d82b148；本批白名单tmp/stl4-knowledge-review-checkpoint-20261023.json，实际提交核对git log。阅读KNOWLEDGE_REVIEW_20261023及CURRENT_PROGRESS最上项。原preview页面?review=1为检查工作台，?frame=1为受认证保护的公开组件子视口；接口review=1强制保存版本、只读预检。发布仍原KnowledgePublishControl与既有修订事务。
+
+不要重跑本次record脚本或之前wire/adjust/links/record脚本。统计96/26/87，M17仍部分；保留全部继承脏改，尤其editorial_revision_views.py。本批没有正式测试/浏览器/构建/迁移/生产操作。下一步知识M18完整历史/撤回/恢复、固定页面统一发布检查，先读唯一PDF相应图。
+
 ## 2026-10-23 知识预览版本恢复
 
 前置fbb6864，本批白名单tmp/stl4-knowledge-preview-checkpoint-20261023.json，提交号核对git log。editorial_edit_version提取原保存公式；AdminKnowledgeObjectPreviewView GET/POST携可选edit_version且响应前后重查。完整/编辑内预览清空失败旧内容、owner验证、绑定链接。生成契约226路径，96/26/87不变，无正式验收/生产。

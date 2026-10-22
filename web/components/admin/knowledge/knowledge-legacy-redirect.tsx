@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 export function KnowledgeLegacyRedirect({destination,taxonomy=false}:{destination?:string;taxonomy?:boolean}) {
  const router=useRouter(); const search=useSearchParams();
  useEffect(()=>{
-  const query=new URLSearchParams(search.toString());const type=query.get("object_type") || "";const id=query.get("object_id") || "";
+  const query=new URLSearchParams(search.toString());const type=query.get("selected_type") || query.get("object_type") || "";const id=query.get("selected_id") || query.get("object_id") || "";
   let next=destination || "/admin/theories";
   if(!destination){
    if(type==="scholar") next=id?`/admin/scholars/${encodeURIComponent(id)}`:"/admin/scholars";

@@ -535,6 +535,7 @@ class AdminKnowledgeObjectPreviewView(APIView):
             OpenApiParameter("object_type", OpenApiTypes.STR, OpenApiParameter.PATH),
             OpenApiParameter("object_id", OpenApiTypes.UUID, OpenApiParameter.PATH),
             OpenApiParameter("edit_version", OpenApiTypes.STR, description="Optional exact saved edit_version. Stale or repeated values return 409. The response includes the current edit_version and is rechecked before return."),
+            OpenApiParameter("review", OpenApiTypes.STR, description="Use 1 with edit_version for read-only knowledge publication checks, public-field changes and settings. Unsaved overrides are not accepted in this mode."),
             OpenApiParameter("featured_source_id", {"type": "string", "maxLength": 36},
                 description="Scholar only. UUID of this scholar's saved curation reference; an empty value clears the unsaved choice. Omit to retain the saved draft."),
             OpenApiParameter("reading_path_ids", {"type": "string", "maxLength": 3699},
@@ -552,6 +553,9 @@ class AdminKnowledgeObjectPreviewView(APIView):
             return conflict
         params = request.query_params.copy()
         params.pop("edit_version", None)
+        review_values = params.pop("review", [])
+        if review_values and (review_values != ["1"] or params or not request.query_params.get("edit_version")):
+            raise ValidationError("发布检查必须绑定已保存版本，不能混入未保存的选择。")
         overrides = None
         if params:
             if object_type != "scholar":
@@ -564,6 +568,14 @@ class AdminKnowledgeObjectPreviewView(APIView):
             reviewer=request.user,
             scholar_preview_overrides=overrides,
         )
+        if review_values and payload is not None:
+            from catalog.services.knowledge_publication_review import knowledge_publication_review
+            try:
+                payload["publication_review"] = knowledge_publication_review(
+                    object_type=object_type, object_id=object_id, payload=payload, actor=request.user,
+                )
+            except ValueError as exc:
+                raise ValidationError(str(exc)) from exc
         return self._response(payload, object_type, object_id, version)
 
     @extend_schema(

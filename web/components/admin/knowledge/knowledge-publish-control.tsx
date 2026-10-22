@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, use, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { editorialHeaders } from "@/lib/editorial-version";
@@ -12,7 +13,7 @@ import styles from "../curation/issue-publication.module.css";
 
 type Saved = {id?:string;edit_version?:string;editorial_revision?:{id:string;status:string;target_type?:string;target_id?:string};[key:string]:unknown};
 type Pending = {format:1;owner:string;objectType:string;objectId:string;phase:"prepare"|"publish";version:string;revisionId:string|null};
-const targets:Record<string,{endpoint:string;type:string;field:string}>={
+export const knowledgePublicationTargets:Record<string,{endpoint:string;type:string;field:string}>={
   scholar:{endpoint:"scholars",type:"scholar_profile",field:"editorial_status"},topic:{endpoint:"topics",type:"topic",field:"editorial_status"},
   discipline:{endpoint:"disciplines",type:"discipline",field:"editorial_status"},subdiscipline:{endpoint:"subdisciplines",type:"subdiscipline",field:"editorial_status"},
   reading_path:{endpoint:"theory-system/reading-paths",type:"reading_path",field:"status"},
@@ -27,7 +28,7 @@ function validCommand(value:unknown,owner:string,objectType:string,objectId:stri
   const command=value as Partial<Pending>;
   return command.format===1&&command.owner===owner&&command.objectType===objectType&&command.objectId===objectId&&uuid.test(objectId)&&typeof command.version==="string"&&/^[a-f0-9]{64}$/.test(command.version)&&(command.phase==="prepare"?command.revisionId===null:command.phase==="publish"&&typeof command.revisionId==="string"&&uuid.test(command.revisionId));
 }
-type Props={objectType:string;objectId:string;savedRecord:object;dirty:boolean;onPublished?:()=>void;onLockChange:(locked:boolean)=>void};
+type Props={objectType:string;objectId:string;savedRecord:object;dirty:boolean;onPublished?:()=>void;onLockChange:(locked:boolean)=>void;blockedReason?:string;reviewHref?:string;embedded?:boolean};
 export const KnowledgePublicationContext=createContext<{locked:boolean;requestReview:()=>void}|null>(null);
 export function KnowledgePublishEntry({disabled,onFallback}:{disabled:boolean;onFallback:()=>void}) {
   const publication=use(KnowledgePublicationContext);
@@ -38,8 +39,9 @@ export function KnowledgePublishControl(props:Props) {
   const owner=useAdminSession()?.id;
   return <PublishControl key={`${owner}:${props.objectType}:${props.objectId}`} {...props}/>;
 }
-function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLockChange}:Props) {
-  const user=useAdminSession(),owner=user?String(user.id):"",target=targets[objectType];
+function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLockChange,blockedReason="",reviewHref,embedded=false}:Props) {
+  const user=useAdminSession(),owner=user?String(user.id):"",target=knowledgePublicationTargets[objectType];
+  const router=useRouter();
   const key=`stl:knowledge-publish:v1:${owner}:${objectType}:${objectId}`,endpoint=target?`/catalog/admin/${target.endpoint}/${objectId}/`:"";
   const savedVersion=(savedRecord as Saved).edit_version||"",canPublish=hasAdminCapability(user,"can_publish_authority");
   const lifetime=useRef<AbortController|null>(null),acting=useRef(false);
@@ -60,16 +62,18 @@ function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLoc
   function clear(){sessionStorage.removeItem(key);setPending(null);setRecordProblem(false);}
   function refresh(){try{onPublished?.();}catch{setError("发布结果已记录，但编辑器刷新失败，请重新打开本对象。");}}
   async function inspect(){
-    if(acting.current||!endpoint||!owner||dirty||!hydrated||pending||recordProblem||!canPublish||lifetime.current?.signal.aborted)return;
+    if(acting.current||!endpoint||!owner||dirty||!hydrated||pending||recordProblem||!canPublish||blockedReason||lifetime.current?.signal.aborted)return;
+    if(reviewHref){router.push(safeAdminHref(reviewHref));return;}
     acting.current=true;setBusy(true);setError("");setReview(null);setConfirmed(false);setOpen(true);
     try{
       const expected=editorialHeaders(savedRecord)["If-Match"];
-      const [saved,payload]=await Promise.all([request<Saved>(endpoint),request<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/?${new URLSearchParams({edit_version:expected})}`)]);
+      const [saved,payload]=await Promise.all([request<Saved>(endpoint),request<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/?${new URLSearchParams({edit_version:expected,review:"1"})}`)]);
       if(saved.id!==objectId||payload.object_id!==objectId||payload.object_type!==objectType)throw Error("对象身份不一致，请返回列表重新打开。");
       if(saved.edit_version!==expected||payload.edit_version!==expected)throw Error("这条资料已变化，请刷新编辑器后再检查。当前输入保留。");
       const current=await request<Saved>(endpoint);
       if(current.id!==objectId||current.edit_version!==expected)throw Error("检查期间内容已变化，请刷新编辑器后重新核对。");
       if(!payload.perspective.available)throw Error("当前保存内容暂不能预览，请先处理预览问题。");
+      if(!payload.publication_review?.can_publish)throw Error(payload.publication_review?.checks.filter(row=>row.severity==="blocking").map(row=>row.title).join("；")||"当前没有可发布的保存内容，请重新检查。");
       if(typeof saved[target.field]!=="string")throw Error("保存状态不完整，请重新打开当前对象。");
       setReview({version:expected,payload,withdrawing:Boolean(saved.editorial_revision?.status==="draft"&&saved[target.field]!=="published")});
     }catch(reason){if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"发布检查暂不可用。");}
@@ -78,7 +82,7 @@ function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLoc
   async function send(command:Pending){
     if(acting.current||!target||!canPublish||lifetime.current?.signal.aborted)return;
     if(!validCommand(command,owner,objectType,objectId)){setRecordProblem(true);setError("暂存请求与当前对象不符，已停止发送，请核对历史后清除记录。");return;}
-    if(!pending&&(dirty||!confirmed||!review||review.version!==savedVersion||command.version!==review.version))return;
+    if(!pending&&(dirty||blockedReason||!confirmed||!review||review.version!==savedVersion||command.version!==review.version))return;
     acting.current=true;setBusy(true);setError("");setMessage("");setOpen(false);
     let phase=command,stage:"storage"|"request"="storage";
     try{
@@ -114,11 +118,12 @@ function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLoc
   }
   const preview=review?.payload,before=(preview?.perspectives.published.data||{}) as Record<string,unknown>,after=(preview?.perspective.data||{}) as Record<string,unknown>;
   const changes=Object.entries(fields).filter(([field])=>JSON.stringify(before[field])!==JSON.stringify(after[field])&&(before[field]!=null||after[field]!=null));
-  const locked=dirty||busy||!canPublish||!hydrated||recordProblem||Boolean(pending)||!review||review.version!==savedVersion||Boolean(error);
+  const locked=dirty||busy||!canPublish||!hydrated||recordProblem||Boolean(pending)||!review||review.version!==savedVersion||Boolean(error)||Boolean(blockedReason);
   const previewLink=new URL(safeAdminHref(preview?.preview_routes.draft,`/admin/preview/knowledge/${objectType}/${objectId}`),"https://admin.invalid");
   if(review)previewLink.searchParams.set("edit_version",review.version);
-  return <section className={`${styles.review} ${styles.panel}`} aria-label="知识对象发布">
-    <header><h2>发布已保存内容</h2><button type="button" disabled={dirty||busy||!canPublish||!hydrated||recordProblem||Boolean(pending)||settledVersion===savedVersion||!target} onClick={()=>void inspect()}>发布前检查</button></header>
+  return <section className={embedded?undefined:`${styles.review} ${styles.panel}`} aria-label="知识对象发布">
+    <header>{embedded?null:<h2>发布已保存内容</h2>}<button type="button" className={embedded?styles.primary:undefined} disabled={dirty||busy||!canPublish||!hydrated||recordProblem||Boolean(pending)||settledVersion===savedVersion||!target||Boolean(blockedReason)} onClick={()=>void inspect()}>{reviewHref?"进入完整发布检查":"发布前检查"}</button></header>
+    {blockedReason?<p role="status">{blockedReason}</p>:null}
     <p>{dirty?"当前输入尚未保存，请先保存草稿。":!canPublish?"当前账户没有正式发布权限。":"先核对已保存版本、公开内容与授权，再确认发布。"}</p>
     {message?<p role="status">{message}</p>:null}{error?<p className={styles.warning} role="alert">{error}</p>:null}
     {pending||recordProblem?<section className={styles.warning}><h3>原发布操作待核对</h3><a href={`/admin/knowledge?selected_type=${encodeURIComponent(objectType)}&selected_id=${encodeURIComponent(objectId)}`} target="_blank" rel="noopener">打开原对象版本记录 ↗</a><p>{pending?.phase==="publish"?"已记录编辑修订，继续核对原修订的发布结果。":"请核对正式内容与版本历史，确认原请求是否已完成。"}</p>{pending&&!recordProblem?<button type="button" disabled={busy||!canPublish} onClick={()=>void send(pending)}>重试原阶段</button>:null}<button type="button" disabled={busy} onClick={()=>{if(window.confirm("已核对正式内容与版本历史，确定清除此标签页的待确认记录吗？这不会撤销服务端操作。")){try{clear();setSettledVersion(savedVersion);setError("");setMessage("待确认记录已清除，请刷新编辑器后重新检查。");refresh();}catch{setError("浏览器暂不能清除记录，请保持页面后重试。");}}}}>已核对，清除待确认记录</button></section>:null}

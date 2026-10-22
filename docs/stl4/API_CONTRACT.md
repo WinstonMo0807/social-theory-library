@@ -1,5 +1,13 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 知识M17只读检查投影
+
+既有GET /catalog/admin/knowledge-preview/{object_type}/{object_id}/可携review=1，必须同时携精确edit_version；重复review、非1、缺版本或混入未保存学者选择返回400。版本过期/生成期间改变仍409；主题选择POST不接受review。CanViewEvidence、owner与private/no-store保持。
+
+成功在原预览包内添加publication_review：checked_at/saved_at/current_revision/draft_revision_id、has_draft/withdrawing、actor_label、can_publish、blocking_count/warning_count、checks[{code,severity,title,detail,section}]、changes[{key,label,before,after,changed}]。公开字段按模块比较，其他公开字段纳入基本信息，差异不返回额外私人对象。权限/修订/模型/关系和所选图片检查仅只读；原正式发布仍重新运行原事务规则。当前源码没有全原文自动授权检查。
+
+OpenAPI/schema.ts同步可选review参数，既有226路径不变；返回沿原自由对象和手写KnowledgePreviewPayload同步。不新增表/任务/路由或迁移。iframe回执须同源、准确contentWindow、owner/type/id/version/page全匹配，不把HTTP成功等同渲染就绪。
+
 ## 2026-10-23 知识预览保存版本
 
 原GET /catalog/admin/knowledge-preview/{object_type}/{object_id}/及主题只读POST增加可选query edit_version。重复值或与当前保存版本不符返回409 preview_changed；生成前后版本变化同样409，响应不包含perspective。成功响应追加edit_version，沿KnowledgePreviewPayload自由对象内的可选TS字段同步；新发布/完整预览消费者明确核对该值。

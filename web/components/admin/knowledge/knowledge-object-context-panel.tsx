@@ -10,7 +10,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { KnowledgePublicationContext } from "./knowledge-publish-control";
+import { useRouter } from "next/navigation";
+import { KnowledgePublicationContext, knowledgePublicationTargets } from "./knowledge-publish-control";
 import { use, useCallback, useEffect, useState } from "react";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import {
@@ -309,6 +310,7 @@ export function KnowledgeObjectContextPanel({
   hasUnsavedChanges?: boolean;
 }) {
   const publication = use(KnowledgePublicationContext);
+  const router=useRouter();
   const [selection, setSelection] = useState<KnowledgeSelection | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -425,6 +427,10 @@ export function KnowledgeObjectContextPanel({
     if (!revision.publish_url || publishingRevision || publication?.locked) return;
     if (publication) { publication.requestReview(); return; }
     if (hasUnsavedChanges) { setMessage("本页还有未保存的填写，请先保存，再发布已保存的修改。"); setMessageState("error"); return; }
+    if(knowledgePublicationTargets[objectType]){
+      router.push(`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",return_to:window.location.pathname+window.location.search})}`);
+      return;
+    }
     if (!window.confirm(`发布第 ${revision.revision} 版已保存内容？读者页面将按这份保存内容更新。`)) return;
     setPublishingRevision(revision.id);
     setMessageState("pending");
@@ -530,7 +536,7 @@ export function KnowledgeObjectContextPanel({
           <summary><FileClock size={14} /><span>已保存修改与预览</span><b>{revisions.length}</b></summary>
           <div className="knowledge-object-preview-status"><p><strong>读者当前看到的内容</strong><span>{previewLabel(publishedPreview, "对象尚未公开")}</span></p><p><strong>保存后尚未发布的内容</strong><span>{previewLabel(draftPreview, "当前没有待发布修改")}</span></p>{draftPreview?.unsupported_preview_fields?.length ? <small>部分特殊关系暂时只能预览主要内容。</small> : null}</div>
           {hasUnsavedChanges ? <p className="knowledge-object-context-state">本页还有未保存的填写，不会出现在此处预览中。请先保存，再预览或发布。</p> : null}
-          <div className="knowledge-object-context-list">{revisions.map((revision) => <article key={revision.id}><header><strong>第 {revision.revision} 版</strong><span>{revision.has_conflict ? "与正式版本冲突" : statusLabels[revision.status] || revision.status}</span></header><p>{Array.from(new Set(revision.changed_fields.map(changedFieldLabel))).join("、") || "内容更新"}</p><small>{revision.change_note || "无编辑说明"}</small>{revision.publish_url ? <ActionButton state={publishingRevision === revision.id ? "pending" : "idle"} pendingLabel="发布中" disabled={Boolean(publishingRevision) || revision.has_conflict || hasUnsavedChanges || Boolean(publication?.locked)} onClick={() => void publishRevision(revision)}>{publication ? "进入发布前检查" : "确认并发布"}</ActionButton> : null}</article>)}</div>
+          <div className="knowledge-object-context-list">{revisions.map((revision) => <article key={revision.id}><header><strong>第 {revision.revision} 版</strong><span>{revision.has_conflict ? "与正式版本冲突" : statusLabels[revision.status] || revision.status}</span></header><p>{Array.from(new Set(revision.changed_fields.map(changedFieldLabel))).join("、") || "内容更新"}</p><small>{revision.change_note || "无编辑说明"}</small>{revision.publish_url ? <ActionButton state={publishingRevision === revision.id ? "pending" : "idle"} pendingLabel="发布中" disabled={Boolean(publishingRevision) || revision.has_conflict || hasUnsavedChanges || Boolean(publication?.locked)} onClick={() => void publishRevision(revision)}>{publication || knowledgePublicationTargets[objectType] ? "进入发布前检查" : "确认并发布"}</ActionButton> : null}</article>)}</div>
         </details>
 
         <section className="knowledge-object-impact" aria-label="发布后更新">

@@ -13647,6 +13647,8 @@ export interface operations {
                 featured_source_id?: string;
                 /** @description Scholar only. One comma-separated list of at most 100 UUIDs; an empty value clears manual selections. Omit to retain the saved draft. Automatic public associations remain. */
                 reading_path_ids?: string;
+                /** @description Use 1 with edit_version for read-only knowledge publication checks, public-field changes and settings. Unsaved overrides are not accepted in this mode. */
+                review?: string;
             };
             header?: never;
             path: {
