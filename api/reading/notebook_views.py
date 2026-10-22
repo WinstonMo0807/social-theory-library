@@ -63,12 +63,8 @@ class NotebookEdit(serializers.Serializer):
     label = serializers.CharField(max_length=240, allow_blank=True, required=False)
 
 
-class NotebookProjectInput(serializers.Serializer):
-    request_id = serializers.UUIDField()
-    project_id = serializers.UUIDField()
-    expected_revision = serializers.IntegerField(min_value=1)
+class NotebookTargetsInput(serializers.Serializer):
     targets = PrivacyTargetInput(many=True)
-    note = serializers.CharField(max_length=200, allow_blank=True, required=False)
 
     def validate_targets(self, value):
         if not 1 <= len(value) <= 20 or any(row["category"] not in notebook.MODELS for row in value):
@@ -76,6 +72,19 @@ class NotebookProjectInput(serializers.Serializer):
         if len({(row["category"], str(row["id"])) for row in value}) != len(value):
             raise serializers.ValidationError("同一记录不能重复选择。")
         return value
+
+
+class NotebookProjectInput(NotebookTargetsInput):
+    request_id = serializers.UUIDField()
+    project_id = serializers.UUIDField()
+    expected_revision = serializers.IntegerField(min_value=1)
+    note = serializers.CharField(max_length=200, allow_blank=True, required=False)
+
+
+class NotebookExportInput(NotebookTargetsInput):
+    format = serializers.ChoiceField(choices=["pdf", "markdown", "bibtex", "ris"])
+    include_quotes = serializers.BooleanField(default=False)
+    include_notes = serializers.BooleanField(default=False)
 
 
 class NotebookProjectOutput(serializers.Serializer):
@@ -97,6 +106,18 @@ class BookmarkNoteInput(serializers.Serializer):
     tags = serializers.ListField(child=serializers.CharField(max_length=40, allow_blank=False), max_length=12, required=False)
 
 
+class BookmarkNoteReceiptQuery(serializers.Serializer):
+    request_id = serializers.UUIDField()
+
+
+class BookmarkNoteReceipt(serializers.Serializer):
+    owner_id = serializers.CharField()
+    id = serializers.UUIDField()
+    exists = serializers.BooleanField()
+    retired = serializers.BooleanField()
+    record = NotebookRecord(allow_null=True)
+
+
 class NotebookBase(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
@@ -112,6 +133,15 @@ class NotebookView(NotebookBase):
         query = NotebookQuery(data=request.query_params)
         query.is_valid(raise_exception=True)
         return Response(notebook.listing(request.user, query.validated_data))
+
+
+class NotebookExportView(NotebookBase):
+    @extend_schema(request=NotebookExportInput, responses={(200, "application/octet-stream"): bytes})
+    def post(self, request):
+        from .notebook_exports import download
+        data = NotebookExportInput(data=request.data)
+        data.is_valid(raise_exception=True)
+        return download(request.user, data.validated_data)
 
 
 class NotebookChoicesView(NotebookBase):
@@ -157,6 +187,12 @@ class NotebookProjectView(NotebookBase):
 
 
 class NotebookBookmarkNoteView(NotebookBase):
+    @extend_schema(parameters=[BookmarkNoteReceiptQuery], responses=BookmarkNoteReceipt)
+    def get(self, request, pk):
+        data = BookmarkNoteReceiptQuery(data=request.query_params)
+        data.is_valid(raise_exception=True)
+        return Response(notebook.bookmark_note_receipt(request.user, pk, data.validated_data["request_id"]))
+
     @extend_schema(request=BookmarkNoteInput, responses=NotebookRecord)
     def post(self, request, pk):
         data = BookmarkNoteInput(data=request.data)

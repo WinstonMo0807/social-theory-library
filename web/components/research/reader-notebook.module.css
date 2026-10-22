@@ -71,6 +71,13 @@
 .editor input, .editor textarea { width: 100%; }
 .editor footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
 .editor > a { display: inline-block; margin-left: 14px; }
+.exportList { max-height: 220px; overflow-y: auto; list-style: none; padding: 0; border-block: 1px solid var(--line); }
+.exportList li { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.exportList span, .exportList small { display: block; color: var(--muted); font-size: 12px; }
+.editor fieldset { border: 0; padding: 12px 0; }
+.exportChoices { display: flex; flex-wrap: wrap; gap: 14px; }
+.editor .exportCheck, .exportChoices label { display: flex; align-items: center; gap: 8px; }
+.editor input[type=radio], .editor input[type=checkbox] { width: auto; flex: 0 0 auto; accent-color: var(--ink); }
 @media (max-width: 1120px) { .workspace { grid-template-columns: 170px minmax(270px, 1fr) minmax(270px, 1fr); } .records { padding: 16px 12px; } .detail { padding-left: 16px; } }
 @media (max-width: 900px) { .workspace { grid-template-columns: 1fr 1fr; } .filters { grid-column: 1/-1; border-right: 0; display: flex; flex-wrap: wrap; align-items: start; gap: 14px; border-bottom: 1px solid var(--line); padding: 15px 0; } .filters .sectionTitle { width: 100%; } .filters fieldset { flex: 1 1 135px; margin: 0; } .search { flex: 1 1 100%; margin: 0; } }
 @media (max-width: 620px) { .page { padding: 20px 18px 90px; } .heading { padding-top: 24px; display: block; } .heading h1 { font-size: 27px; } .heading p { font-size: 13px; } .heading small { margin-top: 12px; font-size: 11px; } .workspace { display: block; margin-top: 12px; } .filters { font-size: 11px; } .filters fieldset { flex: 1 1 42%; } .records { border: 0; padding: 18px 0; } .detail { border-top: 1px solid var(--line); padding: 24px 0; } .detail:has(.closeDetail) { position: fixed; z-index: 50; inset: 65px 0 0; padding: 20px; overflow-y: auto; background: var(--paper); } .detail .closeDetail { display: flex; margin: 0 0 18px auto; } .record strong { font-size: 17px; } .actions { position: sticky; bottom: 12px; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--line); padding: 10px; } }

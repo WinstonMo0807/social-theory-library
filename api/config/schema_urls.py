@@ -70,7 +70,7 @@ urlpatterns = [
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
         "reader-groups", "reader-group-accept", "reader-group-detail", "reader-group-receipt", "reader-share-selection", "reader-share-preview",
         "reader-share-sources", "reader-share-receipt", "reader-share-notices", "reader-shares", "reader-share-detail", "public-share-link",
-        "reader-notebook", "reader-notebook-choices", "reader-notebook-detail", "reader-notebook-project", "reader-bookmark-note",
+        "reader-notebook", "reader-notebook-export", "reader-notebook-choices", "reader-notebook-detail", "reader-notebook-project", "reader-bookmark-note",
         "reader-center", "research-account", "reader-search-records", "reader-privacy", "reader-privacy-items", "citation-preview", "citation-preview-file",
         "citation-source-preview", "citation-source-preview-file",
         "article-comments-public", "article-comments-admin", "article-comments-own", "article-comment-receipt", "article-comment-delete",

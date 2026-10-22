@@ -31,7 +31,7 @@ from .research_views import (CitationAuditViewSet, CitationSourceViewSet, Person
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
 from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView
 from .reader_center_views import ReaderCenterView
-from .notebook_views import NotebookView, NotebookChoicesView, NotebookDetailView, NotebookProjectView, NotebookBookmarkNoteView
+from .notebook_views import NotebookView, NotebookChoicesView, NotebookDetailView, NotebookProjectView, NotebookBookmarkNoteView, NotebookExportView
 from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 from .shared_citation_views import PublicCitationPreviewView
 from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView, SourceFollowReceiptView
@@ -88,6 +88,7 @@ urlpatterns = [
     path("shares/<uuid:pk>/", ShareDetailView.as_view(), name="reader-share-detail"),
     path("share-links/<uuid:pk>/", PublicShareView.as_view(), name="public-share-link"),
     path("notebook/", NotebookView.as_view(), name="reader-notebook"),
+    path("notebook/export/", NotebookExportView.as_view(), name="reader-notebook-export"),
     path("notebook/choices/<str:kind>/", NotebookChoicesView.as_view(), name="reader-notebook-choices"),
     path("notebook/add-to-project/", NotebookProjectView.as_view(), name="reader-notebook-project"),
     path("notebook/bookmarks/<uuid:pk>/note/", NotebookBookmarkNoteView.as_view(), name="reader-bookmark-note"),

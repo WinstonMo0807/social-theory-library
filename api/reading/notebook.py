@@ -268,3 +268,13 @@ def add_bookmark_note(request, pk, data):
         "kind": "note", "selector": expected_selector, "body": data["body"], "tags": data.get("tags", []),
         "orphaned": current["source"]["source_status"] != "available"})
     return record(user, "annotations", row)
+
+
+def bookmark_note_receipt(user, bookmark_id, request_id):
+    previous = Annotation.objects.filter(user=user, pk=request_id).select_related("asset__edition", "page").first()
+    if previous and isinstance(previous.selector, dict) and previous.selector.get("notebook_bookmark_id") == str(bookmark_id):
+        return {"owner_id": str(user.pk), "id": str(request_id), "exists": True, "retired": False,
+            "record": record(user, "annotations", previous)}
+    if annotation_retired(user, request_id):
+        return {"owner_id": str(user.pk), "id": str(request_id), "exists": False, "retired": True, "record": None}
+    raise NotFound("尚未查到该次新增笔记，请保留原请求并核对我的笔记；不会自动重新创建。")

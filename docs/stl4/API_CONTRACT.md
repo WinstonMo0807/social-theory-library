@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 R28接续
+
+新增notebook/export POST（1–20本人版本、PDF/Markdown/BibTeX/RIS、明确摘录/笔记）；原bookmark note增加GET请求回执。267路径，无模型迁移，所有者与内容/来源再核对。
+
 ## 2026-10-23 R34受限分享契约
 
 新增groups与shares及share-links共12路径、合计266。见SHARING_WORKSPACE_20261023。私人必需owner头，分享源绑定本人/版本，公开token不进入查询字符串；允许review_candidate仅读明确提案。原privacy collaboration五类与旧export同步，0契约错误/10旧catalog警告；迁移0024仅声明。

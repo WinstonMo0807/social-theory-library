@@ -9,7 +9,9 @@ import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
-import { notebookPath, notebookRecordPath, notebookRequest, type NotebookChoice, type NotebookPage, type NotebookRecord } from "@/lib/api/notebook.client";
+import { downloadNotebook, notebookPath, notebookRecordPath, notebookRequest, type NotebookChoice, type NotebookExportInput, type NotebookPage, type NotebookRecord } from "@/lib/api/notebook.client";
+import { previewSharedCitation, type SharedCitationInput } from "@/lib/api/shared-citation.client";
+import { SharedCitationOverlay } from "@/components/shared-citation-overlay";
 import { preparePrivacyOperation, type PrivacyTarget } from "@/lib/api/privacy.client";
 import { Dialog } from "@/components/ui/dialog";
 import { ResearchCenterNav } from "./research-center-nav";
@@ -126,41 +128,82 @@ function useOwnerController() {
 function NoteEditor({ owner, original, addNote = false, onSaved, onCancel }: { owner: string; original: NotebookRecord; addNote?: boolean; onSaved: (saved: NotebookRecord) => void; onCancel: () => void }) {
   const [body, setBody] = useState(addNote ? "" : original.kind === "bookmark" ? original.label : original.body), [tags, setTags] = useState(original.tags.join("，"));
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
-  const controller = useOwnerController(), sending = useRef(false);
-  const [requestId] = useState(() => crypto.randomUUID());
-  const labelOnly = original.kind === "bookmark" && !addNote;
-  const limit = labelOnly ? 240 : Math.max(500, original.body.length);
-  async function save(event: FormEvent) {
-    event.preventDefault(); const request = controller.current;
-    if (!request || request.signal.aborted || sending.current) return;
+  const [canRetry, setCanRetry] = useState(false);
+  const [ready, setReady] = useState(!addNote), [recovery, setRecovery] = useState<string | null>(null), [broken, setBroken] = useState(false);
+  const controller = useOwnerController(), sending = useRef(false), pending = useRef<Record<string, unknown> | null>(null);
+  const storageKey = `stl-notebook-new-note:${owner}:${original.id}`;
+  const labelOnly = original.kind === "bookmark" && !addNote, limit = labelOnly ? 240 : Math.max(500, original.body.length);
+  useEffect(() => {
+    if (!addNote) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      try {
+        const id = sessionStorage.getItem(storageKey);
+        if (id) { if (!/^[\da-f-]{36}$/i.test(id)) throw Error("原请求标识无法读取，请先在我的笔记核对。"); setRecovery(id); setMessage("上次新增笔记的结果尚未确认，请先查回原结果。"); }
+      } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "原请求无法读取。"); }
+      setReady(true);
+    });
+    return () => { active = false; };
+  }, [addNote, storageKey]);
+  function clear() { sessionStorage.removeItem(storageKey); setRecovery(null); setBroken(false); setCanRetry(false); pending.current = null; }
+  async function lookup() {
+    const request = controller.current;
+    if (!recovery || !request || request.signal.aborted || sending.current) return;
     sending.current = true; setBusy(true); setMessage("");
     try {
-      const saved = await withPrivateOwner(owner, () => notebookRequest<NotebookRecord>(owner, addNote ? `${notebookRecordPath(original)}note/` : notebookRecordPath(original), { method: addNote ? "POST" : "PATCH", signal: request.signal,
-        body: JSON.stringify({ expected_version: original.revision, ...(addNote ? { request_id: requestId } : {}), ...(labelOnly ? { label: body } : { body, tags: [...new Set(tags.split(/[，,]/).map(value => value.trim()).filter(Boolean))] }) }) }), request.signal);
-      if (!request.signal.aborted) onSaved(saved);
-    } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "保存未确认，请保留输入并重试。"); }
+      const result = await withPrivateOwner(owner, () => notebookRequest<{ owner_id: string; id: string; exists: boolean; retired: boolean; record: NotebookRecord | null }>(owner, `${notebookRecordPath(original)}note/?${new URLSearchParams({ request_id: recovery })}`, { signal: request.signal }), request.signal);
+      if (result.id !== recovery) throw Error("回执与原请求不符，请保留请求并重新核对。");
+      if (!request.signal.aborted) { clear(); if (result.exists && result.record) onSaved(result.record); else setMessage("原笔记已经删除，旧请求不会重新创建。可以关闭，或明确填写另一条新笔记。"); }
+    } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "原笔记暂时无法核对。"); }
     finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
   }
-  return <form className={styles.editor} onSubmit={event => void save(event)}><label>{labelOnly ? "名称" : "我的笔记"}<textarea value={body} maxLength={limit} rows={7} onChange={event => setBody(event.target.value)} /></label><small>{body.length} / {limit}</small>{!labelOnly ? <label>标签（逗号分隔，最多12个）<input value={tags} onChange={event => setTags(event.target.value)} /></label> : null}{message ? <p role="alert">{message}</p> : null}<footer><button type="button" disabled={busy} onClick={onCancel}>取消</button><button className={styles.primary} disabled={busy}>{busy ? "正在保存…" : "保存"}</button></footer></form>;
+  async function save(event: FormEvent) {
+    event.preventDefault(); const request = controller.current;
+    if (!request || request.signal.aborted || sending.current || !ready || broken || recovery && !pending.current) return;
+    sending.current = true; setBusy(true); setMessage("");
+    const data = pending.current || { expected_version: original.revision, ...(addNote ? { request_id: crypto.randomUUID() } : {}), ...(labelOnly ? { label: body } : { body, tags: [...new Set(tags.split(/[，,]/).map(value => value.trim()).filter(Boolean))] }) };
+    try {
+      if (addNote) { sessionStorage.setItem(storageKey, String(data.request_id)); pending.current = data; setCanRetry(true); setRecovery(String(data.request_id)); }
+      const saved = await withPrivateOwner(owner, () => notebookRequest<NotebookRecord>(owner, addNote ? `${notebookRecordPath(original)}note/` : notebookRecordPath(original), { method: addNote ? "POST" : "PATCH", signal: request.signal, body: JSON.stringify(data) }), request.signal);
+      if (!request.signal.aborted) { if (addNote) clear(); onSaved(saved); }
+    } catch (reason) {
+      if (request.signal.aborted) return;
+      if (addNote && reason instanceof ApiRequestError && [400, 403, 404, 409].includes(reason.status)) clear();
+      setMessage(reason instanceof Error ? reason.message : "保存未确认，请保留输入并查回原结果。");
+    } finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
+  }
+  const locked = busy || !ready || Boolean(recovery) || broken;
+  return <form className={styles.editor} onSubmit={event => void save(event)}><fieldset disabled={locked}><label>{labelOnly ? "名称" : "我的笔记"}<textarea value={body} maxLength={limit} rows={7} onChange={event => setBody(event.target.value)} /></label><small>{body.length} / {limit}</small>{!labelOnly ? <label>标签（逗号分隔，最多12个）<input value={tags} onChange={event => setTags(event.target.value)} /></label> : null}</fieldset>{message ? <p role="alert">{message}</p> : null}
+    {recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>查回原笔记</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的笔记核对原操作。确认结束本次恢复？已保存内容不会删除。")) clear(); }}>已核对，结束恢复</button> : null}
+    <footer><button type="button" disabled={busy} onClick={onCancel}>取消</button><button className={styles.primary} disabled={busy || !ready || broken || Boolean(recovery && !canRetry)}>{busy ? "正在保存…" : recovery ? "重试原请求" : "保存"}</button></footer></form>;
 }
 
 function DetailActions({ owner, row, onPreview }: { owner: string; row: NotebookRecord; onPreview: () => void }) {
   const [message, setMessage] = useState(""); const controller = useOwnerController();
-  async function copy() {
+  const [citation, setCitation] = useState<SharedCitationInput | null>(null);
+  async function cite(copy: boolean) {
     const request = controller.current; if (!request || request.signal.aborted) return;
     try {
-      const fresh = await withPrivateOwner(owner, () => notebookRequest<NotebookRecord>(owner, notebookRecordPath(row), { signal: request.signal }), request.signal);
-      if (!fresh.saved_quote || fresh.source.source_status !== "available") throw Error("当前无法核对摘录与引文，请先查看原文。");
-      await navigator.clipboard.writeText(`${fresh.saved_quote}\n\n${fresh.source.citation || fresh.work.title} · PDF 第 ${fresh.pdf_page} 页${fresh.source.printed_label ? ` · 书内页码 ${fresh.source.printed_label}` : ""}`);
-      if (!request.signal.aborted) setMessage("已复制摘录与来源。");
-    } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "复制未完成。"); }
+      const result = await withPrivateOwner(owner, async () => {
+        const fresh = await notebookRequest<NotebookRecord>(owner, notebookRecordPath(row), { signal: request.signal });
+        if (fresh.source.source_status !== "available" || copy && !fresh.saved_quote) throw Error("当前无法核对摘录与引文，请先查看原文。");
+        const input: SharedCitationInput = { reference: fresh.source, ...(fresh.saved_quote ? { selectedText: fresh.saved_quote } : {}) };
+        return { input, verified: await previewSharedCitation(input, request.signal) };
+      }, request.signal);
+      if (request.signal.aborted) return;
+      if (!copy) { setCitation(result.input); return; }
+      await navigator.clipboard.writeText(`${result.verified.reference?.quote || ""}\n\n${result.verified.citations["gbt7714-2025"] || result.verified.source.title} · PDF 第 ${result.verified.source.pdf_page} 页`);
+      if (!request.signal.aborted) setMessage("已复制当前可核对的摘录与来源。");
+    } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "引用暂时无法核对。"); }
   }
-  return <div className={styles.detailActions}><button disabled={!row.saved_quote || row.source.source_status !== "available"} onClick={() => void copy()}><Copy size={14} />复制摘录（含出处）</button><button disabled={row.source.source_status !== "available"} onClick={onPreview}><BookOpen size={14} />核对原文</button>{message ? <p role="status">{message}</p> : null}</div>;
+  return <><div className={styles.detailActions}><button disabled={!row.saved_quote || row.source.source_status !== "available"} onClick={() => void cite(true)}><Copy size={14} />复制摘录（含出处）</button><button disabled={row.source.source_status !== "available"} onClick={() => void cite(false)}><Download size={14} />导出为引用</button><button disabled={row.source.source_status !== "available"} onClick={onPreview}><BookOpen size={14} />核对原文</button>{message ? <p role="status">{message}</p> : null}</div>{citation ? <SharedCitationOverlay {...citation} open onClose={() => setCitation(null)} /> : null}</>;
 }
 
 type BulkIntent = { requestId: string; kind: "export" | "erase"; targets: PrivacyTarget[] };
 function NotebookActions({ owner, chosen, onChanged }: { owner: string; chosen: NotebookRecord[]; onChanged: () => void }) {
   const [intent, setIntent] = useState<BulkIntent | null>(null), [operation, setOperation] = useState<string | null>(null), [projectRows, setProjectRows] = useState<NotebookRecord[] | null>(null);
+  const [exportRows, setExportRows] = useState<NotebookRecord[] | null>(null);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(""), [broken, setBroken] = useState(false);
   const controller = useOwnerController(), sending = useRef(false); const storageKey = `stl-notebook-operation:${owner}`;
   useEffect(() => {
@@ -173,8 +216,8 @@ function NotebookActions({ owner, chosen, onChanged }: { owner: string; chosen: 
       } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "无法读取原请求。"); }
     }); return () => { active = false; };
   }, [storageKey]);
-  async function submit(kind?: BulkIntent["kind"]) {
-    const request = controller.current, action = intent || (kind && chosen.length ? { requestId: crypto.randomUUID(), kind, targets: chosen.map(target) } : null);
+  async function submit(kind?: BulkIntent["kind"], selectedRows = chosen) {
+    const request = controller.current, action = intent || (kind && selectedRows.length ? { requestId: crypto.randomUUID(), kind, targets: selectedRows.map(target) } : null);
     if (!action || !request || request.signal.aborted || sending.current || broken) return;
     sending.current = true; setBusy(true); setMessage("");
     try {
@@ -188,10 +231,31 @@ function NotebookActions({ owner, chosen, onChanged }: { owner: string; chosen: 
     } finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
   }
   const disabled = busy || !!intent || broken || !chosen.length;
-  return <><div className={styles.actions}><button className={styles.primary} disabled={disabled} onClick={() => setProjectRows([...chosen])}>加入研究</button><button disabled={disabled} onClick={() => void submit("export")}><Download size={14} />导出</button><button disabled={disabled} onClick={() => void submit("erase")}><Trash2 size={14} />删除</button></div>
+  return <><div className={styles.actions}><button className={styles.primary} disabled={disabled} onClick={() => setProjectRows([...chosen])}>加入研究</button><button disabled={disabled} onClick={() => setExportRows([...chosen])}><Download size={14} />导出</button><button disabled={disabled} onClick={() => void submit("erase")}><Trash2 size={14} />删除</button></div>
     {message ? <p className={styles.notice} role="status">{message}</p> : null}{intent ? <button disabled={busy} onClick={() => void submit()}>核对原请求</button> : null}{broken ? <Link href="/account/privacy">打开隐私与资料核对</Link> : null}
     {operation ? <OperationDialog id={operation} ownerId={owner} titles={Object.fromEntries(chosen.map(row => [row.id, row.work.title]))} onClose={() => { setOperation(null); onChanged(); }} onChanged={onChanged} onInvalid={reason => setMessage(reason instanceof Error ? reason.message : "账户状态需重新核对。")} /> : null}
-    {projectRows ? <Modal title="加入我的研究" onClose={() => setProjectRows(null)}><ProjectForm owner={owner} rows={projectRows} onDone={() => { setProjectRows(null); onChanged(); }} /></Modal> : null}</>;
+    {projectRows ? <Modal title="加入我的研究" onClose={() => setProjectRows(null)}><ProjectForm owner={owner} rows={projectRows} onDone={() => { setProjectRows(null); onChanged(); }} /></Modal> : null}
+    {exportRows ? <Modal title="导出选中的阅读记录" onClose={() => setExportRows(null)}><NotebookExport owner={owner} rows={exportRows} onJson={() => { const selected = exportRows; setExportRows(null); void submit("export", selected); }} /></Modal> : null}</>;
+}
+
+function NotebookExport({ owner, rows, onJson }: { owner: string; rows: NotebookRecord[]; onJson: () => void }) {
+  const [format, setFormat] = useState<NotebookExportInput["format"]>("pdf"), [notes, setNotes] = useState(false), [quotes, setQuotes] = useState(false);
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
+  const controller = useOwnerController(), sending = useRef(false);
+  async function submit(event: FormEvent) {
+    event.preventDefault(); const request = controller.current;
+    if (!request || request.signal.aborted || sending.current) return;
+    sending.current = true; setBusy(true); setMessage("");
+    try {
+      await downloadNotebook(owner, { targets: rows.map(target), format, include_notes: notes, include_quotes: quotes }, AbortSignal.any([request.signal, AbortSignal.timeout(30000)]));
+      if (!request.signal.aborted) setMessage("所选文件已准备并交给浏览器下载。");
+    } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "导出未完成，请保留选择后重试。"); }
+    finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
+  }
+  return <form className={styles.editor} onSubmit={event => void submit(event)}><p>本次选择 {rows.length} 条。只导出这些记录；关闭后不会保留未确认的下载内容。</p><ul className={styles.exportList}>{rows.map(row => <li key={row.key}><strong>{row.work.title}</strong><span>{labels[row.kind]} · PDF 第 {row.pdf_page} 页</span>{row.source.source_status !== "available" ? <small>当前来源不可核对；PDF/Markdown 可保留本人记录</small> : null}</li>)}</ul>
+    <fieldset disabled={busy}><legend>文件格式</legend><div className={styles.exportChoices}>{([["pdf", "PDF"], ["markdown", "Markdown"], ["bibtex", "BibTeX"], ["ris", "RIS"]] as const).map(([value, label]) => <label key={value}><input type="radio" name="notebook-export-format" checked={format === value} onChange={() => setFormat(value)} />{label}</label>)}</div>
+      <label className={styles.exportCheck}><input type="checkbox" checked={quotes} onChange={event => setQuotes(event.target.checked)} />包含保存时的摘录</label><label className={styles.exportCheck}><input type="checkbox" checked={notes} onChange={event => setNotes(event.target.checked)} />包含本人笔记和标签</label></fieldset>
+    <p className={styles.muted}>默认仅导出记录和来源信息。旧摘录始终标为个人保存记录，引用功能会另行核对当前原文；不下载 PDF 原件、不授予学术记忆或公开分享权限。</p>{message ? <p role="status">{message}</p> : null}<footer><button type="button" disabled={busy} onClick={onJson}>原始 JSON 备份</button><button className={styles.primary} disabled={busy}>{busy ? "正在准备…" : "确认下载所选范围"}</button></footer><p className={styles.muted}>JSON 备份会沿隐私与资料流程生成所选记录的完整备份，含保存的摘录和本人笔记。</p></form>;
 }
 
 function ProjectForm({ owner, rows, onDone }: { owner: string; rows: NotebookRecord[]; onDone: () => void }) {

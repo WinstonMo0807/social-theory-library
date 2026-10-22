@@ -1,4 +1,5 @@
-import { apiRequest, getServerSessionCredential } from "../api";
+import { apiRequest, apiStreamRequest, getServerSessionCredential } from "../api";
+import { withPrivateOwner } from "./private-owner";
 import type { ResolvedEvidence } from "./research.client";
 import type { PrivacyTarget } from "./privacy.client";
 
@@ -19,4 +20,22 @@ export function notebookRequest<T extends { owner_id: string }>(owner: string, p
     if (result.owner_id !== owner) throw Error("登录账户已变化，请重新读取本人资料。");
     return result;
   });
+}
+
+export type NotebookExportInput = { targets: PrivacyTarget[]; format: "pdf" | "markdown" | "bibtex" | "ris"; include_notes: boolean; include_quotes: boolean };
+export async function downloadNotebook(owner: string, data: NotebookExportInput, signal: AbortSignal) {
+  const blob = await withPrivateOwner(owner, async () => {
+    const response = await apiStreamRequest(`${notebookPath}export/`, { method: "POST", headers: { "X-Reader-Owner": owner }, body: JSON.stringify(data), cache: "no-store", signal }, getServerSessionCredential(), false);
+    if (!response.ok) {
+      let message = "导出未完成，请重新读取记录后选择。";
+      try { const body = await response.json(); if (typeof body.detail === "string") message = body.detail; } catch { /* Do not render raw server responses. */ }
+      throw Error(message);
+    }
+    return response.blob();
+  }, signal);
+  signal.throwIfAborted();
+  const url = URL.createObjectURL(blob), anchor = document.createElement("a");
+  anchor.href = url; anchor.download = `stl-reading-records.${data.format === "markdown" ? "md" : data.format === "bibtex" ? "bib" : data.format}`;
+  document.body.append(anchor); anchor.click(); anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

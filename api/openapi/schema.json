@@ -14703,6 +14703,52 @@
             }
         },
         "/api/reading/notebook/bookmarks/{id}/note/": {
+            "get": {
+                "operationId": "reading_notebook_bookmarks_note_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BookmarkNoteReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
             "post": {
                 "operationId": "reading_notebook_bookmarks_note_create",
                 "parameters": [
@@ -14879,6 +14925,55 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/NotebookPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/notebook/export/": {
+            "post": {
+                "operationId": "reading_notebook_export_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotebookExportInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotebookExportInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotebookExportInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
                                 }
                             }
                         },
@@ -22812,6 +22907,39 @@
                     "request_id"
                 ]
             },
+            "BookmarkNoteReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "retired": {
+                        "type": "boolean"
+                    },
+                    "record": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/NotebookRecord"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "exists",
+                    "id",
+                    "owner_id",
+                    "record",
+                    "retired"
+                ]
+            },
             "BookmarkRequest": {
                 "type": "object",
                 "properties": {
@@ -27689,16 +27817,6 @@
                     "reader_progress"
                 ]
             },
-            "FormatEnum": {
-                "enum": [
-                    "pdf",
-                    "bibtex",
-                    "ris",
-                    "csv"
-                ],
-                "type": "string",
-                "description": "* `pdf` - pdf\n* `bibtex` - bibtex\n* `ris` - ris\n* `csv` - csv"
-            },
             "GenerateReaderInputRequest": {
                 "type": "object",
                 "properties": {
@@ -31942,6 +32060,16 @@
                     "total_pages"
                 ]
             },
+            "ListExportFormatEnum": {
+                "enum": [
+                    "pdf",
+                    "bibtex",
+                    "ris",
+                    "csv"
+                ],
+                "type": "string",
+                "description": "* `pdf` - pdf\n* `bibtex` - bibtex\n* `ris` - ris\n* `csv` - csv"
+            },
             "ListExportRequest": {
                 "type": "object",
                 "properties": {
@@ -31951,7 +32079,7 @@
                         "maxLength": 100
                     },
                     "format": {
-                        "$ref": "#/components/schemas/FormatEnum"
+                        "$ref": "#/components/schemas/ListExportFormatEnum"
                     },
                     "include_progress": {
                         "type": "boolean",
@@ -34522,6 +34650,42 @@
                     "year_groups"
                 ]
             },
+            "NotebookExportInputFormatEnum": {
+                "enum": [
+                    "pdf",
+                    "markdown",
+                    "bibtex",
+                    "ris"
+                ],
+                "type": "string",
+                "description": "* `pdf` - pdf\n* `markdown` - markdown\n* `bibtex` - bibtex\n* `ris` - ris"
+            },
+            "NotebookExportInputRequest": {
+                "type": "object",
+                "properties": {
+                    "targets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrivacyTargetInputRequest"
+                        }
+                    },
+                    "format": {
+                        "$ref": "#/components/schemas/NotebookExportInputFormatEnum"
+                    },
+                    "include_quotes": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "include_notes": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "format",
+                    "targets"
+                ]
+            },
             "NotebookPage": {
                 "type": "object",
                 "properties": {
@@ -34556,6 +34720,12 @@
             "NotebookProjectInputRequest": {
                 "type": "object",
                 "properties": {
+                    "targets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrivacyTargetInputRequest"
+                        }
+                    },
                     "request_id": {
                         "type": "string",
                         "format": "uuid"
@@ -34567,12 +34737,6 @@
                     "expected_revision": {
                         "type": "integer",
                         "minimum": 1
-                    },
-                    "targets": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/PrivacyTargetInputRequest"
-                        }
                     },
                     "note": {
                         "type": "string",

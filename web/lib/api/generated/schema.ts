@@ -3103,7 +3103,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["reading_notebook_bookmarks_note_retrieve"];
         put?: never;
         post: operations["reading_notebook_bookmarks_note_create"];
         delete?: never;
@@ -3122,6 +3122,22 @@ export interface paths {
         get: operations["reading_notebook_choices_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/notebook/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_notebook_export_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5102,6 +5118,14 @@ export interface components {
             body: string;
             tags?: string[];
         };
+        BookmarkNoteReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            id: string;
+            exists: boolean;
+            retired: boolean;
+            record: components["schemas"]["NotebookRecord"] | null;
+        };
         BookmarkRequest: {
             /** Format: uuid */
             asset: string;
@@ -6572,14 +6596,6 @@ export interface components {
             reader_bookmarks: number;
             reader_progress: number;
         };
-        /**
-         * @description * `pdf` - pdf
-         *     * `bibtex` - bibtex
-         *     * `ris` - ris
-         *     * `csv` - csv
-         * @enum {string}
-         */
-        FormatEnum: "pdf" | "bibtex" | "ris" | "csv";
         GenerateReaderInputRequest: {
             /** Format: uuid */
             request_key: string;
@@ -7843,9 +7859,17 @@ export interface components {
             total_pages: number;
             results: components["schemas"]["ListSummary"][];
         };
+        /**
+         * @description * `pdf` - pdf
+         *     * `bibtex` - bibtex
+         *     * `ris` - ris
+         *     * `csv` - csv
+         * @enum {string}
+         */
+        ListExportFormatEnum: "pdf" | "bibtex" | "ris" | "csv";
         ListExportRequest: {
             expected_version: string;
-            format: components["schemas"]["FormatEnum"];
+            format: components["schemas"]["ListExportFormatEnum"];
             /** @default false */
             include_progress: boolean;
             /** @default false */
@@ -8518,6 +8542,22 @@ export interface components {
             selected_topics: components["schemas"]["TimelineTopic"][];
             selected_authors: components["schemas"]["TimelineScholar"][];
         };
+        /**
+         * @description * `pdf` - pdf
+         *     * `markdown` - markdown
+         *     * `bibtex` - bibtex
+         *     * `ris` - ris
+         * @enum {string}
+         */
+        NotebookExportInputFormatEnum: "pdf" | "markdown" | "bibtex" | "ris";
+        NotebookExportInputRequest: {
+            targets: components["schemas"]["PrivacyTargetInputRequest"][];
+            format: components["schemas"]["NotebookExportInputFormatEnum"];
+            /** @default false */
+            include_quotes: boolean;
+            /** @default false */
+            include_notes: boolean;
+        };
         NotebookPage: {
             owner_id: string;
             count: number;
@@ -8528,12 +8568,12 @@ export interface components {
             }[];
         };
         NotebookProjectInputRequest: {
+            targets: components["schemas"]["PrivacyTargetInputRequest"][];
             /** Format: uuid */
             request_id: string;
             /** Format: uuid */
             project_id: string;
             expected_revision: number;
-            targets: components["schemas"]["PrivacyTargetInputRequest"][];
             note?: string;
         };
         NotebookProjectOutput: {
@@ -21231,6 +21271,29 @@ export interface operations {
             };
         };
     };
+    reading_notebook_bookmarks_note_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookmarkNoteReceipt"];
+                };
+            };
+        };
+    };
     reading_notebook_bookmarks_note_create: {
         parameters: {
             query?: never;
@@ -21295,6 +21358,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotebookPage"];
+                };
+            };
+        };
+    };
+    reading_notebook_export_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotebookExportInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NotebookExportInputRequest"];
+                "multipart/form-data": components["schemas"]["NotebookExportInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
                 };
             };
         };

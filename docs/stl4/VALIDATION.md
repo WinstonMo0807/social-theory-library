@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-23 R28接续
+
+R28 f65197 AST24/SQL编译32/迁移声明退出0，eabfa7契约267/CSS退出0。ESLint367706发现渲染访问ref并已改状态，最终TS+ESLint c439d7退出0；无测试/浏览器/真实导出。
+
 ## 2026-10-23 R34分享静态记录
 
 f78b9b AST23/SQL编译32/迁移声明比较退出0，禁止DB连接；15e1c9契约266/CSS解析退出0，schema0错误10旧警告；TS与目标ESLint eda30b退出0。末次sender缺失处理与导出补齐见SHARING_WORKSPACE_20261023。没有测试/浏览器/迁移/业务/通知/生产；fixture只同步collaboration计数类型。
