@@ -73,3 +73,7 @@
 ## R29书单补充
 
 2026-10-23：/account/collections直接使用本人原书单，directory/workspace/command/receipt/export必需owner；笔记/进度导出默认不勾选，原来源授权复核。书单移除只影响关联、30天内可恢复，整单删除不删独立计划/笔记。新的0023未执行；复制私人入口不公开，显式分享仍待。见BOOKLIST_WORKSPACE_20261023，未测试或运行验收。
+
+## R28账户接口补充
+
+2026-10-23：notebook五路径均强制owner头和本人过滤，编辑校验版本；书签纳入原隐私任务，研究加入只选来源与明确备注，不自动共享笔记正文。旧文件本人文字可编辑，公开WorkCard无公开快照返回null，历史title也不返回草稿。笔记删除保留最小回执防重试复活；跨类型同UUID任务改category+id。全文见NOTEBOOK_WORKSPACE_20261023。静态证据不能证明全部账号场景通过。

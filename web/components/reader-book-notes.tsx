@@ -23,7 +23,7 @@ import { BookCover } from "./ui";
 type AnnotationRow = {
   id: string;
   asset: string;
-  work: ApiWork;
+  work: ApiWork | null;
   kind: "note";
   quote: string;
   body_text: string;
@@ -142,7 +142,7 @@ function BookNotesWorkspace({ assetId, bootstrap }: { assetId: string; bootstrap
     return <main className="account-loading">正在读取这本书的笔记……</main>;
   }
 
-  const work = notes[0] ? adaptWork(notes[0].work) : null;
+  const work = notes[0]?.work ? adaptWork(notes[0].work) : null;
   return (
     <main className="reader-book-notes page-shell">
       <Link className="back-link" href="/account"><ArrowLeft size={15} /> 返回读者中心</Link>

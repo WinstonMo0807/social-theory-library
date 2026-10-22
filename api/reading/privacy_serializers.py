@@ -7,7 +7,7 @@ class PrivacyPreferencesInput(serializers.Serializer):
 
 
 class PrivacyTargetInput(serializers.Serializer):
-    category = serializers.ChoiceField(choices=["article_comments", "reading_history", "search_history", "annotations", "memories", "parallel_alignments", "plans", "followed_topics", "source_follows", "saved_knowledge", "graph_views", "reading_lists", "saved_items", "research", "audits", "citation_sources"])
+    category = serializers.ChoiceField(choices=["article_comments", "reading_history", "search_history", "annotations", "bookmarks", "memories", "parallel_alignments", "plans", "followed_topics", "source_follows", "saved_knowledge", "graph_views", "reading_lists", "saved_items", "research", "audits", "citation_sources"])
     id = serializers.UUIDField()
     revision = serializers.CharField(max_length=80)
 

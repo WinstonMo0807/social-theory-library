@@ -51,7 +51,7 @@ def material(user, kind, row, *, text=None):
         path = f"/account/research/{row.pk}"
     elif kind == "notes":
         state = "source_unavailable" if row.orphaned else "saved"
-        path = f"/account/notes/{row.asset_id}#note-{row.pk}" if row.kind == "note" else "/account/notes"
+        path = f"/account/notes?category=annotations&record={row.pk}"
     elif kind == "plans":
         data = research.unpack(row)
         items = data.get("items") or []

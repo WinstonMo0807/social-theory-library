@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-23 阅读记录投影与最少回执
+
+R28统一原Annotation/Bookmark，无复制库或新迁移；公开来源另外复核，私有正文搜索在5000条本人范围内解密，索引只合并ID/时间/类型。研究关联写入原加密项目，独立笔记不自动授权模型。KnowledgeSaveReceipt命名空间回执阻止已删笔记迟到重建；原隐私任务身份改category+id，兼容唯一ID旧影响。详见docs/stl4/NOTEBOOK_WORKSPACE_20261023.md。
+
+
 ## 2026-10-23 书单转换仍用原计划
 
 booklist_plans复用原PersonalReadingPlan、PlanCommandReceipt及plan_rules；来源写入原加密payload，回执不保存正文。User锁、保存版本和来源摘要复核后同事务生成；原建议任务仅在提交后触发。无新表/新队列，不同步第二份馆藏。见docs/stl4/BOOKLIST_PLAN_20261023.md。

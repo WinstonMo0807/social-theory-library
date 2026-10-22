@@ -31,6 +31,7 @@ from .research_views import (CitationAuditViewSet, CitationSourceViewSet, Person
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
 from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView
 from .reader_center_views import ReaderCenterView
+from .notebook_views import NotebookView, NotebookChoicesView, NotebookDetailView, NotebookProjectView, NotebookBookmarkNoteView
 from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 from .shared_citation_views import PublicCitationPreviewView
 from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView, SourceFollowReceiptView
@@ -72,6 +73,11 @@ router.register(
 )
 
 urlpatterns = [
+    path("notebook/", NotebookView.as_view(), name="reader-notebook"),
+    path("notebook/choices/<str:kind>/", NotebookChoicesView.as_view(), name="reader-notebook-choices"),
+    path("notebook/add-to-project/", NotebookProjectView.as_view(), name="reader-notebook-project"),
+    path("notebook/bookmarks/<uuid:pk>/note/", NotebookBookmarkNoteView.as_view(), name="reader-bookmark-note"),
+    path("notebook/<str:category>/<uuid:pk>/", NotebookDetailView.as_view(), name="reader-notebook-detail"),
     path("reader-center/", ReaderCenterView.as_view(), name="reader-center"),
     path("article-comments/public/<uuid:issue_id>/", PublicArticleCommentsView.as_view(), name="article-comments-public"),
     path("article-comments/admin/<uuid:issue_id>/", AdminArticleCommentsView.as_view(), name="article-comments-admin"),

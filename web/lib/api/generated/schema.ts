@@ -2952,6 +2952,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/notebook/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_notebook_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/notebook/{category}/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_notebook_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["reading_notebook_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/notebook/add-to-project/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_notebook_add_to_project_retrieve"];
+        put?: never;
+        post: operations["reading_notebook_add_to_project_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/notebook/bookmarks/{id}/note/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_notebook_bookmarks_note_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/notebook/choices/{kind}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_notebook_choices_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/parallel-calibrations/": {
         parameters: {
             query?: never;
@@ -4422,7 +4502,7 @@ export interface components {
             readonly id: string;
             /** Format: uuid */
             asset: string;
-            readonly work: components["schemas"]["WorkCard"];
+            readonly work: components["schemas"]["WorkCard"] | null;
             /** Format: uuid */
             page: string;
             kind: components["schemas"]["AnnotationKindEnum"];
@@ -4729,13 +4809,22 @@ export interface components {
             readonly id: string;
             /** Format: uuid */
             asset: string;
-            readonly work: components["schemas"]["WorkCard"];
+            readonly work: components["schemas"]["WorkCard"] | null;
             /** Format: uuid */
             page: string;
             readonly page_index: number;
             label?: string;
             /** Format: date-time */
             readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        BookmarkNoteInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            body: string;
+            tags?: string[];
         };
         BookmarkRequest: {
             /** Format: uuid */
@@ -8026,6 +8115,60 @@ export interface components {
             selected_topics: components["schemas"]["TimelineTopic"][];
             selected_authors: components["schemas"]["TimelineScholar"][];
         };
+        NotebookPage: {
+            owner_id: string;
+            count: number;
+            page: number;
+            total_pages: number;
+            results: {
+                [key: string]: unknown;
+            }[];
+        };
+        NotebookProjectInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            project_id: string;
+            expected_revision: number;
+            targets: components["schemas"]["PrivacyTargetInputRequest"][];
+            note?: string;
+        };
+        NotebookProjectOutput: {
+            owner_id: string;
+            /** Format: uuid */
+            project_id: string;
+            revision: number | null;
+            exists?: boolean;
+        };
+        NotebookRecord: {
+            owner_id: string;
+            /** Format: uuid */
+            id: string;
+            category: string;
+            revision: string;
+            key: string;
+            kind: string;
+            /** Format: uuid */
+            asset_id: string;
+            /** Format: uuid */
+            page_id: string;
+            pdf_page: number;
+            work: {
+                [key: string]: unknown;
+            };
+            body: string;
+            label: string;
+            tags: string[];
+            saved_quote: string;
+            source: {
+                [key: string]: unknown;
+            };
+            notice: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
         /**
          * @description * `save` - save
          *     * `prepare` - prepare
@@ -9115,6 +9258,12 @@ export interface components {
             /** @description 本人已对照当前原笔记后明确更新来源身份；不修改原笔记。 */
             refresh_origin?: boolean;
         };
+        PatchedNotebookEditRequest: {
+            expected_version?: string;
+            body?: string;
+            tags?: string[];
+            label?: string;
+        };
         PatchedParallelTaskUpdateInputRequest: {
             /** Format: uuid */
             request_id?: string;
@@ -10090,6 +10239,7 @@ export interface components {
          *     * `reading_history` - reading_history
          *     * `search_history` - search_history
          *     * `annotations` - annotations
+         *     * `bookmarks` - bookmarks
          *     * `memories` - memories
          *     * `parallel_alignments` - parallel_alignments
          *     * `plans` - plans
@@ -10104,7 +10254,7 @@ export interface components {
          *     * `citation_sources` - citation_sources
          * @enum {string}
          */
-        PrivacyTargetInputCategoryEnum: "article_comments" | "reading_history" | "search_history" | "annotations" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists" | "saved_items" | "research" | "audits" | "citation_sources";
+        PrivacyTargetInputCategoryEnum: "article_comments" | "reading_history" | "search_history" | "annotations" | "bookmarks" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists" | "saved_items" | "research" | "audits" | "citation_sources";
         PrivacyTargetInputRequest: {
             category: components["schemas"]["PrivacyTargetInputCategoryEnum"];
             /** Format: uuid */
@@ -11286,7 +11436,7 @@ export interface components {
             readonly id: string;
             /** Format: uuid */
             asset: string;
-            readonly work: components["schemas"]["WorkCard"];
+            readonly work: components["schemas"]["WorkCard"] | null;
             readonly title: string;
             /** Format: int64 */
             page_index?: number;
@@ -11493,7 +11643,7 @@ export interface components {
             readonly id: string;
             /** Format: uuid */
             asset: string;
-            readonly work: components["schemas"]["WorkCard"];
+            readonly work: components["schemas"]["WorkCard"] | null;
             /** Format: int64 */
             current_page?: number;
             /** Format: double */
@@ -19944,6 +20094,210 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListResult"];
+                };
+            };
+        };
+    };
+    reader_notebook_list: {
+        parameters: {
+            query?: {
+                asset?: string;
+                end?: string;
+                /**
+                 * @description * `all` - all
+                 *     * `note` - note
+                 *     * `excerpt` - excerpt
+                 *     * `bookmark` - bookmark
+                 */
+                kind?: "all" | "note" | "excerpt" | "bookmark";
+                /**
+                 * @description * `newest` - newest
+                 *     * `oldest` - oldest
+                 */
+                order?: "newest" | "oldest";
+                page?: number;
+                project?: string;
+                q?: string;
+                start?: string;
+                work?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotebookPage"];
+                };
+            };
+        };
+    };
+    reading_notebook_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotebookRecord"];
+                };
+            };
+        };
+    };
+    reading_notebook_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedNotebookEditRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedNotebookEditRequest"];
+                "multipart/form-data": components["schemas"]["PatchedNotebookEditRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotebookRecord"];
+                };
+            };
+        };
+    };
+    reading_notebook_add_to_project_retrieve: {
+        parameters: {
+            query: {
+                project_id: string;
+                request_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotebookProjectOutput"];
+                };
+            };
+        };
+    };
+    reading_notebook_add_to_project_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotebookProjectInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NotebookProjectInputRequest"];
+                "multipart/form-data": components["schemas"]["NotebookProjectInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotebookProjectOutput"];
+                };
+            };
+        };
+    };
+    reading_notebook_bookmarks_note_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookmarkNoteInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BookmarkNoteInputRequest"];
+                "multipart/form-data": components["schemas"]["BookmarkNoteInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotebookRecord"];
+                };
+            };
+        };
+    };
+    reading_notebook_choices_retrieve: {
+        parameters: {
+            query?: {
+                asset?: string;
+                end?: string;
+                /**
+                 * @description * `all` - all
+                 *     * `note` - note
+                 *     * `excerpt` - excerpt
+                 *     * `bookmark` - bookmark
+                 */
+                kind?: "all" | "note" | "excerpt" | "bookmark";
+                /**
+                 * @description * `newest` - newest
+                 *     * `oldest` - oldest
+                 */
+                order?: "newest" | "oldest";
+                page?: number;
+                project?: string;
+                q?: string;
+                start?: string;
+                work?: string;
+            };
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotebookPage"];
                 };
             };
         };

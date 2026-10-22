@@ -57,7 +57,7 @@ export function HomeRandomBook({ works, section }: { works: Work[]; section?: Ho
   return <section className="stl4-home-random" aria-label="随机荐读"><div><h2>{work?.title || "遇见一本好书"}</h2><p aria-live="polite">{work ? `${work.author} · ${work.year}` : section?.status === "unavailable" ? section.message : works.length ? "从已发布馆藏中，开始一次新的阅读。" : "馆藏发布后，即可随机发现一本书。"}</p></div><button type="button" disabled={!works.length} onClick={() => setIndex(current => current === null ? Math.floor(Math.random() * works.length) : works.length < 2 ? 0 : (current + 1 + Math.floor(Math.random() * (works.length - 1))) % works.length)}><Shuffle size={16} />{work ? "再换一本" : "随机推荐"}</button>{work ? <Link href={`/works/${work.slug}`}>查看馆藏 <ArrowRight size={16} /></Link> : null}</section>;
 }
 
-type ProgressRow = { id: string; asset: string; current_page: number; progress_ratio: number; updated_at?: string; work: ApiWork };
+type ProgressRow = { id: string; asset: string; current_page: number; progress_ratio: number; updated_at?: string; work: ApiWork | null };
 export function HomeContinueReading() {
   const { state: session } = usePublicSession();
   const userId = session.status === "authenticated" ? session.user?.id : undefined;
@@ -76,5 +76,6 @@ export function HomeContinueReading() {
   if (userId === undefined || result?.owner !== userId || (!result.row && !result.error)) return null;
   if (result.error) return <aside className="stl4-continue" role="status"><p>{result.error}</p><button type="button" onClick={() => setAttempt(value => value + 1)}>重试</button></aside>;
   const row = result.row!;
+  if (!row.work) return <aside className="stl4-continue"><p>上次阅读的来源当前不可用，阅读位置仍保留。</p><Link href="/account">查看读者中心</Link></aside>;
   return <aside className="stl4-continue"><span className="stl4-continue-cover">{row.work.cover ? <img src={row.work.cover} alt={`${row.work.title}封面`} width={44} height={64} /> : <BookOpen size={24} aria-label="尚未提供封面" />}</span><div><span>继续阅读 <small>仅本人可见</small></span><h2>{row.work.title}</h2><p>PDF 第 {row.current_page} 页 · 已读 {Math.round(Math.min(1, Math.max(0, row.progress_ratio)) * 100)}%{row.updated_at && Number.isFinite(Date.parse(row.updated_at)) ? <> · 上次阅读 <time dateTime={row.updated_at}>{new Date(row.updated_at).toLocaleDateString("zh-CN")}</time></> : null}</p></div><Link href={`/reader/${encodeURIComponent(row.asset)}?page=${row.current_page}`}>继续阅读 <ArrowRight size={16} /></Link></aside>;
 }

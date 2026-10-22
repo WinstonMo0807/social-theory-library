@@ -11,7 +11,7 @@ from rest_framework.exceptions import NotFound, Throttled, ValidationError
 
 from accounts.models import ReaderProfile
 from . import research
-from .models import (Annotation, CitationAudit, PersonalReadingPlan, ReaderDataOperation,
+from .models import (Annotation, Bookmark, CitationAudit, PersonalReadingPlan, ReaderDataOperation,
                      ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic, ReadingList, SavedItem)
 from .services import decrypt_private_text
 from .source_models import SourceFollow
@@ -21,14 +21,14 @@ from .graph_models import SavedGraphView
 from .editorial_comment_models import EditorialComment
 
 RETENTION = {"reading_history": True, "search_history": False, "personal_notes": True, "followed_topics": True, "source_follows": True, "saved_knowledge": True}
-RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "个人笔记", "followed_topics": "收藏的主题", "source_follows": "来源、学者与主题关注", "saved_knowledge": "知识条目、图谱视图与私人书单"}
-EXPORT_GROUPS = {"article_comments": ("article_comments",), "research": ("research",), "notes": ("annotations", "memories", "parallel_alignments"),
+RETENTION_LABELS = {"reading_history": "阅读历史", "search_history": "搜索记录", "personal_notes": "笔记、摘录与书签", "followed_topics": "收藏的主题", "source_follows": "来源、学者与主题关注", "saved_knowledge": "知识条目、图谱视图与私人书单"}
+EXPORT_GROUPS = {"article_comments": ("article_comments",), "research": ("research",), "notes": ("annotations", "bookmarks", "memories", "parallel_alignments"),
                  "plans": ("plans",), "audits": ("audits", "citation_sources"), "source_follows": ("source_follows",),
                  "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists", "saved_items")}
 ERASE_GROUPS = {"article_comments": ("article_comments",), "reading_history": ("reading_history",), "search_history": ("search_history",),
-                "personal_notes": ("annotations", "memories", "parallel_alignments"), "reading_plans": ("plans",),
+                "personal_notes": ("annotations", "bookmarks", "memories", "parallel_alignments"), "reading_plans": ("plans",),
                 "followed_topics": ("followed_topics",), "source_follows": ("source_follows",), "saved_knowledge": ("saved_knowledge", "graph_views", "reading_lists", "saved_items")}
-MODELS = {"article_comments": EditorialComment, "research": ResearchProject, "annotations": Annotation, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
+MODELS = {"article_comments": EditorialComment, "research": ResearchProject, "annotations": Annotation, "bookmarks": Bookmark, "memories": ResearchMemory, "parallel_alignments": ParallelReadingTask,
           "plans": PersonalReadingPlan, "audits": CitationAudit, "citation_sources": CitationAudit,
           "reading_history": ReadingHistory, "search_history": ReaderSearchRecord, "followed_topics": SavedTopic,
           "source_follows": SourceFollow, "saved_knowledge": SavedKnowledgeNode, "graph_views": SavedGraphView, "reading_lists": ReadingList, "saved_items": SavedItem}
@@ -37,6 +37,21 @@ MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 ACTIVE = {"queued", "running"}
 NOTICE = "仅处理本人的资料，不删除账户、登录权限或公开馆藏原件。备份按既有保留期清理；取消不会恢复已删除的项目。"
 logger = logging.getLogger(__name__)
+
+
+def target_key(target):
+    # Different private models can legitimately share a UUID (annotation request IDs are client chosen).
+    return f"{target['category']}:{target['id']}"
+
+
+def prepared_impact(payload, target):
+    values = payload.get("impacts", {})
+    if target_key(target) in values:
+        return values[target_key(target)]
+    # Compatible with prior single-ID tasks only when the original impact is unambiguous.
+    if sum(str(row["id"]) == str(target["id"]) for row in payload.get("targets", [])) == 1:
+        return values.get(str(target["id"]), {})
+    return {}
 
 
 def profile_data(user):
@@ -158,10 +173,14 @@ def annotation_export(user, row):
     from .serializers import AnnotationSerializer
     original = dict(AnnotationSerializer(row, context={"request": SimpleNamespace(user=user)}).data)
     original.update(quote=row.quote if source.get("source_status") == "available" else "", source=source)
+    original["saved_quote"] = row.quote
     return original
 
 
 def export_item(user, category, row):
+    if category == "bookmarks":
+        from .notebook import record
+        return record(user, category, row)
     if category == "saved_items":
         from types import SimpleNamespace
         from .serializers import SavedItemSerializer
@@ -201,6 +220,8 @@ def linked_memories(user, annotation_id):
 
 
 def erase_impact(user, category, row, *, contexts=None):
+    if category == "bookmarks":
+        return {"message": "删除本人这条页面书签；独立笔记、摘录、研究与原始馆藏仍保留。", "memories": [], "scope_count": 0}
     related = linked_memories(user, row.id) if category == "annotations" else [row] if category == "memories" else []
     contexts = contexts if contexts is not None else research.memory_contexts(user) if related else []
     affected = []
@@ -225,7 +246,13 @@ def erase_impact(user, category, row, *, contexts=None):
 def describe_item(user, category, row):
     payload = research.unpack(row) if hasattr(row, "data_ciphertext") else {}
     source = {}
-    if category == "saved_items":
+    if category == "bookmarks":
+        from .notebook import record
+        current = record(user, category, row)
+        title = row.label or "页面书签"
+        source = {"title": current["work"]["title"], "pdf_page": row.page.index,
+            "path": f"/account/notes?category=bookmarks&record={row.pk}"}
+    elif category == "saved_items":
         current = export_item(user, category, row)
         title = current.get("title") or "作品收藏"
         work = current.get("work_data") or {}
@@ -330,13 +357,13 @@ def operation_output(row):
     results = payload.get("results", [])
     successful = sum(result["status"] == "completed" for result in results)
     failed = sum(result["status"] == "failed" for result in results)
-    finished_ids = {result["id"] for result in results}
+    finished_ids = {target_key(result) for result in results}
     preview = []
     if row.kind == "erase" and row.status == "preview":
         for target in payload.get("targets", []):
-            if target["id"] in finished_ids:
+            if target_key(target) in finished_ids:
                 continue
-            entry = {**target, "impact": payload.get("impacts", {}).get(target["id"], {}), "title": "已选择的资料", "current": False}
+            entry = {**target, "impact": prepared_impact(payload, target), "title": "已选择的资料", "current": False}
             try:
                 current = item(row.user, target["category"], target["id"])
                 if target["category"] == "annotations":
@@ -449,7 +476,7 @@ def create_operation(user, data):
                 raise ValidationError({"targets": "选中资料不能重复。"})
             seen.add(key)
             targets.append(target_of(row, target["category"]))
-            impacts[str(row.id)] = erase_impact(user, target["category"], row, contexts=contexts)
+            impacts[target_key(target)] = erase_impact(user, target["category"], row, contexts=contexts)
         categories = sorted({target["category"] for target in targets})
     else:
         raise ValidationError({"kind": "操作类型无效。"})
@@ -486,8 +513,8 @@ def command_operation(user, pk, data):
             target["category"] in {"annotations", "memories"} for target in payload["targets"]) else []
         if row.kind == "erase" and action == "retry":
             # Erasure retry is a new impact preview. It never silently deletes newly edited records.
-            successful = {result["id"] for result in payload.get("results", []) if result["status"] == "completed"}
-            pending = [target for target in payload["targets"] if target["id"] not in successful]
+            successful = {target_key(result) for result in payload.get("results", []) if result["status"] == "completed"}
+            pending = [target for target in payload["targets"] if target_key(target) not in successful]
             unavailable = []
             for target in pending:
                 try:
@@ -496,18 +523,18 @@ def command_operation(user, pk, data):
                     unavailable.append({"id": target["id"], "category": target["category"], "status": "failed", "error_code": "record_unavailable"})
                     continue
                 target.update(target_of(current, target["category"]))
-                payload["impacts"][target["id"]] = erase_impact(user, target["category"], current, contexts=contexts)
+                payload["impacts"][target_key(target)] = erase_impact(user, target["category"], current, contexts=contexts)
             payload["results"] = [result for result in payload.get("results", []) if result["status"] == "completed"] + unavailable
             row.status = "preview" if len(pending) > len(unavailable) else "partial" if successful else "failed"
             row.finished_at = None if row.status == "preview" else timezone.now()
         else:
             if row.kind == "erase":
-                successful = {result["id"] for result in payload.get("results", [])}
+                successful = {target_key(result) for result in payload.get("results", [])}
                 for target in payload["targets"]:
-                    if target["id"] in successful:
+                    if target_key(target) in successful:
                         continue
                     current = verify_target(user, target, lock=True)
-                    if erase_impact(user, target["category"], current, contexts=contexts) != payload["impacts"].get(target["id"]):
+                    if erase_impact(user, target["category"], current, contexts=contexts) != prepared_impact(payload, target):
                         raise research.ResearchConflict("关联笔记或使用范围已变化，请重新预览影响。")
             admission(user)
             if row.kind == "export":
@@ -529,8 +556,10 @@ def erase_item(user, target, row, impact, *, contexts):
     if target["category"] == "memories":
         research.revoke_memory_contexts(row, contexts)
     elif target["category"] == "annotations":
+        from .notebook import annotation_retired
         for memory in linked_memories(user, row.id):
             research.revoke_memory_contexts(memory, contexts)
+        annotation_retired(user, row.pk, retire=True)
     elif target["category"] == "source_follows":
         from .source_follow import erase_follow
         erase_follow(row)
@@ -557,8 +586,8 @@ def run_operation(pk, generation, task_id):
             if row is None:
                 return
             payload = research.unpack(row)
-            done = {result["id"] for result in payload["results"]}
-            target = next((target for target in payload["targets"] if target["id"] not in done), None)
+            done = {target_key(result) for result in payload["results"]}
+            target = next((target for target in payload["targets"] if target_key(target) not in done), None)
             if target is None:
                 success = any(result["status"] == "completed" for result in payload["results"])
                 failure = any(result["status"] == "failed" for result in payload["results"])
@@ -572,7 +601,7 @@ def run_operation(pk, generation, task_id):
                     contexts = research.memory_contexts(user, lock=True) if row.kind == "erase" and target["category"] in {"annotations", "memories"} else []
                     current = verify_target(user, target, lock=True)
                     if row.kind == "erase":
-                        erase_item(user, target, current, payload["impacts"][target["id"]], contexts=contexts)
+                        erase_item(user, target, current, prepared_impact(payload, target), contexts=contexts)
                     else:
                         size = len(json.dumps(export_item(user, target["category"], current), ensure_ascii=False, default=str).encode())
                         verify_target(user, target)
@@ -597,12 +626,12 @@ def download_operation(user, pk):
     if row.kind != "export" or row.status in ACTIVE | {"preview"}:
         raise ValidationError("导出文件尚未准备完成。")
     payload = research.unpack(row)
-    successful = {result["id"] for result in payload.get("results", []) if result["status"] == "completed"}
+    successful = {target_key(result) for result in payload.get("results", []) if result["status"] == "completed"}
     if not successful:
         raise ValidationError("暂无可下载内容。")
     output, unavailable, total_bytes = [], [], 0
     for target in payload["targets"]:
-        if target["id"] not in successful:
+        if target_key(target) not in successful:
             continue
         try:
             current = verify_target(user, target)

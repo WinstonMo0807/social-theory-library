@@ -1,5 +1,10 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 R28五条路径
+
+原244保留，增加notebook列表、choices/{kind}、{category}/{id}、bookmarks/{id}/note、add-to-project，共249。后者GET查回/POST加入研究；全部必需X-Reader-Owner，owner/version/source范围固定。原隐私targets增加bookmarks；原work字段明确可空、书签输出updated_at。见NOTEBOOK_WORKSPACE_20261023。
+
+
 ## 2026-10-23 书单计划三接口
 
 原241路径保留，新增lists/{id}/plan-preview、create-plan及lists/plan-receipt，共244。owner头必需；预览使用expected_version和可选item_ids，生成另携source_token/request_id/原计划设置；返回owner/request/record_id/deleted，不把已删除回执当新建。详见BOOKLIST_PLAN_20261023。

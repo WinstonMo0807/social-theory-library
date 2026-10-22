@@ -82,7 +82,7 @@ type SavedTopicRow = {
 type AnnotationRow = {
   id: string;
   asset: string;
-  work: ApiWork;
+  work: ApiWork | null;
   kind: string;
   quote: string;
   body_text: string;
@@ -92,7 +92,7 @@ type AnnotationRow = {
 type BookmarkRow = {
   id: string;
   asset: string;
-  work: ApiWork;
+  work: ApiWork | null;
   label: string;
   page: string;
   page_index: number;
@@ -107,14 +107,14 @@ type ReadingListRow = {
 type HistoryRow = {
   id: string;
   asset: string;
-  work: ApiWork;
+  work: ApiWork | null;
   page_index: number;
   session_seconds: number;
   created_at: string;
 };
 type NoteGroupRow = {
   asset: string;
-  work: ApiWork;
+  work: ApiWork | null;
   note_count: number;
   latest_at: string;
   previews: AnnotationRow[];
@@ -194,7 +194,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   const section = searchParams.get("section");
   const [selectedTab, selectTab] = useState<{ section: string | null; label: string } | null>(null);
   const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : section === "history" ? "阅读历史" : section === "saved" ? "收藏" : "概览";
-  const setActive = (label: string) => { if (label === "书单") router.push("/account/collections"); else selectTab({ section, label }); };
+  const setActive = (label: string) => { if (label === "书单") router.push("/account/collections"); else if (["笔记", "书签", "高亮与划线"].includes(label)) router.push(`/account/notes?kind=${label === "书签" ? "bookmark" : label === "高亮与划线" ? "excerpt" : "note"}`); else selectTab({ section, label }); };
   const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
   const [noteGroups, setNoteGroups] = useState<NoteGroupRow[]>([]);
@@ -559,7 +559,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
             {readerData.bookmarks.map((item) => (
               <article className="reader-data-row" key={item.id}>
                 <Bookmark size={17} />
-                <div><strong>{adaptWork(item.work).title}</strong><p>{item.label || "页面书签"}</p></div>
+                <div><strong>{(item.work ? adaptWork(item.work).title : "来源当前不可用")}</strong><p>{item.label || "页面书签"}</p></div>
                 <span className="reader-data-actions"><CollectionLink href={`/reader/${item.asset}?page=${item.page_index}`}>打开 <ArrowRight size={14} /></CollectionLink><ActionButton type="button" state={pendingAction === `delete-record:bookmarks:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:bookmarks:${item.id}`} onClick={() => void deleteRecord("bookmarks", item.id)}>删除</ActionButton></span>
               </article>
             ))}
@@ -574,7 +574,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
               .map((item) => (
                 <article className="reader-data-row" key={item.id}>
                   <Highlighter size={17} />
-                  <div><strong>{adaptWork(item.work).title}</strong><blockquote>{item.quote || "未保存引文"}</blockquote>{item.body_text ? <p>{item.body_text}</p> : null}</div>
+                  <div><strong>{(item.work ? adaptWork(item.work).title : "来源当前不可用")}</strong><blockquote>{item.quote || "未保存引文"}</blockquote>{item.body_text ? <p>{item.body_text}</p> : null}</div>
                   <span className="reader-data-actions"><CollectionLink href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开 <ArrowRight size={14} /></CollectionLink><ActionButton type="button" state={pendingAction === `delete-record:annotations:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:annotations:${item.id}`} onClick={() => void deleteRecord("annotations", item.id)}>删除</ActionButton></span>
                 </article>
               ))}
@@ -584,14 +584,14 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
         {active === "笔记" ? (
           <DataPanel title="笔记">
             {noteGroups.map((group) => {
-              const work = adaptWork(group.work);
+              const work = group.work ? adaptWork(group.work) : null;
               return (
                 <article className="reader-note-book" key={group.asset}>
                   <header>
-                    <BookCover work={work} size="small" />
+                    {work ? <BookCover work={work} size="small" /> : null}
                     <div>
-                      <strong>{work.title}</strong>
-                      <p>{work.author} · {group.note_count} 条笔记</p>
+                      <strong>{work?.title || "来源当前不可用"}</strong>
+                      <p>{work?.author || "作者待核对"} · {group.note_count} 条笔记</p>
                       <small>最近记录于 {new Date(group.latest_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</small>
                     </div>
                     <Link href={`/account/notes/${group.asset}`}>查看全部 <ArrowRight size={14} /></Link>
@@ -621,7 +621,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
             {readerData.history.map((item) => (
               <article className="reader-data-row" key={item.id}>
                 <Clock3 size={17} />
-                <div><strong>{adaptWork(item.work).title}</strong><p>读到第 {item.page_index} 页</p><small>{new Date(item.created_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</small></div>
+                <div><strong>{(item.work ? adaptWork(item.work).title : "来源当前不可用")}</strong><p>读到第 {item.page_index} 页</p><small>{new Date(item.created_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</small></div>
                 <CollectionLink href={`/reader/${item.asset}?page=${item.page_index}`}>继续 <ArrowRight size={14} /></CollectionLink>
               </article>
             ))}

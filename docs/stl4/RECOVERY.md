@@ -1,5 +1,10 @@
 # 中断恢复最短路径
 
+## 2026-10-23 R28恢复
+
+见NOTEBOOK_WORKSPACE_20261023与CURRENT_PROGRESS顶部。前置a84e707，白名单tmp/stl4-notebook-checkpoint-20261023.json。新notebook服务复用原记录、研究和隐私任务；category+id处理跨类型同UUID，旧歧义影响须重新预览；annotation删除最少回执防迟到创建。无新迁移、未测试/浏览器/业务运行。96/38/75、249路径；继续计数/导出/档案/分享和全站余项，勿重跑一次性替换/记录脚本。
+
+
 ## 2026-10-23 书单转计划恢复
 
 前置6ed6afd，见BOOKLIST_PLAN_20261023，白名单tmp/stl4-booklist-plan-checkpoint-20261023.json。244路径、96/36/77。新服务booklist_plans在原User锁下预览版本并生成原计划，PlanCommandReceipt防删除后重建；保留计划顺序，原建议任务提交后运行。没有运行任务、迁移/测试/浏览器/生产；0022/0023仍待。不要重跑一次性文档/代码替换脚本。继续PDF181–182的本人分享边界及余项。

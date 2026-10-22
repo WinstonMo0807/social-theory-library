@@ -109,8 +109,10 @@ class AnnotationViewSet(OwnedModelViewSet):
     def perform_destroy(self, instance):
         from . import research
         from .privacy import linked_memories
+        from .notebook import annotation_retired
         for memory in linked_memories(self.request.user, instance.id):
             research.revoke_memory_contexts(memory, self._privacy_contexts)
+        annotation_retired(self.request.user, instance.pk, retire=True)
         instance.delete()
 
     @action(detail=False, methods=["get"], url_path="note-groups")

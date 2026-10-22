@@ -1,5 +1,12 @@
 # 验收记录
 
+## 2026-10-23 R28仅静态检查
+
+前置a84e707，详见NOTEBOOK_WORKSPACE_20261023。`.venv/Scripts/python.exe tmp/stl4-notebook-static-20261023.py` 最近7d95e3及最终同命令退出0；9AST/8SQL编译/reading迁移声明一致，数据库连接强制阻断；OpenAPI0错误、10既有catalog提示。`node tmp/stl4-notebook-contracts-20261023.mjs` 646217及后续退出0，保留244并新增5路径，共249，CSS解析。
+
+`node node_modules/typescript/bin/tsc --noEmit --incremental false`（web目录）ab9fd4/e5be05、475d42/b5272e、737507/0ebae7、最终f31d4d/37cbbd退出0。目标10文件ESLint最终76c517退出0，3条已有img提示，无错误；新notebook组件没有提示。白名单33文件存在、git diff --check退出0；仅AST检查隐私结果集合不再以单UUID识别。没有运行测试、业务请求、队列、模型、浏览器、页面截图、构建、迁移、生产。全站视觉与业务验收仍待。
+
+
 ## 2026-10-23 计划隐私开关静态校正
 
 前置1a02917。继续核对真实RETENTION字典时发现本批计划转换引用了并不存在的plans开关；已移除，计划仍由本人明确生成、在原分类删除中管理，不借用笔记/知识保存开关。静态AST额外核对本批require_retention字面量键均属于真实配置；444a4d退出0，0数据库连接、无业务调用。BOOKLIST_PLAN说明同步修正。

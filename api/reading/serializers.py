@@ -35,7 +35,11 @@ def _reader_asset_available(asset: Asset, user) -> bool:
 
 
 def _reader_work_data(work, context):
-    data = WorkCardSerializer(work, context=context).data
+    serializer = WorkCardSerializer(work, context=context)
+    # A private note does not grant access to the current unpublished catalog draft.
+    if not serializer._public_snapshot(work):
+        return None
+    data = serializer.data
     edition = data.get("edition") or {}
     asset = edition.get("readable_asset")
     if asset and not readable_assets_for_user(getattr(context.get("request"), "user", None)).filter(
@@ -67,7 +71,7 @@ class ReadingProgressSerializer(OwnedSerializer):
         )
         read_only_fields = ("id", "updated_at")
 
-    @extend_schema_field(WorkCardSerializer)
+    @extend_schema_field(WorkCardSerializer(allow_null=True))
     def get_work(self, obj):
         return _reader_work_data(obj.asset.edition.work, self.context)
 
@@ -145,7 +149,7 @@ class AnnotationSerializer(OwnedSerializer):
             raise serializers.ValidationError("标签必须是文字。")
         return list(dict.fromkeys(tag for tag in value if tag))
 
-    @extend_schema_field(WorkCardSerializer)
+    @extend_schema_field(WorkCardSerializer(allow_null=True))
     def get_work(self, obj):
         return _reader_work_data(obj.asset.edition.work, self.context)
 
@@ -166,7 +170,8 @@ class AnnotationSerializer(OwnedSerializer):
                 type(selector["page_index"]) is not int or selector["page_index"] != page.index
             ):
                 raise serializers.ValidationError({"selector": "批注位置与所选页码不一致。"})
-        if not _reader_asset_available(asset, self.context["request"].user):
+        authored_only = self.instance is not None and set(attrs) <= {"body", "tags", "color"}
+        if not authored_only and not _reader_asset_available(asset, self.context["request"].user):
             raise serializers.ValidationError("该文献当前不可批注。")
         return attrs
 
@@ -182,6 +187,9 @@ class AnnotationSerializer(OwnedSerializer):
         conflict = "此保存请求无法复用，请保留输入并重新确认保存状态。"
         lock_owner(user)
         if request_id is not None:
+            from .notebook import annotation_retired
+            if annotation_retired(user, request_id):
+                raise ResearchConflict("原笔记已经删除，迟到的原请求不会重新创建它。")
             previous = Annotation.objects.filter(pk=request_id, user=user).first()
             if previous is not None:
                 existing = (previous.asset_id, previous.page_id, previous.kind, previous.selector,
@@ -224,19 +232,29 @@ class BookmarkSerializer(OwnedSerializer):
 
     class Meta:
         model = Bookmark
-        fields = ("id", "asset", "work", "page", "page_index", "label", "created_at")
-        read_only_fields = ("id", "created_at")
+        fields = ("id", "asset", "work", "page", "page_index", "label", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
 
-    @extend_schema_field(WorkCardSerializer)
+    @extend_schema_field(WorkCardSerializer(allow_null=True))
     def get_work(self, obj):
         return _reader_work_data(obj.asset.edition.work, self.context)
 
     def validate(self, attrs):
-        if attrs["page"].asset_id != attrs["asset"].id:
+        asset = attrs.get("asset") or getattr(self.instance, "asset", None)
+        page = attrs.get("page") or getattr(self.instance, "page", None)
+        if asset is None or page is None or page.asset_id != asset.pk:
             raise serializers.ValidationError("页码与阅读文件不匹配。")
-        if not _reader_asset_available(attrs["asset"], self.context["request"].user):
+        if self.instance and (self.instance.asset_id != asset.pk or self.instance.page_id != page.pk):
+            raise serializers.ValidationError("已有书签不能更换文件或页码，请在新位置创建。")
+        if not self.instance and not _reader_asset_available(asset, self.context["request"].user):
             raise serializers.ValidationError("该阅读文件不可用。")
         return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        from .privacy import require_retention
+        require_retention(self.context["request"].user, "personal_notes")
+        return super().create(validated_data)
 
 
 class SavedItemProgressSerializer(serializers.ModelSerializer):
@@ -432,7 +450,7 @@ class ReadingListSerializer(OwnedSerializer):
 
 
 class ReadingHistorySerializer(OwnedSerializer):
-    title = serializers.CharField(source="asset.edition.work.title", read_only=True)
+    title = serializers.SerializerMethodField()
     work = serializers.SerializerMethodField()
 
     class Meta:
@@ -440,9 +458,12 @@ class ReadingHistorySerializer(OwnedSerializer):
         fields = ("id", "asset", "work", "title", "page_index", "session_seconds", "created_at")
         read_only_fields = ("id", "created_at")
 
-    @extend_schema_field(WorkCardSerializer)
+    @extend_schema_field(WorkCardSerializer(allow_null=True))
     def get_work(self, obj):
         return _reader_work_data(obj.asset.edition.work, self.context)
+
+    def get_title(self, obj) -> str:
+        return (self.get_work(obj) or {}).get("title", "来源当前不可用")
 
     def validate_asset(self, value):
         if not _reader_asset_available(value, self.context["request"].user):

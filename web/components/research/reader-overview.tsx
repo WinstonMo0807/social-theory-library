@@ -15,7 +15,7 @@ import styles from "./reader-overview.module.css";
 
 type Kind = "research" | "notes" | "plans" | "lists" | "audits" | "confirmed" | "saved";
 type Material = { id: string; key: string; kind: Kind; kind_label: string; title: string; question: string; status: string; href: string; updated_at: string; revision: string };
-type Progress = { id: string; asset: string; work: ApiWork; current_page: number; progress_ratio: number; updated_at: string };
+type Progress = { id: string; asset: string; work: ApiWork | null; current_page: number; progress_ratio: number; updated_at: string };
 type Pending = { id: string; title: string; question: string; status: string; updated_at: string; href: string };
 type Overview = { owner_id: string; counts: Record<Kind, number>; count: number; page: number; page_size: number; total_pages: number; results: Material[]; recent_reading: Progress[]; pending_tasks: Pending[] };
 const sections: Array<[Kind, string, string]> = [
@@ -59,6 +59,7 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
     {workspace.error ? <section className={styles.state} role="alert"><h2>私人资料暂时无法读取</h2><p>{workspace.error}</p><div><button onClick={workspace.reload}><RefreshCw size={15} />重新读取</button>{page > 1 ? <button onClick={() => filter({ page: "1" })}>返回第一页</button> : null}{search || kind !== "all" ? <button onClick={() => filter({ q: "", material: "all" })}>清除筛选</button> : null}</div></section> : workspace.loading || !data ? <section className={styles.state} role="status"><p>正在读取你的资料…</p></section> : <>
       <section className={styles.section}><header><div><h2>继续阅读</h2><p>从上次离开的三个阅读位置继续。</p></div><Link href="/account?section=history">查看全部 <ArrowRight size={14} /></Link></header>
         {data.recent_reading.length ? <div className={styles.reading}>{data.recent_reading.map(row => {
+          if (!row.work) return <article key={row.id}><div><h3>来源当前不可用</h3><p>阅读位置仍保留，作品公开后可继续阅读。</p></div></article>;
           const work = adaptApiWork(row.work), ratio = Math.max(0, Math.min(100, Math.round(row.progress_ratio * 100)));
           return <article key={row.id}><BookCover work={work} /><div><h3><Link href={`/works/${work.slug}`}>{work.title}</Link></h3><p>{work.author}</p><small>上次阅读：第 {row.current_page} 页</small><div className={styles.progress}><progress max={100} value={ratio} aria-label={`《${work.title}》阅读进度`} /><span>{ratio}%</span></div><Link className={styles.continue} href={`/reader/${row.asset}?page=${row.current_page}`}>继续阅读 <ChevronRight size={14} /></Link></div></article>;
         })}</div> : <div className={styles.empty}><BookOpen size={24} /><strong>从一本书开始</strong><p>开始阅读后，这里会保留继续阅读的位置。</p><Link href="/explore/original">探索原文 <ArrowRight size={14} /></Link></div>}
