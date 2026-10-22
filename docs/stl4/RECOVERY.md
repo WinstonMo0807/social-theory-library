@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 书单转计划恢复
+
+前置6ed6afd，见BOOKLIST_PLAN_20261023，白名单tmp/stl4-booklist-plan-checkpoint-20261023.json。244路径、96/36/77。新服务booklist_plans在原User锁下预览版本并生成原计划，PlanCommandReceipt防删除后重建；保留计划顺序，原建议任务提交后运行。没有运行任务、迁移/测试/浏览器/生产；0022/0023仍待。不要重跑一次性文档/代码替换脚本。继续PDF181–182的本人分享边界及余项。
+
 ## 2026-10-23 R29书单恢复
 
 前置e814dd6，BOOKLIST_WORKSPACE_20261023及tmp/stl4-booklist-checkpoint-20261023.json。新增0023仅声明，未执行；0022亦未执行。共享原书单/原知识保存回执，列表command先receipt后version，隐私目标含removed_at；周期清理未运行。96/36/77、241契约。不要重跑本批文档前插脚本；保存白名单检查点后继续分享/原计划和读者余项。保留继承脏改，不测试/浏览器/生产。

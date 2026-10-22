@@ -36,7 +36,7 @@ def preserve_origin(row):
 
 
 def owned(user, pk):
-    row = ReadingList.objects.filter(user=user, pk=pk).first()
+    row = ReadingList.objects.filter(user=user, pk=research.identifier(pk)).first()
     if row is None:
         raise NotFound("这份本人书单已不存在。")
     return row

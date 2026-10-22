@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 书单转换仍用原计划
+
+booklist_plans复用原PersonalReadingPlan、PlanCommandReceipt及plan_rules；来源写入原加密payload，回执不保存正文。User锁、保存版本和来源摘要复核后同事务生成；原建议任务仅在提交后触发。无新表/新队列，不同步第二份馆藏。见docs/stl4/BOOKLIST_PLAN_20261023.md。
+
 ## 2026-10-23 原私人书单扩展
 
 原ReadingList/Item增目标、标签、稳定专题来源与移除时间，通过0023声明；无第二馆藏。沿原KnowledgeSaveReceipt最小回执和User锁；每小时清理到期关联，正式启用前应用0022/0023并统一验收。公开书目读时复核、本人进度/笔记独立保存、导出不发布。见docs/stl4/BOOKLIST_WORKSPACE_20261023.md。

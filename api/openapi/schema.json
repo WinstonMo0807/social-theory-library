@@ -13210,6 +13210,74 @@
                 }
             }
         },
+        "/api/reading/lists/{id}/create-plan/": {
+            "post": {
+                "operationId": "reading_lists_create_plan_create",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading list 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ListPlanInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ListPlanInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ListPlanInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListPlanResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/lists/{id}/export/": {
             "post": {
                 "operationId": "reading_lists_export_create",
@@ -13316,6 +13384,77 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/reading/lists/{id}/plan-preview/": {
+            "get": {
+                "operationId": "reading_lists_plan_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "expected_version",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading list 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "item_ids",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "maxItems": 200,
+                            "minItems": 1
+                        }
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListPlanPreview"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -13574,6 +13713,52 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ListDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/lists/plan-receipt/": {
+            "get": {
+                "operationId": "reading_lists_plan_receipt_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListPlanResult"
                                 }
                             }
                         },
@@ -24474,6 +24659,39 @@
                 "type": "string",
                 "description": "* `scholar` - 学者\n* `publication` - 重要发表\n* `concept_proposed` - 理论概念提出\n* `school_formation` - 学派形成\n* `debate` - 争论\n* `institution` - 机构\n* `theoretical_turn` - 理论转向\n* `translation` - 重要译介\n* `china_reception` - 进入中国学界\n* `institutionalization` - 学科制度化\n* `formation` - 形成\n* `development` - 发展"
             },
+            "EvidenceAnchorInput": {
+                "type": "object",
+                "properties": {
+                    "evidence_span_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "content_hash": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "selection_start": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "selection_end": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                }
+            },
             "EvidenceAnchorInputRequest": {
                 "type": "object",
                 "properties": {
@@ -24575,6 +24793,46 @@
                 "required": [
                     "items"
                 ]
+            },
+            "EvidenceReferenceInput": {
+                "type": "object",
+                "properties": {
+                    "evidence_span_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "content_hash": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "selection_start": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "selection_end": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "anchors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceAnchorInput"
+                        },
+                        "description": "跨页引用按顺序传 1—20 个同文件同修订的单页锚点。"
+                    }
+                }
             },
             "EvidenceReferenceInputRequest": {
                 "type": "object",
@@ -29343,6 +29601,217 @@
                     "reader_url",
                     "removed_at",
                     "work",
+                    "work_id"
+                ]
+            },
+            "ListPlanInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "item_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 200,
+                        "minItems": 1
+                    },
+                    "time_budget": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "budget_minutes": {
+                        "type": "integer",
+                        "maximum": 100000,
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "session_minutes": {
+                        "type": "integer",
+                        "maximum": 480,
+                        "minimum": 5
+                    },
+                    "reading_level": {
+                        "$ref": "#/components/schemas/ReadingDifficultyEnum"
+                    },
+                    "reading_pace": {
+                        "$ref": "#/components/schemas/ReadingPaceInputRequest"
+                    },
+                    "prefer_unread": {
+                        "type": "boolean"
+                    },
+                    "item_estimates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ItemEstimateInputRequest"
+                        }
+                    },
+                    "weekly_minutes": {
+                        "type": "integer",
+                        "maximum": 10080,
+                        "minimum": 1,
+                        "description": "与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。"
+                    },
+                    "duration_weeks": {
+                        "type": "integer",
+                        "maximum": 52,
+                        "minimum": 1
+                    },
+                    "language_preference": {
+                        "type": "string",
+                        "description": "用于导读提示，不自动排除已选材料。",
+                        "maxLength": 160
+                    },
+                    "use_confirmed_memories": {
+                        "type": "boolean",
+                        "description": "默认关闭，仅使用显式选择的本人已确认笔记。"
+                    },
+                    "confirmed_memory_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 40
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_token": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "goal": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 1200
+                    },
+                    "background": {
+                        "type": "string",
+                        "maxLength": 4000
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "goal",
+                    "request_id",
+                    "source_token"
+                ]
+            },
+            "ListPlanPreview": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "list_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string"
+                    },
+                    "source_token": {
+                        "type": "string"
+                    },
+                    "goal": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListPlanSource"
+                        }
+                    },
+                    "ready": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "goal",
+                    "items",
+                    "list_id",
+                    "owner_id",
+                    "ready",
+                    "source_token"
+                ]
+            },
+            "ListPlanResult": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "record_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "deleted": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "deleted",
+                    "owner_id",
+                    "record_id",
+                    "request_id"
+                ]
+            },
+            "ListPlanSource": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "reference": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EvidenceReferenceInput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/PublicTimelineSourceStatusEnum"
+                    },
+                    "reader_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "catalog_revision_id",
+                    "item_id",
+                    "reader_url",
+                    "reference",
+                    "source_status",
+                    "title",
                     "work_id"
                 ]
             },

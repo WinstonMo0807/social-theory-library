@@ -5,6 +5,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 
 from . import booklists
+from .research_serializers import EvidenceReferenceInput, PlanPolicyInput
 
 
 class ListQuery(serializers.Serializer):
@@ -123,6 +124,55 @@ class ListExport(serializers.Serializer):
         return values
 
 
+class ListPlanPreviewInput(serializers.Serializer):
+    expected_version = serializers.CharField(max_length=100)
+    item_ids = serializers.ListField(child=serializers.UUIDField(), min_length=1, max_length=200, required=False)
+
+    def validate_item_ids(self, values):
+        if len(values) != len(set(values)):
+            raise serializers.ValidationError("不要重复选择作品。")
+        return values
+
+
+class ListPlanInput(ListPlanPreviewInput, PlanPolicyInput):
+    request_id = serializers.UUIDField()
+    source_token = serializers.RegexField(r"^[0-9a-f]{64}$")
+    goal = serializers.CharField(min_length=2, max_length=1200)
+    background = serializers.CharField(max_length=4000, allow_blank=True, required=False)
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict) or set(data) - set(self.fields):
+            raise serializers.ValidationError("书单计划包含不支持的字段。")
+        return super().to_internal_value(data)
+
+
+class ListPlanSource(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    work_id = serializers.UUIDField()
+    title = serializers.CharField()
+    reference = EvidenceReferenceInput(allow_null=True)
+    source_status = serializers.ChoiceField(choices=["available", "unavailable"])
+    reader_url = serializers.CharField(allow_null=True)
+    catalog_revision_id = serializers.UUIDField(allow_null=True)
+
+
+class ListPlanPreview(serializers.Serializer):
+    owner_id = serializers.CharField()
+    list_id = serializers.UUIDField()
+    expected_version = serializers.CharField()
+    source_token = serializers.CharField()
+    goal = serializers.CharField()
+    items = ListPlanSource(many=True)
+    ready = serializers.BooleanField()
+
+
+class ListPlanResult(serializers.Serializer):
+    owner_id = serializers.CharField()
+    request_id = serializers.UUIDField()
+    record_id = serializers.UUIDField(allow_null=True)
+    deleted = serializers.BooleanField()
+
+
 OWNER = OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER, required=True)
 
 
@@ -130,6 +180,32 @@ class BooklistActions:
     def list_owner(self, request):
         if request.headers.get("X-Reader-Owner") != str(request.user.pk):
             raise PermissionDenied("请重新核对当前书单所属账户。")
+
+    @extend_schema(parameters=[OWNER, ListPlanPreviewInput], responses=ListPlanPreview)
+    @action(detail=True, methods=["get"], url_path="plan-preview")
+    def plan_preview(self, request, pk=None):
+        from .booklist_plans import preview
+        self.list_owner(request)
+        data = ListPlanPreviewInput(data=request.query_params)
+        data.is_valid(raise_exception=True)
+        return Response(preview(request.user, pk, **data.validated_data))
+
+    @extend_schema(parameters=[OWNER], request=ListPlanInput, responses=ListPlanResult)
+    @action(detail=True, methods=["post"], url_path="create-plan")
+    def create_plan(self, request, pk=None):
+        from .booklist_plans import create
+        self.list_owner(request)
+        data = ListPlanInput(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(create(request.user, pk, data.validated_data))
+
+    @extend_schema(parameters=[OWNER, OpenApiParameter("request_id", str, required=True)], responses=ListPlanResult)
+    @action(detail=False, methods=["get"], url_path="plan-receipt")
+    def plan_receipt(self, request):
+        from . import research
+        from .booklist_plans import lookup
+        self.list_owner(request)
+        return Response(lookup(request.user, research.identifier(request.query_params.get("request_id"), "request_id")))
 
     @extend_schema(parameters=[OWNER], request=ListExport, responses={(200, "application/octet-stream"): bytes})
     @action(detail=True, methods=["post"])

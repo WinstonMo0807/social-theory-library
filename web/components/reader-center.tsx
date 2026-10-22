@@ -206,7 +206,6 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   const [submissionNote, setSubmissionNote] = useState("");
   const [message, setMessage] = useState("");
   const [messageState, setMessageState] = useState<ActionState>("idle");
-  const [newListTitle, setNewListTitle] = useState("");
   const [profileName, setProfileName] = useState("");
   const { pendingAction, startAction, finishAction } = useActionGuard();
 
@@ -346,7 +345,6 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
     };
   }, [active, resourceAttempt, session.status, session.user]);
 
-  const recentSavedWork = readerData.saved.find(item => item.work_data)?.work_data;
 
   async function logout() {
     const actionKey = "logout";
@@ -432,69 +430,6 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
       finishReaderAction(actionKey, "success", "个人阅读记录已删除。");
     } catch (error) {
       finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "删除失败。");
-    }
-  }
-
-  async function createReadingList(event: FormEvent) {
-    event.preventDefault();
-    const token = getServerSessionCredential();
-    if (!token || !newListTitle.trim()) return;
-    const actionKey = "create-reading-list";
-    if (!beginReaderAction(actionKey, "正在创建书单……")) return;
-    try {
-      const created = await privateRequest<ReadingListRow>(
-        "/reading/lists/",
-        {
-          method: "POST",
-          body: JSON.stringify({ title: newListTitle.trim(), description: "", is_default: false }),
-        },
-        token,
-      );
-      setReaderData((current) => ({ ...current, lists: [created, ...current.lists] }));
-      setNewListTitle("");
-      finishReaderAction(actionKey, "success", "书单已创建。");
-    } catch (error) {
-      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "书单创建失败。");
-    }
-  }
-
-  async function addSavedWorkToList(listId: string, workId: string) {
-    const token = getServerSessionCredential();
-    if (!token || !workId) return;
-    const actionKey = `add-to-list:${listId}:${workId}`;
-    if (!beginReaderAction(actionKey, "正在加入书单……")) return;
-    try {
-      const item = await privateRequest<{ id: string; work: string; title: string }>(
-        `/reading/lists/${listId}/add_item/`,
-        { method: "POST", body: JSON.stringify({ work: workId }) },
-        token,
-      );
-      setReaderData((current) => ({
-        ...current,
-        lists: current.lists.map((list) => (
-          list.id === listId && !list.items.some((existing) => existing.id === item.id)
-            ? { ...list, items: [...list.items, item] }
-            : list
-        )),
-      }));
-      finishReaderAction(actionKey, "success", "文献已加入书单。");
-    } catch (error) {
-      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "加入书单失败。");
-    }
-  }
-
-  async function deleteReadingList(id: string) {
-    if (!window.confirm("删除这份私人书单及其条目？馆藏原件与笔记会保留。")) return;
-    const token = getServerSessionCredential();
-    if (!token) return;
-    const actionKey = `delete-reading-list:${id}`;
-    if (!beginReaderAction(actionKey, "正在删除书单……")) return;
-    try {
-      await privateRequest(`/reading/lists/${id}/`, { method: "DELETE" }, token);
-      setReaderData((current) => ({ ...current, lists: current.lists.filter((list) => list.id !== id) }));
-      finishReaderAction(actionKey, "success", "书单已删除。");
-    } catch (error) {
-      finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "书单删除失败。");
     }
   }
 
@@ -678,22 +613,6 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
               );
             })}
             {!noteGroups.length ? <p className="empty-state">你还没有保存笔记。</p> : null}
-          </DataPanel>
-        ) : null}
-
-        {active === "书单" ? (
-          <DataPanel title="书单">
-            <form className="reading-list-create" onSubmit={createReadingList}><input value={newListTitle} onChange={(event) => setNewListTitle(event.target.value)} placeholder="新书单名称" required /><ActionButton className="button secondary" type="submit" state={pendingAction === "create-reading-list" ? "pending" : "idle"} pendingLabel="正在创建" disabled={Boolean(pendingAction) && pendingAction !== "create-reading-list"}>创建书单</ActionButton></form>
-            {readerData.lists.map((list) => (
-              <article className="reader-data-row" key={list.id} id={`list-${list.id}`}>
-                <List size={17} /><div><strong>{list.title}</strong><p>{list.description}</p><small>{list.items.length} 部文献</small>{list.items.map((item) => <span className="reading-list-item" key={item.id}>{item.title}</span>)}</div>
-                <span className="reader-data-actions">
-                  {recentSavedWork ? <ActionButton type="button" state={pendingAction === `add-to-list:${list.id}:${recentSavedWork.id}` ? "pending" : "idle"} pendingLabel="加入中" disabled={Boolean(pendingAction) && pendingAction !== `add-to-list:${list.id}:${recentSavedWork.id}`} onClick={() => void addSavedWorkToList(list.id, recentSavedWork.id)}>加入最近收藏</ActionButton> : null}
-                  <ActionButton type="button" state={pendingAction === `delete-reading-list:${list.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-reading-list:${list.id}`} onClick={() => void deleteReadingList(list.id)}>删除</ActionButton>
-                </span>
-              </article>
-            ))}
-            {!readerData.lists.length ? <p className="empty-state">你还没有创建书单。</p> : null}
           </DataPanel>
         ) : null}
 

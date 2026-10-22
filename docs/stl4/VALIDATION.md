@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-23 书单转计划静态记录
+
+`.venv/Scripts/python.exe tmp/stl4-booklist-plan-static-20261023.py` 33f48b/98b6f2退出0，13AST/10SQL编译/reading迁移声明一致/0数据库连接；OpenAPI0错误和10既有catalog提示。`node tmp/stl4-booklist-plan-contracts-20261023.mjs` 135fae退出0，241保留+3=244并解析CSS。完整TS200821/e77795及807ed9/778c66退出0，目标ESLinte91e3b及后续同807ed9退出0。未测试/浏览器/业务操作/运行计划/PDF渲染/构建/模型/迁移/生产。
+
 ## 2026-10-23 R29书单静态记录
 
 - `.venv/Scripts/python.exe tmp/stl4-booklist-static-20261023.py` aedeca退出0：12文件AST、10次两数据库SQL编译，禁止所有数据库连接；MigrationLoader(None)/ProjectState比较reading声明一致；OpenAPI0错误/10既有catalog类型提示。reader_center另外AST解析，未运行。

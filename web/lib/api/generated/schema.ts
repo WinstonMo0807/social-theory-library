@@ -2808,6 +2808,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/lists/{id}/create-plan/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_lists_create_plan_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/lists/{id}/export/": {
         parameters: {
             query?: never;
@@ -2835,6 +2851,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["reading_lists_items_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/{id}/plan-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_plan_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2880,6 +2912,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["reading_lists_directory_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/lists/plan-receipt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_plan_receipt_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5851,6 +5899,18 @@ export interface components {
          * @enum {string}
          */
         EventTypeEnum: "scholar" | "publication" | "concept_proposed" | "school_formation" | "debate" | "institution" | "theoretical_turn" | "translation" | "china_reception" | "institutionalization" | "formation" | "development";
+        EvidenceAnchorInput: {
+            /** Format: uuid */
+            evidence_span_id?: string;
+            /** Format: uuid */
+            asset_id?: string;
+            /** Format: uuid */
+            document_revision_id?: string;
+            pdf_page?: number;
+            content_hash?: string;
+            selection_start?: number;
+            selection_end?: number;
+        };
         EvidenceAnchorInputRequest: {
             /** Format: uuid */
             evidence_span_id?: string;
@@ -5878,6 +5938,20 @@ export interface components {
         EvidenceCurationRequest: {
             edit_version?: string;
             items: components["schemas"]["CurationItemRequest"][];
+        };
+        EvidenceReferenceInput: {
+            /** Format: uuid */
+            evidence_span_id?: string;
+            /** Format: uuid */
+            asset_id?: string;
+            /** Format: uuid */
+            document_revision_id?: string;
+            pdf_page?: number;
+            content_hash?: string;
+            selection_start?: number;
+            selection_end?: number;
+            /** @description 跨页引用按顺序传 1—20 个同文件同修订的单页锚点。 */
+            anchors?: components["schemas"]["EvidenceAnchorInput"][];
         };
         EvidenceReferenceInputRequest: {
             /** Format: uuid */
@@ -7302,6 +7376,60 @@ export interface components {
             /** Format: double */
             progress_ratio: number | null;
             reader_url: string | null;
+        };
+        ListPlanInputRequest: {
+            expected_version: string;
+            item_ids?: string[];
+            time_budget?: string;
+            budget_minutes?: number | null;
+            session_minutes?: number;
+            reading_level?: components["schemas"]["ReadingDifficultyEnum"];
+            reading_pace?: components["schemas"]["ReadingPaceInputRequest"];
+            prefer_unread?: boolean;
+            item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
+            /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
+            weekly_minutes?: number;
+            duration_weeks?: number;
+            /** @description 用于导读提示，不自动排除已选材料。 */
+            language_preference?: string;
+            /** @description 默认关闭，仅使用显式选择的本人已确认笔记。 */
+            use_confirmed_memories?: boolean;
+            confirmed_memory_ids?: string[];
+            /** Format: uuid */
+            request_id: string;
+            source_token: string;
+            goal: string;
+            background?: string;
+        };
+        ListPlanPreview: {
+            owner_id: string;
+            /** Format: uuid */
+            list_id: string;
+            expected_version: string;
+            source_token: string;
+            goal: string;
+            items: components["schemas"]["ListPlanSource"][];
+            ready: boolean;
+        };
+        ListPlanResult: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            record_id: string | null;
+            deleted: boolean;
+        };
+        ListPlanSource: {
+            /** Format: uuid */
+            item_id: string;
+            /** Format: uuid */
+            work_id: string;
+            title: string;
+            reference: components["schemas"]["EvidenceReferenceInput"] | null;
+            source_status: components["schemas"]["PublicTimelineSourceStatusEnum"];
+            reader_url: string | null;
+            /** Format: uuid */
+            catalog_revision_id: string | null;
         };
         ListReceipt: {
             /** Format: uuid */
@@ -19556,6 +19684,36 @@ export interface operations {
             };
         };
     };
+    reading_lists_create_plan_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListPlanInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ListPlanInputRequest"];
+                "multipart/form-data": components["schemas"]["ListPlanInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListPlanResult"];
+                };
+            };
+        };
+    };
     reading_lists_export_create: {
         parameters: {
             query?: never;
@@ -19605,6 +19763,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    reading_lists_plan_preview_retrieve: {
+        parameters: {
+            query: {
+                expected_version: string;
+                item_ids?: string[];
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListPlanPreview"];
+                };
             };
         };
     };
@@ -19712,6 +19897,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListDirectory"];
+                };
+            };
+        };
+    };
+    reading_lists_plan_receipt_retrieve: {
+        parameters: {
+            query: {
+                request_id: string;
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListPlanResult"];
                 };
             };
         };

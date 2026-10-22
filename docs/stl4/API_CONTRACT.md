@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 书单计划三接口
+
+原241路径保留，新增lists/{id}/plan-preview、create-plan及lists/plan-receipt，共244。owner头必需；预览使用expected_version和可选item_ids，生成另携source_token/request_id/原计划设置；返回owner/request/record_id/deleted，不把已删除回执当新建。详见BOOKLIST_PLAN_20261023。
+
 ## 2026-10-23 R29书单契约
 
 新增纳入9条原/新书单路径：/reading/lists/及{id}/、add_item/、items/{item_id}/、directory/、{id}/workspace/、command/、receipt/、{id}/export/。共241路径，232旧契约保留。工作台必需owner头；command显式UUID/版本/动作，receipt查回后删除不重建；export为private二进制响应、私人内容显式opt-in。详细限制与0023见BOOKLIST_WORKSPACE_20261023。
