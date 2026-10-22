@@ -13641,6 +13641,8 @@ export interface operations {
     admin_knowledge_object_preview: {
         parameters: {
             query?: {
+                /** @description Optional exact saved edit_version. Stale or repeated values return 409. The response includes the current edit_version and is rechecked before return. */
+                edit_version?: string;
                 /** @description Scholar only. UUID of this scholar's saved curation reference; an empty value clears the unsaved choice. Omit to retain the saved draft. */
                 featured_source_id?: string;
                 /** @description Scholar only. One comma-separated list of at most 100 UUIDs; an empty value clears manual selections. Omit to retain the saved draft. Automatic public associations remain. */
@@ -13695,11 +13697,24 @@ export interface operations {
                     };
                 };
             };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
         };
     };
     admin_topic_selection_preview: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Optional exact saved version. Overrides remain unsaved; response includes edit_version. Stale or repeated versions return 409. */
+                edit_version?: string;
+            };
             header?: never;
             path: {
                 object_id: string;
@@ -13746,6 +13761,16 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

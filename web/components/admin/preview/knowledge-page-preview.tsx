@@ -15,7 +15,9 @@ import { TopicPublicView } from "@/components/public/topic-public-view";
 import { TopicSectionPublicView } from "@/components/public/topic-section-public-view";
 import { TheoryTimelinePublicList } from "@/components/public/theory-timeline-public-view";
 import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { withPrivateOwner } from "@/lib/api/private-owner";
+import { useAdminSession } from "@/lib/admin-session";
 import type { TheorySchool } from "@/lib/data";
 import { adaptApiWork } from "@/lib/public-data-adapters";
 import type { PublicScholarDetail } from "@/lib/api/scholars.types";
@@ -36,6 +38,7 @@ type PreviewPerspective = {
 };
 
 export type KnowledgePreviewPayload = {
+  edit_version?: string;
   preview_mode: true;
   protected: true;
   object_type: string;
@@ -181,27 +184,38 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
   }
 }
 
-export function AdminKnowledgePagePreview({ objectType, objectId }: { objectType: string; objectId: string }) {
+export function AdminKnowledgePagePreview(props: { objectType: string; objectId: string }) {
+  const owner=useAdminSession()?.id,params=useSearchParams();
+  return <KnowledgePagePreview key={`${owner}:${props.objectType}:${props.objectId}:${params.get("edit_version")||""}`} {...props}/>;
+}
+
+function KnowledgePagePreview({ objectType, objectId }: { objectType: string; objectId: string }) {
   const searchParams = useSearchParams();
+  const user=useAdminSession(),owner=user?String(user.id):"",expectedVersion=searchParams.get("edit_version")||"";
   const pageId = searchParams.get("page") || "overview";
   const moduleId = searchParams.get("module") || "";
-  const returnHref = safeAdminHref(searchParams.get("return_to"), `/admin/knowledge?object_type=${encodeURIComponent(objectType)}&object_id=${encodeURIComponent(objectId)}`);
+  const returnHref = safeAdminHref(searchParams.get("return_to"), `/admin/knowledge?selected_type=${encodeURIComponent(objectType)}&selected_id=${encodeURIComponent(objectId)}`);
   const [payload, setPayload] = useState<KnowledgePreviewPayload | null>(null);
   const [message, setMessage] = useState("");
   const [anchorMessage, setAnchorMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const requestRevision = useRef(0);
+  const lifetime=useRef<AbortController|null>(null);
 
   const load = useCallback(async () => {
     const revision = ++requestRevision.current;
     setLoading(true);
+    setPayload(null);
     setMessage("");
     try {
-      const result = await apiRequest<KnowledgePreviewPayload>(
-        `/catalog/admin/knowledge-preview/${encodeURIComponent(objectType)}/${encodeURIComponent(objectId)}/`,
-        {},
+      const signal=AbortSignal.any([lifetime.current!.signal,AbortSignal.timeout(30000)]);
+      const query=expectedVersion?`?${new URLSearchParams({edit_version:expectedVersion})}`:"";
+      const result = await withPrivateOwner(owner,()=>apiRequest<KnowledgePreviewPayload>(
+        `/catalog/admin/knowledge-preview/${encodeURIComponent(objectType)}/${encodeURIComponent(objectId)}/${query}`,
+        {signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},
         getServerSessionCredential(),
-      );
+      ),signal);
+      if(result.object_id!==objectId||result.object_type!==objectType||!result.edit_version||!/^[a-f0-9]{64}$/.test(result.edit_version)||expectedVersion&&result.edit_version!==expectedVersion)throw Error("预览与当前对象或保存版本不一致，请返回编辑页重新检查。");
       if (requestRevision.current === revision) setPayload(result);
     } catch (reason) {
       if (requestRevision.current === revision) {
@@ -210,15 +224,19 @@ export function AdminKnowledgePagePreview({ objectType, objectId }: { objectType
     } finally {
       if (requestRevision.current === revision) setLoading(false);
     }
-  }, [objectId, objectType]);
+  }, [objectId, objectType,owner,expectedVersion]);
 
   useEffect(() => {
+    if(!owner)return;
+    const controller=new AbortController();lifetime.current=controller;
+    const unsubscribe=subscribeToSessionChanges(()=>{controller.abort();requestRevision.current+=1;setPayload(null);setMessage("账户已变化，请重新打开当前对象的预览。");setLoading(false);});
     const timer = window.setTimeout(() => { void load(); }, 0);
     return () => {
+      controller.abort();unsubscribe();
       window.clearTimeout(timer);
       requestRevision.current += 1;
     };
-  }, [load]);
+  }, [load,owner]);
 
   useEffect(() => {
     if (!payload) return;
@@ -254,6 +272,7 @@ export function AdminKnowledgePagePreview({ objectType, objectId }: { objectType
           assertive={!loading}
         />
         {!loading ? <ActionButton className="button secondary" onClick={() => void load()}><RefreshCw size={15} />重试</ActionButton> : null}
+        {!loading ? <Link className="button secondary" href={returnHref}>返回当前对象编辑</Link> : null}
       </div>
     );
   }
@@ -273,6 +292,7 @@ export function AdminKnowledgePagePreview({ objectType, objectId }: { objectType
         </div>
         <nav className="admin-preview-actions" aria-label="预览操作">
           <Link className="button secondary" href={returnHref}>返回当前对象编辑</Link>
+          <ActionButton className="button secondary" onClick={()=>void load()}><RefreshCw size={15}/>重新读取保存版本</ActionButton>
           {payload.preview_routes.published ? <Link className="button secondary" href={payload.preview_routes.published} target="_blank">查看当前公开版</Link> : null}
         </nav>
         {payload.public_control?.page_tree?.length ? <nav className="admin-preview-page-switcher" aria-label="公开页面预览">

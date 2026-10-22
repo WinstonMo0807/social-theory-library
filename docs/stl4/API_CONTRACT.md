@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 知识预览保存版本
+
+原GET /catalog/admin/knowledge-preview/{object_type}/{object_id}/及主题只读POST增加可选query edit_version。重复值或与当前保存版本不符返回409 preview_changed；生成前后版本变化同样409，响应不包含perspective。成功响应追加edit_version，沿KnowledgePreviewPayload自由对象内的可选TS字段同步；新发布/完整预览消费者明确核对该值。
+
+学者GET既有选择参数和主题POST parent/curation保持；edit_version仅用于底稿一致性，不将未保存选择写库。CanViewEvidence、可选X-Editor-Owner、private/no-store保持。版本算法提取自原AdminEditorialDraftReadMixin，输入不变；包含主体updated_at、正式revision、最新draft身份/updated_at和学者Person版本，不是所有关联资料快照。OpenAPI/schema.ts已生成，可选参数与409响应均覆盖，226路径不变。
+
 ## 2026-10-23 知识发布账户与阶段契约
 
 本批不增加路由/DTO/表。RequiresCapability、IsLibraryStaff、IsKnowledgeEditor接受可选X-Editor-Owner；存在且不等于当前认证user.pk返回403，缺省沿原权限。匹配header不授予任何新能力。当前知识控制器所有原详情GET/PATCH、knowledge-preview及editorial-revisions GET/publish POST均携此头并以withPrivateOwner前后验证。

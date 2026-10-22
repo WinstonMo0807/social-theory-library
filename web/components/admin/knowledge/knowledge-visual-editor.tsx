@@ -9,7 +9,9 @@ import type { TopicCurationFields } from "./topic-fields";
 import { projectReadingPath } from "@/components/admin/curation/reading-path-preview";
 import { FixedPageEditor, type PreviewSelection } from "@/components/admin/curation/fixed-page-editor";
 import { PreviewSurface, type KnowledgePreviewPayload } from "@/components/admin/preview/knowledge-page-preview";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { useAdminSession } from "@/lib/admin-session";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { KnowledgePublishControl, KnowledgePublicationContext } from "./knowledge-publish-control";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
@@ -67,13 +69,14 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
 /** Public components project local fields and server-verified, unsaved selections. */
 export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, previewStageId, onPreviewSelect}: Props) {
   const searchParams = useSearchParams();
+  const user=useAdminSession(),owner=user?String(user.id):"",savedVersion=(savedRecord as {edit_version?:string}|null)?.edit_version||"";
   const [active, setActive] = useState(initialSection || searchParams.get("section") || "identity");
   const [resolved, setResolved] = useState<{ key: string; payload: KnowledgePreviewPayload } | null>(null);
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
   const [previewRetry, setPreviewRetry] = useState(0);
   const previewQuery = objectType === "scholar" ? scholarPreviewQuery(draft as Row) : "";
   const previewBody = objectType === "topic" ? topicPreviewBody(draft as TopicCurationFields) : "";
-  const previewKey = JSON.stringify([objectType, objectId, refreshKey, previewQuery, previewBody, previewRetry]);
+  const previewKey = JSON.stringify([objectType, objectId, refreshKey, previewQuery, previewBody, previewRetry, owner, savedVersion]);
   const payload = resolved?.key === previewKey ? resolved.payload : null;
   const error = failure?.key === previewKey ? failure.message : "";
   const [evidenceDirty, setEvidenceDirty] = useState(false);
@@ -81,14 +84,16 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const [localImage, setLocalImage] = useState("");
   useEffect(()=>{let active=true;const url=mediaFile?URL.createObjectURL(mediaFile):"";queueMicrotask(()=>{if(active)setLocalImage(url);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[mediaFile]);
   useEffect(() => {
-    if (!objectId) return;
-    const controller = new AbortController();
+    if (!objectId || !owner) return;
+    const controller = new AbortController(),signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
+    const params=new URLSearchParams(previewQuery);if(savedVersion)params.set("edit_version",savedVersion);
+    const unsubscribe=subscribeToSessionChanges(()=>{controller.abort();setResolved(null);setFailure({key:previewKey,message:"账户已变化，请重新打开当前对象。"});});
     queueMicrotask(() => { if (!controller.signal.aborted) { setResolved(null); setFailure(null); } });
-    apiRequest<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/${previewQuery ? `?${previewQuery}` : ""}`, { signal: controller.signal, ...(previewBody ? { method: "POST", body: previewBody } : {}) }, getServerSessionCredential())
-      .then(value => { if (!controller.signal.aborted) { setResolved({ key: previewKey, payload: value }); setFailure(null); } })
+    withPrivateOwner(owner,()=>apiRequest<KnowledgePreviewPayload>(`/catalog/admin/knowledge-preview/${objectType}/${objectId}/${params.size ? `?${params}` : ""}`, { signal,cache:"no-store",headers:{"X-Editor-Owner":owner}, ...(previewBody ? { method: "POST", body: previewBody } : {}) }, getServerSessionCredential()),signal)
+      .then(value => { if(value.object_type!==objectType||value.object_id!==objectId||savedVersion&&value.edit_version!==savedVersion)throw Error("预览与保存版本不一致，请重新核对。");if (!controller.signal.aborted) { setResolved({ key: previewKey, payload: value }); setFailure(null); } })
       .catch(reason => { if (!controller.signal.aborted) setFailure({ key: previewKey, message: reason instanceof Error ? reason.message : "预览读取失败" }); });
-    return () => controller.abort();
-  }, [objectType, objectId, previewQuery, previewBody, previewKey]);
+    return () => {controller.abort();unsubscribe();};
+  }, [objectType, objectId, previewQuery, previewBody, previewKey,owner,savedVersion]);
   const childList = Children.toArray(children);
   const form = childList.find(node => isValidElement(node) && node.type === "form") as ReactElement<{children:ReactNode}> | undefined;
   const rail = childList.filter(node => node !== form);
@@ -109,7 +114,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
     const url = new URL(window.location.href); url.searchParams.set("section",id); window.history.replaceState(null,"",url.pathname+url.search);
   }
   const evidenceEditor = evidenceType ? <div className="knowledge-visual-editor" inert={publicationLocked}>{objectId ? <EvidenceCurationEditor key={`${evidenceType}:${objectId}`} objectType={evidenceType} objectId={objectId} sections={sections} onSectionChange={changeSection} onDirtyChange={setEvidenceDirty} /> : <><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} onClick={() => changeSection(section.id)}>{section.label}</button>)}</nav><p className="admin-panel">请先保存当前对象，再选择馆内原文。当前基本信息输入仍然保留。</p></>}</div> : null;
-  return <KnowledgePublicationContext value={{locked:publicationLocked,requestReview:()=>setActive("publication")}}><div className="knowledge-visual-editor">{publicationLocked && selected !== "publication" ? <p role="status">发布记录正在核对，编辑暂时锁定。<button type="button" onClick={()=>setActive("publication")}>查看发布记录</button></p>:null}{objectType === "scholar" && selected === "network" ? <section className="private-preview-label"><strong>规范学术关系</strong><p>两端学者共用同一关系、方向、说明和来源。下方历史关联阅读保持原记录。</p>{objectId ? <Link className="button secondary" href={`/admin/scholars/${objectId}/relations`}>进入学者关系图编辑</Link> : <p>请先保存学者草稿，再建立关系。</p>}</section> : null}{selected === "passages" && evidenceType ? evidenceEditor : <FixedPageEditor sections={sections} activeSection={selected} onSectionChange={changeSection} onPreviewSelect={onPreviewSelect} dirty={dirty} previewHref={objectId ? `/admin/preview/knowledge/${objectType}/${objectId}?page=${page}` : undefined}
+  return <KnowledgePublicationContext value={{locked:publicationLocked,requestReview:()=>setActive("publication")}}><div className="knowledge-visual-editor">{publicationLocked && selected !== "publication" ? <p role="status">发布记录正在核对，编辑暂时锁定。<button type="button" onClick={()=>setActive("publication")}>查看发布记录</button></p>:null}{objectType === "scholar" && selected === "network" ? <section className="private-preview-label"><strong>规范学术关系</strong><p>两端学者共用同一关系、方向、说明和来源。下方历史关联阅读保持原记录。</p>{objectId ? <Link className="button secondary" href={`/admin/scholars/${objectId}/relations`}>进入学者关系图编辑</Link> : <p>请先保存学者草稿，再建立关系。</p>}</section> : null}{selected === "passages" && evidenceType ? evidenceEditor : <FixedPageEditor sections={sections} activeSection={selected} onSectionChange={changeSection} onPreviewSelect={onPreviewSelect} dirty={dirty} previewHref={objectId ? `/admin/preview/knowledge/${objectType}/${objectId}?page=${page}${savedVersion ? `&edit_version=${encodeURIComponent(savedVersion)}` : ""}` : undefined}
     fields={form ? cloneElement(form,{},<fieldset disabled={disabled || publicationLocked} style={{display:"contents"}}>{groups.map(({node,section},index) => <div key={index} hidden={section !== selected && !alwaysVisible(node)} data-field-section={section}>{node}</div>)}</fieldset>) : children}
     toolbar={error ? <button type="button" className="button secondary" onClick={() => setPreviewRetry(value => value + 1)}>重新核对预览</button> : null}
     preview={error ? <p className="form-message" role="alert">{error}。当前输入仍保留，本次选择尚未核对，请在左侧重新核对预览。</p> : objectId && !payload ? <p role="status">{objectType === "scholar" ? "正在核对本次选择的原文引语与阅读路径…" : "正在读取当前对象的受控预览…"}</p> : <div onClickCapture={event => {const target = event.target as HTMLElement; const row = target.closest<HTMLElement>("[data-edit-row]"); if (row) window.dispatchEvent(new CustomEvent("knowledge-row-select",{detail:Number(row.dataset.editRow)})); if (target.closest("a")) event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId={page} previewStageId={previewStageId}/></div>}/> }

@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-23 知识预览保存版本静态检查
+
+- `.venv/Scripts/python.exe tmp/stl4-knowledge-preview-static-20261023.py`（PYTHONIOENCODING=utf-8），bd0c77退出0：3文件AST、16次SQLite/PostgreSQL SQL编译，ensure_connection禁止连接，0连接。脚本内spectacular生成与验证0错误/10既有警告；未运行测试。
+- `node tmp/stl4-knowledge-preview-contracts-20261023.mjs`，2c67d4退出0。保留226路径，仅知识预览GET/POST新增edit_version参数及409响应；api/openapi/schema.json与生成schema.ts同步。
+- 完整`node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web），最终49661/4ca627退出0，前次92613/defda6也退出0。
+- 四目标ESLint（knowledge-page-preview、knowledge-publish-control、knowledge-visual-editor、knowledge-publication-atlas），bfb464退出0。后续链接/验收定义两目标992b06及错误返回入口一目标1ecd67退出0，均无警告。曾从仓库根目录调用ESLint产生pages路径提示；改在web目录按原配置执行，未忽略规则。
+- 新增4后端函数（首函数6类型参数）、2浏览器场景只定义；浏览器文件共7场景。覆盖版本公式保持、保存后过期、生成期间变化、只读选择不写库、失败重读清空、账户变化及绑定链接。未运行正式测试/E2E/浏览器/服务/构建/迁移/模型/索引/检索测评/生产操作。图集状态与96/26/87不变。
+
 ## 2026-10-23 知识对象发布状态与恢复静态检查
 
 - `node node_modules/typescript/bin/tsc --noEmit --incremental false --pretty false`（web），最终47850/ed2103退出0；前次31566/8e90ff也退出0。仅类型检查，无构建。

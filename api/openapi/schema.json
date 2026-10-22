@@ -2219,6 +2219,14 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "edit_version",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Optional exact saved edit_version. Stale or repeated values return 409. The response includes the current edit_version and is rechecked before return."
+                    },
+                    {
+                        "in": "query",
                         "name": "featured_source_id",
                         "schema": {
                             "type": "string",
@@ -2308,6 +2316,17 @@
                             }
                         },
                         "description": ""
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             },
@@ -2315,6 +2334,14 @@
                 "operationId": "admin_topic_selection_preview",
                 "description": "Read-only Topic selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written.",
                 "parameters": [
+                    {
+                        "in": "query",
+                        "name": "edit_version",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Optional exact saved version. Overrides remain unsaved; response includes edit_version. Stale or repeated versions return 409."
+                    },
                     {
                         "in": "path",
                         "name": "object_id",
@@ -2398,6 +2425,17 @@
                         "description": ""
                     },
                     "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "409": {
                         "content": {
                             "application/json": {
                                 "schema": {

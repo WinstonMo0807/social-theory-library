@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 预览与编辑共用保存版本
+
+editorial_edit_version提取原AdminEditorialDraftReadMixin的哈希逻辑，current_editorial_version只读原主体/最新草稿/正式revision；不新建版本表。知识preview读前/读后比对同一版本并回传，未保存选择仍只作原serializer内存投影。前端按账户/对象/保存版本隔离读取，失败清空旧预览；全屏链接携原保存版本。相关馆藏与关联对象自身版本不纳入此哈希，正式来源资格仍由原业务服务核验，不把此保护当全站快照。
+
 ## 2026-10-23 知识发布复用与账户校验
 
 KnowledgePublishControl作为原编辑器的确认/恢复组件，不建第二个发布服务。第一次公开调用规范保存CAS，已存在的不可变编辑修订直接走原发布事务，避免覆盖草稿撤回状态。sessionStorage按owner/对象保存非正文的准确请求阶段，恢复先检查原修订。两类旧知识权限继承RequiresCapability以共享可选owner校验，原capability保持。知识编辑器内发布入口共用上下文，待核对期间锁定写入；独立旧工作室与固定页面继续待接完整M17/M18。

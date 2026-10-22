@@ -20,6 +20,32 @@ class EditorialDraftReadError(APIException):
     default_code = "editorial_draft_unavailable"
 
 
+def editorial_edit_version(target_type, target, *, revision, canonical_revision):
+    """One saved-version identity for Admin edits and their protected previews."""
+    version = {"type": target_type, "id": target.pk, "updated_at": target.updated_at,
+               "canonical": canonical_revision,
+               "draft": [revision.pk, revision.updated_at] if revision else None}
+    if target_type == "scholar_profile":
+        version["person"] = [target.person_id, target.person.updated_at]
+    return sha256(json.dumps(version, cls=DjangoJSONEncoder, sort_keys=True).encode()).hexdigest()
+
+
+def current_editorial_version(target_type, object_id):
+    from catalog.services.editorial_revision import TARGET_POLICIES
+    policy = TARGET_POLICIES.get(target_type)
+    if policy is None:
+        return None
+    queryset = policy.model.objects.all()
+    if target_type == "scholar_profile":
+        queryset = queryset.select_related("person")
+    target = queryset.filter(pk=object_id).first()
+    if target is None:
+        return None
+    revision = EditorialRevision.objects.filter(target_type=target_type, target_id=object_id, status="draft").order_by("-revision").first()
+    canonical = CanonicalObjectRevision.objects.filter(object_type=target_type, object_id=object_id).values_list("current_revision", flat=True).first() or 0
+    return editorial_edit_version(target_type, target, revision=revision, canonical_revision=canonical)
+
+
 class AdminPrivateResponseMixin:
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
@@ -117,12 +143,7 @@ class AdminEditorialDraftReadMixin(AdminPrivateResponseMixin):
         output = []
         for row in rows:
             revision = revisions.get(str(row.pk))
-            version = {"type": self.editorial_target_type, "id": row.pk, "updated_at": row.updated_at,
-                       "canonical": canonical.get(row.pk, 0),
-                       "draft": [revision.pk, revision.updated_at] if revision else None}
-            if self.editorial_target_type == "scholar_profile":
-                version["person"] = [row.person_id, row.person.updated_at]
-            edit_version = sha256(json.dumps(version, cls=DjangoJSONEncoder, sort_keys=True).encode()).hexdigest()
+            edit_version = editorial_edit_version(self.editorial_target_type, row, revision=revision, canonical_revision=canonical.get(row.pk, 0))
             if revision is None:
                 output.append({**dict(self.get_serializer(row).data), "edit_version": edit_version})
                 continue

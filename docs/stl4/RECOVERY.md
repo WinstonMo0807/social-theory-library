@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-23 知识预览版本恢复
+
+前置fbb6864，本批白名单tmp/stl4-knowledge-preview-checkpoint-20261023.json，提交号核对git log。editorial_edit_version提取原保存公式；AdminKnowledgeObjectPreviewView GET/POST携可选edit_version且响应前后重查。完整/编辑内预览清空失败旧内容、owner验证、绑定链接。生成契约226路径，96/26/87不变，无正式验收/生产。
+
+不要重跑tmp/stl4-knowledge-preview-wire/links/record-20261023.py；静态与契约脚本可按需复用。不暂存继承改动。下一步仍为完整知识M17与固定页面/M18其他对象，不能把预览一致性修复当成整个页面验收完成。
+
 ## 2026-10-23 知识对象发布恢复
 
 前置ad1b230；本批白名单tmp/stl4-knowledge-publish-checkpoint-20261023.json，实际提交核对git log。读KNOWLEDGE_PUBLICATION_20261023。KnowledgePublishControl复用原规范保存/修订发布，已有修订不改写保存状态；prepare未知需人工核对，publish阶段先查原修订，禁止另建请求冒充恢复。RequiresCapability及IsLibraryStaff/IsKnowledgeEditor带可选owner守卫。统计96/26/87未变，无正式验收/迁移/生产。

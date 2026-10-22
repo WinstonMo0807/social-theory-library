@@ -1,26 +1,27 @@
 import {test,expect,type Page} from "@playwright/test";
+import {projectTopic} from "../components/admin/knowledge/topic-preview";
 
 // Isolated API projections exercise the UI contract, not live providers or visual acceptance.
 const id="61111111-1111-4111-8111-111111111111",revisionId="62222222-2222-4222-8222-222222222222";
 const version="a".repeat(64),key=`stl:knowledge-publish:v1:1:topic:${id}`;
 async function setup(page:Page,options:{existing?:boolean;withdraw?:boolean;lost?:boolean;stale?:boolean;stored?:unknown}={}) {
   const writes:Array<{method:string;path:string;body:unknown;owner:string|undefined;version:string|undefined}>=[];
-  let published=false,detailReads=0;
+  let published=false,detailReads=0,previewFailure=false,owner=1;
   const revision=()=>({id:revisionId,target_type:"topic",target_id:id,status:published?"published":"draft"});
   const record=()=>({id,name:"隔离主题发布样本",slug:"isolated-publication-topic",description:"已保存的说明",editorial_status:options.withdraw?"archived":options.existing||published?"published":"draft",edit_version:options.stale&&detailReads>1?"b".repeat(64):version,editorial_revision:options.existing&&!published?revision():null,key_concepts:[],timeline:[],curation:{},parent:null,works:[],disciplines:[],core_questions:[],research_dimensions:[],methods:[]});
-  const perspective=()=>({source:"editorial_revision",available:true,serializer:"Topic",data:record()});
+  const perspective=()=>({source:"editorial_revision",available:true,serializer:"Topic",data:projectTopic({},record())});
   await page.context().addCookies([{name:"stl_access",value:"opaque-knowledge-fixture",domain:"127.0.0.1",path:"/",httpOnly:true,sameSite:"Lax"}]);
   if(options.stored!==undefined)await page.addInitScript(({key,value})=>sessionStorage.setItem(key,JSON.stringify(value)),{key,value:options.stored});
   await page.route("**/api/**",async route=>{
     const req=route.request(),url=new URL(req.url());
-    if(url.pathname==="/api/auth/me/")return route.fulfill({json:{id:1,email:"knowledge@example.test",display_name:"隔离编辑",role:"admin",capabilities:["access_back_office","can_edit_draft_authority","can_publish_authority","can_view_evidence"],reading_preferences:{}}});
+    if(url.pathname==="/api/auth/me/")return route.fulfill({json:{id:owner,email:"knowledge@example.test",display_name:"隔离编辑",role:"admin",capabilities:["access_back_office","can_edit_draft_authority","can_publish_authority","can_view_evidence"],reading_preferences:{}}});
     if(req.method()!=="GET"&&!url.pathname.includes("knowledge-preview"))writes.push({method:req.method(),path:url.pathname,body:req.postDataJSON(),owner:req.headers()["x-editor-owner"],version:req.headers()["if-match"]});
     if(url.pathname.endsWith(`/topics/${id}/`)){
       if(req.method()==="GET")detailReads++;
       if(req.method()==="PATCH")published=true;
       return route.fulfill({json:record()});
     }
-    if(url.pathname.endsWith(`/knowledge-preview/topic/${id}/`))return route.fulfill({json:{preview_mode:true,protected:true,object_type:"topic",object_id:id,label:"隔离主题发布样本",status:"published",active_perspective:"draft",perspective:perspective(),perspectives:{draft:perspective(),published:{...perspective(),data:{...record(),description:"当前公开说明"}}},preview_routes:{draft:`/admin/preview/knowledge/topic/${id}`}}});
+    if(url.pathname.endsWith(`/knowledge-preview/topic/${id}/`))return previewFailure?route.fulfill({status:503,json:{detail:"隔离预览暂不可用"}}):route.fulfill({json:{edit_version:version,preview_mode:true,protected:true,object_type:"topic",object_id:id,label:"隔离主题发布样本",status:"published",active_perspective:"draft",perspective:perspective(),perspectives:{draft:perspective(),published:{...perspective(),data:{...perspective().data,description:"当前公开说明"}}},preview_routes:{draft:`/admin/preview/knowledge/topic/${id}`}}});
     if(url.pathname.endsWith(`/editorial-revisions/${revisionId}/publish/`)){published=true;if(options.lost)return route.abort("failed");return route.fulfill({json:revision()});}
     if(url.pathname.endsWith(`/editorial-revisions/${revisionId}/`))return route.fulfill({json:revision()});
     if(url.pathname.endsWith("/knowledge-workspace/"))return route.fulfill({json:{studio:{selection:null}}});
@@ -28,7 +29,7 @@ async function setup(page:Page,options:{existing?:boolean;withdraw?:boolean;lost
   });
   await page.goto(`/admin/topics/${id}?section=publication`);
   const panel=page.getByRole("region",{name:"知识对象发布",exact:true});await expect(panel).toBeVisible();
-  return {panel,writes};
+  return {panel,writes,failPreviews:()=>{previewFailure=true;},changeOwner:()=>{owner=2;}};
 }
 async function confirm(page:Page,withdraw=false) {
   await page.getByRole("button",{name:"发布前检查",exact:true}).click();
@@ -71,4 +72,24 @@ test("foreign or malformed pending records block publication without issuing mut
   await expect(panel.getByRole("heading",{name:"原发布操作待核对"})).toBeVisible();
   await expect(panel.getByRole("button",{name:"发布前检查",exact:true})).toBeDisabled();
   await expect(panel.getByRole("button",{name:"重试原阶段"})).toHaveCount(0);expect(writes).toHaveLength(0);
+});
+
+test("full preview links preserve the reviewed version and failed reload removes the prior content",async({page})=>{
+  const {writes,failPreviews}=await setup(page);await page.getByRole("button",{name:"发布前检查",exact:true}).click();
+  const link=page.getByRole("dialog",{name:"知识对象发布前检查"}).getByRole("link",{name:"打开完整预览 ↗"});
+  await expect(link).toHaveAttribute("href",`/admin/preview/knowledge/topic/${id}?edit_version=${version}`);
+  await page.goto((await link.getAttribute("href"))!);
+  await expect(page.locator(".admin-knowledge-page-preview-body h1")).toHaveText("隔离主题发布样本");
+  failPreviews();await page.getByRole("button",{name:"重新读取保存版本"}).click();
+  await expect(page.getByRole("alert")).toContainText("隔离预览暂不可用");
+  await expect(page.locator(".admin-knowledge-page-preview-body")).toHaveCount(0);expect(writes).toHaveLength(0);
+});
+
+test("cookie owner change rejects reload and clears previously visible private preview",async({page})=>{
+  const {writes,changeOwner}=await setup(page);
+  await page.goto(`/admin/preview/knowledge/topic/${id}?edit_version=${version}`);
+  await expect(page.locator(".admin-knowledge-page-preview-body")).toBeVisible();changeOwner();
+  await page.getByRole("button",{name:"重新读取保存版本"}).click();
+  await expect(page.getByRole("alert")).toContainText("登录账户已变化");
+  await expect(page.locator(".admin-knowledge-page-preview-body")).toHaveCount(0);expect(writes).toHaveLength(0);
 });

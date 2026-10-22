@@ -505,6 +505,25 @@ class AdminKnowledgeObjectPreviewView(APIView):
 
     permission_classes = [CanViewEvidence]
 
+    def _version(self, object_type, object_id):
+        from catalog.editorial_read import current_editorial_version
+        from catalog.services.knowledge_studio import KnowledgeObjectEditorAdapter
+        return current_editorial_version(KnowledgeObjectEditorAdapter.TARGET_TYPES.get(object_type), object_id)
+
+    def _response(self, payload, object_type, object_id, version):
+        if payload is None:
+            return Response({"detail": "知识对象不存在，或对象类型与标识不匹配。"}, status=404)
+        if version is None or self._version(object_type, object_id) != version:
+            return Response({"detail": "生成预览期间保存内容已变化，请重新读取。", "code": "preview_changed"}, status=409)
+        return Response({**payload, "edit_version": version})
+
+    def _expected(self, request, version):
+        from django.utils.crypto import constant_time_compare
+        values = request.query_params.getlist("edit_version")
+        if len(values) > 1 or values and (not version or not constant_time_compare(values[0], version)):
+            return Response({"detail": "保存内容已变化，请返回编辑页重新检查。", "code": "preview_changed"}, status=409)
+        return None
+
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
         response["Cache-Control"] = "private, no-store"
@@ -515,56 +534,61 @@ class AdminKnowledgeObjectPreviewView(APIView):
         parameters=[
             OpenApiParameter("object_type", OpenApiTypes.STR, OpenApiParameter.PATH),
             OpenApiParameter("object_id", OpenApiTypes.UUID, OpenApiParameter.PATH),
+            OpenApiParameter("edit_version", OpenApiTypes.STR, description="Optional exact saved edit_version. Stale or repeated values return 409. The response includes the current edit_version and is rechecked before return."),
             OpenApiParameter("featured_source_id", {"type": "string", "maxLength": 36},
                 description="Scholar only. UUID of this scholar's saved curation reference; an empty value clears the unsaved choice. Omit to retain the saved draft."),
             OpenApiParameter("reading_path_ids", {"type": "string", "maxLength": 3699},
                 description="Scholar only. One comma-separated list of at most 100 UUIDs; an empty value clears manual selections. Omit to retain the saved draft. Automatic public associations remain."),
         ],
-        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT, 409: OpenApiTypes.OBJECT},
         description="Protected KnowledgePreviewPayload envelope with existing draft/published perspectives and their public serializer data. Optional scholar selections affect only an in-memory draft copy; no data is saved.",
     )
     def get(self, request, object_type, object_id):
         from catalog.services.knowledge_studio import knowledge_object_preview_payload
 
+        version = self._version(object_type, object_id)
+        conflict = self._expected(request, version)
+        if conflict is not None:
+            return conflict
+        params = request.query_params.copy()
+        params.pop("edit_version", None)
         overrides = None
-        if request.query_params:
+        if params:
             if object_type != "scholar":
                 raise ValidationError("只有学者预览接受未保存的引语与阅读路径选择。")
             from catalog.services.public_scholars import scholar_preview_overrides
-            overrides = scholar_preview_overrides(request.query_params)
+            overrides = scholar_preview_overrides(params)
         payload = knowledge_object_preview_payload(
             object_type=object_type,
             object_id=str(object_id),
             reviewer=request.user,
             scholar_preview_overrides=overrides,
         )
-        if payload is None:
-            return Response(
-                {"detail": "知识对象不存在，或对象类型与标识不匹配。"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        return Response(payload)
+        return self._response(payload, object_type, object_id, version)
 
     @extend_schema(
         operation_id="admin_topic_selection_preview",
         request=TopicPreviewRequestSerializer,
         parameters=[OpenApiParameter("object_type", OpenApiTypes.STR, OpenApiParameter.PATH),
-            OpenApiParameter("object_id", OpenApiTypes.UUID, OpenApiParameter.PATH)],
-        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+            OpenApiParameter("object_id", OpenApiTypes.UUID, OpenApiParameter.PATH),
+            OpenApiParameter("edit_version", OpenApiTypes.STR, description="Optional exact saved version. Overrides remain unsaved; response includes edit_version. Stale or repeated versions return 409.")],
+        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT, 409: OpenApiTypes.OBJECT},
         description="Read-only Topic selection preview. Large UUID selections use the request body; only an in-memory draft copy changes. The published perspective is unchanged. No record, revision or task is written.",
     )
     def post(self, request, object_type, object_id):
         from catalog.services.knowledge_studio import knowledge_object_preview_payload
 
-        if object_type != "topic" or request.query_params:
+        if object_type != "topic" or set(request.query_params) - {"edit_version"}:
             raise ValidationError("此操作只支持主题的只读选择预览。")
+        version = self._version(object_type, object_id)
+        conflict = self._expected(request, version)
+        if conflict is not None:
+            return conflict
         body = TopicPreviewRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         payload = knowledge_object_preview_payload(object_type="topic", object_id=str(object_id),
             reviewer=request.user, topic_preview_overrides=body.validated_data)
-        if payload is None:
-            return Response({"detail": "主题不存在，或对象类型与标识不匹配。"}, status=status.HTTP_404_NOT_FOUND)
-        return Response(payload)
+        return self._response(payload, object_type, object_id, version)
 
 
 class AdminProjectionRefreshView(APIView):
