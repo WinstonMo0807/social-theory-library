@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 NEW-R04研究总览源码接入
+
+原research-projects新增GET directory/，必需X-Reader-Owner，page与scope（active/archived/all），20条摘要及本人最近阅读；无新数据库模型。总274路径，保留此前273。
+
 ## 2026-10-23 M25账户管理
 
 auth/users新增workspace/roles/preview/command/receipt/history六路径，共273。actor头+权限+HMAC版本/预览/明确确认/UUID；旧用户PATCH和set-password必须同命令字段，拒绝旧无条件提交。原角色集合/账户表保留，实际能力矩阵来源原服务。

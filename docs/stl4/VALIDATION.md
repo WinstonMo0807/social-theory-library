@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-23 NEW-R04研究总览源码接入
+
+ea404a：AST33/38次SQLite与PostgreSQL SQL编译/账户及reading迁移声明比较一致，禁止DB连接；274契约、CSS解析退出0，schema 0错误/10旧catalog警告。TypeScript noEmit及目标ESLint636d4f退出0。仅静态，无测试、浏览器、实际操作或视觉验收。
+
 ## 2026-10-23 M25账户管理
 
 M25最终9e6d4d AST32/SQL编译36/accounts+reading迁移声明比较/273契约/CSS退出0，0schema错误10旧警告。初次accounts声明差异仅本地化标签，在en上下文比较后通过。最终TS/目标ESLint91498e退出0。未测试/浏览器/真实账号/迁移/生产。

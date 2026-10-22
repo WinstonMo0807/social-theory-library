@@ -1,5 +1,9 @@
 # 读者账户、隐私接口与夜间外观
 
+## 2026-10-23 NEW-R04研究总览源码接入
+
+研究总览接回原ResearchProject/ResearchTurn/ReadingProgress，同一User；摘要只含题名/问题节选/状态/时间和当前可读阅读入口，不返回全部笔记/结果/选材。必需owner头，私有no-store、会话切换清空/中止，前后核对身份。未运行真实多账户隔离验收。
+
 ## 2026-10-23 M25账户管理
 
 账户管理补核：新workspace/roles/preview/command/receipt/history关联原User，不读取读者私文；旧users列表移除Annotation/Bookmark/SavedItem统计。旧角色/密码写入统一preview+CAS+请求回执，角色/状态/密码变化撤销旧token，停用账户能力为空。普通管理员不能分配角色/管理其他管理员，馆长身份不可经role取得。源码已接，真实不同账户与并发操作未验收。

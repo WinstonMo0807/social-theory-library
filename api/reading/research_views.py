@@ -17,6 +17,7 @@ from common.private_responses import PrivateAccountResponses
 
 from . import research
 from .research_replay_views import ReplayActions
+from .research_directory import DirectoryActions
 from .path_serializers import PathCommandOutput
 from .citation_audit import audit_capabilities, audit_versions, create_audit, original_document, update_audit
 from .citation_sources import paginated_units
@@ -139,7 +140,7 @@ class PrivateRecordViewSet(PrivateResponses, viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ResearchProjectViewSet(ReplayActions, PrivateRecordViewSet):
+class ResearchProjectViewSet(DirectoryActions, ReplayActions, PrivateRecordViewSet):
     model = ResearchProject
 
     @extend_schema(request=ProjectImportInput, responses={201: PrivateRecordSerializer})

@@ -19201,6 +19201,61 @@
                 }
             }
         },
+        "/api/reading/research-projects/directory/": {
+            "get": {
+                "operationId": "reading_research_projects_directory_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "scope",
+                        "schema": {
+                            "enum": [
+                                "active",
+                                "archived",
+                                "all"
+                            ],
+                            "type": "string",
+                            "default": "active",
+                            "minLength": 1
+                        },
+                        "description": "* `active` - active\n* `archived` - archived\n* `all` - all"
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResearchDirectoryOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/research-projects/import/": {
             "post": {
                 "operationId": "reading_research_projects_import_create",
@@ -42364,6 +42419,58 @@
                     "schema_version"
                 ]
             },
+            "ProjectSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "question": {
+                        "type": "string"
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "status_label": {
+                        "type": "string"
+                    },
+                    "activity_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "last_turn_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "activity_at",
+                    "archived",
+                    "id",
+                    "last_turn_id",
+                    "question",
+                    "revision",
+                    "status",
+                    "status_label",
+                    "title",
+                    "updated_at"
+                ]
+            },
             "ProposedUser": {
                 "type": "object",
                 "properties": {
@@ -46968,6 +47075,29 @@
                     "asset"
                 ]
             },
+            "RecentReadingSummary": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "current_page": {
+                        "type": "integer"
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    },
+                    "reader_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "current_page",
+                    "page_count",
+                    "reader_url",
+                    "title"
+                ]
+            },
             "RecommendationImagePreview": {
                 "type": "object",
                 "properties": {
@@ -47588,6 +47718,49 @@
                     "counts",
                     "deletion_notice",
                     "preferences"
+                ]
+            },
+            "ResearchDirectoryOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "all_count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProjectSummary"
+                        }
+                    },
+                    "recent_reading": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RecentReadingSummary"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "all_count",
+                    "count",
+                    "owner_id",
+                    "page",
+                    "recent_reading",
+                    "results",
+                    "total_pages"
                 ]
             },
             "ResearchMemoryContextKindEnum": {

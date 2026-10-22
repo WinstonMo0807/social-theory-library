@@ -4056,6 +4056,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/research-projects/directory/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        get: operations["reading_research_projects_directory_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/research-projects/import/": {
         parameters: {
             query?: never;
@@ -11011,6 +11028,22 @@ export interface components {
             comparison?: components["schemas"]["ImportedComparisonInputRequest"];
             turns?: components["schemas"]["ImportedTurnInputRequest"][];
         };
+        ProjectSummary: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            title: string;
+            question: string;
+            archived: boolean;
+            status: string;
+            status_label: string;
+            /** Format: date-time */
+            activity_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            last_turn_id: string | null;
+        };
         ProposedUser: {
             id: number | null;
             display_name: string;
@@ -12362,6 +12395,12 @@ export interface components {
             progress_ratio?: number;
             last_position?: unknown;
         };
+        RecentReadingSummary: {
+            title: string;
+            current_page: number;
+            page_count: number;
+            reader_url: string;
+        };
         RecommendationImagePreview: {
             /** Format: uuid */
             work_id: string;
@@ -12539,6 +12578,15 @@ export interface components {
             readonly counts: components["schemas"]["ResearchAccountCountsOutput"];
             readonly preferences: boolean;
             readonly deletion_notice: string;
+        };
+        ResearchDirectoryOutput: {
+            owner_id: string;
+            count: number;
+            all_count: number;
+            page: number;
+            total_pages: number;
+            results: components["schemas"]["ProjectSummary"][];
+            recent_reading: components["schemas"]["RecentReadingSummary"] | null;
         };
         /**
          * @description * `project` - project
@@ -23697,6 +23745,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivateRecord"];
+                };
+            };
+        };
+    };
+    reading_research_projects_directory_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                /**
+                 * @description * `active` - active
+                 *     * `archived` - archived
+                 *     * `all` - all
+                 */
+                scope?: "active" | "archived" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchDirectoryOutput"];
                 };
             };
         };

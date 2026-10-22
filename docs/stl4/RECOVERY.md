@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-23 NEW-R04研究总览源码接入
+
+前置7dc1446；RESEARCH_DIRECTORY_20261023及tmp/stl4-directory-checkpoint-20261023.json。原研究摘要目录已接，274契约、96/46/67；不重跑一次性记录脚本。reading0022/23/24仍待，无测试/浏览器/实际业务。继续M19人物规范及其余视图。
+
 ## 2026-10-23 M25账户管理
 
 前置13d54c1，ACCOUNT_MANAGEMENT_20261023与tmp/stl4-accounts-checkpoint-20261023.json。M25原User/AuditEvent命令集中化，273契约、96/45/68，reading0022/23/24仍待，暂无账户迁移。最终静态9e6d4d/91498e退出0，无测试/浏览器/实际账号修改。继续NEW-R04。勿重跑一次性代码/文档脚本。
