@@ -51348,10 +51348,11 @@
                     "retry",
                     "cancel",
                     "recover",
-                    "configure_followup"
+                    "configure_followup",
+                    "retry_followup"
                 ],
                 "type": "string",
-                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel\n* `recover` - recover\n* `configure_followup` - configure_followup"
+                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel\n* `recover` - recover\n* `configure_followup` - configure_followup\n* `retry_followup` - retry_followup"
             },
             "ProcessingCommandRequest": {
                 "type": "object",
@@ -51521,6 +51522,12 @@
                     "can_configure": {
                         "type": "boolean"
                     },
+                    "retry_url": {
+                        "type": "string"
+                    },
+                    "retry_status": {
+                        "type": "string"
+                    },
                     "counts": {
                         "type": "object",
                         "additionalProperties": {
@@ -51532,6 +51539,8 @@
                     "can_configure",
                     "counts",
                     "enabled",
+                    "retry_status",
+                    "retry_url",
                     "state"
                 ]
             },

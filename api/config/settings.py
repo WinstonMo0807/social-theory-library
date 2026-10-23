@@ -191,7 +191,7 @@ SPECTACULAR_SETTINGS = {
         "CurationProjectSourceStatusEnum": ["public", "private", "unavailable"],
         "CurationProjectActionEnum": ["create", "save", "duplicate", "archive", "restore", "create_article", "attach_article", "reorder"],
         "IndexMaintenanceActionEnum": ["rebuild", "activate", "retry", "reconcile"],
-        "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel", "recover", "configure_followup"],
+        "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup"],
         "ProcessingFollowupStateEnum": ["waiting", "running", "completed", "skipped", "disabled", "failed", "unrecorded"],
         "ProcessingTaskSourceEnum": ["processing_job", "semantic_index_job"],
         "ProcessingGroupingEnum": ["file", "task"],
@@ -390,6 +390,7 @@ CELERY_TASK_ROUTES = {
     "catalog.tasks.reconcile_discovery_index": {"queue": DISCOVERY_INDEX_TASK_QUEUE},
     "ingestion.tasks.process_upload_item": {"queue": INGESTION_TASK_QUEUE},
     "ingestion.tasks.process_reviewed_upload_item": {"queue": INGESTION_TASK_QUEUE},
+    "ingestion.tasks.process_concept_job": {"queue": INGESTION_TASK_QUEUE},
     "ingestion.tasks.process_query_lexicon_candidate_job": {
         "queue": INGESTION_TASK_QUEUE
     },

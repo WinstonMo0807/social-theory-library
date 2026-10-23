@@ -82,6 +82,8 @@ class ProcessingFollowupSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
     state = serializers.ChoiceField(choices=["waiting", "running", "completed", "skipped", "disabled", "failed", "unrecorded"])
     can_configure = serializers.BooleanField()
+    retry_url = serializers.CharField(allow_blank=True)
+    retry_status = serializers.CharField(allow_blank=True)
     counts = serializers.DictField(child=serializers.IntegerField())
 
 
@@ -122,7 +124,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     failure_page_count = serializers.IntegerField()
     failure_location = ProcessingFailureLocationSerializer(allow_null=True)
     version = serializers.CharField()
-    actions = serializers.ListField(child=serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover", "configure_followup"]))
+    actions = serializers.ListField(child=serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup"]))
     permission_reason = serializers.CharField(allow_blank=True)
     retry_url = serializers.CharField(allow_blank=True)
     operation = serializers.CharField(allow_blank=True)

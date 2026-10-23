@@ -234,6 +234,13 @@ def process_ocr_job(self, job_id):
     return {"id": str(job.id), "status": job.status, "attempt": job.attempt}
 
 
+@shared_task(bind=True, ignore_result=True)
+def process_concept_job(self, job_id):
+    from .services.concept_retry import run_concept_job
+    job = run_concept_job(str(job_id), task_id=str(self.request.id or ""))
+    return {"id": str(job.pk), "status": job.status, "attempt": job.attempt}
+
+
 @shared_task(
     bind=True,
     autoretry_for=(OSError, ConnectionError, TimeoutError),

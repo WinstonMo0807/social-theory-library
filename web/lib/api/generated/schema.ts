@@ -13297,9 +13297,10 @@ export interface components {
          *     * `cancel` - cancel
          *     * `recover` - recover
          *     * `configure_followup` - configure_followup
+         *     * `retry_followup` - retry_followup
          * @enum {string}
          */
-        ProcessingCommandActionEnum: "pause" | "resume" | "retry" | "cancel" | "recover" | "configure_followup";
+        ProcessingCommandActionEnum: "pause" | "resume" | "retry" | "cancel" | "recover" | "configure_followup" | "retry_followup";
         ProcessingCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -13350,6 +13351,8 @@ export interface components {
             enabled: boolean;
             state: components["schemas"]["ProcessingFollowupStateEnum"];
             can_configure: boolean;
+            retry_url: string;
+            retry_status: string;
             counts: {
                 [key: string]: number;
             };

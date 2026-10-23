@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 M09概念对齐独立重试
+
+原ProcessingCommand新增retry_followup，仅对正文succeeded、概念failed且尚无接续记录的OCR任务开放，要求当前VIEW_SYSTEM_STATUS/RETRY_JOBS与固定请求、任务版本。回执result.job_id/next_url指向接续任务。子任务沿text_extraction+operation=concept_alignment，retry/cancel/recover复用原控制，拒绝page_indexes；原OCR执行状态保留。followup新增retry_url/retry_status，结果URL增加concepts，数量只读实际生成结果。后续阶段运行时详情持续读取，结束后停止轮询。source_sha256/document_revision_id/ocr_job_id锁定原来源；正文变化返回409。333路径，无新增迁移。
+
 ## 2026-10-24 M09后续部分失败
 
 ProcessingWorkspaceTask新增outcome_issues[{code,label,message,url}]，只回传已知后续阶段的安全说明与原入口。原status仍代表执行记录，partial=true表示成功正文存在后续问题。新版workspace的failed筛选包含这些任务，succeeded只含无已知后续问题的成功任务；逐文件与按任务计数使用同一SQL表达式。旧processing-center仍按原存储状态计数，无新端点/迁移。

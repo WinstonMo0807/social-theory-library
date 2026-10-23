@@ -21,7 +21,7 @@ class ProcessingCommandSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     job_id = serializers.UUIDField()
     source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
-    action = serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover", "configure_followup"])
+    action = serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup"])
     expected_version = serializers.CharField(max_length=64)
     page_indexes = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1, max_length=20000, required=False)
     align_concepts = serializers.BooleanField(required=False)
@@ -40,7 +40,7 @@ def task_version(job):
     # Heartbeats/progress do not invalidate a command for the same worker delivery.
     values = [str(job.pk), job.task_id, job.status, getattr(job, "attempt", getattr(job, "attempts", 0)),
               str(job.pause_requested_at), str(job.asset_id), str(getattr(job, "edition_id", "")),
-              (job.stats or {}).get("retry_replacement_id", ""), (job.stats or {}).get("after_processing"),
+              (job.stats or {}).get("retry_replacement_id", ""), (job.stats or {}).get("after_processing"), (job.stats or {}).get("concept_retry_job_id"),
               ((job.stats or {}).get("concept_alignment") or {}).get("state")]
     return sha256(json.dumps(values).encode()).hexdigest()
 
@@ -57,9 +57,14 @@ def task_actions(job, actor):
     recover = ["recover"] if has_capability(actor, Capability.VIEW_SYSTEM_STATUS) and recovery_state(job)["can_recover"] else []
     if kind == "discovery_index":
         return recover + (["retry"] if state == "failed" else ["resume", "cancel"] if state == "paused" else ["cancel"] if state == "pending" else [])
+    if kind == "text_extraction" and job.stats.get("operation") == "concept_alignment":
+        if not has_capability(actor, Capability.VIEW_SYSTEM_STATUS): return []
+        return recover + (["cancel"] if state in {"pending", "running", "failed"} else []) + (["retry"] if state in {"failed", "canceled"} else [])
     actions = []
     if kind == "ocr" and has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
         from .processing_followup import followup_state
+        if state == "succeeded" and followup_state(job)["state"] == "failed" and not job.stats.get("concept_retry_job_id"):
+            actions.append("retry_followup")
         if followup_state(job)["can_configure"]:
             actions.append("configure_followup")
     if kind in {"ocr", "external_enrichment"}:
@@ -108,14 +113,14 @@ def command_receipt(row):
 def run_processing_command(request, handler):
     actor = command_actor(request)
     request.user = actor
-    if (request.data.get("action") in {"recover", "configure_followup"} or request.data.get("action") == "retry" and "page_indexes" in request.data) and not has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
+    if (request.data.get("action") in {"recover", "configure_followup", "retry_followup"} or request.data.get("action") == "retry" and "page_indexes" in request.data) and not has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
         raise PermissionDenied("当前账户不能调整处理队列中的任务。")
-    if request.data.get("action") in {"recover", "configure_followup"} and not request.data.get("request_id"):
+    if request.data.get("action") in {"recover", "configure_followup", "retry_followup"} and not request.data.get("request_id"):
         raise ValidationError("此操作必须使用当前页面的固定请求编号。")
     if request.data.get("action") == "retry" and "page_indexes" in request.data and not request.data.get("request_id"):
         raise ValidationError("选择失败页重试必须使用固定请求编号。")
     # OCR creation already owns its request_id contract and receipt shape.
-    identifier = request.data.get("request_id") if request.data.get("action") in {"pause", "resume", "retry", "cancel", "recover", "configure_followup"} else None
+    identifier = request.data.get("request_id") if request.data.get("action") in {"pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup"} else None
     data, signature, job = None, "", None
     if identifier:
         if request.headers.get("X-Editor-Owner") != str(actor.pk): raise PermissionDenied("请从当前账户的任务页面提交操作。")
@@ -137,7 +142,23 @@ def run_processing_command(request, handler):
     if isinstance(job, ProcessingJob) and job.job_type == "editorial_assistance":
         from catalog.services.curation_projects import require_issue_access
         require_issue_access(job.stats.get("issue_id"), actor)
-    if data is not None and data["action"] == "configure_followup":
+    if data is not None and "page_indexes" in data and (not isinstance(job, ProcessingJob) or job.job_type != "ocr"):
+        raise ValidationError("只有原 OCR 任务的失败重试可以选择页序。")
+    if data is not None and data["action"] == "retry_followup":
+        from .concept_retry import queue_concept_retry
+        try:
+            child = queue_concept_retry(job, actor)
+        except ValueError as exc:
+            raise EditConflict(str(exc)) from exc
+        response = Response({"job_id": str(child.pk), "status": child.status}, status=202)
+    elif isinstance(job, ProcessingJob) and job.job_type == "text_extraction" and job.stats.get("operation") == "concept_alignment" and request.data.get("action") in {"retry", "cancel"}:
+        from .concept_retry import concept_job_action
+        try:
+            child = concept_job_action(job, action=request.data["action"], actor=actor)
+        except ValueError as exc:
+            raise EditConflict(str(exc)) from exc
+        response = Response({"job_id": str(child.pk), "status": child.status}, status=202)
+    elif data is not None and data["action"] == "configure_followup":
         from .processing_followup import configure_followup
         response = Response(configure_followup(job, enabled=data["align_concepts"], actor=actor))
     elif data is not None and data["action"] == "recover":

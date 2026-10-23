@@ -7,7 +7,7 @@ from .processing_followup import followup_state
 from .processing_outcomes import outcome_issues
 
 
-def workspace_task(job, row, actor):
+def workspace_task(job, row, actor, *, retry_status=""):
     row = dict(row)
     stats = row.pop("stats", {}) or {}
     edition = processing_edition(job)
@@ -23,12 +23,13 @@ def workspace_task(job, row, actor):
     issues = outcome_issues(job, files_url=files_url, workbench_url=row.get("workbench_url", ""))
     if followup:
         followup["can_configure"] = "configure_followup" in actions
+        followup["retry_status"] = retry_status
     ocr = row.get("ocr_progress")
     if ocr:
         if not ocr["can_resume"]: actions = [action for action in actions if action not in {"resume", "retry"}]
         if not ocr["can_cancel"] and row["status"] == "failed": actions = [action for action in actions if action != "cancel"]
     cover_id = edition.work.cover_rendition_id if edition else None
-    counts = {key: value for key in ("target_pages", "processed_pages", "completed_pages", "total_pages", "failed_pages", "indexed_chunks", "failed_chunks", "completed_chunks", "total_chunks", "completed_units", "documents") if isinstance(value := stats.get(key), int) and not isinstance(value, bool) and value >= 0}
+    counts = {key: value for key in ("target_pages", "processed_pages", "completed_pages", "total_pages", "failed_pages", "indexed_chunks", "failed_chunks", "completed_chunks", "total_chunks", "completed_units", "documents", "created", "updated", "new_node_tasks", "protected_nodes") if isinstance(value := stats.get(key), int) and not isinstance(value, bool) and value >= 0}
     failed_pages = failed_ocr_pages(job) if ocr else []
     retry_selection = stats.get("retry_selection") or {}
     retry_pages = [page for page in retry_selection.get("page_indexes", []) if type(page) is int and page > 0]
@@ -46,7 +47,7 @@ def workspace_task(job, row, actor):
             "heartbeat_stale": job.status == "running" and recovery["state"] in {"recoverable", "delayed"},
             "recovery": recovery,
             "followup": followup,
-            "operation": "outline_rebuild" if stats.get("operation") == "outline_rebuild" else "",
+            "operation": stats["operation"] if stats.get("operation") in {"outline_rebuild", "concept_alignment"} else "",
             "can_export_results": row["source"] == "processing_job" and (row["job_type"] == "ocr" or stats.get("operation") == "outline_rebuild"
                 or row["job_type"] == "discovery_index" and stats.get("action") == "source" and stats.get("source_type") == "edition"),
             "file": {"filename": row.get("source_filename", ""), "pages": asset.page_count if asset else None,
@@ -56,4 +57,5 @@ def workspace_task(job, row, actor):
             "result_urls": {"ocr": f"/admin/library/assets/{ocr['source_asset_id'] if ocr and row['status'] == 'failed' and ocr.get('source_asset_id') else asset.pk}/ocr" if asset else "",
                             "outline": f"/admin/library/assets/{asset.pk}/outline" if asset else "",
                             "files": files_url,
+                            "concepts": "/admin/theories/relations" if stats.get("operation") == "concept_alignment" else "",
                             "index": "/admin/processing/semantic-index" if row["job_type"] in {"discovery_index", "semantic_index"} else ""}}

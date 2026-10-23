@@ -165,6 +165,8 @@ def task_rows(refs, actor, *, workspace=False):
         "edition__work", "edition__active_catalog_revision", "asset__edition__work", "asset__edition__active_catalog_revision", "upload_item__edition__work", "upload_item__edition__active_catalog_revision", "upload_item__asset",
     ).prefetch_related("edition__catalog_revisions", "asset__edition__catalog_revisions", "upload_item__edition__catalog_revisions"))
     semantic_rows = list(SemanticIndexJob.objects.filter(pk__in=[row["id"] for row in refs if row["source"] == "semantic_index_job"]).select_related("asset__edition__work"))
+    retry_ids = [(job.stats or {}).get("concept_retry_job_id") for job in job_rows if (job.stats or {}).get("concept_retry_job_id")]
+    retry_states = {str(pk): state for pk, state in ProcessingJob.objects.filter(pk__in=retry_ids).values_list("pk", "status")} if workspace and retry_ids else {}
     titles = task_titles([*job_rows, *semantic_rows])
     events = {str(event.pk): event for event in KnowledgePublicationEvent.objects.filter(
         pk__in=[(job.stats or {}).get("knowledge_publication_event_id") for job in job_rows if (job.stats or {}).get("knowledge_publication_event_id")],
@@ -194,6 +196,6 @@ def task_rows(refs, actor, *, workspace=False):
                 row["ocr_progress"] = progress_row(job, actor=actor, event=events.get(str((job.stats or {}).get("knowledge_publication_event_id") or "")), edition=processing_edition(job), legacy_controls=True)
             if workspace:
                 from .processing_workspace import workspace_task
-                row = workspace_task(job, row, actor)
+                row = workspace_task(job, row, actor, retry_status=retry_states.get((job.stats or {}).get("concept_retry_job_id"), ""))
             rows[(source, str(job.pk))] = row
     return rows

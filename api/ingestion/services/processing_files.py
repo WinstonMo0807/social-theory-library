@@ -21,7 +21,7 @@ def stage_query(rows, source):
     group = Case(When(has_asset,
         then=Concat(Value('file:'), Replace(asset, Value('-'), Value('')))),
         default=Concat(Value(f'task:{source}:'), Replace(Cast('pk', CharField()), Value('-'), Value(''))), output_field=CharField())
-    stage = Case(When(stats__operation='outline_rebuild', then=Value('outline_rebuild')), default=F('job_type'), output_field=CharField()) if ordinary else Value('semantic_index', output_field=CharField())
+    stage = Case(When(stats__operation='outline_rebuild', then=Value('outline_rebuild')), When(stats__operation='concept_alignment', then=Value('concept_alignment')), default=F('job_type'), output_field=CharField()) if ordinary else Value('semantic_index', output_field=CharField())
     normalized = workspace_status() if ordinary else Case(*[When(status=old, then=Value(new)) for old,new in SEMANTIC_STATUS.items()], output_field=CharField())
     return rows.order_by().annotate(file_key=group, stage_key=stage,
         task_kind=F('job_type') if ordinary else Value('semantic_index', output_field=CharField()), task_state=normalized,
@@ -82,7 +82,7 @@ def processing_file_page(params, actor):
     for ref in refs:
         row = rendered.get((ref['source'],ref['id']))
         if row: groups[ref['file_key']].append(row)
-    order = {'ocr':0,'text_extraction':1,'outline_rebuild':2,'page_labels':3,'discovery_index':4,'semantic_index':5}
+    order = {'ocr':0,'text_extraction':1,'outline_rebuild':2,'page_labels':3,'concept_alignment':4,'discovery_index':5,'semantic_index':6}
     files = []
     for key in keys:
         rows = groups[key]

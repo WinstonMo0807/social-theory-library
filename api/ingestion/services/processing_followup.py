@@ -2,7 +2,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from catalog.models import Edition
+from catalog.models import Asset, Edition
 from catalog.services.document_outline import _source_current
 from catalog.services.editorial_issues import EditConflict
 from ingestion.models import AuditEvent, ProcessingJob
@@ -26,6 +26,7 @@ def followup_state(job):
     if not isinstance(counts, dict):
         counts = {}
     return {"enabled": enabled, "state": state,
+            "retry_url": f"/admin/processing?task_id={stats['concept_retry_job_id']}&task_source=processing_job" if stats.get("concept_retry_job_id") else "",
             "can_configure": state == "waiting" and job.status in {"pending", "running", "paused", "failed"},
             "counts": {key: value for key in ("created", "updated", "new_node_tasks", "protected_nodes")
                        if type(value := counts.get(key)) is int and value >= 0}}
@@ -54,6 +55,7 @@ def _locked_job(job):
         pk=job.pk, task_id=job.task_id, status="running").first()
     if current is None:
         raise OCRClaimSuperseded()
+    current.asset = Asset.objects.select_for_update(of=("self",)).select_related("edition").get(pk=current.asset_id)
     _source_current(current.asset)
     if current.asset.sha256 != (current.stats.get("source_sha256") or current.asset.sha256):
         raise ValueError("原文件已变化，不能继续生成概念候选。")
