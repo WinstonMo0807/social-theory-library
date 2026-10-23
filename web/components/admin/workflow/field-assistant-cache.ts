@@ -1,6 +1,7 @@
 "use client";
 
 import { apiRequest, subscribeToSessionChanges } from "@/lib/api";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 
 type Pending = { controller: AbortController; promise: Promise<unknown>; users: number };
 const completed = new Map<string, { expires: number; value: unknown }>();
@@ -63,9 +64,10 @@ export async function cachedAssistantRequest<T>(key: string, path: string, optio
   });
 }
 
-export function lookupFieldSuggestions<T>({ editionId, fieldName, query = "", contextKey = "", formContext, token, signal, refresh = false, poll = false }: {
-  editionId: string; fieldName: string; query?: string; contextKey?: string; formContext?: Record<string, unknown>; token: string | null; signal?: AbortSignal; refresh?: boolean; poll?: boolean;
+export function lookupFieldSuggestions<T>({ owner, editionId, fieldName, query = "", contextKey = "", formContext, token, signal, refresh = false, poll = false }: {
+  owner?:string; editionId: string; fieldName: string; query?: string; contextKey?: string; formContext?: Record<string, unknown>; token: string | null; signal?: AbortSignal; refresh?: boolean; poll?: boolean;
 }) {
+  if(owner) return withPrivateOwner(owner,()=>apiRequest<T>("/catalog/admin/field-assistant/lookup/",{method:"POST",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},body:JSON.stringify({object_type:"edition",object_id:editionId,field_name:fieldName,query,confirmed_context:formContext,refresh,allow_external:refresh})},token,false),signal);
   if (refresh) {
     // Only a direct user action schedules external research. Prefetch and
     // initial cached rendering never request it; the server deduplicates runs.

@@ -68,6 +68,7 @@ import { useAdminSession } from "@/lib/admin-session";
 import { withPrivateOwner, PrivateOwnerVerificationError } from "@/lib/api/private-owner";
 import { CatalogEditDiff } from "./catalog-edit-diff";
 import atlas from "./catalog-editor.module.css";
+import { MaterialAssistantProvider, MaterialAssistantEntry } from "./material-assistant";
 import { WorkflowLivePreview } from "./workflow-live-preview";
 import { BibliographicCandidatePanel } from "./bibliographic-candidate-panel";
 import { FieldAssistantControl, ASSISTED_WORK_FIELDS, ASSISTED_BIBLIOGRAPHY_FIELDS, FILL_FIELD_LABELS, type AssistantFieldName, type AssistedFieldFill } from "./field-assistant-control";
@@ -355,7 +356,6 @@ function candidateCount(candidates: WorkflowCandidate[], field: string) {
 }
 
 function WorkflowFieldAssistant({ fieldName, query, ...props }: BodyProps & { fieldName: AssistantFieldName; query?: string }) {
-  if (!["author", "translator", "topic", "theory"].includes(fieldName)) return null;
   const addDraft = (entity: { id: string; name: string; type: string }) => {
     if (fieldName === "author" || fieldName === "translator") {
       const rows = normalizeItems(props.draft.items, "display_name");
@@ -367,7 +367,7 @@ function WorkflowFieldAssistant({ fieldName, query, ...props }: BodyProps & { fi
     }
     props.message("已填入当前对象关联，尚未保存。可以继续填写或在新标签页完善草稿。");
   };
-  return <><FieldAssistantControl editionId={asString(props.context.edition_id)} fieldName={fieldName} query={query} token={props.research.token} disabled={!props.canEdit} beforeAction={props.beforeFieldAction} contextKey={props.assistantContextKey} formContext={props.assistantFormContext} onInspect={() => props.inspectField(fieldName)} onCreateDraft={addDraft} onFill={fieldName in FILL_FIELD_LABELS ? props.fillSuggestion : undefined} onSaved={async (message) => { await props.research.onUpdated(); props.message(message); }} />{props.pendingFillFields.some((key) => key === fieldName || key.startsWith(`${fieldName}:`)) ? <p className="workflow-assistant-fill-status" role="status">已填入，尚未保存。<button type="button" disabled={!props.canEdit} onClick={() => props.undoFill(fieldName)}>撤销{FILL_FIELD_LABELS[fieldName as AssistedFieldFill["field_name"]]}填入</button></p> : null}</>;
+  return <><FieldAssistantControl editionId={asString(props.context.edition_id)} fieldName={fieldName} onEdit={fieldName in ASSISTED_WORK_FIELDS||fieldName in ASSISTED_BIBLIOGRAPHY_FIELDS ? value=>props.update(fieldName in ASSISTED_WORK_FIELDS?"work":"bibliography",fieldName,value):undefined} query={query} token={props.research.token} disabled={!props.canEdit} beforeAction={props.beforeFieldAction} contextKey={props.assistantContextKey} formContext={props.assistantFormContext} onInspect={() => props.inspectField(fieldName)} onCreateDraft={addDraft} onFill={fieldName in FILL_FIELD_LABELS ? props.fillSuggestion : undefined} onSaved={async (message) => { await props.research.onUpdated(); props.message(message); }} />{props.pendingFillFields.some((key) => key === fieldName || key.startsWith(`${fieldName}:`)) ? <p className="workflow-assistant-fill-status" role="status">已填入，尚未保存。<button type="button" disabled={!props.canEdit} onClick={() => props.undoFill(fieldName)}>撤销{FILL_FIELD_LABELS[fieldName as AssistedFieldFill["field_name"]]}填入</button></p> : null}</>;
 }
 
 function CoverField(props: BodyProps) {
@@ -585,13 +585,13 @@ function WorkflowSectionBody(props: BodyProps) {
   return <PublicationBody {...props} />;
 }
 
-type EditorProps={mode:EditorMode;itemId?:string;workId?:string;editionId?:string};
+type EditorProps={mode:EditorMode;itemId?:string;workId?:string;editionId?:string;initialAssistant?:boolean};
 export function WorkflowEditor(props:EditorProps){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
   return user?<OwnedWorkflowEditor key={`${user.id}:${props.mode}:${props.workId}:${props.itemId}:${props.editionId}:${epoch}`} {...props} owner={String(user.id)}/>:<p role="status">正在核对编目账户…</p>;
 }
-function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEditionId, owner }: EditorProps & {owner:string}) {
+function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEditionId, owner, initialAssistant=false }: EditorProps & {owner:string}) {
   const lifetime=useRef<AbortController|null>(null);
   useEffect(()=>{const controller=new AbortController();lifetime.current=controller;return()=>controller.abort();},[]);
   const ownerRequest=useMemo(()=>async function request<T>(path:string, options:RequestInit={},credential?:string|null):Promise<T>{
@@ -1396,13 +1396,13 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
     .filter((issue) => issue.severity === "blocker")
     .map((issue) => [JSON.stringify([issue.code || issue.message, issue.field || "", issue.action_target || ""]), { ...issue, step: issue.step || step.key }] as const))).values()];
   return (
-    <ResearchSuggestionCapabilityContext.Provider value={canRunResearch}>
+    <MaterialAssistantProvider dirty={currentDirtyCount>0} disabled={Boolean(busy)||!canEdit} save={saveAllDirty} preview={<WorkflowLivePreview owner={owner} drafts={drafts} context={payload.context} token={token} savedAt={savedAt} dirty={currentDirtyCount>0} returnHref={previewReturnHref} onLocate={goToStep}/>}><ResearchSuggestionCapabilityContext.Provider value={canRunResearch}>
     <ResearchWorkspaceContext.Provider value={researchWorkspace}>
     <div className={`workflow-editor workflow-v307-editor ${atlas.atlas}`} data-workflow-mode={payload.mode}>
 
       <main className="workflow-editor-main">
         <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>馆藏目录与材料编辑</h1><strong className="workflow-v307-book-title">统一整理作品、版本、贡献者和关联知识。</strong><span>{payload.workflow.blockers_count ? `还需确认 ${payload.workflow.blockers_count} 项` : "没有阻断性问题"} · {currentDirtyCount ? `${currentDirtyCount} 项未保存` : "草稿已保存"}</span></div><div><ActionButton state={busy === "refresh" ? "pending" : "idle"} pendingLabel="正在刷新" onClick={() => void manualRefresh()} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</ActionButton><ActionButton state={busy === "save-draft" || busy === `save-${active}` ? "pending" : "idle"} pendingLabel="正在保存" onClick={() => void saveAllDirty()} disabled={Boolean(busy) || !canEdit || !currentDirtyCount}><Save size={14} />保存书目修改</ActionButton><ActionButton disabled={Boolean(busy)} onClick={()=>void inspectDiff()}>查看差异</ActionButton><ActionButton onClick={openPreview}><Eye size={14} />预览公开页</ActionButton>{canEdit && (itemId || editionId) ? <RecycleControl kind={mode === "intake" && itemId ? "upload" : "edition"} id={mode === "intake" && itemId ? itemId : editionId!} name={asString(payload.context.title) || "当前记录"} disabled={Boolean(busy)} onDeleted={() => { window.location.assign(returnHref); }} /> : null}{payload.context.page_preview_url && !currentDirtyCount ? <ActionLink className="workflow-header-preview" href={withAdminReturn(asString(payload.context.page_preview_url), previewReturnHref)} target="_blank">打开完整前台预览</ActionLink> : null}{payload.context.public_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开页面</ActionLink> : null}</div></header>
-        <nav className={atlas.tabs} aria-label="馆藏编辑栏目">{([["work","基本信息"],["contributors","贡献者"],["bibliography","出版与版本"],["classification","分类与主题"],["knowledge","关联知识"],["file","文件"],["reader","目录"],["curation","策划"],["publication","变更与发布记录"]] as [WorkflowStepKey,string][]).map(([key,label])=><button key={key} type="button" aria-current={active===key?"page":undefined} onClick={()=>goToStep(key)}>{label}{key==="file"&&asArray(asRecord(payload.data.file).assets).length?`（${asArray(asRecord(payload.data.file).assets).length}）`:""}</button>)}</nav>
+        <div className="workflow-section-actions"><MaterialAssistantEntry autoOpen={initialAssistant||routeParams.get("assistant")==="fields"}/></div><nav className={atlas.tabs} aria-label="馆藏编辑栏目">{([["work","基本信息"],["contributors","贡献者"],["bibliography","出版与版本"],["classification","分类与主题"],["knowledge","关联知识"],["file","文件"],["reader","目录"],["curation","策划"],["publication","变更与发布记录"]] as [WorkflowStepKey,string][]).map(([key,label])=><button key={key} type="button" aria-current={active===key?"page":undefined} onClick={()=>goToStep(key)}>{label}{key==="file"&&asArray(asRecord(payload.data.file).assets).length?`（${asArray(asRecord(payload.data.file).assets).length}）`:""}</button>)}</nav>
         <div className={atlas.columns}><div className={atlas.editing}>
 
         {busy && !message ? <AsyncStatus state="pending" message="正在执行馆藏工作操作……" className="workflow-editor-message" /> : null}
@@ -1457,6 +1457,6 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
       <span className="sr-only" aria-live="polite">{currentDirtyCount ? `${currentDirtyCount} 项未保存` : "所有修改已保存"}</span>
     </div>
     </ResearchWorkspaceContext.Provider>
-    </ResearchSuggestionCapabilityContext.Provider>
+    </ResearchSuggestionCapabilityContext.Provider></MaterialAssistantProvider>
   );
 }

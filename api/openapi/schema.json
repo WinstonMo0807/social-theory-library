@@ -2971,6 +2971,251 @@
                 }
             }
         },
+        "/api/catalog/admin/field-assistant/adopt/": {
+            "post": {
+                "operationId": "catalog_admin_field_assistant_adopt_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDecisionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDecisionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDecisionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/field-assistant/create/": {
+            "post": {
+                "operationId": "catalog_admin_field_assistant_create_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantCreateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantCreateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantCreateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/field-assistant/duplicates/": {
+            "post": {
+                "operationId": "catalog_admin_field_assistant_duplicates_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDuplicateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDuplicateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDuplicateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/field-assistant/lookup/": {
+            "post": {
+                "operationId": "catalog_admin_field_assistant_lookup_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantLookupRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantLookupRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantLookupRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/field-assistant/reject/": {
+            "post": {
+                "operationId": "catalog_admin_field_assistant_reject_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDecisionRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDecisionRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FieldAssistantDecisionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/knowledge-media/{object_type}/{object_id}/": {
             "get": {
                 "operationId": "catalog_admin_knowledge_media_retrieve",
@@ -31657,6 +31902,177 @@
                     "request_id"
                 ]
             },
+            "FieldAssistantCreateRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "field_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                    },
+                    "details": {},
+                    "allow_possible_duplicate": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "defer_link": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "field_name",
+                    "label"
+                ]
+            },
+            "FieldAssistantDecisionRequest": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "field_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "source_type": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "selected_value": {
+                        "type": "string",
+                        "maxLength": 30000
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "field_name",
+                    "source_id",
+                    "source_type"
+                ]
+            },
+            "FieldAssistantDuplicateRequest": {
+                "type": "object",
+                "properties": {
+                    "field_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                    }
+                },
+                "required": [
+                    "field_name",
+                    "label"
+                ]
+            },
+            "FieldAssistantLookupObjectTypeEnum": {
+                "enum": [
+                    "edition",
+                    "work",
+                    "person",
+                    "topic",
+                    "knowledge_node",
+                    "discipline",
+                    "subdiscipline",
+                    "reading_path"
+                ],
+                "type": "string",
+                "description": "* `edition` - edition\n* `work` - work\n* `person` - person\n* `topic` - topic\n* `knowledge_node` - knowledge_node\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `reading_path` - reading_path"
+            },
+            "FieldAssistantLookupRequest": {
+                "type": "object",
+                "properties": {
+                    "object_type": {
+                        "$ref": "#/components/schemas/FieldAssistantLookupObjectTypeEnum"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "field_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "query": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "confirmed_context": {},
+                    "upload_item_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "scope": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FieldAssistantLookupScopeEnum"
+                            }
+                        ],
+                        "default": "catalog"
+                    },
+                    "authority_type": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "current_value": {
+                        "nullable": true
+                    },
+                    "form_context": {},
+                    "refresh": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "allow_external": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "field_name",
+                    "object_type"
+                ]
+            },
+            "FieldAssistantLookupScopeEnum": {
+                "enum": [
+                    "catalog",
+                    "curation"
+                ],
+                "type": "string",
+                "description": "* `catalog` - catalog\n* `curation` - curation"
+            },
             "FileAdoptionInputRequest": {
                 "type": "object",
                 "properties": {
@@ -35325,7 +35741,7 @@
                 "type": "object",
                 "properties": {
                     "object_type": {
-                        "$ref": "#/components/schemas/ObjectTypeEnum"
+                        "$ref": "#/components/schemas/KnowledgeImageStateObjectTypeEnum"
                     },
                     "object_id": {
                         "type": "string",
@@ -35371,6 +35787,17 @@
                     "object_type",
                     "preview_url"
                 ]
+            },
+            "KnowledgeImageStateObjectTypeEnum": {
+                "enum": [
+                    "knowledge_node",
+                    "reading_path",
+                    "discipline",
+                    "subdiscipline",
+                    "topic"
+                ],
+                "type": "string",
+                "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `topic` - topic"
             },
             "KnowledgeNodeAlias": {
                 "type": "object",
@@ -40980,17 +41407,6 @@
                         "$ref": "#/components/schemas/OCRCorrectionPreview"
                     }
                 ]
-            },
-            "ObjectTypeEnum": {
-                "enum": [
-                    "knowledge_node",
-                    "reading_path",
-                    "discipline",
-                    "subdiscipline",
-                    "topic"
-                ],
-                "type": "string",
-                "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `topic` - topic"
             },
             "OcrStrategyEnum": {
                 "enum": [

@@ -1429,6 +1429,11 @@ class FieldAssistantService:
 
         from catalog.models import Edition
 
+        from common.capabilities import Capability, has_capability
+        from rest_framework.exceptions import PermissionDenied
+        if not has_capability(actor, Capability.CREATE_AUTHORITY):
+            raise PermissionDenied("当前账户不能新建人物或知识草稿。")
+
         policy = get_field_policy(field_name)
         clean_label = " ".join(str(label or "").split()).strip()
         if not clean_label:

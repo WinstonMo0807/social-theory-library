@@ -8,9 +8,11 @@ import { useContextState } from "@/lib/use-context-state";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { assistantCacheKey, invalidateAssistantCache, lookupFieldSuggestions } from "./field-assistant-cache";
 import { CandidateDecisionBar } from "../research/candidate-decision-bar";
-import { Dialog } from "@/components/ui/dialog";
+import { MaterialAssistantDialog, useMaterialField } from "./material-assistant";
+import { useAdminSession } from "@/lib/admin-session";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 
-type Evidence = { category?: string; summary?: string };
+type Evidence = { category?: string; summary?: string;locator?:{url?:string;page?:number} };
 type Suggestion = {
   id: string;
   label: string;
@@ -70,6 +72,7 @@ export function FieldAssistantControl({
   formContext,
   onInspect,
   onCreateDraft,
+  onEdit,
 }: {
   editionId: string;
   fieldName: AssistantFieldName;
@@ -80,12 +83,14 @@ export function FieldAssistantControl({
   beforeAction?: () => Promise<boolean>;
   contextKey?: string;
   onFill?: (selection: AssistedFieldFill) => void;
+  onEdit?: (value:string)=>void;
   formContext?: Record<string, unknown>;
   onInspect?: () => void;
   onCreateDraft?: (entity: { id: string; name: string; type: string; edit_url?: string }) => void;
 }) {
+  const user=useAdminSession(),owner=user?String(user.id):"";
   const popoverId = useId();
-  const lookupKey = assistantCacheKey(editionId, fieldName, query, contextKey);
+  const lookupKey = assistantCacheKey(editionId, fieldName, query, `${owner}:${contextKey}`);
   const [open, setOpen] = useContextState(`${editionId}:${fieldName}`, false);
   const [lookupAttempt, setLookupAttempt] = useState(0);
   const [loading, setLoading] = useContextState(lookupKey, false);
@@ -94,6 +99,7 @@ export function FieldAssistantControl({
   const [data, setData] = useContextState<LookupResult | null>(lookupKey, null);
   const [message, setMessage] = useContextState(lookupKey, "");
   const [newLabel, setNewLabel] = useState("");
+  const [editingValue,setEditingValue]=useState<{id:string;value:string}|null>(null);
   const [showMore, setShowMore] = useState(false);
   const [createdEditUrl, setCreatedEditUrl] = useState("");
   const creationReceipt = useRef<{ key: string; id: string; allow: boolean; sent: boolean } | null>(null);
@@ -105,6 +111,7 @@ export function FieldAssistantControl({
   const externalLookup = useRef("");
   const copy = fieldName in FIELD_COPY ? FIELD_COPY[fieldName as keyof typeof FIELD_COPY]
     : { label: FILL_FIELD_LABELS[fieldName as keyof typeof FILL_FIELD_LABELS], lookup: "查看填写建议", create: "" };
+  const reviewField=useMaterialField(copy.label,()=>setOpen(true));
   const lookupKeyRef = useRef(lookupKey);
   const lookupContextRef = useRef({ editionId, fieldName, query, contextKey, formContext, setData, setOpen, setLoading, setMessage });
   useLayoutEffect(() => {
@@ -114,6 +121,7 @@ export function FieldAssistantControl({
 
   useEffect(() => () => requestRef.current?.abort(), []);
 
+  async function request<T>(path:string,options:RequestInit={},credential:string|null=token){const headers=new Headers(options.headers);headers.set("X-Editor-Owner",owner);return withPrivateOwner(owner,()=>apiRequest<T>(path,{...options,headers,cache:"no-store"},credential,false),options.signal||undefined);}
   const prepare = async () => {
     if (beforeAction && !(await beforeAction())) throw new Error("草稿尚未保存成功，请先处理保存提示。");
   };
@@ -140,7 +148,7 @@ export function FieldAssistantControl({
       const timeout = setTimeout(() => request?.abort(), 15_000);
       const current = lookupContextRef.current;
       try {
-        const result = await lookupFieldSuggestions<LookupResult>({ ...current, token, signal: request.signal, refresh, poll: !refresh });
+        const result = await lookupFieldSuggestions<LookupResult>({ ...current, token, owner, signal: request.signal, refresh, poll: !refresh });
         if (disposed || requestKey !== lookupKeyRef.current) return;
         current.setData(result);
         current.setMessage(result.refresh?.message || "已按当前填写更新建议，尚未保存任何字段。");
@@ -158,9 +166,9 @@ export function FieldAssistantControl({
     // click is required to start another external or paid research run.
     timer = setTimeout(() => void read(external), external ? 0 : 350);
     return () => { disposed = true; clearTimeout(timer); request?.abort(); };
-  }, [editionId, lookupKey, lookupAttempt, open, token]);
+  }, [editionId, lookupKey, lookupAttempt, open, token, owner]);
 
-  const adopt = async (suggestion: Suggestion) => {
+  const adopt = async (suggestion: Suggestion,edited?:string) => {
     if (!onFill && onCreateDraft && suggestion.entity?.id) {
       if (suggestion.conflicts.length && identityReview !== suggestion.id) {
         setIdentityReview(suggestion.id);
@@ -187,7 +195,10 @@ export function FieldAssistantControl({
       onFill({ field_name: fieldName as AssistedFieldFill["field_name"], source_type: suggestion.action.source_type,
         source_id: suggestion.action.source_id, selected_value: suggestion.action.selected_value ?? suggestion.label,
         ...(suggestion.entity?.id ? { selected_entity_id: suggestion.entity.id } : {}) });
-      setOpen(false);
+      if(edited!==undefined)onEdit?.(edited);
+      setEditingValue(null);
+      reviewField.mark(edited===undefined?"已填入，待保存":"已修改填入，待保存");
+      setMessage(`已填入${copy.label}，可继续核对其他字段。`);
       return;
     }
     if (!startAction(suggestion.id)) return;
@@ -195,7 +206,7 @@ export function FieldAssistantControl({
     setMessage("");
     try {
       await prepare();
-      await apiRequest("/catalog/admin/field-assistant/adopt/", {
+      await request("/catalog/admin/field-assistant/adopt/", {
         method: "POST",
         body: JSON.stringify({
           edition_id: editionId,
@@ -207,6 +218,7 @@ export function FieldAssistantControl({
       }, token);
       invalidateAssistantCache(editionId);
       setOpen(false);
+      reviewField.mark("已保存采用决定");
       await onSaved("已采用并保存到当前草稿。");
     } catch (reason) {
       setOpen(true);
@@ -223,12 +235,13 @@ export function FieldAssistantControl({
     setBusy(`reject-${suggestion.id}`);
     setMessage("");
     try {
-      await apiRequest("/catalog/admin/field-assistant/reject/", {
+      await request("/catalog/admin/field-assistant/reject/", {
         method: "POST",
         body: JSON.stringify({ edition_id: editionId, field_name: fieldName, source_type: suggestion.action.source_type, source_id: suggestion.action.source_id, reason }),
       }, token);
       invalidateAssistantCache(editionId);
       setData((current) => current ? { ...current, results: current.results.filter((item) => item.id !== suggestion.id), more_results: current.more_results?.filter((item) => item.id !== suggestion.id) } : current);
+      reviewField.mark("已记录忽略");
       setMessage(`已记录不采用：${reason}。原有资料未改变。`);
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "未能保存这次决定，请重试。");
@@ -247,7 +260,7 @@ export function FieldAssistantControl({
       const key = JSON.stringify([editionId, fieldName, newLabel.trim(), Boolean(onCreateDraft)]);
       if (!creationReceipt.current || creationReceipt.current.key !== key) creationReceipt.current = { key, id: createRequestKey(), allow: allowPossibleDuplicate && duplicateName === newLabel.trim(), sent: false };
       if (!creationReceipt.current.sent && (!allowPossibleDuplicate || duplicateName !== newLabel.trim())) {
-        const found = await apiRequest<{ matches: Duplicate[] }>("/catalog/admin/field-assistant/duplicates/", { method: "POST", body: JSON.stringify({ field_name: fieldName, label: newLabel.trim() }) }, token);
+        const found = await request<{ matches: Duplicate[] }>("/catalog/admin/field-assistant/duplicates/", { method: "POST", body: JSON.stringify({ field_name: fieldName, label: newLabel.trim() }) }, token);
         setDuplicates(found.matches);
         setDuplicateName(newLabel.trim());
         if (found.matches.length) {
@@ -257,7 +270,7 @@ export function FieldAssistantControl({
       }
       if (!creationReceipt.current.sent) creationReceipt.current.allow = allowPossibleDuplicate && duplicateName === newLabel.trim();
       creationReceipt.current.sent = true;
-      const created = await apiRequest<{ entity: { id: string; name: string; type: string; edit_url?: string }; edit_url?: string }>("/catalog/admin/field-assistant/create/", {
+      const created = await request<{ entity: { id: string; name: string; type: string; edit_url?: string }; edit_url?: string }>("/catalog/admin/field-assistant/create/", {
         method: "POST",
         body: JSON.stringify({ edition_id: editionId, field_name: fieldName, label: newLabel.trim(), defer_link: Boolean(onCreateDraft), allow_possible_duplicate: creationReceipt.current.allow, request_id: creationReceipt.current.id }),
       }, token);
@@ -291,7 +304,7 @@ export function FieldAssistantControl({
 
   return <div className="field-assistant-control">
     <button type="button" className="field-assistant-trigger" disabled={disabled || !editionId || Boolean(busy)} aria-haspopup="dialog" aria-expanded={open} aria-controls={popoverId} onClick={() => setOpen(true)}><Search size={13} />查看填写建议</button>
-    {open ? <Dialog open id={popoverId} className="field-assistant-dialog field-assistant-popover" aria-label={`${copy.label}建议`} aria-busy={loading} onRequestClose={() => { if (!busy) setOpen(false); }} onKeyDown={(event) => {
+    {open ? <MaterialAssistantDialog fieldId={reviewField.id} fieldLabel={copy.label} sources={visibleResults.map(row=>({id:row.id,label:row.label,evidence:row.evidence}))} open id={popoverId} className="field-assistant-dialog field-assistant-popover" aria-label={`${copy.label}建议`} aria-busy={loading} onRequestClose={() => { if (!busy) setOpen(false); }} onKeyDown={(event) => {
       // Enter in the new-name input must not submit the surrounding work form.
       if (event.key === "Enter" && event.target instanceof HTMLInputElement) event.preventDefault();
     }}>
@@ -306,6 +319,7 @@ export function FieldAssistantControl({
         <div><strong>{suggestion.label}</strong><span>{suggestion.status_label}</span><p>{suggestion.summary}</p></div>
         {suggestion.conflicts.length ? <p className="field-assistant-conflict">{suggestion.conflicts.join("；")}</p> : null}
         <details><summary>查看依据</summary><ul>{suggestion.evidence.map((item, index) => <li key={`${suggestion.id}-${index}`}><b>{item.category}</b>{item.summary}</li>)}</ul>{suggestion.entity?.id ? <small>馆内记录编号：{suggestion.entity.id}。仅关联当前书目，不合并人物或修改学者主页。</small> : null}</details>
+        {onEdit?<><button type="button" disabled={Boolean(busy)||disabled||data?.field.locked} onClick={()=>setEditingValue(editingValue?.id===suggestion.id?null:{id:suggestion.id,value:suggestion.action.selected_value??suggestion.label})}>修改后采用</button>{editingValue?.id===suggestion.id?<label>修改后的{copy.label}<textarea value={editingValue.value} onChange={event=>setEditingValue({...editingValue,value:event.target.value})}/><button type="button" disabled={Boolean(busy)||disabled||data?.field.locked||!editingValue.value.trim()} onClick={()=>void adopt(suggestion,editingValue.value)}>核对后填入修改值</button></label>:null}</>:null}
         <button type="button" disabled={Boolean(busy) || disabled || data?.field.locked} onClick={() => adopt(suggestion)}>{busy === suggestion.id ? <LoaderCircle className="spin" size={13} /> : <Check size={13} />}{onFill ? identityReview === suggestion.id ? `已核对，填入${copy.label}` : (fieldName === "author" || fieldName === "translator") && !suggestion.entity?.id ? "填写新人物名称" : `填入${copy.label}` : data?.field.adopt_label || `采用${copy.label}`}</button>
         <CandidateDecisionBar candidate={{ id: suggestion.id, actions: [{ action: "reject", label: "不采用" }] }} showInspect={false} disabled={Boolean(busy) || disabled} busyAction={busy === `reject-${suggestion.id}` ? "reject" : ""} onAction={(action) => reject(suggestion, String(action.payload.reason))} />
       </article>)}
@@ -316,6 +330,6 @@ export function FieldAssistantControl({
       {createdEditUrl && /^\/admin\//.test(createdEditUrl) ? <a className="button secondary" href={createdEditUrl} target="_blank" rel="noreferrer">在新标签页完善此草稿 ↗</a> : null}
       {onFill ? <p>填入后可以继续修改，点击页面顶部“保存书目修改”才会保存。不会自动发布。</p> : null}
       {onInspect ? <button type="button" disabled={Boolean(busy)} onClick={() => { setOpen(false); onInspect(); }}>查看全部候选、原文与处理记录</button> : null}
-    </Dialog> : null}
+    </MaterialAssistantDialog> : null}
   </div>;
 }

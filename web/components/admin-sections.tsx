@@ -39,6 +39,7 @@ import { ActionButton, AsyncStatus, type ActionState } from "@/components/action
 import { EntityRelationsAdmin } from "@/components/entity-relations-admin";
 import { RecycleControl } from "@/components/admin/recycle-control";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
+import { ScholarMaterialFields } from "@/components/admin/knowledge/scholar-material-fields";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
 import { EditorialPrefillNotice, useEditorialPrefills } from "@/components/admin/curation/editorial-prefills";
 import { TopicMergePanel } from "@/components/admin/curation/topic-merge-panel";
@@ -1164,6 +1165,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
                 originalName: suggestion.originalName || current.originalName }));
             }}
           /></section>
+          <section data-editor-section="assistance"><ScholarMaterialFields value={draft} onChange={patch=>{prefills.fill("",current=>({...current,...patch}));}}/></section>
           <label data-editor-section="identity-original"><span>外文名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
           <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
 

@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import logging
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from drf_spectacular.utils import extend_schema, OpenApiTypes
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
+from common.capabilities import Capability, has_capability
+from catalog.editorial_read import AdminPrivateResponseMixin
 
 from catalog.services.field_assistant import (
     FieldAssistantError,
@@ -75,14 +81,15 @@ class FieldAssistantDuplicateSerializer(serializers.Serializer):
     label = serializers.CharField(max_length=300)
 
 
-class _FieldAssistantView(APIView):
+class _FieldAssistantView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsCatalogEditor]
     service = FieldAssistantService()
 
-    def finalize_response(self, request, response, *args, **kwargs):
-        response = super().finalize_response(request, response, *args, **kwargs)
-        response["Cache-Control"] = "private, no-store"
-        return response
+    def lock_actor(self, request):
+        actor = get_user_model().objects.select_for_update().filter(pk=request.user.pk, is_active=True).first()
+        if not actor or actor.token_version != request.user.token_version or not has_capability(actor, Capability.EDIT_METADATA):
+            raise PermissionDenied("当前会话不能保存候选决定，请重新登录后核对。")
+        request.user = actor
 
     @staticmethod
     def _error(exc: Exception) -> Response:
@@ -93,6 +100,7 @@ class _FieldAssistantView(APIView):
 
 
 class AdminFieldAssistantLookupView(_FieldAssistantView):
+    @extend_schema(request=FieldAssistantLookupSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         serializer = FieldAssistantLookupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -145,7 +153,10 @@ class AdminFieldAssistantLookupView(_FieldAssistantView):
 
 
 class AdminFieldAssistantAdoptView(_FieldAssistantView):
+    @extend_schema(request=FieldAssistantDecisionSerializer, responses=OpenApiTypes.OBJECT)
+    @transaction.atomic
     def post(self, request):
+        self.lock_actor(request)
         serializer = FieldAssistantDecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -157,7 +168,10 @@ class AdminFieldAssistantAdoptView(_FieldAssistantView):
 
 
 class AdminFieldAssistantRejectView(_FieldAssistantView):
+    @extend_schema(request=FieldAssistantDecisionSerializer, responses=OpenApiTypes.OBJECT)
+    @transaction.atomic
     def post(self, request):
+        self.lock_actor(request)
         serializer = FieldAssistantDecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -170,7 +184,12 @@ class AdminFieldAssistantRejectView(_FieldAssistantView):
 
 
 class AdminFieldAssistantCreateView(_FieldAssistantView):
+    @extend_schema(request=FieldAssistantCreateSerializer, responses=OpenApiTypes.OBJECT)
+    @transaction.atomic
     def post(self, request):
+        self.lock_actor(request)
+        if not has_capability(request.user, Capability.CREATE_AUTHORITY):
+            raise PermissionDenied("当前账户不能新建人物或知识草稿。")
         serializer = FieldAssistantCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data["field_name"] == "subdiscipline" and serializer.validated_data["defer_link"]:
@@ -205,6 +224,7 @@ class AdminFieldAssistantCreateView(_FieldAssistantView):
 
 
 class AdminFieldAssistantDuplicateView(_FieldAssistantView):
+    @extend_schema(request=FieldAssistantDuplicateSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         serializer = FieldAssistantDuplicateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

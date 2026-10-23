@@ -14,7 +14,9 @@ import {
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { useContextState } from "@/lib/use-context-state";
-import { Dialog } from "@/components/ui/dialog";
+import { MaterialAssistantDialog, useMaterialField } from "../workflow/material-assistant";
+import { useAdminSession } from "@/lib/admin-session";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 
 type AuthorityEntityType =
   | "person"
@@ -106,10 +108,11 @@ export function CurationFieldAssistant({
   scopeId,
   affectedFields,
 }: Props) {
+  const user=useAdminSession(),owner=user?String(user.id):"";
   const popoverId = useId();
   const normalizedQuery = useMemo(() => query.normalize("NFKC").trim(), [query]);
-  const objectKey = JSON.stringify([targetType || authorityType, targetId || scopeId || "new", fieldName || label]);
-  const contextKey = JSON.stringify([targetType, targetId, fieldName, normalizedQuery, currentValue, formContext]);
+  const objectKey = JSON.stringify([owner,targetType || authorityType, targetId || scopeId || "new", fieldName || label]);
+  const contextKey = JSON.stringify([owner,targetType, targetId, fieldName, normalizedQuery, currentValue, formContext]);
   const [open, setOpen] = useContextState(objectKey, false);
   const [loading, setLoading] = useContextState(contextKey, false);
   const [busy, setBusy] = useState("");
@@ -125,6 +128,7 @@ export function CurationFieldAssistant({
   const [editingClaim, setEditingClaim] = useContextState<{ key: string; proposition: string } | null>(contextKey, null);
   const requestRef = useRef<AbortController | null>(null);
   const objectRef = useRef(objectKey);
+  const reviewField=useMaterialField(label,()=>setOpen(true));
   const lookupRef = useRef<(external?: boolean) => Promise<void>>(async () => {});
   useLayoutEffect(() => { objectRef.current = objectKey; lookupRef.current = lookup; });
   useEffect(() => {
@@ -133,6 +137,7 @@ export function CurationFieldAssistant({
     return () => { clearTimeout(timer); requestRef.current?.abort(); };
   }, [contextKey, open]);
 
+  async function ownerRequest<T>(path:string,options:RequestInit={},credential:string|null=getServerSessionCredential()){const headers=new Headers(options.headers);headers.set("X-Editor-Owner",owner);return withPrivateOwner(owner,()=>apiRequest<T>(path,{...options,headers,cache:"no-store"},credential,false),options.signal||undefined);}
   async function lookup(external = false) {
     setLoading(true);
     setShowMore(false);
@@ -148,7 +153,7 @@ export function CurationFieldAssistant({
     }
     const timeout = setTimeout(() => request.abort(), 30_000);
     try {
-      const result = await apiRequest<{ results: AssistantCandidate[]; more_results?: AssistantCandidate[]; message?: string; can_lookup_external?: boolean }>(
+      const result = await ownerRequest<{ results: AssistantCandidate[]; more_results?: AssistantCandidate[]; message?: string; can_lookup_external?: boolean }>(
         "/catalog/admin/field-assistant/lookup/",
         { method: "POST", signal: request.signal, body: JSON.stringify({
           scope: "curation", object_type: objectType, object_id: targetId || null,
@@ -177,7 +182,7 @@ export function CurationFieldAssistant({
       const filled = onFillSuggestion(candidate.enrichment.id, candidate.enrichment.proposed_value, candidate.label);
       setReview(null);
       setOutcome(filled ? `已填入${label}，尚未保存。请核对后点击本页保存；可在表单中修改或撤销。` : "表单没有变化。已有内容不会重复添加；取消替换时也会保留当前填写。");
-      setOpen(false);
+      reviewField.mark("已填入，待保存");
       return;
     }
     if (!candidate.enrichment && !candidate.claim && onApply) {
@@ -186,7 +191,7 @@ export function CurationFieldAssistant({
       const filled = onApply(candidate.label, candidate.authority);
       setReview(null);
       setOutcome(filled === false ? "表单已有这项内容，没有重复填写或保存。" : `已填入${(affectedFields || [label]).join("、")}。这一步只修改了表单，请核对后保存本页；没有合并人物或修改公开页面。`);
-      setOpen(false);
+      reviewField.mark("已填入，待保存");
       return;
     }
     setReview(candidate);
@@ -206,7 +211,7 @@ export function CurationFieldAssistant({
       if (beforeAction && !await beforeAction()) throw new Error("本页仍有未保存填写，请先显式保存，再处理这项建议。");
       if (scope !== objectRef.current) return;
       if (candidate.claim) {
-        await apiRequest(candidate.claim.decision_url, {
+        await ownerRequest(candidate.claim.decision_url, {
           method: "POST",
           signal: writeController.signal,
           body: JSON.stringify({
@@ -216,7 +221,7 @@ export function CurationFieldAssistant({
           }),
         }, getServerSessionCredential());
       } else if (candidate.enrichment) {
-        await apiRequest(
+        await ownerRequest(
           `/catalog/admin/field-enrichment/candidates/${candidate.enrichment.id}/decision/`,
           {
             method: "POST",
@@ -227,6 +232,7 @@ export function CurationFieldAssistant({
         );
       }
       saved = true;
+      reviewField.mark("已保存采用决定");
       setUncertainSave(false);
       if (scope !== objectRef.current) return;
       onApply?.(candidate.enrichment?.proposed_value ?? candidate.label);
@@ -258,7 +264,7 @@ export function CurationFieldAssistant({
     setBusy(`reject:${candidate.key}`);
     setMessage("");
     try {
-      await apiRequest(
+      await ownerRequest(
         candidate.claim?.decision_url || `/catalog/admin/field-enrichment/candidates/${candidate.enrichment?.id}/decision/`,
         {
           method: "POST",
@@ -267,6 +273,7 @@ export function CurationFieldAssistant({
         getServerSessionCredential(),
       );
       setResults((current) => current.filter((row) => row.key !== candidate.key));
+      reviewField.mark("已记录忽略");
       setOutcome(`已记录不采用：${reason}。原有资料未改变。`);
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "未能记录本次决定，请稍后重试。");
@@ -292,7 +299,7 @@ export function CurationFieldAssistant({
       catch (reason) { setOutcome(reason instanceof Error ? reason.message : "页面读取失败，请稍后重试。"); }
       finally { busyRef.current = false; setBusy(""); }
     }}>重新读取保存结果</button> : null}
-    {open ? <Dialog open id={popoverId} className="field-assistant-dialog field-assistant-popover" aria-label={`${label}建议`} aria-busy={loading} onRequestClose={() => { if (!busy) { setReview(null); setOpen(false); } }}>
+    {open ? <MaterialAssistantDialog fieldId={reviewField.id} fieldLabel={label} sources={visible.map(row=>({id:row.key,label:row.label,evidence:row.evidence}))} open id={popoverId} className="field-assistant-dialog field-assistant-popover" aria-label={`${label}建议`} aria-busy={loading} onRequestClose={() => { if (!busy) { setReview(null); setOpen(false); } }}>
       <header><strong>{label}建议</strong><button type="button" disabled={Boolean(busy)} aria-label={`关闭${label}建议`} onClick={() => { setReview(null); setOpen(false); }}><X size={14} /></button></header>
       {outcome ? <p role="status">{outcome}</p> : null}
       {review ? <section className="curation-assistant-review" aria-label={`核对${label}保存范围`}>
@@ -309,10 +316,10 @@ export function CurationFieldAssistant({
         <button type="button" disabled={Boolean(busy)} onClick={() => setReview(null)}>返回查看建议</button>
         {message ? <p role="alert">{message}</p> : null}
       </section> : <>
-      <p>先查看馆内记录和已有依据，不会保存或改变你的填写。</p>
-      <button type="button" className="button secondary" disabled={loading || Boolean(busy) || externalAllowed === false} onClick={() => void lookup(true)}>查找新的{label}建议</button>
+      <p>先查看馆内记录和已有依据，不会保存或改变你的填写。</p><p>当前填写：{typeof currentValue==="string"||typeof currentValue==="number"?String(currentValue):Array.isArray(currentValue)?currentValue.filter(row=>typeof row==="string").join("、")||"已填写关联条目":query||"尚未填写"}</p>
+      <button type="button" className="button secondary" disabled={loading || Boolean(busy)} onClick={() => void lookup(false)}>重新核对{label}候选</button>
       {externalAllowed === false ? <p>当前账户没有外部查找权限，仍可核对已有建议或手工填写。</p> : null}
-      <small>新的查找可能使用外部来源并产生费用。修改表单只重新核对已有结果，不会自动收费检索。</small>
+      <small>这里核对馆内记录及已有来源。未启用的来源会说明原因，不会生成示例建议。</small>
       {loading ? <p><LoaderCircle className="spin" size={14} />正在查找馆内记录和可核对资料</p> : null}
       {!loading && visible.map((candidate) => <article key={candidate.key}>
         <div><strong>{candidate.label}</strong><span>{candidate.statusLabel}</span></div>
@@ -332,6 +339,6 @@ export function CurationFieldAssistant({
       {message && visible.length ? <p role="status" aria-live="polite" className="field-assistant-message">{message}</p> : null}
       <button type="button" disabled={Boolean(busy)} onClick={() => { setOpen(false); setOutcome("本次暂不处理建议，填写和保存记录均未改变。"); }}>暂不处理，继续填写</button>
       </>}
-    </Dialog> : null}
+    </MaterialAssistantDialog> : null}
   </div>;
 }

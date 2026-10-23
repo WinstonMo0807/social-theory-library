@@ -704,6 +704,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/field-assistant/adopt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_field_assistant_adopt_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/field-assistant/create/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_field_assistant_create_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/field-assistant/duplicates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_field_assistant_duplicates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/field-assistant/lookup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_field_assistant_lookup_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/field-assistant/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_field_assistant_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/knowledge-media/{object_type}/{object_id}/": {
         parameters: {
             query?: never;
@@ -7517,6 +7597,70 @@ export interface components {
             accepted_revision: number;
             record: components["schemas"]["FeedbackDetailOutput"];
         };
+        FieldAssistantCreateRequest: {
+            /** Format: uuid */
+            request_id?: string;
+            /** Format: uuid */
+            edition_id: string;
+            field_name: string;
+            label: string;
+            details?: unknown;
+            /** @default false */
+            allow_possible_duplicate: boolean;
+            /** @default false */
+            defer_link: boolean;
+        };
+        FieldAssistantDecisionRequest: {
+            /** Format: uuid */
+            edition_id: string;
+            field_name: string;
+            source_type: string;
+            /** Format: uuid */
+            source_id: string;
+            selected_value?: string;
+            reason?: string;
+        };
+        FieldAssistantDuplicateRequest: {
+            field_name: string;
+            label: string;
+        };
+        /**
+         * @description * `edition` - edition
+         *     * `work` - work
+         *     * `person` - person
+         *     * `topic` - topic
+         *     * `knowledge_node` - knowledge_node
+         *     * `discipline` - discipline
+         *     * `subdiscipline` - subdiscipline
+         *     * `reading_path` - reading_path
+         * @enum {string}
+         */
+        FieldAssistantLookupObjectTypeEnum: "edition" | "work" | "person" | "topic" | "knowledge_node" | "discipline" | "subdiscipline" | "reading_path";
+        FieldAssistantLookupRequest: {
+            object_type: components["schemas"]["FieldAssistantLookupObjectTypeEnum"];
+            /** Format: uuid */
+            object_id?: string | null;
+            field_name: string;
+            query?: string;
+            confirmed_context?: unknown;
+            /** Format: uuid */
+            upload_item_id?: string | null;
+            /** @default catalog */
+            scope: components["schemas"]["FieldAssistantLookupScopeEnum"];
+            authority_type?: string;
+            current_value?: unknown;
+            form_context?: unknown;
+            /** @default false */
+            refresh: boolean;
+            /** @default false */
+            allow_external: boolean;
+        };
+        /**
+         * @description * `catalog` - catalog
+         *     * `curation` - curation
+         * @enum {string}
+         */
+        FieldAssistantLookupScopeEnum: "catalog" | "curation";
         FileAdoptionInputRequest: {
             /** Format: uuid */
             request_key: string;
@@ -8585,7 +8729,7 @@ export interface components {
             fingerprint: string;
         };
         KnowledgeImageState: {
-            object_type: components["schemas"]["ObjectTypeEnum"];
+            object_type: components["schemas"]["KnowledgeImageStateObjectTypeEnum"];
             /** Format: uuid */
             object_id: string;
             name: string;
@@ -8597,6 +8741,15 @@ export interface components {
             editor_url: string;
             fingerprint: string;
         };
+        /**
+         * @description * `knowledge_node` - knowledge_node
+         *     * `reading_path` - reading_path
+         *     * `discipline` - discipline
+         *     * `subdiscipline` - subdiscipline
+         *     * `topic` - topic
+         * @enum {string}
+         */
+        KnowledgeImageStateObjectTypeEnum: "knowledge_node" | "reading_path" | "discipline" | "subdiscipline" | "topic";
         KnowledgeNodeAlias: {
             /** Format: uuid */
             readonly id: string;
@@ -10168,15 +10321,6 @@ export interface components {
             result?: components["schemas"]["OCRCorrection"];
         };
         OCRWorkspaceCommandResult: components["schemas"]["OCRWorkspace"] | components["schemas"]["OCRCorrectionPreview"];
-        /**
-         * @description * `knowledge_node` - knowledge_node
-         *     * `reading_path` - reading_path
-         *     * `discipline` - discipline
-         *     * `subdiscipline` - subdiscipline
-         *     * `topic` - topic
-         * @enum {string}
-         */
-        ObjectTypeEnum: "knowledge_node" | "reading_path" | "discipline" | "subdiscipline" | "topic";
         /**
          * @description * `auto` - 自动检测
          *     * `force` - 强制 OCR
@@ -18124,6 +18268,141 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CurationSourcesPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_field_assistant_adopt_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldAssistantDecisionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["FieldAssistantDecisionRequest"];
+                "multipart/form-data": components["schemas"]["FieldAssistantDecisionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    catalog_admin_field_assistant_create_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldAssistantCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["FieldAssistantCreateRequest"];
+                "multipart/form-data": components["schemas"]["FieldAssistantCreateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    catalog_admin_field_assistant_duplicates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldAssistantDuplicateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["FieldAssistantDuplicateRequest"];
+                "multipart/form-data": components["schemas"]["FieldAssistantDuplicateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    catalog_admin_field_assistant_lookup_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldAssistantLookupRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["FieldAssistantLookupRequest"];
+                "multipart/form-data": components["schemas"]["FieldAssistantLookupRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    catalog_admin_field_assistant_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldAssistantDecisionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["FieldAssistantDecisionRequest"];
+                "multipart/form-data": components["schemas"]["FieldAssistantDecisionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

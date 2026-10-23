@@ -8,7 +8,7 @@ import { WorkflowEditor } from "./workflow-editor";
 import { safeAdminHref, withAdminReturn } from "@/lib/admin-route-context";
 export { ManualCatalogForm } from "./manual-catalog";
 
-export function CatalogingWorkbench({ sessionId }: { sessionId: string }) {
+export function CatalogingWorkbench({ sessionId, initialAssistant=false }: { sessionId: string; initialAssistant?:boolean }) {
   const params = useSearchParams();
   const returnHref = safeAdminHref(params.get("return_to"));
   const { data, error, loading, retry } = useApiResource<{ session: CatalogingSession }>(
@@ -19,5 +19,5 @@ export function CatalogingWorkbench({ sessionId }: { sessionId: string }) {
   const session = data.session;
   if (["published", "abandoned"].includes(session.status)) return <section className="admin-panel"><p>本次编目已结束，草稿、馆藏和原始文件均保留。</p>{session.work_id && session.edition_id ? <Link href={withAdminReturn(`/admin/library/works/${session.work_id}?edition=${session.edition_id}`, returnHref, "publication")}>核对当前出版版本及公开结果</Link> : null}<Link href={returnHref}>返回原页面</Link></section>;
   if (!session.work_id || !session.edition_id) return <section className="admin-panel"><p role="status">上传尚未建立作品版本，文件处理完成后可继续编目。</p><button type="button" onClick={retry}>刷新处理结果</button><Link href={withAdminReturn(session.upload_item_id ? `/admin/uploads?item=${encodeURIComponent(session.upload_item_id)}` : "/admin/uploads", returnHref)}>查看原上传来源</Link></section>;
-  return <WorkflowEditor key={session.id} mode="maintenance" workId={session.work_id} editionId={session.edition_id} />;
+  return <WorkflowEditor key={session.id} mode="maintenance" workId={session.work_id} editionId={session.edition_id} initialAssistant={initialAssistant}/>;
 }

@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 字段助手
+
+保留307，原field-assistant lookup/adopt/reject/create/duplicates五路径纳入312契约。请求身份核对及私人响应沿AdminPrivateResponseMixin，写入核对活跃用户token/编辑能力；新建authority额外CREATE_AUTHORITY。
+
 ## 2026-10-23 材料编辑回执
 
 保留305，纳入原works/{work_id}/edits/和新增edits/commands/{request_id}/，共307。原保存CAS和候选来源记录继续使用；保存/停止共用账户锁与请求身份，GET只回当前操作者原请求。
