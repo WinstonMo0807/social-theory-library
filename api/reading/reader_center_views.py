@@ -1,5 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,6 +8,7 @@ from rest_framework.views import APIView
 from common.private_responses import PrivateAccountResponses
 from . import reader_center
 from .serializers import ReadingProgressSerializer
+from .privacy_serializers import PrivacyRequestStopInput
 
 
 class ReaderCenterQuery(serializers.Serializer):
@@ -28,6 +30,7 @@ class ReaderMaterialOutput(serializers.Serializer):
     href = serializers.CharField()
     updated_at = serializers.DateTimeField()
     revision = serializers.CharField()
+    editable_title = serializers.CharField(allow_blank=True)
 
 
 class ReaderPendingOutput(serializers.Serializer):
@@ -65,3 +68,54 @@ class ReaderCenterView(PrivateAccountResponses, APIView):
         if overview:
             data.update(recent_reading=reader_center.recent_reading(request), pending_tasks=reader_center.pending_tasks(request.user))
         return Response(data)
+
+
+class ReaderMaterialTarget(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["research", "lists", "bookmarks"])
+    id = serializers.UUIDField()
+    revision = serializers.CharField(max_length=80)
+    title = serializers.CharField(max_length=240, required=False)
+
+
+class ReaderMaterialCommand(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    action = serializers.ChoiceField(choices=["rename", "archive", "restore"])
+    targets = ReaderMaterialTarget(many=True, allow_empty=False, max_length=100)
+
+
+class ReaderMaterialReceipt(serializers.Serializer):
+    owner_id = serializers.CharField()
+    request_id = serializers.UUIDField()
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
+    action = serializers.CharField(allow_blank=True)
+    applied = serializers.ListField(child=serializers.DictField())
+
+
+class ReaderMaterialCommandView(PrivateAccountResponses, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if request.headers.get("X-Reader-Owner") != str(request.user.pk):
+            raise PermissionDenied("请从当前账户的资料列表操作本人资料。")
+
+    @extend_schema(operation_id="reader_material_command", request=ReaderMaterialCommand, responses=ReaderMaterialReceipt)
+    def post(self, request):
+        from .reader_material_commands import command
+        values = ReaderMaterialCommand(data=request.data)
+        values.is_valid(raise_exception=True)
+        return Response(command(request.user, values.validated_data))
+
+
+class ReaderMaterialReceiptView(ReaderMaterialCommandView):
+    @extend_schema(operation_id="reader_material_receipt", responses=ReaderMaterialReceipt)
+    def get(self, request, request_id):
+        from .reader_material_commands import receipt
+        return Response(receipt(request.user, request_id))
+
+    @extend_schema(operation_id="reader_material_stop_pending", request=PrivacyRequestStopInput, responses=ReaderMaterialReceipt)
+    def post(self, request, request_id):
+        from .reader_material_commands import stop
+        values = PrivacyRequestStopInput(data=request.data)
+        values.is_valid(raise_exception=True)
+        return Response(stop(request.user, request_id))

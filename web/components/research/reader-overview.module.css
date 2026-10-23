@@ -96,3 +96,9 @@
 .transferDialog footer { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:14px; margin-top:24px; font-size:12px; }
 .transferDialog .transferAck { font-size:13px; line-height:1.7; align-items:flex-start; }
 @media(max-width:760px) { .localTransfer { flex-wrap:wrap; }.transferDialog { padding:18px; }.transferDialog li { flex-wrap:wrap; }.transferDialog h2 { font-size:22px; } }
+.materialCommandNotice { flex-basis:100%; padding:10px 12px; background:var(--wash); border:1px solid var(--line); }
+.materialCommandNotice p { margin:0 0 8px; }
+.materialCommandNotice button { margin-right:8px; }
+.materialEditor ul { max-height:45vh; overflow:auto; }
+.materialEditor li label { flex:1; min-width:0; display:flex; flex-direction:column; align-items:stretch; gap:8px; }
+.materialEditor input { width:100%; box-sizing:border-box; min-width:0; padding:9px; border:1px solid var(--line); border-radius:3px; color:var(--ink); background:var(--surface); }

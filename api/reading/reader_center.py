@@ -77,6 +77,7 @@ def material(user, kind, row, *, text=None):
         state = "saved" if work else "source_unavailable"
     return {"id": str(row.pk), "key": f"{kind}:{row.pk}", "kind": kind, "kind_label": KINDS[kind],
             "title": title, "question": question[:240], "status": state, "href": path,
+            "editable_title": private_text(row, kind)[0] if kind in {"research", "lists", "bookmarks"} else "",
             "updated_at": row.updated_at.isoformat(), "revision": str(row.revision) if hasattr(row, "revision") else row.updated_at.isoformat()}
 
 

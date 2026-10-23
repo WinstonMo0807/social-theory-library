@@ -14,7 +14,7 @@ import { LocalResearchTransfer } from "./local-research-transfer";
 import styles from "./reader-overview.module.css";
 
 type Kind = "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
-type Material = { id: string; key: string; kind: Kind; kind_label: string; title: string; question: string; status: string; href: string; updated_at: string; revision: string };
+type Material = { id: string; key: string; kind: Kind; kind_label: string; title: string; editable_title: string; question: string; status: string; href: string; updated_at: string; revision: string };
 type Progress = { id: string; asset: string; work: ApiWork | null; current_page: number; progress_ratio: number; updated_at: string };
 type Pending = { id: string; title: string; question: string; status: string; updated_at: string; href: string };
 type Overview = { owner_id: string; counts: Record<Kind, number>; count: number; page: number; page_size: number; total_pages: number; results: Material[]; recent_reading: Progress[]; pending_tasks: Pending[] };
@@ -45,7 +45,7 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
   const workspace = usePersistentWorkspace<Overview>(`/reading/reader-center/?${query}`, ownerId, undefined, load);
   const data = workspace.error ? null : workspace.data;
   function filter(values: Record<string, string>) {
-    if (materialGuard && !window.confirm("切换筛选或分页会清除本页选择。尚未取得回执的原请求会保留，可在新页面查回。确定继续吗？")) return;
+    if (materialGuard && !window.confirm("原资料操作尚未完成。切换筛选不会取消请求，选择及恢复编号会保留。确定继续吗？")) return;
     const next = new URLSearchParams(params.toString());
     next.delete("page");
     for (const [key, value] of Object.entries(values)) { if (!value || value === "all") next.delete(key); else next.set(key, value); }
@@ -72,7 +72,7 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
     </>}
     <section className={styles.section}><header><div><h2>我的资料</h2><p>筛选、打开和管理你创建或保存的资料。</p></div><div className={styles.view}><button aria-label="列表查看" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={16} /></button><button aria-label="卡片查看" aria-pressed={view === "cards"} onClick={() => setView("cards")}><Grid2X2 size={16} /></button></div></header>
       <div className={styles.filters}><label><span className="sr-only">资料类型</span><select value={kind} onChange={event => filter({ material: event.target.value })}><option value="all">全部资料</option>{sections.map(([key, label]) => <option key={key} value={key}>{label}</option>)}<option value="saved">选材收藏</option></select></label><form onSubmit={submit} key={search}><Search size={15} /><input aria-label="搜索我的资料" name="q" type="search" maxLength={180} defaultValue={search} placeholder="搜索标题或私人正文…" /><button type="submit">搜索</button></form><label><span className="sr-only">排序</span><select value={order} onChange={event => filter({ order: event.target.value })}><option value="newest">最近更新</option><option value="oldest">最早更新</option></select></label></div>
-      <ReaderMaterials key={`${ownerId}:${query}`} rows={data?.results || []} ownerId={ownerId} cards={view === "cards"} onChanged={workspace.reload} onGuardChange={setMaterialGuard} />
+      <ReaderMaterials key={ownerId} rows={data?.results || []} ownerId={ownerId} cards={view === "cards"} onChanged={workspace.reload} onGuardChange={setMaterialGuard} />
       {data ? data.results.length ? <><nav className={styles.paging} aria-label="资料分页"><span>共 {data.count} 项</span><button disabled={data.page <= 1} onClick={() => filter({ page: String(data.page - 1) })} aria-label="上一页"><ChevronLeft size={16} /></button><span>{data.page} / {data.total_pages}</span><button disabled={data.page >= data.total_pages} onClick={() => filter({ page: String(data.page + 1) })} aria-label="下一页"><ChevronRight size={16} /></button></nav></> : <div className={styles.empty}><FileText size={24} /><strong>{search || kind !== "all" ? "没有匹配的资料" : "这里还没有资料"}</strong><p>{search || kind !== "all" ? "可以调整关键词或资料类型，现有资料没有被删除。" : "保存研究、笔记、计划或书单后，就能在这里继续。"}</p>{search || kind !== "all" ? <button onClick={() => filter({ q: "", material: "all" })}>查看全部资料</button> : <Link href="/explore">从探索开始 <ArrowRight size={14} /></Link>}</div> : null}
     </section>
   </div>;

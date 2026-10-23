@@ -23118,6 +23118,150 @@
                 }
             }
         },
+        "/api/reading/reader-center/commands/": {
+            "post": {
+                "operationId": "reader_material_command",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReaderMaterialCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReaderMaterialCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReaderMaterialCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderMaterialReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/reader-center/commands/{request_id}/": {
+            "get": {
+                "operationId": "reader_material_receipt",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderMaterialReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reader_material_stop_pending",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyRequestStopInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyRequestStopInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyRequestStopInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReaderMaterialReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/reading-plans/": {
             "get": {
                 "operationId": "reading_reading_plans_list",
@@ -58251,6 +58395,38 @@
                 "type": "string",
                 "description": "* `campus` - campus\n* `team` - team"
             },
+            "ReaderMaterialCommandActionEnum": {
+                "enum": [
+                    "rename",
+                    "archive",
+                    "restore"
+                ],
+                "type": "string",
+                "description": "* `rename` - rename\n* `archive` - archive\n* `restore` - restore"
+            },
+            "ReaderMaterialCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/ReaderMaterialCommandActionEnum"
+                    },
+                    "targets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReaderMaterialTargetRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "action",
+                    "request_id",
+                    "targets"
+                ]
+            },
             "ReaderMaterialOutput": {
                 "type": "object",
                 "properties": {
@@ -58285,9 +58461,13 @@
                     },
                     "revision": {
                         "type": "string"
+                    },
+                    "editable_title": {
+                        "type": "string"
                     }
                 },
                 "required": [
+                    "editable_title",
                     "href",
                     "id",
                     "key",
@@ -58313,6 +58493,74 @@
                 ],
                 "type": "string",
                 "description": "* `research` - research\n* `notes` - notes\n* `bookmarks` - bookmarks\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
+            },
+            "ReaderMaterialReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "applied": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "action",
+                    "applied",
+                    "owner_id",
+                    "request_id",
+                    "state"
+                ]
+            },
+            "ReaderMaterialTargetKindEnum": {
+                "enum": [
+                    "research",
+                    "lists",
+                    "bookmarks"
+                ],
+                "type": "string",
+                "description": "* `research` - research\n* `lists` - lists\n* `bookmarks` - bookmarks"
+            },
+            "ReaderMaterialTargetRequest": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderMaterialTargetKindEnum"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "revision"
+                ]
             },
             "ReaderOCRActionEnum": {
                 "enum": [

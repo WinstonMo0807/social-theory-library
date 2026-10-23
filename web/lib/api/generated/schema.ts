@@ -4875,6 +4875,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/reader-center/commands/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reader_material_command"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reading/reader-center/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_material_receipt"];
+        put?: never;
+        post: operations["reader_material_stop_pending"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/reading-plans/": {
         parameters: {
             query?: never;
@@ -15194,6 +15226,19 @@ export interface components {
          * @enum {string}
          */
         ReaderGroupKindEnum: "campus" | "team";
+        /**
+         * @description * `rename` - rename
+         *     * `archive` - archive
+         *     * `restore` - restore
+         * @enum {string}
+         */
+        ReaderMaterialCommandActionEnum: "rename" | "archive" | "restore";
+        ReaderMaterialCommandRequest: {
+            /** Format: uuid */
+            request_id: string;
+            action: components["schemas"]["ReaderMaterialCommandActionEnum"];
+            targets: components["schemas"]["ReaderMaterialTargetRequest"][];
+        };
         ReaderMaterialOutput: {
             /** Format: uuid */
             id: string;
@@ -15207,6 +15252,7 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
             revision: string;
+            editable_title: string;
         };
         /**
          * @description * `research` - research
@@ -15220,6 +15266,30 @@ export interface components {
          * @enum {string}
          */
         ReaderMaterialOutputKindEnum: "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
+        ReaderMaterialReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            action: string;
+            applied: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * @description * `research` - research
+         *     * `lists` - lists
+         *     * `bookmarks` - bookmarks
+         * @enum {string}
+         */
+        ReaderMaterialTargetKindEnum: "research" | "lists" | "bookmarks";
+        ReaderMaterialTargetRequest: {
+            kind: components["schemas"]["ReaderMaterialTargetKindEnum"];
+            /** Format: uuid */
+            id: string;
+            revision: string;
+            title?: string;
+        };
         /**
          * @description * `pause` - pause
          *     * `resume` - resume
@@ -29603,6 +29673,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReaderCenterOutput"];
+                };
+            };
+        };
+    };
+    reader_material_command: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReaderMaterialCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReaderMaterialCommandRequest"];
+                "multipart/form-data": components["schemas"]["ReaderMaterialCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderMaterialReceipt"];
+                };
+            };
+        };
+    };
+    reader_material_receipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderMaterialReceipt"];
+                };
+            };
+        };
+    };
+    reader_material_stop_pending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyRequestStopInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PrivacyRequestStopInputRequest"];
+                "multipart/form-data": components["schemas"]["PrivacyRequestStopInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReaderMaterialReceipt"];
                 };
             };
         };

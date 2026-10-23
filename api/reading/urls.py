@@ -30,7 +30,7 @@ from .runtime_views import (
 from .research_views import (CitationAuditViewSet, CitationSourceViewSet, PersonalReadingPlanViewSet, ResearchAccountView,
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
 from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView, ReaderPrivacyRequestView
-from .reader_center_views import ReaderCenterView
+from .reader_center_views import ReaderCenterView, ReaderMaterialCommandView, ReaderMaterialReceiptView
 from .notebook_views import NotebookView, NotebookChoicesView, NotebookDetailView, NotebookProjectView, NotebookBookmarkNoteView, NotebookExportView
 from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 from .shared_citation_views import PublicCitationPreviewView
@@ -93,6 +93,8 @@ urlpatterns = [
     path("notebook/add-to-project/", NotebookProjectView.as_view(), name="reader-notebook-project"),
     path("notebook/bookmarks/<uuid:pk>/note/", NotebookBookmarkNoteView.as_view(), name="reader-bookmark-note"),
     path("notebook/<str:category>/<uuid:pk>/", NotebookDetailView.as_view(), name="reader-notebook-detail"),
+    path("reader-center/commands/", ReaderMaterialCommandView.as_view(), name="reader-material-command"),
+    path("reader-center/commands/<uuid:request_id>/", ReaderMaterialReceiptView.as_view(), name="reader-material-receipt"),
     path("reader-center/", ReaderCenterView.as_view(), name="reader-center"),
     path("article-comments/public/<uuid:issue_id>/", PublicArticleCommentsView.as_view(), name="article-comments-public"),
     path("article-comments/admin/<uuid:issue_id>/", AdminArticleCommentsView.as_view(), name="article-comments-admin"),

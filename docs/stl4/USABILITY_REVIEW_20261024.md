@@ -161,3 +161,13 @@ ZIP/CSV发送前再核对来源资格和资料修订，比较时仅排除下载�
 7de886禁连DB契约0错误10既有警告；b7eb93同步345路径；e17eac五AST，后续两份最终AST；5ce819目标ESLint0错误1既有img提示；3530e3→991ecb TypeScript noEmit0；015c7a CSS解析。ZIP清单、CSV中文/公式、来源时钟与撤回区分、他人隔离和格式化中资料改变用例只编写未运行。未执行测试、浏览器、实际导出、目录写入、迁移或部署，真实交互和像素验收仍待核实。继续其他已登记缺项及内网预览准备。
 
 文件夹兼容边界依据MDN官方文档：[showDirectoryPicker](https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker)、[createWritable](https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle/createWritable)，2026-10-24核对；该资料仅用于技术接口，视觉仍只参考最终PDF。
+
+## 2026-10-24 读者总览跨页选择、重命名与研究归档
+
+前置2a3fa60。再次实际读取唯一PDF183/185，继续读者整类无引导复核。总览改为跨分页/筛选保留已选记录及选中时版本，显示总选择/本页数量，明确清除全部，导出/删除沿原隐私任务500项上限，不隐式全库选择。账户切换重新挂载清除内存选择，未知请求编号仍按原账户隔离。
+
+重命名仅作用于原有独立名称：ResearchProject.title（加密载荷）、ReadingList.title、Bookmark.label；一次最多20项。归档/恢复仅使用原ResearchProject.archived，一次最多100项；不把笔记正文、计划目标或公开作品题名当作重命名字段。前端预填完整editable_title，避免列表160字截断变成保存值；无变化名称不提交。普通用户可在原总览站内弹层逐项核对，保留未保存输入，未知结果支持原请求查回、同请求重试、停止尚未执行的请求。
+
+后端命令复用原research.update_project/booklists.command/notebook.edit，账户启用/token、User锁与所有对象版本重核，固定顺序锁及整批事务，任意不符整批回滚。原AuditEvent只记请求、状态、对象编号/版本和指纹，不保存名称正文；重复已采用返回原回执，停止后迟到请求不能执行。未新增私人资料表或平行归档库，无数据库迁移。
+
+首次静态检查发现渲染期间读取ref及OpenAPI自动operationId碰撞，已改用state及显式operationId。221aa0契约0错误10既有警告；999d7f同步347路径；8605a5目标ESLint0；e78c42六AST与8条SQLite/PostgreSQL查询编译（禁连DB）；39c389→aa3efc TypeScript noEmit0；289121 CSS解析；f4b183目标diff空白0。原记录更名/版本整批回滚/归档恢复/停止与跨人隔离/截断名称保护用例仅编写。没有测试、浏览器、实际资料命令、迁移或部署，精确视觉和真实交互未验收。账户浮层及全站其余登记缺项、实际内网预览继续。
