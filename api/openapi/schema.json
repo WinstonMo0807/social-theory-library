@@ -2857,6 +2857,64 @@
                 }
             }
         },
+        "/api/catalog/admin/editions/{edition_id}/journal-contents-candidates/": {
+            "get": {
+                "operationId": "catalog_admin_editions_journal_contents_candidates_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "asset_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 400,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/editions/{edition_id}/media-workspace/": {
             "get": {
                 "operationId": "catalog_admin_editions_media_workspace_retrieve",
@@ -38250,6 +38308,11 @@
             "JournalIssueArticleRowRequest": {
                 "type": "object",
                 "properties": {
+                    "candidate_source": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 3000
+                    },
                     "id": {
                         "type": "string",
                         "format": "uuid",

@@ -36,6 +36,8 @@ def normalize_journal_contents(edition, rows, *, document_type=None):
         raise ValueError("目录只能关联馆内已有的期刊论文。")
     output, seen = [], set()
     for position, row in enumerate(rows):
+        if row.get("candidate_source"):
+            raise ValueError("目录候选请通过书目页的保存本页填写提交，以保留来源和并发保护。")
         identifier = str(row.get("id") or "")
         if identifier and (identifier not in existing or identifier in seen):
             raise ValueError("目录条目已变化，请刷新后重试。")

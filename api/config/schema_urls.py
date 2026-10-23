@@ -17,7 +17,7 @@ VERIFIED_NAMES = {
     "index-maintenance", "index-maintenance-receipt", "index-maintenance-terms", "index-maintenance-query", "index-maintenance-query-receipt",
     "index-knowledge-terms-command", "index-knowledge-terms-receipt", "index-knowledge-terms-source",
     "media-workspace", "media-workspace-receipt",
-    "workspace-save-receipt", "admin-work-workspace-edits",
+    "workspace-save-receipt", "admin-work-workspace-edits", "journal-contents-candidates",
     "admin-field-assistant-lookup", "admin-field-assistant-adopt", "admin-field-assistant-reject", "admin-field-assistant-create", "admin-field-assistant-duplicates",
     "manual-catalog", "manual-catalog-receipt",
     "upload-workspace", "upload-workspace-receipt",

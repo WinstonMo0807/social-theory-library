@@ -1,4 +1,5 @@
 from catalog.visual_review_views import VisualReviewView, VisualReviewReceiptView, VisualReviewReferenceView
+from catalog.journal_candidate_views import JournalContentsCandidatesView
 from catalog.local_service_views import LocalServicesView, LocalServiceCheckView
 from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
@@ -411,6 +412,7 @@ urlpatterns = [
         WorkLibraryListView.as_view(),
         name="admin-work-library-list",
     ),
+    path("admin/editions/<uuid:edition_id>/journal-contents-candidates/", JournalContentsCandidatesView.as_view(), name="journal-contents-candidates"),
     path(
         "admin/library/works/<uuid:work_id>/",
         WorkMaintenanceWorkspaceView.as_view(),

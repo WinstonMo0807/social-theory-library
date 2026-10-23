@@ -1,0 +1,12 @@
+.panel { border-block: 1px solid var(--line); margin-block: 1rem; }
+.panel summary { cursor: pointer; padding-block: .85rem; font-weight: 600; }
+.body { display: grid; gap: .8rem; padding-block: 0 1rem; }
+.body p { margin: 0; color: var(--muted); }
+.body select { display: block; max-width: 100%; margin-top: .4rem; }
+.list { list-style: none; padding: 0; margin: .75rem 0; max-height: 22rem; overflow: auto; border-block: 1px solid var(--line); }
+.list li + li { border-top: 1px solid var(--line); }
+.row { display: flex; align-items: flex-start; gap: .65rem; padding-block: .7rem; }
+.row input { flex: 0 0 auto; margin-top: .2rem; accent-color: var(--ink); }
+.row span { min-width: 0; overflow-wrap: anywhere; }
+.row small { display: block; margin-top: .3rem; color: var(--muted); line-height: 1.6; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }

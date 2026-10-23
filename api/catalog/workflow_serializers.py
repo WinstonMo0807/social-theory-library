@@ -33,6 +33,7 @@ class WorkSectionSerializer(WorkflowSectionSerializer):
 
 
 class JournalIssueArticleRowSerializer(serializers.Serializer):
+    candidate_source = serializers.CharField(max_length=3000, required=False)
     id = serializers.UUIDField(required=False, allow_null=True)
     article_work_id = serializers.UUIDField(required=False, allow_null=True)
     title = serializers.CharField(max_length=600)

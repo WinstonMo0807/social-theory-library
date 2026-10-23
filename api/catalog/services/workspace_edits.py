@@ -117,6 +117,12 @@ def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, s
     if workspace_edit_version(edition) != expected_version:
         raise WorkflowEditConflict("其他操作已更新这份书目。你的输入仍保留，请刷新后核对差异再保存。")
 
+    journal_observations = []
+    if "journal_contents" in sections.get("bibliography", {}):
+        from catalog.services.journal_candidates import prepare_rows
+        rows, journal_observations = prepare_rows(edition, actor, sections["bibliography"]["journal_contents"], expected_version)
+        sections = {**sections, "bibliography":{**sections["bibliography"], "journal_contents":rows}}
+
     before, _ = formal_field_values(edition)
     from catalog.services.field_assistant.refresh import form_context_for_edits
 
@@ -180,7 +186,7 @@ def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, s
         actor=actor, action="workspace.edits.saved", object_type="edition", object_id=str(edition.pk), request_id=request_id,
         before={"edit_version": expected_version},
         after={"request_fingerprint": fingerprint, "work_id": str(work_id), "sections": list(sections),
-               "confirmed_sections": sorted(confirmations), "assistance": assistance,
+               "confirmed_sections": sorted(confirmations), "assistance": assistance, "journal_candidates":journal_observations,
                "training_eligibility": "not_reviewed", "correctness": "not_evaluated"},
     )
     return edition, receipt, False

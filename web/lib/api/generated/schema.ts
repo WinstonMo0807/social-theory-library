@@ -672,6 +672,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/editions/{edition_id}/journal-contents-candidates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_journal_contents_candidates_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/editions/{edition_id}/media-workspace/": {
         parameters: {
             query?: never;
@@ -9272,6 +9288,7 @@ export interface components {
             minutes?: number;
         };
         JournalIssueArticleRowRequest: {
+            candidate_source?: string;
             /** Format: uuid */
             id?: string | null;
             /** Format: uuid */
@@ -19733,6 +19750,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkFileUploadOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_journal_contents_candidates_retrieve: {
+        parameters: {
+            query?: {
+                asset_id?: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
