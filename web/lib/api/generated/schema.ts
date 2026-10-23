@@ -1330,6 +1330,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/manual-catalog/candidates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_manual_catalog_candidates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/manual-catalog/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -8454,6 +8470,29 @@ export interface components {
          * @enum {string}
          */
         FieldAssistantLookupScopeEnum: "catalog" | "curation";
+        /**
+         * @description * `abstract` - abstract
+         *     * `authors` - authors
+         *     * `document_type` - document_type
+         *     * `doi` - doi
+         *     * `isbn` - isbn
+         *     * `isbn10` - isbn10
+         *     * `isbn13` - isbn13
+         *     * `issue` - issue
+         *     * `journal_title` - journal_title
+         *     * `language` - language
+         *     * `page_range` - page_range
+         *     * `publication_place` - publication_place
+         *     * `publication_year` - publication_year
+         *     * `publisher` - publisher
+         *     * `subtitle` - subtitle
+         *     * `title` - title
+         *     * `translators` - translators
+         *     * `version_label` - version_label
+         *     * `volume` - volume
+         * @enum {string}
+         */
+        FieldsEnum: "abstract" | "authors" | "document_type" | "doi" | "isbn" | "isbn10" | "isbn13" | "issue" | "journal_title" | "language" | "page_range" | "publication_place" | "publication_year" | "publisher" | "subtitle" | "title" | "translators" | "version_label" | "volume";
         FileAdoptionInputRequest: {
             /** Format: uuid */
             request_key: string;
@@ -10516,6 +10555,11 @@ export interface components {
         ManualCancelRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
+        ManualCandidateOutput: {
+            owner_id: string;
+            results: unknown[];
+            sources: unknown[];
+        };
         ManualCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -10531,11 +10575,19 @@ export interface components {
             /** @default false */
             continue_files: boolean;
             form: components["schemas"]["ManualFormRequest"];
+            prefills?: components["schemas"]["PrefillSelectionRequest"][];
         };
         ManualFormRequest: {
             work: components["schemas"]["WorkSectionRequest"];
             bibliography: components["schemas"]["BibliographySectionRequest"];
             contributors: components["schemas"]["ManualPersonRequest"][];
+        };
+        ManualLookupInputRequest: {
+            /** @default  */
+            query: string;
+            form_context?: {
+                [key: string]: unknown;
+            };
         };
         ManualPersonRequest: {
             /** Format: uuid */
@@ -10573,6 +10625,7 @@ export interface components {
             next_url: string;
             form: unknown;
             manual_form: boolean;
+            shared_work: boolean;
         };
         ManualWorkspace: {
             owner_id: string;
@@ -13481,6 +13534,10 @@ export interface components {
          * @enum {string}
          */
         PolicyEnum: "auto" | "original" | "ocr";
+        PrefillSelectionRequest: {
+            token: string;
+            fields: components["schemas"]["FieldsEnum"][];
+        };
         PreparePublicFileInputRequest: {
             /** Format: uuid */
             request_key: string;
@@ -21750,6 +21807,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ManualReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_manual_catalog_candidates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ManualLookupInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ManualLookupInputRequest"];
+                "multipart/form-data": components["schemas"]["ManualLookupInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualCandidateOutput"];
                 };
             };
         };

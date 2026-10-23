@@ -6018,6 +6018,53 @@
                 }
             }
         },
+        "/api/catalog/admin/manual-catalog/candidates/": {
+            "post": {
+                "operationId": "catalog_admin_manual_catalog_candidates_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualLookupInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualLookupInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualLookupInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManualCandidateOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/manual-catalog/commands/{request_id}/": {
             "get": {
                 "operationId": "catalog_admin_manual_catalog_commands_retrieve",
@@ -35677,6 +35724,31 @@
                 "type": "string",
                 "description": "* `catalog` - catalog\n* `curation` - curation"
             },
+            "FieldsEnum": {
+                "enum": [
+                    "abstract",
+                    "authors",
+                    "document_type",
+                    "doi",
+                    "isbn",
+                    "isbn10",
+                    "isbn13",
+                    "issue",
+                    "journal_title",
+                    "language",
+                    "page_range",
+                    "publication_place",
+                    "publication_year",
+                    "publisher",
+                    "subtitle",
+                    "title",
+                    "translators",
+                    "version_label",
+                    "volume"
+                ],
+                "type": "string",
+                "description": "* `abstract` - abstract\n* `authors` - authors\n* `document_type` - document_type\n* `doi` - doi\n* `isbn` - isbn\n* `isbn10` - isbn10\n* `isbn13` - isbn13\n* `issue` - issue\n* `journal_title` - journal_title\n* `language` - language\n* `page_range` - page_range\n* `publication_place` - publication_place\n* `publication_year` - publication_year\n* `publisher` - publisher\n* `subtitle` - subtitle\n* `title` - title\n* `translators` - translators\n* `version_label` - version_label\n* `volume` - volume"
+            },
             "FileAdoptionInputRequest": {
                 "type": "object",
                 "properties": {
@@ -42827,6 +42899,27 @@
                     "action"
                 ]
             },
+            "ManualCandidateOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "owner_id",
+                    "results",
+                    "sources"
+                ]
+            },
             "ManualCommandRequest": {
                 "type": "object",
                 "properties": {
@@ -42863,6 +42956,12 @@
                     },
                     "form": {
                         "$ref": "#/components/schemas/ManualFormRequest"
+                    },
+                    "prefills": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrefillSelectionRequest"
+                        }
                     }
                 },
                 "required": [
@@ -42892,6 +42991,20 @@
                     "contributors",
                     "work"
                 ]
+            },
+            "ManualLookupInputRequest": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 600
+                    },
+                    "form_context": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                }
             },
             "ManualPersonRequest": {
                 "type": "object",
@@ -42973,6 +43086,9 @@
                     },
                     "manual_form": {
                         "type": "boolean"
+                    },
+                    "shared_work": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
@@ -42983,6 +43099,7 @@
                     "owner_id",
                     "request_id",
                     "session_id",
+                    "shared_work",
                     "state",
                     "version",
                     "work_id"
@@ -52386,6 +52503,28 @@
                 ],
                 "type": "string",
                 "description": "* `auto` - 自动选择\n* `original` - 强制原始 PDF\n* `ocr` - 强制 OCR PDF"
+            },
+            "PrefillSelectionRequest": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 50000
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FieldsEnum"
+                        },
+                        "maxItems": 30,
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "fields",
+                    "token"
+                ]
             },
             "PreparePublicFileInputRequest": {
                 "type": "object",

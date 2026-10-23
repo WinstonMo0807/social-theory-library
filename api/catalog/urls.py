@@ -17,6 +17,7 @@ from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
 from .content_placement_urls import urlpatterns as content_placement_urlpatterns
 from .site_commands import SiteReceiptView, SiteSourcesView
 from .field_assistant_commands import AssistantCommandView, AssistantReceiptView
+from .manual_catalog_candidates import ManualCatalogCandidatesView
 from .discovery_index_views import DiscoveryIndexView
 from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, DiscoverySearchExpandView,
     DiscoverySearchCancelView, DiscoverySearchContextView, DiscoverySearchRetryView, DiscoverySearchRemoveDocumentView, LegacyDiscoverySearchView)
@@ -359,6 +360,7 @@ urlpatterns = [
     path("admin/manual-catalog/", ManualCatalogView.as_view(), name="manual-catalog"),
     path("admin/library/works/<uuid:work_id>/edits/commands/<uuid:request_id>/", WorkWorkspaceReceiptView.as_view(), name="workspace-save-receipt"),
     path("admin/manual-catalog/commands/<uuid:request_id>/", ManualCatalogReceiptView.as_view(), name="manual-catalog-receipt"),
+    path("admin/manual-catalog/candidates/", ManualCatalogCandidatesView.as_view(), name="manual-catalog-candidates"),
     path("admin/cataloging-sessions/<uuid:session_id>/", CatalogingSessionDetailView.as_view(), name="cataloging-session-detail"),
     path("admin/cataloging-sessions/<uuid:session_id>/abandon/", CatalogingSessionAbandonView.as_view(), name="cataloging-session-abandon"),
     path("admin/cataloging-sessions/<uuid:session_id>/candidates/<uuid:candidate_id>/decision/", CatalogingCandidateDecisionView.as_view(), name="cataloging-candidate-decision"),

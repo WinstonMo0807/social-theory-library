@@ -11,7 +11,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiTypes
 
-from catalog.contracts.identifiers import normalize_doi, normalize_isbn, valid_doi, valid_isbn
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import Edition, CatalogingSession, Person
 from catalog.services.field_decisions import formal_field_values
@@ -135,30 +134,11 @@ class BibliographicCandidatesView(AdminPrivateResponseMixin, APIView):
         if data["allow_external"]:
             if not CanRunEnrichment().has_permission(request, self):
                 return Response({"detail": "当前账户没有外部资料查询权限。", "code": "external_lookup_forbidden"}, status=403)
-            from ingestion.services.metadata import resolve_doi, resolve_isbn, search_crossref_title, search_openlibrary_title
-            from ingestion.services.provider_gateway import invoke_provider, _enabled
-            isbn = normalize_isbn(context.get("isbn13") or context.get("isbn10") or context.get("isbn") or "")
-            doi = normalize_doi(context.get("doi") or "")
-            if isbn and not valid_isbn(isbn):
-                return Response({"detail": "ISBN校验未通过，请核对后查询。"}, status=400)
-            if doi and not valid_doi(doi):
-                return Response({"detail": "DOI格式无效，请核对后查询。"}, status=400)
+            from catalog.services.bibliographic_sources import lookup_sources
             item = UploadItem.objects.filter(edition=edition).order_by("-created_at").first()
-            operations = []
-            if doi:
-                operations.append(("crossref", "doi", {"doi": doi}, lambda: resolve_doi(doi)))
-            elif isbn:
-                operations.append(("openlibrary", "isbn", {"isbn": isbn}, lambda: resolve_isbn(isbn)))
-            elif title:
-                operations = [("openlibrary", "title", {"title": title}, lambda: search_openlibrary_title(title, language=str(context.get("language") or "zh"))),
-                              ("crossref", "title", {"title": title}, lambda: search_crossref_title(title))]
-            else:
-                return Response({"detail": "请先填写题名、ISBN或DOI。"}, status=400)
-            for provider, operation, query, resolver in operations:
-                if not _enabled(provider):
-                    sources.append({"key": provider, "state": "disabled", "message": "来源未启用；可继续手工填写。"})
-                    continue
-                values, warnings = invoke_provider(provider=provider, operation=f"whole_record_{operation}", query=query, resolver=resolver, upload_item=item)
+            for values, state in lookup_sources(context, title, item=item):
+                sources.append(state)
+                if not values: continue
                 # Reuse the existing candidate ledger so a later explicit
                 # workspace save retains source/evidence and undo history.
                 from catalog.services.cataloging_sessions import open_cataloging_session
@@ -180,7 +160,6 @@ class BibliographicCandidatesView(AdminPrivateResponseMixin, APIView):
                             confidence=candidate.confidence, normalized_value={"value": candidate.value})
                     stored.append(match)
                 results.extend(_group_candidates(stored))
-                sources.append({"key": provider, "state": "failed" if warnings else "ready" if values else "no_match", "message": "；".join(warnings) if warnings else "已查询免费来源。" if values else "没有匹配书目。"})
         else:
             sources.extend({"key": source, "state": "not_checked", "message": "点击查找免费来源后才会联网。"} for source in ("openlibrary", "crossref"))
         from catalog.contracts.fields import FIELD_CONTRACTS

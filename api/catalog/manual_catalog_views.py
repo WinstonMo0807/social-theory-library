@@ -25,6 +25,7 @@ from catalog.workflow_serializers import WorkSectionSerializer, BibliographySect
 from common.capabilities import Capability, has_capability
 from common.permissions import CanEditMetadata
 from ingestion.models import AuditEvent
+from catalog.manual_catalog_candidates import PrefillSelection, unpack_selections, record_prefills
 
 ACTION = "manual_catalog.command"
 
@@ -40,7 +41,9 @@ def actor_for(request, lock=False):
 
 
 def version(edition):
+    from catalog.services.workspace_edits import workspace_edit_version
     parts = [str(edition.pk), str(edition.updated_at), str(edition.work.updated_at)]
+    parts.append(workspace_edit_version(edition))
     parts.extend(f"{row.pk}:{row.updated_at}:{row.person_id}:{row.role}" for row in edition.contributions.order_by("pk"))
     return sha256("|".join(parts).encode()).hexdigest()
 
@@ -94,6 +97,7 @@ class ManualCommandSerializer(serializers.Serializer):
     acknowledge_similar = serializers.BooleanField(default=False)
     continue_files = serializers.BooleanField(default=False)
     form = ManualFormSerializer()
+    prefills = PrefillSelection(many=True, required=False, max_length=30)
 
 
 class ManualQuerySerializer(serializers.Serializer):
@@ -124,13 +128,14 @@ class ManualReceiptSerializer(serializers.Serializer):
     next_url = serializers.CharField(allow_blank=True)
     form = serializers.JSONField(allow_null=True)
     manual_form = serializers.BooleanField()
+    shared_work = serializers.BooleanField()
 
 
 def receipt(event):
     return {"owner_id": str(event.actor_id), "request_id": event.request_id,
         "state": "cancelled" if event.after.get("cancelled") else "applied",
         **{key: event.after.get(key) for key in ("session_id", "edition_id", "work_id", "form")},
-        "version": event.after.get("version", ""), "next_url": event.after.get("next_url", ""), "manual_form": event.after.get("manual_form", False)}
+        "version": event.after.get("version", ""), "next_url": event.after.get("next_url", ""), "manual_form": event.after.get("manual_form", False), "shared_work": event.after.get("shared_work", False)}
 
 
 def form_for(edition):
@@ -168,7 +173,7 @@ class ManualCatalogView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView)
         if data.get("session"):
             session = get_object_or_404(CatalogingSession.objects.select_related("edition__work"), pk=data["session"], created_by=actor, source_type="manual")
             saved = {"session_id": str(session.pk), "version": version(session.edition), "edition_id": str(session.edition_id), "work_id": str(session.work_id),
-                     "status": session.status, "form": form_for(session.edition), "editable": session.status in OPEN_STATUSES and session.status != "publishing" and session.edition.state == "draft"}
+                     "status": session.status, "form": form_for(session.edition), "shared_work": session.edition.work.editions.exclude(pk=session.edition_id).exists(), "editable": session.status in OPEN_STATUSES and session.status != "publishing" and session.edition.state == "draft"}
         return Response({"owner_id": str(actor.pk), "results": rows, "people": [{"id": str(row.pk), "name": row.preferred_name, "original_name": row.original_name, "context": " · ".join(filter(None, [row.country_region, str(row.birth_year or ""), row.authority_status]))} for row in people],
                          "count": pages.count, "page": page.number, "pages": pages.num_pages, "saved": saved})
 
@@ -184,6 +189,8 @@ class ManualCatalogView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView)
         if previous:
             if previous.after.get("fingerprint") != fingerprint: raise EditConflict("此编号已用于其他内容或已停止，请先查回原请求。")
             return Response(receipt(previous))
+        prefills = unpack_selections(data.get("prefills", []), actor)
+        if prefills and data["mode"] == "use_edition": raise ValidationError("选用已有版本不会写入预填来源，请移除本次预填后继续。")
         form = data["form"]
         session = None
         if data.get("session_id"):
@@ -230,9 +237,11 @@ class ManualCatalogView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView)
             if len({(row["person_id"], row["role"]) for row in contributors}) != len(contributors): raise ValidationError("同一责任者与角色不能重复。")
             save_workflow_section(edition, "contributors", {"contributors": contributors}, actor=actor, confirm_section=False)
             edition.refresh_from_db(); edition.work.refresh_from_db()
+        shared_work = edition.work.editions.exclude(pk=edition.pk).exists()
+        assistance = record_prefills(prefills, edition, session, actor, data["request_id"], shared_work=shared_work)
         path = f"/admin/library/works/{edition.work_id}"
         event = AuditEvent.objects.create(actor=actor, action=ACTION, object_type="CatalogingSession", object_id=str(session.pk), request_id=str(data["request_id"]),
-            after={"fingerprint": fingerprint, "session_id": str(session.pk), "edition_id": str(edition.pk), "work_id": str(edition.work_id), "version": version(edition),
+            after={"fingerprint": fingerprint, "assistance": assistance, "shared_work": shared_work, "session_id": str(session.pk), "edition_id": str(edition.pk), "work_id": str(edition.work_id), "version": version(edition),
                    "form": form_for(edition), "manual_form": data["mode"] != "use_edition", "next_url": f"{path}/files?edition={edition.pk}" if data["continue_files"] else f"{path}?edition={edition.pk}#bibliography"})
         return Response(receipt(event))
 
