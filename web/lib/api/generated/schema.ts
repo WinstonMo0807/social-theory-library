@@ -6444,6 +6444,8 @@ export interface components {
             extent?: string;
             responsibility_statement?: string;
         };
+        /** @enum {unknown} */
+        BlankEnum: "";
         /**
          * @description * `intro` - 简介
          *     * `stat` - 数据
@@ -13305,6 +13307,7 @@ export interface components {
             source: components["schemas"]["ProcessingTaskSourceEnum"];
             action: components["schemas"]["ProcessingCommandActionEnum"];
             expected_version: string;
+            page_indexes?: number[];
         };
         /**
          * @description * `create` - create
@@ -13453,6 +13456,18 @@ export interface components {
          * @enum {string}
          */
         ProcessingResultManifestKindEnum: "ocr" | "outline" | "discovery";
+        ProcessingRetrySelection: {
+            state: components["schemas"]["ProcessingRetrySelectionStateEnum"] | components["schemas"]["BlankEnum"];
+            pages: number[];
+            count: number;
+        };
+        /**
+         * @description * `active` - active
+         *     * `completed` - completed
+         *     * `continued` - continued
+         * @enum {string}
+         */
+        ProcessingRetrySelectionStateEnum: "active" | "completed" | "continued";
         ProcessingSource: {
             /** Format: uuid */
             edition_id: string;
@@ -13553,6 +13568,7 @@ export interface components {
             heartbeat_at: string | null;
             heartbeat_stale: boolean;
             recovery: components["schemas"]["ProcessingRecovery"];
+            retry_selection: components["schemas"]["ProcessingRetrySelection"];
             pause_requested: boolean;
             last_error: string;
             error_code: string;

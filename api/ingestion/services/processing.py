@@ -174,6 +174,9 @@ def resume_processing_job(job: ProcessingJob, *, actor=None) -> ProcessingJob:
     job.error_code = ""
     job.error_message = ""
     job.finished_at = None
+    selection = (job.stats or {}).get("retry_selection") or {}
+    if job.job_type == ProcessingJob.JobType.OCR and selection.get("state") == "completed":
+        job.stats = {**job.stats, "retry_selection": {**selection, "state": "continued"}}
     if actor is not None and job.created_by_id is None:
         job.created_by = actor
     job.save(
@@ -185,6 +188,7 @@ def resume_processing_job(job: ProcessingJob, *, actor=None) -> ProcessingJob:
             "error_message",
             "finished_at",
             "created_by",
+            "stats",
             "updated_at",
         ]
     )
@@ -202,7 +206,7 @@ def resume_paused_workload(job_type: str, *, actor=None, limit: int = 500) -> in
     for job in ProcessingJob.objects.filter(
         job_type=job_type,
         status=ProcessingJob.Status.PAUSED,
-    ).order_by("created_at")[:limit]:
+    ).filter(Q(stats__retry_selection__state__isnull=True) | ~Q(stats__retry_selection__state="completed")).order_by("created_at")[:limit]:
         resume_processing_job(job, actor=actor)
         queued += 1
     return queued
@@ -1144,9 +1148,11 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             raise ValueError("OCR 目标文件没有可处理的页面。")
 
         provider = str(stats.get("engine") or asset.extraction_method or "paddleocr_nas")
-        if remaining:
+        from .processing_retry import selected_ocr_remaining
+        selected_remaining = selected_ocr_remaining(stats, remaining)
+        if selected_remaining:
             batch_size = 1  # Persist each page before requesting the next one.
-            batch_indexes = remaining[:batch_size]
+            batch_indexes = selected_remaining[:batch_size]
             local_path, cleanup = materialize_field_file(asset.file)
             stats.update(total_pages=document_page_count, target_pages=target_page_count,
                          processed_pages=target_page_count-len(remaining), remaining_pages=len(remaining))
@@ -1207,6 +1213,15 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 ),
             )
             _write_ocr_checkpoint(job, progress=progress, engine=provider, stats=stats)
+
+        # A selected retry never declares the other original pages complete.
+        selection = stats.get("retry_selection") or {}
+        if selection.get("state") == "active" and not selected_ocr_remaining(stats, remaining):
+            stats["retry_selection"] = {**selection, "state": "completed", "finished_at": timezone.now().isoformat()}
+            _write_ocr_checkpoint(job, stats=stats)
+            if remaining:
+                _update_ocr_edition_if_current(job, ocr_status=OcrStatus.PENDING)
+                return _mark_job_paused(job)
 
         # OCR is cooperative. A running batch is allowed to finish and persist
         # its pages before a pause takes effect, so resume can continue from

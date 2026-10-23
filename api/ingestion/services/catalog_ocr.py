@@ -109,6 +109,11 @@ def progress_row(job, *, actor, event=None, edition=None, legacy_controls=False)
         label = "OCR 服务已接收，等待识别当前页"
     if job.status == "pending" and done:
         label = "已保存当前页，等待继续识别"
+    selection = stats.get("retry_selection") or {}
+    if selection.get("state") == "active" and job.status in {"pending", "running"}:
+        label = "正在按所选中断页重试，原任务其他页面保持当前进度"
+    elif selection.get("state") == "completed" and job.status == "paused":
+        label = "所选范围已结束，其他待处理页暂停等待继续"
     public = "本次识别不会发布未公开的书目。"
     if edition:
         from catalog.services.publication_commands import catalog_publication_state
@@ -181,7 +186,7 @@ def check_resume_source(job, *, manual_retry=False):
 
 
 @transaction.atomic
-def retry_ocr_job(job, *, actor):
+def retry_ocr_job(job, *, actor, page_indexes=None):
     """Resume one failed OCR job, preserving its identity, pages and failure audit."""
     edition_id = job.edition_id or (job.asset.edition_id if job.asset_id else None)
     if edition_id:
@@ -190,20 +195,34 @@ def retry_ocr_job(job, *, actor):
     if job.job_type != "ocr":
         raise ValueError("请选择文字识别任务。")
     if job.status in {"pending", "running"}:
+        if page_indexes is not None:
+            raise ValueError("任务已在执行，不能更换本次重试范围。")
         return job
     if job.status != "failed":
         raise ValueError("只有失败任务可以重试，请刷新任务状态。")
     check_resume_source(job, manual_retry=True)
-    before = {"status": job.status, "error_code": job.error_code, "error_message": job.error_message, "attempt": job.attempt, "processed_pages": job.stats.get("processed_pages")}
+    selection = None
+    if page_indexes is not None:
+        from .processing_retry import failed_ocr_pages
+        if (not isinstance(page_indexes, list) or not page_indexes or len(page_indexes) > 20000
+                or any(type(index) is not int or index < 1 for index in page_indexes)
+                or not set(page_indexes).issubset(failed_ocr_pages(job))):
+            raise ValueError("只能选择这个任务当前记录且尚未完成的中断页，请重新读取失败详情。")
+        selection = {"state": "active", "page_indexes": sorted(set(page_indexes))}
+    before = {"status": job.status, "error_code": job.error_code, "error_message": job.error_message, "attempt": job.attempt, "processed_pages": job.stats.get("processed_pages"), "retry_selection": job.stats.get("retry_selection")}
     job.status = "paused"
     # A deliberate administrator retry starts a new bounded attempt cycle.
     # Automatic retries still stop at max_attempts; the old cycle stays audited.
     job.attempt = 0
     job.stats = {**job.stats, "batch_session_started": False, "retry_page_batch_size": 1,
                  "manual_retry_count": int(job.stats.get("manual_retry_count") or 0) + 1}
+    if selection is not None:
+        job.stats["retry_selection"] = selection
+    elif job.stats.get("retry_selection"):
+        job.stats["retry_selection"] = {**job.stats["retry_selection"], "state": "continued"}
     job.save(update_fields=["status", "attempt", "stats", "updated_at"])
     job = resume_processing_job(job, actor=actor)
-    AuditEvent.objects.create(actor=actor, action="ocr.retry_from_checkpoint", object_type="processing_job", object_id=str(job.pk), before=before, after={"status": job.status, "task_id": job.task_id})
+    AuditEvent.objects.create(actor=actor, action="ocr.retry_from_checkpoint", object_type="processing_job", object_id=str(job.pk), before=before, after={"status": job.status, "task_id": job.task_id, "retry_selection": selection})
     return job
 
 

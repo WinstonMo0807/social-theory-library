@@ -2,6 +2,7 @@
 from .processing_commands import task_actions, task_version
 from .processing_identity import processing_edition
 from .processing_recovery import recovery_state
+from .processing_retry import failed_ocr_pages
 
 
 def workspace_task(job, row, actor):
@@ -21,7 +22,9 @@ def workspace_task(job, row, actor):
         if not ocr["can_cancel"] and row["status"] == "failed": actions = [action for action in actions if action != "cancel"]
     cover_id = edition.work.cover_rendition_id if edition else None
     counts = {key: value for key in ("target_pages", "processed_pages", "completed_pages", "total_pages", "failed_pages", "indexed_chunks", "failed_chunks", "completed_chunks", "total_chunks", "completed_units", "documents") if isinstance(value := stats.get(key), int) and not isinstance(value, bool) and value >= 0}
-    failed_pages = sorted({page for page in (stats.get("active_page_indexes") or []) if type(page) is int and page > 0}) if ocr and job.status == "failed" else []
+    failed_pages = failed_ocr_pages(job) if ocr else []
+    retry_selection = stats.get("retry_selection") or {}
+    retry_pages = [page for page in retry_selection.get("page_indexes", []) if type(page) is int and page > 0]
     unit = stats.get("active_unit") if row["job_type"] == "discovery_index" and job.status == "failed" else None
     failure_location = {key: unit.get(key) if type(unit.get(key)) is int and unit[key] >= (1 if key == "pdf_page" else 0) else None
                         for key in ("pdf_page", "start_offset", "end_offset")} if isinstance(unit, dict) else None
@@ -30,6 +33,8 @@ def workspace_task(job, row, actor):
             "retry_url": f"/admin/processing?task_id={stats['retry_replacement_id']}&task_source={row['source']}" if stats.get("retry_replacement_id") else "",
             "partial": job.status == "partial" or bool(stats.get("partial")), "heartbeat_at": heartbeat,
             "failure_pages": failed_pages[:200], "failure_page_count": len(failed_pages), "failure_location": failure_location,
+            "retry_selection": {"state": retry_selection.get("state", "") if retry_selection.get("state") in {"active", "completed", "continued"} else "",
+                                "pages": retry_pages[:200], "count": len(retry_pages)},
             "heartbeat_stale": job.status == "running" and recovery["state"] in {"recoverable", "delayed"},
             "recovery": recovery,
             "operation": "outline_rebuild" if stats.get("operation") == "outline_rebuild" else "",

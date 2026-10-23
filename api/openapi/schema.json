@@ -28855,6 +28855,11 @@
                     }
                 }
             },
+            "BlankEnum": {
+                "enum": [
+                    ""
+                ]
+            },
             "BlockTypeEnum": {
                 "enum": [
                     "intro",
@@ -51368,6 +51373,15 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 64
+                    },
+                    "page_indexes": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "minimum": 1
+                        },
+                        "maxItems": 20000,
+                        "minItems": 1
                     }
                 },
                 "required": [
@@ -51842,6 +51856,44 @@
                 "type": "string",
                 "description": "* `ocr` - ocr\n* `outline` - outline\n* `discovery` - discovery"
             },
+            "ProcessingRetrySelection": {
+                "type": "object",
+                "properties": {
+                    "state": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ProcessingRetrySelectionStateEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "pages": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "count",
+                    "pages",
+                    "state"
+                ]
+            },
+            "ProcessingRetrySelectionStateEnum": {
+                "enum": [
+                    "active",
+                    "completed",
+                    "continued"
+                ],
+                "type": "string",
+                "description": "* `active` - active\n* `completed` - completed\n* `continued` - continued"
+            },
             "ProcessingSource": {
                 "type": "object",
                 "properties": {
@@ -52177,6 +52229,9 @@
                     "recovery": {
                         "$ref": "#/components/schemas/ProcessingRecovery"
                     },
+                    "retry_selection": {
+                        "$ref": "#/components/schemas/ProcessingRetrySelection"
+                    },
                     "pause_requested": {
                         "type": "boolean"
                     },
@@ -52298,6 +52353,7 @@
                     "progress",
                     "recovery",
                     "result_urls",
+                    "retry_selection",
                     "retry_url",
                     "settings_version",
                     "source",

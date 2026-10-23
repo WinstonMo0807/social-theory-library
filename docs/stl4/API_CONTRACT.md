@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 M09所选失败页
+
+ProcessingCommand的retry可携带page_indexes，必须为processing_job和固定请求，后台限定OCR原任务中断且未完成页。不能搭配其他动作或无编号旧接口。ProcessingWorkspaceTask增加retry_selection的state/pages/count，最多展示200页；状态active/completed/continued或空。局部结束只代表选择范围处理结束，不代表原任务成功。沿333路径，无新表。
+
 ## 2026-10-24 M09指定任务恢复
 
 ProcessingWorkspaceTask增加recovery（state、last_activity_at、activity_kind、eligible_at、can_recover、notice），ProcessingCommandActionEnum增加recover。原POST processing-workspace/在200回执之外明确202恢复已受理；请求仍需request_id、job_id、source、action、expected_version与X-Editor-Owner。recover同时要求当前RETRY_JOBS与VIEW_SYSTEM_STATUS；账户、来源或活动变化拒绝后保留原任务，不能绕过固定回执使用旧无编号入口。原commands/{request_id}/查回和停止协议继续使用。

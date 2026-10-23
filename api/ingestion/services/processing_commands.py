@@ -23,10 +23,13 @@ class ProcessingCommandSerializer(serializers.Serializer):
     source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
     action = serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover"])
     expected_version = serializers.CharField(max_length=64)
+    page_indexes = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1, max_length=20000, required=False)
 
     def validate(self, value):
-        if set(self.initial_data) != set(self.fields):
+        if set(self.initial_data) - set(self.fields):
             raise serializers.ValidationError("请提交当前任务的完整操作参数。")
+        if "page_indexes" in value and (value["action"] != "retry" or value["source"] != "processing_job"):
+            raise serializers.ValidationError("仅原 OCR 任务的失败重试可以指定页序。")
         return value
 
 
@@ -97,10 +100,12 @@ def command_receipt(row):
 def run_processing_command(request, handler):
     actor = command_actor(request)
     request.user = actor
-    if request.data.get("action") == "recover" and not has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
+    if (request.data.get("action") == "recover" or request.data.get("action") == "retry" and "page_indexes" in request.data) and not has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
         raise PermissionDenied("当前账户不能从处理队列恢复任务。")
     if request.data.get("action") == "recover" and not request.data.get("request_id"):
         raise ValidationError("恢复任务必须使用当前页面的固定请求编号。")
+    if request.data.get("action") == "retry" and "page_indexes" in request.data and not request.data.get("request_id"):
+        raise ValidationError("选择失败页重试必须使用固定请求编号。")
     # OCR creation already owns its request_id contract and receipt shape.
     identifier = request.data.get("request_id") if request.data.get("action") in {"pause", "resume", "retry", "cancel", "recover"} else None
     data, signature, job = None, "", None
@@ -127,6 +132,13 @@ def run_processing_command(request, handler):
     if data is not None and data["action"] == "recover":
         from .processing_recovery import recover_processing_task
         response = Response(recover_processing_task(job, actor), status=202)
+    elif data is not None and "page_indexes" in data:
+        from .catalog_ocr import retry_ocr_job
+        try:
+            job = retry_ocr_job(job, actor=actor, page_indexes=data["page_indexes"])
+        except ValueError as exc:
+            raise EditConflict(str(exc)) from exc
+        response = Response({"job_id": str(job.pk), "status": job.status}, status=202)
     else:
         response = handler()
     if response.status_code >= 400:

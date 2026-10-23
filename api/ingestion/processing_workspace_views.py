@@ -72,6 +72,12 @@ class ProcessingRecoverySerializer(serializers.Serializer):
     notice = serializers.CharField()
 
 
+class ProcessingRetrySelectionSerializer(serializers.Serializer):
+    state = serializers.ChoiceField(choices=["active", "completed", "continued"], allow_blank=True)
+    pages = serializers.ListField(child=serializers.IntegerField())
+    count = serializers.IntegerField()
+
+
 class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
@@ -92,6 +98,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     heartbeat_at = serializers.DateTimeField(allow_null=True)
     heartbeat_stale = serializers.BooleanField()
     recovery = ProcessingRecoverySerializer()
+    retry_selection = ProcessingRetrySelectionSerializer()
     pause_requested = serializers.BooleanField()
     last_error = serializers.CharField(allow_blank=True)
     error_code = serializers.CharField(allow_blank=True)
