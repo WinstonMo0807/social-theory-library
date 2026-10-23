@@ -13895,6 +13895,9 @@ export interface components {
             /** Format: date-time */
             checked_at: string;
             logs: components["schemas"]["ProcessingLog"][];
+            /** Format: uuid */
+            batch_id: string | null;
+            batch_label: string;
         };
         ProcessingWorkspaceCommandRequest: components["schemas"]["ProcessingCommandRequest"] | components["schemas"]["ProcessingCreationRequest"];
         ProcessingWorkspaceFile: {
@@ -25904,6 +25907,7 @@ export interface operations {
     ingestion_processing_workspace_retrieve: {
         parameters: {
             query?: {
+                batch_id?: string;
                 date_from?: string;
                 date_to?: string;
                 edition_id?: string;

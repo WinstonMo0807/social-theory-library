@@ -1,28 +1,29 @@
 """Current document stages, selected in SQL before bounded page hydration."""
 from django.db.models import OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 
 from catalog.models import SemanticIndexJob
 from ingestion.models import ProcessingAttempt, ProcessingJob
 
 
 def with_document_stage_ids(queryset):
+    queryset = queryset.annotate(document_source_asset_id=Coalesce("asset__source_asset_id", "asset_id"))
     related = (
         Q(upload_item_id=OuterRef("pk"))
-        | Q(edition_id=OuterRef("edition_id"), asset__isnull=True)
-        | Q(asset_id=OuterRef("asset_id"))
-        | Q(asset__edition_id=OuterRef("edition_id"), asset__is_current=True)
+        | Q(asset_id=OuterRef("document_source_asset_id"))
+        | Q(asset__source_asset_id=OuterRef("document_source_asset_id"))
     )
     jobs = ProcessingJob.objects.filter(related).order_by("-created_at", "-id")
     semantic = SemanticIndexJob.objects.filter(
-        Q(asset_id=OuterRef("asset_id"))
-        | Q(asset__edition_id=OuterRef("edition_id"), asset__is_current=True),
+        Q(asset_id=OuterRef("document_source_asset_id"))
+        | Q(asset__source_asset_id=OuterRef("document_source_asset_id")),
         operation__in=["build", "rebuild"],
     ).order_by("-created_at", "-id")
     attempts = ProcessingAttempt.objects.filter(upload_item_id=OuterRef("pk"), invalidated_at__isnull=True).order_by("-started_at", "-id")
     return queryset.annotate(
         document_file_job_id=Subquery(jobs.filter(job_type__in=["text_extraction", "r2_staging"]).values("pk")[:1]),
         document_ocr_job_id=Subquery(jobs.filter(job_type="ocr").values("pk")[:1]),
-        document_index_job_id=Subquery(jobs.filter(job_type="semantic_index").values("pk")[:1]),
+        document_index_job_id=Subquery(jobs.filter(job_type__in=["semantic_index", "discovery_index"]).values("pk")[:1]),
         document_semantic_job_id=Subquery(semantic.values("pk")[:1]),
         document_file_attempt_id=Subquery(attempts.filter(stage__in=["validate", "asset", "text_extraction"]).values("pk")[:1]),
         document_index_attempt_id=Subquery(attempts.filter(stage__in=["search_index", "review_reindex"]).values("pk")[:1]),

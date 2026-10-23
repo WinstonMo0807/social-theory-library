@@ -4,14 +4,14 @@ from uuid import UUID
 
 from django.db.models import CharField, Count, F, Q, Value
 from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast, Replace
+from django.db.models.functions import Cast, Coalesce, Replace
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from django.utils.dateparse import parse_date
 
 from catalog.models import KnowledgePublicationEvent, RecommendationIssue, SemanticIndexJob
 from common.capabilities import Capability, has_capability
-from ingestion.models import ProcessingJob
+from ingestion.models import ProcessingJob, UploadItem
 from .processing_identity import draft_title_work_ids, processing_edition, processing_identity, task_titles
 
 
@@ -47,6 +47,17 @@ def task_querysets(params, actor):
     jobs = jobs.annotate(project_issue_key=Replace(KeyTextTransform("issue_id", "stats"), Value("-"), Value(""), output_field=CharField())).filter(
         ~Q(job_type="editorial_assistance") | Q(project_issue_key__in=visible_issue_keys))
     semantic = SemanticIndexJob.objects.all()
+    if params.get("batch_id"):
+        try:
+            batch_id = UUID(str(params["batch_id"]))
+        except (TypeError, ValueError):
+            raise ValidationError({"batch_id": "上传批次编号无效，请返回原上传批次。"})
+        # Use exact file lineage, never all files of the same edition/title.
+        sources = UploadItem.objects.filter(batch_id=batch_id, asset_id__isnull=False).order_by().annotate(
+            source_id=Coalesce("asset__source_asset_id", "asset_id")).values("source_id")
+        related = Q(asset_id__in=sources) | Q(asset__source_asset_id__in=sources)
+        jobs = jobs.filter(Q(upload_item__batch_id=batch_id) | related)
+        semantic = semantic.filter(related)
     for key, lookup in (("date_from", "created_at__date__gte"), ("date_to", "created_at__date__lte")):
         if params.get(key):
             try:

@@ -11,7 +11,7 @@ from catalog.editorial_issue_views import EditorialErrorMixin
 from catalog.editorial_read import AdminPrivateResponseMixin
 from common.capabilities import Capability, has_capability
 from common.permissions import IsLibraryStaff
-from ingestion.models import AuditEvent, ProcessingJob
+from ingestion.models import AuditEvent, ProcessingJob, UploadBatch
 from ingestion.services.processing_center import processing_task_page
 from ingestion.services.processing_commands import (ACTION, ProcessingCommandSerializer, command_actor, command_receipt, run_processing_command)
 from ingestion.services.processing_creation import ProcessingCreationSerializer, create_processing_task
@@ -198,6 +198,8 @@ class ProcessingWorkspaceSerializer(serializers.Serializer):
     job_types = ProcessingTaskTypeSerializer(many=True)
     checked_at = serializers.DateTimeField()
     logs = ProcessingLogSerializer(many=True)
+    batch_id = serializers.UUIDField(allow_null=True)
+    batch_label = serializers.CharField(allow_blank=True)
 
 
 class ProcessingReceiptSerializer(serializers.Serializer):
@@ -218,11 +220,16 @@ class ProcessingStopSerializer(serializers.Serializer):
 class ProcessingWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
 
-    @extend_schema(parameters=[OpenApiParameter(name, type=str) for name in ("q", "job_type", "status", "edition_id", "work_id", "file_id", "group_by", "task_id", "task_source", "date_from", "date_to", "page")], responses=ProcessingWorkspaceSerializer)
+    @extend_schema(parameters=[OpenApiParameter(name, type=str) for name in ("q", "job_type", "status", "edition_id", "work_id", "file_id", "batch_id", "group_by", "task_id", "task_source", "date_from", "date_to", "page")], responses=ProcessingWorkspaceSerializer)
     def get(self, request):
         if not has_capability(request.user, Capability.VIEW_SYSTEM_STATUS):
             raise PermissionDenied("当前账户不能查看完整处理队列，请从材料页查看所属版本的处理记录。")
         params = request.query_params.copy(); params["workspace"] = "1"; params["page_size"] = "20"
+        batch = None
+        if params.get("batch_id"):
+            identifier = serializers.UUIDField().run_validation(params["batch_id"])
+            # The upload workspace is owner-bound even for administrators.
+            batch = get_object_or_404(UploadBatch.objects.only("id", "label"), pk=identifier, created_by=request.user)
         if params.get("group_by") not in {None, "file", "task"}: raise ValidationError({"group_by": "请选择文件阶段或任务历史。"})
         if params.get("group_by") == "file" and not params.get("task_id"):
             from ingestion.services.processing_files import processing_file_page
@@ -236,7 +243,8 @@ class ProcessingWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, AP
                 # No raw payloads, prompts, exception traces or reader content.
                 logs.append({"id": str(row.pk), "at": row.created_at, "action": row.action,
                              "status": (row.after or {}).get("status") or ((row.after or {}).get("result") or {}).get("status") or ""})
-        payload.update(job_types=[{"value": value, "label": label} for value, label in ProcessingJob.JobType.choices], checked_at=timezone.now(), logs=logs)
+        payload.update(job_types=[{"value": value, "label": label} for value, label in ProcessingJob.JobType.choices], checked_at=timezone.now(), logs=logs,
+                       batch_id=str(batch.pk) if batch else None, batch_label=batch.label if batch else "")
         return Response(payload)
 
     @extend_schema(request=PolymorphicProxySerializer(component_name="ProcessingWorkspaceCommand", serializers=[ProcessingCommandSerializer, ProcessingCreationSerializer], resource_type_field_name=None), responses={200: ProcessingReceiptSerializer, 202: ProcessingReceiptSerializer})

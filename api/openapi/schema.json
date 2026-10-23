@@ -15387,6 +15387,13 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "batch_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "date_from",
                         "schema": {
                             "type": "string"
@@ -53485,9 +53492,19 @@
                         "items": {
                             "$ref": "#/components/schemas/ProcessingLog"
                         }
+                    },
+                    "batch_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "batch_label": {
+                        "type": "string"
                     }
                 },
                 "required": [
+                    "batch_id",
+                    "batch_label",
                     "can_manage",
                     "checked_at",
                     "count",
