@@ -29,7 +29,7 @@ from .runtime_views import (
 )
 from .research_views import (CitationAuditViewSet, CitationSourceViewSet, PersonalReadingPlanViewSet, ResearchAccountView,
                              ResearchMemoryViewSet, ResearchProjectViewSet, ResearchTurnViewSet)
-from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView
+from .privacy_views import ReaderDataOperationViewSet, ReaderPrivacyItemsView, ReaderPrivacyView, ReaderPrivacyRequestView
 from .reader_center_views import ReaderCenterView
 from .notebook_views import NotebookView, NotebookChoicesView, NotebookDetailView, NotebookProjectView, NotebookBookmarkNoteView, NotebookExportView
 from .document_preview_views import CitationPreviewFileView, CitationPreviewView
@@ -112,6 +112,7 @@ urlpatterns = [
     path("citation-sources/<uuid:pk>/preview/file/", CitationPreviewFileView.as_view(purpose="private_source"), name="citation-source-preview-file"),
     path("privacy/", ReaderPrivacyView.as_view(), name="reader-privacy"),
     path("privacy/items/", ReaderPrivacyItemsView.as_view(), name="reader-privacy-items"),
+    path("privacy/requests/<uuid:request_id>/", ReaderPrivacyRequestView.as_view(), name="reader-privacy-request"),
     path("research-account/", ResearchAccountView.as_view(), name="research-account"),
     path("", include(router.urls)),
     path("export/", ReaderDataExportView.as_view(), name="reader-data-export"),

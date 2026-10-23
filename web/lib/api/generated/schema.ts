@@ -4809,6 +4809,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/privacy/requests/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        get: operations["reading_privacy_requests_retrieve"];
+        put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        post: operations["reading_privacy_requests_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/progress/": {
         parameters: {
             query?: never;
@@ -13490,6 +13508,18 @@ export interface components {
             /** Format: uri */
             previous: string | null;
             results: components["schemas"]["PrivacyOperationOutput"][];
+        };
+        PrivacyRequestReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            /** Format: uuid */
+            operation_id: string | null;
+            kind: string;
+        };
+        PrivacyRequestStopInputRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
         PrivacySummaryOutput: {
             owner_id: string;
@@ -29331,6 +29361,54 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    reading_privacy_requests_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequestReceipt"];
+                };
+            };
+        };
+    };
+    reading_privacy_requests_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyRequestStopInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PrivacyRequestStopInputRequest"];
+                "multipart/form-data": components["schemas"]["PrivacyRequestStopInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequestReceipt"];
                 };
             };
         };

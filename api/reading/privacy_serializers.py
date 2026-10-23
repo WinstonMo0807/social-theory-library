@@ -32,6 +32,23 @@ class PrivacyCommandInput(serializers.Serializer):
     action = serializers.ChoiceField(choices=["confirm", "cancel", "retry"])
 
 
+class PrivacyRequestStopInput(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict) or set(data) != {"action"}:
+            raise serializers.ValidationError("仅可停止指定编号尚未创建的本人资料请求。")
+        return super().to_internal_value(data)
+
+
+class PrivacyRequestReceipt(serializers.Serializer):
+    owner_id = serializers.CharField()
+    request_id = serializers.UUIDField()
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
+    operation_id = serializers.UUIDField(allow_null=True)
+    kind = serializers.CharField(allow_blank=True)
+
+
 class PrivacyOperationOutput(serializers.Serializer):
     id = serializers.UUIDField()
     owner_id = serializers.CharField()

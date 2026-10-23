@@ -7,9 +7,10 @@ from uuid import uuid4
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import NotFound, Throttled, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, Throttled, ValidationError
 
 from accounts.models import ReaderProfile
+from ingestion.models import AuditEvent
 from . import research
 from .models import (Annotation, Bookmark, CitationAudit, PersonalReadingPlan, ReaderDataOperation,
                      ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic, ReadingList, SavedItem)
@@ -38,6 +39,7 @@ MODELS = {"reader_groups": ReaderGroup, "group_memberships": ReaderGroupMember, 
 MAX_ITEMS = 500
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 ACTIVE = {"queued", "running"}
+REQUEST_STOPPED = "reader_privacy_request_stopped"
 NOTICE = "仅处理本人的资料，不删除账户、登录权限或公开馆藏原件。备份按既有保留期清理；取消不会恢复已删除的项目。"
 logger = logging.getLogger(__name__)
 
@@ -63,7 +65,38 @@ def profile_data(user):
 
 
 def lock_owner(user):
-    get_user_model().objects.select_for_update().get(pk=user.pk)
+    return get_user_model().objects.select_for_update().get(pk=user.pk)
+
+
+def command_owner(user):
+    actor = lock_owner(user)
+    if not actor.is_active or actor.token_version != user.token_version:
+        raise PermissionDenied("登录账户已变化，请重新验证后操作本人资料。")
+    return actor
+
+
+def request_receipt(user, request_id):
+    identifier = research.identifier(request_id, "request_id")
+    row = ReaderDataOperation.objects.filter(user=user, request_id=identifier).first()
+    if row:
+        return {"owner_id": str(user.pk), "request_id": str(identifier), "state": "applied",
+                "operation_id": str(row.pk), "kind": row.kind}
+    if AuditEvent.objects.filter(actor=user, action=REQUEST_STOPPED, request_id=str(identifier)).exists():
+        return {"owner_id": str(user.pk), "request_id": str(identifier), "state": "cancelled", "operation_id": None, "kind": ""}
+    raise NotFound("尚未找到这次请求的回执；原请求可能仍在途中，请稍后查回或明确停止未执行请求。")
+
+
+@transaction.atomic
+def stop_request(user, request_id):
+    actor = command_owner(user)
+    identifier = research.identifier(request_id, "request_id")
+    try:
+        return request_receipt(actor, identifier)
+    except NotFound:
+        # The same owner lock serializes this marker with create_operation.
+        AuditEvent.objects.create(actor=actor, action=REQUEST_STOPPED, object_type="ReaderDataOperation",
+                                  object_id="", request_id=str(identifier))
+        return request_receipt(actor, identifier)
 
 
 def preferences(user):
@@ -85,7 +118,7 @@ def require_retention(user, key):
 
 @transaction.atomic
 def update_preferences(user, data):
-    lock_owner(user)
+    user = command_owner(user)
     profile, _ = ReaderProfile.objects.select_for_update().get_or_create(user=user)
     current = profile.reading_preferences or {}
     revision = int(current.get("privacy_revision", 1))
@@ -451,12 +484,14 @@ def schedule(row):
 
 @transaction.atomic
 def create_operation(user, data):
-    lock_owner(user)
+    user = command_owner(user)
     request_id = research.identifier(data.get("request_id"), "request_id")
     fingerprint = research.request_fingerprint(data, ("kind", "categories", "targets"))
     previous = ReaderDataOperation.objects.filter(user=user, request_id=request_id).first()
     if previous:
         return research.same_request(previous, fingerprint)
+    if AuditEvent.objects.filter(actor=user, action=REQUEST_STOPPED, request_id=str(request_id)).exists():
+        raise research.ResearchConflict("这次原请求已停止，不会再创建资料任务。请核对后重新选择。")
     kind, targets, impacts = data.get("kind"), [], {}
     categories = data.get("categories", [])
     if kind == "export":
@@ -519,7 +554,7 @@ def create_operation(user, data):
 
 @transaction.atomic
 def command_operation(user, pk, data):
-    lock_owner(user)
+    user = command_owner(user)
     row = research.owned(ReaderDataOperation, user, pk, lock=True)
     research.expect(row, data.get("expected_revision"))
     payload = research.unpack(row)

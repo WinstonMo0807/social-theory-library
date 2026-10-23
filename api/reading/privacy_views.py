@@ -1,7 +1,7 @@
 from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,7 +9,8 @@ from rest_framework.views import APIView
 from . import privacy, research
 from .models import ReaderDataOperation
 from .privacy_serializers import (PrivacyCommandInput, PrivacyItemsOutput, PrivacyOperationInput,
-    PrivacyOperationOutput, PrivacyOperationsPage, PrivacyPreferencesInput, PrivacySummaryOutput)
+    PrivacyOperationOutput, PrivacyOperationsPage, PrivacyPreferencesInput, PrivacySummaryOutput,
+    PrivacyRequestReceipt, PrivacyRequestStopInput)
 from .research_views import PrivateResponses, command
 
 
@@ -40,6 +41,25 @@ class ReaderPrivacyItemsView(PrivateResponses, APIView):
         except (TypeError, ValueError) as exc:
             raise ValidationError({"page": "页码需要正整数。"}) from exc
         return Response(privacy.list_items(request.user, request.query_params.get("category", "reading_history"), page))
+
+
+class ReaderPrivacyRequestView(PrivateResponses, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if request.headers.get("X-Reader-Owner") != str(request.user.pk):
+            raise PermissionDenied("请从当前账户的资料页面核对原请求。")
+
+    @extend_schema(responses=PrivacyRequestReceipt)
+    def get(self, request, request_id):
+        return Response(privacy.request_receipt(request.user, request_id))
+
+    @extend_schema(request=PrivacyRequestStopInput, responses=PrivacyRequestReceipt)
+    def post(self, request, request_id):
+        serializer = PrivacyRequestStopInput(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(privacy.stop_request(request.user, request_id))
 
 
 class ReaderDataOperationViewSet(PrivateResponses, viewsets.GenericViewSet):

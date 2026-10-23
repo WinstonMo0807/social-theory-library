@@ -22615,6 +22615,104 @@
                 }
             }
         },
+        "/api/reading/privacy/requests/{request_id}/": {
+            "get": {
+                "operationId": "reading_privacy_requests_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivacyRequestReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_privacy_requests_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyRequestStopInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyRequestStopInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrivacyRequestStopInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivacyRequestReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/progress/": {
             "get": {
                 "operationId": "reading_progress_list",
@@ -52230,6 +52328,47 @@
                     "next",
                     "previous",
                     "results"
+                ]
+            },
+            "PrivacyRequestReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "operation_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "kind",
+                    "operation_id",
+                    "owner_id",
+                    "request_id",
+                    "state"
+                ]
+            },
+            "PrivacyRequestStopInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
                 ]
             },
             "PrivacySummaryOutput": {

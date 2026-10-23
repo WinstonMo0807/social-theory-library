@@ -1,4 +1,5 @@
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "../api";
+import { PrivateOwnerVerificationError } from "./private-owner";
 
 export type RetentionKey = "reading_history" | "search_history" | "personal_notes" | "followed_topics" | "source_follows" | "saved_knowledge";
 export type ExportCategory = "collaboration" | "article_comments" | "research" | "notes" | "plans" | "audits" | "source_follows" | "saved_knowledge";
@@ -32,7 +33,7 @@ async function privacyOwnerRequest<T extends { owner_id: string }>(ownerId: stri
   const result = await apiRequest<T>(path, { ...options, headers, cache: "no-store",
     signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
   }, getServerSessionCredential(), false);
-  if (result.owner_id !== ownerId) throw new ApiRequestError("登录账户已变化，请重新读取当前账户的资料。", 403);
+  if (result.owner_id !== ownerId) throw new PrivateOwnerVerificationError("登录账户已变化，请重新读取当前账户的资料。", 403);
   return result;
 }
 export function savePrivacyPreferences(ownerId: string, expectedRevision: number, retention: Record<RetentionKey, boolean>, signal?: AbortSignal) {
@@ -40,6 +41,15 @@ export function savePrivacyPreferences(ownerId: string, expectedRevision: number
 }
 export function preparePrivacyOperation(ownerId: string, requestId: string, input: { kind: "export"; categories: ExportCategory[] } | { kind: "export" | "erase"; targets: PrivacyTarget[] }, signal?: AbortSignal) {
   return privacyOwnerRequest<PrivacyOperation>(ownerId, operationPath(), { method: "POST", signal, body: JSON.stringify({ request_id: requestId, ...input }) });
+}
+export type PrivacyRequestReceipt = { owner_id: string; request_id: string; state: "applied" | "cancelled"; operation_id: string | null; kind: string };
+export async function recoverPrivacyRequest(ownerId: string, requestId: string, stop = false, signal?: AbortSignal) {
+  const result = await privacyOwnerRequest<PrivacyRequestReceipt>(ownerId, `${privacyPath}requests/${encodeURIComponent(requestId)}/`,
+    { method: stop ? "POST" : "GET", signal, ...(stop ? { body: JSON.stringify({ action: "cancel_pending" }) } : {}) });
+  if (result.request_id !== requestId || !["applied", "cancelled"].includes(result.state) || (result.state === "applied" && !result.operation_id)) {
+    throw new PrivateOwnerVerificationError("原请求回执不匹配，请保留编号并重新核对。", 409);
+  }
+  return result;
 }
 export function commandPrivacyOperation(ownerId: string, id: string, expectedRevision: number, action: "confirm" | "cancel" | "retry", signal?: AbortSignal) {
   return privacyOwnerRequest<PrivacyOperation>(ownerId, `${operationPath(id)}command/`, { method: "POST", signal, body: JSON.stringify({ expected_revision: expectedRevision, action }) });
