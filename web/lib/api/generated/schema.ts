@@ -368,6 +368,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/content-placements/{page_type}/{page_id}/parent-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_content_placements_parent_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/content-placements/pages/": {
         parameters: {
             query?: never;
@@ -12874,6 +12890,26 @@ export interface components {
             previous: string | null;
             results: components["schemas"]["PlacementPageChoice"][];
         };
+        PlacementParentPreview: {
+            owner_id: string;
+            page_type: string;
+            /** Format: uuid */
+            page_id: string;
+            expected_revision: string;
+            parent_version: string;
+            /** Format: date-time */
+            checked_at: string;
+            kind: components["schemas"]["PlacementParentPreviewKindEnum"];
+            page: unknown;
+            config: unknown;
+        };
+        /**
+         * @description * `knowledge` - knowledge
+         *     * `issue` - issue
+         *     * `timeline_event` - timeline_event
+         * @enum {string}
+         */
+        PlacementParentPreviewKindEnum: "knowledge" | "issue" | "timeline_event";
         PlacementRead: {
             schema_version: number;
             page_type: string;
@@ -19169,6 +19205,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlacementHistoryPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_content_placements_parent_preview_retrieve: {
+        parameters: {
+            query: {
+                expected_revision: string;
+            };
+            header?: never;
+            path: {
+                page_id: string;
+                page_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementParentPreview"];
                 };
             };
         };

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { RefreshCw, ShieldCheck } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActionButton, AsyncStatus } from "@/components/action-feedback";
 import { DisciplinePublicView } from "@/components/public/discipline-public-view";
 import { KnowledgeNodePublicView } from "@/components/public/knowledge-node-public-view";
@@ -110,19 +110,18 @@ function previewProblem(payload:KnowledgePreviewPayload):string {
   return "";
 }
 
-export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId = "" }: { payload: KnowledgePreviewPayload; pageId: string; moduleId?: string; previewStageId?: string }) {
+export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId = "", footer = null, subdisciplineDraftFields = true }: { payload: KnowledgePreviewPayload; pageId: string; moduleId?: string; previewStageId?: string; footer?:ReactNode; subdisciplineDraftFields?:boolean }) {
   const data = payload.perspective.data,problem=previewProblem(payload);
   if(problem)return <p className="admin-list-state is-unavailable">{problem}</p>;
 
-  const footer = null;
   switch (payload.object_type) {
     case "discipline": {
-      const item = data as Discipline;
-      return <DisciplinePublicView payload={disciplinePage(item)} activeType="theory_tradition" slug={item.slug} footer={footer} />;
+      const item = data as Discipline & {page_projection?:TheoryDisciplinePage};
+      return <DisciplinePublicView payload={item.page_projection || disciplinePage(item)} activeType="theory_tradition" slug={item.slug} footer={footer} />;
     }
     case "subdiscipline": {
       const item = data as Subdiscipline;
-      return <SubdisciplinePublicView preview item={{ ...item, works: (item.works ?? []).map(adaptApiWork) }} footer={footer} />;
+      return <SubdisciplinePublicView preview={subdisciplineDraftFields} item={{ ...item, works: (item.works ?? []).map(adaptApiWork) }} footer={footer} />;
     }
     case "scholar": {
       const item = data as PublicScholarDetail;

@@ -116,6 +116,19 @@ def serialize_timeline_draft(target, revision, context):
     ).data)
 
 
+def timeline_preview_instance(target, revision):
+    """Project saved fields and associations without writing or exposing Admin DTOs."""
+    from catalog.services.knowledge_studio import KnowledgeObjectEditorAdapter
+    draft = KnowledgeObjectEditorAdapter._draft_target("timeline_event", target, revision)
+    rows = revision.materialized_preview.get("timeline_relations")
+    if rows is not None:
+        draft._prefetched_objects_cache = {
+            **getattr(draft, "_prefetched_objects_cache", {}),
+            "normalized_relations": [TimelineEventRelation(event=draft, **_model_values(row)) for row in rows],
+        }
+    return draft
+
+
 def validated_editorial_values(target, values):
     """Translate the established serializer names; stage uploads without replacing originals."""
     values = dict(values)

@@ -915,6 +915,9 @@ class KnowledgeObjectEditorAdapter:
             serialized = dict(view.public_payload(target, request))
         else:
             serialized = dict(serializer_class(target, context={}).data)
+        if object_type == "discipline":
+            from catalog.theory_system_views import TheoryDisciplineDetailView
+            serialized["page_projection"] = TheoryDisciplineDetailView.public_payload(None, target)
         if object_type == "theory":
             secondary = _theory_secondary_preview(object_id=str(target.pk), active_data=serialized)
             serialized["timeline"] = secondary["timeline"]
@@ -926,6 +929,9 @@ class KnowledgeObjectEditorAdapter:
                 revision=revision,
                 data=serialized,
             )
+        if object_type == "discipline":
+            identity = serialized["page_projection"]["discipline"]
+            identity.update({key: serialized[key] for key in identity if key in serialized})
         return serialized, serializer_class.__name__, unsupported_fields
 
     @classmethod

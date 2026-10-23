@@ -1561,6 +1561,63 @@
                 }
             }
         },
+        "/api/catalog/admin/content-placements/{page_type}/{page_id}/parent-preview/": {
+            "get": {
+                "operationId": "catalog_admin_content_placements_parent_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "expected_revision",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "page_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "page_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlacementParentPreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/content-placements/pages/": {
             "get": {
                 "operationId": "catalog_admin_content_placements_pages_retrieve",
@@ -50208,6 +50265,56 @@
                     "previous",
                     "results"
                 ]
+            },
+            "PlacementParentPreview": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "page_type": {
+                        "type": "string"
+                    },
+                    "page_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "string"
+                    },
+                    "parent_version": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/PlacementParentPreviewKindEnum"
+                    },
+                    "page": {},
+                    "config": {}
+                },
+                "required": [
+                    "checked_at",
+                    "config",
+                    "expected_revision",
+                    "kind",
+                    "owner_id",
+                    "page",
+                    "page_id",
+                    "page_type",
+                    "parent_version"
+                ]
+            },
+            "PlacementParentPreviewKindEnum": {
+                "enum": [
+                    "knowledge",
+                    "issue",
+                    "timeline_event"
+                ],
+                "type": "string",
+                "description": "* `knowledge` - knowledge\n* `issue` - issue\n* `timeline_event` - timeline_event"
             },
             "PlacementRead": {
                 "type": "object",

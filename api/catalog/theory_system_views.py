@@ -458,11 +458,16 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
             slug=slug,
             editorial_status="published",
         )
+        return Response(self.public_payload(request, discipline))
+
+    @staticmethod
+    def public_payload(request, discipline):
+        """Shared public projection; protected previews supply an in-memory draft parent."""
         nodes = _published_node_queryset().filter(
             Q(primary_discipline=discipline)
             | Q(discipline_links__discipline=discipline, discipline_links__status="published")
         ).distinct()
-        node_type = request.query_params.get("type", "theory_tradition")
+        node_type = request.query_params.get("type", "theory_tradition") if request else "theory_tradition"
         displayed = nodes.filter(node_type=node_type).order_by("sort_order", "canonical_name_zh")
         work_ids = WorkNodeRelation.objects.filter(
             node__in=nodes,
@@ -503,8 +508,7 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
             "scholars": scholar_ids.count(),
             "works": work_ids.count(),
         }
-        return Response(
-            {
+        return {
                 "discipline": DisciplineCompactSerializer(
                     discipline,
                     context={"request": request},
@@ -526,8 +530,7 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
                     many=True,
                     context={"request": request},
                 ).data,
-            }
-        )
+        }
 
 
 class NormalizedTimelineListView(TheorySystemFeatureMixin, generics.ListAPIView):

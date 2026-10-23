@@ -68,7 +68,7 @@ VERIFIED_NAMES = {
     "admin-issue-history", "admin-issue-sources", "admin-issue-suggestions", "admin-issue-presence",
     "admin-recommendation-issue-link", "admin-site-content", "admin-site-content-publish", "admin-bibliographic-candidates",
     "asset-outline", "admin-asset-outline", "admin-outline-rebuilds", "admin-outline-job", "admin-page-mapping",
-    "content-placement-pages", "content-placement-sources", "admin-content-placements", "content-placement-history", "public-content-placements",
+    "content-placement-pages", "content-placement-sources", "admin-content-placements", "content-placement-history", "public-content-placements", "content-placement-parent-preview",
     "editorial-assistance-list", "editorial-assistance-detail",
     "edition-file-submit", "work-files", "work-edition-create", "edition-file-impact-csv",
     "edition-file-request", "edition-generate-reader", "edition-file-adopt", "edition-file-content", "edition-file-rights", "edition-file-prepare-public",
