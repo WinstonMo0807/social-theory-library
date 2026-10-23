@@ -51,6 +51,7 @@ from .knowledge_history_views import KnowledgeHistoryView
 
 from .cataloging_views import CatalogingSessionListView, CatalogingSessionDetailView, CatalogingSessionAbandonView, CatalogingCandidateDecisionView, CatalogFieldContractView
 from .cataloging_views import CatalogingMetadataDecisionView, CatalogingMetadataImportView
+from .manual_catalog_views import ManualCatalogView, ManualCatalogReceiptView
 
 from .knowledge_views import (
     AboutPageBlockListView,
@@ -322,6 +323,8 @@ urlpatterns = [
     path("admin/cataloging-sessions/<uuid:session_id>/metadata/import/", CatalogingMetadataImportView.as_view(), name="cataloging-metadata-import"),
     path("admin/cataloging-sessions/<uuid:session_id>/metadata/<uuid:candidate_id>/decision/", CatalogingMetadataDecisionView.as_view(), name="cataloging-metadata-decision"),
     path("admin/cataloging-sessions/", CatalogingSessionListView.as_view(), name="cataloging-session-list"),
+    path("admin/manual-catalog/", ManualCatalogView.as_view(), name="manual-catalog"),
+    path("admin/manual-catalog/commands/<uuid:request_id>/", ManualCatalogReceiptView.as_view(), name="manual-catalog-receipt"),
     path("admin/cataloging-sessions/<uuid:session_id>/", CatalogingSessionDetailView.as_view(), name="cataloging-session-detail"),
     path("admin/cataloging-sessions/<uuid:session_id>/abandon/", CatalogingSessionAbandonView.as_view(), name="cataloging-session-abandon"),
     path("admin/cataloging-sessions/<uuid:session_id>/candidates/<uuid:candidate_id>/decision/", CatalogingCandidateDecisionView.as_view(), name="cataloging-candidate-decision"),

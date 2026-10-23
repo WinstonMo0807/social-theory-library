@@ -95,7 +95,7 @@ export type WorkflowQueuePage = CollectionPage<WorkflowQueueItem> & {
 };
 
 export const sourceLabels: Record<string, string> = { upload: "上传", manual: "手工书目", import: "导入编目", existing: "馆藏维护" };
-export const documentLabels: Record<string, string> = { book: "图书", journal_article: "期刊论文", journal_issue: "整期期刊", thesis: "学位论文", report: "报告" };
+export const documentLabels: Record<string, string> = { book: "图书", journal_article: "期刊论文", journal_issue: "整期期刊", thesis: "学位论文", report: "报告" , chapter:"论文集章节", other:"其他资料" };
 
 /** Present the server's publication result, never infer it from Edition.state. */
 export function publicationPresentation(publication?: CatalogPublication) {

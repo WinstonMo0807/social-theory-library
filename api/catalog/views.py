@@ -543,6 +543,9 @@ DOCUMENT_TYPE_ALIASES = {
     "journal_article": "journal_article",
     "thesis": "thesis",
     "report": "report",
+    "journal_issue": "journal_issue",
+    "chapter": "chapter",
+    "other": "other",
 }
 
 YEAR_FILTERS = {

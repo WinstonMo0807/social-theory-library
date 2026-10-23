@@ -116,6 +116,8 @@ TARGET_POLICIES = {
                 "isbn13",
                 "doi",
                 "series",
+                "series_number",
+                "container_title",
                 "extent",
                 "responsibility_statement",
                 "citation_data",

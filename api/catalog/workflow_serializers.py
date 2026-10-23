@@ -62,6 +62,8 @@ class BibliographySectionSerializer(WorkflowSectionSerializer):
     isbn13 = serializers.CharField(max_length=20, required=False, allow_blank=True)
     doi = serializers.CharField(max_length=255, required=False, allow_blank=True)
     series = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    series_number = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    container_title = serializers.CharField(max_length=600, required=False, allow_blank=True)
     extent = serializers.CharField(max_length=160, required=False, allow_blank=True)
     responsibility_statement = serializers.CharField(required=False, allow_blank=True)
 

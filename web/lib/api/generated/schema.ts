@@ -786,6 +786,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/manual-catalog/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_manual_catalog_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_manual_catalog_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/manual-catalog/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_manual_catalog_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_manual_catalog_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/media/": {
         parameters: {
             query?: never;
@@ -5900,6 +5932,39 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        BibliographySectionRequest: {
+            /** Format: date-time */
+            expected_updated_at?: string;
+            /** Format: date-time */
+            expected_work_updated_at?: string;
+            /** @default  */
+            note: string;
+            journal_contents?: components["schemas"]["JournalIssueArticleRowRequest"][];
+            version_label?: string;
+            /** Format: date */
+            publication_date?: string | null;
+            publication_year?: number | null;
+            publisher?: string;
+            /** Format: uuid */
+            publisher_authority_id?: string | null;
+            publication_place?: string;
+            journal_title?: string;
+            volume?: string;
+            issue?: string;
+            page_range?: string;
+            degree_institution?: string;
+            degree_type?: string;
+            report_institution?: string;
+            isbn?: string;
+            isbn10?: string;
+            isbn13?: string;
+            doi?: string;
+            series?: string;
+            series_number?: string;
+            container_title?: string;
+            extent?: string;
+            responsibility_statement?: string;
+        };
         /**
          * @description * `intro` - 简介
          *     * `stat` - 数据
@@ -6023,6 +6088,8 @@ export interface components {
             isbn13?: string;
             doi?: string;
             series?: string;
+            series_number?: string;
+            container_title?: string;
             extent?: string;
             responsibility_statement?: string;
             readonly contributors: components["schemas"]["PublicContributionSnapshot"][];
@@ -6047,6 +6114,13 @@ export interface components {
             concepts: components["schemas"]["CatalogFacet"][];
             year_histogram: components["schemas"]["CatalogYearCount"][];
         };
+        /**
+         * @description * `use_edition` - use_edition
+         *     * `new_version` - new_version
+         *     * `new_work` - new_work
+         * @enum {string}
+         */
+        CatalogIdentityModeEnum: "use_edition" | "new_version" | "new_work";
         CatalogPagination: {
             page: number;
             page_size: number;
@@ -6908,9 +6982,11 @@ export interface components {
          *     * `journal_issue` - 整期期刊
          *     * `thesis` - 学位论文
          *     * `report` - 研究报告
+         *     * `chapter` - 论文集章节
+         *     * `other` - 其他资料
          * @enum {string}
          */
-        DocumentTypeEnum: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
+        DocumentTypeEnum: "book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other";
         /**
          * @description * `review` - 发现重复时人工确认
          *     * `block_exact` - 阻止完全重复文件
@@ -6948,6 +7024,8 @@ export interface components {
             isbn13?: string;
             doi?: string;
             series?: string;
+            series_number?: string;
+            container_title?: string;
             extent?: string;
             responsibility_statement?: string;
             readonly contributors: components["schemas"]["PublicContributionSnapshot"][];
@@ -7996,7 +8074,7 @@ export interface components {
             warnings: unknown[];
         };
         IntakeChoice: {
-            mode: components["schemas"]["IntakeChoiceModeEnum"];
+            mode: components["schemas"]["CatalogIdentityModeEnum"];
             /** Format: uuid */
             edition_id?: string | null;
             candidate_version?: string;
@@ -8005,15 +8083,8 @@ export interface components {
             /** @default  */
             note: string;
         };
-        /**
-         * @description * `use_edition` - use_edition
-         *     * `new_version` - new_version
-         *     * `new_work` - new_work
-         * @enum {string}
-         */
-        IntakeChoiceModeEnum: "use_edition" | "new_version" | "new_work";
         IntakeChoiceRequest: {
-            mode: components["schemas"]["IntakeChoiceModeEnum"];
+            mode: components["schemas"]["CatalogIdentityModeEnum"];
             /** Format: uuid */
             edition_id?: string | null;
             candidate_version?: string;
@@ -8367,6 +8438,18 @@ export interface components {
             work_id: string;
             difficulty?: components["schemas"]["ReadingDifficultyEnum"];
             minutes?: number;
+        };
+        JournalIssueArticleRowRequest: {
+            /** Format: uuid */
+            id?: string | null;
+            /** Format: uuid */
+            article_work_id?: string | null;
+            title: string;
+            /** @default  */
+            author_display: string;
+            /** @default  */
+            page_range: string;
+            position?: number;
         };
         KnowledgeEntryCitation: {
             /** Format: uuid */
@@ -9173,6 +9256,76 @@ export interface components {
             operation: string;
             /** Format: date-time */
             created_at: string;
+        };
+        ManualCancelRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
+        ManualCommandRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            session_id?: string | null;
+            expected_version?: string;
+            mode: components["schemas"]["CatalogIdentityModeEnum"];
+            /** Format: uuid */
+            edition_id?: string | null;
+            candidate_version?: string;
+            /** @default false */
+            acknowledge_similar: boolean;
+            /** @default false */
+            continue_files: boolean;
+            form: components["schemas"]["ManualFormRequest"];
+        };
+        ManualFormRequest: {
+            work: components["schemas"]["WorkSectionRequest"];
+            bibliography: components["schemas"]["BibliographySectionRequest"];
+            contributors: components["schemas"]["ManualPersonRequest"][];
+        };
+        ManualPersonRequest: {
+            /** Format: uuid */
+            person_id?: string | null;
+            name: string;
+            role: components["schemas"]["ManualPersonRoleEnum"];
+            /** @default false */
+            create_new: boolean;
+        };
+        /**
+         * @description * `author` - 作者
+         *     * `chief_editor` - 主编
+         *     * `editor` - 编者
+         *     * `translator` - 译者
+         *     * `annotator` - 校注
+         *     * `photographer` - 摄影
+         *     * `advisor` - 导师
+         *     * `subject` - 研究对象
+         *     * `other` - 其他贡献者
+         * @enum {string}
+         */
+        ManualPersonRoleEnum: "author" | "chief_editor" | "editor" | "translator" | "annotator" | "photographer" | "advisor" | "subject" | "other";
+        ManualReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            /** Format: uuid */
+            session_id: string | null;
+            /** Format: uuid */
+            edition_id: string | null;
+            /** Format: uuid */
+            work_id: string | null;
+            version: string;
+            next_url: string;
+            form: unknown;
+            manual_form: boolean;
+        };
+        ManualWorkspace: {
+            owner_id: string;
+            results: unknown[];
+            people: unknown[];
+            count: number;
+            page: number;
+            pages: number;
+            saved: unknown;
         };
         MappingAsset: {
             /** Format: uuid */
@@ -16418,6 +16571,26 @@ export interface components {
             works: components["schemas"]["CatalogWork"][];
             journal_issues: components["schemas"]["WorkRelatedJournal"][];
         };
+        WorkSectionRequest: {
+            /** Format: date-time */
+            expected_updated_at?: string;
+            /** Format: date-time */
+            expected_work_updated_at?: string;
+            /** @default  */
+            note: string;
+            document_type?: components["schemas"]["DocumentTypeEnum"];
+            title?: string;
+            subtitle?: string;
+            original_title?: string;
+            uniform_title?: string;
+            language?: string;
+            original_language?: string;
+            /** Format: date */
+            first_publication_date?: string | null;
+            /** Format: uuid */
+            translation_of?: string | null;
+            abstract?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -17270,8 +17443,10 @@ export interface operations {
                  *     * `journal_issue` - 整期期刊
                  *     * `thesis` - 学位论文
                  *     * `report` - 研究报告
+                 *     * `chapter` - 论文集章节
+                 *     * `other` - 其他资料
                  */
-                document_type?: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
+                document_type?: "book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other";
                 edition_id?: string;
                 language?: string;
                 page?: number;
@@ -18164,6 +18339,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LocalServiceObservation"];
+                };
+            };
+        };
+    };
+    catalog_admin_manual_catalog_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                people?: string;
+                q?: string;
+                session?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualWorkspace"];
+                };
+            };
+        };
+    };
+    catalog_admin_manual_catalog_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ManualCommandRequest"];
+                "multipart/form-data": components["schemas"]["ManualCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_manual_catalog_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_manual_catalog_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualCancelRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ManualCancelRequest"];
+                "multipart/form-data": components["schemas"]["ManualCancelRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualReceipt"];
                 };
             };
         };
@@ -21752,8 +22024,10 @@ export interface operations {
                  *     * `journal_issue` - 整期期刊
                  *     * `thesis` - 学位论文
                  *     * `report` - 研究报告
+                 *     * `chapter` - 论文集章节
+                 *     * `other` - 其他资料
                  */
-                document_type?: "book" | "journal_article" | "journal_issue" | "report" | "thesis";
+                document_type?: "book" | "chapter" | "journal_article" | "journal_issue" | "other" | "report" | "thesis";
                 language?: string;
                 /** @description 用于排序结果的字段。 */
                 ordering?: string;

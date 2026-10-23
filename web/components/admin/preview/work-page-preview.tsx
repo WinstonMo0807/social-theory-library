@@ -45,7 +45,7 @@ function adaptPreviewWork(value: ApiWork): Work {
     versions: value.editions,
     author: authors.map((row) => row.person.preferred_name).join("、") || "作者待确认",
     year: String(value.edition?.publication_year ?? "出版年不详"),
-    kind: ({ book: "图书", journal_article: "期刊论文", journal_issue: "整期期刊", thesis: "学位论文", report: "研究报告" } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type],
+    kind: ({ book: "图书", journal_article: "期刊论文", journal_issue: "整期期刊", thesis: "学位论文", report: "研究报告", chapter: "论文集章节", other: "其他资料" } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type],
     school: value.theories[0]?.name ?? value.topics[0]?.name ?? "社会理论",
     summary: value.abstract || "简介待编辑。",
     cover: coverStyles[0],

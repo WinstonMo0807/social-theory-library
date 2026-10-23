@@ -525,6 +525,8 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             "isbn13",
             "doi",
             "series",
+            "series_number",
+            "container_title",
             "extent",
             "responsibility_statement",
             "contributors",
@@ -615,6 +617,8 @@ class EditionCompactSerializer(serializers.ModelSerializer):
             "isbn13",
             "doi",
             "series",
+            "series_number",
+            "container_title",
             "extent",
             "responsibility_statement",
         ):
@@ -622,6 +626,10 @@ class EditionCompactSerializer(serializers.ModelSerializer):
                 data[field_name] = values[field_name]
         if "publisher_authority_id" in values:
             data["publisher_authority"] = values["publisher_authority_id"]
+        # Older activated snapshots lack these fields. Never fall back to a
+        # later, unpublished catalog edit when serving that older snapshot.
+        for field_name in ("series_number", "container_title"):
+            data[field_name] = values.get(field_name, "")
         data["edition_statement"] = data.get("version_label", "")
         data["publisher_verbatim"] = data.get("publisher", "")
         data["publication_place_verbatim"] = data.get("publication_place", "")

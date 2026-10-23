@@ -117,7 +117,7 @@ def normalize_filters(raw) -> dict:
     if output.get("year_min", 1) > output.get("year_max", 3000):
         raise ValidationError({"year_max": "结束年份不能早于起始年份。"})
     source_types = output.pop("source_types", [])
-    mapping = {"book": ["book"], "journal": ["journal_article", "journal_issue"], "other": ["thesis", "report"]}
+    mapping = {"book": ["book"], "journal": ["journal_article", "journal_issue"], "other": ["thesis", "report", "chapter", "other"]}
     if any(value not in mapping for value in source_types):
         raise ValidationError({"source_type": "材料类型无效。"})
     if source_types:
@@ -125,7 +125,7 @@ def normalize_filters(raw) -> dict:
             *output.get("document_types", []), *(kind for value in source_types for kind in mapping[value])]))
     if output.get("document_types"):
         output["document_types"] = ["journal_article" if value == "article" else value for value in output["document_types"]]
-        if any(value not in {"book", "journal_article", "journal_issue", "thesis", "report"} for value in output["document_types"]):
+        if any(value not in {"book", "journal_article", "journal_issue", "thesis", "report", "chapter", "other"} for value in output["document_types"]):
             raise ValidationError({"document_type": "文献类型无效。"})
     return output
 

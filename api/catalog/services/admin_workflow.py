@@ -657,7 +657,7 @@ def _work_step(edition: Edition, catalog_state: dict[str, Any]) -> dict[str, Any
     issues = []
     if not work.title.strip():
         issues.append(_issue("title_required", "请填写作品题名。", "work", severity="blocker", field="title"))
-    if work.document_type not in {"book", "journal_article", "journal_issue", "thesis", "report"}:
+    if work.document_type not in {"book", "journal_article", "journal_issue", "thesis", "report", "chapter", "other"}:
         issues.append(
             _issue(
                 "document_type_required",

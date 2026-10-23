@@ -48,6 +48,7 @@ export const ASSISTED_WORK_FIELDS = {
 export const ASSISTED_BIBLIOGRAPHY_FIELDS = {
   version_label: "版本说明", publication_date: "出版日期", publication_year: "年份", publisher: "出版社",
   publication_place: "出版地", isbn10: "ISBN-10", isbn13: "ISBN-13", doi: "DOI", series: "丛书",
+  series_number: "丛书号", container_title: "论文集名称",
   extent: "页数与装帧说明", responsibility_statement: "贡献说明原文", journal_title: "期刊", volume: "卷", issue: "期",
   page_range: "页码范围", degree_institution: "学位授予单位", degree_type: "学位类型", report_institution: "报告机构",
 } as const;

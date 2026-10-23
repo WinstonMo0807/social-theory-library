@@ -27,6 +27,7 @@ def _snapshot_values(edition: Edition, snapshot: dict | None):
                 "publication_year": edition.publication_year,
                 "publisher": edition.publisher,
                 "journal_title": edition.journal_title,
+                "container_title": edition.container_title,
                 "publication_place": edition.publication_place,
                 "volume": edition.volume,
                 "issue": edition.issue,
@@ -104,6 +105,12 @@ def format_gbt_7714_2025(
         place = f"{primary_place}：" if primary_place else ""
         return f"{authors}. {work.get('title') or '未题名'}[R]. {place}{institution}，{year}{page}."
 
+    if work.get("document_type") == DocumentType.CHAPTER:
+        pages = _gbt_page(page_label or values.get("page_range") or "")
+        return f"{authors}. {work.get('title') or '未题名'}[M]//{values.get('container_title') or '论文集名称待补'}. {primary_place + '：' if primary_place else ''}{values.get('publisher') or '出版者不详'}，{year}{pages}."
+    if work.get("document_type") == DocumentType.OTHER:
+        return f"{authors}. {work.get('title') or '未题名'}[Z]. {values.get('publisher') or '出版者不详'}，{year}{page}."
+
     place = primary_place or "[出版地不详]"
     publisher = values.get("publisher") or "出版者不详"
     edition_statement = f" {values.get('version_label')}." if values.get("version_label") else ""
@@ -147,15 +154,11 @@ def _snapshot_csl(edition: Edition, snapshot: dict) -> dict:
     year = values.get("publication_year")
     return {
         "id": str(edition.id),
-        "type": (
-            "article-journal"
-            if work.get("document_type") == DocumentType.JOURNAL_ARTICLE
-            else "book"
-        ),
+        "type": {"book": "book", "journal_article": "article-journal", "journal_issue": "periodical", "chapter": "chapter", "thesis": "thesis", "report": "report", "other": "document"}.get(work.get("document_type"), "document"),
         "title": work.get("title") or "未题名",
         "author": authors,
         "publisher": values.get("publisher") or "",
-        "container-title": values.get("journal_title") or "",
+        "container-title": values.get("container_title") or values.get("journal_title") or "",
         "issued": {"date-parts": [[year]]} if year else {},
         "DOI": values.get("doi") or "",
     }

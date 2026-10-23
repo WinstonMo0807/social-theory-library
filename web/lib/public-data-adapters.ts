@@ -34,6 +34,8 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
       journal_issue: "整期期刊",
       thesis: "学位论文",
       report: "研究报告",
+      chapter: "论文集章节",
+      other: "其他资料",
     } satisfies Record<ApiWork["document_type"], Work["kind"]>)[value.document_type] || "文献",
     school: value.theories[0]?.name ?? value.topics[0]?.name ?? "社会理论",
     summary: value.abstract || "馆藏简介待补充。",

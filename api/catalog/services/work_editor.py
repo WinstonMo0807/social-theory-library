@@ -142,6 +142,8 @@ def _refresh_edition_metadata(edition: Edition) -> None:
             "journal_issue": "periodical",
             "thesis": "thesis",
             "report": "report",
+            "chapter": "chapter",
+            "other": "document",
         }[work.document_type],
         "title": work.title,
         "author": [{"literal": name} for name in authors],
@@ -155,7 +157,7 @@ def _refresh_edition_metadata(edition: Edition) -> None:
             {"date-parts": [[edition.publication_year]]} if edition.publication_year else {}
         ),
         "publisher": edition.publisher,
-        "container-title": edition.journal_title,
+        "container-title": edition.container_title or edition.journal_title,
         "volume": edition.volume,
         "issue": edition.issue,
         "page": edition.page_range,
@@ -673,7 +675,10 @@ def save_workflow_section(
         .select_related("work")
         .get(pk=edition.pk)
     )
-    if not publishing_revision and edition.work.editions.filter(state=PublicationState.PUBLISHED).exists():
+    shared_work_change = step_key in {"work", "classification", "knowledge", "curation"}
+    if not publishing_revision and edition.work.editions.filter(state=PublicationState.PUBLISHED).exists() and (
+        shared_work_change or edition.state != PublicationState.DRAFT or edition.active_catalog_revision_id or edition.first_published_at
+    ):
         raise WorkflowEditError("已发布作品请先保存编辑草稿，再正式发布修改。")
     values = dict(values)
     expected_updated_at = values.pop("expected_updated_at", None)

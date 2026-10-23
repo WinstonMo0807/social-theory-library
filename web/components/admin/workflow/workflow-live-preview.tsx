@@ -34,7 +34,7 @@ export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, re
     originalLanguage: asString(drafts.work.original_language), firstPublicationDate: asString(drafts.work.first_publication_date),
     author: authorRows.map(row => asString(row.display_name || row.name)).filter(Boolean).join("、") || "作者待确认",
     year: asString(drafts.bibliography.publication_year) || String(drafts.bibliography.publication_year || "年份待补"),
-    kind: ({ book:"图书", journal_article:"期刊论文", journal_issue:"整期期刊", thesis:"学位论文", report:"研究报告" } as Record<string, Work["kind"]>)[documentType] || "图书",
+    kind: ({ book:"图书", journal_article:"期刊论文", journal_issue:"整期期刊", thesis:"学位论文", report:"研究报告" , chapter:"论文集章节", other:"其他资料" } as Record<string, Work["kind"]>)[documentType] || "图书",
     school: asArray(drafts.classification.primary_disciplines).map(asRecord).map(row => asString(row.name)).join("、"),
     summary: asString(drafts.work.abstract), cover:"paper", coverImage:cover || undefined, coverAlt:title,
     pages: Number(currentAsset?.page_count || drafts.reader.page_count || 0), language:asString(drafts.work.language),

@@ -16,7 +16,7 @@ import styles from "./intake-confirmation.module.css";
 
 type Candidate={id:string;work_id:string;version:string;title:string;document_type:string;authors:string[];year:number|null;publisher:string;language:string;version_label:string;isbn:string;doi:string;state:string;exact_duplicate:boolean;reasons:string[];cover_url:string;edit_url:string};
 type State={owner_id:string;version:string;batch_id:string;preview_url:string;draft:IntakeChoice|null;candidates:Candidate[];count:number;page:number;pages:number;busy:boolean;confirmed:boolean;next_url:string;item:{id:string;source_filename:string;byte_size:number;status:string;stage_progress:number;edition:string|null;error_message:string;recognized_metadata:Record<string,unknown>;preflight_summary:Record<string,unknown>;review_data:{title:string;document_type:string;authors:string[];publication_year:number|null;publisher:string;language:string}|null}};
-const kinds:Record<string,string>={book:"图书",journal_article:"期刊论文",journal_issue:"整期期刊",thesis:"学位论文",report:"研究报告"};
+const kinds:Record<string,string>={book:"图书",journal_article:"期刊论文",journal_issue:"整期期刊",thesis:"学位论文",report:"研究报告", chapter:"论文集章节", other:"其他资料" };
 const text=(value:unknown)=>Array.isArray(value)?value.map(String).join("、"):value===undefined||value===null?"":String(value);
 
 function IntakePdf({owner,itemId,path}:{owner:string;itemId:string;path:string}){

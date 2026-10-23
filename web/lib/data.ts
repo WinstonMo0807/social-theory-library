@@ -65,7 +65,7 @@ export type Work = {
   relatedWorks?: Work[];
   author: string;
   year: string;
-  kind: "图书" | "期刊论文" | "整期期刊" | "学位论文" | "研究报告" | "文献";
+  kind: "图书" | "期刊论文" | "整期期刊" | "学位论文" | "研究报告" | "论文集章节" | "其他资料" | "文献";
   school: string;
   summary: string;
   cover: "dark" | "paper" | "cream" | "line";

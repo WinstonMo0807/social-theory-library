@@ -68,7 +68,7 @@ def edition_inventory():
     contributors = Contribution.objects.filter(edition_id=OuterRef("pk"), role="author", approved=True)
     queryset = queryset.annotate(q_authors=Exists(contributors))
     incomplete = Q(q_conflict=True)
-    for document_type in ("book", "journal_article", "journal_issue", "thesis", "report"):
+    for document_type in ("book", "journal_article", "journal_issue", "thesis", "report", "chapter", "other"):
         for field in required_fields(document_type, has_document=False):
             if field == "file":
                 continue

@@ -1641,12 +1641,14 @@
                                 "journal_article",
                                 "journal_issue",
                                 "thesis",
-                                "report"
+                                "report",
+                                "chapter",
+                                "other"
                             ],
                             "type": "string",
                             "minLength": 1
                         },
-                        "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告"
+                        "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告\n* `chapter` - 论文集章节\n* `other` - 其他资料"
                     },
                     {
                         "in": "query",
@@ -3520,6 +3522,211 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/LocalServiceObservation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/manual-catalog/": {
+            "get": {
+                "operationId": "catalog_admin_manual_catalog_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "people",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "session",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManualWorkspace"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_manual_catalog_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManualReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/manual-catalog/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_manual_catalog_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManualReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_manual_catalog_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualCancelRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualCancelRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualCancelRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManualReceipt"
                                 }
                             }
                         },
@@ -11273,13 +11480,15 @@
                             "type": "string",
                             "enum": [
                                 "book",
+                                "chapter",
                                 "journal_article",
                                 "journal_issue",
+                                "other",
                                 "report",
                                 "thesis"
                             ]
                         },
-                        "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告"
+                        "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告\n* `chapter` - 论文集章节\n* `other` - 其他资料"
                     },
                     {
                         "in": "query",
@@ -26233,6 +26442,121 @@
                     "edition_id"
                 ]
             },
+            "BibliographySectionRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expected_work_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    },
+                    "journal_contents": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/JournalIssueArticleRowRequest"
+                        }
+                    },
+                    "version_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "publication_year": {
+                        "type": "integer",
+                        "maximum": 2100,
+                        "minimum": 1000,
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "publisher_authority_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "publication_place": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "journal_title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "volume": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "issue": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "page_range": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "degree_institution": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "degree_type": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "report_institution": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "isbn10": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "isbn13": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "doi": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "series": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "series_number": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "container_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "extent": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "responsibility_statement": {
+                        "type": "string"
+                    }
+                }
+            },
             "BlockTypeEnum": {
                 "enum": [
                     "intro",
@@ -26641,6 +26965,14 @@
                         "type": "string",
                         "maxLength": 300
                     },
+                    "series_number": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "container_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
                     "extent": {
                         "type": "string",
                         "maxLength": 160
@@ -26778,6 +27110,15 @@
                     "year_histogram",
                     "years"
                 ]
+            },
+            "CatalogIdentityModeEnum": {
+                "enum": [
+                    "use_edition",
+                    "new_version",
+                    "new_work"
+                ],
+                "type": "string",
+                "description": "* `use_edition` - use_edition\n* `new_version` - new_version\n* `new_work` - new_work"
             },
             "CatalogPagination": {
                 "type": "object",
@@ -29574,10 +29915,12 @@
                     "journal_article",
                     "journal_issue",
                     "thesis",
-                    "report"
+                    "report",
+                    "chapter",
+                    "other"
                 ],
                 "type": "string",
-                "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告"
+                "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告\n* `chapter` - 论文集章节\n* `other` - 其他资料"
             },
             "DuplicatePolicyEnum": {
                 "enum": [
@@ -29709,6 +30052,14 @@
                     "series": {
                         "type": "string",
                         "maxLength": 300
+                    },
+                    "series_number": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "container_title": {
+                        "type": "string",
+                        "maxLength": 600
                     },
                     "extent": {
                         "type": "string",
@@ -33311,7 +33662,7 @@
                 "type": "object",
                 "properties": {
                     "mode": {
-                        "$ref": "#/components/schemas/IntakeChoiceModeEnum"
+                        "$ref": "#/components/schemas/CatalogIdentityModeEnum"
                     },
                     "edition_id": {
                         "type": "string",
@@ -33340,20 +33691,11 @@
                     "title"
                 ]
             },
-            "IntakeChoiceModeEnum": {
-                "enum": [
-                    "use_edition",
-                    "new_version",
-                    "new_work"
-                ],
-                "type": "string",
-                "description": "* `use_edition` - use_edition\n* `new_version` - new_version\n* `new_work` - new_work"
-            },
             "IntakeChoiceRequest": {
                 "type": "object",
                 "properties": {
                     "mode": {
-                        "$ref": "#/components/schemas/IntakeChoiceModeEnum"
+                        "$ref": "#/components/schemas/CatalogIdentityModeEnum"
                     },
                     "edition_id": {
                         "type": "string",
@@ -34453,6 +34795,43 @@
                 },
                 "required": [
                     "work_id"
+                ]
+            },
+            "JournalIssueArticleRowRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "article_work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 600
+                    },
+                    "author_display": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 600
+                    },
+                    "page_range": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 80
+                    },
+                    "position": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "title"
                 ]
             },
             "KnowledgeEntryCitation": {
@@ -37263,6 +37642,215 @@
                     "request_id",
                     "user_id",
                     "version"
+                ]
+            },
+            "ManualCancelRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "ManualCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "expected_version": {
+                        "type": "string"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/CatalogIdentityModeEnum"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "candidate_version": {
+                        "type": "string"
+                    },
+                    "acknowledge_similar": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "continue_files": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "form": {
+                        "$ref": "#/components/schemas/ManualFormRequest"
+                    }
+                },
+                "required": [
+                    "form",
+                    "mode",
+                    "request_id"
+                ]
+            },
+            "ManualFormRequest": {
+                "type": "object",
+                "properties": {
+                    "work": {
+                        "$ref": "#/components/schemas/WorkSectionRequest"
+                    },
+                    "bibliography": {
+                        "$ref": "#/components/schemas/BibliographySectionRequest"
+                    },
+                    "contributors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ManualPersonRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "bibliography",
+                    "contributors",
+                    "work"
+                ]
+            },
+            "ManualPersonRequest": {
+                "type": "object",
+                "properties": {
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/ManualPersonRoleEnum"
+                    },
+                    "create_new": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "name",
+                    "role"
+                ]
+            },
+            "ManualPersonRoleEnum": {
+                "enum": [
+                    "author",
+                    "chief_editor",
+                    "editor",
+                    "translator",
+                    "annotator",
+                    "photographer",
+                    "advisor",
+                    "subject",
+                    "other"
+                ],
+                "type": "string",
+                "description": "* `author` - 作者\n* `chief_editor` - 主编\n* `editor` - 编者\n* `translator` - 译者\n* `annotator` - 校注\n* `photographer` - 摄影\n* `advisor` - 导师\n* `subject` - 研究对象\n* `other` - 其他贡献者"
+            },
+            "ManualReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "form": {
+                        "nullable": true
+                    },
+                    "manual_form": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "form",
+                    "manual_form",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "session_id",
+                    "state",
+                    "version",
+                    "work_id"
+                ]
+            },
+            "ManualWorkspace": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "people": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "saved": {
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "count",
+                    "owner_id",
+                    "page",
+                    "pages",
+                    "people",
+                    "results",
+                    "saved"
                 ]
             },
             "MappingAsset": {
@@ -61540,6 +62128,66 @@
                     "topics",
                     "works"
                 ]
+            },
+            "WorkSectionRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expected_work_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 600
+                    },
+                    "subtitle": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "original_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "uniform_title": {
+                        "type": "string",
+                        "maxLength": 600
+                    },
+                    "language": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16
+                    },
+                    "original_language": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "first_publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "translation_of": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "abstract": {
+                        "type": "string"
+                    }
+                }
             }
         },
         "securitySchemes": {

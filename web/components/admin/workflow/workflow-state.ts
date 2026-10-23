@@ -102,6 +102,8 @@ export function nextWorkflowStep(
 
 export function bibliographyFields(documentType: string): readonly string[] {
   const common = ["publication_date", "publication_year"] as const;
+  if (documentType === "chapter") return [...common, "container_title", "publisher", "publication_place", "page_range", "doi", "isbn10", "isbn13", "version_label"];
+  if (documentType === "other") return [...common, "publisher", "report_institution", "publication_place", "doi", "extent"];
   if (documentType === "journal_article") {
     return [...common, "journal_title", "volume", "issue", "page_range", "doi"];
   }
@@ -121,7 +123,7 @@ export function bibliographyFields(documentType: string): readonly string[] {
     "publication_place",
     "isbn10",
     "isbn13",
-    "series",
+    "series", "series_number",
     "extent",
     "responsibility_statement",
   ];

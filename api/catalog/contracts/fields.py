@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, replace
 from catalog.contracts.projections import catalog_contract_projection_impact
 
 
-DOCUMENT_TYPES = ("book", "journal_article", "journal_issue", "thesis", "report")
+DOCUMENT_TYPES = ("book", "journal_article", "journal_issue", "thesis", "report", "chapter", "other")
 _IDENTITY = ("title", "authors", "isbn10", "isbn13", "publisher", "publication_year")
 
 
@@ -81,6 +81,8 @@ FIELDS = (
     _edition("isbn", "ISBN 兼容值", data_type="identifier", normalizer="isbn", validator="isbn", publication_rules=("compatibility_alias",)),
     _edition("responsibility_statement", "原书责任说明", data_type="text", display="textarea"),
     _edition("series", "丛书"),
+    _edition("series_number", "丛书号"),
+    _edition("container_title", "论文集名称", required_for=("chapter",)),
     _edition("extent", "页数或篇幅"),
     _edition("journal_title", "期刊", required_for=("journal_article", "journal_issue")),
     _edition("volume", "卷", required_for=("journal_issue",)),

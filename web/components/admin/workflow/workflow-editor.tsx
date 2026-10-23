@@ -86,6 +86,8 @@ const documentTypeOptions = [
   { value: "journal_issue", label: "整期期刊" },
   { value: "thesis", label: "学位论文" },
   { value: "report", label: "研究报告" },
+  { value: "chapter", label: "论文集章节" },
+  { value: "other", label: "其他资料" },
 ] as const;
 
 const languageOptions = [
@@ -442,7 +444,7 @@ function BibliographyBody(props: BodyProps) {
       {render("publication_date", issue ? "本期出版日期" : "本版本出版日期", { type: "date" })}
       {render("publication_year", issue ? "本期年份" : "本版本出版年份", { type: "number" })}
       {fields.has("publisher") ? <div><CanonicalField name="publisher" label="出版社" value={fieldValue(draft, "publisher")} onChange={(next) => { value("publisher", next); update("bibliography", "publisher_authority_id", null); }} disabled={!canEdit} /><WorkflowFieldAssistant {...props} fieldName="publisher" query={fieldValue(draft, "publisher")} /></div> : null}
-      {render("publication_place", "出版地")}{render("isbn10", "ISBN-10")}{render("isbn13", "ISBN-13")}{render("series", "丛书")}
+      {render("publication_place", "出版地")}{render("isbn10", "ISBN-10")}{render("isbn13", "ISBN-13")}{render("series", "丛书")}{render("series_number", "丛书号")}{render("container_title", "论文集名称", { required: documentType === "chapter" })}
       {render("journal_title", "期刊", { required: ["journal_article", "journal_issue"].includes(documentType) })}
       {render("volume", "卷", { required: issue })}{render("issue", "期", { required: issue })}
       {render("page_range", "页码范围")}{render("doi", "DOI")}

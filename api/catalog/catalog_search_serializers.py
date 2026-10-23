@@ -13,7 +13,7 @@ from .services.publication_eligibility import active_catalog_snapshot
 class CatalogSearchQuery(serializers.Serializer):
     q = serializers.CharField(max_length=500, allow_blank=True, default="")
     match = serializers.ListField(child=serializers.ChoiceField(choices=["title", "author", "keyword", "abstract", "fulltext"]), min_length=1, max_length=5, default=["title", "author", "keyword", "abstract"])
-    document_type = serializers.ListField(child=serializers.ChoiceField(choices=["book", "journal_article", "journal_issue", "article", "thesis", "report"]), max_length=10, default=list)
+    document_type = serializers.ListField(child=serializers.ChoiceField(choices=["book", "journal_article", "journal_issue", "article", "thesis", "report", "chapter", "other"]), max_length=10, default=list)
     author = serializers.ListField(child=serializers.CharField(max_length=180), max_length=30, default=list)
     language = serializers.ListField(child=serializers.CharField(max_length=32), max_length=30, default=list)
     theory = serializers.ListField(child=serializers.CharField(max_length=180), max_length=30, default=list)

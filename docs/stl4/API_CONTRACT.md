@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M04手工书目
+
+保留303，manual-catalog GET/POST与commands/{request_id} GET/POST新增2，总305。严格owner/权限/版本/请求；新建作品、新版、直接使用原版分开。DocumentType扩展章节/其他，公开版本新增论文集名/丛书号且只取激活快照，0078未执行。
+
 ## 2026-10-23 M03收件身份
 
 保留301，新增items/{item_id}/confirmation GET/POST和commands/{request_id} GET/POST，共303。owner、EDIT_METADATA、目标版本、固定请求、原文权限与未发布状态；不增加迁移。

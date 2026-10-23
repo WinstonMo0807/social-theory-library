@@ -1,4 +1,4 @@
-from catalog.contracts.fields import FIELD_CONTRACTS
+from catalog.contracts.fields import FIELD_CONTRACTS, DOCUMENT_TYPES
 from catalog.contracts.identifiers import normalize_doi, normalize_isbn, valid_doi, valid_isbn
 
 
@@ -18,7 +18,7 @@ VALIDATORS = {
     "isbn13": lambda value: valid_isbn(value, 13),
     "isbn": valid_isbn,
     "doi": valid_doi,
-    "document_type": lambda value: value in {"book", "journal_article", "journal_issue", "thesis", "report"},
+    "document_type": lambda value: value in DOCUMENT_TYPES,
     "publication_mode": lambda value: value in {"document", "bibliographic"},
     "publication_year": lambda value: value in {None, ""} or (isinstance(value, int) and 1000 <= value <= 2100),
 }

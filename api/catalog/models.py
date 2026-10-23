@@ -15,6 +15,8 @@ class DocumentType(models.TextChoices):
     JOURNAL_ISSUE = "journal_issue", "整期期刊"
     THESIS = "thesis", "学位论文"
     REPORT = "report", "研究报告"
+    CHAPTER = "chapter", "论文集章节"
+    OTHER = "other", "其他资料"
 
 
 class PublicationState(models.TextChoices):
@@ -205,6 +207,8 @@ class Edition(UUIDTimeStampedModel):
     isbn13 = models.CharField(max_length=20, blank=True, db_index=True)
     doi = models.CharField(max_length=255, blank=True, db_index=True)
     series = models.CharField(max_length=300, blank=True)
+    series_number = models.CharField(max_length=80, blank=True)
+    container_title = models.CharField(max_length=600, blank=True)
     extent = models.CharField(max_length=160, blank=True)
     responsibility_statement = models.TextField(blank=True)
     metadata_confidence = models.FloatField(default=0)
