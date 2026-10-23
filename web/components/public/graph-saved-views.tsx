@@ -10,7 +10,7 @@ import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { usePublicSession } from "@/components/public-session-provider";
 import { Dialog } from "@/components/ui/dialog";
 import { findGraphViewReceipt, loadGraphView, loadGraphViews, writeGraphView, type GraphViewCommand, type GraphViewPage, type GraphViewResponse } from "@/lib/api/graph-views.client";
-import type { GraphViewState } from "@/lib/api/graph.types";
+import { graphHref, graphParamsForView, type GraphViewState } from "@/lib/api/graph.types";
 import styles from "./theory-graph.module.css";
 
 type PendingCommand = { owner: string; command: GraphViewCommand; dispatched: boolean };
@@ -128,7 +128,7 @@ function SavedViews({ view, title: defaultTitle, onRestore, disabled, owner, rea
   }, [initialSavedView, memoryRef, owner, restore, unknown]);
 
   return <>
-    {!owner && ready ? <Link className={styles.outlineButton} href={`/login?${new URLSearchParams({ next: `/theories/graph${initialSavedView ? `?saved_view=${encodeURIComponent(initialSavedView)}` : ""}` })}`}><Bookmark size={15} />{initialSavedView ? "登录后恢复本人视图" : "保存当前视图"}</Link> : <button className={styles.outlineButton} type="button" disabled={!ready || !owner} onClick={() => { setOpen(true); if (!list) void readPage(1); }}><Bookmark size={15} />{unknown ? "核对未确认的保存" : "保存当前视图"}</button>}
+    {!owner && ready ? <Link className={styles.outlineButton} href={`/login?${new URLSearchParams({ next: initialSavedView ? `/theories/graph?saved_view=${encodeURIComponent(initialSavedView)}` : view ? graphHref(graphParamsForView(view)) : "/theories/graph" })}`}><Bookmark size={15} />{initialSavedView ? "登录后恢复本人视图" : "保存当前视图"}</Link> : <button className={styles.outlineButton} type="button" disabled={!ready || !owner} onClick={() => { setOpen(true); if (!list) void readPage(1); }}><Bookmark size={15} />{unknown ? "核对未确认的保存" : "保存当前视图"}</button>}
     {unknown && !open ? <p role="alert" className={styles.status}>原操作尚未核对，本页仍保留查回入口；请核对后再离开。</p> : null}
     <Dialog open={open} onRequestClose={() => { if (!busy) setOpen(false); }} className={styles.savedDialog} aria-labelledby="saved-graph-title">
       <header><h2 id="saved-graph-title">我的图谱视图</h2><button type="button" aria-label="关闭保存视图" disabled={busy} onClick={() => setOpen(false)}><X size={19} /></button></header>

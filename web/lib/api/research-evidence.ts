@@ -1,4 +1,5 @@
 import type { EvidenceReference, QueryScope, ResolvedEvidence } from "./research.client";
+import { readerContextHref } from "./research-navigation";
 
 /** Keep distinct passages on the same page distinct; use the server's composite identity. */
 export function researchEvidenceKey(reference: ResolvedEvidence): string {
@@ -19,7 +20,7 @@ export function researchScopeLabel(scope?: QueryScope): string {
   return "全馆可访问文献";
 }
 
-export function researchReaderHref(reference: ResolvedEvidence): string {
+export function researchReaderHref(reference: ResolvedEvidence, context?: { projectId?: string; turnId?: string; returnTo?: string }): string {
   const url = reference.reader_url || "";
-  return reference.source_status === "available" && url.startsWith("/") && !url.startsWith("//") && !url.includes("\\") ? url : "";
+  return reference.source_status === "available" ? readerContextHref(url, { ...context, ...(context?.projectId || context?.turnId ? { referenceId: reference.reference_id } : {}) }) : "";
 }

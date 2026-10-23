@@ -22,5 +22,5 @@ export default async function ReadingPathPage({ params, searchParams }: Props) {
     if (failure instanceof ServerApiError && failure.status === 404) notFound();
   }
   if (!path) return <><main className="page-shell"><h1>阅读路径暂时无法读取</h1><p>当前无法核对公开路径，请稍后重新打开。本人已有进度与笔记不会因此删除。</p><Link href={`/theories/reading-paths/${encodeURIComponent(slug)}`}>重新读取路径</Link><p><Link href="/theories/reading-paths">返回阅读路径列表</Link></p></main><SiteFooter /></>;
-  return <ReadingPathPublicView path={path} footer={<><PublishedPlacements type="reading_path" id={path.id}/><SiteFooter /></>} initialCopy={first(search.action) === "copy-plan"} initialRevision={first(search.revision)} initialPlanId={first(search.copy)} />;
+  return <ReadingPathPublicView path={path} footer={<><PublishedPlacements type="reading_path" id={path.id}/><SiteFooter /></>} initialCopy={first(search.action) === "copy-plan"} initialRevision={first(search.revision)} initialPlanId={first(search.copy)} initialStage={first(search.stage)} />;
 }

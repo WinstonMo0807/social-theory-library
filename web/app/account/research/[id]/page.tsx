@@ -4,7 +4,8 @@ import { ResearchSessionDetail } from "@/components/research/research-session-de
 
 export const metadata: Metadata = { title: "研究会话" };
 
-export default async function ResearchDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  return <><ResearchSessionDetail id={id} /><SiteFooter /></>;
+export default async function ResearchDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ turn?: string | string[] }> }) {
+  const [{ id }, search] = await Promise.all([params, searchParams]);
+  const initialTurn = typeof search.turn === "string" ? search.turn : "";
+  return <><ResearchSessionDetail id={id} initialTurn={initialTurn} /><SiteFooter /></>;
 }

@@ -44,7 +44,9 @@ export function useReaderResearch({ assetId, revisionId, requestedRevisionId, pr
         const project = await readResearchRecord<ProjectData>("research-projects", projectId, request.signal);
         references = project.data.selections;
       }
-      const identities = await Promise.all(references.map(evidenceIdentity));
+      // Resolved server references already carry the canonical composite digest;
+      // use it on HTTP intranet pages where WebCrypto is unavailable.
+      const identities = await Promise.all(references.map(reference => reference.reference_id || evidenceIdentity(reference)));
       const reference = references[identities.indexOf(referenceId)];
       if (!reference) throw new Error("这条材料已从当前研究移除，请返回研究核对。");
       const anchors = readerResearchAnchors(reference, assetId, revisionId);

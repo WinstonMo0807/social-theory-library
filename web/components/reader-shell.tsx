@@ -389,7 +389,7 @@ function ReaderWorkspace({
               router.push(researchReturn && version.readable_asset ? `${url}?${new URLSearchParams({ return_to: researchReturn })}` : url);
             }}>{versions.map(version => <option value={version.id} key={version.id}>{version.id === work.editionId ? "当前 · " : ""}{[version.edition_statement || version.language, version.publication_year, version.publisher].filter(Boolean).join(" · ") || "未标注版本"}{!version.readable_asset ? "（查看详情）" : ""}</option>)}</select></label> : null}
           </div>
-          <div className="reader-heading-actions"><Link className="button secondary" href={detailHref}><ChevronLeft size={15} />返回文献</Link>{researchReturn ? <Link className="button secondary" href={researchReturn}>{researchReturn.startsWith("/recommendations/") ? "返回展项" : researchReturn.startsWith("/explore/") ? "返回候选位置" : "返回研究"}</Link> : null}<button className="button" type="button" onClick={() => sharedSource()}><FolderPlus size={15} />加入研究</button></div>
+          <div className="reader-heading-actions"><Link className="button secondary" href={detailHref}><ChevronLeft size={15} />返回文献</Link>{researchReturn ? <Link className="button secondary" href={researchReturn}>{researchReturn.startsWith("/recommendations/") ? "返回展项" : researchReturn.startsWith("/explore/") ? "返回候选位置" : researchReturn.startsWith("/topics/") ? "返回主题" : researchReturn.startsWith("/theories/reading-paths/") ? "返回阅读路径" : "返回研究"}</Link> : null}<button className="button" type="button" onClick={() => sharedSource()}><FolderPlus size={15} />加入研究</button></div>
         </div>
       </div>}
 

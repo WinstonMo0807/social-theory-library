@@ -3,7 +3,7 @@ import test from "node:test";
 import { createHash } from "node:crypto";
 import { nextCollectionPath, readAllPages } from "../lib/api/read-all-pages.ts";
 import { prepareOutline, filterOutline, outlinePosition } from "../lib/api/document-outline.ts";
-import { availableEvidenceAnchors, evidenceIdentity, researchReaderHref, safeResearchReturn } from "../lib/api/research-navigation.ts";
+import { availableEvidenceAnchors, evidenceIdentity, researchReaderHref, safeResearchReturn, readerContextHref } from "../lib/api/research-navigation.ts";
 import { passageReference, changeResearchSelection, createCitationAudit, readCitationOCR, commandReadingPlan, updateResearchSubclaims } from "../lib/api/research.client.ts";
 import { prepareLocalResearchTransfer, readLocalResearchSnapshot } from "../lib/api/local-research-transfer.ts";
 import { adoptOutline, changePlacements, actOnEditorialAssistance } from "../lib/api/curation-workspace.client.ts";
@@ -140,4 +140,16 @@ test("citation upload uses multipart and keeps the explicit idempotency key", as
     assert.equal(sent.options.body.get("file").name, "manuscript.docx");
     assert.equal(sent.options.body.get("project_id"), "project");
   } finally { globalThis.fetch = original; }
+});
+
+test("public and private reading return paths keep their scope without accepting external destinations", () => {
+  for (const path of ["/topics/agriculture/evidence?page=2", "/theories/reading-paths/classics?stage=second", "/account/plans/plan"]) {
+    assert.equal(safeResearchReturn(path), path);
+    const url = new URL(readerContextHref("/reader/asset?page=8&revision=rev", { returnTo: path }), "https://library.invalid");
+    assert.equal(url.searchParams.get("return_to"), path);
+    assert.equal(url.searchParams.get("page"), "8");
+  }
+  for (const path of ["//outside.invalid", "/admin/users", "/topics/../../admin", "/theories/graph"]) assert.equal(safeResearchReturn(path), "");
+  assert.equal(readerContextHref("https://outside.invalid/reader/asset", { returnTo: "/account" }), "");
+  assert.equal(readerContextHref("/reader/../admin/users", {}), "");
 });

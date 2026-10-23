@@ -14,7 +14,19 @@ export async function evidenceIdentity(reference: EvidenceReference): Promise<st
 export function safeResearchReturn(value?: string) {
   if (!value || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(value)) return "";
   const url = new URL(value, "https://library.invalid");
-  if (url.origin !== "https://library.invalid" || !/^\/(account|research|explore|recommendations)(\/|$)/.test(url.pathname)) return "";
+  if (url.origin !== "https://library.invalid" || !/^\/(account|research|explore|recommendations|topics|theories\/reading-paths)(\/|$)/.test(url.pathname)) return "";
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function readerContextHref(href: string, context: { projectId?: string; turnId?: string; referenceId?: string; returnTo?: string }) {
+  if (!href.startsWith("/reader/") || /[\\\u0000-\u001f\u007f]/.test(href)) return "";
+  const url = new URL(href, "https://library.invalid");
+  if (url.origin !== "https://library.invalid" || !url.pathname.startsWith("/reader/")) return "";
+  const returnTo = safeResearchReturn(context.returnTo);
+  if (returnTo) url.searchParams.set("return_to", returnTo);
+  if (context.projectId) url.searchParams.set("research_project", context.projectId);
+  if (context.turnId) url.searchParams.set("research_turn", context.turnId);
+  if (context.referenceId) url.searchParams.set("reference", context.referenceId);
   return `${url.pathname}${url.search}${url.hash}`;
 }
 

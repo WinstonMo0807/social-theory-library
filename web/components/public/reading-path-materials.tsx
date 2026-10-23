@@ -4,7 +4,7 @@ import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, BookOpen, FileText, MoreHorizontal, X } from "lucide-react";
-import { CollectionLink } from "@/components/collection-link";
+import { readerContextHref } from "@/lib/api/research-navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import type { PathMaterial, PathProgress } from "@/lib/api/reading-paths.types";
@@ -14,7 +14,7 @@ import styles from "./reading-path.module.css";
 const statusLabels: Record<PathProgress["status"], string> = { pending: "尚未开始", reading: "阅读中", completed: "已完成", skipped: "暂时跳过" };
 const sourceLabels: Record<PathMaterial["source_status"], string> = { available: "原文可读", no_fulltext: "暂无全文", unavailable: "来源当前不可用", withdrawn: "材料已撤回", revision_changed: "原文版本已变化" };
 
-export function ReadingPathMaterials({ items, personal, writable, preview, onNavigateMaterial }: { items: PathMaterial[]; personal: PathPersonal; writable: boolean; preview: boolean; onNavigateMaterial?:(id:string)=>void }) {
+export function ReadingPathMaterials({ items, personal, writable, preview, returnTo, onNavigateMaterial }: { items: PathMaterial[]; personal: PathPersonal; writable: boolean; preview: boolean; returnTo: string; onNavigateMaterial?:(id:string)=>void }) {
   const [details, setDetails] = useState<PathMaterial | null>(null), [noteItem, setNoteItem] = useState<PathMaterial | null>(null);
   const busy = personal.busy || !!personal.pending;
   return <>
@@ -24,7 +24,7 @@ export function ReadingPathMaterials({ items, personal, writable, preview, onNav
         <div className={styles.materialIdentity} role="cell">{item.cover_url ? <img src={item.cover_url} alt="" /> : <span className={styles.documentPlaceholder}>{item.kind === "node" ? <BookOpen size={27} /> : <FileText size={27} />}</span>}<div><strong>{item.title}</strong>{item.chapter_title ? <small>{item.chapter_title}</small> : null}{item.version_label ? <small>{item.version_label}</small> : null}{item.page_start ? <small>PDF 第 {item.page_start}{item.page_end && item.page_end !== item.page_start ? `–${item.page_end}` : ""} 页{item.printed_page_label ? ` · 印刷页 ${item.printed_page_label}` : ""}</small> : null}{item.prerequisite ? <small>先修条件：{item.prerequisite}</small> : null}<span className={styles.mobileRequired}>{item.is_required ? "必读" : "选读"}</span><span className={styles.mobileAuthors}>{item.authors.join("、") || (item.source_status === "withdrawn" || item.source_status === "unavailable" ? "来源信息不可用" : "作者尚未收录")}</span></div></div>
         <div className={styles.authors} role="cell">{item.authors.join("、") || (item.source_status === "withdrawn" || item.source_status === "unavailable" ? "来源信息不可用" : "作者尚未收录")}</div>
         <div className={styles.materialReason} role="cell">{item.source_status !== "available" ? <><strong className={styles.sourceWarning}>{sourceLabels[item.source_status]}</strong><p>{item.source_notice}</p></> : <p>{item.reason || "尚未填写阅读理由。"}</p>}</div>
-        <div className={styles.materialActions} role="cell">{item.kind === "node" && item.href && item.source_status === "available" ? <Link className={styles.outlineButton} href={item.href}>查看知识条目</Link> : item.reader_url && item.source_status === "available" ? <CollectionLink className={item.is_required ? styles.primaryButton : styles.outlineButton} href={item.reader_url}>开始阅读</CollectionLink> : <button type="button" disabled className={styles.unavailableButton}>暂不可读</button>}
+        <div className={styles.materialActions} role="cell">{item.kind === "node" && item.href && item.source_status === "available" ? <Link className={styles.outlineButton} href={item.href}>查看知识条目</Link> : item.reader_url && item.source_status === "available" ? <Link className={item.is_required ? styles.primaryButton : styles.outlineButton} href={readerContextHref(item.reader_url, { returnTo: `${returnTo}#path-material-${item.id}` })}>开始阅读</Link> : <button type="button" disabled className={styles.unavailableButton}>暂不可读</button>}
           {item.href ? <Link href={item.href}>查看详情<ArrowRight size={12} /></Link> : null}
           <button type="button" className={styles.textButton} aria-label={`查看${item.title}的来源与版本`} onClick={() => setDetails(item)}>{item.source_status === "available" ? <>来源与版本<MoreHorizontal size={13} /></> : <>了解来源状态<ArrowRight size={12} /></>}</button>
           {writable && personal.record && !preview ? <><label className={styles.progressSelect}><span className={styles.srOnly}>{item.title}的阅读状态</span><select value={progress?.status || "pending"} disabled={busy || progress?.status === "completed"} onChange={event => { if (personal.record) void personal.mutate({ action: "progress", request_id: createRequestKey(), id: personal.record.id, expected_revision: personal.record.revision, item_id: item.id, status: event.target.value as PathProgress["status"] }); }}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>{progress?.status === "completed" ? <small>已完成记录保留，可补充笔记</small> : null}</label><button type="button" disabled={busy} onClick={() => setNoteItem(item)}>{progress?.note ? "查看本人笔记" : "记录本人笔记"}</button></> : null}

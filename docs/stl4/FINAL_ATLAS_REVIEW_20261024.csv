@@ -32,37 +32,37 @@ page,id,route,pdf_image_read,source_review,findings,runtime_visual_verification
 41,R09-main,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
 42,R09-sub01,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
 43,R09-states,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-45,MISSING-02,/theory-schools,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-46,R15-main,/theories/nodes/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-47,R15-sub01,/theories/nodes/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-48,R15-sub02,/theory-schools/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-49,R15-states,/theories/nodes/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-50,MISSING-05,/subdisciplines,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-51,NEW-T02,/subdisciplines/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-52,R17-main,/theories/graph,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-53,R17-sub01,/theories/graph?view=list,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-54,R17-sub02,/theories/directory,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-55,R17-states,/theories/graph,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-56,R16-main,/theories/timeline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-57,R16-states,/theories/timeline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-58,R20-main,/theories/reading-paths,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-59,R20-sub01,/theories/reading-paths/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-60,R20-states,/theories/reading-paths,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-62,R11-main,/scholars,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-63,R11-states,/scholars,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-64,R12-main,/scholars/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-65,R12-sub01,/scholars/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-66,R12-states,/scholars/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-68,R13-main,/topics,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-69,R13-states,/topics,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-70,R14-main,/topics/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-71,R14-states,/topics/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-73,R18-main,/recommendations,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-74,R18-states,/recommendations,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-75,R19-main,/recommendations/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-76,R19-states,/recommendations/[slug],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-77,X03-main,/recommendations/[slug]?exhibit={stable-id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-78,X03-states,/recommendations/[slug]?exhibit={stable-id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
+45,MISSING-02,/theory-schools,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+46,R15-main,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+47,R15-sub01,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+48,R15-sub02,/theory-schools/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+49,R15-states,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+50,MISSING-05,/subdisciplines,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+51,NEW-T02,/subdisciplines/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+52,R17-main,/theories/graph,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+53,R17-sub01,/theories/graph?view=list,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+54,R17-sub02,/theories/directory,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+55,R17-states,/theories/graph,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+56,R16-main,/theories/timeline,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+57,R16-states,/theories/timeline,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+58,R20-main,/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+59,R20-sub01,/theories/reading-paths/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+60,R20-states,/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+62,R11-main,/scholars,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+63,R11-states,/scholars,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+64,R12-main,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+65,R12-sub01,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+66,R12-states,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+68,R13-main,/topics,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+69,R13-states,/topics,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+70,R14-main,/topics/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+71,R14-states,/topics/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+73,R18-main,/recommendations,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+74,R18-states,/recommendations,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+75,R19-main,/recommendations/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+76,R19-states,/recommendations/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+77,X03-main,/recommendations/[slug]?exhibit={stable-id},2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+78,X03-states,/recommendations/[slug]?exhibit={stable-id},2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
 80,M01-main,/admin,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
 81,M01-states,/admin,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
 82,M02-main,/admin/uploads,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
@@ -163,48 +163,48 @@ page,id,route,pdf_image_read,source_review,findings,runtime_visual_verification
 177,M32-main,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
 178,M32-sub01,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
 179,M32-states,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-181,R34-sub02,共享浮层,2026-10-24 已读取原图,核对中,文章引用弹层复用共享引用；目录入口纠正为特别策划,未运行测试/浏览器；未确认像素一致
-182,R34-sub03,共享浮层,2026-10-24 已读取原图,核对中,分享范围图与现有share-composer核对中；入口纠正为/account/sharing/new,未运行测试/浏览器；未确认像素一致
-183,R22-main,/account,2026-10-24 已读取原图,读者组源码核对中,资料中心与登录/注册/找回/会话过期，继续接口和无引导路径核查,未运行测试/浏览器；未确认像素一致
-184,NEW-R04,/account/research,2026-10-24 已读取原图,读者组源码核对中,资料中心与登录/注册/找回/会话过期，继续接口和无引导路径核查,未运行测试/浏览器；未确认像素一致
-185,R22-states,/account,2026-10-24 已读取原图,读者组源码核对中,资料中心与登录/注册/找回/会话过期，继续接口和无引导路径核查,未运行测试/浏览器；未确认像素一致
-186,R31-main,/login,2026-10-24 已读取原图,读者组源码核对中,资料中心与登录/注册/找回/会话过期，继续接口和无引导路径核查,未运行测试/浏览器；未确认像素一致
-187,R31-sub01,/register,2026-10-24 已读取原图,读者组源码核对中,资料中心与登录/注册/找回/会话过期，继续接口和无引导路径核查,未运行测试/浏览器；未确认像素一致
-188,R31-sub02,/reset-password,2026-10-24 已读取原图,读者组源码核对中,资料中心与登录/注册/找回/会话过期，继续接口和无引导路径核查,未运行测试/浏览器；未确认像素一致
-189,R31-sub03,/login,2026-10-24 已读取原图,读者组源码核对中,资料中心与登录/注册/找回/会话过期，继续接口和无引导路径核查,未运行测试/浏览器；未确认像素一致
-190,R31-states,/login,2026-10-24 已读取原图,读者组源码核对中,资料中心与登录/注册/找回/会话过期，继续接口和无引导路径核查,未运行测试/浏览器；未确认像素一致
-191,R05-main,/account/research/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-192,R05-sub01,/account/research/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-193,R05-sub02,/account/research/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-194,R05-states,/account/research/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-195,R06-main,/account/research/[id]/compare,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-196,R06-sub01,/account/research/[id]/compare,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-197,R06-states,/account/research/[id]/compare,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-198,R07-main,/account/research/[id]/counter-evidence,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-199,R07-sub01,/account/research/[id]/counter-evidence,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-200,R07-states,/account/research/[id]/counter-evidence,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-201,R21-main,/account/plans/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-202,R21-sub01,/account/plans/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-203,R21-sub02,/account/plans/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-204,R21-states,/account/plans/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-205,R23-main,/account/confirmed-notes,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-206,R23-sub01,/account/confirmed-notes,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-207,R23-states,/account/confirmed-notes,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-208,R25-main,/account/citation-audits,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-209,R25-sub01,/account/citation-audits/[id]/parse,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-210,R25-states,/account/citation-audits,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-211,R26-main,/account/citation-audits/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-212,R26-states,/account/citation-audits/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-213,R27-main,/account/citation-audits/[id]/issues/[issueId],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-214,R27-sub01,/account/citation-audits/[id]/issues/[issueId],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-215,R27-states,/account/citation-audits/[id]/issues/[issueId],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-216,R28-main,/account/notes,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-217,R28-states,/account/notes,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-218,R29-main,/account/collections/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-219,R29-sub01,/account/collections/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-220,R29-states,/account/collections/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-221,R30-main,/account/research/[id]/history,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-222,R30-states,/account/research/[id]/history,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-223,R32-main,/account/settings/privacy,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-224,R32-sub01,/account/settings/privacy/export,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-225,R32-states,/account/settings/privacy,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
+181,R34-sub02,共享浮层,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+182,R34-sub03,共享浮层,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+183,R22-main,/account,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+184,NEW-R04,/account/research,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+185,R22-states,/account,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+186,R31-main,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+187,R31-sub01,/register,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+188,R31-sub02,/reset-password,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+189,R31-sub03,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+190,R31-states,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+191,R05-main,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+192,R05-sub01,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+193,R05-sub02,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+194,R05-states,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+195,R06-main,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+196,R06-sub01,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+197,R06-states,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+198,R07-main,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+199,R07-sub01,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+200,R07-states,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+201,R21-main,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+202,R21-sub01,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+203,R21-sub02,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+204,R21-states,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+205,R23-main,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+206,R23-sub01,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+207,R23-states,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+208,R25-main,/account/citation-audits,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+209,R25-sub01,/account/citation-audits/[id]/parse,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+210,R25-states,/account/citation-audits,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+211,R26-main,/account/citation-audits/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+212,R26-states,/account/citation-audits/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+213,R27-main,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+214,R27-sub01,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+215,R27-states,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+216,R28-main,/account/notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+217,R28-states,/account/notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+218,R29-main,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+219,R29-sub01,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+220,R29-states,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+221,R30-main,/account/research/[id]/history,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+222,R30-states,/account/research/[id]/history,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+223,R32-main,/account/settings/privacy,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+224,R32-sub01,/account/settings/privacy/export,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+225,R32-states,/account/settings/privacy,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
