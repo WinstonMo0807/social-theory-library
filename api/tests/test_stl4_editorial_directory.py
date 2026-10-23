@@ -62,6 +62,19 @@ def test_anonymous_curator_never_infers_account_or_returns_portrait_fields(admin
     assert public_metadata(issues.issue_draft_payload(row), public=False)[0]["curator_role"] == "测试身份"
 
 
+def test_home_curator_uses_effective_public_identity_not_editor_or_draft(admin_user):
+    from catalog.site_layout import source_card
+    row = article(admin_user, public_byline="公开策划署名", article_metadata={"curator_role":"公开身份"})
+    issues.save_issue(row.pk, {"edit_version":issues.edit_version("recommendation_issue", row.pk),
+        "public_byline":"未发布署名", "article_metadata":{"curator_role":"私人草稿身份"}}, admin_user)
+    row.refresh_from_db()
+    card = source_card({"type":"issue", "id":str(row.pk)}, row)
+    assert card["curator"] == {"name":"公开策划署名", "role":"公开身份", "affiliation":"", "portrait_url":""}
+    anonymous = article(admin_user, public_byline="", article_metadata={"curator_role":"不公开身份"})
+    assert source_card({"type":"issue", "id":str(anonymous.pk)}, anonymous)["curator"] == {
+        "name":"", "role":"", "affiliation":"", "portrait_url":""}
+
+
 def test_article_only_publication_and_stable_section_identity(admin_user):
     row = article(admin_user)
     first = article_context(row, issues.issue_payload(row, public=True))

@@ -8,6 +8,7 @@ import type { LibraryTopic } from "@/lib/api/topics.types";
 import type { RecommendationIssue } from "@/lib/api/recommendation-issues.types";
 import type { HomeSections } from "@/lib/api/home.types";
 import type { HomeLayoutPreview } from "@/lib/api/home.types";
+import { EditorialByline } from "./editorial-directory";
 import { HomeCuratedSection } from "./home-curated-section";
 
 export type HomeViewData = {
@@ -50,7 +51,7 @@ export function HomePublicView({ config, works, scholars, topics, randomWorks, i
       <header className="stl4-home-heading"><h2 id="home-issues">特别策划 <small>Featured issues</small></h2><div>{issueCount != null ? <span className="stl4-issue-count">已策划 {issueCount} 期</span> : null}<Link href="/recommendations">查看全部 <ArrowRight size={15} /></Link></div></header>
       {editions.length ? <div className="stl4-issue-grid">{editions.slice(0, 4).map((entry, index) => <Link className={`stl4-issue-card${index === 0 ? " stl4-issue-lead" : ""}`} href={`/recommendations/${entry.slug}`} key={entry.id}>
         {entry.cover_url ? <img src={entry.cover_url} alt="" loading="lazy" /> : <div className="stl4-image-missing" aria-label="尚未提供策划配图"><BookOpen size={32} strokeWidth={1} /></div>}
-        <div className="stl4-issue-copy">{entry.issue_label ? <span className="stl4-issue-label">{entry.issue_label}</span> : null}<h3>{entry.title}</h3><p>{entry.introduction}</p>{entry.public_byline && index === 0 ? <span className="stl4-issue-byline">{entry.public_byline}</span> : null}<ArrowRight size={17} aria-hidden="true" /></div>
+        <div className="stl4-issue-copy">{entry.issue_label ? <span className="stl4-issue-label">{entry.issue_label}</span> : null}<h3>{entry.title}</h3><p>{entry.introduction}</p>{index === 0 && (entry.curator?.name || entry.public_byline) ? <div className="stl4-issue-byline"><EditorialByline curator={entry.curator || {name:entry.public_byline,portrait_url:"",role:"",affiliation:""}} date={null}/></div> : null}<ArrowRight size={17} aria-hidden="true" /></div>
       </Link>)}</div> : <HomeSectionState section={sections?.issues} empty="暂无已发布的特别策划。新内容发布后会显示在这里。" />}
       {editions.length > 1 ? <Link href="/recommendations" className="stl4-mobile-more">继续浏览特别策划 <ArrowRight size={15} /></Link> : null}
     </section>}

@@ -13,6 +13,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from catalog.editorial_issue_serializers import PublicEditorialCuratorSerializer
 from catalog.services import editorial_issues as ledger
 from catalog.services.shared_curation import identifier
 
@@ -42,6 +43,7 @@ class HomeLayoutSerializer(serializers.Serializer):
 
 
 class HomeCardSerializer(serializers.Serializer):
+    curator = PublicEditorialCuratorSerializer(required=False, allow_null=True)
     id = serializers.CharField()
     title = serializers.CharField(allow_blank=True)
     description = serializers.CharField(allow_blank=True)
@@ -103,7 +105,10 @@ def source_card(target, row=None):
     row = row if row is not None else get_object_or_404(source_rows(kind), pk=identifier(target["id"]))
     card = {"id": str(row.pk), "label": LABELS[kind], "available": True, "visible": True}
     if kind == "issue":
+        from catalog.services.public_editorial import public_metadata
         raw = ledger.public_issue_revision(row).materialized_preview
+        _metadata, curator = public_metadata(raw, public=True)
+        card.update(curator=curator, label=raw.get("issue_label") or LABELS[kind])
         image = f"/api/catalog/editorial-media/{raw['cover_rendition_id']}/" if raw.get("cover_rendition_id") else raw.get("cover_url", "")
         card.update(title=raw.get("title", ""), description=raw.get("introduction", ""), image_url=image, href=f"/recommendations/{row.slug}")
     elif kind == "scholar":

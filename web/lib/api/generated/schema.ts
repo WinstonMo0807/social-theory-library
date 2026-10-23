@@ -8523,6 +8523,7 @@ export interface components {
          */
         HeadingLevelEnum: 1 | 2 | 3;
         HomeCard: {
+            curator?: components["schemas"]["PublicEditorialCurator"] | null;
             id: string;
             title: string;
             description: string;
@@ -8536,6 +8537,7 @@ export interface components {
             source_image_url?: string;
         };
         HomeCardRequest: {
+            curator?: components["schemas"]["PublicEditorialCuratorRequest"] | null;
             id: string;
             title: string;
             description: string;

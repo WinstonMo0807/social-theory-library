@@ -35708,6 +35708,14 @@
             "HomeCard": {
                 "type": "object",
                 "properties": {
+                    "curator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicEditorialCurator"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "id": {
                         "type": "string"
                     },
@@ -35756,6 +35764,14 @@
             "HomeCardRequest": {
                 "type": "object",
                 "properties": {
+                    "curator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicEditorialCuratorRequest"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "id": {
                         "type": "string",
                         "minLength": 1
