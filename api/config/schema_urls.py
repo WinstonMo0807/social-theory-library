@@ -13,7 +13,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 VERIFIED_NAMES = {
     "curation-projects", "curation-project-detail", "curation-project-receipt", "curation-project-people", "curation-project-materials", "curation-project-sources", "curation-project-preview",
-    "index-maintenance", "index-maintenance-receipt", "index-maintenance-terms",
+    "index-maintenance", "index-maintenance-receipt", "index-maintenance-terms", "index-maintenance-query", "index-maintenance-query-receipt",
     "media-workspace", "media-workspace-receipt",
     "workspace-save-receipt", "admin-work-workspace-edits",
     "admin-field-assistant-lookup", "admin-field-assistant-adopt", "admin-field-assistant-reject", "admin-field-assistant-create", "admin-field-assistant-duplicates",

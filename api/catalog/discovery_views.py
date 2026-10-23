@@ -1,7 +1,7 @@
 from django.utils.cache import patch_vary_headers
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -255,6 +255,12 @@ SESSION_TOKEN = OpenApiParameter("X-Discovery-Token", str, OpenApiParameter.HEAD
 
 class DiscoveryView(APIView):
     permission_classes = [AllowAny]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        expected = request.headers.get("X-Editor-Owner")
+        if expected is not None and (not request.user.is_authenticated or expected != str(request.user.pk)):
+            raise PermissionDenied("登录账户已变化，请重新读取当前检索。")
 
     def get_throttles(self):
         if self.request.method == "POST" or isinstance(self, LegacyDiscoverySearchView):

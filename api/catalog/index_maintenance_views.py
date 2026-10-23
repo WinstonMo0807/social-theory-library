@@ -34,11 +34,12 @@ def maintenance_version():
     return sha256(json.dumps(list(rows), default=str).encode()).hexdigest()
 
 
-def locked_actor(request):
+def locked_actor(request, *, capability=None):
     if request.headers.get("X-Editor-Owner") != str(request.user.pk):
         raise PermissionDenied("登录账户已变化，请重新读取索引维护页面。")
     actor = get_object_or_404(get_user_model().objects.select_for_update(), pk=request.user.pk, is_active=True)
-    if actor.token_version != request.user.token_version or not any(has_capability(actor, value) for value in CAPABILITIES.values()):
+    allowed = has_capability(actor, capability) if capability else any(has_capability(actor, value) for value in CAPABILITIES.values())
+    if actor.token_version != request.user.token_version or not allowed:
         raise PermissionDenied("当前会话没有索引维护权限。")
     return actor
 

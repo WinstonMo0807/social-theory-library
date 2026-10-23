@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 检索命中预览（329路径）
+
+新增POST admin/index-maintenance/query/（request_id/q/work_id）和commands/{request_id}/ GET查回、POST cancel_pending。IndexQueryCommand/IndexQueryReceipt具名契约，回执仅owner/request/session身份。实际会话读取、继续、取消仍使用原discovery-search接口，X-Editor-Owner可选绑定当前账户；原接口未增加必填头。正文作品过滤与全通道public权限分别落实，知识/策展仍按原全库语义。后台预览没有单独评测接口。
+
 ## 2026-10-23 任务配置（327路径）
 
 新增GET processing-workspace/sources/{edition_id}/具名ProcessingSource，沿原OCR读取当前文件与任务阻断，无服务探测。原POST扩展ProcessingCreation（create、task_type=ocr/outline、asset_id、source_version、confirmed及OCR可选page_indexes/task_options），返回原ProcessingReceipt，查回/停止同commands路由。创建不接受新公开发布指令。原任务响应新增failure_pages/failure_page_count/failure_location与已保存OCR策略，失败页最多200条；实际索引片段字符偏移以来源单元为基准。Discovery重试/恢复同原固定命令协议。

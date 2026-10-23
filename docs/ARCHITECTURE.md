@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 检索维护中的原查询会话
+
+M13预览沿原DiscoverySearchSession与推荐检索流水线，index.query.preview审计只串行请求身份及会话ID，不存第二份查询正文或材料。原会话创建后、提交派发前将所有通道权限收窄为public；正文限定作品，知识/策展沿原全库查询。读者中心搜索记录开关仍由原remember_search_after_commit处理。原DiscoveryView只对显式X-Editor-Owner头追加账户核对，不改变无此头的访客权限。没有新存储、队列或迁移。
+
 ## 2026-10-23 处理任务创建与原队列复用
 
 processing_creation仅对原start_catalog_ocr与queue_outline_rebuild提供配置入口，复用ProcessingJob/AuditEvent和processing.workspace.command回执。与原停止操作共享账户锁，版本与文件身份在事务内复核；OCR不隐式取消进行中任务，目录相同来源进行中时复用。没有模型、存储或执行器迁移。Discovery继续原source/generation身份与逐片段幂等写入，新增当前单元定位及重试前审计；未新增检索方案。

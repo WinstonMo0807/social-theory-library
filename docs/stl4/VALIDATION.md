@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-23 内嵌查询静态检查
+
+`.venv/Scripts/python.exe tmp/stl4-index-query-static-20261023.py`（9648f7/73aa81）退出0：6 Python AST、数据库连接主动禁止、OpenAPI0错误10旧声明警告。`node tmp/stl4-index-query-contracts-20261023.mjs`（f93d28）退出0：327→329路径、生成类型与PostCSS。TypeScript noEmit（b7310a→1563a8）退出0；两目标组件ESLint（7d3d8b）退出0。没有正式测试、浏览器、实际检索/模型/索引调用、迁移或部署。
+
+`api/tests/test_stl4_index_query_20261023.py`仅保存待验收用例，覆盖丢失响应的同号重放、改词冲突、停止晚到请求、换账户以及所有通道public范围。统一验收还需原推荐深度结果、查询来源变化/撤回、无索引和空库、原查询过期、关闭/刷新查回、跨作品恢复提示、50条上限、账户搜索记录设置、移动右栏与PDF图差；未运行。
+
 ## 2026-10-23 任务配置与失败定位静态检查
 
 `.venv/Scripts/python.exe tmp/stl4-processing-creation-static-20261023.py`（a6ce17）退出0，12 Python AST、6条SQLite/PostgreSQL SQL编译，连接被禁止；OpenAPI0错误10条原声明警告。`node tmp/stl4-processing-creation-contracts-20261023.mjs`（21428d/0b0100）退出0，327路径/生成类型/CSS。`node node_modules/typescript/bin/tsc --noEmit --incremental false`（d7f673→08594a）退出0。目标4组件ESLint（aa9006）退出0，原OCR页面2条img建议。首次TypeScript发现JSON响应需收窄，已修复；新增来源路由已加入正式契约范围。

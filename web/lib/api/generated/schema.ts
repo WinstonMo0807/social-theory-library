@@ -960,6 +960,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/index-maintenance/query/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_index_maintenance_query_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/index-maintenance/query/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_index_maintenance_query_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_index_maintenance_query_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/index-maintenance/terms/": {
         parameters: {
             query?: never;
@@ -8654,6 +8686,22 @@ export interface components {
             retry_allowed: boolean;
             overdue: boolean;
             workbench_url: string;
+        };
+        IndexQueryCommandRequest: {
+            /** Format: uuid */
+            request_id: string;
+            q: string;
+            /** Format: uuid */
+            work_id: string;
+        };
+        IndexQueryReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            /** Format: uuid */
+            session_id: string | null;
+            next_url: string;
         };
         IndexStage: {
             status: string;
@@ -19888,6 +19936,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IndexMaintenanceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_index_maintenance_query_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndexQueryCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IndexQueryCommandRequest"];
+                "multipart/form-data": components["schemas"]["IndexQueryCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexQueryReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_index_maintenance_query_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexQueryReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_index_maintenance_query_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndexMaintenanceStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IndexMaintenanceStopRequest"];
+                "multipart/form-data": components["schemas"]["IndexMaintenanceStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexQueryReceipt"];
                 };
             };
         };
