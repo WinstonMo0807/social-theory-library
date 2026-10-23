@@ -7768,12 +7768,39 @@
                     },
                     {
                         "in": "query",
+                        "name": "operator",
+                        "schema": {
+                            "oneOf": [
+                                {
+                                    "type": "string",
+                                    "default": "",
+                                    "maxLength": 20,
+                                    "pattern": "^\\d+$"
+                                },
+                                {
+                                    "type": "string",
+                                    "maxLength": 0
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "page",
                         "schema": {
                             "type": "integer",
                             "maximum": 100000,
                             "minimum": 1,
                             "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "reason",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 200
                         }
                     },
                     {
@@ -59211,6 +59238,15 @@
                             "$ref": "#/components/schemas/RecoveryKind"
                         }
                     },
+                    "operators": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryOperator"
+                        }
+                    },
+                    "operators_limited": {
+                        "type": "boolean"
+                    },
                     "notice": {
                         "type": "string"
                     }
@@ -59220,6 +59256,8 @@
                     "counts",
                     "kinds",
                     "notice",
+                    "operators",
+                    "operators_limited",
                     "page",
                     "page_size",
                     "results"
@@ -59255,6 +59293,21 @@
                 ]
             },
             "RecoveryKind": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label"
+                ]
+            },
+            "RecoveryOperator": {
                 "type": "object",
                 "properties": {
                     "id": {
@@ -59334,6 +59387,15 @@
                     "actor_name": {
                         "type": "string"
                     },
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
                     "label": {
                         "type": "string"
                     },
@@ -59342,13 +59404,16 @@
                     }
                 },
                 "required": [
+                    "actor_id",
                     "actor_name",
                     "changed_at",
+                    "cover_url",
                     "destination",
                     "entry_id",
                     "kind",
                     "label",
                     "object_id",
+                    "reason",
                     "record_state",
                     "title"
                 ]

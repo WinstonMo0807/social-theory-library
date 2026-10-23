@@ -15582,6 +15582,8 @@ export interface components {
             };
             results: components["schemas"]["RecoveryRow"][];
             kinds: components["schemas"]["RecoveryKind"][];
+            operators: components["schemas"]["RecoveryOperator"][];
+            operators_limited: boolean;
             notice: string;
         };
         RecoveryHistory: {
@@ -15594,6 +15596,10 @@ export interface components {
             detail: string;
         };
         RecoveryKind: {
+            id: string;
+            label: string;
+        };
+        RecoveryOperator: {
             id: string;
             label: string;
         };
@@ -15619,6 +15625,9 @@ export interface components {
             entry_id: string | null;
             record_state: string;
             actor_name: string;
+            actor_id: string;
+            reason: string;
+            cover_url: string;
             label: string;
             destination: string;
         };
@@ -22148,7 +22157,9 @@ export interface operations {
                  *     * `publisher` - publisher
                  */
                 kind?: "" | "upload" | "work" | "edition" | "person" | "scholar" | "topic" | "knowledge-node" | "theory-school" | "discipline" | "subdiscipline" | "reading-path" | "timeline-event" | "knowledge-relation" | "evidence-curation" | "scholar-relation" | "recommendation-issue" | "recommendation-item" | "about-block" | "publisher";
+                operator?: string;
                 page?: number;
+                reason?: string;
                 search?: string;
                 since?: string;
                 /**

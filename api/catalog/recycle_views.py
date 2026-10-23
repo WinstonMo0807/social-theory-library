@@ -14,6 +14,8 @@ class RecoveryQuery(serializers.Serializer):
     state = serializers.ChoiceField(choices=["", "deleted", "archived", "restored"], default="")
     since = serializers.DateTimeField(required=False)
     page = serializers.IntegerField(min_value=1, max_value=100000, default=1)
+    operator = serializers.RegexField(r"^\d+$", max_length=20, required=False, allow_blank=True, default="")
+    reason = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
 
 
 class RecoveryRow(serializers.Serializer):
@@ -24,6 +26,9 @@ class RecoveryRow(serializers.Serializer):
     entry_id = serializers.UUIDField(allow_null=True)
     record_state = serializers.CharField()
     actor_name = serializers.CharField()
+    actor_id = serializers.CharField(allow_blank=True)
+    reason = serializers.CharField(allow_blank=True)
+    cover_url = serializers.CharField(allow_blank=True)
     label = serializers.CharField()
     destination = serializers.CharField()
 
@@ -33,6 +38,11 @@ class RecoveryKind(serializers.Serializer):
     label = serializers.CharField()
 
 
+class RecoveryOperator(serializers.Serializer):
+    id = serializers.CharField()
+    label = serializers.CharField(allow_blank=True)
+
+
 class RecoveryDirectory(serializers.Serializer):
     count = serializers.IntegerField()
     page = serializers.IntegerField()
@@ -40,6 +50,8 @@ class RecoveryDirectory(serializers.Serializer):
     counts = serializers.DictField(child=serializers.IntegerField())
     results = RecoveryRow(many=True)
     kinds = RecoveryKind(many=True)
+    operators = RecoveryOperator(many=True)
+    operators_limited = serializers.BooleanField()
     notice = serializers.CharField()
 
 
