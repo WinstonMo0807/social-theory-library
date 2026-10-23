@@ -1660,6 +1660,20 @@
                     },
                     {
                         "in": "query",
+                        "name": "group_by",
+                        "schema": {
+                            "enum": [
+                                "edition",
+                                "work"
+                            ],
+                            "type": "string",
+                            "default": "edition",
+                            "minLength": 1
+                        },
+                        "description": "* `edition` - edition\n* `work` - work"
+                    },
+                    {
+                        "in": "query",
                         "name": "language",
                         "schema": {
                             "type": "string",
@@ -50646,6 +50660,10 @@
                     },
                     "source": {
                         "$ref": "#/components/schemas/PlacementSource"
+                    },
+                    "version_count": {
+                        "type": "integer",
+                        "minimum": 1
                     }
                 },
                 "required": [

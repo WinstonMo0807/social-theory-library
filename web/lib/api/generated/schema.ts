@@ -13016,6 +13016,7 @@ export interface components {
         PlacementSourceChoice: {
             target: components["schemas"]["PlacementTarget"];
             source: components["schemas"]["PlacementSource"];
+            version_count?: number;
         };
         /**
          * @description * `work` - work
@@ -19216,6 +19217,11 @@ export interface operations {
                  */
                 document_type?: "book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other";
                 edition_id?: string;
+                /**
+                 * @description * `edition` - edition
+                 *     * `work` - work
+                 */
+                group_by?: "edition" | "work";
                 language?: string;
                 page?: number;
                 q?: string;

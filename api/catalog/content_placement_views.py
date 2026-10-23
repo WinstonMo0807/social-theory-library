@@ -1,7 +1,7 @@
 """Protected editing, exact-revision preview, and public placement reads."""
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Case, When, Value, IntegerField, Exists, OuterRef
+from django.db.models import Q, Case, When, Value, IntegerField, Exists, OuterRef, Subquery, F, Count
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
@@ -116,6 +116,7 @@ class PlacementResultItemSerializer(PlacementSerializer):
 class PlacementSourceChoiceSerializer(serializers.Serializer):
     target = PlacementTargetSerializer()
     source = PlacementSourceSerializer()
+    version_count = serializers.IntegerField(min_value=1, required=False)
 
 
 class PlacementSourcesPageSerializer(serializers.Serializer):
@@ -222,6 +223,12 @@ class PlacementSourceQuerySerializer(serializers.Serializer):
     readable = serializers.ChoiceField(choices=["yes", "no"], required=False)
     sort = serializers.ChoiceField(choices=["relevance", "title", "newest", "oldest"], default="relevance")
     page = serializers.IntegerField(min_value=1, default=1)
+    group_by = serializers.ChoiceField(choices=["edition", "work"], default="edition")
+
+    def validate(self, values):
+        if values["group_by"] == "work" and values["type"] not in {"work", "edition"}:
+            raise serializers.ValidationError("只有馆藏作品和出版版本支持按作品归并。")
+        return values
 
 
 def placement_source_rows(params):
@@ -246,8 +253,17 @@ def placement_source_rows(params):
     order = params.get("sort", "relevance")
     if order == "relevance" and query:
         rows = rows.annotate(match_rank=Case(When(work__title__iexact=query, then=Value(0)), When(work__title__istartswith=query, then=Value(1)), default=Value(2), output_field=IntegerField()))
-        return rows.order_by("match_rank", "work__title", "publication_year", "pk")
-    return rows.order_by(*({"newest": ["-publication_year", "work__title"], "oldest": ["publication_year", "work__title"]}.get(order, ["work__title", "publication_year"])), "pk")
+        return rows.order_by("match_rank", "work__title", F("publication_year").asc(nulls_last=True), "pk")
+    year = F("publication_year").desc(nulls_last=True) if order == "newest" else F("publication_year").asc(nulls_last=True)
+    return rows.order_by(*([year, "work__title"] if order in {"newest", "oldest"} else ["work__title", year]), "pk")
+
+
+def grouped_placement_source_rows(params):
+    """Group by the real Work identity before pagination, never by title."""
+    rows = placement_source_rows(params)
+    representative = rows.filter(work_id=OuterRef("work_id")).values("pk")[:1]
+    versions = Edition.objects.filter(work_id=OuterRef("work_id")).order_by().values("work_id").annotate(total=Count("pk"))
+    return rows.annotate(representative_id=Subquery(representative), version_count=Subquery(versions.values("total")[:1])).filter(pk=F("representative_id"))
 
 
 class PlacementSourcesView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
@@ -264,10 +280,11 @@ class PlacementSourcesView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
             from catalog.site_layout import source_rows
             return Response(_page(request, source_rows(kind, query), lambda row: dict(zip(("target", "source"), service._source({"type": kind, "id": str(row.pk)})))))
         if kind in {"work", "edition"}:
-            rows = placement_source_rows(params)
+            grouped = params["group_by"] == "work"
+            rows = grouped_placement_source_rows(params) if grouped else placement_source_rows(params)
             def serialize(row):
                 reference, source = service._source({"type": kind, "id": str(row.work_id if kind == "work" else row.pk), "edition_id": str(row.pk)})
-                return {"target": reference, "source": source}
+                return {"target": reference, "source": source, **({"version_count": row.version_count} if grouped else {})}
             return Response(_page(request, rows, serialize))
         if kind == "node":
             rows = KnowledgeNode.objects.all()
