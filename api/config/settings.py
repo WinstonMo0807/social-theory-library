@@ -191,7 +191,7 @@ SPECTACULAR_SETTINGS = {
         "CurationProjectSourceStatusEnum": ["public", "private", "unavailable"],
         "CurationProjectActionEnum": ["create", "save", "duplicate", "archive", "restore", "create_article", "attach_article", "reorder"],
         "IndexMaintenanceActionEnum": ["rebuild", "activate", "retry", "reconcile"],
-        "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel"],
+        "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel", "recover"],
         "ProcessingTaskSourceEnum": ["processing_job", "semantic_index_job"],
         "ProcessingGroupingEnum": ["file", "task"],
         "ProcessingCreationTypeEnum": ["ocr", "outline"],

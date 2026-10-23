@@ -63,6 +63,15 @@ class ProcessingFailureLocationSerializer(serializers.Serializer):
     end_offset = serializers.IntegerField(allow_null=True)
 
 
+class ProcessingRecoverySerializer(serializers.Serializer):
+    state = serializers.ChoiceField(choices=["inactive", "unsupported", "waiting_sources", "recoverable", "delayed", "waiting", "active"])
+    last_activity_at = serializers.DateTimeField(allow_null=True)
+    activity_kind = serializers.ChoiceField(choices=["none", "checkpoint", "heartbeat", "started", "queue"])
+    eligible_at = serializers.DateTimeField(allow_null=True)
+    can_recover = serializers.BooleanField()
+    notice = serializers.CharField()
+
+
 class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
@@ -82,6 +91,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     finished_at = serializers.DateTimeField(allow_null=True)
     heartbeat_at = serializers.DateTimeField(allow_null=True)
     heartbeat_stale = serializers.BooleanField()
+    recovery = ProcessingRecoverySerializer()
     pause_requested = serializers.BooleanField()
     last_error = serializers.CharField(allow_blank=True)
     error_code = serializers.CharField(allow_blank=True)
@@ -89,7 +99,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     failure_page_count = serializers.IntegerField()
     failure_location = ProcessingFailureLocationSerializer(allow_null=True)
     version = serializers.CharField()
-    actions = serializers.ListField(child=serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel"]))
+    actions = serializers.ListField(child=serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover"]))
     permission_reason = serializers.CharField(allow_blank=True)
     retry_url = serializers.CharField(allow_blank=True)
     operation = serializers.CharField(allow_blank=True)
@@ -186,7 +196,7 @@ class ProcessingWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, AP
         payload.update(job_types=[{"value": value, "label": label} for value, label in ProcessingJob.JobType.choices], checked_at=timezone.now(), logs=logs)
         return Response(payload)
 
-    @extend_schema(request=PolymorphicProxySerializer(component_name="ProcessingWorkspaceCommand", serializers=[ProcessingCommandSerializer, ProcessingCreationSerializer], resource_type_field_name=None), responses=ProcessingReceiptSerializer)
+    @extend_schema(request=PolymorphicProxySerializer(component_name="ProcessingWorkspaceCommand", serializers=[ProcessingCommandSerializer, ProcessingCreationSerializer], resource_type_field_name=None), responses={200: ProcessingReceiptSerializer, 202: ProcessingReceiptSerializer})
     def post(self, request):
         if request.data.get("action") == "create":
             return Response(create_processing_task(request))

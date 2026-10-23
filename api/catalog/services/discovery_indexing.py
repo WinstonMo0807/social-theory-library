@@ -8,7 +8,7 @@ import math
 import json
 import threading
 import time
-from uuid import uuid4, uuid5
+from uuid import UUID, uuid4, uuid5
 
 from django.conf import settings
 from django.db import connection, transaction
@@ -26,6 +26,8 @@ from ingestion.models import AuditEvent, ProcessingJob
 logger = logging.getLogger(__name__)
 JOB_TYPE = "discovery_index"
 OPEN = ("pending", "running")
+RUNNING_STALLED_SECONDS = 15 * 60
+QUEUED_STALLED_SECONDS = 60 * 60
 _LOCAL_LOCK = threading.RLock()
 
 
@@ -578,14 +580,69 @@ def reconcile():
         return _reconcile()
 
 
+def discovery_recovery_window(job):
+    if job.stats.get("action") == "build" and job.stats.get("generation_id") and job.progress >= 5:
+        return job.updated_at, None
+    return job.updated_at, RUNNING_STALLED_SECONDS if job.status == "running" else QUEUED_STALLED_SECONDS
+
+
+def recover_interrupted_job(job_id):
+    # Never replace a live writer, even if its model call has taken unusually long.
+    with index_writer() as acquired:
+        if not acquired:
+            raise DiscoveryIndexError("writer_busy", "索引处理服务仍持有写入锁，请继续等待并核对服务状态。")
+        with transaction.atomic():
+            job = ProcessingJob.objects.select_for_update().get(pk=job_id, job_type=JOB_TYPE)
+            last, seconds = discovery_recovery_window(job)
+            if job.status not in OPEN or seconds is None or last + timedelta(seconds=seconds) > timezone.now():
+                raise DiscoveryIndexError("active", "任务已恢复活动或正在正常等待来源，请重新读取。")
+            if job.attempt >= job.max_attempts or job.status == "running" and job.attempt + 1 >= job.max_attempts:
+                raise DiscoveryIndexError("exhausted", "已到恢复次数边界，请等待原恢复结果后明确重试。")
+            if job.stats.get("action") == "source":
+                try:
+                    generation_id = UUID(str(job.stats.get("generation_id")))
+                    source_id = UUID(str(job.stats.get("source_id")))
+                except ValueError as exc:
+                    raise DiscoveryIndexError("invalid_source", "原任务的来源标识不完整，请从索引维护入口核对。") from exc
+                source_type = job.stats.get("source_type")
+                if source_type not in SOURCE_TYPES or not job.stats.get("source_revision"):
+                    raise DiscoveryIndexError("invalid_source", "原任务的来源类型或修订缺失，请从索引维护入口核对。")
+                generation = SemanticIndexVersion.discovery_objects.filter(pk=generation_id, status__in=["building", "ready", "active"]).first()
+                header = get_source(source_type, source_id)[1]
+                state = DiscoverySourceState.objects.filter(generation=generation, source_type=source_type, source_id=source_id, job=job).first()
+                if not generation or not state or not header or header["source_revision"] != job.stats["source_revision"]:
+                    raise DiscoveryIndexError("superseded", "原索引来源、修订或任务归属已变化，请查看当前材料的处理任务。")
+            elif job.stats.get("action") != "build":
+                raise DiscoveryIndexError("unknown_action", "无法核对原索引任务用途，请从索引维护入口检查。")
+            elif job.stats.get("generation_id"):
+                try:
+                    generation_id = UUID(str(job.stats["generation_id"]))
+                except ValueError as exc:
+                    raise DiscoveryIndexError("invalid_source", "原任务的索引代际标识不完整，请核对原任务。") from exc
+                if not SemanticIndexVersion.discovery_objects.filter(pk=generation_id, status="building").exists():
+                    raise DiscoveryIndexError("superseded", "原索引代际已不在构建中，请查看当前索引状态。")
+            if job.status == "pending" and job.task_id:
+                # Preserve a queued delivery's identity; an occupied queue is not a dead worker.
+                job.save(update_fields=["updated_at"])
+                transaction.on_commit(lambda jid=str(job.pk), tid=job.task_id: _dispatch(jid, tid))
+            else:
+                interrupted = job.status == "running"
+                job.stats = {**job.stats, "recovery": {"reason": "worker_interrupted" if interrupted else "broker_notification_lost", "previous_task_id": job.task_id, "requeued_at": timezone.now().isoformat()}}
+                if interrupted:
+                    job.attempt += 1
+                job.save(update_fields=["stats", "attempt"])
+                _enqueue_job(job)
+            return job
+
+
 def _reconcile():
-    stale = timezone.now() - timedelta(minutes=15)
+    stale = timezone.now() - timedelta(seconds=RUNNING_STALLED_SECONDS)
     # Eight queued sources can each use a four-minute CPU slice. Waiting behind
     # those tasks is not a lost worker lease; only running work uses 15 minutes.
-    queued_stale = timezone.now() - timedelta(hours=1)
+    queued_stale = timezone.now() - timedelta(seconds=QUEUED_STALLED_SECONDS)
     interrupted = Q(status="running", updated_at__lt=stale) | Q(status="pending", updated_at__lt=queued_stale)
     for job in ProcessingJob.objects.filter(interrupted, job_type=JOB_TYPE)[:20]:
-        if job.stats.get("action") == "build" and job.stats.get("generation_id") and job.progress >= 5:
+        if discovery_recovery_window(job)[1] is None:
             # This coordinator intentionally sleeps between source tasks.
             continue
         ProcessingJob.objects.filter(interrupted, pk=job.pk, task_id=job.task_id).update(

@@ -14683,6 +14683,16 @@
                             }
                         },
                         "description": ""
+                    },
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessingReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -25982,6 +25992,17 @@
                 ],
                 "type": "string",
                 "description": "* `create` - create\n* `update` - update\n* `password` - password"
+            },
+            "ActivityKindEnum": {
+                "enum": [
+                    "none",
+                    "checkpoint",
+                    "heartbeat",
+                    "started",
+                    "queue"
+                ],
+                "type": "string",
+                "description": "* `none` - none\n* `checkpoint` - checkpoint\n* `heartbeat` - heartbeat\n* `started` - started\n* `queue` - queue"
             },
             "AdminIssueSummary": {
                 "type": "object",
@@ -51320,10 +51341,11 @@
                     "pause",
                     "resume",
                     "retry",
-                    "cancel"
+                    "cancel",
+                    "recover"
                 ],
                 "type": "string",
-                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel"
+                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel\n* `recover` - recover"
             },
             "ProcessingCommandRequest": {
                 "type": "object",
@@ -51681,6 +51703,54 @@
                     "source",
                     "state"
                 ]
+            },
+            "ProcessingRecovery": {
+                "type": "object",
+                "properties": {
+                    "state": {
+                        "$ref": "#/components/schemas/ProcessingRecoveryStateEnum"
+                    },
+                    "last_activity_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "activity_kind": {
+                        "$ref": "#/components/schemas/ActivityKindEnum"
+                    },
+                    "eligible_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "can_recover": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "activity_kind",
+                    "can_recover",
+                    "eligible_at",
+                    "last_activity_at",
+                    "notice",
+                    "state"
+                ]
+            },
+            "ProcessingRecoveryStateEnum": {
+                "enum": [
+                    "inactive",
+                    "unsupported",
+                    "waiting_sources",
+                    "recoverable",
+                    "delayed",
+                    "waiting",
+                    "active"
+                ],
+                "type": "string",
+                "description": "* `inactive` - inactive\n* `unsupported` - unsupported\n* `waiting_sources` - waiting_sources\n* `recoverable` - recoverable\n* `delayed` - delayed\n* `waiting` - waiting\n* `active` - active"
             },
             "ProcessingResultManifest": {
                 "type": "object",
@@ -52104,6 +52174,9 @@
                     "heartbeat_stale": {
                         "type": "boolean"
                     },
+                    "recovery": {
+                        "$ref": "#/components/schemas/ProcessingRecovery"
+                    },
                     "pause_requested": {
                         "type": "boolean"
                     },
@@ -52223,6 +52296,7 @@
                     "pause_requested",
                     "permission_reason",
                     "progress",
+                    "recovery",
                     "result_urls",
                     "retry_url",
                     "settings_version",

@@ -1,7 +1,7 @@
 """Presentation facts only; processing remains in its existing task services."""
-from django.utils import timezone
 from .processing_commands import task_actions, task_version
 from .processing_identity import processing_edition
+from .processing_recovery import recovery_state
 
 
 def workspace_task(job, row, actor):
@@ -13,6 +13,8 @@ def workspace_task(job, row, actor):
     file_asset = asset or (upload.asset if upload and upload.asset_id else None)
     heartbeat = getattr(job, "heartbeat_at", None)
     actions = task_actions(job, actor)
+    recovery = recovery_state(job)
+    recovery["can_recover"] = "recover" in actions
     ocr = row.get("ocr_progress")
     if ocr:
         if not ocr["can_resume"]: actions = [action for action in actions if action not in {"resume", "retry"}]
@@ -28,7 +30,8 @@ def workspace_task(job, row, actor):
             "retry_url": f"/admin/processing?task_id={stats['retry_replacement_id']}&task_source={row['source']}" if stats.get("retry_replacement_id") else "",
             "partial": job.status == "partial" or bool(stats.get("partial")), "heartbeat_at": heartbeat,
             "failure_pages": failed_pages[:200], "failure_page_count": len(failed_pages), "failure_location": failure_location,
-            "heartbeat_stale": bool(heartbeat and job.status == "running" and (timezone.now() - heartbeat).total_seconds() > 90),
+            "heartbeat_stale": job.status == "running" and recovery["state"] in {"recoverable", "delayed"},
+            "recovery": recovery,
             "operation": "outline_rebuild" if stats.get("operation") == "outline_rebuild" else "",
             "can_export_results": row["source"] == "processing_job" and (row["job_type"] == "ocr" or stats.get("operation") == "outline_rebuild"
                 or row["job_type"] == "discovery_index" and stats.get("action") == "source" and stats.get("source_type") == "edition"),

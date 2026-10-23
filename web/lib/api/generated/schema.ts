@@ -5543,6 +5543,15 @@ export interface components {
          * @enum {string}
          */
         AccountManagementOperationEnum: "create" | "update" | "password";
+        /**
+         * @description * `none` - none
+         *     * `checkpoint` - checkpoint
+         *     * `heartbeat` - heartbeat
+         *     * `started` - started
+         *     * `queue` - queue
+         * @enum {string}
+         */
+        ActivityKindEnum: "none" | "checkpoint" | "heartbeat" | "started" | "queue";
         AdminIssueSummary: {
             total: number;
             published: number;
@@ -13284,9 +13293,10 @@ export interface components {
          *     * `resume` - resume
          *     * `retry` - retry
          *     * `cancel` - cancel
+         *     * `recover` - recover
          * @enum {string}
          */
-        ProcessingCommandActionEnum: "pause" | "resume" | "retry" | "cancel";
+        ProcessingCommandActionEnum: "pause" | "resume" | "retry" | "cancel" | "recover";
         ProcessingCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -13391,6 +13401,27 @@ export interface components {
             next_url: string;
             result: unknown;
         };
+        ProcessingRecovery: {
+            state: components["schemas"]["ProcessingRecoveryStateEnum"];
+            /** Format: date-time */
+            last_activity_at: string | null;
+            activity_kind: components["schemas"]["ActivityKindEnum"];
+            /** Format: date-time */
+            eligible_at: string | null;
+            can_recover: boolean;
+            notice: string;
+        };
+        /**
+         * @description * `inactive` - inactive
+         *     * `unsupported` - unsupported
+         *     * `waiting_sources` - waiting_sources
+         *     * `recoverable` - recoverable
+         *     * `delayed` - delayed
+         *     * `waiting` - waiting
+         *     * `active` - active
+         * @enum {string}
+         */
+        ProcessingRecoveryStateEnum: "inactive" | "unsupported" | "waiting_sources" | "recoverable" | "delayed" | "waiting" | "active";
         ProcessingResultManifest: {
             owner_id: string;
             /** Format: uuid */
@@ -13521,6 +13552,7 @@ export interface components {
             /** Format: date-time */
             heartbeat_at: string | null;
             heartbeat_stale: boolean;
+            recovery: components["schemas"]["ProcessingRecovery"];
             pause_requested: boolean;
             last_error: string;
             error_code: string;
@@ -25025,6 +25057,14 @@ export interface operations {
         };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessingReceipt"];
+                };
+            };
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

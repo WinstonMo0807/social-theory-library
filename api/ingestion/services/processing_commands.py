@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from catalog.models import Asset, Edition, SemanticIndexJob
@@ -21,7 +21,7 @@ class ProcessingCommandSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     job_id = serializers.UUIDField()
     source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
-    action = serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel"])
+    action = serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover"])
     expected_version = serializers.CharField(max_length=64)
 
     def validate(self, value):
@@ -46,8 +46,10 @@ def task_actions(job, actor):
         if job.operation not in {"build", "rebuild"}: return []
         return (["pause"] if job.status in {"queued", "running"} and not job.pause_requested_at else []) + (["resume"] if job.status == "paused" else []) + (["cancel"] if job.status in {"queued", "paused"} else []) + (["retry"] if job.status in {"failed", "partial"} and job.asset_id else [])
     kind, state = job.job_type, job.status
+    from .processing_recovery import recovery_state
+    recover = ["recover"] if has_capability(actor, Capability.VIEW_SYSTEM_STATUS) and recovery_state(job)["can_recover"] else []
     if kind == "discovery_index":
-        return ["retry"] if state == "failed" else ["resume", "cancel"] if state == "paused" else ["cancel"] if state == "pending" else []
+        return recover + (["retry"] if state == "failed" else ["resume", "cancel"] if state == "paused" else ["cancel"] if state == "pending" else [])
     actions = []
     if kind in {"ocr", "external_enrichment"}:
         if state in {"pending", "running"} and not job.pause_requested_at: actions.append("pause")
@@ -58,7 +60,7 @@ def task_actions(job, actor):
     if kind == "editorial_assistance" or kind == "text_extraction" and job.stats.get("operation") == "outline_rebuild":
         if state in {"running", "failed"}: actions.append("cancel")
         if state == "failed": actions.append("retry")
-    return actions
+    return actions + recover
 
 
 def command_actor(request):
@@ -95,8 +97,12 @@ def command_receipt(row):
 def run_processing_command(request, handler):
     actor = command_actor(request)
     request.user = actor
+    if request.data.get("action") == "recover" and not has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
+        raise PermissionDenied("当前账户不能从处理队列恢复任务。")
+    if request.data.get("action") == "recover" and not request.data.get("request_id"):
+        raise ValidationError("恢复任务必须使用当前页面的固定请求编号。")
     # OCR creation already owns its request_id contract and receipt shape.
-    identifier = request.data.get("request_id") if request.data.get("action") in {"pause", "resume", "retry", "cancel"} else None
+    identifier = request.data.get("request_id") if request.data.get("action") in {"pause", "resume", "retry", "cancel", "recover"} else None
     data, signature, job = None, "", None
     if identifier:
         if request.headers.get("X-Editor-Owner") != str(actor.pk): raise PermissionDenied("请从当前账户的任务页面提交操作。")
@@ -118,7 +124,11 @@ def run_processing_command(request, handler):
     if isinstance(job, ProcessingJob) and job.job_type == "editorial_assistance":
         from catalog.services.curation_projects import require_issue_access
         require_issue_access(job.stats.get("issue_id"), actor)
-    response = handler()
+    if data is not None and data["action"] == "recover":
+        from .processing_recovery import recover_processing_task
+        response = Response(recover_processing_task(job, actor), status=202)
+    else:
+        response = handler()
     if response.status_code >= 400:
         # Legacy handlers sometimes discover unsupported retries after a write.
         transaction.set_rollback(True)

@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 M09指定任务恢复
+
+ProcessingWorkspaceTask增加recovery（state、last_activity_at、activity_kind、eligible_at、can_recover、notice），ProcessingCommandActionEnum增加recover。原POST processing-workspace/在200回执之外明确202恢复已受理；请求仍需request_id、job_id、source、action、expected_version与X-Editor-Owner。recover同时要求当前RETRY_JOBS与VIEW_SYSTEM_STATUS；账户、来源或活动变化拒绝后保留原任务，不能绕过固定回执使用旧无编号入口。原commands/{request_id}/查回和停止协议继续使用。
+
+GET只展示现存活动；刷新不更新心跳、不触发任务。heartbeat_stale兼容字段现在按对应任务恢复窗口判定，Discovery协调等待不算失联。恢复受理不等于队列/执行服务已正常；原请求回执不能代替最新任务状态。没有新增API路径，仍333条。
+
 ## 2026-10-24 M09索引片段导出与账户复核
 
 原ProcessingResultManifest增加discovery类别、index_generation_id和source_revision；ProcessingWorkspaceTask增加can_export_results。GET results原页序/版本契约复用，333路径不变。仅单份公开文献原任务的成功片段，下载前后核对当前来源与账户会话/权限；原OCR和目录同享账户复核。无新增写接口或迁移。

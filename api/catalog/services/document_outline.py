@@ -593,7 +593,7 @@ def dispatch_outline_job(job_id, task_id):
         process_outline_job.apply_async(args=[job_id], task_id=task_id, ignore_result=True)
         return True
     except (OperationalError, OSError, ConnectionError, TimeoutError):
-        ProcessingJob.objects.filter(pk=job_id, task_id=task_id).update(status="failed", error_code="queue_unavailable", error_message="目录任务未进入队列，请重试。", finished_at=timezone.now())
+        ProcessingJob.objects.filter(pk=job_id, task_id=task_id, status="pending").update(status="failed", error_code="queue_unavailable", error_message="目录任务未进入队列，请重试。", finished_at=timezone.now(), updated_at=timezone.now())
         return False
 
 

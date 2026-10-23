@@ -324,7 +324,7 @@ def _dispatch_processing_job(job_id: str, job_type: str, task_id: str) -> bool:
     return False
 
 
-def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
+def recover_stalled_processing_jobs(*, limit: int = 100, job_id=None) -> dict[str, int]:
     """Redis messages are wakeups; stalled jobs are recovered from PostgreSQL."""
 
     now = timezone.now()
@@ -340,9 +340,10 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
         ProcessingJob.JobType.PROJECTION_REFRESH,
         ProcessingJob.JobType.R2_STAGING,
     }
+    scope = ProcessingJob.objects.filter(pk=job_id) if job_id is not None else ProcessingJob.objects.all()
     with transaction.atomic():
         jobs = list(
-            ProcessingJob.objects.select_for_update(skip_locked=True, of=("self",))
+            scope.select_for_update(skip_locked=True, of=("self",))
             .filter(job_type__in=supported_types)
             .filter(
                 (Q(status=ProcessingJob.Status.RUNNING) & (
@@ -431,12 +432,12 @@ def recover_stalled_processing_jobs(*, limit: int = 100) -> dict[str, int]:
     # The exhausted recovery branch never reaches run_ocr_job's failure
     # handler. Repair its summary (including historical rows) after releasing
     # ProcessingJob locks so the regular Edition -> job lock order is retained.
-    terminal_ocr = ProcessingJob.objects.filter(job_type=ProcessingJob.JobType.OCR,
+    terminal_ocr = scope.filter(job_type=ProcessingJob.JobType.OCR,
         status=ProcessingJob.Status.FAILED, error_code="max_attempts_exhausted",
         edition__ocr_status__in=[OcrStatus.RUNNING, OcrStatus.PENDING]).order_by("-created_at")[:max(1, min(limit, 500))]
     for job in terminal_ocr:
         _update_ocr_edition_if_current(job, expected_status=ProcessingJob.Status.FAILED, ocr_status=OcrStatus.FAILED)
-    paused_ocr = ProcessingJob.objects.filter(job_type=ProcessingJob.JobType.OCR,
+    paused_ocr = scope.filter(job_type=ProcessingJob.JobType.OCR,
         status=ProcessingJob.Status.PAUSED, edition__ocr_status=OcrStatus.RUNNING).order_by("-created_at")[:max(1, min(limit, 500))]
     for job in paused_ocr:
         _update_ocr_edition_if_current(job, expected_status=ProcessingJob.Status.PAUSED, ocr_status=OcrStatus.PENDING)

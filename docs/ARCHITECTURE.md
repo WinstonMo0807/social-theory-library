@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 M09原队列的指定任务恢复
+
+processing_recovery只汇总真实活动并调用原恢复服务。recover_stalled_processing_jobs可按job_id限定，候选与OCR摘要修复均保持该范围；原定时全局恢复行为保留。Discovery人工恢复复用index_writer的非阻塞写入锁和原_enqueue_job/_dispatch，核对原代际/来源修订/任务归属，正常协调等待不重派。调用方沿账户→原父对象→任务锁与固定AuditEvent回执串行，不新增任务存储、设备路由或数据库schema。原worker的task_id写入保护继续生效。
+
 ## 2026-10-23 查询词维护写回原知识草稿
 
 M13 knowledge-terms封装原KnowledgeNode/EditorialRevision/AuditEvent。只提交aliases字段，组合保存保留原草稿其他字段；公开采用仍由原发布与QueryLexicon变更事件负责。来源版本包含原编辑版本及正式/草稿别名，固定请求与停止按账户锁串行。原别名发布应用保留同名记录身份，显式is_verified决定优先于旧创建默认，无新存储或迁移。
