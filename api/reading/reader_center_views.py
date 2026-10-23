@@ -17,6 +17,7 @@ class ReaderCenterQuery(serializers.Serializer):
     order = serializers.ChoiceField(choices=["newest", "oldest"], default="newest")
     page = serializers.IntegerField(min_value=1, default=1)
     overview = serializers.BooleanField(default=True)
+    visibility = serializers.ChoiceField(choices=["all", "active", "archived"], default="all")
 
 
 class ReaderMaterialOutput(serializers.Serializer):
@@ -31,6 +32,8 @@ class ReaderMaterialOutput(serializers.Serializer):
     updated_at = serializers.DateTimeField()
     revision = serializers.CharField()
     editable_title = serializers.CharField(allow_blank=True)
+    source_revision = serializers.CharField()
+    preference_revision = serializers.IntegerField(min_value=0)
 
 
 class ReaderPendingOutput(serializers.Serializer):
@@ -71,7 +74,7 @@ class ReaderCenterView(PrivateAccountResponses, APIView):
 
 
 class ReaderMaterialTarget(serializers.Serializer):
-    kind = serializers.ChoiceField(choices=["research", "lists", "bookmarks"])
+    kind = serializers.ChoiceField(choices=list(reader_center.KINDS))
     id = serializers.UUIDField()
     revision = serializers.CharField(max_length=80)
     title = serializers.CharField(max_length=240, required=False)

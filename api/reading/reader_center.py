@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from django.db.models import CharField, F, OuterRef, Subquery, Value
 from rest_framework.exceptions import NotFound, ValidationError
 
-from . import research
+from . import material_preferences, research
 from .models import Annotation, Bookmark, CitationAudit, PersonalReadingPlan, ReadingList, ResearchMemory, ResearchProject, SavedItem
 from .serializers import ReadingProgressSerializer, SavedItemSerializer
 from .services import decrypt_private_text, readable_progress_for_user
@@ -17,7 +17,7 @@ MODELS = {"research": ResearchProject, "notes": Annotation, "bookmarks": Bookmar
           "lists": ReadingList, "audits": CitationAudit, "confirmed": ResearchMemory, "saved": SavedItem}
 
 
-def collection(user, kind):
+def collection(user, kind, *, visibility="all"):
     rows = MODELS[kind].objects.filter(user=user)
     if kind == "plans":
         rows = rows.filter(public_path_id__isnull=True)
@@ -27,7 +27,18 @@ def collection(user, kind):
         rows = rows.filter(state="confirmed")
     elif kind == "saved":
         rows = rows.select_related("work")
+    rows = material_preferences.annotate(rows, user, kind)
+    if visibility != "all":
+        rows = rows.filter(material_archived=visibility == "archived")
     return rows
+
+
+def source_revision(row):
+    return str(row.revision) if hasattr(row, "revision") else row.updated_at.isoformat()
+
+
+def command_revision(row, kind):
+    return f"{source_revision(row)}|{material_preferences.presentation(row, kind)['revision']}"
 
 
 def private_text(row, kind):
@@ -47,6 +58,7 @@ def private_text(row, kind):
 def material(user, kind, row, *, text=None):
     title, question = text if text is not None else private_text(row, kind)
     title = title.strip().split("\n")[0][:160] or {"notes": "阅读标记", "bookmarks": "页面书签", "plans": "未命名阅读计划", "lists": "未命名书单", "audits": "引文体检", "confirmed": "个人认识", "research": "未命名研究", "saved": "来源暂不可用"}[kind]
+    presentation = material_preferences.presentation(row, kind)
     state, path = "saved", ""
     if kind == "research":
         state = "archived" if row.archived else "saved"
@@ -75,23 +87,27 @@ def material(user, kind, row, *, text=None):
         title = (work or {}).get("title") or "来源暂不可用"
         path = f"/works/{work['slug']}" if work and work.get("slug") else "/account?section=saved"
         state = "saved" if work else "source_unavailable"
+    editable_title = presentation["title"] or (private_text(row, kind)[0] if kind in {"research", "lists", "bookmarks"} else title)
+    title = presentation["title"] or title
+    if presentation["archived"]:
+        state = "archived"
     return {"id": str(row.pk), "key": f"{kind}:{row.pk}", "kind": kind, "kind_label": KINDS[kind],
             "title": title, "question": question[:240], "status": state, "href": path,
-            "editable_title": private_text(row, kind)[0] if kind in {"research", "lists", "bookmarks"} else "",
-            "updated_at": row.updated_at.isoformat(), "revision": str(row.revision) if hasattr(row, "revision") else row.updated_at.isoformat()}
+            "editable_title": editable_title, "source_revision": source_revision(row), "preference_revision": presentation["revision"],
+            "updated_at": presentation["updated_at"].isoformat(), "revision": command_revision(row, kind)}
 
 
-def ordered_materials(user, kinds, *, reverse=True):
-    branches = [collection(user, name).order_by().annotate(material_kind=Value(name, output_field=CharField()))
-                .values_list("id", "updated_at", "material_kind") for name in kinds]
+def ordered_materials(user, kinds, *, reverse=True, visibility="all"):
+    branches = [collection(user, name, visibility=visibility).order_by().annotate(material_kind=Value(name, output_field=CharField()))
+                .values_list("id", "material_updated_at", "material_kind") for name in kinds]
     union = branches[0].union(*branches[1:], all=True) if len(branches) > 1 else branches[0]
-    fields = ("-updated_at", "-id", "-material_kind") if reverse else ("updated_at", "id", "material_kind")
+    fields = ("-material_updated_at", "-id", "-material_kind") if reverse else ("material_updated_at", "id", "material_kind")
     return union.order_by(*fields)
 
 
-def materials(user, *, kind="all", q="", order="newest", page=1):
+def materials(user, *, kind="all", q="", order="newest", page=1, visibility="all"):
     kinds = list(KINDS) if kind == "all" else ["notes", "bookmarks"] if kind == "notes" else [kind]
-    counts = {name: collection(user, name).count() for name in KINDS}
+    counts = {name: collection(user, name, visibility=visibility).count() for name in KINDS}
     total = sum(counts[name] for name in kinds)
     start, stop = (page - 1) * PAGE_SIZE, page * PAGE_SIZE
     reverse = order == "newest"
@@ -106,27 +122,28 @@ def materials(user, *, kind="all", q="", order="newest", page=1):
         def matches():
             nonlocal total
             for name in kinds:
-                for row in collection(user, name).order_by("id").iterator(chunk_size=100):
+                for row in collection(user, name, visibility=visibility).order_by("id").iterator(chunk_size=100):
                     text = private_text(row, name)
-                    descriptor = material(user, name, row, text=text) if name == "saved" else None
-                    haystack = descriptor["title"] if descriptor else " ".join(text)
+                    current = SavedItemSerializer(row, context={"request": SimpleNamespace(user=user)}).data if name == "saved" else None
+                    haystack = str((current.get("work_data") or {}).get("title") or "") if current else " ".join(text)
+                    haystack += " " + material_preferences.presentation(row, name)["title"]
                     if query not in haystack.casefold():
                         continue
                     total += 1
-                    yield (row.updated_at, str(row.pk), name)
+                    yield (row.material_updated_at, str(row.pk), name)
         pick = heapq.nlargest if reverse else heapq.nsmallest
         selected = pick(stop, matches())[start:stop]
     else:
         # UNION carries identities/timestamps only; SQL applies the global offset.
         # Every branch retains its owner predicate before it enters the union.
-        selected = [(stamp, str(pk), name) for pk, stamp, name in ordered_materials(user, kinds, reverse=reverse)[start:stop]]
+        selected = [(stamp, str(pk), name) for pk, stamp, name in ordered_materials(user, kinds, reverse=reverse, visibility=visibility)[start:stop]]
     if page > 1 and start >= total:
         raise NotFound("这一页已没有资料，请返回第一页。")
     if len(selected) != min(PAGE_SIZE, max(0, total - start)):
         raise research.ResearchConflict("资料在读取时发生变化，请刷新当前页。")
     results = []
     for _, pk, name in selected:
-        row = collection(user, name).filter(pk=pk).first()
+        row = collection(user, name, visibility=visibility).filter(pk=pk).first()
         if row is None:
             # Never convert a concurrent deletion into a false empty library.
             raise research.ResearchConflict("资料在读取时发生变化，请刷新当前页。")
@@ -148,7 +165,7 @@ def recent_reading(request):
 def pending_tasks(user):
     output = []
     # Scan encrypted plans in update order until the visible six tasks are found.
-    for plan in collection(user, "plans").order_by("-updated_at", "-id").iterator(chunk_size=25):
+    for plan in collection(user, "plans", visibility="active").order_by("-updated_at", "-id").iterator(chunk_size=25):
         data = research.unpack(plan)
         for item in data.get("items") or []:
             if not isinstance(item, dict) or item.get("status") not in {"pending", "reading"}:

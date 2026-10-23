@@ -11,7 +11,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied, Throttled, Val
 
 from accounts.models import ReaderProfile
 from ingestion.models import AuditEvent
-from . import research
+from . import material_preferences, research
 from .models import (Annotation, Bookmark, CitationAudit, PersonalReadingPlan, ReaderDataOperation,
                      ReaderSearchRecord, ReadingHistory, ResearchMemory, ResearchProject, SavedTopic, ReadingList, SavedItem)
 from .services import decrypt_private_text
@@ -198,6 +198,9 @@ def item(user, category, pk, *, lock=False):
 
 def target_of(row, category):
     target = {"category": category, "id": str(row.id), "revision": version(row)}
+    preference_revision = material_preferences.revision(row.user_id, category, row.pk)
+    if preference_revision is not None:
+        target["preference_revision"] = preference_revision
     if category == "research":
         target["children"] = {str(turn.id): turn.revision for turn in row.turns.all()}
     if category == "reading_lists":
@@ -209,6 +212,8 @@ def verify_target(user, target, *, lock=False):
     row = item(user, target["category"], target["id"], lock=lock)
     if version(row) != target["revision"]:
         raise research.ResearchConflict("资料已修改，请重新预览当前版本。")
+    if "preference_revision" in target and material_preferences.revision(user, target["category"], row.pk) != target["preference_revision"]:
+        raise research.ResearchConflict("本人显示名称或归档状态已变化，请重新选择并预览。")
     if target.get("children") is not None and target_of(row, target["category"]).get("children") != target["children"]:
         raise research.ResearchConflict("研究轮次已修改，请重新准备导出。")
     return row
@@ -226,6 +231,12 @@ def annotation_export(user, row):
 
 
 def export_item(user, category, row):
+    record = _export_item(user, category, row)
+    preference = material_preferences.export(user, category, row)
+    return {**record, "reader_center": preference} if preference else record
+
+
+def _export_item(user, category, row):
     if category in COLLABORATION_CATEGORIES:
         from .sharing_privacy import export
         return export(user, category, row)
@@ -375,6 +386,9 @@ def describe_item(user, category, row):
         source = {"title": title, "path": f"/topics/{current['slug']}" if current else ""}
     else:
         title = payload.get("query") or payload.get("goal") or payload.get("title") or "未命名资料"
+    preference = material_preferences.export(user, category, row)
+    if preference and preference["title"]:
+        title = preference["title"]
     return {**target_of(row, category), "title": title, "updated_at": row.updated_at.isoformat(),
             "source": source, "impact": erase_impact(user, category, row)["message"]}
 
@@ -430,7 +444,11 @@ def operation_output(row):
                     title = (content.get("body") or content.get("goal") or content.get("query") or "本人资料")[:120]
                 else:
                     title = describe_item(row.user, target["category"], current)["title"]
-                entry.update(title=title, current=version(current) == target["revision"])
+                preference = material_preferences.export(row.user, target["category"], current)
+                if preference and preference["title"]:
+                    title = preference["title"]
+                preference_current = "preference_revision" not in target or material_preferences.revision(row.user, target["category"], current.pk) == target["preference_revision"]
+                entry.update(title=title, current=version(current) == target["revision"] and preference_current)
             except NotFound:
                 entry["title"] = "这项资料已被删除"
             preview.append(entry)

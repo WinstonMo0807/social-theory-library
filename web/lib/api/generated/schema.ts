@@ -13607,6 +13607,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             revision: string;
+            preference_revision?: number;
         };
         PrivateRecord: {
             /** Format: uuid */
@@ -15239,21 +15240,6 @@ export interface components {
             action: components["schemas"]["ReaderMaterialCommandActionEnum"];
             targets: components["schemas"]["ReaderMaterialTargetRequest"][];
         };
-        ReaderMaterialOutput: {
-            /** Format: uuid */
-            id: string;
-            key: string;
-            kind: components["schemas"]["ReaderMaterialOutputKindEnum"];
-            kind_label: string;
-            title: string;
-            question: string;
-            status: string;
-            href: string;
-            /** Format: date-time */
-            updated_at: string;
-            revision: string;
-            editable_title: string;
-        };
         /**
          * @description * `research` - research
          *     * `notes` - notes
@@ -15265,7 +15251,24 @@ export interface components {
          *     * `saved` - saved
          * @enum {string}
          */
-        ReaderMaterialOutputKindEnum: "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
+        ReaderMaterialKindEnum: "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
+        ReaderMaterialOutput: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            kind: components["schemas"]["ReaderMaterialKindEnum"];
+            kind_label: string;
+            title: string;
+            question: string;
+            status: string;
+            href: string;
+            /** Format: date-time */
+            updated_at: string;
+            revision: string;
+            editable_title: string;
+            source_revision: string;
+            preference_revision: number;
+        };
         ReaderMaterialReceipt: {
             owner_id: string;
             /** Format: uuid */
@@ -15276,15 +15279,8 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
-        /**
-         * @description * `research` - research
-         *     * `lists` - lists
-         *     * `bookmarks` - bookmarks
-         * @enum {string}
-         */
-        ReaderMaterialTargetKindEnum: "research" | "lists" | "bookmarks";
         ReaderMaterialTargetRequest: {
-            kind: components["schemas"]["ReaderMaterialTargetKindEnum"];
+            kind: components["schemas"]["ReaderMaterialKindEnum"];
             /** Format: uuid */
             id: string;
             revision: string;
@@ -29660,6 +29656,12 @@ export interface operations {
                 overview?: boolean;
                 page?: number;
                 q?: string;
+                /**
+                 * @description * `all` - all
+                 *     * `active` - active
+                 *     * `archived` - archived
+                 */
+                visibility?: "all" | "active" | "archived";
             };
             header?: never;
             path?: never;

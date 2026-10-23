@@ -15,7 +15,7 @@ type Action = "rename" | "archive" | "restore";
 type Target = { kind: string; id: string; revision: string; title?: string };
 type Command = { request_id: string; action: Action; targets: Target[] };
 type Receipt = { owner_id: string; request_id: string; state: "applied" | "cancelled"; action: string; applied: Array<{ id: string; kind: string; revision: string }> };
-const labels = { rename: "重命名", archive: "归档研究", restore: "恢复研究" };
+const labels = { rename: "重命名", archive: "归档资料", restore: "恢复资料" };
 const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 export function ReaderMaterialActions({ ownerId, selection, blocked, onApplied, onLocked }: { ownerId: string; selection: ReaderMaterial[]; blocked: boolean; onApplied: () => void; onLocked: (locked: boolean) => void }) {
@@ -43,8 +43,8 @@ export function ReaderMaterialActions({ ownerId, selection, blocked, onApplied, 
   const locked = !ready || broken || busy || Boolean(pending) || Boolean(editor);
   useEffect(() => { onLocked(locked); }, [locked, onLocked]);
   useUnsavedForm(Boolean(editor) || Boolean(pending), false);
-  const canRename = selection.length > 0 && selection.length <= 20 && selection.every(row => ["research", "lists", "bookmarks"].includes(row.kind));
-  const canArchive = selection.length > 0 && selection.length <= 100 && selection.every(row => row.kind === "research");
+  const canRename = selection.length > 0 && selection.length <= 20;
+  const canArchive = selection.length > 0 && selection.length <= 100;
   function open(action: Action) { setMessage(""); setEditor({ action, rows: selection, titles: selection.map(row => row.editable_title) }); }
   function close() {
     if (busy) return;
@@ -86,9 +86,9 @@ export function ReaderMaterialActions({ ownerId, selection, blocked, onApplied, 
   return <>
     <button type="button" disabled={blocked || locked || !canRename} onClick={() => open("rename")}><Pencil size={14} />重命名</button>
     <button type="button" disabled={blocked || locked || !canArchive || selection.every(row => row.status === "archived")} onClick={() => open("archive")}><Archive size={14} />归档</button>
-    {canArchive && selection.some(row => row.status === "archived") ? <button type="button" disabled={blocked || locked} onClick={() => open("restore")}><ArchiveRestore size={14} />恢复研究</button> : null}
+    {canArchive && selection.some(row => row.status === "archived") ? <button type="button" disabled={blocked || locked} onClick={() => open("restore")}><ArchiveRestore size={14} />恢复资料</button> : null}
     {message || pending ? <div className={styles.materialCommandNotice}>{feedback}</div> : null}
-    {editor ? <Dialog open className={`${styles.transferDialog} ${styles.materialEditor}`} aria-labelledby="reader-material-editor-title" onRequestClose={close}><header><h2 id="reader-material-editor-title">{labels[editor.action]}</h2><button type="button" disabled={busy} onClick={close} aria-label="关闭资料编辑"><X size={17} /></button></header><p>{editor.action === "rename" ? "修改独立名称，保留正文、来源和关联。任何一项版本变化都会停止本次全部修改。" : "归档用于整理研究记录，可恢复；原文、研究轮次、笔记授权与已开始的任务保留。不会归档所选范围外的资料。"}</p>
+    {editor ? <Dialog open className={`${styles.transferDialog} ${styles.materialEditor}`} aria-labelledby="reader-material-editor-title" onRequestClose={close}><header><h2 id="reader-material-editor-title">{labels[editor.action]}</h2><button type="button" disabled={busy} onClick={close} aria-label="关闭资料编辑"><X size={17} /></button></header><p>{editor.action === "rename" ? "研究、书单与书签修改原名称；笔记、计划、体检和选材设置本人资料列表的显示名称，正文、原题名和目标不变。任何一项版本变化都会停止本次全部修改。" : "归档用于整理本人的资料列表，可在“已归档”筛选中恢复；保留原文、笔记确认与授权、阅读进度及任务记录。不会归档未选择的资料。"}</p>
       <form onSubmit={event => { event.preventDefault(); submit(); }}><ul>{editor.rows.map((row, i) => <li key={row.key}><label><span>{row.kind_label} · {row.title}</span>{editor.action === "rename" ? <input aria-label={`新的名称：${row.title}`} value={editor.titles[i]} maxLength={240} required disabled={busy || Boolean(pending)} onChange={event => setEditor(current => current ? { ...current, titles: current.titles.map((title, index) => index === i ? event.target.value : title) } : current)} /> : <small>{row.status === "archived" ? "已归档" : "已保存"}</small>}</label></li>)}</ul>
         {feedback}<footer><button type="button" disabled={busy} onClick={close}>{pending ? "稍后核对" : "取消"}</button><button type="submit" disabled={busy || Boolean(pending) || (editor.action === "rename" && editor.titles.some(title => !title.trim()))}>{busy ? "正在保存…" : "确认并保存"}</button></footer>
       </form></Dialog> : null}

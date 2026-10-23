@@ -71,7 +71,7 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
   }
   async function prepare(kind: "export" | "erase", targets = selected) {
     if (!data) return;
-    const input = kind === "export" ? { kind, categories: exports } as const : { kind, targets: targets.map(({ category: leaf, id, revision }) => ({ category: leaf, id, revision })) } as const;
+    const input = kind === "export" ? { kind, categories: exports } as const : { kind, targets: targets.map(({ category: leaf, id, revision, preference_revision }) => ({ category: leaf, id, revision, preference_revision })) } as const;
     setNotice("");
     const id = await preparation.prepare(input);
     if (id) { setFocused(id); summary.reload(); }

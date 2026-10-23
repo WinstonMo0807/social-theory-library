@@ -5,10 +5,10 @@ from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
 from ingestion.models import AuditEvent
-from . import booklists, notebook, privacy, reader_center, research
+from . import booklists, material_preferences, notebook, privacy, reader_center, research
 
 ACTION = "reader_material_command"
-RENAMABLE = {"research", "lists", "bookmarks"}
+RENAMABLE = set(reader_center.KINDS)
 
 
 def receipt(user, request_id):
@@ -48,15 +48,15 @@ def command(user, data):
     seen, locked = set(), []
     for target in sorted(targets, key=lambda row: (row["kind"], str(row["id"]))):
         kind, pk = target["kind"], str(research.identifier(target["id"]))
-        if kind not in (RENAMABLE if verb == "rename" else {"research"}):
-            raise ValidationError("只能重命名研究、书单与书签，或归档/恢复研究。笔记正文和计划目标请在原工作台编辑。")
+        if kind not in RENAMABLE:
+            raise ValidationError("请选择读者中心支持的本人资料类型。")
         if (kind, pk) in seen:
             raise ValidationError("同一份资料不能重复选择。")
         seen.add((kind, pk))
         row = reader_center.collection(user, kind).select_for_update().filter(pk=pk).first()
         if row is None:
             raise NotFound("所选本人资料已不存在；本次全部更改均未执行。")
-        if privacy.version(row) != target["revision"]:
+        if reader_center.command_revision(row, kind) != target["revision"]:
             raise research.ResearchConflict("所选资料已变化；本次全部更改均未执行，请刷新后重新选择。")
         if verb == "rename":
             research.text(target.get("title"), "title", 240, True)
@@ -68,14 +68,17 @@ def command(user, data):
             changes = {"title": target["title"]} if verb == "rename" else {"archived": verb == "archive"}
             if verb == "rename" or row.archived != changes["archived"]:
                 row = research.update_project(user, row.pk, {"expected_revision": row.revision, **changes})
-        elif kind == "lists":
+        elif verb == "rename" and kind == "lists":
             booklists.command(user, {"list_id": str(row.pk), "request_id": str(uuid5(NAMESPACE_URL, f"stl:reader-material:{request_id}:{row.pk}")),
                 "expected_version": booklists.version(row), "action": "edit", "title": research.text(target["title"], "title", 240, True)})
             row.refresh_from_db()
-        else:
+        elif verb == "rename" and kind == "bookmarks":
             notebook.edit(user, "bookmarks", row.pk, {"expected_version": privacy.version(row), "label": research.text(target["title"], "title", 240, True)})
             row.refresh_from_db()
-        applied.append({"kind": kind, "id": str(row.pk), "revision": privacy.version(row)})
+        else:
+            material_preferences.save(user, kind, row, **({"title": research.text(target["title"], "title", 240, True)} if verb == "rename" else {"archived": verb == "archive"}))
+        fresh = reader_center.MODELS[kind].objects.get(pk=row.pk, user=user)
+        applied.append({"kind": kind, "id": str(row.pk), "revision": reader_center.command_revision(fresh, kind)})
     AuditEvent.objects.create(actor=user, action=ACTION, object_type="ReaderMaterial", object_id="", request_id=request_id,
         after={"state": "applied", "action": verb, "applied": applied, "fingerprint": fingerprint})
     return receipt(user, request_id)

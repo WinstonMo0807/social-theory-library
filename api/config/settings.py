@@ -246,6 +246,7 @@ SPECTACULAR_SETTINGS = {
         "ResearchMemoryUsageActionEnum": ["grant", "revoke", "revoke_all"],
         "CitationSourceCommandActionEnum": ["cancel", "retry"],
         "ReaderPrivacyOperationKindEnum": ["export", "erase"],
+        "ReaderMaterialKindEnum": ["research", "notes", "bookmarks", "plans", "lists", "audits", "confirmed", "saved"],
         "DocumentRevisionApplyModeEnum": ["publish", "apply_draft"],
         "EditorialSourceKindEnum": ["catalog", "planned"],
         "EditorialTextKindEnum": ["paragraph", "heading"],

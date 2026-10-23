@@ -14,7 +14,7 @@ import { LocalResearchTransfer } from "./local-research-transfer";
 import styles from "./reader-overview.module.css";
 
 type Kind = "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
-type Material = { id: string; key: string; kind: Kind; kind_label: string; title: string; editable_title: string; question: string; status: string; href: string; updated_at: string; revision: string };
+type Material = { id: string; key: string; kind: Kind; kind_label: string; title: string; editable_title: string; source_revision: string; preference_revision: number; question: string; status: string; href: string; updated_at: string; revision: string };
 type Progress = { id: string; asset: string; work: ApiWork | null; current_page: number; progress_ratio: number; updated_at: string };
 type Pending = { id: string; title: string; question: string; status: string; updated_at: string; href: string };
 type Overview = { owner_id: string; counts: Record<Kind, number>; count: number; page: number; page_size: number; total_pages: number; results: Material[]; recent_reading: Progress[]; pending_tasks: Pending[] };
@@ -31,12 +31,13 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
   const pathname = usePathname();
   const kind = params.get("material") || "all";
   const search = params.get("q") || "";
+  const visibility = ["active", "archived"].includes(params.get("visibility") || "") ? params.get("visibility")! : "all";
   const order = params.get("order") === "oldest" ? "oldest" : "newest";
   const pageText = params.get("page") || "1";
   const page = /^\d{1,9}$/.test(pageText) && Number(pageText) > 0 ? Number(pageText) : 1;
   const [materialGuard, setMaterialGuard] = useState(false);
   const [view, setView] = useState<"list" | "cards">("list");
-  const query = new URLSearchParams({ kind, q: search, order, page: String(page) });
+  const query = new URLSearchParams({ kind, q: search, order, visibility, page: String(page) });
   const load = useCallback(async (path: string, signal: AbortSignal) => {
     const value = await apiRequest<Overview>(path, { cache: "no-store", signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]), headers: { "X-Reader-Owner": ownerId } }, getServerSessionCredential());
     if (value.owner_id !== ownerId) throw new Error("登录账户已变化，请重新读取资料。");
@@ -58,7 +59,7 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
   return <div className={styles.overview}>
     <nav className={styles.sections} aria-label="我的资料类型">{sections.map(([key, label, href]) => <Link key={key} href={href}><FileText size={17} /><span>{label}</span><small>{data ? data.counts[key] + (key === "notes" ? data.counts.bookmarks : 0) : "—"}</small></Link>)}</nav>
     <div className={styles.localTransfer}><p>本机研究记录只有在你选择并确认后才会转存。</p><LocalResearchTransfer ownerId={ownerId} onChanged={workspace.reload} /></div>
-    {workspace.error ? <section className={styles.state} role="alert"><h2>私人资料暂时无法读取</h2><p>{workspace.error}</p><div><button onClick={workspace.reload}><RefreshCw size={15} />重新读取</button>{page > 1 ? <button onClick={() => filter({ page: "1" })}>返回第一页</button> : null}{search || kind !== "all" ? <button onClick={() => filter({ q: "", material: "all" })}>清除筛选</button> : null}</div></section> : workspace.loading || !data ? <section className={styles.state} role="status"><p>正在读取你的资料…</p></section> : <>
+    {workspace.error ? <section className={styles.state} role="alert"><h2>私人资料暂时无法读取</h2><p>{workspace.error}</p><div><button onClick={workspace.reload}><RefreshCw size={15} />重新读取</button>{page > 1 ? <button onClick={() => filter({ page: "1" })}>返回第一页</button> : null}{search || kind !== "all" || visibility !== "all" ? <button onClick={() => filter({ q: "", material: "all", visibility: "all" })}>清除筛选</button> : null}</div></section> : workspace.loading || !data ? <section className={styles.state} role="status"><p>正在读取你的资料…</p></section> : <>
       <section className={styles.section}><header><div><h2>继续阅读</h2><p>从上次离开的三个阅读位置继续。</p></div><Link href="/account?section=history">查看全部 <ArrowRight size={14} /></Link></header>
         {data.recent_reading.length ? <div className={styles.reading}>{data.recent_reading.map(row => {
           if (!row.work) return <article key={row.id}><div><h3>来源当前不可用</h3><p>阅读位置仍保留，作品公开后可继续阅读。</p></div></article>;
@@ -71,9 +72,9 @@ export function ReaderOverview({ ownerId }: { ownerId: string }) {
       </section>
     </>}
     <section className={styles.section}><header><div><h2>我的资料</h2><p>筛选、打开和管理你创建或保存的资料。</p></div><div className={styles.view}><button aria-label="列表查看" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={16} /></button><button aria-label="卡片查看" aria-pressed={view === "cards"} onClick={() => setView("cards")}><Grid2X2 size={16} /></button></div></header>
-      <div className={styles.filters}><label><span className="sr-only">资料类型</span><select value={kind} onChange={event => filter({ material: event.target.value })}><option value="all">全部资料</option>{sections.map(([key, label]) => <option key={key} value={key}>{label}</option>)}<option value="saved">选材收藏</option></select></label><form onSubmit={submit} key={search}><Search size={15} /><input aria-label="搜索我的资料" name="q" type="search" maxLength={180} defaultValue={search} placeholder="搜索标题或私人正文…" /><button type="submit">搜索</button></form><label><span className="sr-only">排序</span><select value={order} onChange={event => filter({ order: event.target.value })}><option value="newest">最近更新</option><option value="oldest">最早更新</option></select></label></div>
+      <div className={styles.filters}><label><span className="sr-only">资料类型</span><select value={kind} onChange={event => filter({ material: event.target.value })}><option value="all">全部资料</option>{sections.map(([key, label]) => <option key={key} value={key}>{label}</option>)}<option value="saved">选材收藏</option></select></label><label><span className="sr-only">归档范围</span><select value={visibility} onChange={event => filter({ visibility: event.target.value })}><option value="all">全部状态</option><option value="active">未归档</option><option value="archived">已归档</option></select></label><form onSubmit={submit} key={search}><Search size={15} /><input aria-label="搜索我的资料" name="q" type="search" maxLength={180} defaultValue={search} placeholder="搜索标题或私人正文…" /><button type="submit">搜索</button></form><label><span className="sr-only">排序</span><select value={order} onChange={event => filter({ order: event.target.value })}><option value="newest">最近更新</option><option value="oldest">最早更新</option></select></label></div>
       <ReaderMaterials key={ownerId} rows={data?.results || []} ownerId={ownerId} cards={view === "cards"} onChanged={workspace.reload} onGuardChange={setMaterialGuard} />
-      {data ? data.results.length ? <><nav className={styles.paging} aria-label="资料分页"><span>共 {data.count} 项</span><button disabled={data.page <= 1} onClick={() => filter({ page: String(data.page - 1) })} aria-label="上一页"><ChevronLeft size={16} /></button><span>{data.page} / {data.total_pages}</span><button disabled={data.page >= data.total_pages} onClick={() => filter({ page: String(data.page + 1) })} aria-label="下一页"><ChevronRight size={16} /></button></nav></> : <div className={styles.empty}><FileText size={24} /><strong>{search || kind !== "all" ? "没有匹配的资料" : "这里还没有资料"}</strong><p>{search || kind !== "all" ? "可以调整关键词或资料类型，现有资料没有被删除。" : "保存研究、笔记、计划或书单后，就能在这里继续。"}</p>{search || kind !== "all" ? <button onClick={() => filter({ q: "", material: "all" })}>查看全部资料</button> : <Link href="/explore">从探索开始 <ArrowRight size={14} /></Link>}</div> : null}
+      {data ? data.results.length ? <><nav className={styles.paging} aria-label="资料分页"><span>共 {data.count} 项</span><button disabled={data.page <= 1} onClick={() => filter({ page: String(data.page - 1) })} aria-label="上一页"><ChevronLeft size={16} /></button><span>{data.page} / {data.total_pages}</span><button disabled={data.page >= data.total_pages} onClick={() => filter({ page: String(data.page + 1) })} aria-label="下一页"><ChevronRight size={16} /></button></nav></> : <div className={styles.empty}><FileText size={24} /><strong>{search || kind !== "all" || visibility !== "all" ? "没有匹配的资料" : "这里还没有资料"}</strong><p>{search || kind !== "all" || visibility !== "all" ? "可以调整关键词或资料类型，现有资料没有被删除。" : "保存研究、笔记、计划或书单后，就能在这里继续。"}</p>{search || kind !== "all" || visibility !== "all" ? <button onClick={() => filter({ q: "", material: "all", visibility: "all" })}>查看全部资料</button> : <Link href="/explore">从探索开始 <ArrowRight size={14} /></Link>}</div> : null}
     </section>
   </div>;
 }

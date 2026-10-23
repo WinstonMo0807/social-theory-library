@@ -5,15 +5,15 @@ import pytest
 from rest_framework.exceptions import NotFound, PermissionDenied
 
 from accounts.models import User
-from reading import privacy, reader_center, reader_material_commands as commands, research
-from reading.models import ReadingList
-from tests.test_confirmed_memory_atlas_20261018 import project_for
+from reading import material_preferences, privacy, reader_center, reader_material_commands as commands, research
+from reading.models import ReadingList, ReaderMaterialPreference
+from tests.test_confirmed_memory_atlas_20261018 import grant, memory_for, project_for
 
 pytestmark = pytest.mark.django_db
 
 
 def target(row, kind, title=None):
-    return {"id": str(row.pk), "kind": kind, "revision": privacy.version(row), **({"title": title} if title is not None else {})}
+    return {"id": str(row.pk), "kind": kind, "revision": reader_center.command_revision(row, kind), **({"title": title} if title is not None else {})}
 
 
 def test_rename_original_project_and_list_replays_without_rewriting(reader_user):
@@ -71,3 +71,39 @@ def test_display_truncation_does_not_become_rename_input_and_old_session_cannot_
     User.objects.filter(pk=reader_user.pk).update(token_version=reader_user.token_version + 1)
     with pytest.raises(PermissionDenied):
         commands.command(reader_user, {"request_id": str(uuid4()), "action": "archive", "targets": [target(project, "research")]})
+
+
+def test_display_name_preserves_memory_grant_and_invalidates_private_snapshot(reader_user, admin_user):
+    project = project_for(reader_user)
+    memory = grant(reader_user, memory_for(reader_user), project)
+    original, revision = research.unpack(memory), memory.revision
+    snapshot = privacy.target_of(memory, "memories")
+    commands.command(reader_user, {"request_id": str(uuid4()), "action": "rename", "targets": [target(memory, "confirmed", "自己的显示名")]})
+    memory.refresh_from_db()
+    assert research.unpack(memory) == original and memory.revision == revision and memory.state == "confirmed"
+    with pytest.raises(research.ResearchConflict):
+        privacy.verify_target(reader_user, snapshot)
+    assert privacy.export_item(reader_user, "memories", memory)["reader_center"]["title"] == "自己的显示名"
+    assert material_preferences.export_all(admin_user) == []
+    value = reader_center.materials(reader_user, kind="confirmed", q="自己的显示名")["results"][0]
+    assert value["id"] == str(memory.pk) and value["title"] == "自己的显示名"
+    with pytest.raises(NotFound):
+        commands.command(admin_user, {"request_id": str(uuid4()), "action": "archive", "targets": [target(memory, "confirmed")]})
+
+
+def test_mixed_archive_filter_and_hard_delete_cleanup(reader_user):
+    project = project_for(reader_user)
+    memory = memory_for(reader_user)
+    booklist = ReadingList.objects.create(user=reader_user, title="原书单")
+    pairs = [(project, "research"), (memory, "confirmed"), (booklist, "lists")]
+    commands.command(reader_user, {"request_id": str(uuid4()), "action": "archive", "targets": [target(row, kind) for row, kind in pairs]})
+    assert reader_center.materials(reader_user, visibility="archived")["count"] == 3
+    assert reader_center.materials(reader_user, visibility="active")["count"] == 0
+    assert ReaderMaterialPreference.objects.filter(user=reader_user).count() == 2
+    for row, kind in pairs:
+        row.refresh_from_db()
+    commands.command(reader_user, {"request_id": str(uuid4()), "action": "restore", "targets": [target(row, kind) for row, kind in pairs]})
+    assert reader_center.materials(reader_user, visibility="active")["count"] == 3
+    assert reader_center.materials(reader_user, visibility="archived")["count"] == 0
+    memory.delete()
+    assert not ReaderMaterialPreference.objects.filter(user=reader_user, kind="confirmed").exists()

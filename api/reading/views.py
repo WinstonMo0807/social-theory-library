@@ -348,6 +348,7 @@ class ReaderDataExportView(PrivateAccountResponses, APIView):
 
     def get(self, request):
         from accounts.avatars import export as export_avatar
+        from .material_preferences import export_all as export_material_preferences
         context = {"request": request}
         from .research import research_export, serialize_record
         from .privacy import annotation_export, operation_output, profile_data, export_item, rows
@@ -361,6 +362,7 @@ class ReaderDataExportView(PrivateAccountResponses, APIView):
         return Response(
             {
                 "research_data": research_export(request.user),
+                "reader_material_preferences": export_material_preferences(request.user),
                 "collaboration": {category: [export_item(request.user, category, row)
                     for row in rows(request.user, category)] for category in COLLABORATION_CATEGORIES},
                 "article_comments": [export_item(request.user, "article_comments", row) for row in EditorialComment.objects.filter(user=request.user)],

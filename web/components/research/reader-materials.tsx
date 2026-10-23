@@ -10,7 +10,7 @@ import { ReaderMaterialActions } from "./reader-material-actions";
 import { OperationDialog } from "./privacy-workspace";
 import styles from "./reader-overview.module.css";
 
-export type ReaderMaterial = { id: string; key: string; kind: string; kind_label: string; title: string; editable_title: string; question: string; status: string; href: string; updated_at: string; revision: string };
+export type ReaderMaterial = { id: string; key: string; kind: string; kind_label: string; title: string; editable_title: string; source_revision: string; preference_revision: number; question: string; status: string; href: string; updated_at: string; revision: string };
 const leaves: Record<string, PrivacyTarget["category"]> = { research: "research", notes: "annotations", bookmarks: "bookmarks", plans: "plans", lists: "reading_lists", audits: "audits", confirmed: "memories", saved: "saved_items" };
 const erasable = new Set(["notes", "bookmarks", "plans", "lists", "confirmed", "saved"]);
 const statuses: Record<string, string> = { saved: "已保存", archived: "已归档", confirmed: "已确认", reading: "进行中", pending: "待开始", queued: "待处理", running: "处理中", completed: "已完成", complete: "已完成", partial: "部分完成", failed: "处理失败", cancelled: "已取消", canceled: "已取消", source_unavailable: "来源待核对" };
@@ -31,7 +31,7 @@ export function ReaderMaterials({ rows, ownerId, cards, onChanged, onGuardChange
   function openOperation(id: string) { setSelected([]); setOperation(id); onChanged(); }
   async function submit(kind: "export" | "erase") {
     if (!chosen.length) return;
-    const id = await preparation.prepare({ kind, targets: chosen.map(row => ({ category: leaves[row.kind], id: row.id, revision: row.revision })) });
+    const id = await preparation.prepare({ kind, targets: chosen.map(row => ({ category: leaves[row.kind], id: row.id, revision: row.source_revision, preference_revision: row.preference_revision })) });
     if (id) openOperation(id);
   }
   function select(values: ReaderMaterial[], checked: boolean) {
@@ -49,7 +49,7 @@ export function ReaderMaterials({ rows, ownerId, cards, onChanged, onGuardChange
       <button type="button" disabled={locked || !chosen.length} onClick={() => setSelected([])}>清除全部选择</button>
       <button type="button" disabled={locked || !chosen.length} onClick={() => void submit("export")}><Download size={14} />导出所选</button>
       <button type="button" disabled={locked || !canErase} onClick={() => void submit("erase")}><Trash2 size={14} />删除预览</button>
-      <small>跨页选择保留，最多500项。重命名限研究、书单与书签（20项）；归档限研究（100项）。{chosen.length && !canErase ? "研究与体检请打开原工作台管理删除。" : "删除前须核对影响。"}</small>
+      <small>跨页选择保留，最多500项。重命名一次20项，归档或恢复一次100项。{chosen.length && !canErase ? "研究与体检请打开原工作台管理删除。" : "删除前须核对影响。"}</small>
       <Link href="/account/settings/privacy">资料任务</Link>
     </div>
     <PrivacyRequestRecovery preparation={preparation} onOpen={openOperation} className={styles.bulkNotice} />

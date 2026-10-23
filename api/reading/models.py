@@ -282,3 +282,4 @@ from .path_models import PlanCommandReceipt  # noqa: E402,F401
 
 from .editorial_comment_models import EditorialComment  # noqa: E402,F401
 from .sharing_models import ReaderGroup, ReaderGroupMember, ReaderGroupInvite, ReaderShare, ReaderShareNotice  # noqa: E402,F401
+from .material_models import ReaderMaterialPreference  # noqa: E402,F401

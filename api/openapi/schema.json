@@ -23091,6 +23091,21 @@
                             "default": "",
                             "maxLength": 180
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "visibility",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "active",
+                                "archived"
+                            ],
+                            "type": "string",
+                            "default": "all",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `active` - active\n* `archived` - archived"
                     }
                 ],
                 "tags": [
@@ -52660,6 +52675,10 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 80
+                    },
+                    "preference_revision": {
+                        "type": "integer",
+                        "minimum": 0
                     }
                 },
                 "required": [
@@ -58427,6 +58446,20 @@
                     "targets"
                 ]
             },
+            "ReaderMaterialKindEnum": {
+                "enum": [
+                    "research",
+                    "notes",
+                    "bookmarks",
+                    "plans",
+                    "lists",
+                    "audits",
+                    "confirmed",
+                    "saved"
+                ],
+                "type": "string",
+                "description": "* `research` - research\n* `notes` - notes\n* `bookmarks` - bookmarks\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
+            },
             "ReaderMaterialOutput": {
                 "type": "object",
                 "properties": {
@@ -58438,7 +58471,7 @@
                         "type": "string"
                     },
                     "kind": {
-                        "$ref": "#/components/schemas/ReaderMaterialOutputKindEnum"
+                        "$ref": "#/components/schemas/ReaderMaterialKindEnum"
                     },
                     "kind_label": {
                         "type": "string"
@@ -58464,6 +58497,13 @@
                     },
                     "editable_title": {
                         "type": "string"
+                    },
+                    "source_revision": {
+                        "type": "string"
+                    },
+                    "preference_revision": {
+                        "type": "integer",
+                        "minimum": 0
                     }
                 },
                 "required": [
@@ -58473,26 +58513,14 @@
                     "key",
                     "kind",
                     "kind_label",
+                    "preference_revision",
                     "question",
                     "revision",
+                    "source_revision",
                     "status",
                     "title",
                     "updated_at"
                 ]
-            },
-            "ReaderMaterialOutputKindEnum": {
-                "enum": [
-                    "research",
-                    "notes",
-                    "bookmarks",
-                    "plans",
-                    "lists",
-                    "audits",
-                    "confirmed",
-                    "saved"
-                ],
-                "type": "string",
-                "description": "* `research` - research\n* `notes` - notes\n* `bookmarks` - bookmarks\n* `plans` - plans\n* `lists` - lists\n* `audits` - audits\n* `confirmed` - confirmed\n* `saved` - saved"
             },
             "ReaderMaterialReceipt": {
                 "type": "object",
@@ -58526,20 +58554,11 @@
                     "state"
                 ]
             },
-            "ReaderMaterialTargetKindEnum": {
-                "enum": [
-                    "research",
-                    "lists",
-                    "bookmarks"
-                ],
-                "type": "string",
-                "description": "* `research` - research\n* `lists` - lists\n* `bookmarks` - bookmarks"
-            },
             "ReaderMaterialTargetRequest": {
                 "type": "object",
                 "properties": {
                     "kind": {
-                        "$ref": "#/components/schemas/ReaderMaterialTargetKindEnum"
+                        "$ref": "#/components/schemas/ReaderMaterialKindEnum"
                     },
                     "id": {
                         "type": "string",
