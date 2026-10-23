@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { Plus, Search, ArrowLeft, ExternalLink, UserRound } from "lucide-react";
 import { ApiRequestError, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import { useAdminSession, hasAdminCapability } from "@/lib/admin-session";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { PrivateOwnerVerificationError } from "@/lib/api/private-owner";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { useApiResource } from "@/lib/api/use-api-resource";
@@ -103,16 +104,16 @@ function SimilarPeople({ actor, original, target, canMerge, setInput, onAdopt }:
   return <><section className={styles.panel}><div className={styles.row}><h2>相似人物候选</h2><Link href={`${personPage()}?new=1`}>新建人物，保持独立</Link></div><p>以下是实际名称或标识匹配线索，不代表同一人物，也不计算没有依据的相似百分比。</p>{resource.error ? <p role="alert">{resource.error}<button onClick={resource.retry}>重新读取</button></p> : resource.loading ? <p role="status">正在读取候选…</p> : <>{resource.data?.results.length ? <><label>本次判断依据<textarea value={reason} onChange={event => setReason(event.target.value)} maxLength={1000} rows={2} /></label><div className={styles.candidates}>{resource.data.results.map(row => <article key={row.person.id}><div><h3>{row.person.preferred_name}</h3><p>{row.person.original_name} · {row.person.birth_year ?? "生年未详"}{row.person.death_year ? `—${row.person.death_year}` : ""}</p><p>{row.matches.map(match => `${asRecord(match).kind === "name" ? "名称" : "外部标识"}：${textValue(asRecord(match).values)}`).join("；")}</p>{row.identity_conflicts.length ? <p className={styles.warning}>存在 {row.identity_conflicts.length} 项身份差异，需要进一步核对。</p> : null}</div><div className={styles.actions}><Link href={personPage(original.id, row.person.id)}>比较与预览</Link><button disabled={busy || !original.can_edit || original.pending_draft} onClick={() => onAdopt(row.person.preferred_name, row.person.id)}>作为待核验异名</button><button disabled={busy} onClick={() => void decision(row.person.id, "independent")}>保持独立</button><button disabled={busy} onClick={() => void decision(row.person.id, "needs_evidence")}>需要更多证据</button></div></article>)}</div></> : <p>暂未发现名称或标识匹配的人物；这不能证明馆内没有重复身份。</p>}{resource.data?.has_more ? <p>候选超过20条，请在人物库补充名称缩小范围。</p> : null}</>}{failure ? <p role="alert">{failure}</p> : null}</section><details className={styles.panel}><summary>查找其他人物进行比较</summary><PersonPicker sourceId={original.id} credential={getServerSessionCredential() ?? ""} /></details>{target ? canMerge ? <PreviewLoader sourceId={original.id} targetId={target} credential={getServerSessionCredential() ?? ""} /> : <p className={styles.notice}>归并影响预览及实际归并需要馆长权限。当前账户仍可记录人工核对判断。</p> : null}</>;
 }
 
-function Recovery({ actor }: { actor: string }) {
+function Recovery({ actor, onResolved }: { actor: string; onResolved?: (result: AuthorityReceipt) => void }) {
   const router = useRouter(), [id, setId] = useState(""), [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
   const controller = useRef<AbortController | null>(null);
   useEffect(() => { const request = new AbortController(); controller.current = request; const read = () => { if (request.signal.aborted) return; try { setId(sessionStorage.getItem(storageKey(actor)) || ""); } catch { setMessage("原请求标识暂不可读，请先核对操作记录。"); } }; queueMicrotask(read); window.addEventListener("stl-person-request", read); return () => { request.abort(); window.removeEventListener("stl-person-request", read); }; }, [actor]);
-  async function lookup() { const request = controller.current; if (!id || busy || !request || request.signal.aborted) return; setBusy(true); try { const result = await authorityRequest<AuthorityReceipt>(actor, `workspace/receipts/${id}/`, { signal: request.signal }); sessionStorage.removeItem(storageKey(actor)); window.dispatchEvent(new Event("stl-person-request")); if (!request.signal.aborted) { setId(""); router.push(personPage(result.person_id)); router.refresh(); } } catch (error) { if (!request.signal.aborted) setMessage(error instanceof Error ? error.message : "暂未收到原请求结果。"); } finally { if (!request.signal.aborted) setBusy(false); } }
+  async function lookup() { const request = controller.current; if (!id || busy || !request || request.signal.aborted) return; setBusy(true); try { const result = await authorityRequest<AuthorityReceipt>(actor, `workspace/receipts/${id}/`, { signal: request.signal }); sessionStorage.removeItem(storageKey(actor)); window.dispatchEvent(new Event("stl-person-request")); if (!request.signal.aborted) { setId(""); if (onResolved) onResolved(result); else { router.push(personPage(result.person_id)); router.refresh(); } } } catch (error) { if (!request.signal.aborted) setMessage(error instanceof Error ? error.message : "暂未收到原请求结果。"); } finally { if (!request.signal.aborted) setBusy(false); } }
   if (!id && !message) return null;
   return <aside className={styles.notice}><strong>有一次保存需要核对结果</strong><p>这里只保留请求编号，没有保存表单正文。读取回执不会再次执行保存。</p>{id ? <button disabled={busy} onClick={() => void lookup()}>核对原请求</button> : null}{message ? <p role="alert">{message}</p> : null}</aside>;
 }
 
-function CommandPreview({ actor, input, onClose, onSaved }: { actor: string; input: AuthorityInput; onClose: () => void; onSaved: () => void }) {
+function CommandPreview({ actor, input, onClose, onSaved, stayOnPage = false }: { actor: string; input: AuthorityInput; onClose: () => void; onSaved: () => void; stayOnPage?: boolean }) {
   const router = useRouter(), [preview, setPreview] = useState<AuthorityPreview | null>(null), [error, setError] = useState(""), [busy, setBusy] = useState(false), [uncertain, setUncertain] = useState(false);
   const pending = useRef<AuthorityCommand | null>(null), sending = useRef(false), controller = useRef<AbortController | null>(null);
   useEffect(() => { const request = new AbortController(); controller.current = request; void authorityRequest<AuthorityPreview>(actor, "workspace/preview/", { method: "POST", body: JSON.stringify(input), signal: request.signal }).then(value => { if (!request.signal.aborted) setPreview(value); }, reason => { if (!request.signal.aborted) setError(reason instanceof Error ? reason.message : "预览失败。"); }); return () => request.abort(); }, [actor, input]);
@@ -123,7 +124,7 @@ function CommandPreview({ actor, input, onClose, onSaved }: { actor: string; inp
       if (!pending.current) { const old = sessionStorage.getItem(storageKey(actor)); if (old) throw Error("上次保存尚未核对，请先关闭此预览并读取原请求回执。"); pending.current = { ...input, preview_hash: preview.preview_hash, confirmed: true, request_id: crypto.randomUUID() }; sessionStorage.setItem(storageKey(actor), pending.current.request_id); window.dispatchEvent(new Event("stl-person-request")); }
       const result = await authorityRequest<AuthorityReceipt>(actor, "workspace/command/", { method: "POST", body: JSON.stringify(pending.current), signal: request.signal });
       if (result.request_id !== pending.current.request_id) throw Error("回执与原请求不一致，请核对操作记录。");
-      sessionStorage.removeItem(storageKey(actor)); window.dispatchEvent(new Event("stl-person-request")); if (!request.signal.aborted) { onSaved(); router.push(personPage(result.person_id)); router.refresh(); }
+      sessionStorage.removeItem(storageKey(actor)); window.dispatchEvent(new Event("stl-person-request")); if (!request.signal.aborted) { onSaved(); if (!stayOnPage) { router.push(personPage(result.person_id)); router.refresh(); } }
     } catch (reason) {
       if (request.signal.aborted) return;
       const rejected = reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400, 401, 403, 404, 409].includes(reason.status);
@@ -131,5 +132,53 @@ function CommandPreview({ actor, input, onClose, onSaved }: { actor: string; inp
       setUncertain(!rejected && Boolean(pending.current)); setError(reason instanceof Error ? reason.message : "未收到保存结果，请核对原请求。");
     } finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
   }
-  return <Dialog open className={styles.dialog} aria-labelledby="authority-preview-title" onRequestClose={busy ? undefined : onClose}><h2 id="authority-preview-title">核对变化与影响</h2>{preview ? <><p>{input.operation === "decision" ? `记录判断：${input.decision === "independent" ? "保持独立身份" : "需要更多证据"}` : `变更 ${preview.fields.map(field => labels[field] || field).join("、")}`}</p><p>关联 {preview.edition_count} 个作品版本、{preview.profile_count} 个学者档案。</p>{preview.public_update ? <p className={styles.notice}>这次确认会更新正式人物规范，并为关联公开书目记录发布任务。学者页的既有发布版本仍由原学者编辑流程管理。</p> : <p>本次保存不会自动发布学者页或归并人物。</p>}<p>依据：{preview.reason}</p>{preview.before && preview.after ? <dl className={styles.changes}>{preview.fields.filter(field => field !== "name_variants").map(field => <div key={field}><dt>{labels[field] || field}</dt><dd>{textValue(asRecord(preview.before)[field])} → {textValue(asRecord(preview.after)[field])}</dd></div>)}</dl> : null}</> : !error ? <p role="status">正在核对当前记录与影响…</p> : null}{error ? <p role="alert">{error}</p> : null}<div className={styles.actions}><button disabled={busy} onClick={onClose}>{uncertain ? "关闭并保留原请求" : "返回修改"}</button><button className={styles.primary} disabled={!preview || busy || Boolean(error && !uncertain)} onClick={() => void save()}>{busy ? "正在保存…" : uncertain ? "重试同一次保存" : "确认并保存"}</button></div></Dialog>;
+  return <Dialog open className={styles.dialog} aria-labelledby="authority-preview-title" onRequestClose={busy ? undefined : onClose}><h2 id="authority-preview-title">核对变化与影响</h2>{preview ? <><p>{input.operation === "decision" ? `记录判断：${input.decision === "independent" ? "保持独立身份" : "需要更多证据"}` : `变更 ${preview.fields.map(field => labels[field] || field).join("、")}`}</p><p>关联 {preview.edition_count} 个作品版本、{preview.profile_count} 个学者档案。</p>{preview.public_update ? <p className={styles.notice}>这次确认会更新正式人物规范，并为关联公开书目记录发布任务。学者页的既有发布版本仍由原学者编辑流程管理。</p> : <p>本次保存不会自动发布学者页或归并人物。</p>}<p>依据：{preview.reason}</p>{preview.before && preview.after ? <dl className={styles.changes}>{preview.fields.filter(field => field !== "name_variants").map(field => <div key={field}><dt>{labels[field] || field}</dt><dd>{textValue(asRecord(preview.before)[field])} → {textValue(asRecord(preview.after)[field])}</dd></div>)}</dl> : null}{preview.variant_changes.length ? <section className={styles.variantChanges}><h3>本次异名变化</h3>{preview.variant_changes.map((change,index)=><article key={index}><strong>{change.before ? `${change.before.name} → ${change.after.name}` : `新增：${change.after.name}`}</strong><p>{change.before ? `${variantSummary(change.before)} → ` : ""}{variantSummary(change.after)}</p>{change.before?.source_note ? <p>原依据：{change.before.source_note}</p> : null}<p>修改后依据：{change.after.source_note || "尚未填写"}</p></article>)}</section> : null}</> : !error ? <p role="status">正在核对当前记录与影响…</p> : null}{error ? <p role="alert">{error}</p> : null}<div className={styles.actions}><button disabled={busy} onClick={onClose}>{uncertain ? "关闭并保留原请求" : "返回修改"}</button><button className={styles.primary} disabled={!preview || busy || Boolean(error && !uncertain)} onClick={() => void save()}>{busy ? "正在保存…" : uncertain ? "重试同一次保存" : "确认并保存"}</button></div></Dialog>;
+}
+
+function variantSummary(value: AuthorityVariant) {
+  const names: Record<string,string> = {alias:"别名",translation:"译名",abbreviation:"简称",historical:"历史名称",transliteration:"音译"};
+  return `${value.language} · ${names[value.variant_type] || value.variant_type} · ${value.is_verified ? "已人工核验" : "未核验"} · ${value.displayable ? "允许公开显示" : "不公开显示"}`;
+}
+
+/** Inline variant maintenance reuses the complete authority preview and receipt. */
+export function PersonAliasesDialog({ owner, personId, onClose, onSaved }: { owner: string; personId: string; onClose: () => void; onSaved: () => void }) {
+  const load = useCallback((path: string, signal: AbortSignal) => authorityRequest<AuthorityDetail>(owner, path, { signal }), [owner]);
+  const resource = usePersistentWorkspace<AuthorityDetail>(`${personId}/workspace/`, owner, undefined, load);
+  if (!resource.data) return <Dialog open className={`${styles.dialog} ${styles.aliasDialog}`} onRequestClose={onClose} aria-label="人物异名来源"><h2>人物异名来源</h2><p role={resource.error ? "alert" : "status"}>{resource.error || "正在读取权威人物记录…"}</p><button type="button" onClick={resource.reload}>重新读取</button><button type="button" onClick={onClose}>关闭</button></Dialog>;
+  return <AliasesEditor key={`${owner}:${resource.data.id}`} actor={owner} source={resource.data} readError={resource.error} onClose={onClose} onSaved={onSaved} reload={resource.reload} />;
+}
+
+function AliasesEditor({ actor, source, readError, onClose, onSaved, reload }: { actor: string; source: AuthorityDetail; readError: string; onClose: () => void; onSaved: () => void; reload: () => void }) {
+  // Focus revalidation may reveal a competing revision; it never replaces this draft.
+  const [original, setOriginal] = useState(source);
+  const [variants, setVariants] = useState(original.variants), [reason, setReason] = useState("");
+  const [input, setInput] = useState<AuthorityInput | null>(null), [notice, setNotice] = useState(""), [refreshing, setRefreshing] = useState(false);
+  const request = useRef<AbortController | null>(null);
+  useEffect(()=>{const active=new AbortController();request.current=active;return()=>active.abort();},[]);
+  const dirty = useUnsavedForm({variants, reason}, {variants:original.variants, reason:""});
+  const needsPublisher = source.values.authority_status === "verified" && !source.can_verify;
+  const readOnly = !source.can_edit || source.pending_draft || needsPublisher || Boolean(input) || refreshing;
+  function close() { if (!input && !refreshing && (!dirty || window.confirm("异名修改尚未保存，关闭会放弃当前输入。是否关闭？"))) onClose(); }
+  async function refreshSource() {
+    const active=request.current;
+    if(!active || active.signal.aborted || refreshing || dirty && !window.confirm("重新读取会放弃当前未保存输入。是否继续？"))return;
+    setRefreshing(true);
+    try {
+      const next=await authorityRequest<AuthorityDetail>(actor,`${original.id}/workspace/`,{signal:active.signal});
+      if(!active.signal.aborted){setOriginal(next);setVariants(next.variants);setReason("");setNotice("");reload();}
+    } catch(error){if(!active.signal.aborted){setNotice(error instanceof Error?error.message:"来源暂不可读，当前输入仍保留。");reload();}}
+    finally{if(!active.signal.aborted)setRefreshing(false);}
+  }
+  function review(event: FormEvent) {
+    event.preventDefault(); if (readOnly) return;
+    setInput({operation:"update",person_id:original.id,expected_version:original.version,values:original.values,reason,variants:variants.map(row=>({...(row.id?{id:row.id}:{}),name:row.name,language:row.language,variant_type:row.variant_type,source_note:row.source_note,is_verified:row.is_verified,displayable:row.displayable}))});
+  }
+  return <Dialog open className={`${styles.dialog} ${styles.aliasDialog}`} aria-labelledby="inline-alias-title" onRequestClose={close}><header className={styles.row}><h2 id="inline-alias-title">{original.values.preferred_name} · 人名与异名</h2><button type="button" disabled={Boolean(input)||refreshing} onClick={close}>关闭</button></header><p>编辑原人物的异名与核验依据。查询词由已保存的权威来源同步，规范名和人物身份沿原记录保留。</p>
+    <Recovery actor={actor} onResolved={result=>{setNotice(result.person_id===original.id?"原人物操作已确认，重新读取后可继续维护。":"已确认此前另一人物的保存，本次输入仍保留。");onSaved();reload();}}/>
+    {readError ? <p role="alert">{readError}；当前输入仍保留。</p> : null}{source.version!==original.version ? <p role="alert" className={styles.notice}>来源已有新版本，当前输入仍保留。请先核对新记录，不能覆盖他人的修改。</p> : null}
+    {notice ? <p role="status" className={styles.notice}>{notice}</p> : null}{source.pending_draft ? <p className={styles.notice}>关联学者仍有草稿，须先在<Link href={`/admin/scholars/${source.scholar_id}`}>学者编辑页</Link>完成版本核对，再更新正式人物异名。</p> : null}{!source.can_edit || needsPublisher ? <p className={styles.notice}>{needsPublisher ? "此人物已正式核验，修改需规范发布权限。" : "当前账户可查看来源，不能修改人物规范。"}</p> : null}
+    <form onSubmit={review}><fieldset className={styles.aliasFields} disabled={readOnly}>{variants.map((variant,index)=><VariantEditor key={variant.id||index} value={variant} onChange={value=>setVariants(rows=>rows.map((row,at)=>at===index?value:row))} remove={!variant.id?()=>setVariants(rows=>rows.filter((_,at)=>at!==index)):undefined}/>)}{!variants.length ? <p>尚无异名。请按真实出处添加，不能依据检索相似度推定同一人物。</p> : null}<button type="button" disabled={variants.length>=200} onClick={()=>setVariants(rows=>[...rows,{name:"",language:"und",variant_type:"alias",source_note:"",is_verified:false,displayable:false}])}>添加异名</button><label className={styles.aliasReason}>本次修改依据<textarea value={reason} required minLength={2} maxLength={1000} rows={3} onChange={event=>setReason(event.target.value)} /></label><p className={styles.muted}>原异名记录不可删除。取消人工核验后停止用于公开匹配，后台仍保留来源。新增或修改已核验异名需要规范发布权限。</p><div className={styles.actions}><button className={styles.primary} type="submit" disabled={!dirty||source.version!==original.version}>预览变化与影响</button></div></fieldset></form>
+    <button type="button" disabled={Boolean(input)||refreshing} onClick={()=>void refreshSource()}>{refreshing?"正在读取…":"重新读取来源"}</button>
+    {input ? <CommandPreview actor={actor} input={input} stayOnPage onClose={()=>setInput(null)} onSaved={()=>{setInput(null);onSaved();onClose();}}/> : null}
+  </Dialog>;
 }

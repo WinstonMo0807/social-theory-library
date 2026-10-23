@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-23 人物异名维护静态检查
+
+`tmp/stl4-index-query-static-20261023.py` cb63fa禁止数据库OpenAPI0错误10旧警告；`node tmp/stl4-index-query-contracts-20261023.mjs` e3a849保留329路径并生成类型。ab35af对index_maintenance_views/person_authority_views/services/person_authority/新用例进行4个AST及person-authority CSS解析。目标index-maintenance和person-authority-workspace ESLint f57ce1退出0；TypeScript noEmit 781aa0→7ebc1a退出0。
+
+`api/tests/test_stl4_person_alias_preview_20261023.py`未运行；后续覆盖异名前后预览、预览不保存、原异名不能省略、账户绑定。正式验收还需自动刷新不丢输入、源版本竞争、发布权限、回执恢复、原学者编辑流程及桌面/移动弹层。没有运行测试或浏览器。
+
 ## 2026-10-23 内嵌查询静态检查
 
 `.venv/Scripts/python.exe tmp/stl4-index-query-static-20261023.py`（9648f7/73aa81）退出0：6 Python AST、数据库连接主动禁止、OpenAPI0错误10旧声明警告。`node tmp/stl4-index-query-contracts-20261023.mjs`（f93d28）退出0：327→329路径、生成类型与PostCSS。TypeScript noEmit（b7310a→1563a8）退出0；两目标组件ESLint（7d3d8b）退出0。没有正式测试、浏览器、实际检索/模型/索引调用、迁移或部署。

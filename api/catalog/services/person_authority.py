@@ -185,7 +185,11 @@ def prepare(actor, data, *, person=None, target=None):
         "public_update": operation != "decision" and proposed.authority_status == "verified" and bool(set(changes) - {"authority_note", "identifier_sources"}),
         "reason": data["reason"], "decision": data.get("decision", ""),
         "before": {key: getattr(person, key) for key in FIELDS} if person else None,
-        "after": {key: getattr(proposed, key) for key in FIELDS} if proposed else None}
+        "after": {key: getattr(proposed, key) for key in FIELDS} if proposed else None,
+        "variant_changes": [{
+            "before": {key: previous[str(row["id"])][key] for key in VARIANT_FIELDS} if row.get("id") else None,
+            "after": {key: row[key] for key in VARIANT_FIELDS},
+        } for row in variants if row["changed"]] if operation != "decision" else []}
     request = {key: value for key, value in data.items() if key not in {"request_id", "confirmed", "preview_hash"}}
     projection["preview_hash"] = digest({"actor": actor.pk, "request": request, "before": before,
         "target": state(target) if target else None, "projection": projection})

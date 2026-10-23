@@ -27683,6 +27683,12 @@
                     },
                     "after": {
                         "nullable": true
+                    },
+                    "variant_changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AuthorityVariantChange"
+                        }
                     }
                 },
                 "required": [
@@ -27696,7 +27702,8 @@
                     "preview_hash",
                     "profile_count",
                     "public_update",
-                    "reason"
+                    "reason",
+                    "variant_changes"
                 ]
             },
             "AuthorityReceipt": {
@@ -27814,6 +27821,64 @@
                     "original_name",
                     "preferred_language",
                     "preferred_name"
+                ]
+            },
+            "AuthorityVariant": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "language": {
+                        "type": "string",
+                        "maxLength": 24
+                    },
+                    "variant_type": {
+                        "$ref": "#/components/schemas/AuthorityNameTypeEnum"
+                    },
+                    "source_note": {
+                        "type": "string",
+                        "maxLength": 5000
+                    },
+                    "is_verified": {
+                        "type": "boolean"
+                    },
+                    "displayable": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "displayable",
+                    "is_verified",
+                    "language",
+                    "name",
+                    "source_note",
+                    "variant_type"
+                ]
+            },
+            "AuthorityVariantChange": {
+                "type": "object",
+                "properties": {
+                    "before": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/AuthorityVariant"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "after": {
+                        "$ref": "#/components/schemas/AuthorityVariant"
+                    }
+                },
+                "required": [
+                    "after",
+                    "before"
                 ]
             },
             "AuthorityVariantRequest": {
@@ -36242,6 +36307,10 @@
                         "type": "string",
                         "format": "uuid"
                     },
+                    "entity_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
                     "term": {
                         "type": "string"
                     },
@@ -36276,6 +36345,7 @@
                 "required": [
                     "admin_resolvable",
                     "edit_url",
+                    "entity_id",
                     "entity_label",
                     "entity_type",
                     "id",

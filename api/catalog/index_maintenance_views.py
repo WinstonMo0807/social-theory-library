@@ -275,6 +275,7 @@ class IndexMaintenanceReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin
 
 class IndexTermSerializer(serializers.Serializer):
     id = serializers.UUIDField()
+    entity_id = serializers.UUIDField()
     term = serializers.CharField()
     entity_label = serializers.CharField()
     entity_type = serializers.CharField()

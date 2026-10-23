@@ -6150,6 +6150,7 @@ export interface components {
             decision: string;
             before: unknown;
             after: unknown;
+            variant_changes: components["schemas"]["AuthorityVariantChange"][];
         };
         AuthorityReceipt: {
             actor_id: string;
@@ -6186,6 +6187,20 @@ export interface components {
                 [key: string]: string;
             };
             authority_status: components["schemas"]["AuthorityValuesAuthorityStatusEnum"];
+        };
+        AuthorityVariant: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            language: string;
+            variant_type: components["schemas"]["AuthorityNameTypeEnum"];
+            source_note: string;
+            is_verified: boolean;
+            displayable: boolean;
+        };
+        AuthorityVariantChange: {
+            before: components["schemas"]["AuthorityVariant"] | null;
+            after: components["schemas"]["AuthorityVariant"];
         };
         AuthorityVariantRequest: {
             /** Format: uuid */
@@ -8725,6 +8740,8 @@ export interface components {
         IndexTerm: {
             /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            entity_id: string;
             term: string;
             entity_label: string;
             entity_type: string;

@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 人物异名预览
+
+IndexTerm显式输出原来源entity_id。原AuthorityPreview增加variant_changes（before/after，含名称/语言/类别/依据/核验及显示）并参与preview_hash；UI复用原人物preview/command/receipts，329路径不变。无新权威存储，没有直接编辑QueryLexiconEntry。
+
 ## 2026-10-23 检索命中预览（329路径）
 
 新增POST admin/index-maintenance/query/（request_id/q/work_id）和commands/{request_id}/ GET查回、POST cancel_pending。IndexQueryCommand/IndexQueryReceipt具名契约，回执仅owner/request/session身份。实际会话读取、继续、取消仍使用原discovery-search接口，X-Editor-Owner可选绑定当前账户；原接口未增加必填头。正文作品过滤与全通道public权限分别落实，知识/策展仍按原全库语义。后台预览没有单独评测接口。

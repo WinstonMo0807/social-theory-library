@@ -110,6 +110,11 @@ class AuthorityDetail(serializers.Serializer):
     history = serializers.ListField(child=serializers.JSONField())
 
 
+class AuthorityVariantChange(serializers.Serializer):
+    before = AuthorityVariant(allow_null=True)
+    after = AuthorityVariant()
+
+
 class AuthorityPreview(serializers.Serializer):
     actor_id = serializers.CharField()
     person_id = serializers.UUIDField(allow_null=True)
@@ -122,6 +127,7 @@ class AuthorityPreview(serializers.Serializer):
     decision = serializers.CharField(allow_blank=True)
     before = serializers.JSONField(allow_null=True)
     after = serializers.JSONField(allow_null=True)
+    variant_changes = AuthorityVariantChange(many=True)
 
 
 class AuthorityReceipt(serializers.Serializer):
