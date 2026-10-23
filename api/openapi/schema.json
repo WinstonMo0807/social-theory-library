@@ -2003,6 +2003,112 @@
                 }
             }
         },
+        "/api/catalog/admin/curation-projects/{project_id}/preview/": {
+            "get": {
+                "operationId": "catalog_admin_curation_projects_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "project_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectPreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/curation-projects/{project_id}/sources/": {
+            "get": {
+                "operationId": "catalog_admin_curation_projects_sources_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "origin",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "project_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "scope",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectSources"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/curation-projects/commands/{request_id}/": {
             "get": {
                 "operationId": "catalog_admin_curation_projects_commands_retrieve",
@@ -29967,6 +30073,23 @@
                 "type": "string",
                 "description": "* `create` - create\n* `save` - save\n* `duplicate` - duplicate\n* `archive` - archive\n* `restore` - restore\n* `create_article` - create_article\n* `attach_article` - attach_article\n* `reorder` - reorder"
             },
+            "CurationProjectSourceOriginEnum": {
+                "enum": [
+                    "body",
+                    "selection"
+                ],
+                "type": "string",
+                "description": "* `body` - body\n* `selection` - selection"
+            },
+            "CurationProjectSourceStatusEnum": {
+                "enum": [
+                    "public",
+                    "private",
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `public` - public\n* `private` - private\n* `unavailable` - unavailable"
+            },
             "CurationProjectVisibilityEnum": {
                 "enum": [
                     "team",
@@ -51440,6 +51563,83 @@
                     "name"
                 ]
             },
+            "ProjectPreview": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProjectPreviewArticle"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "checked_at",
+                    "count",
+                    "results"
+                ]
+            },
+            "ProjectPreviewArticle": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "introduction": {
+                        "type": "string"
+                    },
+                    "public_byline": {
+                        "type": "string"
+                    },
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "saved_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "has_unpublished_changes": {
+                        "type": "boolean"
+                    },
+                    "public_title": {
+                        "type": "string"
+                    },
+                    "public_introduction": {
+                        "type": "string"
+                    },
+                    "published_byline": {
+                        "type": "string"
+                    },
+                    "public_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "edit_version",
+                    "has_unpublished_changes",
+                    "id",
+                    "introduction",
+                    "public_byline",
+                    "public_introduction",
+                    "public_title",
+                    "public_url",
+                    "published_byline",
+                    "saved_at",
+                    "title"
+                ]
+            },
             "ProjectProblem": {
                 "type": "object",
                 "properties": {
@@ -51504,6 +51704,116 @@
                     "project_id",
                     "request_id",
                     "state"
+                ]
+            },
+            "ProjectSource": {
+                "type": "object",
+                "properties": {
+                    "article_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "article_title": {
+                        "type": "string"
+                    },
+                    "origin": {
+                        "$ref": "#/components/schemas/CurationProjectSourceOriginEnum"
+                    },
+                    "reference": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "position": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "block_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "context": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/CurationProjectSourceStatusEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "reader_url": {
+                        "type": "string"
+                    },
+                    "source_url": {
+                        "type": "string"
+                    },
+                    "edit_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "article_id",
+                    "article_title",
+                    "block_id",
+                    "context",
+                    "edit_url",
+                    "origin",
+                    "position",
+                    "reader_url",
+                    "reference",
+                    "source_url",
+                    "status",
+                    "title"
+                ]
+            },
+            "ProjectSources": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProjectSource"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "totals": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "article_count": {
+                        "type": "integer"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "scope_notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "article_count",
+                    "checked_at",
+                    "count",
+                    "page",
+                    "page_size",
+                    "pages",
+                    "results",
+                    "scope_notice",
+                    "totals"
                 ]
             },
             "ProjectStopRequest": {

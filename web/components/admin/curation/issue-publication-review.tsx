@@ -11,7 +11,7 @@ export type IssuePublicationCheck={code:string;severity:"blocking"|"warning"|"no
 export type IssuePublicationReviewData={edit_version:string;checked_at:string;draft_revision_id:string|null;current_revision_id:string|null;draft_at:string|null;current_at:string|null;checks:IssuePublicationCheck[];changes:Array<{field:string;label:string;before_display:string;after_display:string;change:"unchanged"|"added"|"removed"|"changed"}>;blocking_count:number;warning_count:number;has_draft:boolean;can_publish:boolean;actor_label:string;public_url:string;reader_preview:RecommendationIssue};
 const date=(value:string|null)=>value?new Date(value).toLocaleString("zh-CN"):"尚无记录";
 const labels={unchanged:"未变化",added:"新增",removed:"移除",changed:"修改"};
-function ReaderViewport({src,device}:{src:string;device:string}) {
+export function ReaderViewport({src,device}:{src:string;device:string}) {
   const container=useRef<HTMLDivElement|null>(null),[available,setAvailable]=useState(390);
   useEffect(()=>{const node=container.current;if(!node)return;const observer=new ResizeObserver(entries=>setAvailable(entries[0].contentRect.width));observer.observe(node);return()=>observer.disconnect();},[]);
   const width=device==="mobile"?390:1180,scale=Math.min(1,available/width);

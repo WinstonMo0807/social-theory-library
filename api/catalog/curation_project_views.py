@@ -139,6 +139,45 @@ class ProjectMaterialsSerializer(serializers.Serializer):
     scope_notice = serializers.CharField()
 
 
+class ProjectSourceSerializer(serializers.Serializer):
+    article_id = serializers.UUIDField()
+    article_title = serializers.CharField()
+    origin = serializers.ChoiceField(choices=["body", "selection"])
+    reference = serializers.DictField()
+    position = serializers.IntegerField(allow_null=True)
+    block_id = serializers.UUIDField(allow_null=True)
+    context = serializers.CharField(allow_blank=True)
+    status = serializers.ChoiceField(choices=["public", "private", "unavailable"])
+    title = serializers.CharField()
+    reader_url = serializers.CharField(allow_blank=True)
+    source_url = serializers.CharField(allow_blank=True)
+    edit_url = serializers.CharField(allow_blank=True)
+
+
+class ProjectSourcesSerializer(ProjectMaterialsSerializer):
+    results = ProjectSourceSerializer(many=True)
+
+
+class ProjectPreviewArticleSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    introduction = serializers.CharField(allow_blank=True)
+    public_byline = serializers.CharField(allow_blank=True)
+    edit_version = serializers.CharField()
+    saved_at = serializers.DateTimeField(allow_null=True)
+    has_unpublished_changes = serializers.BooleanField()
+    public_title = serializers.CharField(allow_blank=True)
+    public_introduction = serializers.CharField(allow_blank=True)
+    published_byline = serializers.CharField(allow_blank=True)
+    public_url = serializers.CharField(allow_blank=True)
+
+
+class ProjectPreviewSerializer(serializers.Serializer):
+    results = ProjectPreviewArticleSerializer(many=True)
+    count = serializers.IntegerField()
+    checked_at = serializers.DateTimeField()
+
+
 class ProjectDetailSerializer(ProjectCardSerializer):
     version = serializers.CharField()
     articles = ProjectArticleSerializer(many=True)
@@ -289,6 +328,26 @@ class CurationProjectMaterialsView(AdminPrivateResponseMixin, APIView):
         from catalog.services.project_materials import directory
         project = get_object_or_404(service.visible_projects(request.user), pk=project_id)
         return Response(ProjectMaterialsSerializer(directory(project, request.query_params)).data)
+
+
+class CurationProjectSourcesView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(responses=ProjectSourcesSerializer, parameters=[OpenApiParameter(name, type=str) for name in ("q", "scope", "origin", "page")])
+    def get(self, request, project_id):
+        from catalog.services.project_sources import directory
+        project = get_object_or_404(service.visible_projects(request.user), pk=project_id)
+        return Response(ProjectSourcesSerializer(directory(project, request.query_params)).data)
+
+
+class CurationProjectPreviewView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(responses=ProjectPreviewSerializer)
+    def get(self, request, project_id):
+        from catalog.services.project_materials import preview_directory
+        project = get_object_or_404(service.visible_projects(request.user), pk=project_id)
+        return Response(ProjectPreviewSerializer(preview_directory(project)).data)
 
 
 class CurationProjectPeopleView(AdminPrivateResponseMixin, APIView):

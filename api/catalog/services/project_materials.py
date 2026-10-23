@@ -19,12 +19,17 @@ def valid_id(value):
     except (TypeError, ValueError, AttributeError): return None
 
 
-def directory(project, params):
+def current_articles(project):
     latest = EditorialRevision.objects.filter(target_type="recommendation_issue", target_id=OuterRef("pk")).order_by("-revision").values("pk")[:1]
     articles = list(project.articles.select_related("project").annotate(latest_id=Subquery(latest)).order_by("project_position", "created_at", "pk"))
+    versions = EditorialRevision.objects.filter(pk__in=[row.latest_id for row in articles if row.latest_id])
+    return articles, versions
+
+
+def directory(project, params):
+    articles, versions = current_articles(project)
     by_id = {str(row.pk): row for row in articles}
     order = {str(row.pk): index for index, row in enumerate(articles)}
-    versions = EditorialRevision.objects.filter(pk__in=[row.latest_id for row in articles if row.latest_id])
     pointers = []
     # Stream original arrays without retaining every article body or long note.
     for row in versions.values("pk", "target_id", "materialized_preview__title", "materialized_preview__items").iterator(chunk_size=2):
@@ -64,4 +69,31 @@ def directory(project, params):
     results = [{**materialized[(row["article_id"], row["id"])], "article_id": row["article_id"], "article_title": row["article_title"]} for row in page.object_list]
     return {"results": results, "count": page.paginator.count, "page": page.number, "pages": page.paginator.num_pages, "page_size": 30,
             "totals": totals, "article_count": len(articles), "checked_at": timezone.now(),
-            "scope_notice": "本项目全部文章当前保存的附录材料，按原文章顺序排列。待补按当前公开版本与原文可读状态核对；正文引用和选材候选仍在各文章中检查。"}
+            "scope_notice": "本项目全部文章当前保存的附录材料，按原文章顺序排列。待补按当前公开版本与原文可读状态核对；正文和选材来源可切换到对应清单。"}
+
+
+def preview_directory(project):
+    from django.db.models import Case, Max, When, F
+    articles, versions = current_articles(project)
+    latest = {str(row['target_id']): row for row in versions.values('pk', 'target_id', 'status', 'created_at',
+        'materialized_preview__title', 'materialized_preview__introduction', 'materialized_preview__public_byline')}
+    modified = {str(row['issue_id']): row['at'] for row in RecommendationIssueItem.objects.filter(issue__project=project).values('issue_id').annotate(at=Max('updated_at'))}
+    due = dict(scheduled_revision__status='published', scheduled_for__lte=timezone.now())
+    published = {str(row['pk']): row for row in ledger.published_issues().filter(project=project).annotate(
+        public_title=Case(When(**due, then=F('scheduled_revision__materialized_preview__title')), default=F('active_revision__materialized_preview__title')),
+        public_introduction=Case(When(**due, then=F('scheduled_revision__materialized_preview__introduction')), default=F('active_revision__materialized_preview__introduction')),
+        public_byline=Case(When(**due, then=F('scheduled_revision__materialized_preview__public_byline')), default=F('active_revision__materialized_preview__public_byline')),
+    ).values('pk', 'public_title', 'public_introduction', 'public_byline')}
+    rows = []
+    for article in articles:
+        key = str(article.pk)
+        revision, live = latest.get(key), published.get(key)
+        raw = revision or {}
+        at = modified.get(key)
+        version = f"{revision['pk']}:{at.isoformat() if at else ''}" if revision else '0'
+        rows.append({'id': key, 'title': raw.get('materialized_preview__title') or article.title,
+            'introduction': raw.get('materialized_preview__introduction') or '', 'public_byline': raw.get('materialized_preview__public_byline') or '',
+            'edit_version': version, 'saved_at': raw.get('created_at'), 'has_unpublished_changes': raw.get('status') == 'draft',
+            'public_title': (live or {}).get('public_title') or '', 'public_introduction': (live or {}).get('public_introduction') or '',
+            'published_byline': (live or {}).get('public_byline') or '', 'public_url': f'/recommendations/{article.slug}' if live else ''})
+    return {'results': rows, 'count': len(rows), 'checked_at': timezone.now()}

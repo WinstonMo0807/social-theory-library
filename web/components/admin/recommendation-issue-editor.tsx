@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { DraftConflict } from "@/components/admin/curation/draft-conflict";
@@ -62,13 +63,16 @@ export function RecommendationIssueEditor({ issueId, fullPreview = false }: { is
   return <IssueEditorSession key={`${user?.id || "anonymous"}:${issueId}:${fullPreview}`} issueId={issueId} fullPreview={fullPreview}/>;
 }
 function IssueEditorSession({ issueId, fullPreview }: { issueId: string; fullPreview: boolean }) {
+  const params=useSearchParams();
   const user = useAdminSession();
   const editor=useIssueDraft(issueId,user ? String(user.id) : "",false);
   const {draft,dirty,busy,initialError,message,conflict,update}=editor;
-  const [active,setActive]=useState("body"),[selected,setSelected]=useState(0),[selectedBlock,setSelectedBlock]=useState("");
+  const [active,setActive]=useState("body"),[selected,setSelected]=useState(0),[selectedBlock,setSelectedBlock]=useState(()=>params.get("block")||"");
   const [pane,setPane]=useState("preview"),[mobile,setMobile]=useState("edit"),[history,setHistory]=useState(false),[suggestions,setSuggestions]=useState(false);
   const [publicationReview,setPublicationReview]=useState(fullPreview);
-  const [materials,setMaterials]=useState(false),[assistantPending,setAssistantPending]=useState(false),[assistantReviewDirty,setAssistantReviewDirty]=useState(false);
+  const [materials,setMaterials]=useState(()=>params.get("tab")==="selection"),[assistantPending,setAssistantPending]=useState(false),[assistantReviewDirty,setAssistantReviewDirty]=useState(false);
+  const loaded=Boolean(draft);
+  useEffect(()=>{if(!loaded||!selectedBlock)return;const frame=requestAnimationFrame(()=>document.getElementById(`editor-block-${selectedBlock}`)?.scrollIntoView({block:"nearest"}));return()=>cancelAnimationFrame(frame);},[loaded,selectedBlock]);
   const canEdit=hasAdminCapability(user,"can_edit_metadata")&&!draft?.project_archived;
   if (!draft) return <section className="admin-panel" aria-busy={!initialError}><p role={initialError ? "alert" : "status"}>{initialError || "正在读取本期草稿…"}</p>{initialError ? <button type="button" className="button secondary" onClick={editor.retryLoad}>重试读取</button> : null}<p><Link href="/admin/recommendations">返回推荐与随机</Link></p></section>;
   const previewDraft: RecommendationIssue = { ...draft, curator: { name: draft.public_byline, role: draft.public_byline ? draft.article_metadata?.curator_role || "" : "", affiliation: draft.public_byline ? draft.article_metadata?.curator_affiliation || "" : "", portrait_url: draft.public_byline ? draft.curator?.portrait_url || "" : "" } };

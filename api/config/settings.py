@@ -187,6 +187,8 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
         "CurationProjectVisibilityEnum": ["team", "staff"],
+        "CurationProjectSourceOriginEnum": ["body", "selection"],
+        "CurationProjectSourceStatusEnum": ["public", "private", "unavailable"],
         "CurationProjectActionEnum": ["create", "save", "duplicate", "archive", "restore", "create_article", "attach_article", "reorder"],
         "IndexMaintenanceActionEnum": ["rebuild", "activate", "retry", "reconcile"],
         "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel"],

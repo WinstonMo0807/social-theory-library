@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-23 项目来源与完整预览静态检查
+
+`.venv/Scripts/python.exe tmp/stl4-project-sources-static-20261023.py`：521400退出0，6 AST、10条禁连DB SQL编译、OpenAPI0错误10个原声明警告。`node tmp/stl4-project-sources-contracts-20261023.mjs`：2df222退出0，324→326路径、TypeScript契约与PostCSS。`node node_modules/typescript/bin/tsc --noEmit --incremental false`：88fc9d→48df37退出0。目标4组件ESLint e348d5退出0，仅原img建议；最后汇总组件c13380退出0；70cfcd→bbca86最后TypeScript退出0。差异空白检查无错误。未测试/浏览器/业务/迁移/部署。
+
+后续统一验收：全项目超过12篇、引用超过30项、重复来源计数、失效原文/文档修订/未公开来源、已有稿与公开稿不同、延时发布、权限撤销与换账户、空项目/空范围、区块定位、窄屏预览、图片权利与比较缺口发布阻断。待核实，未运行。
+
 ## 2026-10-23 项目附录汇总静态记录
 
 af8c5e：tmp/stl4-project-materials-static-20261023.py退出0（5 AST、禁连DB8 SQL编译，0契约错误/10既有警告）；对应contracts脚本324路径及CSS解析。d5edda→bea7b4 TypeScript noEmit0；2f0afb新工作区ESLint0；dac59e差异空白0。未执行测试/浏览器/业务请求/迁移/生产。来源并发变化、分页全量范围与权限撤销需正式验收。

@@ -464,6 +464,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/curation-projects/{project_id}/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_curation_projects_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/curation-projects/{project_id}/sources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_curation_projects_sources_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/curation-projects/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -6850,6 +6882,19 @@ export interface components {
          * @enum {string}
          */
         CurationProjectActionEnum: "create" | "save" | "duplicate" | "archive" | "restore" | "create_article" | "attach_article" | "reorder";
+        /**
+         * @description * `body` - body
+         *     * `selection` - selection
+         * @enum {string}
+         */
+        CurationProjectSourceOriginEnum: "body" | "selection";
+        /**
+         * @description * `public` - public
+         *     * `private` - private
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        CurationProjectSourceStatusEnum: "public" | "private" | "unavailable";
         /**
          * @description * `team` - team
          *     * `staff` - staff
@@ -13363,6 +13408,27 @@ export interface components {
             id: string;
             name: string;
         };
+        ProjectPreview: {
+            results: components["schemas"]["ProjectPreviewArticle"][];
+            count: number;
+            /** Format: date-time */
+            checked_at: string;
+        };
+        ProjectPreviewArticle: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            introduction: string;
+            public_byline: string;
+            edit_version: string;
+            /** Format: date-time */
+            saved_at: string | null;
+            has_unpublished_changes: boolean;
+            public_title: string;
+            public_introduction: string;
+            published_byline: string;
+            public_url: string;
+        };
         ProjectProblem: {
             /** Format: uuid */
             article_id: string;
@@ -13382,6 +13448,38 @@ export interface components {
             /** Format: uuid */
             project_id: string | null;
             message: string;
+        };
+        ProjectSource: {
+            /** Format: uuid */
+            article_id: string;
+            article_title: string;
+            origin: components["schemas"]["CurationProjectSourceOriginEnum"];
+            reference: {
+                [key: string]: unknown;
+            };
+            position: number | null;
+            /** Format: uuid */
+            block_id: string | null;
+            context: string;
+            status: components["schemas"]["CurationProjectSourceStatusEnum"];
+            title: string;
+            reader_url: string;
+            source_url: string;
+            edit_url: string;
+        };
+        ProjectSources: {
+            results: components["schemas"]["ProjectSource"][];
+            count: number;
+            page: number;
+            pages: number;
+            page_size: number;
+            totals: {
+                [key: string]: number;
+            };
+            article_count: number;
+            /** Format: date-time */
+            checked_at: string;
+            scope_notice: string;
         };
         ProjectStopRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
@@ -18692,6 +18790,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectMaterials"];
+                };
+            };
+        };
+    };
+    catalog_admin_curation_projects_preview_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPreview"];
+                };
+            };
+        };
+    };
+    catalog_admin_curation_projects_sources_retrieve: {
+        parameters: {
+            query?: {
+                origin?: string;
+                page?: string;
+                q?: string;
+                scope?: string;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSources"];
                 };
             };
         };
