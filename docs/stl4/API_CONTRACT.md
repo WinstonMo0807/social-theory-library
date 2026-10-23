@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 查询词规则筛选
+
+原index-maintenance/terms/增加具名IndexTermsQuery：term_group为空/canonical/aliases/variants，availability为空/public/admin/inactive；q/来源类别/页码统一验证。响应增加rule_counts与can_edit_authority，30项分页和全库覆盖分母保持。复用原people/workspace及theory-system/nodes选择已有来源，332路径不变。
+
 ## 2026-10-24 人物原请求停止
 
 原people/workspace/receipts/{request_id}/增加POST {action:cancel_pending}，AuthorityReceipt增加state applied/cancelled，person_id在停止回执可空；旧成功回执仍有真实人物。332路径不变。写入与停止检查同一账户、会话token及规范编辑能力，并串行同一请求编号。

@@ -51,7 +51,20 @@ def _entry_label(row: QueryLexiconEntry) -> str:
     return getattr(target, "name", str(target))
 
 
-def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: int = 60, page: int = 1) -> dict:
+def filter_maintenance_terms(entries, *, term_group="", availability=""):
+    if term_group not in {"", "canonical", "aliases", "variants"} or availability not in {"", "public", "admin", "inactive"}:
+        raise ValueError("查询词筛选条件不受支持。")
+    if term_group == "canonical": entries = entries.filter(term_type="canonical")
+    elif term_group == "variants": entries = entries.filter(term_type="search_variant")
+    elif term_group == "aliases": entries = entries.exclude(term_type__in=["canonical", "search_variant"])
+    if availability == "public": entries = entries.filter(public_active=True)
+    elif availability == "admin": entries = entries.filter(public_active=False, admin_resolvable=True)
+    elif availability == "inactive": entries = entries.filter(public_active=False, admin_resolvable=False)
+    return entries
+
+
+def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: int = 60, page: int = 1,
+                            term_group: str = "", availability: str = "") -> dict:
     try:
         limit = max(1, min(int(limit), 200))
     except (TypeError, ValueError):
@@ -75,6 +88,7 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
             "failed_events": 0,
             "last_reconciliation": None,
             "count": 0, "page": 1, "pages": 1,
+            "rule_counts": {"canonical": 0, "aliases": 0, "variants": 0},
         }
     generation = state.active_generation
     entries = QueryLexiconEntry.objects.filter(generation=generation)
@@ -83,6 +97,10 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
     query = str(query or "").strip()
     if query:
         entries = entries.filter(Q(term__icontains=query) | Q(normalized_term__icontains=query))
+    entries = filter_maintenance_terms(entries, availability=availability)
+    rule_counts = entries.aggregate(canonical=Count("id", filter=Q(term_type="canonical")),
+        variants=Count("id", filter=Q(term_type="search_variant")), aliases=Count("id", filter=~Q(term_type__in=["canonical", "search_variant"])))
+    entries = filter_maintenance_terms(entries, term_group=term_group)
     count = entries.count()
     pages = max(1, (count + limit - 1) // limit)
     page = min(page, pages)
@@ -129,6 +147,7 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
     return {
         "initialized": True,
         "count": count, "page": page, "pages": pages,
+        "rule_counts": rule_counts,
         "revision": state.revision,
         "generation": {
             "id": str(generation.id),
@@ -139,8 +158,8 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
             "built_at": generation.built_at,
         },
         "entries": generation.entry_count,
-        "public_active_entries": entries.filter(public_active=True).count() if not query and not entity_type else QueryLexiconEntry.objects.filter(generation=generation, public_active=True).count(),
-        "admin_resolvable_entries": entries.filter(admin_resolvable=True).count() if not query and not entity_type else QueryLexiconEntry.objects.filter(generation=generation, admin_resolvable=True).count(),
+        "public_active_entries": QueryLexiconEntry.objects.filter(generation=generation, public_active=True).count(),
+        "admin_resolvable_entries": QueryLexiconEntry.objects.filter(generation=generation, admin_resolvable=True).count(),
         "entities": by_entity,
         "terms": rows,
         "pending_events": pending_events,

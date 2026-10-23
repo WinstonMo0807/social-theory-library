@@ -4440,24 +4440,75 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "availability",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "public",
+                                "admin",
+                                "inactive"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `public` - public\n* `admin` - admin\n* `inactive` - inactive"
+                    },
+                    {
+                        "in": "query",
                         "name": "entity_type",
                         "schema": {
-                            "type": "string"
-                        }
+                            "enum": [
+                                "",
+                                "work",
+                                "person",
+                                "knowledge_node",
+                                "discipline",
+                                "theory_school",
+                                "topic",
+                                "concept",
+                                "subdiscipline"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `work` - work\n* `person` - person\n* `knowledge_node` - knowledge_node\n* `discipline` - discipline\n* `theory_school` - theory_school\n* `topic` - topic\n* `concept` - concept\n* `subdiscipline` - subdiscipline"
                     },
                     {
                         "in": "query",
                         "name": "page",
                         "schema": {
-                            "type": "string"
+                            "type": "integer",
+                            "maximum": 100000,
+                            "minimum": 1,
+                            "default": 1
                         }
                     },
                     {
                         "in": "query",
                         "name": "q",
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 200
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "term_group",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "canonical",
+                                "aliases",
+                                "variants"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `canonical` - canonical\n* `aliases` - aliases\n* `variants` - variants"
                     }
                 ],
                 "tags": [
@@ -36649,9 +36700,19 @@
                         "items": {
                             "$ref": "#/components/schemas/IndexTerm"
                         }
+                    },
+                    "rule_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "can_edit_authority": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
+                    "can_edit_authority",
                     "count",
                     "entries",
                     "failed_events",
@@ -36661,6 +36722,7 @@
                     "pending_events",
                     "public_active_entries",
                     "revision",
+                    "rule_counts",
                     "terms"
                 ]
             },

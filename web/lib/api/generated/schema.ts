@@ -8816,6 +8816,10 @@ export interface components {
             pending_events: number;
             failed_events: number;
             terms: components["schemas"]["IndexTerm"][];
+            rule_counts: {
+                [key: string]: number;
+            };
+            can_edit_authority: boolean;
         };
         IntakeChoice: {
             mode: components["schemas"]["CatalogIdentityModeEnum"];
@@ -20241,9 +20245,34 @@ export interface operations {
     catalog_admin_index_maintenance_terms_retrieve: {
         parameters: {
             query?: {
-                entity_type?: string;
-                page?: string;
+                /**
+                 * @description * `` -
+                 *     * `public` - public
+                 *     * `admin` - admin
+                 *     * `inactive` - inactive
+                 */
+                availability?: "" | "public" | "admin" | "inactive";
+                /**
+                 * @description * `` -
+                 *     * `work` - work
+                 *     * `person` - person
+                 *     * `knowledge_node` - knowledge_node
+                 *     * `discipline` - discipline
+                 *     * `theory_school` - theory_school
+                 *     * `topic` - topic
+                 *     * `concept` - concept
+                 *     * `subdiscipline` - subdiscipline
+                 */
+                entity_type?: "" | "work" | "person" | "knowledge_node" | "discipline" | "theory_school" | "topic" | "concept" | "subdiscipline";
+                page?: number;
                 q?: string;
+                /**
+                 * @description * `` -
+                 *     * `canonical` - canonical
+                 *     * `aliases` - aliases
+                 *     * `variants` - variants
+                 */
+                term_group?: "" | "canonical" | "aliases" | "variants";
             };
             header?: never;
             path?: never;

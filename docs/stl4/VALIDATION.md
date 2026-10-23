@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-24 规则分类静态检查
+
+`.venv/Scripts/python.exe tmp/stl4-term-rules-static-20261024.py` 9d88d9退出0：3 AST、主动禁止DB、32条SQLite/PostgreSQL查询编译、OpenAPI0错误10旧警告；同输出记录契约生成与两CSS解析0。TypeScript noEmit 1d0a7a→69e826退出0；index-maintenance/knowledge-aliases-dialog ESLint 0ef0a8退出0。
+
+test_stl4_term_rule_filters_20261024.py只写入，覆盖分类/权限范围筛选与全库分母不变，未运行。最终验收仍需多页筛选、同名来源选择、空库初始化、原规范/别名启停及公开同步、桌面和移动状态；没有浏览器或实际检索。
+
 ## 2026-10-24 人物请求恢复静态检查
 
 a193d5：禁止DB生成OpenAPI0错误10旧警告，person_authority_views、person_authority服务、新恢复用例3 AST及生成类型/PostCSS退出0。`node node_modules/typescript/bin/tsc --noEmit --incremental false` 430572→b8c623退出0；person-authority-workspace目标ESLint df6d0d→d9cf81退出0。

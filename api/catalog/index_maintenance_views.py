@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 from catalog.discovery_index_views import DiscoveryIndexView, IndexStatusSerializer
 from catalog.editorial_issue_views import EditorialErrorMixin
 from catalog.editorial_read import AdminPrivateResponseMixin
-from catalog.models import SemanticIndexVersion, SiteSetting
+from catalog.models import SemanticIndexVersion, SiteSetting, QueryLexiconEntry
 from catalog.services.discovery_indexing import index_writer, request_rebuild, retry_job, _activate_generation
 from catalog.services.discovery_projection import DiscoveryIndexError
 from catalog.services.editorial_issues import EditConflict
@@ -299,18 +299,30 @@ class IndexTermsSerializer(serializers.Serializer):
     pending_events = serializers.IntegerField()
     failed_events = serializers.IntegerField()
     terms = IndexTermSerializer(many=True)
+    rule_counts = serializers.DictField(child=serializers.IntegerField())
+    can_edit_authority = serializers.BooleanField()
+
+
+class IndexTermsQuerySerializer(serializers.Serializer):
+    q = serializers.CharField(max_length=200, allow_blank=True, default="")
+    entity_type = serializers.ChoiceField(choices=["", *QueryLexiconEntry.EntityType.values], default="")
+    page = serializers.IntegerField(min_value=1, max_value=100000, default=1)
+    term_group = serializers.ChoiceField(choices=["", "canonical", "aliases", "variants"], default="")
+    availability = serializers.ChoiceField(choices=["", "public", "admin", "inactive"], default="")
 
 
 class IndexTermsView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
 
-    @extend_schema(responses=IndexTermsSerializer, parameters=[OpenApiParameter(name, type=str) for name in ("q", "entity_type", "page")])
+    @extend_schema(responses=IndexTermsSerializer, parameters=[IndexTermsQuerySerializer])
     def get(self, request):
         if not has_capability(request.user, Capability.VIEW_QUERY_LEXICON): raise PermissionDenied("当前账户不能查看查询词来源。")
-        from catalog.discovery_index_views import _integer
         from catalog.services.query_lexicon.operations import query_lexicon_workspace
-        payload = query_lexicon_workspace(query=str(request.query_params.get("q", ""))[:200], entity_type=request.query_params.get("entity_type", ""),
-            limit=30, page=_integer(request.query_params, "page", 1, 100000))
+        serializer = IndexTermsQuerySerializer(data=request.query_params); serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        payload = query_lexicon_workspace(query=data["q"], entity_type=data["entity_type"], limit=30, page=data["page"],
+            term_group=data["term_group"], availability=data["availability"])
+        payload["can_edit_authority"] = has_capability(request.user, Capability.EDIT_DRAFT_AUTHORITY)
         for row in payload["terms"]:
             entity_id = row["entity_id"]
             row["edit_url"] = {"person": f"/admin/people?source={entity_id}", "knowledge_node": f"/admin/theories/{entity_id}",
