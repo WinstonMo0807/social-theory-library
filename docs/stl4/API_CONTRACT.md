@@ -577,3 +577,5 @@ PDF18继续使用现有公开会话、GET /explore?q=、/account?section=setting
 GET /api/catalog/admin/search/ 使用TodayWorkPage投影，q≤200、kind(catalog/curation/processing)、state、owner(all/me)、ordering及page，20条一页；空q返回空结果。counts为当前q/state/owner下各类型全量数量，kind仅筛选结果页，不截断分面。包括已发布/已确认资料与历史任务。GET /api/catalog/admin/work-notices/ 返回count/checked_at/results（最多5条），当前failed/paused/partial才提醒。两者CanAccessBackOffice、private/no-store，处理任务仍需VIEW_SYSTEM_STATUS；编辑不可获隐藏计数。均只读、不创建任务/新索引。通知不存在伪造已读状态。
 
 2026-10-24 首页HomeCard增加可选curator，来源仅有效发布快照中的public_byline/article_metadata，遵循原匿名清空规则；预览atlas附start_path/route_kind/route_files，仅表示实际路由导航依据。路径总数336不变。
+
+2026-10-24 目录source_locator增加geometry_status，验证后的normalized_position直接用于显示页定位。outline-v3自动任务needs_review与批量筛选覆盖无诊断的未复核修订；无新增路由或数据库迁移，路径仍336。

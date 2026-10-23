@@ -25,7 +25,7 @@ export type OutlineNode = {
   pdf_position?: number[];
   normalized_position?: number[];
   coordinate_space?: string;
-  source_locator?: { bbox?: number[]; coordinate_space?: string; source_width?: number; source_height?: number; page_geometry?: OutlineGeometry };
+  source_locator?: { bbox?: number[]; coordinate_space?: string; source_width?: number; source_height?: number; page_geometry?: OutlineGeometry; geometry_status?: "validated"|"unknown" };
   page_geometry?: OutlineGeometry;
   outline_revision_id?: string;
   source?: string;
@@ -83,17 +83,23 @@ export function outlinePosition(node: OutlineNode): [number, number] | undefined
     return [clamp(point[0] / width), clamp(point[1] / height)];
   }
   const source = node.source_locator;
-  if (!source?.bbox || source.bbox.length !== 4 || !source.bbox.every(Number.isFinite) ||
+  if (source?.geometry_status === "unknown" || !source?.bbox || source.bbox.length !== 4 || !source.bbox.every(Number.isFinite) ||
       !source.source_width || !source.source_height) return undefined;
   const x = source.bbox[0] / source.source_width;
   const y = source.bbox[1] / source.source_height;
   if (source.coordinate_space === "ocr_rendered_page") return [clamp(x), clamp(y)];
   if (source.coordinate_space !== "pymupdf_unrotated") return undefined;
-  switch ((node.page_geometry || source.page_geometry)?.rotation) {
-    case 0: return [clamp(x), clamp(y)];
-    case 90: return [clamp(1 - y), clamp(x)];
-    case 180: return [clamp(1 - x), clamp(1 - y)];
-    case 270: return [clamp(y), clamp(1 - x)];
+  const geometry = node.page_geometry || source.page_geometry;
+  const crop = geometry?.cropbox;
+  if (geometry?.rotation === 0) return [clamp(x), clamp(y)];
+  // Older records used rotated page dimensions for unrotated text. Only the
+  // known crop box can recover that space; otherwise retain a page-only jump.
+  if (!crop || crop.length !== 4 || !crop.every(Number.isFinite) || crop[2] <= crop[0] || crop[3] <= crop[1]) return undefined;
+  const [x0,y0,x1,y1] = [source.bbox[0]/(crop[2]-crop[0]),source.bbox[1]/(crop[3]-crop[1]),source.bbox[2]/(crop[2]-crop[0]),source.bbox[3]/(crop[3]-crop[1])];
+  switch (geometry.rotation) {
+    case 90: return [clamp(1 - y1), clamp(x0)];
+    case 180: return [clamp(1 - x1), clamp(1 - y1)];
+    case 270: return [clamp(y0), clamp(1 - x1)];
     default: return undefined;
   }
 }

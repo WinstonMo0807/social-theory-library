@@ -95,10 +95,10 @@
 109,M10-main,/admin/library/assets/[assetId]/ocr,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
 110,M10-sub01,/admin/library/assets/[assetId]/ocr,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
 111,M10-states,/admin/library/assets/[assetId]/ocr,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-112,M11-main,/admin/library/assets/[id]/outline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-113,M11-sub01,/admin/library/assets/[id]/outline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-114,M11-sub02,/admin/library/assets/[id]/outline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-115,M11-states,/admin/library/assets/[id]/outline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
+112,M11-main,/admin/library/assets/[id]/outline,2026-10-24 已读取原图,目录调用链已核对，局部修正已接,保留候选/人工确认/历史/原页预览；修复无诊断待复核漏选、旋转页落点，原生书签不再文案冒充人工确认,未运行测试/浏览器；未确认像素一致
+113,M11-sub01,/admin/library/assets/[id]/outline,2026-10-24 已读取原图,目录调用链已核对，局部修正已接,保留候选/人工确认/历史/原页预览；修复无诊断待复核漏选、旋转页落点，原生书签不再文案冒充人工确认,未运行测试/浏览器；未确认像素一致
+114,M11-sub02,/admin/library/assets/[id]/outline,2026-10-24 已读取原图,目录调用链已核对，局部修正已接,保留候选/人工确认/历史/原页预览；修复无诊断待复核漏选、旋转页落点，原生书签不再文案冒充人工确认,未运行测试/浏览器；未确认像素一致
+115,M11-states,/admin/library/assets/[id]/outline,2026-10-24 已读取原图,目录调用链已核对，局部修正已接,保留候选/人工确认/历史/原页预览；修复无诊断待复核漏选、旋转页落点，原生书签不再文案冒充人工确认,未运行测试/浏览器；未确认像素一致
 116,M12-main,/admin/library/assets/[id]/page-mapping,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
 117,M12-sub01,/admin/library/assets/[id]/page-mapping,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
 118,M12-states,/admin/library/assets/[id]/page-mapping,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致

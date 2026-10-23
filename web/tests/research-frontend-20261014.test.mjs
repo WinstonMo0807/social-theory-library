@@ -55,7 +55,11 @@ test("outline positions respect coordinate spaces and rotated native source boun
   assert.deepEqual(outlinePosition({ normalized_position: [.4, .6] }), [.4, .6]);
   assert.deepEqual(outlinePosition({ pdf_position: [40, 60], coordinate_space: "pymupdf_toc", page_geometry: { pdf_width: 100, pdf_height: 200 } }), [.4, .3]);
   assert.equal(outlinePosition({ pdf_position: [40, 60], coordinate_space: "unknown", page_geometry: { pdf_width: 100, pdf_height: 200 } }), undefined);
-  assert.deepEqual(outlinePosition({ source_locator: { bbox: [20, 60, 40, 80], source_width: 100, source_height: 200, coordinate_space: "pymupdf_unrotated" }, page_geometry: { rotation: 90 } }), [.7, .2]);
+  const source = { bbox: [20, 60, 40, 80], source_width: 200, source_height: 100, coordinate_space: "pymupdf_unrotated" };
+  assert.deepEqual(outlinePosition({ source_locator: source, page_geometry: { rotation: 90, cropbox: [0, 0, 100, 200] } }), [.6, .2]);
+  assert.deepEqual(outlinePosition({ source_locator: source, page_geometry: { rotation: 270, cropbox: [0, 0, 100, 200] } }), [.3, .6]);
+  assert.equal(outlinePosition({ source_locator: source, page_geometry: { rotation: 90 } }), undefined);
+  assert.equal(outlinePosition({ source_locator: { ...source, geometry_status: "unknown" }, page_geometry: { rotation: 90, cropbox: [0, 0, 100, 200] } }), undefined);
 });
 
 const anchor = { evidence_span_id: "span", asset_id: "asset", document_revision_id: "rev", pdf_page: 3, source_status: "available" };

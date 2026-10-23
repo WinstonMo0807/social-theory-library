@@ -18,10 +18,11 @@ from kombu.exceptions import OperationalError
 
 from catalog.models import Asset, DocumentOutlineRevision
 from catalog.services.text import sanitize_unicode
+from catalog.services.page_geometry import locator_geometry, native_geometry, validated_geometry
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v2"
+PARSER_VERSION = "outline-v3"
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*录|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(r"^(?P<title>.+?)\s*(?:[.．·…_]{2,}|\s{2,}|\t)\s*(?P<label>\d{1,5}|[ivxlcdmIVXLCDM]{1,12})\s*$")
@@ -66,7 +67,9 @@ def _node(asset, ordinal, title, page, *, level=1, source, label="", position=No
         "title": title, "pdf_page": page, "printed_label": label,
         "pdf_position": position or [], "coordinate_unit": "pdf_points" if position else "",
         "coordinate_space": "pymupdf_toc" if position else "",
-        "source_locator": locator or {}, "precision": "position" if position or locator else "page",
+        "source_locator": locator or {},
+        "normalized_position": (locator or {}).get("normalized_bbox", [])[:2],
+        "precision": "position" if position or (locator or {}).get("normalized_bbox") else "page",
         "source": source, "calibration_status": "unverified",
         "contents_page": contents_page,
     }
@@ -133,7 +136,7 @@ def extract_outline(asset, path, *, progress=None):
     segments and ambiguous repeated labels. A whole-book offset is never guessed.
     """
     import fitz
-    nodes, diagnostics, geometry = [], [], {}
+    nodes, diagnostics, geometry, native_pages = [], [], {}, {}
     if progress:
         progress("bookmarks", 0, asset.page_count)
     with fitz.open(str(path)) as document:
@@ -142,6 +145,7 @@ def extract_outline(asset, path, *, progress=None):
         for number, pdf_page in enumerate(document, start=1):
             geometry[number] = {"pdf_width": pdf_page.rect.width, "pdf_height": pdf_page.rect.height,
                                 "rotation": pdf_page.rotation, "cropbox": list(pdf_page.cropbox)}
+            native_pages[number] = native_geometry(pdf_page)
         for ordinal, entry in enumerate(document.get_toc(simple=False)):
             level, title, page = entry[:3]
             title = _title(title)
@@ -199,7 +203,7 @@ def extract_outline(asset, path, *, progress=None):
     # PaddleOCR returns rendered pixmap pixels. Native text blocks use MuPDF's
     # unrotated points. Keep their actual space and reference geometry; the
     # Reader adapter must not consume either as a naked PDF-point coordinate.
-    for block in asset.pages.filter(index__gte=1, index__lte=asset.page_count).exclude(index__in=contents_pages).values("index", "width", "height", "text_source", "blocks__text", "blocks__bbox"):
+    for block in asset.pages.filter(index__gte=1, index__lte=asset.page_count).exclude(index__in=contents_pages).values("index", "width", "height", "geometry", "text_source", "blocks__text", "blocks__bbox"):
         title = _title(block["blocks__text"])
         box = block["blocks__bbox"]
         if title and len(title) <= 180 and isinstance(box, list) and len(box) == 4 and all(type(value) in {int, float} and math.isfinite(value) for value in box):
@@ -210,6 +214,14 @@ def extract_outline(asset, path, *, progress=None):
                        "coordinate_space": "ocr_rendered_page" if source == "ocr" else "pymupdf_unrotated",
                        "source_width": block["width"], "source_height": block["height"],
                        "page_geometry": geometry.get(block["index"], {})}
+            actual = native_pages[block["index"]]
+            observed = validated_geometry(block["geometry"])
+            expected_space = "rendered_pixels" if source == "ocr" else "pymupdf_unrotated"
+            if (observed.get("coordinate_space") != expected_space
+                    or any(observed.get(key) != actual.get(key) for key in ("page_rect", "crop_box", "rotation"))
+                    or source == "ocr" and (block["width"], block["height"]) != (observed.get("render_width"), observed.get("render_height"))):
+                observed = {}
+            locator.update(locator_geometry(box, observed))
             titles[_match_key(title)].append((block["index"], locator))
 
     native_by_target = defaultdict(list)
@@ -664,7 +676,9 @@ def run_outline_job(job_id, *, task_id):
                 revision.is_active = True
                 revision.save(update_fields=["is_active", "updated_at"])
             current.status, current.progress, current.finished_at = "succeeded", 100, timezone.now()
-            current.stats = {**current.stats, "result_revision_id": str(revision.pk), "node_count": len(nodes), "needs_review": bool(diagnostics), "stage": "complete"}
+            # Extraction is never a human review, even when matching produced
+            # no warnings or the source contained structurally valid bookmarks.
+            current.stats = {**current.stats, "result_revision_id": str(revision.pk), "node_count": len(nodes), "needs_review": not revision.reviewed, "stage": "complete"}
             current.save(update_fields=["status", "progress", "finished_at", "stats", "updated_at"])
             return current
     except OutlineJobInterrupted:

@@ -131,7 +131,7 @@ class AdminOutlineRebuildBatchView(AdminPrivateResponseMixin, APIView):
         current = active.filter(source_checksum=OuterRef("sha256"), document_revision__is_active=True)
         latest = DocumentOutlineRevision.objects.filter(asset_id=OuterRef("pk")).order_by("-revision")
         queryset = queryset.annotate(has_outline=Exists(current), has_previous_outline=Exists(active), latest_outline_id=Subquery(latest.values("pk")[:1]))
-        queryset = queryset.annotate(needs_review=Exists(DocumentOutlineRevision.objects.filter(pk=OuterRef("latest_outline_id"), reviewed=False, diagnostics__0__isnull=False)))
+        queryset = queryset.annotate(needs_review=Exists(DocumentOutlineRevision.objects.filter(pk=OuterRef("latest_outline_id"), reviewed=False)))
         selected_filter = request.query_params.get("filter", "missing")
         if selected_filter == "missing":
             queryset = queryset.filter(has_outline=False)
