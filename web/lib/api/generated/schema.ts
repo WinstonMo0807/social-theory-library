@@ -944,6 +944,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/editions/{edition_id}/supporting-materials/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_supporting_materials_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_editions_supporting_materials_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/supporting-materials/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_supporting_materials_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_editions_supporting_materials_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/evidence-curation/{object_type}/{object_id}/": {
         parameters: {
             query?: never;
@@ -17132,6 +17164,9 @@ export interface components {
         StopAvatarRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
+        StopInputRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
         StopPendingAccountRequest: {
             /** Format: uuid */
             request_id: string;
@@ -17460,6 +17495,73 @@ export interface components {
             count: number;
             page: number;
             total_pages: number;
+        };
+        /**
+         * @description * `note` - note
+         *     * `link` - link
+         * @enum {string}
+         */
+        SupportingFieldsKindEnum: "note" | "link";
+        SupportingFieldsRequest: {
+            kind: components["schemas"]["SupportingFieldsKindEnum"];
+            title: string;
+            /** @default  */
+            note: string;
+            url?: string;
+        };
+        /**
+         * @description * `create` - create
+         *     * `update` - update
+         *     * `archive` - archive
+         *     * `restore` - restore
+         * @enum {string}
+         */
+        SupportingInputActionEnum: "create" | "update" | "archive" | "restore";
+        SupportingInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            action: components["schemas"]["SupportingInputActionEnum"];
+            /** Format: uuid */
+            material_id?: string | null;
+            fields?: components["schemas"]["SupportingFieldsRequest"];
+        };
+        SupportingReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            next_url: string;
+            result: unknown;
+        };
+        SupportingRow: {
+            /** Format: uuid */
+            readonly id: string;
+            kind: components["schemas"]["SupportingRowKindEnum"];
+            title: string;
+            note?: string;
+            url?: string;
+            archived?: boolean;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description * `note` - 补充说明
+         *     * `link` - 相关链接
+         * @enum {string}
+         */
+        SupportingRowKindEnum: "note" | "link";
+        SupportingState: {
+            owner_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            version: string;
+            results: components["schemas"]["SupportingRow"][];
+            count: number;
+            page: number;
+            pages: number;
         };
         /**
          * @description * `none` - 尚无文字
@@ -20840,6 +20942,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReaderRenditionPolicyResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_supporting_materials_retrieve: {
+        parameters: {
+            query?: {
+                archived?: boolean;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportingState"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_supporting_materials_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportingInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SupportingInputRequest"];
+                "multipart/form-data": components["schemas"]["SupportingInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportingReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_supporting_materials_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportingReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_supporting_materials_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StopInputRequest"];
+                "multipart/form-data": components["schemas"]["StopInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportingReceipt"];
                 };
             };
         };

@@ -315,6 +315,22 @@ class Edition(UUIDTimeStampedModel):
         self.publication_place = value
 
 
+class EditionSupportingMaterial(UUIDTimeStampedModel):
+    """Back-office supporting notes and links; files retain their existing Asset identities."""
+    edition = models.ForeignKey(Edition, on_delete=models.PROTECT, related_name="supporting_materials")
+    kind = models.CharField(max_length=8, choices=[("note", "补充说明"), ("link", "相关链接")])
+    title = models.CharField(max_length=300)
+    note = models.TextField(blank=True)
+    url = models.URLField(max_length=2000, blank=True)
+    archived = models.BooleanField(default=False, db_index=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_supporting_materials")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="updated_supporting_materials")
+
+    class Meta:
+        ordering = ["-updated_at", "pk"]
+        constraints = [models.CheckConstraint(condition=(models.Q(kind="note", url="") | (models.Q(kind="link") & ~models.Q(url=""))), name="edition_supporting_kind_valid")]
+
+
 class JournalIssueArticle(UUIDTimeStampedModel):
     """Editorial issue contents, optionally linked to an independently catalogued article."""
 

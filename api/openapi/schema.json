@@ -4081,6 +4081,233 @@
                 }
             }
         },
+        "/api/catalog/admin/editions/{edition_id}/supporting-materials/": {
+            "get": {
+                "operationId": "catalog_admin_editions_supporting_materials_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "archived",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SupportingState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_editions_supporting_materials_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupportingInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupportingInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupportingInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SupportingReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/supporting-materials/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_editions_supporting_materials_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SupportingReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_editions_supporting_materials_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SupportingReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/evidence-curation/{object_type}/{object_id}/": {
             "get": {
                 "operationId": "catalog_admin_evidence_curation_retrieve",
@@ -64769,6 +64996,17 @@
                     "action"
                 ]
             },
+            "StopInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
             "StopPendingAccountRequest": {
                 "type": "object",
                 "properties": {
@@ -66001,6 +66239,217 @@
                     "count",
                     "page",
                     "total_pages"
+                ]
+            },
+            "SupportingFieldsKindEnum": {
+                "enum": [
+                    "note",
+                    "link"
+                ],
+                "type": "string",
+                "description": "* `note` - note\n* `link` - link"
+            },
+            "SupportingFieldsRequest": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/SupportingFieldsKindEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 12000
+                    },
+                    "url": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "default": "",
+                                "maxLength": 2000
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "kind",
+                    "title"
+                ]
+            },
+            "SupportingInputActionEnum": {
+                "enum": [
+                    "create",
+                    "update",
+                    "archive",
+                    "restore"
+                ],
+                "type": "string",
+                "description": "* `create` - create\n* `update` - update\n* `archive` - archive\n* `restore` - restore"
+            },
+            "SupportingInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/SupportingInputActionEnum"
+                    },
+                    "material_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "fields": {
+                        "$ref": "#/components/schemas/SupportingFieldsRequest"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "request_id"
+                ]
+            },
+            "SupportingReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "result": {
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "result",
+                    "state"
+                ]
+            },
+            "SupportingRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/SupportingRowKindEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 2000
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "title",
+                    "updated_at"
+                ]
+            },
+            "SupportingRowKindEnum": {
+                "enum": [
+                    "note",
+                    "link"
+                ],
+                "type": "string",
+                "description": "* `note` - 补充说明\n* `link` - 相关链接"
+            },
+            "SupportingState": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SupportingRow"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "count",
+                    "edition_id",
+                    "owner_id",
+                    "page",
+                    "pages",
+                    "results",
+                    "version"
                 ]
             },
             "TextSourceEnum": {
