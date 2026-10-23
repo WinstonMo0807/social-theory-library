@@ -93,6 +93,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     permission_reason = serializers.CharField(allow_blank=True)
     retry_url = serializers.CharField(allow_blank=True)
     operation = serializers.CharField(allow_blank=True)
+    can_export_results = serializers.BooleanField()
     cover_url = serializers.CharField(allow_blank=True)
     engine = serializers.CharField(allow_blank=True)
     attempt = serializers.IntegerField()

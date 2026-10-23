@@ -1,9 +1,10 @@
-"""Bounded exports of recorded successful OCR pages or the task's outline revision."""
+"""Bounded exports of recorded OCR, outline and Discovery task results."""
 from hashlib import sha256
 import json
 from tempfile import SpooledTemporaryFile
 from uuid import UUID
 
+from django.contrib.auth import get_user_model
 from django.db.models import Count, Max
 from django.db.models.functions import Length
 from django.http import FileResponse
@@ -44,9 +45,11 @@ class ProcessingResultQuerySerializer(serializers.Serializer):
 class ProcessingResultManifestSerializer(serializers.Serializer):
     owner_id = serializers.CharField()
     task_id = serializers.UUIDField()
-    kind = serializers.ChoiceField(choices=["ocr", "outline"])
+    kind = serializers.ChoiceField(choices=["ocr", "outline", "discovery"])
     asset_id = serializers.UUIDField(allow_null=True)
     revision_id = serializers.UUIDField(allow_null=True)
+    index_generation_id = serializers.UUIDField(allow_null=True, default=None)
+    source_revision = serializers.CharField(allow_blank=True, default="")
     title = serializers.CharField()
     task_status = serializers.CharField()
     count = serializers.IntegerField()
@@ -79,8 +82,11 @@ def result_asset(job):
 
 def result_source(job, actor, data):
     stats = job.stats or {}
+    if job.job_type == "discovery_index":
+        from ingestion.services.processing_index_results import discovery_result_source
+        return discovery_result_source(job, actor, data)
     if job.job_type != "ocr" and not (job.job_type == "text_extraction" and stats.get("operation") == "outline_rebuild"):
-        raise ValidationError("此导出入口只处理原OCR成功页与本次章节目录。其他任务请使用其原结果入口。")
+        raise ValidationError("此入口支持OCR成功页、任务目录修订和单份文献索引片段。其他任务请使用其原结果入口。")
     asset = result_asset(job)
     if not 1 <= asset.page_count <= 20000:
         raise ValidationError("原文件页数未核实或超过本入口上限，请在材料页先核对。")
@@ -145,6 +151,12 @@ def export_file(manifest, rows, file_format):
             for row in records:
                 if file_format == "jsonl": write(json.dumps({"type": "page", **row}, ensure_ascii=False, default=str) + "\n")
                 else: write(f"--- PDF 第 {row['index']} 页 · 印刷页 {row['printed_label'] or '未标注'} ---\n文字来源 {row['text_source']} · 人工文字 {'是' if row['is_text_manual'] else '否'} · 更新于 {row['updated_at'].isoformat()}\n{row['text']}\n\n")
+        elif manifest["kind"] == "discovery":
+            from ingestion.services.processing_index_results import discovery_export_rows
+            if file_format == "txt": write(f"索引版本 {manifest['index_generation_id']}\n原文修订 {manifest['revision_id']}\n\n")
+            for row in discovery_export_rows(rows):
+                if file_format == "jsonl": write(json.dumps({"type": "indexed_passage", **row}, ensure_ascii=False, default=str) + "\n")
+                else: write(f"--- PDF 第 {row['pdf_page']} 页 · 印刷页 {row['printed_page'] or '未标注'} ---\n来源单元 {row['unit_id']} · 单元内字符 {row['start_offset']}–{row['end_offset']} · 来源修订 {row['source_revision']}\n{row['text']}\n\n")
         else:
             for row in rows:
                 if file_format == "jsonl": write(json.dumps({"type": "outline_node", **row}, ensure_ascii=False, default=str) + "\n")
@@ -159,22 +171,30 @@ def export_file(manifest, rows, file_format):
 class ProcessingResultView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
 
+    def current_actor(self, request):
+        actor = get_user_model().objects.filter(pk=request.user.pk, is_active=True).first()
+        if (actor is None or request.headers.get("X-Editor-Owner") != str(actor.pk)
+                or actor.token_version != request.user.token_version or not has_capability(actor, Capability.VIEW_SYSTEM_STATUS)):
+            raise PermissionDenied("账户、会话或任务查看权限已变化，请重新登录后读取结果。")
+        return actor
+
     @extend_schema(parameters=[ProcessingResultQuerySerializer], responses={200: ProcessingResultManifestSerializer, (200, "text/plain"): OpenApiTypes.BINARY, (200, "application/x-ndjson"): OpenApiTypes.BINARY})
     def get(self, request, task_id):
-        if request.headers.get("X-Editor-Owner") != str(request.user.pk) or not has_capability(request.user, Capability.VIEW_SYSTEM_STATUS):
-            raise PermissionDenied("请使用有任务查看权限的当前账户导出。")
+        actor = self.current_actor(request)
         data = ProcessingResultQuerySerializer(data=request.query_params); data.is_valid(raise_exception=True)
         data = data.validated_data
-        jobs, _, _, _ = task_querysets({"task_source": "processing_job", "task_id": str(task_id)}, request.user)
+        jobs, _, _, _ = task_querysets({"task_source": "processing_job", "task_id": str(task_id)}, actor)
         job = get_object_or_404(jobs.select_related("asset__edition__work"), pk=task_id)
-        manifest, rows = result_source(job, request.user, data)
+        manifest, rows = result_source(job, actor, data)
         if not data["download"]: return Response(ProcessingResultManifestSerializer(manifest).data)
         if data["expected_version"] != manifest["version"]: raise EditConflict("结果范围已变化，请重新读取后导出。")
         if not manifest["count"]: raise ValidationError(manifest["notice"])
         output = export_file(manifest, rows, data["download"])
         try:
+            actor = self.current_actor(request)
+            jobs, _, _, _ = task_querysets({"task_source": "processing_job", "task_id": str(task_id)}, actor)
             fresh = get_object_or_404(jobs.select_related("asset__edition__work"), pk=task_id)
-            current, _ = result_source(fresh, request.user, data)
+            current, _ = result_source(fresh, actor, data)
             if current["version"] != manifest["version"]: raise EditConflict("导出期间结果发生变化，请重新读取范围后重试。")
         except Exception:
             output.close()

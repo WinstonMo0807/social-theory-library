@@ -13395,11 +13395,15 @@ export interface components {
             owner_id: string;
             /** Format: uuid */
             task_id: string;
-            kind: components["schemas"]["ProcessingCreationTypeEnum"];
+            kind: components["schemas"]["ProcessingResultManifestKindEnum"];
             /** Format: uuid */
             asset_id: string | null;
             /** Format: uuid */
             revision_id: string | null;
+            /** Format: uuid */
+            index_generation_id?: string | null;
+            /** @default  */
+            source_revision: string;
             title: string;
             task_status: string;
             count: number;
@@ -13411,6 +13415,13 @@ export interface components {
             notice: string;
             formats: string[];
         };
+        /**
+         * @description * `ocr` - ocr
+         *     * `outline` - outline
+         *     * `discovery` - discovery
+         * @enum {string}
+         */
+        ProcessingResultManifestKindEnum: "ocr" | "outline" | "discovery";
         ProcessingSource: {
             /** Format: uuid */
             edition_id: string;
@@ -13521,6 +13532,7 @@ export interface components {
             permission_reason: string;
             retry_url: string;
             operation: string;
+            can_export_results: boolean;
             cover_url: string;
             engine: string;
             attempt: number;

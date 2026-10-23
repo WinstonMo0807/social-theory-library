@@ -1,5 +1,10 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 M09索引片段导出与账户复核
+
+原ProcessingResultManifest增加discovery类别、index_generation_id和source_revision；ProcessingWorkspaceTask增加can_export_results。GET results原页序/版本契约复用，333路径不变。仅单份公开文献原任务的成功片段，下载前后核对当前来源与账户会话/权限；原OCR和目录同享账户复核。无新增写接口或迁移。
+
+
 ## 2026-10-24 任务成功结果导出
 
 新增GET processing-workspace/results/{task_id}/。默认返回ProcessingResultManifest；page_from/page_to按PDF页序限制范围；download=txt/jsonl必须携带预览返回的expected_version。X-Editor-Owner与VIEW_SYSTEM_STATUS严格匹配；403/404/409及空结果/超量返回明确错误。二进制响应不缓存，JSONL清单不携带账户编号。333路径。

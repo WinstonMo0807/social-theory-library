@@ -30,6 +30,8 @@ def workspace_task(job, row, actor):
             "failure_pages": failed_pages[:200], "failure_page_count": len(failed_pages), "failure_location": failure_location,
             "heartbeat_stale": bool(heartbeat and job.status == "running" and (timezone.now() - heartbeat).total_seconds() > 90),
             "operation": "outline_rebuild" if stats.get("operation") == "outline_rebuild" else "",
+            "can_export_results": row["source"] == "processing_job" and (row["job_type"] == "ocr" or stats.get("operation") == "outline_rebuild"
+                or row["job_type"] == "discovery_index" and stats.get("action") == "source" and stats.get("source_type") == "edition"),
             "file": {"filename": row.get("source_filename", ""), "pages": asset.page_count if asset else None,
                      "bytes": asset.byte_size if asset else None, "is_current": asset.is_current if asset else None},
             "cover_url": f"/api/catalog/admin/media/renditions/{cover_id}/file/" if cover_id else "",

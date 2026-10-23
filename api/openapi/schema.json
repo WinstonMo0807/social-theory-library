@@ -51693,7 +51693,7 @@
                         "format": "uuid"
                     },
                     "kind": {
-                        "$ref": "#/components/schemas/ProcessingCreationTypeEnum"
+                        "$ref": "#/components/schemas/ProcessingResultManifestKindEnum"
                     },
                     "asset_id": {
                         "type": "string",
@@ -51704,6 +51704,15 @@
                         "type": "string",
                         "format": "uuid",
                         "nullable": true
+                    },
+                    "index_generation_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_revision": {
+                        "type": "string",
+                        "default": ""
                     },
                     "title": {
                         "type": "string"
@@ -51753,6 +51762,15 @@
                     "total_recorded",
                     "version"
                 ]
+            },
+            "ProcessingResultManifestKindEnum": {
+                "enum": [
+                    "ocr",
+                    "outline",
+                    "discovery"
+                ],
+                "type": "string",
+                "description": "* `ocr` - ocr\n* `outline` - outline\n* `discovery` - discovery"
             },
             "ProcessingSource": {
                 "type": "object",
@@ -52130,6 +52148,9 @@
                     "operation": {
                         "type": "string"
                     },
+                    "can_export_results": {
+                        "type": "boolean"
+                    },
                     "cover_url": {
                         "type": "string"
                     },
@@ -52176,6 +52197,7 @@
                     "actions",
                     "asset_id",
                     "attempt",
+                    "can_export_results",
                     "counts",
                     "cover_url",
                     "created_at",
