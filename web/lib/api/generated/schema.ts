@@ -13296,9 +13296,10 @@ export interface components {
          *     * `retry` - retry
          *     * `cancel` - cancel
          *     * `recover` - recover
+         *     * `configure_followup` - configure_followup
          * @enum {string}
          */
-        ProcessingCommandActionEnum: "pause" | "resume" | "retry" | "cancel" | "recover";
+        ProcessingCommandActionEnum: "pause" | "resume" | "retry" | "cancel" | "recover" | "configure_followup";
         ProcessingCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -13308,6 +13309,7 @@ export interface components {
             action: components["schemas"]["ProcessingCommandActionEnum"];
             expected_version: string;
             page_indexes?: number[];
+            align_concepts?: boolean;
         };
         /**
          * @description * `create` - create
@@ -13325,6 +13327,7 @@ export interface components {
             confirmed: boolean;
             page_indexes?: number[];
             task_options?: components["schemas"]["OCRTaskOptionsRequest"];
+            align_concepts?: boolean;
         };
         /**
          * @description * `ocr` - ocr
@@ -13343,6 +13346,25 @@ export interface components {
             bytes: number | null;
             is_current: boolean | null;
         };
+        ProcessingFollowup: {
+            enabled: boolean;
+            state: components["schemas"]["ProcessingFollowupStateEnum"];
+            can_configure: boolean;
+            counts: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * @description * `waiting` - waiting
+         *     * `running` - running
+         *     * `completed` - completed
+         *     * `skipped` - skipped
+         *     * `disabled` - disabled
+         *     * `failed` - failed
+         *     * `unrecorded` - unrecorded
+         * @enum {string}
+         */
+        ProcessingFollowupStateEnum: "waiting" | "running" | "completed" | "skipped" | "disabled" | "failed" | "unrecorded";
         /**
          * @description * `file` - file
          *     * `task` - task
@@ -13569,6 +13591,7 @@ export interface components {
             heartbeat_stale: boolean;
             recovery: components["schemas"]["ProcessingRecovery"];
             retry_selection: components["schemas"]["ProcessingRetrySelection"];
+            followup: components["schemas"]["ProcessingFollowup"] | null;
             pause_requested: boolean;
             last_error: string;
             error_code: string;

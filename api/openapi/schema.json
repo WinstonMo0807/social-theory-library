@@ -51347,10 +51347,11 @@
                     "resume",
                     "retry",
                     "cancel",
-                    "recover"
+                    "recover",
+                    "configure_followup"
                 ],
                 "type": "string",
-                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel\n* `recover` - recover"
+                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel\n* `recover` - recover\n* `configure_followup` - configure_followup"
             },
             "ProcessingCommandRequest": {
                 "type": "object",
@@ -51382,6 +51383,9 @@
                         },
                         "maxItems": 20000,
                         "minItems": 1
+                    },
+                    "align_concepts": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
@@ -51435,6 +51439,9 @@
                     },
                     "task_options": {
                         "$ref": "#/components/schemas/OCRTaskOptionsRequest"
+                    },
+                    "align_concepts": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
@@ -51501,6 +51508,45 @@
                     "is_current",
                     "pages"
                 ]
+            },
+            "ProcessingFollowup": {
+                "type": "object",
+                "properties": {
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/ProcessingFollowupStateEnum"
+                    },
+                    "can_configure": {
+                        "type": "boolean"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "required": [
+                    "can_configure",
+                    "counts",
+                    "enabled",
+                    "state"
+                ]
+            },
+            "ProcessingFollowupStateEnum": {
+                "enum": [
+                    "waiting",
+                    "running",
+                    "completed",
+                    "skipped",
+                    "disabled",
+                    "failed",
+                    "unrecorded"
+                ],
+                "type": "string",
+                "description": "* `waiting` - waiting\n* `running` - running\n* `completed` - completed\n* `skipped` - skipped\n* `disabled` - disabled\n* `failed` - failed\n* `unrecorded` - unrecorded"
             },
             "ProcessingGroupingEnum": {
                 "enum": [
@@ -52232,6 +52278,14 @@
                     "retry_selection": {
                         "$ref": "#/components/schemas/ProcessingRetrySelection"
                     },
+                    "followup": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProcessingFollowup"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "pause_requested": {
                         "type": "boolean"
                     },
@@ -52339,6 +52393,7 @@
                     "file",
                     "file_id",
                     "finished_at",
+                    "followup",
                     "heartbeat_at",
                     "heartbeat_stale",
                     "id",

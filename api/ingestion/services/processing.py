@@ -55,10 +55,18 @@ class OCRClaimSuperseded(RuntimeError):
     """A delayed worker must stop without changing the replacement's state."""
 
 
+@transaction.atomic
 def _write_ocr_checkpoint(job, **updates):
     updates["updated_at"] = timezone.now()
-    if not ProcessingJob.objects.filter(pk=job.pk, status="running", task_id=job.task_id).update(**updates):
+    current = ProcessingJob.objects.select_for_update().filter(pk=job.pk, status="running", task_id=job.task_id).first()
+    if current is None:
         raise OCRClaimSuperseded()
+    if "stats" in updates:
+        # Operator settings and separately committed follow-up state can change
+        # while the OCR worker retains its previous in-memory checkpoint.
+        updates["stats"] = {**updates["stats"], **{key: current.stats[key] for key in
+            ("after_processing", "concept_alignment") if key in current.stats}}
+    ProcessingJob.objects.filter(pk=current.pk).update(**updates)
     for field, value in updates.items():
         setattr(job, field, value)
 
@@ -1092,6 +1100,7 @@ def _publish_ocr_result(job, stats, claim_task_id):
         # Make it available for the next explicit publication without publishing it.
         Asset.objects.filter(edition=edition, kind=Asset.Kind.NORMALIZED, is_current=True).exclude(pk=job.asset_id).update(is_current=False, updated_at=timezone.now())
         Asset.objects.filter(pk=job.asset_id).update(is_current=True, updated_at=timezone.now())
+    stats.update({key: current.stats[key] for key in ("after_processing", "concept_alignment") if key in current.stats})
     current.stats = stats
     current.save(update_fields=["stats", "updated_at"])
     return True
@@ -1378,11 +1387,8 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         if not _publish_ocr_result(job, stats, claim_task_id):
             return ProcessingJob.objects.get(pk=job.pk)
         try:
-            stats["theory_suggestions"] = generate_theory_review_tasks(
-                asset,
-                actor=job.created_by,
-                force=False,
-            )
+            from .processing_followup import run_concept_followup
+            stats["theory_suggestions"] = run_concept_followup(job)
         except Exception as exc:
             stats["theory_suggestion_warning"] = str(exc)[:2000]
         try:

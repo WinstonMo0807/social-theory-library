@@ -3,6 +3,7 @@ from .processing_commands import task_actions, task_version
 from .processing_identity import processing_edition
 from .processing_recovery import recovery_state
 from .processing_retry import failed_ocr_pages
+from .processing_followup import followup_state
 
 
 def workspace_task(job, row, actor):
@@ -16,6 +17,9 @@ def workspace_task(job, row, actor):
     actions = task_actions(job, actor)
     recovery = recovery_state(job)
     recovery["can_recover"] = "recover" in actions
+    followup = followup_state(job)
+    if followup:
+        followup["can_configure"] = "configure_followup" in actions
     ocr = row.get("ocr_progress")
     if ocr:
         if not ocr["can_resume"]: actions = [action for action in actions if action not in {"resume", "retry"}]
@@ -37,6 +41,7 @@ def workspace_task(job, row, actor):
                                 "pages": retry_pages[:200], "count": len(retry_pages)},
             "heartbeat_stale": job.status == "running" and recovery["state"] in {"recoverable", "delayed"},
             "recovery": recovery,
+            "followup": followup,
             "operation": "outline_rebuild" if stats.get("operation") == "outline_rebuild" else "",
             "can_export_results": row["source"] == "processing_job" and (row["job_type"] == "ocr" or stats.get("operation") == "outline_rebuild"
                 or row["job_type"] == "discovery_index" and stats.get("action") == "source" and stats.get("source_type") == "edition"),

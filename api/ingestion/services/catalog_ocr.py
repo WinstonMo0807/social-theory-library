@@ -272,6 +272,10 @@ def start_catalog_ocr(data, actor):
     if "task_options" in data:
         import json
         identity += ":" + json.dumps(options, sort_keys=True)
+    if "align_concepts" in data:
+        if type(data["align_concepts"]) is not bool:
+            raise ValidationError({"align_concepts": ["请明确是否在识别后进行概念对齐。"]})
+        identity += f":align_concepts={data['align_concepts']}"
     fingerprint = sha256((identity if targets is None else f"{identity}:{targets}").encode()).hexdigest()
     receipt = AuditEvent.objects.filter(actor=actor, action="catalog.ocr.start", request_id=request_id).first()
     if receipt:
@@ -309,6 +313,8 @@ def start_catalog_ocr(data, actor):
                      "requested_page_indexes": eligible, "protected_page_indexes": sorted(protected.intersection(requested)),
                      "reviewed_page_indexes": sorted(reviewed.intersection(requested)), "task_options": options,
                      "processed_pages": 0, "completed_page_indexes": [], "remaining_pages": len(eligible), "ocr_phase": "queued"}
+        if "align_concepts" in data:
+            job.stats["after_processing"] = {"align_concepts": data["align_concepts"]}
         job.save(update_fields=["stats", "idempotency_key", "updated_at"])
     AuditEvent.objects.create(actor=actor, action="catalog.ocr.start", object_type="edition", object_id=str(edition.pk), request_id=request_id,
                               after={"job_id": str(job.pk), "asset_id": str(asset.pk), "fingerprint": fingerprint, "mode": job.stats["requested_mode"]})

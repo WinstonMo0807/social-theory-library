@@ -266,44 +266,30 @@ def generate_theory_review_tasks(asset: Asset, *, actor=None, force: bool = Fals
 
     created = 0
     updated = 0
+    protected_nodes = 0
     for confidence, node, terms, occurrences in sorted(scored, key=lambda row: -row[0])[:MAX_NODE_CANDIDATES]:
         role = _relation_role(asset.edition.work.title, terms, occurrences)
-        if WorkNodeRelation.objects.filter(
-            work=asset.edition.work,
-            node=node,
-            status=KnowledgePublicationStatus.PUBLISHED,
-        ).exists():
+        task = TheoryReviewTask.objects.filter(task_type=TheoryReviewTask.TaskType.WORK_NODE,
+            work=asset.edition.work, file=asset, candidate_node=node).first()
+        # A regeneration request never resets an editor's decision or manual relation.
+        if (task and task.status != TheoryReviewTask.TaskStatus.PENDING
+                or WorkNodeRelation.objects.filter(work=asset.edition.work, node=node)
+                .exclude(source=SOURCE_NAME, status=KnowledgePublicationStatus.PENDING,
+                         reviewed_by__isnull=True, reviewed_at__isnull=True).exists()):
+            protected_nodes += 1
             continue
-        WorkNodeRelation.objects.filter(
-            work=asset.edition.work,
-            node=node,
-            status=KnowledgePublicationStatus.PENDING,
-            source=SOURCE_NAME,
-        ).exclude(role=role).delete()
-        relation, _ = WorkNodeRelation.objects.update_or_create(
-            work=asset.edition.work,
-            node=node,
-            role=role,
-            defaults={
-                "is_primary": False,
-                "strength": (
-                    RelationStrength.HIGH if confidence >= 0.82
-                    else RelationStrength.MEDIUM if confidence >= 0.62
-                    else RelationStrength.LOW
-                ),
-                "confidence": confidence,
-                "status": KnowledgePublicationStatus.PENDING,
-                "source": SOURCE_NAME,
-                "created_by": actor,
-            },
-        )
+        defaults = {"is_primary": False,
+            "strength": RelationStrength.HIGH if confidence >= 0.82 else RelationStrength.MEDIUM if confidence >= 0.62 else RelationStrength.LOW,
+            "confidence": confidence, "status": KnowledgePublicationStatus.PENDING, "source": SOURCE_NAME, "created_by": actor}
+        relation, fresh = WorkNodeRelation.objects.get_or_create(work=asset.edition.work, node=node, role=role, defaults=defaults)
+        if not fresh and not WorkNodeRelation.objects.filter(pk=relation.pk, source=SOURCE_NAME,
+                status=KnowledgePublicationStatus.PENDING, reviewed_by__isnull=True,
+                reviewed_at__isnull=True).update(**defaults, updated_at=timezone.now()):
+            protected_nodes += 1
+            continue
+        # Keep other inferred roles and their evidence. Removing them could also
+        # remove a human-reviewed snippet attached after the original suggestion.
         pages, summary = _evidence_summary(occurrences)
-        task = TheoryReviewTask.objects.filter(
-            task_type=TheoryReviewTask.TaskType.WORK_NODE,
-            work=asset.edition.work,
-            file=asset,
-            candidate_node=node,
-        ).first()
         if task is None:
             task = TheoryReviewTask.objects.create(
                 task_type=TheoryReviewTask.TaskType.WORK_NODE,
@@ -318,51 +304,29 @@ def generate_theory_review_tasks(asset: Asset, *, actor=None, force: bool = Fals
                 submitted_at=timezone.now(),
             )
             created += 1
-        elif force or task.status in {
-            TheoryReviewTask.TaskStatus.PENDING,
-            TheoryReviewTask.TaskStatus.NEEDS_CHANGES,
-            TheoryReviewTask.TaskStatus.DEFERRED,
-            TheoryReviewTask.TaskStatus.INSUFFICIENT_EVIDENCE,
-        }:
-            task.suggested_relation_type = role
-            task.confidence = confidence
-            task.evidence_pages = pages
-            task.evidence_text = summary
-            task.status = TheoryReviewTask.TaskStatus.PENDING
-            task.submitted_at = timezone.now()
-            task.save(
-                update_fields=[
-                    "suggested_relation_type", "confidence", "evidence_pages",
-                    "evidence_text", "status", "submitted_at", "updated_at",
-                ]
-            )
+        else:
+            changed = TheoryReviewTask.objects.filter(pk=task.pk, status=TheoryReviewTask.TaskStatus.PENDING).update(
+                suggested_relation_type=role, confidence=confidence, evidence_pages=pages, evidence_text=summary,
+                submitted_at=timezone.now(), updated_at=timezone.now())
+            if not changed:
+                protected_nodes += 1
+                continue
             updated += 1
 
         for occurrence in occurrences[:MAX_EVIDENCE_PER_NODE]:
-            EvidenceSnippet.objects.update_or_create(
-                work=asset.edition.work,
-                file=asset,
-                node=node,
-                work_node_relation=relation,
-                page_number=occurrence.page,
-                defaults={
-                    "printed_page_label": occurrence.printed_label,
-                    "quote": _excerpt(occurrence.text, occurrence.matched_terms),
-                    "bounding_box": {"rect": occurrence.bbox} if occurrence.bbox else {},
-                    "extraction_method": (
-                        EvidenceSnippet.ExtractionMethod.OCR
-                        if occurrence.page_source == Page.TextSource.OCR
-                        else EvidenceSnippet.ExtractionMethod.TEXT_LAYER
-                    ),
-                    "ocr_confidence": (
-                        occurrence.page_confidence
-                        if occurrence.page_source == Page.TextSource.OCR
-                        else None
-                    ),
-                    "semantic_confidence": confidence,
-                    "review_status": RelationReviewStatus.SUGGESTED,
-                },
-            )
+            evidence = {"printed_page_label": occurrence.printed_label,
+                "quote": _excerpt(occurrence.text, occurrence.matched_terms),
+                "bounding_box": {"rect": occurrence.bbox} if occurrence.bbox else {},
+                "extraction_method": EvidenceSnippet.ExtractionMethod.OCR if occurrence.page_source == Page.TextSource.OCR else EvidenceSnippet.ExtractionMethod.TEXT_LAYER,
+                "ocr_confidence": occurrence.page_confidence if occurrence.page_source == Page.TextSource.OCR else None,
+                "semantic_confidence": confidence, "review_status": RelationReviewStatus.SUGGESTED}
+            snippet, fresh = EvidenceSnippet.objects.get_or_create(work=asset.edition.work, file=asset, node=node,
+                work_node_relation=relation, page_number=occurrence.page, defaults=evidence)
+            if not fresh:
+                EvidenceSnippet.objects.filter(pk=snippet.pk, review_status=RelationReviewStatus.SUGGESTED,
+                    reviewed_by__isnull=True, reviewed_at__isnull=True,
+                    extraction_method__in=[EvidenceSnippet.ExtractionMethod.OCR, EvidenceSnippet.ExtractionMethod.TEXT_LAYER]
+                ).update(**evidence, updated_at=timezone.now())
 
     new_node_tasks = 0
     for candidate in _unknown_node_candidates(passages, known_terms):
@@ -393,4 +357,5 @@ def generate_theory_review_tasks(asset: Asset, *, actor=None, force: bool = Fals
         "new_node_tasks": new_node_tasks,
         "matched_nodes": len(scored),
         "passages_checked": len(passages),
+        "protected_nodes": protected_nodes,
     }

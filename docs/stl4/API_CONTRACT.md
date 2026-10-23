@@ -1,5 +1,11 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 处理队列后续概念对齐
+
+原任务命令增加configure_followup及必填align_concepts布尔值；仅OCR、尚未开始该阶段、当前VIEW_SYSTEM_STATUS/RETRY_JOBS权限可用。仍必填request_id/source/job_id/expected_version与X-Editor-Owner；重复/停止/来源变化沿原回执和409冲突。其他动作不能附带该设置。新建OCR可传align_concepts，进入原OCR启动指纹及创建事务；目录任务拒绝该参数。
+
+任务增加可空followup对象，包含enabled、state、can_configure、counts。state为waiting/running/completed/skipped/disabled/failed/unrecorded；counts只回传真实非负数量。旧任务无设置时沿原开启行为；未记录结果不补造数量。task_version包含后续设置和阶段，心跳不改变版本。对齐只生成原馆内关系/证据候选，人工审核和发布仍沿原权限。333路径，无新增迁移。
+
 ## 2026-10-24 M09所选失败页
 
 ProcessingCommand的retry可携带page_indexes，必须为processing_job和固定请求，后台限定OCR原任务中断且未完成页。不能搭配其他动作或无编号旧接口。ProcessingWorkspaceTask增加retry_selection的state/pages/count，最多展示200页；状态active/completed/continued或空。局部结束只代表选择范围处理结束，不代表原任务成功。沿333路径，无新表。

@@ -25,13 +25,14 @@ class ProcessingCreationSerializer(serializers.Serializer):
     confirmed = serializers.BooleanField()
     page_indexes = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1, max_length=20000, required=False)
     task_options = OCRTaskOptionsSerializer(required=False)
+    align_concepts = serializers.BooleanField(required=False)
 
     def validate(self, data):
         if set(self.initial_data) - set(self.fields):
             raise serializers.ValidationError("任务包含不支持的参数。")
         if not data["confirmed"]:
             raise serializers.ValidationError("请先确认文件、处理范围及结果用途。")
-        if data["task_type"] != "ocr" and ("page_indexes" in data or "task_options" in data):
+        if data["task_type"] != "ocr" and ("page_indexes" in data or "task_options" in data or "align_concepts" in data):
             raise serializers.ValidationError("页面识别策略只用于 OCR 任务。")
         return data
 
