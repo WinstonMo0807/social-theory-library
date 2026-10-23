@@ -242,6 +242,12 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
         blockers.append("已归并人物必须从原归并历史处理，不能通过回收恢复解除身份归并。")
     if obj and kind=="topic" and (obj.curation or {}).get("topic_merge"):
         blockers.append("已归并主题须从原归并记录处理。")
+    public_children=[]
+    if obj and kind=="person":
+        from .services.recycle import published_person_profiles
+        public_children=list(published_person_profiles(obj).order_by("pk").values("pk","updated_at"))
+        if public_children and not has_capability(actor,Capability.PUBLISH_AUTHORITY):
+            blockers.append("此人物关联旧公开学者页，请有发布管理权限的管理员恢复；恢复时需一并撤下旧公开状态，避免页面自动重新公开。")
     storage=source_file_check(obj,kind) if check_files else {"state":"pending" if kind in {"work","edition"} else "not_required","checked_at":None,"total":None,"checks":[],"blockers":[]}
     blockers.extend(storage["blockers"])
     required=Capability.EDIT_METADATA if deleted else Capability.PUBLISH_AUTHORITY
@@ -254,7 +260,7 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
     before=entry.before if entry and isinstance(entry.before,dict) else {}
     version=sha256(json.dumps({"kind":kind,"id":identifier,"object_updated":obj.updated_at if obj else None,
         "entry_updated":entry.updated_at if entry else None,"state":state,"dependencies":deps,"total":total,"blockers":blockers,
-        "files":storage["checks"]},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
+        "files":storage["checks"],"public_children":public_children},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
     return {"kind":kind,"object_id":str(identifier),"entry_id":str(entry.pk) if entry else None,"title":title,"label":LABELS[kind],
         "record_state":state,"version":version,"destination":DESTINATIONS[kind],"cover_url":cover_url(obj,kind),
         "created_at":obj.created_at if obj else None,"updated_at":obj.updated_at if obj else None,
@@ -262,7 +268,7 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
         "reason":str(before.get("_recycle_reason") or "原记录未保存操作原因"),"dependencies":deps,"dependency_count":total,
         "dependencies_limited":total>len(deps),"history":changes,"blockers":blockers,"can_restore":can_restore,
         "storage":{"state":storage["state"],"checked_at":storage["checked_at"],"total":storage["total"]},
-        "notice":"恢复原对象和保留的关联，保持未发布；不自动恢复其他已删除对象，不覆盖同名内容，不重启任务。"}
+        "notice":"恢复原对象和保留的关联，保持未发布；不自动恢复其他已删除对象，不覆盖同名内容，不重启任务。"+(" 此人物的旧公开学者页将一并撤下，档案内容和历史修订保留，需另行审核发布。" if public_children else "")}
 
 
 @transaction.atomic

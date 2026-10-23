@@ -15,6 +15,27 @@ def require_editor(actor):
         raise PermissionDenied("当前账号没有管理删除与恢复的权限。")
 
 
+def published_person_profiles(person):
+    """Profiles hidden only by this recycled parent still retain a public state."""
+    removed = RecycleEntry.objects.filter(model_label="catalog.scholarprofile", restored_at__isnull=True)
+    return ScholarProfile.all_objects.filter(person=person, editorial_status="published").exclude(pk__in=removed.values("object_id"))
+
+
+def withdraw_person_profiles(person, *, actor):
+    profiles = list(published_person_profiles(person).select_for_update())
+    if not profiles:
+        return
+    if not has_capability(actor, Capability.PUBLISH_AUTHORITY):
+        raise PermissionDenied("此人物关联旧公开学者页，需要有发布管理权限的管理员处理，防止恢复人物时重新公开旧页面。")
+    from types import SimpleNamespace
+    from catalog.lifecycle_views import LIFECYCLE_MODELS, _draft_public_withdrawal
+    from catalog.services.editorial_revision import publish_editorial_revision
+    for profile in profiles:
+        revision = _draft_public_withdrawal(request=SimpleNamespace(user=actor, headers={}), kind="scholar",
+            obj=profile, config=LIFECYCLE_MODELS["scholar"])
+        publish_editorial_revision(revision.pk, actor=actor)
+
+
 @transaction.atomic
 def recycle_object(obj, *, actor, kind, name, reason=""):
     require_editor(actor)
@@ -33,6 +54,8 @@ def recycle_object(obj, *, actor, kind, name, reason=""):
         raise ValidationError("此主题已合并，请保留来源记录供审计。")
     if isinstance(obj, Person) and obj.contributions.exists():
         raise ValidationError("此人物仍作为馆藏作者或译者使用。请先合并或替换这些关联；删除学者展示资料不需要删除人物身份。")
+    if isinstance(obj, Person):
+        withdraw_person_profiles(obj, actor=actor)
 
     before = {field: str(getattr(obj, field) or "") for field in ("status", "state", "editorial_status", "review_status", "authority_status", "workflow_state", "error_code", "error_message", "active_revision_id", "scheduled_revision_id", "visible") if hasattr(obj, field)}
     before["_recycle_reason"] = str(reason).strip()[:500]
@@ -147,6 +170,10 @@ def restore_object(entry_id, *, actor):
         raise ValidationError("请先恢复所属作品或人物，再恢复本条记录。")
     entry.restored_at = timezone.now()
     entry.save(update_fields=["restored_at", "updated_at"])
+    if isinstance(obj, Person):
+        # Parent and withdrawal commit together. Legacy deletions may have left
+        # a published child hidden by the parent's recycle marker.
+        withdraw_person_profiles(obj, actor=actor)
     fields = []
     for field in ("editorial_status", "status", "state"):
         if hasattr(obj, field) and getattr(obj, field) in ("published", "archived", "withdrawn", "deleted"):
