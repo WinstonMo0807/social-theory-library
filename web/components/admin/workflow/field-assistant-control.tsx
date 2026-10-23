@@ -10,6 +10,7 @@ import { assistantCacheKey, invalidateAssistantCache, lookupFieldSuggestions } f
 import { CandidateDecisionBar } from "../research/candidate-decision-bar";
 import { MaterialAssistantDialog, useMaterialField } from "./material-assistant";
 import { useAdminSession } from "@/lib/admin-session";
+import { useAssistantCommands } from "./assistant-commands";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 
 type Evidence = { category?: string; summary?: string;locator?:{url?:string;page?:number} };
@@ -89,6 +90,7 @@ export function FieldAssistantControl({
   onCreateDraft?: (entity: { id: string; name: string; type: string; edit_url?: string }) => void;
 }) {
   const user=useAdminSession(),owner=user?String(user.id):"";
+  const decisions=useAssistantCommands();
   const popoverId = useId();
   const lookupKey = assistantCacheKey(editionId, fieldName, query, `${owner}:${contextKey}`);
   const [open, setOpen] = useContextState(`${editionId}:${fieldName}`, false);
@@ -122,6 +124,10 @@ export function FieldAssistantControl({
   useEffect(() => () => requestRef.current?.abort(), []);
 
   async function request<T>(path:string,options:RequestInit={},credential:string|null=token){const headers=new Headers(options.headers);headers.set("X-Editor-Owner",owner);return withPrivateOwner(owner,()=>apiRequest<T>(path,{...options,headers,cache:"no-store"},credential,false),options.signal||undefined);}
+  async function decision<T>(action:"adopt"|"reject"|"create",options:RequestInit,credential:string|null){
+    if(decisions)return await decisions.send(action,fieldName,JSON.parse(String(options.body||"{}"))) as T;
+    return request<T>(`/catalog/admin/field-assistant/${action}/`,options,credential);
+  }
   const prepare = async () => {
     if (beforeAction && !(await beforeAction())) throw new Error("草稿尚未保存成功，请先处理保存提示。");
   };
@@ -206,7 +212,7 @@ export function FieldAssistantControl({
     setMessage("");
     try {
       await prepare();
-      await request("/catalog/admin/field-assistant/adopt/", {
+      await decision("adopt", {
         method: "POST",
         body: JSON.stringify({
           edition_id: editionId,
@@ -235,7 +241,7 @@ export function FieldAssistantControl({
     setBusy(`reject-${suggestion.id}`);
     setMessage("");
     try {
-      await request("/catalog/admin/field-assistant/reject/", {
+      await decision("reject", {
         method: "POST",
         body: JSON.stringify({ edition_id: editionId, field_name: fieldName, source_type: suggestion.action.source_type, source_id: suggestion.action.source_id, reason }),
       }, token);
@@ -270,7 +276,7 @@ export function FieldAssistantControl({
       }
       if (!creationReceipt.current.sent) creationReceipt.current.allow = allowPossibleDuplicate && duplicateName === newLabel.trim();
       creationReceipt.current.sent = true;
-      const created = await request<{ entity: { id: string; name: string; type: string; edit_url?: string }; edit_url?: string }>("/catalog/admin/field-assistant/create/", {
+      const created = await decision<{ entity: { id: string; name: string; type: string; edit_url?: string }; edit_url?: string }>("create", {
         method: "POST",
         body: JSON.stringify({ edition_id: editionId, field_name: fieldName, label: newLabel.trim(), defer_link: Boolean(onCreateDraft), allow_possible_duplicate: creationReceipt.current.allow, request_id: creationReceipt.current.id }),
       }, token);

@@ -16,6 +16,7 @@ from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
     AdminOutlineRebuildBatchView, AdminOutlineJobView)
 from .content_placement_urls import urlpatterns as content_placement_urlpatterns
 from .site_commands import SiteReceiptView, SiteSourcesView
+from .field_assistant_commands import AssistantCommandView, AssistantReceiptView
 from .discovery_index_views import DiscoveryIndexView
 from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, DiscoverySearchExpandView,
     DiscoverySearchCancelView, DiscoverySearchContextView, DiscoverySearchRetryView, DiscoverySearchRemoveDocumentView, LegacyDiscoverySearchView)
@@ -248,6 +249,8 @@ from .theory_system_views import (
 urlpatterns = [
     path("admin/visual-review/", VisualReviewView.as_view(), name="admin-visual-review"),
     path("admin/visual-review/commands/<uuid:request_id>/", VisualReviewReceiptView.as_view(), name="admin-visual-review-receipt"),
+    path("admin/editions/<uuid:edition_id>/field-decisions/", AssistantCommandView.as_view(), name="field-assistant-command"),
+    path("admin/editions/<uuid:edition_id>/field-decisions/commands/<uuid:request_id>/", AssistantReceiptView.as_view(), name="field-assistant-command-receipt"),
     path("admin/visual-review/references/<int:page>/", VisualReviewReferenceView.as_view(), name="admin-visual-review-reference"),
     path("admin/local-services/", LocalServicesView.as_view(), name="local-services"),
     path("admin/local-services/check/", LocalServiceCheckView.as_view(), name="local-service-check"),

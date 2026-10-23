@@ -2748,6 +2748,179 @@
                 }
             }
         },
+        "/api/catalog/admin/editions/{edition_id}/field-decisions/": {
+            "post": {
+                "operationId": "catalog_admin_editions_field_decisions_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantCommandInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantCommandInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantCommandInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AssistantReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/field-decisions/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_editions_field_decisions_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AssistantReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_editions_field_decisions_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantStopInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantStopInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantStopInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AssistantReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/editions/{edition_id}/files/": {
             "post": {
                 "operationId": "catalog_admin_editions_files_create",
@@ -28624,6 +28797,101 @@
                 ],
                 "type": "string",
                 "description": "* `reader` - reader\n* `editor` - editor\n* `admin` - admin"
+            },
+            "AssistantCommandInputActionEnum": {
+                "enum": [
+                    "adopt",
+                    "reject",
+                    "create"
+                ],
+                "type": "string",
+                "description": "* `adopt` - adopt\n* `reject` - reject\n* `create` - create"
+            },
+            "AssistantCommandInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/AssistantCommandInputActionEnum"
+                    },
+                    "field_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "payload": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "field_name",
+                    "payload",
+                    "request_id"
+                ]
+            },
+            "AssistantReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "field_name": {
+                        "type": "string"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "result": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "action",
+                    "edition_id",
+                    "field_name",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "result",
+                    "state"
+                ]
+            },
+            "AssistantStopInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
             },
             "AttributionEnum": {
                 "enum": [

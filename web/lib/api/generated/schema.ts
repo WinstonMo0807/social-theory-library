@@ -640,6 +640,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/editions/{edition_id}/field-decisions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_editions_field_decisions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/field-decisions/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_field_decisions_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_editions_field_decisions_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/editions/{edition_id}/files/": {
         parameters: {
             query?: never;
@@ -6254,6 +6286,40 @@ export interface components {
          * @enum {string}
          */
         AssignableAccountRoleEnum: "reader" | "editor" | "admin";
+        /**
+         * @description * `adopt` - adopt
+         *     * `reject` - reject
+         *     * `create` - create
+         * @enum {string}
+         */
+        AssistantCommandInputActionEnum: "adopt" | "reject" | "create";
+        AssistantCommandInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            action: components["schemas"]["AssistantCommandInputActionEnum"];
+            field_name: string;
+            payload: {
+                [key: string]: unknown;
+            };
+        };
+        AssistantReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            action: string;
+            field_name: string;
+            next_url: string;
+            result: {
+                [key: string]: unknown;
+            };
+        };
+        AssistantStopInputRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
         /**
          * @description * `author_claim` - author_claim
          *     * `quoted_claim` - quoted_claim
@@ -20117,6 +20183,83 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IndexActionResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_field_decisions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssistantCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["AssistantCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_field_decisions_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_field_decisions_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantStopInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssistantStopInputRequest"];
+                "multipart/form-data": components["schemas"]["AssistantStopInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantReceipt"];
                 };
             };
         };

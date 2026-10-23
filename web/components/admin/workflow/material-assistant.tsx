@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Dialog, type DialogProps } from "@/components/ui/dialog";
 import styles from "./material-assistant.module.css";
+import { AssistantCommandNotice } from "./assistant-commands";
 
 type Field = {id:string;label:string;open:()=>void;status?:string};
 type Context = {fields:Field[];register:(field:Field)=>()=>void;mark:(id:string,status:string)=>void;preview?:ReactNode;dirty:boolean;disabled:boolean;save?:()=>void|Promise<boolean|void>};
@@ -45,6 +46,6 @@ export function MaterialAssistantDialog({fieldId,fieldLabel,sources=[],children,
     <div className={styles.columns}><nav className={styles.fields} aria-label="待核对字段"><h2>字段列表 <span>{fields.length}</span></h2>{fields.map((field,index)=><button key={field.id} type="button" disabled={disabled} aria-current={field.id===fieldId?"step":undefined} onClick={()=>navigate(index)}><span>{String(index+1).padStart(2,"0")}</span><strong>{field.label}<small>{field.status||"待核对"}</small></strong></button>)}</nav>
       <section className={styles.candidates} aria-label={`${fieldLabel}候选`}><h2><span>{String(position+1).padStart(2,"0")}</span>{fieldLabel}</h2><div className={styles.legacy}>{children}</div></section>
       <aside className={styles.aside}><nav className={styles.tabs} aria-label="核对依据"><button type="button" aria-pressed={tab==="sources"} onClick={()=>setTab("sources")}>相关材料</button><button type="button" aria-pressed={tab==="preview"} onClick={()=>setTab("preview")}>页面预览</button></nav>{tab==="sources"?<><h2>相关材料预览</h2>{sources.length?<><label>候选来源<select value={source?.id||""} onChange={event=>setSelected(event.target.value)}>{sources.map(row=><option key={row.id} value={row.id}>{row.label}</option>)}</select></label><h3>{source?.label}</h3>{source?.evidence.length?source.evidence.map((row,index)=>{const href=sourceHref(row.url||row.locator?.url);return <article key={index}><strong>{row.category||"来源资料"}</strong>{row.locator?.page?<small>原文件第 {row.locator.page} 页</small>:null}<blockquote>{row.summary||"此来源未提供摘录，请核对原记录。"}</blockquote>{href?<a href={href} target="_blank" rel="noopener noreferrer">查看资料 ↗</a>:null}</article>}):<p>这项候选没有可显示的来源摘录，请保留人工判断。</p>}</>:<p>暂无可核对材料。可返回编辑页手工填写，不会生成示例资料。</p>}</>:<div className={styles.preview}>{context?.preview||<p>此入口没有页面预览，请返回原编辑页核对。</p>}</div>}</aside>
-    </div>{message?<p role="alert">{message}</p>:null}<footer className={styles.footer}><span>{context?.dirty?"本页修改尚未保存":"候选不会自动发布"}</span><button type="button" disabled={disabled} onClick={onRequestClose}>返回继续编辑</button>{context?.save?<button type="button" disabled={disabled} onClick={()=>void save()}>{saving?"正在保存…":"保存草稿"}</button>:null}</footer>
+    </div><AssistantCommandNotice/>{message?<p role="alert">{message}</p>:null}<footer className={styles.footer}><span>{context?.dirty?"本页修改尚未保存":"候选不会自动发布"}</span><button type="button" disabled={disabled} onClick={onRequestClose}>返回继续编辑</button>{context?.save?<button type="button" disabled={disabled} onClick={()=>void save()}>{saving?"正在保存…":"保存草稿"}</button>:null}</footer>
   </Dialog>;
 }

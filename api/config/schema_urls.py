@@ -19,6 +19,7 @@ VERIFIED_NAMES = {
     "media-workspace", "media-workspace-receipt",
     "workspace-save-receipt", "admin-work-workspace-edits", "journal-contents-candidates",
     "admin-field-assistant-lookup", "admin-field-assistant-adopt", "admin-field-assistant-reject", "admin-field-assistant-create", "admin-field-assistant-duplicates",
+    "field-assistant-command", "field-assistant-command-receipt",
     "manual-catalog", "manual-catalog-receipt",
     "upload-workspace", "upload-workspace-receipt",
     "admin-site-sources", "admin-site-receipt",

@@ -70,6 +70,7 @@ import { withPrivateOwner, PrivateOwnerVerificationError } from "@/lib/api/priva
 import { CatalogEditDiff } from "./catalog-edit-diff";
 import atlas from "./catalog-editor.module.css";
 import { MaterialAssistantProvider, MaterialAssistantEntry } from "./material-assistant";
+import { AssistantCommandsProvider } from "./assistant-commands";
 import { CatalogFieldLocksProvider, CatalogFieldLockButton, type CatalogLockFields } from "./catalog-field-locks";
 import { WorkflowLivePreview } from "./workflow-live-preview";
 import { BibliographicCandidatePanel } from "./bibliographic-candidate-panel";
@@ -618,6 +619,9 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [requiresRefresh, setRequiresRefresh] = useState(false);
+  const [assistantGuard, setAssistantGuard] = useState(false);
+  const assistantGuardRef = useRef(false);
+  const changeAssistantGuard = useCallback((value: boolean) => { assistantGuardRef.current = value; setAssistantGuard(value); }, []);
   const [fieldLockGuard, setFieldLockGuard] = useState(false);
   const fieldLockGuardRef = useRef(false);
   const changeFieldLockGuard = useCallback((value: boolean) => { fieldLockGuardRef.current = value; setFieldLockGuard(value); }, []);
@@ -665,6 +669,7 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
   } : {};
   const assistantContextKey = drafts ? JSON.stringify([assistantFormContext, payload?.editorial_revision?.id]) : "";
   const beginOperation = useCallback((key: string) => {
+    if (assistantGuardRef.current && !["refresh", "refresh-after-change"].includes(key)) { setMessage("请先查回或停止材料助手的原决定。"); return false; }
     if (fieldLockGuardRef.current && key !== "refresh") { setMessage("请先完成或核对当前人工锁决定，再执行其他操作。"); return false; }
     if(pendingRecovery.current && key!=="recover-save" && key!=="refresh"){setMessage("上次保存结果尚未确认，请先查回或停止原请求。");return false;}
     if (refreshRequiredRef.current && key !== "refresh") {
@@ -1395,7 +1400,7 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
   const presentations = sectionPresentations(payload.workflow.steps, active);
   const returnHref = safeAdminHref(routeParams.get("return_to"), asString(payload.queue.return_href ?? payload.context.return_href, mode === "intake" ? "/admin/review" : "/admin/library"));
   const baseCanEdit = payload.permissions.can_edit !== false && !requiresRefresh && recoveryReady && !saveRecovery;
-  const canEdit = baseCanEdit && !fieldLockGuard;
+  const canEdit = baseCanEdit && !fieldLockGuard && !assistantGuard;
   const publication = payload.publication ?? asRecord(payload.data.publication);
   const savedAt = asString(payload.editing?.saved_at ?? payload.context.updated_at);
   const source = ({manual:"手工编目",upload:"文件上传",existing:"馆藏维护",import:"导入书目"} as Record<string,string>)[asString(payload.context.source_type)] || "已有馆藏";
@@ -1405,7 +1410,7 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
     .filter((issue) => issue.severity === "blocker")
     .map((issue) => [JSON.stringify([issue.code || issue.message, issue.field || "", issue.action_target || ""]), { ...issue, step: issue.step || step.key }] as const))).values()];
   return (
-    <CatalogFieldLocksProvider key={`${owner}:${payload.context.edition_id}`} owner={owner} workId={asString(payload.context.work_id)} editionId={asString(payload.context.edition_id)} version={asString(payload.editing?.edit_version)} fields={(payload.editing?.field_locks || []) as CatalogLockFields} disabled={!baseCanEdit || Boolean(busy) || currentDirtyCount>0} onChanged={() => refresh(true)} onGuard={changeFieldLockGuard}><MaterialAssistantProvider dirty={currentDirtyCount>0} disabled={Boolean(busy)||!canEdit} save={saveAllDirty} preview={<WorkflowLivePreview owner={owner} drafts={drafts} context={payload.context} token={token} savedAt={savedAt} dirty={currentDirtyCount>0} returnHref={previewReturnHref} onLocate={goToStep}/>}><ResearchSuggestionCapabilityContext.Provider value={canRunResearch}>
+    <AssistantCommandsProvider key={`${owner}:${payload.context.edition_id}`} owner={owner} editionId={asString(payload.context.edition_id)} version={asString(payload.editing?.edit_version)} onGuard={changeAssistantGuard} onRecovered={() => refresh(true)}><CatalogFieldLocksProvider key={`${owner}:${payload.context.edition_id}`} owner={owner} workId={asString(payload.context.work_id)} editionId={asString(payload.context.edition_id)} version={asString(payload.editing?.edit_version)} fields={(payload.editing?.field_locks || []) as CatalogLockFields} disabled={!baseCanEdit || Boolean(busy) || currentDirtyCount>0 || assistantGuard} onChanged={() => refresh(true)} onGuard={changeFieldLockGuard}><MaterialAssistantProvider dirty={currentDirtyCount>0} disabled={Boolean(busy)||!canEdit} save={saveAllDirty} preview={<WorkflowLivePreview owner={owner} drafts={drafts} context={payload.context} token={token} savedAt={savedAt} dirty={currentDirtyCount>0} returnHref={previewReturnHref} onLocate={goToStep}/>}><ResearchSuggestionCapabilityContext.Provider value={canRunResearch}>
     <ResearchWorkspaceContext.Provider value={researchWorkspace}>
     <div className={`workflow-editor workflow-v307-editor ${atlas.atlas}`} data-workflow-mode={payload.mode}>
 
@@ -1466,6 +1471,6 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
       <span className="sr-only" aria-live="polite">{currentDirtyCount ? `${currentDirtyCount} 项未保存` : "所有修改已保存"}</span>
     </div>
     </ResearchWorkspaceContext.Provider>
-    </ResearchSuggestionCapabilityContext.Provider></MaterialAssistantProvider></CatalogFieldLocksProvider>
+    </ResearchSuggestionCapabilityContext.Provider></MaterialAssistantProvider></CatalogFieldLocksProvider></AssistantCommandsProvider>
   );
 }
