@@ -6497,6 +6497,150 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-system/reading-paths/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_reading_paths_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathSaveReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_system_reading_paths_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathSaveReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/reading-paths/validate/": {
+            "post": {
+                "operationId": "catalog_admin_theory_system_reading_paths_validate_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathValidationInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathValidationInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathValidationInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PathValidationResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-timeline/": {
             "get": {
                 "operationId": "catalog_admin_theory_timeline_list",
@@ -40685,6 +40829,56 @@
                     "role"
                 ]
             },
+            "PathDependencyInput": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/PathDependencyKindEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "item_id",
+                    "kind"
+                ]
+            },
+            "PathDependencyInputRequest": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/PathDependencyKindEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "item_id",
+                    "kind"
+                ]
+            },
+            "PathDependencyKindEnum": {
+                "enum": [
+                    "learning_order",
+                    "theory_related"
+                ],
+                "type": "string",
+                "description": "* `learning_order` - learning_order\n* `theory_related` - theory_related"
+            },
             "PathDiffOutput": {
                 "type": "object",
                 "properties": {
@@ -40872,6 +41066,15 @@
                             "type": "object",
                             "additionalProperties": {}
                         }
+                    },
+                    "learning_goal": {
+                        "type": "string"
+                    },
+                    "dependencies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicPathDependency"
+                        }
                     }
                 },
                 "required": [
@@ -40879,12 +41082,14 @@
                     "authors",
                     "chapter_title",
                     "cover_url",
+                    "dependencies",
                     "document_revision_id",
                     "edition_id",
                     "href",
                     "id",
                     "is_required",
                     "kind",
+                    "learning_goal",
                     "node_id",
                     "page_end",
                     "page_start",
@@ -41144,6 +41349,45 @@
                     "token"
                 ]
             },
+            "PathSaveReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "path_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_version": {
+                        "type": "string"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "path_id",
+                    "request_id",
+                    "saved_version",
+                    "state"
+                ]
+            },
             "PathSourceRevisionOutput": {
                 "type": "object",
                 "properties": {
@@ -41286,6 +41530,17 @@
             "PathStageItemInput": {
                 "type": "object",
                 "properties": {
+                    "learning_goal": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    },
+                    "dependencies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathDependencyInput"
+                        }
+                    },
                     "material_kind": {
                         "allOf": [
                             {
@@ -41380,6 +41635,17 @@
             "PathStageItemInputRequest": {
                 "type": "object",
                 "properties": {
+                    "learning_goal": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    },
+                    "dependencies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathDependencyInputRequest"
+                        }
+                    },
                     "material_kind": {
                         "allOf": [
                             {
@@ -41606,6 +41872,63 @@
                     "retained_notes",
                     "source_revision",
                     "target_revision"
+                ]
+            },
+            "PathValidationInputRequest": {
+                "type": "object",
+                "properties": {
+                    "path_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "stage_groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathStageGroupInputRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "stage_groups"
+                ]
+            },
+            "PathValidationResult": {
+                "type": "object",
+                "properties": {
+                    "material_count": {
+                        "type": "integer"
+                    },
+                    "active_count": {
+                        "type": "integer"
+                    },
+                    "relation_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "dependencies_valid": {
+                        "type": "boolean"
+                    },
+                    "problems": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "active_count",
+                    "dependencies_valid",
+                    "material_count",
+                    "notice",
+                    "problems",
+                    "relation_counts"
                 ]
             },
             "PendingEditorialSaveActionEnum": {
@@ -44896,6 +45219,31 @@
                     "notice",
                     "previous",
                     "results"
+                ]
+            },
+            "PublicPathDependency": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/PathDependencyKindEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    },
+                    "title": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "item_id",
+                    "kind",
+                    "title"
                 ]
             },
             "PublicPersonSnapshot": {
@@ -48347,7 +48695,11 @@
                     "status": {
                         "$ref": "#/components/schemas/ReadingPathItemStatusEnum"
                     },
-                    "substitute_edition_ids": {}
+                    "substitute_edition_ids": {},
+                    "dependencies": {},
+                    "learning_goal": {
+                        "type": "string"
+                    }
                 },
                 "required": [
                     "node_data",
@@ -48463,7 +48815,11 @@
                     "status": {
                         "$ref": "#/components/schemas/ReadingPathItemStatusEnum"
                     },
-                    "substitute_edition_ids": {}
+                    "substitute_edition_ids": {},
+                    "dependencies": {},
+                    "learning_goal": {
+                        "type": "string"
+                    }
                 },
                 "required": [
                     "stage_name"

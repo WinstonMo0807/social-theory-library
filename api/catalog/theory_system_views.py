@@ -1420,7 +1420,10 @@ class AdminTheoryReviewActionView(AdminPrivateResponseMixin, TheorySystemFeature
         return Response(payload)
 
 
-class AdminReadingPathListView(AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+from catalog.path_editor_views import PathCommandMixin
+
+
+class AdminReadingPathListView(PathCommandMixin, AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     editorial_target_type = "reading_path"
     http_method_names = ["get", "post", "head", "options"]
     permission_classes = [IsKnowledgeEditor]
@@ -1449,6 +1452,7 @@ class AdminReadingPathListView(AdminEditorialDraftReadMixin, TheorySystemFeature
 
 
 class AdminReadingPathDetailView(
+    PathCommandMixin,
     AdminEditorialDraftReadMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
@@ -1481,7 +1485,7 @@ class AdminReadingPathDetailView(
             except (ValueError, ValidationError) as error:
                 return Response({"detail": str(error), "code": "image_selection_failed"}, status=409)
             return Response(self._draft_read_rows([path])[0], status=202)
-        if path.status != "published" and not EditorialRevision.objects.filter(target_type="reading_path", target_id=path.pk, status="draft").exists():
+        if path.status != "published" and request.data.get("status") != "published" and not EditorialRevision.objects.filter(target_type="reading_path", target_id=path.pk, status="draft").exists():
             return super().update(request, *args, **kwargs)
         partial = kwargs.pop("partial", False)
         serializer = self.get_serializer(path, data=request.data, partial=partial)

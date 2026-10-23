@@ -1,28 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { getServerSessionCredential } from "@/lib/api";
-import { useApiResource } from "@/lib/api/use-api-resource";
+import { useCallback, useState } from "react";
+import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
+import { useAdminSession } from "@/lib/admin-session";
 import type { CollectionPage, WorkLibraryRow } from "@/lib/api/admin-collections";
 import { outlinePath, type OutlineState } from "@/lib/api/curation-workspace.client";
 import { EntityPicker, RepeatableField } from "../forms/workflow-fields";
 
 export type PathLearningFields = { learning_questions: string[]; related_debate_ids: string[] };
 export type PathMaterialFields = {
+  learning_goal:string;
+  dependencies: import("./reading-path-dependencies").PathDependency[];
   material_kind: "work" | "chapter" | "paper" | "node"; edition: string | null; asset: string | null;
   document_revision: string | null; page_start: number | null; page_end: number | null;
   chapter_title: string; printed_page_label: string; status: "active" | "withdrawn"; substitute_edition_ids: string[];
 };
 export const emptyLearning: PathLearningFields = { learning_questions: [], related_debate_ids: [] };
-export const emptyMaterial: PathMaterialFields = { material_kind: "work", edition: null, asset: null, document_revision: null,
+export const emptyMaterial: PathMaterialFields = { learning_goal:"", dependencies: [], material_kind: "work", edition: null, asset: null, document_revision: null,
   page_start: null, page_end: null, chapter_title: "", printed_page_label: "", status: "active", substitute_edition_ids: [] };
 export const strings = (value: unknown): string[] => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 export function learningFields(row: Record<string, unknown>): PathLearningFields {
   return { learning_questions: strings(row.learning_questions), related_debate_ids: strings(row.related_debate_ids) };
 }
 export function materialFields(row: Record<string, unknown>): PathMaterialFields {
-  return { material_kind: ["chapter", "paper", "node"].includes(String(row.material_kind)) ? row.material_kind as PathMaterialFields["material_kind"] : row.node ? "node" : "work",
+  return { learning_goal:typeof row.learning_goal === "string"?row.learning_goal:"", dependencies:Array.isArray(row.dependencies)?row.dependencies.filter((item): item is import("./reading-path-dependencies").PathDependency=>Boolean(item && typeof item === "object" && typeof item.item_id === "string" && ["learning_order","theory_related"].includes(item.kind))).map(item=>({...item,reason:typeof item.reason === "string"?item.reason:""})):[], material_kind: ["chapter", "paper", "node"].includes(String(row.material_kind)) ? row.material_kind as PathMaterialFields["material_kind"] : row.node ? "node" : "work",
     edition: typeof row.edition === "string" ? row.edition : null, asset: typeof row.asset === "string" ? row.asset : null,
     document_revision: typeof row.document_revision === "string" ? row.document_revision : null,
     page_start: typeof row.page_start === "number" ? row.page_start : null, page_end: typeof row.page_end === "number" ? row.page_end : null,
@@ -40,15 +43,22 @@ export function PathLearningEditor({ value, onChange, label }: { value: PathLear
   </section>;
 }
 
+function usePathResource<T>(url:string) {
+  const owner=String(useAdminSession()?.id||"");
+  const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<T>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
+  const resource=usePersistentWorkspace<T>(url,owner,undefined,load);
+  return {data:resource.data,error:resource.error,loading:!resource.data&&!resource.error,retry:resource.reload};
+}
+
 export function PathMaterialEditor({ work, value, onChange }: { work: string | null; value: PathMaterialFields; onChange: (patch: Partial<PathMaterialFields>) => void }) {
-  const credential = getServerSessionCredential(), [page, setPage] = useState(1);
+  const [page, setPage] = useState(1);
   const base = "/catalog/admin/library/works/?view=editions";
-  const rows = useApiResource<CollectionPage<WorkLibraryRow>>(work ? `${base}&work_id=${encodeURIComponent(work)}&page=${page}` : "", credential);
+  const rows = usePathResource<CollectionPage<WorkLibraryRow>>(work ? `${base}&work_id=${encodeURIComponent(work)}&page=${page}` : "");
   const listed = rows.data?.results.find(row => row.id === value.edition);
-  const selected = useApiResource<CollectionPage<WorkLibraryRow>>(value.edition && !listed ? `${base}&edition_id=${encodeURIComponent(value.edition)}` : "", credential);
+  const selected = usePathResource<CollectionPage<WorkLibraryRow>>(value.edition && !listed ? `${base}&edition_id=${encodeURIComponent(value.edition)}` : "");
   const edition = listed || selected.data?.results.find(row => row.id === value.edition);
   const files = edition?.assets?.filter(row => row.kind === "normalized") || [], file = files.find(row => row.id === value.asset);
-  const source = useApiResource<OutlineState>(value.asset ? outlinePath(value.asset) : "", credential);
+  const source = usePathResource<OutlineState>(value.asset ? outlinePath(value.asset) : "");
   const currentRevision = source.data?.asset?.document_revision_id;
   const error = rows.error || selected.error || source.error;
   return <section aria-label="材料版本与阅读位置">

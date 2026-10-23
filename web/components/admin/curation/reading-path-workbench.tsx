@@ -5,13 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { AdminListPages, useAdminListPage } from "@/components/admin/knowledge/list-pages";
 import { ArrowDown, ArrowRight, ArrowUp, ExternalLink, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { apiRequest as baseApiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { EmptyState, PageHeader, StatusBadge } from "@/components/admin-ui";
 import { EntityPicker, RepeatableField } from "../forms/workflow-fields";
+import pathStyles from "../knowledge/path-editor.module.css";
+import { PathDependencyEditor, PathDependencyValidation } from "./reading-path-dependencies";
 import { emptyLearning, emptyMaterial, learningFields, materialFields, strings, PathLearningEditor, PathMaterialEditor, type PathLearningFields, type PathMaterialFields } from "./reading-path-fields";
 import { asArray, asRecord, asString } from "../workflow/workflow-types";
 import { CurationFieldAssistant } from "./curation-field-assistant";
@@ -19,6 +21,9 @@ import { EditorialPrefillNotice, useEditorialPrefills } from "./editorial-prefil
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { KnowledgeImagePanel } from "../media/knowledge-image-panel";
 import { KnowledgeVisualEditor } from "../knowledge/knowledge-visual-editor";
+import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
+import { withPrivateOwner } from "@/lib/api/private-owner";
+import { useScholarSave } from "../knowledge/use-scholar-save";
 import type { PreviewSelection } from "./fixed-page-editor";
 import { KnowledgeObjectContextPanel } from "../knowledge/knowledge-object-context-panel";
 import { CurationDiscoveryPreview } from "./curation-discovery-preview";
@@ -85,11 +90,11 @@ function key(prefix: string) {
 }
 
 function emptyItem(): PathItemDraft {
-  return { ...emptyMaterial, key: key("item"), node: null, node_name: "", work: null, work_name: "", recommendation_reason: "", prerequisite: "", is_required: false, editorial_note: "" };
+  return { ...emptyMaterial, id:crypto.randomUUID(), key: key("item"), node: null, node_name: "", work: null, work_name: "", recommendation_reason: "", prerequisite: "", is_required: false, editorial_note: "" };
 }
 
 function emptyStage(position: number): StageDraft {
-  return { ...emptyLearning, estimated_reading: "", key: key("stage"), name: `第 ${position + 1} 阶段`, description: "", items: [emptyItem()] };
+  return { ...emptyLearning, id:crypto.randomUUID(), estimated_reading: "", key: key("stage"), name: `第 ${position + 1} 阶段`, description: "", items: [emptyItem()] };
 }
 
 function normalizePath(value: unknown): ReadingPathRow {
@@ -216,7 +221,42 @@ function pathFormValue(draft: typeof emptyPath, stages: StageDraft[]) {
   })) };
 }
 
+function pathStageGroups(stages:StageDraft[]) {
+  return stages.map((stage, stagePosition) => ({
+          id: stage.id,
+          name: stage.name,
+          description: stage.description,
+          ...learningFields(stage), estimated_reading: stage.estimated_reading,
+          position: stagePosition,
+          items: stage.items.map((item, position) => ({
+            id: item.id, ...materialFields(item),
+            node: item.node,
+            work: item.work,
+            recommendation_reason: item.recommendation_reason,
+            prerequisite: item.prerequisite,
+            position,
+            is_required: item.is_required,
+            editorial_note: item.editorial_note,
+          })),
+        }));
+}
+
 export function ReadingPathWorkbench() {
+  const owner=String(useAdminSession()?.id||""),[epoch,setEpoch]=useState(0);
+  useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
+  return <ReadingPathEditor key={`${owner}:${epoch}`} owner={owner}/>;
+}
+
+function ReadingPathEditor({owner}:{owner:string}) {
+  const session=useAdminSession(), canEdit=hasAdminCapability(session,"can_edit_draft_authority"),canCreate=hasAdminCapability(session,"can_create_authority");
+  const command=useScholarSave(owner,"path");
+  const life=useRef<AbortController|null>(null);
+  useEffect(()=>{const controller=new AbortController();life.current=controller;return()=>controller.abort();},[]);
+  const apiRequest=useCallback(<T,>(path:string,options:RequestInit={},token:string|null=getServerSessionCredential())=>{
+    const lifetime=life.current;if(!lifetime||lifetime.signal.aborted)return Promise.reject<T>(Error("编辑会话已变化。"));
+    const signal=AbortSignal.any([lifetime.signal,AbortSignal.timeout(60000),...(options.signal?[options.signal]:[])]);
+    return withPrivateOwner(owner,()=>baseApiRequest<T>(path,{...options,signal,cache:"no-store",headers:{...options.headers,"X-Editor-Owner":owner}},token,false),signal);
+  },[owner]);
   const paging = useAdminListPage();
   const page = paging.page;
   const [collection, setCollection] = useState<{ count: number; next?: string | null; previous?: string | null } | null>(null);
@@ -277,7 +317,7 @@ export function ReadingPathWorkbench() {
     } finally {
       if (!request.signal.aborted) setLoading(false);
     }
-  }, [query, page]);
+  }, [query, page, apiRequest]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadPaths(), 0);
@@ -313,9 +353,10 @@ export function ReadingPathWorkbench() {
     return () => {
       active = false;
     };
-  }, [requestedPath]);
+  }, [requestedPath, apiRequest]);
 
   function start(path?: ReadingPathRow, saved = false) {
+    if (!saved && (command.recovery || pendingAction)) return;
     if (!saved && dirty && !window.confirm("阅读路径还有未保存的安排。放弃填写并切换吗？")) return;
     prefills.clear();
     setEditing(path ?? null);
@@ -343,7 +384,7 @@ export function ReadingPathWorkbench() {
   async function save(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token) return false;
+    if (!token || !canEdit || (!editing && !canCreate)) return false;
     if (!draftOnly && draft.status === "published" && editing?.status !== "published" && !window.confirm("保存并公开这条阅读路径？确认后读者就能看到它。")) return false;
     const actionKey = "save-reading-path";
     if (!startAction(actionKey)) return false;
@@ -358,28 +399,11 @@ export function ReadingPathWorkbench() {
         status: draftOnly ? (editing?.status ?? "draft") : draft.status,
         primary_discipline: draft.primary_discipline || null,
         expected_updated_at: editing?.updated_at,
-        stage_groups: stages.map((stage, stagePosition) => ({
-          id: stage.id,
-          name: stage.name,
-          description: stage.description,
-          ...learningFields(stage), estimated_reading: stage.estimated_reading,
-          position: stagePosition,
-          items: stage.items.map((item, position) => ({
-            id: item.id, ...materialFields(item),
-            node: item.node,
-            work: item.work,
-            recommendation_reason: item.recommendation_reason,
-            prerequisite: item.prerequisite,
-            position,
-            is_required: item.is_required,
-            editorial_note: item.editorial_note,
-          })),
-        })),
+        stage_groups: pathStageGroups(stages),
       };
-      const saved = normalizePath(await apiRequest(
+      const saved = normalizePath(await command.save(
         `/catalog/admin/theory-system/reading-paths/${editing ? `${editing.id}/` : ""}`,
-        { method: editing ? "PATCH" : "POST", headers: editing ? editorialHeaders(editing) : undefined, body: JSON.stringify(payload) },
-        token,
+        JSON.stringify(payload), editing ? editorialHeaders(editing) : {}, editing ? "PATCH" : "POST",
       ));
       start(saved, true);
       setMessage(saved.editorial_revision
@@ -400,7 +424,15 @@ export function ReadingPathWorkbench() {
     }
   }
 
+  async function recoverSave(cancel=false) {
+    const receipt=await command.lookup(cancel);if(!receipt)return;
+    try { if(receipt.exists&&receipt.path_id)start(normalizePath(await apiRequest(`/catalog/admin/theory-system/reading-paths/${receipt.path_id}/`)),true);
+    setMessage(receipt.state==="cancelled"?"原请求已停止，当前输入保留。":receipt.exists?"已找回原保存，请核对内容。":"原保存已完成，但路径后来已删除，不会再次新建。");setMessageState("success");
+    }catch(reason){setMessage(reason instanceof Error?reason.message:"已找到原保存，当前详情暂不可读取。");setMessageState("error");}
+  }
+
   async function removePath() {
+    if(command.recovery||!canEdit)return;
     if (!editing || !window.confirm(`删除阅读路径“${editing.title}”吗？`)) return;
     const token = getServerSessionCredential();
     if (!token) return;
@@ -444,21 +476,21 @@ export function ReadingPathWorkbench() {
   }
 
   return (
-    <div className="admin-page reading-path-v280-page">
-      <PageHeader eyebrow="内容管理" title="阅读路径" description="把文献安排成几个阅读阶段，再选择顺序、填写推荐理由。保存后可预览并发布。" actions={<button className="button" type="button" onClick={() => start()}><Plus size={14} />新建路径</button>} />
+    <div className={`admin-page reading-path-v280-page ${pathStyles.workspace}`}>
+      <PageHeader eyebrow="内容管理" title="公共阅读路径编排" description="把文献安排成几个阅读阶段，再选择顺序、填写推荐理由。保存后可预览并发布。" actions={<button className="button" type="button" onClick={() => start()}><Plus size={14} />新建路径</button>} />
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
       <div className="reading-path-v280-layout">
-        <aside className="admin-panel reading-path-v280-list">
+        <details className={pathStyles.directory}><summary>查找与切换阅读路径</summary><aside className="admin-panel reading-path-v280-list">
           <header><h2>路径</h2><ActionButton type="button" state={pendingAction === "refresh-reading-paths" ? "pending" : "idle"} pendingLabel="刷新中" disabled={Boolean(pendingAction) && pendingAction !== "refresh-reading-paths"} onClick={() => void refreshPaths()}><RefreshCw size={13} />刷新</ActionButton></header>
           <label><span className="sr-only">搜索阅读路径</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); paging.reset({ q: event.target.value }); }} placeholder="搜索路径" /></label>
           {paths.map((path) => <button className={editing?.id === path.id ? "selected" : ""} type="button" key={path.id} onClick={() => start(path)}><span><strong>{path.title}</strong><small>{path.stages.length} 阶段 · {path.items.length} 项阅读内容</small></span><StatusBadge label={path.status} /><ArrowRight size={13} /></button>)}
           {!loading && !paths.length ? <EmptyState compact title="尚无阅读路径" description="建立路径后，也可以从文献的编辑页面加入阅读内容。" /> : null}
           <AdminListPages data={collection} paging={paging} loading={loading} filters={{ q: query }} />
-        </aside>
-        <KnowledgeVisualEditor objectType="reading_path" objectId={editing?.id} previewStageId={previewStage?.id || previewStage?.key || ""} onPreviewSelect={selectPreview} savedRecord={editing} onPublished={() => {void loadPaths();setEditConflict(true);setMessage("发布操作已提交，请打开最新阅读路径后继续编辑。");}} draft={{...draft, stages}} dirty={dirty} refreshKey={`${editing?.updated_at}:${imageRevision}`}>{requestedPath && openedPath !== requestedPath ? <p role="status">正在读取指定阅读路径，载入后即可编辑。</p> : null}<form className="admin-panel reading-path-v280-editor" onSubmit={(event) => void save(event, true)} aria-busy={Boolean(requestedPath && openedPath !== requestedPath)}>
+        </aside></details>
+        {command.recovery?<div role="status"><p>原保存结果尚未确认，请先查回。</p><button type="button" onClick={()=>void recoverSave()}>查回原请求</button>{command.canRetry?<button type="submit" form="reading-path-editor-form">重试原保存</button>:null}<button type="button" onClick={()=>void recoverSave(true)}>停止未完成请求</button></div>:null}{command.error?<p role="alert">{command.error}</p>:null}<KnowledgeVisualEditor objectType="reading_path" objectId={editing?.id} previewStageId={previewStage?.id || previewStage?.key || ""} onPreviewSelect={selectPreview} savedRecord={editing} onPublished={() => {void loadPaths();setEditConflict(true);setMessage("发布操作已提交，请打开最新阅读路径后继续编辑。");}} draft={{...draft, stages}} dirty={dirty||Boolean(command.recovery)} refreshKey={`${editing?.updated_at}:${imageRevision}`}>{requestedPath && openedPath !== requestedPath ? <p role="status">正在读取指定阅读路径，载入后即可编辑。</p> : null}<form id="reading-path-editor-form" className="admin-panel reading-path-v280-editor" onSubmit={(event) => void save(event, true)} aria-busy={Boolean(requestedPath && openedPath !== requestedPath)}>
           <p>保存这条路径的说明、全部阶段、书目顺序和推荐理由，不跳转。已公开路径的修改需另行发布。</p>
           <EditorialPrefillNotice state={prefills} />
-          <fieldset disabled={Boolean(requestedPath && openedPath !== requestedPath)} style={{ display: "contents" }}>
+          <fieldset disabled={!canEdit||(!editing&&!canCreate)||!command.ready||Boolean(command.recovery)||Boolean(requestedPath && openedPath !== requestedPath)} style={{ display: "contents" }}>
           <header><div><h2>{editing ? `编辑 ${editing.title}` : "新建阅读路径"}</h2><p>{stages.length} 个阶段 · {itemCount} 个项目</p></div>{editing ? <div><Link href={`/admin/preview/knowledge/reading_path/${editing.id}`} target="_blank">预览已保存内容 <ExternalLink size={12} /></Link><ActionButton type="button" state={pendingAction === `delete-reading-path:${editing.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-reading-path:${editing.id}`} aria-label="删除阅读路径" onClick={() => void removePath()}><Trash2 size={14} /></ActionButton></div> : null}</header>
           <div className="inline-fields"><label><span>标题</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label><label><span>固定链接</span><input required value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} /></label></div>
           <label><span>路径介绍</span><textarea rows={4} value={draft.introduction} onChange={(event) => setDraft({ ...draft, introduction: event.target.value })} /></label>
@@ -493,12 +525,14 @@ export function ReadingPathWorkbench() {
               <textarea aria-label={`${stage.name}阶段说明`} rows={2} value={stage.description} onChange={(event) => patchStage(stageIndex, { description: event.target.value })} />
               <label><span>阶段建议用时</span><input value={stage.estimated_reading} maxLength={120} onChange={event => patchStage(stageIndex, { estimated_reading: event.target.value })} placeholder="例如：1–2 周，可留空" /></label>
               <details><summary>本阶段学习问题与相关争论</summary><PathLearningEditor label={stage.name} value={stage} onChange={patch => patchStage(stageIndex, patch)} /></details>
-              <nav className="structured-row-index" aria-label="本阶段阅读项目">{stage.items.map((item,index)=><button key={item.key} type="button" aria-current={index===Math.min(activeItem,stage.items.length-1)?"true":undefined} onClick={()=>setActiveItem(index)}>{index+1} · {item.work_name || item.node_name || "新项目"}</button>)}</nav><div className="reading-path-v280-items">{stage.items.map((item, itemIndex) => <section key={item.key} data-editor-item-id={item.id || item.key} hidden={itemIndex!==Math.min(activeItem,stage.items.length-1)}>
+              <nav className="structured-row-index" aria-label="本阶段阅读项目">{stage.items.map((item,index)=><button key={item.key} type="button" data-preview-item-id={item.id||item.key} aria-current={index===Math.min(activeItem,stage.items.length-1)?"true":undefined} onClick={()=>setActiveItem(index)}>{index+1} · {item.work_name || item.node_name || "新项目"}</button>)}</nav><div className="reading-path-v280-items">{stage.items.map((item, itemIndex) => <section key={item.key} data-editor-item-id={item.id || item.key} hidden={itemIndex!==Math.min(activeItem,stage.items.length-1)}>
                 <header><strong>项目 {itemIndex + 1}</strong><div><button type="button" aria-label="上移项目" disabled={itemIndex === 0} onClick={() => patchStage(stageIndex, { items: move(stage.items, itemIndex, itemIndex - 1) })}><ArrowUp size={12} /></button><button type="button" aria-label="下移项目" disabled={itemIndex === stage.items.length - 1} onClick={() => patchStage(stageIndex, { items: move(stage.items, itemIndex, itemIndex + 1) })}><ArrowDown size={12} /></button><button type="button" aria-label="移除项目" onClick={() => patchStage(stageIndex, { items: stage.items.filter((_row, index) => index !== itemIndex) })}><Trash2 size={12} /></button></div></header>
                 <div className="inline-fields reading-path-v292-entity-fields"><EntityPicker label="馆藏作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={item.work ? [{ id: item.work, name: item.work_name || "已选择馆藏作品" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { ...(selected?.id === item.work ? {} : emptyMaterial), work: selected?.id ?? null, work_name: selected?.name ?? "", node: null, node_name: "" }); }} /><EntityPicker label="理论或概念" endpoint="/catalog/admin/theory-system/nodes/" queryParam="q" nameField="canonical_name_zh" values={item.node ? [{ id: item.node, name: item.node_name || "已选择理论或概念" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { ...emptyMaterial, material_kind: "node", node: selected?.id ?? null, node_name: selected?.name ?? "", work: null, work_name: "" }); }} /></div>
                 <PathMaterialEditor key={`${item.key}:${item.work || item.node || "empty"}`} work={item.work} value={item} onChange={patch => patchItem(stageIndex, itemIndex, patch)} />
+                <label><span>这份材料的阅读目标</span><textarea rows={2} maxLength={2000} value={item.learning_goal} onChange={event=>patchItem(stageIndex,itemIndex,{learning_goal:event.target.value})}/></label>
                 <label><span>公开推荐理由</span><textarea rows={3} value={item.recommendation_reason} onChange={(event) => patchItem(stageIndex, itemIndex, { recommendation_reason: event.target.value })} placeholder="这份材料适合讨论什么问题，为什么值得在这里阅读？" /></label>
                 <CurationDiscoveryPreview sourceTitle={draft.title} subjectTitle={item.work_name || item.node_name} reason={item.recommendation_reason} />
+                <PathDependencyEditor itemId={item.id} value={item.dependencies} materials={stages.flatMap(stage=>stage.items)} onChange={dependencies=>patchItem(stageIndex,itemIndex,{dependencies})}/>
                 <label><span>前置要求</span><textarea rows={2} value={item.prerequisite} onChange={(event) => patchItem(stageIndex, itemIndex, { prerequisite: event.target.value })} /></label>
                 <label><span>编辑备注（仅后台）</span><textarea rows={2} value={item.editorial_note} onChange={(event) => patchItem(stageIndex, itemIndex, { editorial_note: event.target.value })} /></label>
                 <label className="workflow-checkbox"><input type="checkbox" checked={item.is_required} onChange={(event) => patchItem(stageIndex, itemIndex, { is_required: event.target.checked })} /><span>设为必读</span></label>
@@ -506,6 +540,7 @@ export function ReadingPathWorkbench() {
               <button className="button secondary" type="button" onClick={() => {setActiveItem(stage.items.length);patchStage(stageIndex, { items: [...stage.items, emptyItem()] });}}><Plus size={12} />在本阶段添加阅读内容</button>
             </article>)}
           </section>
+          <div data-editor-section="dependencies"><PathDependencyValidation owner={owner} pathId={editing?.id} groups={pathStageGroups(stages)} materials={stages.flatMap(stage=>stage.items)} onSelect={id=>{const index=stages.findIndex(stage=>stage.items.some(item=>item.id===id));if(index>=0){setActiveStage(index);setActiveItem(stages[index].items.findIndex(item=>item.id===id));}}}/></div>
           <footer><ActionButton className="button" type="submit" state={pendingAction === "save-reading-path" ? "pending" : "idle"} pendingLabel="正在保存路径" disabled={Boolean(pendingAction) && pendingAction !== "save-reading-path"}><Save size={14} />{"保存阅读路径草稿"}</ActionButton></footer>
           <EditorialConflictHelp visible={editConflict} href={`/admin/theories/reading-paths?path=${editing?.id}`} />
           </fieldset>

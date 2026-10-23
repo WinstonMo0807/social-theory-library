@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 from copy import deepcopy
 from typing import Any
 from uuid import UUID, uuid4
@@ -11,7 +13,7 @@ from catalog.reading_path_serializers import PathMaterialInput, PathStageInput
 from rest_framework.exceptions import ValidationError
 
 STAGE_METADATA = ("estimated_reading", "learning_questions", "related_debate_ids")
-MATERIAL_METADATA = ("material_kind", "chapter_title", "page_start", "page_end", "printed_page_label", "status", "substitute_edition_ids")
+MATERIAL_METADATA = ("learning_goal", "dependencies", "material_kind", "chapter_title", "page_start", "page_end", "printed_page_label", "status", "substitute_edition_ids")
 MATERIAL_RELATIONS = ("edition", "asset", "document_revision")
 
 
@@ -21,8 +23,7 @@ def _json_metadata(serializer, source):
         checked.is_valid(raise_exception=True)
     except ValidationError as exc:
         raise ReadingPathStructureError(str(exc.detail)) from exc
-    return {key: [str(row) for row in value] if isinstance(value, list) else str(value) if isinstance(value, UUID) else value
-            for key, value in checked.validated_data.items()}
+    return json.loads(json.dumps(checked.validated_data, cls=DjangoJSONEncoder))
 
 
 class ReadingPathStructureError(ValueError):
@@ -194,6 +195,8 @@ def normalize_reading_path_stage_groups(
                 **_json_metadata(PathStageInput, {**({key: getattr(existing_stages[stage_id], key) for key in STAGE_METADATA} if stage_id in existing_stage_ids else {}), **source_group}),
             }
         )
+    from catalog.path_editor import validate_dependency_references
+    validate_dependency_references(normalized)
     material_rows = [row for group in normalized for row in group["items"]]
     if len(material_rows) > 600:
         raise ReadingPathStructureError("一条阅读路径最多600项材料。")

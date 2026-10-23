@@ -1262,7 +1262,7 @@ class ReadingPathItemSerializer(serializers.ModelSerializer):
             "is_required",
             "editorial_note",
             "material_kind", "edition", "asset", "document_revision", "chapter_title",
-            "page_start", "page_end", "printed_page_label", "status", "substitute_edition_ids",
+            "page_start", "page_end", "printed_page_label", "status", "substitute_edition_ids", "dependencies", "learning_goal",
         )
 
     @extend_schema_field(CompactTheoryWorkSerializer(allow_null=True))
@@ -1337,7 +1337,7 @@ class ReadingPathSerializer(serializers.ModelSerializer):
     def validate_status(self, value):
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if value in {"published", "archived"} and not has_capability(user, Capability.PUBLISH_AUTHORITY):
+        if value in {"published", "archived"} and (not self.instance or value != self.instance.status) and not has_capability(user, Capability.PUBLISH_AUTHORITY):
             raise serializers.ValidationError("只有管理员可以发布或下线阅读路径。")
         return value
 

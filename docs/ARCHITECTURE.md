@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M24公共阅读路径
+
+M24 catalog0077仅扩原ReadingPathItem学习目标及有类型依赖JSON，原阶段归一化/发布快照负责写读，不建新图库/规划库。学习顺序用有界DFS（最多600材料）定位循环，理论相关仅说明联系。新增只读编排验证和原保存回执，未调用Provider或运行检索测评。
+
 ## 2026-10-23 M23时间线编辑
 
 M23复用TheoryTimelineEvent/TimelineEventRelation/EditorialRevision/AuditEvent；catalog0076增事件日期与私有editorial_details，不建独立人物、文件或时间线。原公共时间线/学者页读取同一发布事件，私有编辑资料不公开。迁移仅文件，未执行。

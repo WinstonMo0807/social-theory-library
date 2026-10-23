@@ -24,7 +24,19 @@ class PathStageInput(serializers.Serializer):
     related_debate_ids = serializers.ListField(child=serializers.UUIDField(), max_length=40, default=list)
 
 
+class PathDependencyInput(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    kind = serializers.ChoiceField(choices=["learning_order", "theory_related"])
+    reason = serializers.CharField(max_length=1000, allow_blank=True, default="")
+
+
+class PublicPathDependency(PathDependencyInput):
+    title = serializers.CharField()
+
+
 class PathMaterialInput(serializers.Serializer):
+    learning_goal = serializers.CharField(max_length=2000, allow_blank=True, default="")
+    dependencies = PathDependencyInput(many=True, max_length=64, default=list)
     material_kind = serializers.ChoiceField(choices=["work", "chapter", "paper", "node"], default="work")
     edition = serializers.UUIDField(allow_null=True, default=None)
     asset = serializers.UUIDField(allow_null=True, default=None)
@@ -117,6 +129,8 @@ class PathMaterialOutput(serializers.Serializer):
     position = serializers.IntegerField()
     reading_order = serializers.IntegerField()
     substitutes = serializers.ListField(child=serializers.DictField())
+    learning_goal = serializers.CharField(allow_blank=True)
+    dependencies = PublicPathDependency(many=True)
 
 
 class PathStageOutput(serializers.Serializer):

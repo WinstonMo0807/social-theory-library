@@ -76,6 +76,8 @@ def capture_reading_path_publication(path, *, actor, revision=None, change_note=
     from catalog.services.reading_paths import reading_path_stage_groups
     ReadingPath.objects.select_for_update().get(pk=path.pk)
     groups = _pinned_groups(reading_path_stage_groups(path))
+    from catalog.path_editor import ensure_path_dependencies
+    ensure_path_dependencies(groups)
     for group in groups:
         for row in group["items"]:
             path.items.filter(pk=row["id"]).update(
@@ -153,12 +155,12 @@ def _projection(path, raw, selected, versions, *, request=None, preview=False, c
                 "title": "当前不可用的材料", "work_id": None, "edition_id": None, "node_id": None,
                 "asset_id": None, "document_revision_id": None, "chapter_title": "", "page_start": None, "page_end": None,
                 "printed_page_label": "", "version_label": "", "authors": [], "publication_year": None, "cover_url": "",
-                "href": None, "reader_url": None, "source_status": "unavailable", "reason": "", "prerequisite": "",
+                "href": None, "reader_url": None, "source_status": "unavailable", "reason": "", "prerequisite": "", "learning_goal": "",
                 "is_required": bool(row.get("is_required")), "position": row.get("position", local_order), "reading_order": order, "substitutes": []}
             node, edition = nodes.get(str(row.get("node"))), editions.get(str(row.get("edition")))
             eligible = node is not None if row.get("node") else bool(edition and str(edition.work_id) == str(row.get("work")))
             if eligible:
-                material.update(reason=str(row.get("recommendation_reason") or ""), prerequisite=str(row.get("prerequisite") or ""))
+                material.update(learning_goal=str(row.get("learning_goal") or ""), reason=str(row.get("recommendation_reason") or ""), prerequisite=str(row.get("prerequisite") or ""))
                 if node:
                     material.update(node_id=str(node.pk), title=node.canonical_name_zh, href=f"/theories/nodes/{node.slug}", source_status="available")
                 else:
@@ -186,6 +188,10 @@ def _projection(path, raw, selected, versions, *, request=None, preview=False, c
             flat.append(material)
             order += 1
         output_stages.append(stage)
+    visible = {row["id"]: row for row in flat if row["source_status"] not in {"unavailable", "withdrawn"}}
+    original = {str(row.get("id")): row for group in groups for row in group.get("items", [])}
+    for material in flat:
+        material["dependencies"] = [{"item_id": str(relation["item_id"]), "kind": relation["kind"], "title": visible[str(relation["item_id"])]["title"], "reason": str(relation.get("reason") or "")} for relation in original.get(material["id"], {}).get("dependencies", []) if material["id"] in visible and str(relation.get("item_id")) in visible]
     discipline = context["disciplines"].get(_id(raw.get("primary_discipline")))
     from catalog.services.knowledge_media import image_media
     cover_media = image_media(path, selection=raw.get("image_selection"), private=preview)

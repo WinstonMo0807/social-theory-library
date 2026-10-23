@@ -1,3 +1,4 @@
+from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
 from catalog.scholar_work_views import ScholarWorkSelectionView
@@ -725,6 +726,8 @@ urlpatterns = [
         AdminTheoryReviewActionView.as_view(),
         name="admin-theory-review-task-action",
     ),
+    path("admin/theory-system/reading-paths/commands/<uuid:request_id>/", PathSaveReceiptView.as_view(), name="path-save-receipt"),
+    path("admin/theory-system/reading-paths/validate/", PathValidationView.as_view(), name="path-editor-validation"),
     path(
         "admin/theory-system/reading-paths/",
         AdminReadingPathListView.as_view(),

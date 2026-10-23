@@ -3340,6 +3340,9 @@ class ReadingPathStage(UUIDTimeStampedModel):
 
 
 class ReadingPathItem(UUIDTimeStampedModel):
+    learning_goal = models.TextField(blank=True)
+    dependencies = models.JSONField(default=list, blank=True)
+
     class MaterialKind(models.TextChoices):
         WORK = "work", "整部作品"
         CHAPTER = "chapter", "章节"

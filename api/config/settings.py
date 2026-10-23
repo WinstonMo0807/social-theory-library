@@ -186,6 +186,7 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "PathDependencyKindEnum": ["learning_order", "theory_related"],
         "PendingEditorialSaveActionEnum": ["cancel_pending"],
         "EditorialSaveReceiptStateEnum": ["applied", "cancelled"],
         "PersonAuthorityOperationEnum": ["create", "update", "decision"],

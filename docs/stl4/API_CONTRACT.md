@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M24公共阅读路径
+
+M24原287全部保留，新增reading-paths/commands/{request_id}及reading-paths/validate，共289。材料增learning_goal/dependencies，公开关系仅含两端可见项；dependencies_valid不是完整发布合格证明。写入owner/If-Match/固定请求，与原发布草稿同步。
+
 ## 2026-10-23 M23时间线编辑
 
 M23保留285条，新增事件similar POST和commands/{request_id} GET/POST，合计287。原事件新增精度日期及私有editorial_details；公开只明确新增日期/精度字段，不加入私有核对资料。新建要求固定请求和owner，更新保留If-Match，详见TIMELINE_EDITOR_20261023。

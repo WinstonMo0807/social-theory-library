@@ -1793,7 +1793,11 @@ def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=
 
     if isinstance(target, ReadingPath):
         from catalog.services.public_reading_paths import capture_reading_path_publication
-        capture_reading_path_publication(target, actor=actor, revision=revision)
+        from catalog.services.reading_paths import ReadingPathStructureError
+        try:
+            capture_reading_path_publication(target, actor=actor, revision=revision)
+        except ReadingPathStructureError as error:
+            raise EditorialRevisionError(str(error)) from error
 
     revision.status = EditorialRevision.Status.PUBLISHED
     revision.published_by = actor

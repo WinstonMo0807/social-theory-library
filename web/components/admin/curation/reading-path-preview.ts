@@ -28,6 +28,8 @@ export function projectReadingPath(base: Row, draft: Row): PublicReadingPath {
       return { ...source, id: text(item.id) || text(item.key) || `${id}-${itemPosition}`, stage_id: id,
         kind: (item.node ? "node" : item.material_kind || "work") as PathMaterial["kind"],
         chapter_title: text(item.chapter_title), printed_page_label: text(item.printed_page_label),
+        learning_goal:text(item.learning_goal),
+        dependencies:rows(item.dependencies).filter(row=>typeof row.item_id === "string" && ["learning_order","theory_related"].includes(String(row.kind))).map(row=>({item_id:text(row.item_id),kind:row.kind as "learning_order"|"theory_related",reason:text(row.reason)})),
         reason: text(item.recommendation_reason), prerequisite: text(item.prerequisite), is_required: item.is_required === true,
         ...(item.status === "withdrawn" ? { source_status: "withdrawn" as const, reader_url: null, source_notice: "此材料在当前草稿中标记为撤回。" } : {}),
         position: itemPosition, substitutes: source.substitutes.filter(row => strings(item.substitute_edition_ids).includes(row.edition_id)),

@@ -1433,6 +1433,38 @@ export interface paths {
         patch: operations["catalog_admin_theory_system_reading_paths_partial_update"];
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/reading-paths/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_reading_paths_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_theory_system_reading_paths_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/reading-paths/validate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_theory_system_reading_paths_validate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/theory-timeline/": {
         parameters: {
             query?: never;
@@ -10413,6 +10445,26 @@ export interface components {
             name: string;
             role: string;
         };
+        PathDependencyInput: {
+            /** Format: uuid */
+            item_id: string;
+            kind: components["schemas"]["PathDependencyKindEnum"];
+            /** @default  */
+            reason: string;
+        };
+        PathDependencyInputRequest: {
+            /** Format: uuid */
+            item_id: string;
+            kind: components["schemas"]["PathDependencyKindEnum"];
+            /** @default  */
+            reason: string;
+        };
+        /**
+         * @description * `learning_order` - learning_order
+         *     * `theory_related` - theory_related
+         * @enum {string}
+         */
+        PathDependencyKindEnum: "learning_order" | "theory_related";
         PathDiffOutput: {
             added: string[];
             removed: string[];
@@ -10476,6 +10528,8 @@ export interface components {
             substitutes: {
                 [key: string]: unknown;
             }[];
+            learning_goal: string;
+            dependencies: components["schemas"]["PublicPathDependency"][];
         };
         /**
          * @description * `available` - available
@@ -10564,6 +10618,18 @@ export interface components {
             change_note: string;
             legacy: boolean;
         };
+        PathSaveReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            path_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
         PathSourceRevisionOutput: {
             id: string | null;
             token: string;
@@ -10598,6 +10664,9 @@ export interface components {
             items: components["schemas"]["PathStageItemInputRequest"][];
         };
         PathStageItemInput: {
+            /** @default  */
+            learning_goal: string;
+            dependencies?: components["schemas"]["PathDependencyInput"][];
             /** @default work */
             material_kind: components["schemas"]["PathMaterialKindEnum"];
             /** Format: uuid */
@@ -10628,6 +10697,9 @@ export interface components {
             is_required?: boolean;
         };
         PathStageItemInputRequest: {
+            /** @default  */
+            learning_goal: string;
+            dependencies?: components["schemas"]["PathDependencyInputRequest"][];
             /** @default work */
             material_kind: components["schemas"]["PathMaterialKindEnum"];
             /** Format: uuid */
@@ -10696,6 +10768,23 @@ export interface components {
             diff: components["schemas"]["PathDiffOutput"];
             retained_completed: string[];
             retained_notes: string[];
+        };
+        PathValidationInputRequest: {
+            /** Format: uuid */
+            path_id?: string | null;
+            stage_groups: components["schemas"]["PathStageGroupInputRequest"][];
+        };
+        PathValidationResult: {
+            material_count: number;
+            active_count: number;
+            relation_counts: {
+                [key: string]: number;
+            };
+            dependencies_valid: boolean;
+            problems: {
+                [key: string]: unknown;
+            }[];
+            notice: string;
         };
         /**
          * @description * `cancel_pending` - cancel_pending
@@ -11736,6 +11825,14 @@ export interface components {
             results: components["schemas"]["ParallelCalibrationOutput"][];
             notice: string;
         };
+        PublicPathDependency: {
+            /** Format: uuid */
+            item_id: string;
+            kind: components["schemas"]["PathDependencyKindEnum"];
+            /** @default  */
+            reason: string;
+            title: string;
+        };
         PublicPersonSnapshot: {
             /** Format: uuid */
             id: string | null;
@@ -12712,6 +12809,8 @@ export interface components {
             printed_page_label?: string;
             status?: components["schemas"]["ReadingPathItemStatusEnum"];
             substitute_edition_ids?: unknown;
+            dependencies?: unknown;
+            learning_goal?: string;
         };
         /**
          * @description * `work` - 整部作品
@@ -12755,6 +12854,8 @@ export interface components {
             printed_page_label?: string;
             status?: components["schemas"]["ReadingPathItemStatusEnum"];
             substitute_edition_ids?: unknown;
+            dependencies?: unknown;
+            learning_goal?: string;
         };
         /**
          * @description * `active` - 在读材料
@@ -18405,6 +18506,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminReadingPath"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathSaveReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathSaveReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_validate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PathValidationInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PathValidationInputRequest"];
+                "multipart/form-data": components["schemas"]["PathValidationInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathValidationResult"];
                 };
             };
         };

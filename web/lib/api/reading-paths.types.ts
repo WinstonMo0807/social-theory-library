@@ -2,6 +2,8 @@ export type PathRevision = { id: string | null; token: string; number: number | 
 export type PathLink = { id: string; slug: string; title: string; href: string };
 export type PathSubstitute = { work_id: string; edition_id: string; title: string; version_label: string; publication_year: number | null; authors: string[]; href: string; cover_url: string };
 export type PathMaterial = {
+  learning_goal?:string;
+  dependencies?: {title?:string;item_id:string;kind:"learning_order"|"theory_related";reason:string}[];
   id: string; stage_id: string; kind: "work" | "chapter" | "paper" | "node"; title: string;
   work_id: string | null; edition_id: string | null; node_id: string | null; asset_id: string | null; document_revision_id: string | null;
   chapter_title: string; page_start: number | null; page_end: number | null; printed_page_label: string;
