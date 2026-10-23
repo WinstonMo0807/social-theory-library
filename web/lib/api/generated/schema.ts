@@ -18702,6 +18702,18 @@ export interface components {
             suggestions?: {
                 [key: string]: unknown;
             }[];
+            field_locks?: components["schemas"]["WorkspaceFieldLockRequest"][];
+        };
+        /**
+         * @description * `lock` - lock
+         *     * `unlock` - unlock
+         * @enum {string}
+         */
+        WorkspaceFieldLockActionEnum: "lock" | "unlock";
+        WorkspaceFieldLockRequest: {
+            field: string;
+            action: components["schemas"]["WorkspaceFieldLockActionEnum"];
+            reason: string;
         };
         WorkspaceReceipt: {
             owner_id: string;

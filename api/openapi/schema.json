@@ -70274,6 +70274,12 @@
                             "additionalProperties": {}
                         },
                         "maxItems": 40
+                    },
+                    "field_locks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkspaceFieldLockRequest"
+                        }
                     }
                 },
                 "required": [
@@ -70281,6 +70287,37 @@
                     "edition_id",
                     "request_id",
                     "sections"
+                ]
+            },
+            "WorkspaceFieldLockActionEnum": {
+                "enum": [
+                    "lock",
+                    "unlock"
+                ],
+                "type": "string",
+                "description": "* `lock` - lock\n* `unlock` - unlock"
+            },
+            "WorkspaceFieldLockRequest": {
+                "type": "object",
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/WorkspaceFieldLockActionEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                    }
+                },
+                "required": [
+                    "action",
+                    "field",
+                    "reason"
                 ]
             },
             "WorkspaceReceipt": {

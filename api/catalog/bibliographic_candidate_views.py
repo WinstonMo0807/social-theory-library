@@ -186,5 +186,5 @@ class BibliographicCandidatesView(AdminPrivateResponseMixin, APIView):
         from catalog.contracts.fields import FIELD_CONTRACTS
         work_fields = [name for name, contract in FIELD_CONTRACTS.items() if contract.domain_object == "work"]
         locks = FieldLock.objects.filter(Q(edition=edition) | Q(edition__work_id=edition.work_id, field_name__in=work_fields)).values_list("field_name", flat=True).distinct()
-        return Response({"results": results, "current_values": current, "locked_fields": list(locks), "confirmed_fields": sorted(confirmed),
+        return Response({"owner_id": str(request.user.pk), "results": results, "current_values": current, "locked_fields": list(locks), "confirmed_fields": sorted(confirmed),
                          "context_fingerprint": fingerprint, "sources": sources, "external_requested": data["allow_external"], "manual_available": True})

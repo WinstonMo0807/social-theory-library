@@ -230,14 +230,29 @@ class WorkMaintenanceWorkspaceView(AdminPrivateResponseMixin, APIView):
         )
 
 
+class WorkspaceFieldLockSerializer(serializers.Serializer):
+    field = serializers.CharField(max_length=80)
+    action = serializers.ChoiceField(choices=["lock", "unlock"])
+    reason = serializers.CharField(max_length=400)
+
+
 class WorkspaceEditsSerializer(serializers.Serializer):
     edition_id = serializers.UUIDField()
     item_id = serializers.UUIDField(required=False, allow_null=True)
     edit_version = serializers.CharField(max_length=64)
     request_id = serializers.UUIDField()
-    sections = serializers.DictField(child=serializers.DictField(), allow_empty=False)
+    sections = serializers.DictField(child=serializers.DictField(), allow_empty=True)
     confirm_sections = serializers.ListField(child=serializers.ChoiceField(choices=list(SECTION_SERIALIZERS)), default=list)
     suggestions = serializers.ListField(child=serializers.DictField(), default=list, max_length=40)
+    field_locks = WorkspaceFieldLockSerializer(many=True, required=False)
+
+    def validate(self, attrs):
+        locks = attrs.get("field_locks", [])
+        if not attrs["sections"] and not locks:
+            raise serializers.ValidationError("请选择需要保存的内容或人工锁决定。")
+        if len(locks) > 40 or locks and (attrs["sections"] or attrs["confirm_sections"] or attrs["suggestions"]):
+            raise serializers.ValidationError("人工锁最多40项，请先保存本页填写，再单独核对。")
+        return attrs
 
 
 class WorkWorkspaceEditsView(AdminPrivateResponseMixin, APIView):
@@ -284,6 +299,7 @@ class WorkWorkspaceEditsView(AdminPrivateResponseMixin, APIView):
                 work_id=work_id, edition_id=data["edition_id"], expected_version=data["edit_version"],
                 request_id=str(data["request_id"]), sections=sections,
                 confirmations=set(data["confirm_sections"]), suggestions=suggestions, actor=request.user,
+                field_locks=data.get("field_locks", []),
             )
         except WorkflowEditError as error:
             return _edit_error(error)

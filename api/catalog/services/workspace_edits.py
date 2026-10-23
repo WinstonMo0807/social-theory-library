@@ -60,7 +60,8 @@ def workspace_edit_version(edition):
         | Q(target_type="edition", target_id=edition.pk),
     ).order_by("-updated_at", "-id").values_list("id", "status", "updated_at")[:1])
     decisions = list(edition.field_decisions.order_by("-updated_at", "-id").values_list("id", "updated_at")[:1])
-    locks = list(edition.field_locks.order_by("field_name").values_list("field_name", "locked_value", "updated_at"))
+    from catalog.services.field_locks import scoped_locks
+    locks = list(scoped_locks(edition).order_by("edition_id", "field_name").values_list("edition_id", "field_name", "locked_value", "updated_at"))
     return _digest([edition.pk, edition.updated_at, edition.work.updated_at, revisions, decisions, locks])
 
 
@@ -82,7 +83,9 @@ def _save_section(edition, step, values, *, actor, confirm):
 
 
 @transaction.atomic
-def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, sections, confirmations, suggestions, actor):
+def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, sections, confirmations, suggestions, actor, field_locks=()):
+    if field_locks and (sections or confirmations or suggestions):
+        raise WorkflowEditError("请先保存当前填写，再单独核对人工锁；本次未保存其他修改。")
     current = get_user_model().objects.select_for_update().filter(pk=actor.pk, is_active=True).first()
     if not current or current.token_version != actor.token_version or not has_capability(current, Capability.EDIT_METADATA):
         raise PermissionDenied("当前会话不能继续保存书目，请重新登录后核对。")
@@ -101,7 +104,7 @@ def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, s
     if edition is None:
         raise WorkflowEditError("请选择这部作品的具体出版版本。")
     edition.work = Work.objects.select_for_update().get(pk=work_id)
-    fingerprint = _digest([expected_version, sections, sorted(confirmations), suggestions])
+    fingerprint = _digest([expected_version, sections, sorted(confirmations), suggestions, *([field_locks] if field_locks else [])])
     receipt = AuditEvent.objects.filter(
         action="workspace.edits.saved", object_type="edition",
         request_id=request_id, actor=actor,
@@ -182,11 +185,14 @@ def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, s
                            "selected_entity_id": str(row.get("selected_entity_id") or ""), "selected_label": row.get("selected_value", ""),
                            "decision_id": str(decision.pk), "original_value": before.get(field),
                            "suggested_value": proposed, "final_value": final, "outcome": outcome, "outcome_scope": outcome_scope})
+    from catalog.services.field_locks import apply as apply_field_locks
+    lock_changes = apply_field_locks(edition, field_locks, actor) if field_locks else []
     receipt = AuditEvent.objects.create(
         actor=actor, action="workspace.edits.saved", object_type="edition", object_id=str(edition.pk), request_id=request_id,
         before={"edit_version": expected_version},
         after={"request_fingerprint": fingerprint, "work_id": str(work_id), "sections": list(sections),
                "confirmed_sections": sorted(confirmations), "assistance": assistance, "journal_candidates":journal_observations,
+               "field_locks": lock_changes,
                "training_eligibility": "not_reviewed", "correctness": "not_evaluated"},
     )
     return edition, receipt, False

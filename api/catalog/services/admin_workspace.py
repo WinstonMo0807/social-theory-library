@@ -1015,6 +1015,7 @@ def build_admin_workspace(
     session = CatalogingSession.objects.filter(edition=edition, status__in=OPEN_STATUSES).order_by("-created_at").first()
     health = catalog_health(edition)
     from catalog.services.workspace_edits import workspace_edit_version
+    from catalog.services.field_locks import state as field_lock_state
     return {
         "mode": mode,
         "cataloging_session": session_payload(session) if session else None,
@@ -1023,6 +1024,7 @@ def build_admin_workspace(
         "publication": visibility,
         "editing": {
             "edit_version": workspace_edit_version(edition),
+            "field_locks": field_lock_state(edition, user),
             "has_unpublished_changes": health["publication"] == "changes_pending",
             "draft_revision_id": str(pending_revision.pk) if pending_revision else None,
             "base_public_revision_id": str(session.base_public_revision_id) if session and session.base_public_revision_id else None,
