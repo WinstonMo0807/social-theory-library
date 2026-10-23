@@ -1443,6 +1443,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/site-content/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_site_content_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_site_content_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/site-content/publish/": {
         parameters: {
             query?: never;
@@ -1453,6 +1469,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["catalog_admin_site_content_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/site-content/sources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_site_content_sources_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7648,7 +7680,54 @@ export interface components {
          * @enum {integer}
          */
         HeadingLevelEnum: 1 | 2 | 3;
+        HomeCard: {
+            id: string;
+            title: string;
+            description: string;
+            href: string;
+            image_url: string;
+            label: string;
+            available: boolean;
+            visible: boolean;
+            source_title?: string;
+            source_description?: string;
+            source_image_url?: string;
+        };
+        HomeCardRequest: {
+            id: string;
+            title: string;
+            description: string;
+            href: string;
+            image_url: string;
+            label: string;
+            available: boolean;
+            visible: boolean;
+            source_title?: string;
+            source_description?: string;
+            source_image_url?: string;
+        };
+        HomeLayout: {
+            featured: components["schemas"]["HomeSlot"][] | null;
+            scholars: components["schemas"]["HomeSlot"][] | null;
+            topics: components["schemas"]["HomeSlot"][] | null;
+        };
+        HomeLayoutPreview: {
+            featured: components["schemas"]["HomeCard"][] | null;
+            scholars: components["schemas"]["HomeCard"][] | null;
+            topics: components["schemas"]["HomeCard"][] | null;
+        };
+        HomeLayoutPreviewRequest: {
+            featured: components["schemas"]["HomeCardRequest"][] | null;
+            scholars: components["schemas"]["HomeCardRequest"][] | null;
+            topics: components["schemas"]["HomeCardRequest"][] | null;
+        };
+        HomeLayoutRequest: {
+            featured: components["schemas"]["HomeSlotRequest"][] | null;
+            scholars: components["schemas"]["HomeSlotRequest"][] | null;
+            topics: components["schemas"]["HomeSlotRequest"][] | null;
+        };
         HomeResponse: {
+            home_layout: components["schemas"]["HomeLayoutPreview"] | null;
             schema_version: string;
             visibility: components["schemas"]["HomeResponseVisibilityEnum"];
             status: components["schemas"]["PublicCollectionStateEnum"];
@@ -7682,6 +7761,7 @@ export interface components {
          */
         HomeSectionStatusEnum: "ready" | "empty" | "unavailable";
         HomeSections: {
+            home_layout: components["schemas"]["HomeSection"];
             works: components["schemas"]["HomeSection"];
             random_works: components["schemas"]["HomeSection"];
             scholars: components["schemas"]["HomeSection"];
@@ -7690,6 +7770,54 @@ export interface components {
             hot_searches: components["schemas"]["HomeSection"];
             config: components["schemas"]["HomeSection"];
         };
+        HomeSlot: {
+            /** Format: uuid */
+            id: string;
+            target: components["schemas"]["HomeTarget"];
+            title: string;
+            description: string;
+            /** Format: uuid */
+            cover_rendition_id: string | null;
+            visible: boolean;
+        };
+        HomeSlotRequest: {
+            /** Format: uuid */
+            id: string;
+            target: components["schemas"]["HomeTargetRequest"];
+            title: string;
+            description: string;
+            /** Format: uuid */
+            cover_rendition_id: string | null;
+            visible: boolean;
+        };
+        HomeSourceChoice: {
+            target: components["schemas"]["HomeTarget"];
+            source: components["schemas"]["HomeCard"];
+        };
+        HomeSourcePage: {
+            count: number;
+            page: number;
+            total_pages: number;
+            results: components["schemas"]["HomeSourceChoice"][];
+        };
+        HomeTarget: {
+            type: components["schemas"]["HomeTargetTypeEnum"];
+            /** Format: uuid */
+            id: string;
+        };
+        HomeTargetRequest: {
+            type: components["schemas"]["HomeTargetTypeEnum"];
+            /** Format: uuid */
+            id: string;
+        };
+        /**
+         * @description * `issue` - issue
+         *     * `scholar` - scholar
+         *     * `topic` - topic
+         *     * `edition` - edition
+         * @enum {string}
+         */
+        HomeTargetTypeEnum: "issue" | "scholar" | "topic" | "edition";
         ImportedComparisonInputRequest: {
             dimensions: string[];
             cells: components["schemas"]["ComparisonCellInputRequest"][];
@@ -14218,13 +14346,73 @@ export interface components {
         SiteContent: {
             config: components["schemas"]["SiteConfig"];
             about_blocks: components["schemas"]["AboutPageBlock"][];
+            home_layout?: components["schemas"]["HomeLayout"];
+            readonly home_preview: components["schemas"]["HomeLayoutPreview"];
+            /** Format: uuid */
+            readonly site_id: string;
+            readonly history: components["schemas"]["SiteHistory"][];
+            readonly receipt: components["schemas"]["SiteReceipt"];
+            readonly replayed: boolean;
             edit_version: string;
             readonly has_unpublished_changes: boolean;
         };
         SiteContentRequest: {
             config: components["schemas"]["SiteConfigRequest"];
             about_blocks: components["schemas"]["AboutPageBlockRequest"][];
+            home_layout?: components["schemas"]["HomeLayoutRequest"];
             edit_version: string;
+        };
+        SiteHistory: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            state: string;
+            /** Format: date-time */
+            saved_at: string;
+            saved_by: string;
+            /** Format: date-time */
+            published_at: string | null;
+            published_by: string;
+        };
+        SiteHistoryRequest: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            state: string;
+            /** Format: date-time */
+            saved_at: string;
+            saved_by: string;
+            /** Format: date-time */
+            published_at: string | null;
+            published_by: string;
+        };
+        SiteReceipt: {
+            /** Format: uuid */
+            request_id: string;
+            actor_id: string;
+            action: components["schemas"]["SiteReceiptActionEnum"];
+            saved_version: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description * `save` - save
+         *     * `publish` - publish
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        SiteReceiptActionEnum: "save" | "publish" | "cancelled";
+        SiteReceiptRequest: {
+            /** Format: uuid */
+            request_id: string;
+            actor_id: string;
+            action: components["schemas"]["SiteReceiptActionEnum"];
+            saved_version: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        SiteStopRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
         SourceCommandOutput: {
             owner_id: string;
@@ -18975,6 +19163,54 @@ export interface operations {
             };
         };
     };
+    catalog_admin_site_content_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_site_content_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SiteStopRequest"];
+                "multipart/form-data": components["schemas"]["SiteStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteReceipt"];
+                };
+            };
+        };
+    };
     catalog_admin_site_content_publish_create: {
         parameters: {
             query?: never;
@@ -18996,6 +19232,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SiteContent"];
+                };
+            };
+        };
+    };
+    catalog_admin_site_content_sources_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `issue` - issue
+                 *     * `scholar` - scholar
+                 *     * `topic` - topic
+                 *     * `edition` - edition
+                 */
+                type?: "issue" | "scholar" | "topic" | "edition";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeSourcePage"];
                 };
             };
         };

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M29首页编排源码接入
+
+首页槽位作为原site_content修订的home_layout保存，不创建第二套内容表或复制来源对象。正式首页仅读最新published网站快照，并通过原策划有效版本、学者/主题正式快照与公开馆藏版本重新解析；私有媒体仅当前公开且来源有效的条目授权。User锁/会话版本/原AuditEvent回执保护保存和发布；首页预览禁用私人续读组件。
+
 ## 2026-10-23 M28回收与恢复
 
 统一读取原RecycleEntry、生命周期归档状态和AuditEvent；不新增身份/文件表。旧lifecycle与新页面共享restore_archived_object；原restore_object补发布关联保护与一致锁顺序。强类型恢复命令及新删除请求回执沿原审计保存，保留对象UUID，不重新公开或重启任务。

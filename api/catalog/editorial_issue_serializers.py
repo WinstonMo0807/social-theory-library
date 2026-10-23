@@ -261,9 +261,27 @@ class PlannedItemLinkSerializer(EditorialPublishSerializer):
     confirm_version = serializers.BooleanField()
 
 
+class SiteHistorySerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    revision = serializers.IntegerField()
+    state = serializers.CharField()
+    saved_at = serializers.DateTimeField()
+    saved_by = serializers.CharField(allow_blank=True)
+    published_at = serializers.DateTimeField(allow_null=True)
+    published_by = serializers.CharField(allow_blank=True)
+
+
 class SiteContentSerializer(serializers.Serializer):
+    from catalog.site_layout import HomeLayoutSerializer, HomeLayoutPreviewSerializer
+    from catalog.site_commands import SiteReceiptSerializer
     config = SiteConfigSerializer()
     about_blocks = AboutPageBlockSerializer(many=True)
+    home_layout = HomeLayoutSerializer(required=False)
+    home_preview = HomeLayoutPreviewSerializer(read_only=True)
+    site_id = serializers.UUIDField(read_only=True)
+    history = SiteHistorySerializer(many=True, read_only=True)
+    receipt = SiteReceiptSerializer(read_only=True)
+    replayed = serializers.BooleanField(read_only=True)
     edit_version = serializers.CharField()
     has_unpublished_changes = serializers.BooleanField(read_only=True)
 

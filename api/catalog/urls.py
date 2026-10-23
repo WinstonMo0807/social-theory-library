@@ -13,6 +13,7 @@ from .feedback_views import AdminFeedbackDetailView, AdminFeedbackListView, Publ
 from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
     AdminOutlineRebuildBatchView, AdminOutlineJobView)
 from .content_placement_urls import urlpatterns as content_placement_urlpatterns
+from .site_commands import SiteReceiptView, SiteSourcesView
 from .discovery_index_views import DiscoveryIndexView
 from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, DiscoverySearchExpandView,
     DiscoverySearchCancelView, DiscoverySearchContextView, DiscoverySearchRetryView, DiscoverySearchRemoveDocumentView, LegacyDiscoverySearchView)
@@ -271,6 +272,8 @@ urlpatterns = [
     path("admin/recommendation-issues/<uuid:issue_id>/items/<uuid:item_id>/link/", AdminIssueLinkView.as_view(), name="admin-recommendation-issue-link"),
     path("admin/recommendation-issues/<uuid:issue_id>/items/<uuid:item_id>/cover/", AdminIssueItemCoverView.as_view(), name="admin-recommendation-issue-item-cover"),
     path("admin/site-content/", AdminSiteContentView.as_view(), name="admin-site-content"),
+    path("admin/site-content/sources/", SiteSourcesView.as_view(), name="admin-site-sources"),
+    path("admin/site-content/commands/<uuid:request_id>/", SiteReceiptView.as_view(), name="admin-site-receipt"),
     path("admin/site-content/preview/", AdminSitePreviewView.as_view(), name="admin-site-content-preview"),
     path("admin/site-content/publish/", AdminSitePublishView.as_view(), name="admin-site-content-publish"),
     path("editorial-media/<uuid:rendition_id>/", PublicEditorialMediaView.as_view(), name="editorial-media-file"),

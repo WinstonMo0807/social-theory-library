@@ -12,5 +12,6 @@ export async function loadHomeViewData(): Promise<HomeViewData> {
     scholars: payload.scholars.map(adaptApiScholar), topics: payload.topics.map(adaptApiTopic),
     issue: payload.issue, issues: payload.issues, issueCount: payload.issue_count,
     hotSearches: payload.hot_searches, sections: payload.sections,
+    homeLayout: payload.home_layout,
   };
 }

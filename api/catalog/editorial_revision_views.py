@@ -83,7 +83,9 @@ class AdminEditorialRevisionListCreateView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanAccessBackOffice]
 
     def get(self, request):
-        queryset = EditorialRevision.objects.select_related("created_by", "published_by")
+        # Site content is admin-only; placements inherit parent permissions.
+        # Both have dedicated, permission-checked histories and receipts.
+        queryset = EditorialRevision.objects.exclude(target_type__in=["content_placement", "site_content"]).select_related("created_by", "published_by")
         target_type = str(request.query_params.get("target_type") or "").strip()
         target_id = str(request.query_params.get("target_id") or "").strip()
         status_value = str(request.query_params.get("status") or "").strip()
@@ -164,7 +166,7 @@ class AdminEditorialRevisionDetailView(AdminPrivateResponseMixin, APIView):
 
     def get(self, request, pk):
         revision = get_object_or_404(
-            EditorialRevision.objects.select_related("created_by", "published_by"),
+            EditorialRevision.objects.exclude(target_type__in=["content_placement", "site_content"]).select_related("created_by", "published_by"),
             pk=pk,
         )
         return Response(serialize_editorial_revision(revision))

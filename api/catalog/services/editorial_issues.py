@@ -81,6 +81,7 @@ def _save_revision(kind, identifier, payload, actor):
     EditorialRevision.objects.filter(target_type=kind, target_id=identifier, status="draft").exclude(pk=draft.pk).update(status="superseded")
     rendition_ids = [payload.get("cover_rendition_id"), payload.get("article_metadata", {}).get("curator_portrait_id"), payload.get("config", {}).get("home_hero_rendition_id"),
                      *[row.get("cover_rendition_id") for row in payload.get("items", [])],
+                     *[row.get("cover_rendition_id") for rows in payload.get("home_layout", {}).values() for row in rows or []],
                      *[row.get("image_rendition_id") for row in payload.get("body_blocks", []) if row.get("type") == "image"]]
     for identifier in filter(None, rendition_ids):
         rendition = _rendition(identifier)
@@ -472,7 +473,8 @@ def link_planned_item(issue_id, item_id, data, actor):
 def site_public_payload():
     from catalog.views import current_site_config
     from catalog.serializers import AboutPageBlockSerializer
-    return {"config": deepcopy(current_site_config()), "about_blocks": list(AboutPageBlockSerializer(AboutPageBlock.objects.all().order_by("sort_order", "created_at"), many=True).data)}
+    from catalog.site_layout import published_layout
+    return {"config": deepcopy(current_site_config()), "home_layout": published_layout(), "about_blocks": list(AboutPageBlockSerializer(AboutPageBlock.objects.all().order_by("sort_order", "created_at"), many=True).data)}
 
 
 def site_target(*, lock=False):
@@ -482,18 +484,26 @@ def site_target(*, lock=False):
 
 
 def site_payload():
+    from catalog.site_layout import AREAS, present
     setting = site_target()
     latest = _latest("site_content", setting.pk)
     payload = deepcopy(latest.materialized_preview) if latest and latest.status == "draft" else site_public_payload()
     rid = payload["config"].get("home_hero_rendition_id")
     if rid:
         payload["config"]["home_hero_image"] = f"/api/catalog/admin/media/renditions/{rid}/file/"
-    return {**payload, "edit_version": edit_version("site_content", setting.pk), "has_unpublished_changes": bool(latest and latest.status == "draft")}
+    payload["home_layout"] = {area: payload.get("home_layout", {}).get(area) for area in AREAS}
+    history = EditorialRevision.objects.filter(target_type="site_content", target_id=setting.pk).select_related("created_by", "published_by").order_by("-revision")[:30]
+    return {**payload, "home_preview": present(payload["home_layout"]), "site_id": str(setting.pk),
+            "history": [{"id": str(row.pk), "revision": row.revision, "state": row.status,
+                "saved_at": row.created_at, "saved_by": row.created_by.display_name if row.created_by else "",
+                "published_at": row.published_at, "published_by": row.published_by.display_name if row.published_by else ""} for row in history],
+            "edit_version": edit_version("site_content", setting.pk), "has_unpublished_changes": bool(latest and latest.status == "draft")}
 
 
 @transaction.atomic
 def save_site(data, actor):
     from catalog.serializers import SiteConfigSerializer, AboutPageBlockSerializer
+    from catalog.site_layout import normalize, published_layout
     setting = site_target(lock=True)
     _check_version("site_content", setting.pk, data.get("edit_version"))
     config = SiteConfigSerializer(data=data.get("config", {}))
@@ -521,7 +531,10 @@ def save_site(data, actor):
         if link and (urlsplit(link).scheme not in {"", "http", "https", "mailto"} or link.startswith("//") or "\\" in link):
             raise ValidationError({"about_blocks": "模块链接无效。"})
         clean_blocks.append(clean)
-    _save_revision("site_content", setting.pk, {"config": clean_config, "about_blocks": clean_blocks}, actor)
+    latest = _latest("site_content", setting.pk)
+    previous = latest.materialized_preview.get("home_layout", {}) if latest else published_layout()
+    layout = normalize(data.get("home_layout", {area: previous.get(area) for area in ("featured", "scholars", "topics")}), retained=previous)
+    _save_revision("site_content", setting.pk, {"config": clean_config, "about_blocks": clean_blocks, "home_layout": layout}, actor)
     return site_payload()
 
 
@@ -533,6 +546,8 @@ def publish_site(expected, actor):
     if not revision or revision.status != "draft":
         raise ValidationError("没有待发布的网站草稿。")
     payload = revision.materialized_preview
+    from catalog.site_layout import present
+    present(payload.get("home_layout", {}), publishing=True)
     config = deepcopy(payload["config"])
     if config.get("home_hero_rendition_id"):
         config["home_hero_image"] = f"/api/catalog/editorial-media/{config['home_hero_rendition_id']}/"

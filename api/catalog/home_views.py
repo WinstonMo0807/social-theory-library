@@ -18,6 +18,7 @@ from catalog.services.editorial_issues import issue_payload, published_issues
 from catalog.services.recommendations import current_recommendations
 from catalog.services.scoped_search import public_scholar_queryset, public_work_queryset
 from catalog.views import current_site_config
+from catalog.site_layout import HomeLayoutPreviewSerializer, public_layout
 
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class HomeSectionSerializer(serializers.Serializer):
 
 
 class HomeSectionsSerializer(serializers.Serializer):
+    home_layout = HomeSectionSerializer()
     works = HomeSectionSerializer()
     random_works = HomeSectionSerializer()
     scholars = HomeSectionSerializer()
@@ -41,6 +43,7 @@ class HomeSectionsSerializer(serializers.Serializer):
 
 
 class HomeResponseSerializer(serializers.Serializer):
+    home_layout = HomeLayoutPreviewSerializer(allow_null=True)
     schema_version = serializers.CharField()
     visibility = serializers.ChoiceField(choices=["public"])
     status = serializers.ChoiceField(choices=["ready", "empty", "partial", "unavailable"])
@@ -86,7 +89,7 @@ class HomeView(APIView):
             "schema_version": "4.0", "visibility": "public", "status": "empty",
             "config": None, "works": [], "random_works": [], "scholars": [],
             "topics": [], "issues": [], "issue": None, "issue_count": None,
-            "hot_searches": [], "sections": {},
+            "hot_searches": [], "sections": {}, "home_layout": None,
         }
         snapshots = None
 
@@ -123,6 +126,7 @@ class HomeView(APIView):
             return _collection(queryset, TopicSerializer, recommended("home_topics"), "topic", 5)
 
         loaders = {
+            "home_layout": (lambda: (public_layout(), "published_site_revision"), "首页编排"),
             "works": (lambda: works("home_featured", 12), "馆藏内容"),
             "random_works": (lambda: works("home_random", 4), "推荐馆藏"),
             "scholars": (scholars, "学者内容"),
@@ -141,7 +145,7 @@ class HomeView(APIView):
                     payload["issue"] = data[0] if data else None
                     source = "published_issue_revision"
                 payload[key] = data
-                count = 1 if key == "config" else len(data)
+                count = 1 if key == "config" else sum(len(rows or []) for rows in data.values()) if key == "home_layout" else len(data)
                 payload["sections"][key] = {
                     "status": "ready" if count else "empty", "source": source,
                     "count": count, "message": "" if count else f"暂无公开的{label}。",

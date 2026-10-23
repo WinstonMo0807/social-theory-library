@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M29首页编排源码接入
+
+保留296条，新增admin/site-content/sources GET（已公开来源20条分页）及commands/{request_id} GET/POST（本人回执/停止未执行请求），共298。原site-content PUT/publish POST必需X-Editor-Owner、固定Idempotency-Key；发布confirm=true。草稿/公开home增加home_layout，null沿用公开推荐、空数组为明确空栏目。home_preview按真实发布来源重算，不含私人记录。通用修订入口排除site_content，网站历史仅本模块30条摘要。
+
 ## 2026-10-23 M28回收与恢复
 
 原294契约保留，新纳入原admin/recycle GET/POST与新增kind/object_id详情，共296。恢复POST必须owner、对象版本、固定请求UUID和明确confirmed，拒绝旧仅传id的恢复载荷。新删除控件另向原lifecycle传Idempotency-Key以查回原结果。目录20条/页，详情返回有限管理依赖与30条历史摘要。

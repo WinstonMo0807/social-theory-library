@@ -212,14 +212,16 @@ class AdminSiteContentView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
         return Response(service.site_payload())
     @extend_schema(request=SiteContentSerializer, responses=SiteContentSerializer)
     def put(self, request):
-        return Response(service.save_site(request.data, request.user))
+        from catalog.site_commands import execute
+        return Response(execute(request))
 
 
 class AdminSitePublishView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryAdmin]
     @extend_schema(request=EditorialPublishSerializer, responses=SiteContentSerializer)
     def post(self, request):
-        return Response(service.publish_site(request.data.get("edit_version"), request.user))
+        from catalog.site_commands import execute
+        return Response(execute(request, publishing=True))
 
 
 class AdminSitePreviewView(AdminSiteContentView):
@@ -234,6 +236,9 @@ class PublicEditorialMediaView(APIView):
         from catalog.services.public_editorial import published_media_usage
         published = published_media_usage(key)
         published = published or SiteSetting.objects.filter(key="site_config", public=True, value__home_hero_rendition_id=key).exists()
+        if not published:
+            from catalog.site_layout import public_cover_used
+            published = public_cover_used(key)
         if not published:
             raise Http404
         row = get_object_or_404(MediaRendition, pk=rendition_id)

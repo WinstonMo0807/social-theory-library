@@ -11,6 +11,8 @@ import type { Scholar, Work } from "@/lib/data";
 import type { ApiWork } from "@/lib/api/public-catalog";
 import type { LibraryTopic } from "@/lib/api/topics.types";
 import type { HomeSection, HomeSections } from "@/lib/api/home.types";
+import type { HomeLayoutPreview } from "@/lib/api/home.types";
+import { HomeCuratedSection } from "./home-curated-section";
 
 function EmptyDiscovery({ section, children }: { section?: HomeSection; children: ReactNode }) {
   return <div className="stl4-home-state" role={section?.status === "unavailable" ? "alert" : "status"}><BookOpen size={24} strokeWidth={1} /><p>{section?.status === "unavailable" ? section.message : children}</p>{section?.status === "unavailable" ? <Link href="/">重新加载首页 <ArrowRight size={14} /></Link> : null}</div>;
@@ -33,21 +35,21 @@ export function HomeSearch() {
   </form>;
 }
 
-export function HomeDiscoveryCards({ scholars, topics, sections }: { scholars: Scholar[]; topics: LibraryTopic[]; sections?: HomeSections }) {
+export function HomeDiscoveryCards({ scholars, topics, sections, homeLayout }: { scholars: Scholar[]; topics: LibraryTopic[]; sections?: HomeSections; homeLayout?: HomeLayoutPreview | null }) {
   const [scholarOffset, setScholarOffset] = useState(0);
   const [topicOffset, setTopicOffset] = useState(0);
   const shownScholars = scholars.slice(scholarOffset).concat(scholars.slice(0, scholarOffset)).slice(0, 5);
   const shownTopics = topics.slice(topicOffset).concat(topics.slice(0, topicOffset)).slice(0, 5);
   const rotate = (count: number, current: number) => count < 2 ? 0 : (current + 1 + Math.floor(Math.random() * (count - 1))) % count;
   return <>
-    <section className="stl4-home-section" data-edit-section="scholars" aria-labelledby="home-scholars">
+    {homeLayout?.scholars != null ? <HomeCuratedSection area="scholars" cards={homeLayout.scholars}/> : <section className="stl4-home-section" data-edit-section="scholars" aria-labelledby="home-scholars">
       <header className="stl4-home-heading"><h2 id="home-scholars">学者聚焦 <small>Scholars</small></h2><div><button type="button" disabled={scholars.length < 2} onClick={() => setScholarOffset(current => rotate(scholars.length, current))}><Shuffle size={15} />随机推荐<span className="sr-only">学者</span></button><Link href="/scholars">查看全部 <ArrowRight size={15} /></Link></div></header>
       {shownScholars.length ? <div className="stl4-scholar-grid" aria-live="polite">{shownScholars.map(scholar => <Link href={`/scholars/${scholar.slug}`} key={scholar.slug} className="stl4-scholar-card"><ScholarPortrait scholar={scholar} /><div><h3>{scholar.name}</h3><p>{scholar.years}</p><p>{scholar.concerns.join("、") || scholar.school}</p><ArrowRight size={16} aria-hidden="true" /></div></Link>)}</div> : <EmptyDiscovery section={sections?.scholars}>尚无已发布学者档案。</EmptyDiscovery>}
-    </section>
-    <section className="stl4-home-section" data-edit-section="topics" aria-labelledby="home-topics">
+    </section>}
+    {homeLayout?.topics != null ? <HomeCuratedSection area="topics" cards={homeLayout.topics}/> : <section className="stl4-home-section" data-edit-section="topics" aria-labelledby="home-topics">
       <header className="stl4-home-heading"><h2 id="home-topics">探索主题 <small>Topics</small></h2><div><button type="button" disabled={topics.length < 2} onClick={() => setTopicOffset(current => rotate(topics.length, current))}><Shuffle size={15} />随机推荐<span className="sr-only">主题</span></button><Link href="/topics">查看全部 <ArrowRight size={15} /></Link></div></header>
       {shownTopics.length ? <div className="stl4-topic-grid" aria-live="polite">{shownTopics.map(topic => <Link className="stl4-topic-card" href={`/topics/${topic.slug}`} key={topic.slug}>{topic.heroImage ? <img src={topic.heroImage} alt="" loading="lazy" /> : <div className="stl4-image-missing" aria-label="尚未提供主题配图"><BookOpen size={30} strokeWidth={1} /></div>}<div><h3>{topic.name}</h3><p>{topic.description}</p><ArrowRight size={16} aria-hidden="true" /></div></Link>)}</div> : <EmptyDiscovery section={sections?.topics}>尚无已发布主题。</EmptyDiscovery>}
-    </section>
+    </section>}
   </>;
 }
 
