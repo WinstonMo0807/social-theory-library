@@ -104,10 +104,10 @@ class EntityResolutionCandidateSerializer(serializers.ModelSerializer):
     available_actions = serializers.SerializerMethodField()
     latest_decision = serializers.SerializerMethodField()
 
-    def get_available_actions(self, obj):
+    def get_available_actions(self, obj) -> list[str]:
         return available_resolution_actions(obj)
 
-    def get_latest_decision(self, obj):
+    def get_latest_decision(self, obj) -> dict | None:
         decision = (
             DecisionLog.objects.filter(
                 resolution_candidate=obj,
@@ -317,7 +317,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
     def get_document_stages(self, obj) -> dict:
         return getattr(obj, "document_stages", {"file": None, "ocr": None, "index": None})
 
-    def get_review_data(self, obj):
+    def get_review_data(self, obj) -> dict | None:
         if not obj.edition_id:
             return None
         edition = obj.edition
@@ -570,14 +570,14 @@ class UploadItemSerializer(serializers.ModelSerializer):
             ),
         }
 
-    def get_publication_reasons(self, obj):
+    def get_publication_reasons(self, obj) -> list[str]:
         if not obj.edition_id:
             return ["文献记录尚未建立"]
         from .services.publication import publication_readiness
 
         return publication_readiness(obj.edition)
 
-    def get_publication_preflight(self, obj):
+    def get_publication_preflight(self, obj) -> dict:
         if not obj.edition_id:
             return {
                 "blockers": ["文献记录尚未建立"],
@@ -588,10 +588,10 @@ class UploadItemSerializer(serializers.ModelSerializer):
 
         return publication_preflight(obj.edition)
 
-    def get_can_publish(self, obj):
+    def get_can_publish(self, obj) -> bool:
         return not self.get_publication_reasons(obj)
 
-    def get_can_manage_publication(self, obj):
+    def get_can_manage_publication(self, obj) -> bool:
         from common.capabilities import Capability, has_capability
 
         request = self.context.get("request")
@@ -601,7 +601,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
             and has_capability(request.user, Capability.PUBLISH_WORK)
         )
 
-    def get_can_withdraw(self, obj):
+    def get_can_withdraw(self, obj) -> bool:
         from common.capabilities import Capability, has_capability
 
         request = self.context.get("request")
@@ -627,10 +627,10 @@ class UploadItemSerializer(serializers.ModelSerializer):
             int((timezone.now() - obj.updated_at).total_seconds()),
         )
 
-    def get_stalled_seconds(self, obj):
+    def get_stalled_seconds(self, obj) -> int:
         return self._stalled_seconds(obj)
 
-    def get_is_stalled(self, obj):
+    def get_is_stalled(self, obj) -> bool:
         if obj.staging_backend == UploadItem.StagingBackend.R2 and obj.staging_status in {
             UploadItem.StagingStatus.UPLOADING,
             UploadItem.StagingStatus.UPLOADED,
@@ -648,7 +648,7 @@ class UploadItemSerializer(serializers.ModelSerializer):
         )
         return seconds >= threshold
 
-    def get_suggested_action(self, obj):
+    def get_suggested_action(self, obj) -> str:
         if obj.staging_backend == UploadItem.StagingBackend.R2:
             if obj.staging_status == UploadItem.StagingStatus.IMPORT_FAILED:
                 return "retry_import"
@@ -674,14 +674,14 @@ class UploadItemSerializer(serializers.ModelSerializer):
             return "retry"
         return ""
 
-    def get_queue_mode(self, obj):
+    def get_queue_mode(self, obj) -> str:
         return (
             "inline"
             if settings.CELERY_TASK_ALWAYS_EAGER
             else "worker"
         )
 
-    def get_staging(self, obj):
+    def get_staging(self, obj) -> dict | None:
         if obj.staging_backend != UploadItem.StagingBackend.R2:
             return None
         from ingestion.services.r2_staging import serialize_staging_session
@@ -717,7 +717,7 @@ class UploadBatchSerializer(serializers.ModelSerializer):
 class UploadBatchCreateSerializer(serializers.Serializer):
     """Validate the intake policy once, before any file enters the batch."""
 
-    expected_count = serializers.IntegerField(min_value=1, max_value=5)
+    expected_count = serializers.IntegerField(min_value=1, max_value=50)
     label = serializers.CharField(max_length=240, required=False, allow_blank=True, default="")
     notes = serializers.CharField(max_length=4000, required=False, allow_blank=True, default="")
     access_policy = serializers.ChoiceField(

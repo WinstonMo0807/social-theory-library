@@ -694,14 +694,14 @@ class R2StagingRetryImportView(APIView):
 
 
 class BatchItemUploadView(APIView):
-    permission_classes = [IsCatalogEditor]
+    permission_classes = [CanUpload]
     parser_classes = [MultiPartParser, FormParser]
 
     @transaction.atomic
     def post(self, request, batch_id):
         batch = get_object_or_404(
             UploadBatch.objects.select_for_update(),
-            pk=batch_id,
+            pk=batch_id, created_by=request.user,
         )
         client_token = str(request.data.get("client_token", "")).strip()[:80]
         if len(client_token) < 8:
@@ -715,7 +715,7 @@ class BatchItemUploadView(APIView):
                     "idempotent": True,
                 }
             )
-        if batch.items.count() >= min(batch.expected_count, 5):
+        if batch.items.count() >= min(batch.expected_count, 50):
             return Response({"detail": "该批次已达到预定文件数量。"}, status=409)
         uploaded = request.FILES.get("file")
         if uploaded is None:
@@ -771,10 +771,15 @@ class BatchItemUploadView(APIView):
         )
 
 
+def _is_unreceived_client_failure(item):
+    """A browser failure receipt must not prevent the same chunks from resuming."""
+    return item.status == UploadItem.Status.FAILED and item.error_code == "client_upload_failed" and not item.file
+
+
 class BatchItemChunkUploadView(APIView):
     """Receive resumable browser chunks for slow public connections."""
 
-    permission_classes = [IsCatalogEditor]
+    permission_classes = [CanUpload]
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request, batch_id):
@@ -783,9 +788,9 @@ class BatchItemChunkUploadView(APIView):
         client_token = str(request.query_params.get("client_token", "")).strip()
         if not _UPLOAD_TOKEN_PATTERN.fullmatch(client_token):
             return Response({"client_token": ["缺少有效的文件上传标识。"]}, status=400)
-        batch = get_object_or_404(UploadBatch, pk=batch_id)
+        batch = get_object_or_404(UploadBatch, pk=batch_id, created_by=request.user)
         existing = batch.items.filter(processing_token=client_token).first()
-        if existing:
+        if existing and not _is_unreceived_client_failure(existing):
             return Response(
                 {
                     "complete": True,
@@ -867,9 +872,9 @@ class BatchItemChunkUploadView(APIView):
                     status=400,
                 )
 
-        batch = get_object_or_404(UploadBatch, pk=batch_id)
+        batch = get_object_or_404(UploadBatch, pk=batch_id, created_by=request.user)
         existing = batch.items.filter(processing_token=client_token).first()
-        if existing:
+        if existing and not _is_unreceived_client_failure(existing):
             return Response(
                 {
                     "accepted": existing.status != UploadItem.Status.FAILED,
@@ -973,27 +978,20 @@ class BatchItemChunkUploadView(APIView):
         with transaction.atomic():
             locked_batch = get_object_or_404(
                 UploadBatch.objects.select_for_update(),
-                pk=batch.id,
+                pk=batch.id, created_by=request.user,
             )
             existing = locked_batch.items.filter(processing_token=client_token).first()
-            if existing is None:
-                if locked_batch.items.count() >= min(locked_batch.expected_count, 5):
+            if existing is None or _is_unreceived_client_failure(existing):
+                if existing is None and locked_batch.items.count() >= min(locked_batch.expected_count, 50):
                     return Response({"detail": "该批次已达到预定文件数量。"}, status=409)
-                item = UploadItem(
-                    batch=locked_batch,
-                    source_filename=original_name,
-                    processing_token=client_token,
-                    status=(UploadItem.Status.FAILED if rejection_reason else UploadItem.Status.RECEIVED),
-                    error_code="upload_rejected" if rejection_reason else "",
-                    error_message=rejection_reason,
-                    dispatch_status=(
-                        UploadItem.DispatchStatus.COMPLETED
-                        if rejection_reason
-                        else UploadItem.DispatchStatus.PENDING
-                    ),
-                    sha256=assembled_sha256,
-                    byte_size=assembled_size,
-                )
+                item = existing or UploadItem(batch=locked_batch, processing_token=client_token)
+                item.source_filename = original_name
+                item.status = UploadItem.Status.FAILED if rejection_reason else UploadItem.Status.RECEIVED
+                item.error_code = "upload_rejected" if rejection_reason else ""
+                item.error_message = rejection_reason
+                item.dispatch_status = UploadItem.DispatchStatus.COMPLETED if rejection_reason else UploadItem.DispatchStatus.PENDING
+                item.sha256 = assembled_sha256
+                item.byte_size = assembled_size
                 storage_write = "rejected"
                 try:
                     if not rejection_reason:
@@ -1040,13 +1038,13 @@ class BatchItemChunkUploadView(APIView):
 
 
 class BatchItemFailureView(APIView):
-    permission_classes = [IsCatalogEditor]
+    permission_classes = [CanUpload]
 
     @transaction.atomic
     def post(self, request, batch_id):
         batch = get_object_or_404(
             UploadBatch.objects.select_for_update(),
-            pk=batch_id,
+            pk=batch_id, created_by=request.user,
         )
         client_token = str(request.data.get("client_token", "")).strip()[:80]
         source_filename = Path(str(request.data.get("source_filename", ""))).name[:800]
@@ -1058,7 +1056,7 @@ class BatchItemFailureView(APIView):
         item = batch.items.filter(processing_token=client_token).first()
         created = False
         if item is None:
-            if batch.items.count() >= min(batch.expected_count, 5):
+            if batch.items.count() >= min(batch.expected_count, 50):
                 return Response({"detail": "该批次已达到预定文件数量。"}, status=409)
             item = UploadItem.objects.create(
                 batch=batch,

@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, ArrowRight, CheckCircle2, FileText, LoaderCircle, RefreshCw, Upload, X } from "lucide-react";
-import { ChangeEvent, DragEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiRequest, apiUpload, getServerSessionCredential } from "@/lib/api";
-import { useApiResource } from "@/lib/api/use-api-resource";
+import { useSearchParams } from "next/navigation";
+import { UploadBatchView, type UploadDisplayRow } from "@/components/admin/workflow/upload-batch-view";
+import { ArrowRight, FileText, LoaderCircle, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { apiRequest as rawRequest, apiUpload as rawUpload, getServerSessionCredential, subscribeToSessionChanges, type UploadProgress } from "@/lib/api";
+import { useAdminSession } from "@/lib/admin-session";
+import { withPrivateOwner } from "@/lib/api/private-owner";
+import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
+import { useUploadReservation, type BatchSummary } from "@/components/admin/workflow/use-upload-reservation";
 import { useActionGuard } from "@/lib/use-action-guard";
 import type { CatalogPublication } from "@/lib/api/admin-collections";
 import { UploadPublicationResult } from "@/components/admin/workflow/upload-publication-result";
@@ -12,8 +17,6 @@ import { RecycleControl } from "@/components/admin/recycle-control";
 import { ProcessingError } from "@/components/admin/processing-error";
 import {
   formatUploadBytes,
-  formatUploadEta,
-  formatUploadRate,
   UploadRateMeter,
 } from "@/lib/upload-metrics";
 import {
@@ -35,12 +38,14 @@ type UploadResponse = {
   rejected: { filename: string; reason: string }[];
   batch: { id: string; status: string };
 };
-type RecentBatch = {id:string;label:string;status:string;expected_count:number;completed_count:number;failed_count:number;created_at:string;items:{id:string;source_filename:string;edition:string|null}[]};
+type RecentBatch = {id:string;label:string;status:string;expected_count:number;completed_count:number;failed_count:number;created_at:string;items:IngestionItem[];access_policy:AccessPolicy;ocr_strategy:OcrStrategy;duplicate_policy:DuplicatePolicy;external_enrichment_enabled:boolean;ai_suggestions_enabled:boolean};
 
 type QueuedFile = {
   file: File;
   token: string;
-  status: "waiting" | "uploading" | "accepted" | "failed";
+  status: "waiting" | "uploading" | "accepted" | "failed" | "paused";
+  itemId?: string;
+  fingerprint?: string;
   message: string;
   progress: number;
   uploadedBytes: number;
@@ -106,6 +111,7 @@ type IngestionCandidate = {
 type IngestionItem = {
   id: string;
   source_filename: string;
+  byte_size?: number;
   status: string;
   stage_progress: number;
   error_code: string;
@@ -120,6 +126,9 @@ type IngestionItem = {
     detected_ocr_pages?: number;
     scheduled_ocr_pages?: number;
     ocr_strategy?: OcrStrategy;
+    ocr_decision?: "required" | "not_required" | "forced" | "skipped";
+    ocr_reason_counts?: Record<string, number>;
+    ocr_detection_version?: string;
     exact_duplicate?: boolean;
   };
   edition: string | null;
@@ -149,10 +158,7 @@ type AccessPolicy = "public" | "registered" | "restricted";
 type OcrStrategy = "auto" | "force" | "skip";
 type DuplicatePolicy = "review" | "block_exact" | "allow";
 
-const MEBIBYTE = 1024 * 1024;
-const CHUNK_SIZE = 2 * MEBIBYTE;
-const PUBLIC_CHUNK_THRESHOLD = 4 * MEBIBYTE;
-const RESUME_STORAGE_KEY = "library_chunk_upload_sessions_v1";
+const RESUME_STORAGE_KEY = "stl-upload-resume-v2";
 const METADATA_FILE_EXTENSIONS = new Set(["ris", "bib", "bibtex", "json", "yaml", "yml"]);
 const INGESTION_TERMINAL_STATUSES = new Set([
   "needs_review",
@@ -198,6 +204,30 @@ const textProfileLabels: Record<string, string> = {
   mixed: "文字与扫描混合",
 };
 
+const ocrReasonLabels: Record<string, string> = {
+  scanned_page: "扫描图像",
+  missing_tounicode: "文字编码无法映射",
+  insufficient_text: "文字层不足",
+};
+
+function ocrPreflightLabel(summary: IngestionItem["preflight_summary"]) {
+  if (summary.ocr_decision === "required") return `需要 OCR · 自动安排 ${summary.scheduled_ocr_pages ?? 0} 页`;
+  if (summary.ocr_decision === "forced") return `已强制 OCR · 安排 ${summary.scheduled_ocr_pages ?? 0} 页`;
+  if (summary.ocr_decision === "skipped") return `检测到 ${summary.detected_ocr_pages ?? 0} 页需要 OCR，但本批策略已跳过`;
+  if (summary.ocr_decision === "not_required") return "无需 OCR · 已有可用文字层";
+  if (summary.scheduled_ocr_pages !== undefined) return `${summary.scheduled_ocr_pages} 页进入 OCR 安排`;
+  return "等待服务端预检";
+}
+
+function ocrPreflightDetail(summary: IngestionItem["preflight_summary"]) {
+  const reasons = Object.entries(summary.ocr_reason_counts || {})
+    .filter(([, count]) => count > 0)
+    .map(([reason, count]) => `${ocrReasonLabels[reason] || reason} ${count} 页`);
+  if (reasons.length) return `判定依据：${reasons.join("、")}。结果来自服务端逐页 PDF 预检。`;
+  if (summary.text_profile === "born_digital") return "文字层可直接用于全文提取，后续仍需等待索引任务。";
+  return "结果来自服务端逐页 PDF 预检，上传卡片会随处理进度更新。";
+}
+
 function displayMetadataValue(value: unknown) {
   if (Array.isArray(value)) return value.map(String).join("、");
   if (value === null || value === undefined || value === "") return "待识别";
@@ -208,33 +238,25 @@ function fileFingerprint(file: File) {
   return `${file.name}:${file.size}:${file.lastModified}`;
 }
 
-type ResumeSession = {
-  batchId: string;
-  token: string;
-  filename: string;
-  size: number;
-  lastModified: number;
-  updatedAt: number;
-  chunkSize?: number;
-};
-
-function loadResumeSessions(): Record<string, ResumeSession> {
-  if (typeof window === "undefined") return {};
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(RESUME_STORAGE_KEY) || "{}");
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+type ResumeSession = {batchId:string;token:string;updatedAt:number;chunkSize:number};
+// Persist only an owner-scoped content digest and opaque resume identifiers.
+// The previous unscoped store is deliberately not imported into any account.
+function loadResumeSessions(owner:string):Record<string,ResumeSession> {
+  try {const parsed=JSON.parse(localStorage.getItem(`${RESUME_STORAGE_KEY}:${owner}`)||"{}");
+    return Object.fromEntries(Object.entries(parsed).filter((entry):entry is [string,ResumeSession]=>{
+      const value=entry[1] as ResumeSession;return /^[a-f0-9]{64}$/.test(entry[0])&&value&&typeof value.batchId==="string"&&typeof value.token==="string"&&Number.isFinite(value.chunkSize)&&value.chunkSize>0&&value.updatedAt>Date.now()-30*86400000;
+    }));
+  } catch{return {};}
 }
-
-function saveResumeSession(file: File, session: ResumeSession | null) {
-  if (typeof window === "undefined") return;
-  const sessions = loadResumeSessions();
-  const fingerprint = fileFingerprint(file);
-  if (session) sessions[fingerprint] = session;
-  else delete sessions[fingerprint];
-  window.localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(sessions));
+function persistResume(owner:string,fingerprint:string|undefined,session:Omit<ResumeSession,"updatedAt">|null) {
+  if(!fingerprint)return;
+  try{const sessions=loadResumeSessions(owner);if(session)sessions[fingerprint]={...session,updatedAt:Date.now()};else delete sessions[fingerprint];localStorage.setItem(`${RESUME_STORAGE_KEY}:${owner}`,JSON.stringify(sessions));}catch{/* Upload remains resumable in this page if browser storage is unavailable. */}
+}
+async function contentFingerprint(owner:string,file:File) {
+  if(!globalThis.crypto?.subtle)return undefined;
+  const bytes=await file.arrayBuffer(),digest=await crypto.subtle.digest("SHA-256",bytes);
+  const scoped=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(`${owner}:${file.name}:${Array.from(new Uint8Array(digest),value=>value.toString(16).padStart(2,"0")).join("")}`));
+  return Array.from(new Uint8Array(scoped),value=>value.toString(16).padStart(2,"0")).join("");
 }
 
 function uploadToken() {
@@ -242,15 +264,6 @@ function uploadToken() {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-function isPrivateNetworkHost(hostname: string) {
-  return hostname === "localhost"
-    || hostname === "127.0.0.1"
-    || hostname === "::1"
-    || hostname.startsWith("192.168.")
-    || hostname.startsWith("10.")
-    || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
 }
 
 function chunkByteLength(totalBytes: number, chunkSize: number, chunkIndex: number) {
@@ -310,13 +323,40 @@ function buildMetadataPairings(pdfFiles: QueuedFile[], metadataFiles: File[]) {
   })) as Record<string, MetadataPairing>;
 }
 
+type UploadWorkspace = {owner_id:string;transport:"local"|"r2";max_files:number;max_file_bytes:number;chunk_bytes:number;recent:BatchSummary[];batch:RecentBatch|null;version:string};
 export function AdminUpload() {
+  const user=useAdminSession(),batchId=useSearchParams().get("batch")||"",[epoch,setEpoch]=useState(0);
+  useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
+  return user?<AdminUploadBody key={`${user.id}:${epoch}:${batchId}`} owner={String(user.id)} batchId={batchId}/>:<p>正在核对上传账户…</p>;
+}
+function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
+  const transfer = useRef<AbortController|null>(null), paused=useRef(new Set<string>()), selecting=useRef(false), reservedTokens=useRef<string[]>([]);
+  const [activeBatchId,setActiveBatchId]=useState(batchId),[preparing,setPreparing]=useState(false),[invalidFiles,setInvalidFiles]=useState<{id:string;filename:string;size:number;message:string}[]>([]);
+  const reservation=useUploadReservation(owner);
+  const loadWorkspace=useCallback((url:string,signal:AbortSignal)=>rawRequest<UploadWorkspace>(url,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
+  const workspace=usePersistentWorkspace<UploadWorkspace>(`/ingestion/upload-workspace/${activeBatchId?`?batch=${encodeURIComponent(activeBatchId)}`:""}`,owner,data=>data.batch?.items.some(item=>!INGESTION_TERMINAL_STATUSES.has(item.status))?3000:null,loadWorkspace);
+  const apiRequest=useCallback(async <T,>(path:string,options:RequestInit={},_credential?:string|null) => {
+    void _credential;
+    const signal=AbortSignal.any([...(transfer.current?[transfer.current.signal]:[]),...(options.signal?[options.signal]:[]),AbortSignal.timeout(60000)]);
+    return withPrivateOwner(owner,()=>rawRequest<T>(path,{...options,signal,cache:"no-store",headers:{...options.headers,"X-Editor-Owner":owner}},getServerSessionCredential(),false),signal);
+  },[owner]);
+  async function apiUpload<T>(path:string,body:FormData,_credential?:string|null,onProgress?:(progress:UploadProgress)=>void) {
+    void _credential;
+    const signal=AbortSignal.any([...(transfer.current?[transfer.current.signal]:[]),AbortSignal.timeout(15*60*1000)]);
+    return withPrivateOwner(owner,()=>rawUpload<T>(path,body,getServerSessionCredential(),onProgress,false,{signal,timeoutMs:15*60*1000}),signal);
+  }
+  async function waitForResume(item:QueuedFile) {
+    transfer.current?.signal.throwIfAborted();
+    while(paused.current.has(item.token)){updateFile(item.token,{status:"paused",message:"上传已暂停，已确认分段保留"});await new Promise<void>(resolve=>setTimeout(resolve,200));transfer.current?.signal.throwIfAborted();}
+  }
+  function pauseFile(item:QueuedFile,pause=true){if(pause)paused.current.add(item.token);else paused.current.delete(item.token);if(workspace.data?.transport==="r2")r2MultipartUploadManager.pause(uploadSnapshots.find(row=>row.taskId===item.token||Boolean(item.sessionId)&&row.sessionId===item.sessionId)?.taskId||item.token,pause);updateFile(item.token,{status:pause?"paused":"uploading",message:pause?"完成当前分段后暂停":"继续上传"});}
+
   const { startAction, finishAction } = useActionGuard();
-  const input = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<QueuedFile[]>([]);
   const [previewToken, setPreviewToken] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
-  const previewFile = files.find(item => item.token === previewToken) ?? files[0];
+  const previewFile = previewToken?files.find(item => item.token === previewToken):files[0];
+  const detailItemId=files.find(item=>item.token===previewToken)?.itemId||files.find(item=>item.token===previewToken)?.sessionId||previewToken;
   const previewPdf = previewFile?.file;
   useEffect(() => {
     const url = previewPdf ? URL.createObjectURL(previewPdf) : "";
@@ -325,19 +365,20 @@ export function AdminUpload() {
   }, [previewPdf]);
   const [metadataFiles, setMetadataFiles] = useState<File[]>([]);
   const [metadataImportStates, setMetadataImportStates] = useState<Record<string, MetadataImportState>>({});
-  const [batchLabel, setBatchLabel] = useState("");
-  const [accessPolicy, setAccessPolicy] = useState<AccessPolicy>("public");
-  const [ocrStrategy, setOcrStrategy] = useState<OcrStrategy>("auto");
-  const [duplicatePolicy, setDuplicatePolicy] = useState<DuplicatePolicy>("review");
-  const externalEnrichmentEnabled = false;
-  const aiSuggestionsEnabled = false;
+  const [labelDraft,setBatchLabel]=useState<string|null>(null);
+  const batchLabel=labelDraft??workspace.data?.batch?.label??"";
+  const [accessDraft, setAccessPolicy] = useState<AccessPolicy>("public");
+  const [ocrDraft, setOcrStrategy] = useState<OcrStrategy>("auto");
+  const [duplicateDraft, setDuplicatePolicy] = useState<DuplicatePolicy>("review");
+  const accessPolicy=workspace.data?.batch?.access_policy??accessDraft,ocrStrategy=workspace.data?.batch?.ocr_strategy??ocrDraft,duplicatePolicy=workspace.data?.batch?.duplicate_policy??duplicateDraft;
+  const externalEnrichmentEnabled = workspace.data?.batch?.external_enrichment_enabled??false;
+  const aiSuggestionsEnabled = workspace.data?.batch?.ai_suggestions_enabled??false;
   const [pending, setPending] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const dragDepth = useRef(0);
   const [result, setResult] = useState<UploadResponse | null>(null);
-  const recentBatches = useApiResource<{results:RecentBatch[]}>("/ingestion/batches/?page_size=5", getServerSessionCredential(), result?.batch.id || "");
+  const recentBatches = {retry:workspace.reload};
   const [error, setError] = useState("");
-  const [ingestionItems, setIngestionItems] = useState<IngestionItem[]>([]);
+  const [ingestionLive, setIngestionItems] = useState<IngestionItem[]>([]);
+  const ingestionItems = [...ingestionLive,...(workspace.data?.batch?.items||[]).filter(item=>!ingestionLive.some(row=>row.id===item.id))];
   const [ingestionError, setIngestionError] = useState("");
   const [retryingItem, setRetryingItem] = useState("");
   const [stagingSessions, setStagingSessions] = useState<R2StagingSession[]>([]);
@@ -357,27 +398,25 @@ export function AdminUpload() {
     [metadataPairings],
   );
 
+  const configuredTransport=workspace.data?.transport;
   const refreshStagingSessions = useCallback(async () => {
     const token = getServerSessionCredential();
     if (!token) return;
     try {
-      const sessions = await loadR2StagingSessions();
+      if(configuredTransport!=="r2")return;
+      const sessions = await loadR2StagingSessions(owner);
       setStagingSessions(sessions);
       r2MultipartUploadManager.hydrateSessions(sessions);
       setStagingError("");
     } catch (reason) {
       setStagingError(reason instanceof Error ? reason.message : "暂时无法读取上传会话。");
     }
-  }, []);
+  }, [owner,configuredTransport]);
 
-  useEffect(() => r2MultipartUploadManager.subscribe((snapshots) => {
+  useEffect(() => {r2MultipartUploadManager.bindOwner(owner);return r2MultipartUploadManager.subscribe((snapshots) => {
     setUploadSnapshots(snapshots);
     setFiles((current) => current.map((item) => {
-      const snapshot = snapshots.find(
-        (value) => value.filename === item.file.name
-          && value.fileSize === item.file.size
-          && value.fileLastModified === item.file.lastModified,
-      );
+      const snapshot = snapshots.find(value=>value.taskId===item.token||Boolean(item.sessionId)&&value.sessionId===item.sessionId);
       if (!snapshot) return item;
       return {
         ...item,
@@ -386,7 +425,7 @@ export function AdminUpload() {
           ? "accepted"
           : snapshot.status === "failed" || snapshot.status === "aborted"
             ? "failed"
-            : "uploading",
+            : snapshot.status === "paused" ? "paused" : "uploading",
         message: snapshot.message,
         progress: snapshot.progress,
         uploadedBytes: snapshot.uploadedBytes,
@@ -395,7 +434,7 @@ export function AdminUpload() {
         etaSeconds: snapshot.etaSeconds,
       };
     }));
-  }), []);
+  });}, [owner]);
 
   useEffect(() => {
     const initial = setTimeout(() => void refreshStagingSessions(), 0);
@@ -442,63 +481,36 @@ export function AdminUpload() {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [result]);
+  }, [result,apiRequest]);
 
-  function addFiles(list: FileList | null) {
-    if (!list) return;
-    const incoming = Array.from(list);
-    const incomingMetadata = incoming.filter(isMetadataFile);
-    if (incomingMetadata.length) {
-      setMetadataFiles((current) => {
-        const identities = new Set(current.map(metadataIdentity));
-        return current.concat(
-          incomingMetadata.filter((file) => !identities.has(metadataIdentity(file))),
-        ).slice(0, 100);
-      });
-    }
-    const pdfCount = incoming.filter((file) => file.name.toLocaleLowerCase().endsWith(".pdf")).length;
-    const known = new Set(files.map(item => fileFingerprint(item.file)));
-    const additions = incoming.filter(file => file.name.toLocaleLowerCase().endsWith(".pdf") && !known.has(fileFingerprint(file)));
-    if (files.length + additions.length > 5) {
-      setError("每批最多选择 5 个 PDF。已保留当前文件，请减少本次选择后重试。");
-      return;
-    }
-    if (!pdfCount && !incomingMetadata.length) {
-      setError("拖入的文件中没有可识别的 PDF 或配套元数据文件。");
-      return;
-    }
-    setError("");
-    setFiles((current) => {
-      const identities = new Set(current.map((item) => `${item.file.name}:${item.file.size}`));
-      return current.concat(
-        incoming.filter(
-          (file) =>
-            file.name.toLocaleLowerCase().endsWith(".pdf") &&
-            !identities.has(`${file.name}:${file.size}`),
-        ).map((file) => {
-          const resume = stagingSessions.find(
-            (session) => session.staging_status === "uploading"
-              && session.source_filename === file.name
-              && session.file_size === file.size
-              && (!session.file_last_modified || session.file_last_modified === file.lastModified),
-          );
-          return {
-            file,
-            token: uploadToken(),
-            status: "waiting" as const,
-            message: resume ? "发现服务端可恢复上传，请继续未完成 part" : "",
-            progress: 0,
-            uploadedBytes: 0,
-            speedBps: 0,
-            averageSpeedBps: 0,
-            etaSeconds: null,
-            sessionId: resume?.upload_session_id,
-            chunkSize: CHUNK_SIZE,
-          };
-        }),
-      ).slice(0, 5);
-    });
+  async function addFiles(list: FileList | null) {
+    if(!list||reservation.recovery||selecting.current||pending)return;
+    if(!workspace.data){setError("请先读取当前上传能力后再选择文件。");return;}
+    const incoming=Array.from(list),metadata=incoming.filter(isMetadataFile);
+    setMetadataFiles(current=>{const known=new Set(current.map(metadataIdentity));return current.concat(metadata.filter(file=>!known.has(metadataIdentity(file)))).slice(0,100);});
+    const rejected=incoming.filter(file=>!isMetadataFile(file)&&(!file.name.toLowerCase().endsWith(".pdf")||file.size<5||file.size>workspace.data!.max_file_bytes));
+    setInvalidFiles(current=>current.concat(rejected.map(file=>({id:uploadToken(),filename:file.name,size:file.size,message:!file.name.toLowerCase().endsWith(".pdf")?"格式不支持，请选择 PDF 文件。":file.size<5?"文件为空或不完整，请重新导出 PDF。":"文件超过本页单个文件大小上限，请重新选择。"}))));
+    const known=new Set(files.map(item=>fileFingerprint(item.file))),valid=incoming.filter(file=>!isMetadataFile(file)&&!rejected.includes(file)&&!known.has(fileFingerprint(file)));
+    if(files.length+valid.length>workspace.data.max_files){setError("当前列表最多50个PDF，请减少本次选择。已选文件保留。");return;}
+    selecting.current=true;setPreparing(true);setError("");
+    const controller=new AbortController(),unsubscribe=subscribeToSessionChanges(()=>controller.abort());
+    try{
+      const additions:QueuedFile[]=[],sessions=loadResumeSessions(owner);
+      for(const file of valid){
+        controller.signal.throwIfAborted();
+        const fingerprint=await contentFingerprint(owner,file);controller.signal.throwIfAborted();
+        const local=fingerprint?sessions[fingerprint]:undefined;
+        // R2 sessions are matched by the content-derived token, never by filename alone.
+        const token=local?.token||`${uploadToken().slice(0,16)}-${fingerprint?.slice(0,32)||uploadToken()}`;
+        const resume=stagingSessions.find(session=>session.staging_status==="uploading"&&session.source_filename===file.name&&session.file_size===file.size&&session.client_token===token);
+        additions.push({file,token,status:"waiting",fingerprint,message:local||resume?"已匹配当前账户恢复记录，开始时核对服务端分段。":"",progress:0,uploadedBytes:0,speedBps:0,averageSpeedBps:0,etaSeconds:null,sessionId:resume?.upload_session_id,resumeBatchId:local?.batchId,chunkSize:local?.chunkSize||workspace.data.chunk_bytes});
+      }
+      controller.signal.throwIfAborted();setFiles(current=>{const seen=new Set(current.map(item=>fileFingerprint(item.file)));return current.concat(additions.filter(item=>!seen.has(fileFingerprint(item.file))));});
+    }catch(reason){if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:"无法准备文件，请重新选择。");}finally{unsubscribe();selecting.current=false;setPreparing(false);}
   }
+  function saveResumeSession(item:QueuedFile,session:Omit<ResumeSession,"updatedAt">|null){persistResume(owner,item.fingerprint,session);}
+  async function renameBatch(){if(!workspace.data?.batch)return;const result=await reservation.send({action:"rename",batch_id:workspace.data.batch.id,expected_version:workspace.data.version,label:batchLabel});if(result){setBatchLabel(result.label);workspace.reload();}}
+  async function recoverReservation(cancel=false){const receipt=await reservation.lookup(cancel);if(receipt?.batch){const batch=receipt.batch;setFiles(rows=>rows.map(row=>{if(!reservedTokens.current.includes(row.token))return row;saveResumeSession(row,{batchId:batch.id,token:row.token,chunkSize:row.chunkSize});return {...row,resumeBatchId:batch.id};}));setActiveBatchId(batch.id);workspace.reload();}if(receipt)reservedTokens.current=[];}
 
   function updateFile(token: string, patch: Partial<QueuedFile>) {
     setFiles((current) => current.map(
@@ -538,7 +550,7 @@ export function AdminUpload() {
     setStagingAction(sessionId);
     setStagingError("");
     try {
-      await r2MultipartUploadManager.abort(sessionId);
+      await r2MultipartUploadManager.abort(sessionId,owner);
       await refreshStagingSessions();
     } catch (reason) {
       setStagingError(reason instanceof Error ? reason.message : "取消上传失败。");
@@ -554,7 +566,7 @@ export function AdminUpload() {
     setStagingAction(sessionId);
     setStagingError("");
     try {
-      await retryR2Import(sessionId);
+      await withPrivateOwner(owner,()=>retryR2Import(sessionId));
       await refreshStagingSessions();
     } catch (reason) {
       setStagingError(reason instanceof Error ? reason.message : "重新入库失败。");
@@ -571,37 +583,23 @@ export function AdminUpload() {
       return;
     }
     const waiting = files.filter((item) => onlyToken ? item.token === onlyToken && item.status === "failed" : item.status === "waiting");
-    if (!waiting.length || !startAction("upload")) return;
+    if (preparing||!workspace.data||reservation.recovery||!reservation.ready||!waiting.length || !startAction("upload")) return;
+    const controller=new AbortController();transfer.current=controller;const unsubscribe=subscribeToSessionChanges(()=>controller.abort());
     setPending(true);
     setError("");
     setIngestionError("");
     try {
-      const shouldUseChunkUpload = (item: QueuedFile) => item.file.size >= PUBLIC_CHUNK_THRESHOLD
-        && !isPrivateNetworkHost(window.location.hostname);
-      const freshItems = waiting.filter((item) => !item.sessionId);
-      const freshBatch = freshItems.length
-        ? await apiRequest<{ id: string; status: string }>(
-          "/ingestion/batches/create/",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              expected_count: freshItems.length,
-              label: batchLabel.trim(),
-              access_policy: accessPolicy,
-              ocr_strategy: ocrStrategy,
-              duplicate_policy: duplicatePolicy,
-              external_enrichment_enabled: externalEnrichmentEnabled,
-              ai_suggestions_enabled: aiSuggestionsEnabled,
-            }),
-          },
-          token,
-        )
-        : null;
+      const shouldUseChunkUpload = (item: QueuedFile) => item.file.size >= 5;
+      const freshItems = waiting.filter((item) => !item.sessionId&&!item.resumeBatchId);
+      reservedTokens.current=freshItems.map(item=>item.token);
+      const freshBatch = freshItems.length ? await reservation.send({action:"reserve",...(workspace.data.batch?{batch_id:workspace.data.batch.id,expected_version:workspace.data.version}:{}),policy:{expected_count:freshItems.length,label:batchLabel.trim(),access_policy:accessPolicy,ocr_strategy:ocrStrategy,duplicate_policy:duplicatePolicy,external_enrichment_enabled:externalEnrichmentEnabled,ai_suggestions_enabled:aiSuggestionsEnabled}}) : null;
+      if(freshItems.length&&!freshBatch)throw Error("批次尚未确认，请先查回原请求。");
+      if(freshBatch){for(const item of freshItems){saveResumeSession(item,{batchId:freshBatch.id,token:item.token,chunkSize:item.chunkSize});updateFile(item.token,{resumeBatchId:freshBatch.id});}setActiveBatchId(freshBatch.id);reservedTokens.current=[];}
       const resumedSession = stagingSessions.find(
         (session) => session.upload_session_id === waiting[0].sessionId,
       );
       const displayBatch = freshBatch || {
-        id: resumedSession?.batch_id || "existing-r2-session",
+        id: resumedSession?.batch_id || waiting[0].resumeBatchId || "",
         status: "resuming",
       };
       const accepted: string[] = [...(result?.accepted ?? [])];
@@ -659,10 +657,8 @@ export function AdminUpload() {
         }
       }
 
-      // Every normal browser origin uses R2 staging. The legacy Django chunk
-      // implementation below remains readable for historical in-flight
-      // sessions, but the current upload page never sends PDF bytes to it.
-      if (window.location.protocol === "https:" || window.location.protocol === "http:") {
+      // Use the configured service; both transports share the existing intake pipeline.
+      if (workspace.data.transport === "r2" || waiting.some(item=>item.sessionId)) {
         async function sendR2File(item: QueuedFile) {
           updateFile(item.token, {
             status: "uploading",
@@ -674,19 +670,22 @@ export function AdminUpload() {
             etaSeconds: null,
           });
           try {
+            await waitForResume(item);
             const existing = item.sessionId
               ? stagingSessions.find((session) => session.upload_session_id === item.sessionId)
               : undefined;
-            if (!existing && !freshBatch) {
+            if (!existing && !freshBatch && !item.resumeBatchId) {
               throw new Error("没有可用的上传批次，请重新选择 PDF。")
             }
             const session = existing
-              ? await r2MultipartUploadManager.resume(item.file, existing)
-              : await r2MultipartUploadManager.start(item.file, freshBatch!.id, item.token);
-            accepted.push(session.upload_session_id);
+              ? await r2MultipartUploadManager.resume(item.file, existing, owner)
+              : await r2MultipartUploadManager.start(item.file, item.resumeBatchId||freshBatch!.id, item.token, owner);
+            if(!accepted.includes(session.upload_session_id))accepted.push(session.upload_session_id);
+            setResult({accepted:[...accepted],rejected:[...rejected],batch:displayBatch});
             const metadataMessage = await importMatchedMetadata(session.upload_session_id, item);
             updateFile(item.token, {
               sessionId: session.upload_session_id,
+              itemId: session.upload_session_id,
               status: "accepted",
               message: metadataMessage.includes("元数据")
                 ? `浏览器上传完成，正在导入书库存储；${metadataMessage.replace(/^上传完成[；，]?/, "")}`
@@ -705,6 +704,7 @@ export function AdminUpload() {
 
         async function r2Worker() {
           while (cursor < waiting.length) {
+          controller.signal.throwIfAborted();
             const item = waiting[cursor];
             cursor += 1;
             await sendR2File(item);
@@ -727,11 +727,7 @@ export function AdminUpload() {
           `/ingestion/batches/${targetBatchId}/chunks/?client_token=${encodeURIComponent(item.token)}`,
           {},
           token,
-        ).catch((): ChunkUploadResponse => ({
-          accepted: false,
-          complete: false,
-          received_indices: [],
-        }));
+        );
         if (saved.complete && saved.item) {
           return {
             accepted: saved.item.status !== "failed",
@@ -777,6 +773,7 @@ export function AdminUpload() {
         }
         for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
           if (received.has(chunkIndex)) continue;
+          await waitForResume(item);
           const start = chunkIndex * chunkSize;
           const end = Math.min(item.file.size, start + chunkSize);
           const chunk = item.file.slice(start, end, "application/octet-stream");
@@ -819,6 +816,7 @@ export function AdminUpload() {
               );
               break;
             } catch (reason) {
+              controller.signal.throwIfAborted();
               lastError = reason;
             }
           }
@@ -836,13 +834,9 @@ export function AdminUpload() {
               : `已完成分段 ${chunkIndex + 1}/${totalChunks}`,
           });
           finalResponse = response;
-          saveResumeSession(item.file, {
+          saveResumeSession(item, {
             batchId: targetBatchId,
             token: item.token,
-            filename: item.file.name,
-            size: item.file.size,
-            lastModified: item.file.lastModified,
-            updatedAt: Date.now(),
             chunkSize,
           });
         }
@@ -867,6 +861,7 @@ export function AdminUpload() {
         });
         let lastReason = "上传中断";
         for (let attempt = 0; attempt < 3; attempt += 1) {
+          await waitForResume(item);
           const body = new FormData();
           body.append("file", item.file);
           body.append("client_token", item.token);
@@ -880,14 +875,10 @@ export function AdminUpload() {
               : freshBatch?.id;
             if (!targetBatchId) throw new Error("没有可用的上传批次，请重新选择文件。");
             if (useChunks) {
-              saveResumeSession(item.file, {
+              saveResumeSession(item, {
                 batchId: targetBatchId,
                 token: item.token,
-                filename: item.file.name,
-                size: item.file.size,
-                lastModified: item.file.lastModified,
-                updatedAt: Date.now(),
-                chunkSize: item.chunkSize,
+                    chunkSize: item.chunkSize,
               });
             }
             const response = useChunks
@@ -918,8 +909,10 @@ export function AdminUpload() {
                 },
               );
             if (response.accepted) {
-              saveResumeSession(item.file, null);
-              accepted.push(response.item.id);
+              saveResumeSession(item, null);
+              if(!accepted.includes(response.item.id))accepted.push(response.item.id);
+              updateFile(item.token,{itemId:response.item.id});
+              setResult({accepted:[...accepted],rejected:[...rejected],batch:displayBatch});
               const completionMessage = await importMatchedMetadata(response.item.id, item);
               updateFile(item.token, {
                 status: "accepted",
@@ -935,6 +928,7 @@ export function AdminUpload() {
             }
             return;
           } catch (reason) {
+            controller.signal.throwIfAborted();
             lastReason = reason instanceof Error ? reason.message : "上传中断";
           }
         }
@@ -973,6 +967,7 @@ export function AdminUpload() {
 
       async function worker() {
         while (cursor < waiting.length) {
+          controller.signal.throwIfAborted();
           const item = waiting[cursor];
           cursor += 1;
           await sendFile(item);
@@ -989,16 +984,22 @@ export function AdminUpload() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "上传失败。");
     } finally {
+      unsubscribe();transfer.current=null;workspace.reload();
       setPending(false);
       finishAction("upload");
     }
   }
 
-  return (
-    <div className="admin-page upload-page">
-      <header className="admin-page-title"><div><p>管理后台 / 上传</p><h1>上传</h1><span>一次选择最多 5 个 PDF，每个文件独立校验、重试，再进入馆藏工作页。</span></div></header>
-      <details className="upload-policy-panel admin-panel" aria-labelledby="upload-policy-title">
-        <summary id="upload-policy-title">本批处理方式与访问权限</summary>
+  const displayRows:UploadDisplayRow[] = files.map(item=>{
+    const source=ingestionItems.find(row=>row.id===(item.itemId||item.sessionId)),kind=String(source?.review_data?.document_type||source?.recognized_metadata.document_type||"");
+    const category:UploadDisplayRow["category"]=source?.preflight_summary?.exact_duplicate?"duplicate":source?.status==="failed"||item.status==="failed"?"failed":item.status==="paused"?"paused":item.status==="uploading"?"active":source&&!INGESTION_TERMINAL_STATUSES.has(source.status)?"active":item.status==="accepted"?"done":"waiting";
+    return {id:item.token,filename:item.file.name,size:item.file.size,profile:textProfileLabels[source?.preflight_summary?.text_profile||""],kind:({book:"图书",journal_article:"期刊论文",journal_issue:"整期期刊",thesis:"学位论文",report:"研究报告"} as Record<string,string>)[kind]||kind,progress:item.progress,stageProgress:source?.stage_progress,canPreview:true,category,status:source?ingestionStatusLabels[source.status]||source.status:item.status==="paused"?"已暂停":item.status==="accepted"?"上传完成 · 等待识别":item.status==="uploading"?"上传中":item.status==="failed"?"上传失败":"等待上传",detail:source?.error_message||item.message,select:()=>setPreviewToken(item.token),actions:<>{["uploading","paused"].includes(item.status)?<button type="button" onClick={()=>pauseFile(item,item.status!=="paused")}>{item.status==="paused"?"继续":"暂停"}</button>:null}{item.status==="failed"?<button disabled={pending||Boolean(reservation.recovery)} onClick={()=>void upload(item.token)}>重试</button>:null}{source?<><Link href={`/admin/intake/${source.id}`}>{source.preflight_summary?.exact_duplicate?"核对重复与版本":"前往编目"}</Link>{source.status==="failed"?<button disabled={Boolean(retryingItem)} onClick={()=>void retryIngestionItem(source.id)}>重试处理</button>:null}</>:null}<button disabled={pending} onClick={()=>setFiles(rows=>rows.filter(row=>row.token!==item.token))}>移除列表项</button></>};
+  });
+  for(const item of ingestionItems)if(!files.some(row=>row.itemId===item.id||row.sessionId===item.id))displayRows.push({id:item.id,filename:item.source_filename,size:item.byte_size||0,profile:textProfileLabels[item.preflight_summary?.text_profile||""],kind:String(item.review_data?.document_type||item.recognized_metadata.document_type||""),progress:100,stageProgress:item.stage_progress,select:()=>setPreviewToken(item.id),category:item.preflight_summary?.exact_duplicate?"duplicate":item.status==="failed"?"failed":INGESTION_TERMINAL_STATUSES.has(item.status)?"done":"active",status:ingestionStatusLabels[item.status]||item.status,detail:item.error_message||"文件已接收，识别状态来自后台任务。",actions:<><Link href={`/admin/intake/${item.id}`}>查看并编目</Link>{item.status==="failed"?<button disabled={Boolean(retryingItem)} onClick={()=>void retryIngestionItem(item.id)}>重试处理</button>:null}</>});
+  for(const item of invalidFiles)displayRows.push({id:item.id,filename:item.filename,size:item.size,profile:"未上传",kind:"",progress:0,status:"无法上传",category:"failed",detail:item.message,select:()=>setPreviewToken(item.id),actions:<button onClick={()=>setInvalidFiles(rows=>rows.filter(row=>row.id!==item.id))}>移除列表项</button>});
+  return <UploadBatchView rows={displayRows} label={batchLabel} onLabel={setBatchLabel} saveLabel={workspace.data?.batch?()=>void renameBatch():undefined} addFiles={list=>void addFiles(list)} locked={preparing||!workspace.data||!reservation.ready||Boolean(reservation.recovery)||reservation.busy} pending={pending} canStart={files.some(row=>row.status==="waiting")} start={()=>void upload()} pauseAll={ids=>files.filter(row=>(!ids||ids.includes(row.token))&&["waiting","uploading"].includes(row.status)).forEach(row=>pauseFile(row))} resumeAll={ids=>files.filter(row=>(!ids||ids.includes(row.token))&&row.status==="paused").forEach(row=>pauseFile(row,false))} retryAll={ids=>void (async()=>{for(const row of files.filter(row=>(!ids||ids.includes(row.token))&&row.status==="failed"))await upload(row.token);for(const row of ingestionItems.filter(row=>(!ids||ids.includes(row.id))&&row.status==="failed"))await retryIngestionItem(row.id);})()} clear={()=>{setActiveBatchId("");setBatchLabel(null);paused.current.clear();setInvalidFiles([]);setFiles([]);setMetadataFiles([]);setResult(null);setIngestionItems([]);}} maxFiles={workspace.data?.max_files} maxBytes={workspace.data?.max_file_bytes} title={activeBatchId?"批次详情与上传恢复":"批量收件与上传"}
+    policy={<div className="upload-policy-panel admin-panel">
+        <h3 id="upload-policy-title">本批处理方式与访问权限</h3>
         <header>
           <div>
             <p>这些选项只作用于本次新建批次，之后仍可在审校和发布阶段调整馆藏内容。</p>
@@ -1011,7 +1012,7 @@ export function AdminUpload() {
               type="text"
               value={batchLabel}
               maxLength={240}
-              disabled={pending}
+              disabled={pending||Boolean(workspace.data?.batch)}
               placeholder="例如 2026 秋季中文社会理论"
               onChange={(event) => setBatchLabel(event.target.value)}
             />
@@ -1021,7 +1022,7 @@ export function AdminUpload() {
             <span>访问权限</span>
             <select
               value={accessPolicy}
-              disabled={pending}
+              disabled={pending||Boolean(workspace.data?.batch)}
               onChange={(event) => setAccessPolicy(event.target.value as AccessPolicy)}
             >
               <option value="public">公开访问</option>
@@ -1034,7 +1035,7 @@ export function AdminUpload() {
             <span>OCR 策略</span>
             <select
               value={ocrStrategy}
-              disabled={pending}
+              disabled={pending||Boolean(workspace.data?.batch)}
               onChange={(event) => setOcrStrategy(event.target.value as OcrStrategy)}
             >
               <option value="auto">自动检测（推荐）</option>
@@ -1047,7 +1048,7 @@ export function AdminUpload() {
             <span>重复检测</span>
             <select
               value={duplicatePolicy}
-              disabled={pending}
+              disabled={pending||Boolean(workspace.data?.batch)}
               onChange={(event) => setDuplicatePolicy(event.target.value as DuplicatePolicy)}
             >
               <option value="review">发现重复时人工确认</option>
@@ -1063,189 +1064,11 @@ export function AdminUpload() {
             已发现服务端 R2 上传会话。重新选择同一 PDF 后只上传未完成 part；原批次策略不会被改写。
           </p>
         ) : null}
-      </details>
-      <section
-        className={`upload-dropzone${dragging ? " is-dragging" : ""}`}
-        tabIndex={0}
-        onKeyDown={(event: KeyboardEvent<HTMLElement>) => {
-          if (event.key !== "Enter" && event.key !== " ") return;
-          event.preventDefault();
-          input.current?.click();
-        }}
-        onDragEnter={(event: DragEvent) => {
-          event.preventDefault();
-          dragDepth.current += 1;
-          event.dataTransfer.dropEffect = "copy";
-          setDragging(true);
-        }}
-        onDragOver={(event: DragEvent) => {
-          event.preventDefault();
-          event.dataTransfer.dropEffect = "copy";
-        }}
-        onDragLeave={(event: DragEvent) => {
-          event.preventDefault();
-          dragDepth.current = Math.max(0, dragDepth.current - 1);
-          if (dragDepth.current === 0 || !event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
-        }}
-        onDrop={(event: DragEvent) => {
-          event.preventDefault();
-          dragDepth.current = 0;
-          setDragging(false);
-          addFiles(event.dataTransfer.files);
-        }}
-        onDragEnd={() => {
-          dragDepth.current = 0;
-          setDragging(false);
-        }}
-        aria-label="拖入 PDF 和配套元数据"
-      >
-        <Upload size={31} />
-        <h2>拖拽 PDF 文件到此处</h2>
-        <p>每批最多 5 个 PDF；也可附上同名 RIS、BibTeX 或 JSON 等元数据。</p>
-        <small>配套文件只生成待审候选，不会直接覆盖馆藏。</small>
-        <button className="button" type="button" onClick={() => input.current?.click()}>选择 PDF 文件</button>
-        <input
-          ref={input}
-          type="file"
-          accept="application/pdf,.pdf,.ris,.bib,.bibtex,.json,.yaml,.yml"
-          multiple
-          hidden
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            addFiles(event.target.files);
-            event.currentTarget.value = "";
-          }}
-        />
-      </section>
-
-      <aside className="upload-v307-preview admin-panel" aria-label="当前上传预览"><header><h2>上传预览</h2></header>{previewFile ? <><div className="upload-v307-file-preview">{previewUrl ? <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} title={`${previewFile.file.name} 本地 PDF 预览`} /> : <FileText size={48} />}</div><strong>{previewFile.file.name}</strong><dl><div><dt>文件类型</dt><dd>PDF</dd></div><div><dt>文件大小</dt><dd>{formatUploadBytes(previewFile.file.size)}</dd></div><div><dt>上传状态</dt><dd>{previewFile.message || "等待上传"}</dd></div></dl><p>文件上传并校验后，进入馆藏工作页完善书目、关联作者和发布。</p></> : <p className="admin-list-state">选择 PDF 后，可以在这里核对本地文件。</p>}</aside>
-
-      {stagingSessions.length || uploadSnapshots.length ? (
-        <section className="upload-staging-sessions admin-panel" aria-live="polite">
-          <header>
-            <div><h2>持续上传与入库</h2><p>切换站内页面后上传继续运行；浏览器刷新后请重新选择同一个本地 PDF 继续未完成 part。</p></div>
-            <button className="button secondary" type="button" onClick={() => void refreshStagingSessions()}><RefreshCw size={14} />刷新状态</button>
-          </header>
-          {stagingError ? <p className="form-message error" role="alert">{stagingError}</p> : null}
-          <div className="upload-staging-list">
-            {stagingSessions.slice(0, 20).map((session) => {
-              const live = uploadSnapshots.find((snapshot) => snapshot.sessionId === session.upload_session_id);
-              const persistedBytes = Math.min(
-                session.file_size,
-                session.completed_parts.reduce((total, part) => total + part.size, 0),
-              );
-              const uploadedBytes = live?.uploadedBytes ?? (session.staging_status === "uploading" ? persistedBytes : session.file_size);
-              const progress = live?.progress ?? (session.file_size ? Math.min(100, Math.floor((uploadedBytes / session.file_size) * 100)) : 0);
-              const waiting = live?.status === "connection_waiting";
-              const message = live?.message || r2StagingStatusLabel(session.staging_status);
-              return (
-                <article className={`upload-staging-row status-${session.staging_status}${waiting ? " is-stalled" : ""}`} key={session.upload_session_id}>
-                  <div className="upload-staging-copy">
-                    <strong>{session.source_filename}</strong>
-                    <span>{message}</span>
-                    <small>
-                      {formatUploadBytes(uploadedBytes)} / {formatUploadBytes(session.file_size)} · {progress}%
-                      {live && live.status !== "uploaded" ? ` · 当前 ${formatUploadRate(live.currentSpeedBps)} · 平均 ${formatUploadRate(live.averageSpeedBps)} · 剩余 ${formatUploadEta(live.etaSeconds)}` : ""}
-                    </small>
-                  </div>
-                  <span className={`upload-file-progress${waiting ? " is-stalled" : ""}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                    <i style={{ width: `${progress}%` }} />
-                  </span>
-                  <div className="upload-staging-actions">
-                    {session.can_resume_upload && !live ? <span>重新选择同一 PDF 继续</span> : null}
-                    {session.can_abort ? <button type="button" disabled={stagingAction === session.upload_session_id} onClick={() => void abortStagingSession(session.upload_session_id)}>取消上传</button> : null}
-                    {session.can_retry_import ? <button type="button" disabled={stagingAction === session.upload_session_id} onClick={() => void retryStagingImport(session.upload_session_id)}>重新入库</button> : null}
-                  </div>
-                  {session.error_message ? <p className="ingestion-item-error"><AlertCircle size={14} />{session.error_message}</p> : null}
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="upload-queue admin-panel">
-        <header><h2>上传队列（{files.length}/5）</h2><button className="button secondary" type="button" disabled={pending || files.length >= 5} onClick={() => input.current?.click()}>选择更多文件</button></header>
-        {metadataFiles.length ? (
-          <div className="upload-metadata-pairing" aria-live="polite">
-            <div>
-              <strong>配套元数据</strong>
-              <span>文件名需与 PDF 一致。允许增加 .sidecar、.metadata、.csl 或 .zotero 后缀。</span>
-            </div>
-            <ul>
-              {metadataFiles.map((file) => {
-                const matched = pairedMetadataIdentities.has(metadataIdentity(file));
-                return (
-                  <li className={matched ? "matched" : "unmatched"} key={metadataIdentity(file)}>
-                    <span>{file.name}</span>
-                    <b>{matched ? "已配对" : "未配对或存在同名冲突"}</b>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      aria-label={`移除元数据文件 ${file.name}`}
-                      onClick={() => setMetadataFiles((current) => current.filter((value) => metadataIdentity(value) !== metadataIdentity(file)))}
-                    >
-                      <X size={14} />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : null}
-        {files.length ? files.map((item, index) => (
-          <div key={item.token}>
-            <FileText size={18} />
-            <p>
-              <button type="button" className="upload-preview-select" onClick={() => setPreviewToken(item.token)}>{item.file.name}</button>
-              <span>{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
-              <span className={`metadata-pair-status ${metadataPairings[item.token]?.status || "missing"}`}>
-                {metadataImportStates[item.token]?.message || metadataPairings[item.token]?.message}
-              </span>
-            </p>
-            <div className="upload-file-status">
-              <small aria-live="polite">{item.message || "等待上传"}</small>
-              {item.status === "uploading" || item.status === "accepted" ? (
-                <span>
-                  {formatUploadBytes(item.uploadedBytes)} / {formatUploadBytes(item.file.size)}
-                  {item.status === "uploading" ? ` · 当前 ${formatUploadRate(item.speedBps)} · 平均 ${formatUploadRate(item.averageSpeedBps)} · 剩余 ${formatUploadEta(item.etaSeconds)}` : ` · 平均 ${formatUploadRate(item.averageSpeedBps)}`}
-                </span>
-              ) : null}
-            </div>
-            {item.status === "uploading" || item.status === "accepted" ? (
-              <span
-                className={`upload-file-progress${item.message.includes("连接等待中") ? " is-stalled" : ""}`}
-                role="progressbar"
-                aria-label={`${item.file.name} 上传进度`}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={item.progress}
-              >
-                <i style={{ width: `${item.progress}%` }} />
-              </span>
-            ) : null}
-            {item.status === "failed" ? <button type="button" className="button secondary" disabled={pending} onClick={() => void upload(item.token)}><RefreshCw size={14} />重试此文件</button> : null}
-            <button type="button" aria-label={`移除待上传文件 ${item.file.name}`} disabled={pending} onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X size={16} /></button>
-          </div>
-        )) : <p className="empty-row">尚未选择文件。</p>}
-        <footer>
-          <p className="admin-help">上传只建立馆藏和后台处理任务。公开发布由具备权限的 Editor 或 Administrator 在馆藏详情中确认。</p>
-          <button className="button" type="button" disabled={!files.some((item) => item.status === "waiting") || pending} onClick={() => void upload()}>
-            {pending ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
-            开始上传
-          </button>
-        </footer>
-      </section>
-
-      {error ? <p className="form-message error" role="alert">{error}</p> : null}
-      {result ? (
-        <section className="upload-result admin-panel">
-          <header><h2><CheckCircle2 size={18} />批次已接收</h2><span>{result.batch.id}</span></header>
-          <p>{result.accepted.length} 个文件进入入库工作台，{result.rejected.length} 个文件被拒绝。识别、复核和发布彼此独立，任一失败不会影响其他文件。</p>
-          {result.rejected.map((item) => <p key={item.filename}><strong>{item.filename}</strong><span>{item.reason}</span></p>)}
-          {ingestionError ? <p className="form-message error" role="alert">{ingestionError}</p> : null}
-          <div className="ingestion-workbench" aria-live="polite">
-            {result.accepted.length && !ingestionItems.length ? <p className="ingestion-loading"><LoaderCircle className="spin" size={16} />正在读取自动识别状态……</p> : null}
-            {ingestionItems.map((item) => {
+      </div>}
+    preview={<aside className="upload-v307-preview admin-panel" aria-label="当前上传预览"><header><h2>上传预览</h2></header>{previewFile ? <><div className="upload-v307-file-preview">{previewUrl ? <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} title={`${previewFile.file.name} 本地 PDF 预览`} /> : <FileText size={48} />}</div><strong>{previewFile.file.name}</strong><dl><div><dt>文件类型</dt><dd>PDF</dd></div><div><dt>文件大小</dt><dd>{formatUploadBytes(previewFile.file.size)}</dd></div><div><dt>上传状态</dt><dd>{previewFile.message || "等待上传"}</dd></div></dl><p>文件上传并校验后，进入馆藏工作页完善书目、关联作者和发布。</p></> : <p className="admin-list-state">选择 PDF 后，可以在这里核对本地文件。</p>}</aside>}
+    feedback={<>{preparing?<p role="status">正在核对文件内容，准备当前账户的恢复记录…</p>:null}{error?<p className="form-message error" role="alert">{error}</p>:null}{workspace.error?<p role="alert">{workspace.error}<button onClick={workspace.reload}>重新读取上传能力</button></p>:null}{reservation.error?<p role="alert">{reservation.error}</p>:null}{reservation.recovery?<section role="status"><p>批次请求尚未确认，当前选择保留，请查回原结果。</p><button disabled={reservation.busy} onClick={()=>void recoverReservation()}>查回批次</button><button disabled={reservation.busy} onClick={()=>void recoverReservation(true)}>停止未执行请求</button></section>:null}{ingestionError?<p role="alert">{ingestionError}</p>:null}{stagingError?<p role="alert">{stagingError}</p>:null}</>}
+    metadata={<><p>可附同名 RIS、BibTeX、JSON、YAML 元数据，导入后仅生成待审候选。</p>{metadataFiles.map(file=><p key={metadataIdentity(file)}>{file.name}{pairedMetadataIdentities.has(metadataIdentity(file))?" · 已匹配":" · 暂未匹配PDF"}</p>)}{Object.entries(metadataImportStates).map(([id,state])=><p key={id}>{state.filename} · {state.message}</p>)}</>}
+    details={<><p>实际服务端预检、OCR安排和书目候选如下。上传完成不等于已发布。</p><div>            {ingestionItems.filter(item=>!detailItemId||item.id===detailItemId).map((item) => {
               const metadata = item.review_data ?? item.recognized_metadata;
               const title = item.review_data?.title || displayMetadataValue(item.recognized_metadata.title);
               const candidateCounts = item.metadata_candidates.reduce<Record<string, number>>((counts, candidate) => {
@@ -1298,6 +1121,11 @@ export function AdminUpload() {
                       ? `${item.preflight_summary.scheduled_ocr_pages} 页${item.preflight_summary.detected_ocr_pages !== undefined ? `（检测到 ${item.preflight_summary.detected_ocr_pages} 页）` : ""}`
                       : "等待检测"}</dd></div>
                   </dl>
+                  <div className="upload-ocr-preflight" role="status">
+                    <strong>OCR 预判</strong>
+                    <span>{ocrPreflightLabel(item.preflight_summary)}</span>
+                    <small>{ocrPreflightDetail(item.preflight_summary)}</small>
+                  </div>
                   <div className="ingestion-candidate-summary">
                     {Object.entries(candidateFieldLabels).map(([field, label]) => (
                       <span className={candidateCounts[field] ? "available" : ""} key={field}>{label}<b>{candidateCounts[field] || 0}</b></span>
@@ -1315,17 +1143,6 @@ export function AdminUpload() {
                 </article>
               );
             })}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="pipeline-explainer admin-panel">
-        <header><h2>处理步骤</h2></header>
-        {["上传与文件校验", "填写书目与选择封面", "关联作者与分类", "预览并明确发布"].map((step, index) => (
-          <div key={step}><b>{String(index + 1).padStart(2, "0")}</b><span>{step}</span></div>
-        ))}
-      </section>
-      <section className="upload-recent-batches admin-panel"><header><div><h2>最近上传批次</h2><p>历史文件继续保留在原馆藏工作页。</p></div><button type="button" className="button secondary" onClick={recentBatches.retry}>刷新批次</button></header>{recentBatches.error ? <p role="alert">{recentBatches.error}</p> : null}<div className="admin-v307-table-scroll"><table><thead><tr><th>批次</th><th>上传时间</th><th>文件数量</th><th>处理结果</th><th>操作</th></tr></thead><tbody>{recentBatches.data?.results.slice(0,5).map(batch=><tr key={batch.id}><td><strong>{batch.label || `上传批次 ${batch.id.slice(0,8)}`}</strong></td><td>{new Date(batch.created_at).toLocaleString("zh-CN")}</td><td>{batch.items.length} / {batch.expected_count}</td><td>{batch.completed_count} 项完成 · {batch.failed_count} 项失败</td><td><details><summary>查看批次文件</summary><ul>{batch.items.map(item=><li key={item.id}><Link href={`/admin/intake/${item.id}#file`}>{item.source_filename || "打开文件工作页"}</Link></li>)}</ul>{!batch.items.length ? <p>批次尚未收到文件。</p> : null}</details></td></tr>)}</tbody></table></div>{recentBatches.loading ? <p role="status">正在读取最近批次…</p> : recentBatches.data && !recentBatches.data.results.length ? <p className="admin-list-state">尚无上传批次。</p> : null}</section>
-    </div>
-  );
+          </div>{!ingestionItems.some(item=>!detailItemId||item.id===detailItemId)?<p>当前文件尚未进入识别，上传完成后可在批次或收件详情查看。</p>:null}{stagingSessions.length?<details><summary>持续上传与恢复记录</summary>{stagingSessions.map(session=><p key={session.upload_session_id}>{session.source_filename} · {r2StagingStatusLabel(session.staging_status)}{session.can_abort?<button disabled={Boolean(stagingAction)} onClick={()=>void abortStagingSession(session.upload_session_id)}>取消上传</button>:null}{session.can_retry_import?<button disabled={Boolean(stagingAction)} onClick={()=>void retryStagingImport(session.upload_session_id)}>重新入库</button>:null}</p>)}</details>:null}</>}
+    recent={<section className="upload-recent-batches admin-panel"><header><h2>我的最近批次</h2><button onClick={workspace.reload}>刷新批次</button></header>{workspace.data?.recent.length?<ul>{workspace.data.recent.map(batch=><li key={batch.id}><Link href={`/admin/uploads?batch=${batch.id}`}>{batch.label||`批次 ${batch.created_at.slice(0,10)}`}</Link> · {batch.expected_count} 个预留文件位 · {batch.completed_count} 项处理完成 · {batch.failed_count} 项失败</li>)}</ul>:<p>尚无上传批次。</p>}</section>}/>;
 }

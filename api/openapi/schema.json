@@ -12288,6 +12288,186 @@
                 }
             }
         },
+        "/api/ingestion/upload-workspace/": {
+            "get": {
+                "operationId": "ingestion_upload_workspace_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "batch",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadWorkspace"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "ingestion_upload_workspace_create",
+                "tags": [
+                    "ingestion"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UploadBatchCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UploadBatchCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UploadBatchCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadBatchReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/ingestion/upload-workspace/commands/{request_id}/": {
+            "get": {
+                "operationId": "ingestion_upload_workspace_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadBatchReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "ingestion_upload_workspace_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UploadReceiptCancelRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UploadReceiptCancelRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UploadReceiptCancelRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadBatchReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/annotations/": {
             "get": {
                 "operationId": "reading_annotations_list",
@@ -23146,6 +23326,15 @@
                     "key"
                 ]
             },
+            "AccessPolicyEnum": {
+                "enum": [
+                    "public",
+                    "registered",
+                    "restricted"
+                ],
+                "type": "string",
+                "description": "* `public` - 公开访问\n* `registered` - 登录读者\n* `restricted` - 受限访问"
+            },
             "AccessStatusEnum": {
                 "enum": [
                     "inherit",
@@ -25975,6 +26164,67 @@
                 ],
                 "type": "string",
                 "description": "* `unverified` - unverified\n* `needs_review` - needs_review\n* `confirmed` - confirmed\n* `native` - native\n* `matched` - matched\n* `generated` - generated"
+            },
+            "CandidateEvidence": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "asset": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_record": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "page_number": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "bbox": {},
+                    "text_quote": {
+                        "type": "string"
+                    },
+                    "source_kind": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "external_identifier": {
+                        "type": "string",
+                        "maxLength": 400
+                    },
+                    "extraction_method": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "model_name": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "model_revision": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "source_kind"
+                ]
             },
             "CapabilityOutput": {
                 "type": "object",
@@ -29054,6 +29304,17 @@
                     "token"
                 ]
             },
+            "DispatchStatusEnum": {
+                "enum": [
+                    "pending",
+                    "queued",
+                    "running",
+                    "completed",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `pending` - 等待派发\n* `queued` - 已进入队列\n* `running` - 工作者处理中\n* `completed` - 任务已完成\n* `failed` - 派发失败"
+            },
             "DisplayFieldsEnum": {
                 "enum": [
                     "authors",
@@ -29082,6 +29343,15 @@
                 ],
                 "type": "string",
                 "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告"
+            },
+            "DuplicatePolicyEnum": {
+                "enum": [
+                    "review",
+                    "block_exact",
+                    "allow"
+                ],
+                "type": "string",
+                "description": "* `review` - 发现重复时人工确认\n* `block_exact` - 阻止完全重复文件\n* `allow` - 允许继续入库"
             },
             "EditionCompact": {
                 "type": "object",
@@ -35402,6 +35672,16 @@
                     "work_count"
                 ]
             },
+            "LifecycleEnum": {
+                "enum": [
+                    "proposed",
+                    "accepted",
+                    "rejected",
+                    "superseded"
+                ],
+                "type": "string",
+                "description": "* `proposed` - 待审核\n* `accepted` - 已接受\n* `rejected` - 已拒绝\n* `superseded` - 已被替代"
+            },
             "ListCommandActionEnum": {
                 "enum": [
                     "create",
@@ -38166,6 +38446,82 @@
                     "kind"
                 ]
             },
+            "MetadataCandidate": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "field_name": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "value": {},
+                    "source": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "evidence": {},
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "selected": {
+                        "type": "boolean"
+                    },
+                    "lifecycle": {
+                        "$ref": "#/components/schemas/LifecycleEnum"
+                    },
+                    "normalized_value": {},
+                    "source_record": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "conflict_group": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "score_factors": {},
+                    "is_locked": {
+                        "type": "boolean"
+                    },
+                    "accepted_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "accepted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "rejected_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "rejected_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "evidence_records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CandidateEvidence"
+                        },
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "evidence_records",
+                    "field_name",
+                    "id",
+                    "source",
+                    "value"
+                ]
+            },
             "MetadataDecisionActionEnum": {
                 "enum": [
                     "reject",
@@ -39411,6 +39767,15 @@
                 ],
                 "type": "string",
                 "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `topic` - topic"
+            },
+            "OcrStrategyEnum": {
+                "enum": [
+                    "auto",
+                    "force",
+                    "skip"
+                ],
+                "type": "string",
+                "description": "* `auto` - 自动检测\n* `force` - 强制 OCR\n* `skip` - 跳过 OCR"
             },
             "OutlineBatchRequest": {
                 "type": "object",
@@ -58794,6 +59159,14 @@
                 "type": "string",
                 "description": "* `available` - available\n* `no_fulltext` - no_fulltext\n* `planned` - planned"
             },
+            "TransportEnum": {
+                "enum": [
+                    "local",
+                    "r2"
+                ],
+                "type": "string",
+                "description": "* `local` - local\n* `r2` - r2"
+            },
             "TurnCreateInputModeEnum": {
                 "enum": [
                     "search",
@@ -58897,6 +59270,446 @@
                     "expected_revision",
                     "request_id"
                 ]
+            },
+            "UploadBatchCommandActionEnum": {
+                "enum": [
+                    "reserve",
+                    "rename"
+                ],
+                "type": "string",
+                "description": "* `reserve` - reserve\n* `rename` - rename"
+            },
+            "UploadBatchCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/UploadBatchCommandActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "batch_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "policy": {
+                        "$ref": "#/components/schemas/UploadBatchCreateRequest"
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 240
+                    }
+                },
+                "required": [
+                    "action",
+                    "request_id"
+                ]
+            },
+            "UploadBatchCreateRequest": {
+                "type": "object",
+                "description": "Validate the intake policy once, before any file enters the batch.",
+                "properties": {
+                    "expected_count": {
+                        "type": "integer",
+                        "maximum": 50,
+                        "minimum": 1
+                    },
+                    "label": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 240
+                    },
+                    "notes": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 4000
+                    },
+                    "access_policy": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/AccessPolicyEnum"
+                            }
+                        ],
+                        "default": "public"
+                    },
+                    "ocr_strategy": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/OcrStrategyEnum"
+                            }
+                        ],
+                        "default": "auto"
+                    },
+                    "duplicate_policy": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DuplicatePolicyEnum"
+                            }
+                        ],
+                        "default": "review"
+                    },
+                    "external_enrichment_enabled": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "ai_suggestions_enabled": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "expected_count"
+                ]
+            },
+            "UploadBatchReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "batch": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UploadBatchSummary"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "batch",
+                    "owner_id",
+                    "request_id",
+                    "state"
+                ]
+            },
+            "UploadBatchSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "expected_count": {
+                        "type": "integer"
+                    },
+                    "completed_count": {
+                        "type": "integer"
+                    },
+                    "failed_count": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "completed_count",
+                    "created_at",
+                    "expected_count",
+                    "failed_count",
+                    "id",
+                    "label",
+                    "status",
+                    "version"
+                ]
+            },
+            "UploadReceiptCancelRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "UploadWorkspace": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "transport": {
+                        "$ref": "#/components/schemas/TransportEnum"
+                    },
+                    "max_files": {
+                        "type": "integer"
+                    },
+                    "max_file_bytes": {
+                        "type": "integer"
+                    },
+                    "chunk_bytes": {
+                        "type": "integer"
+                    },
+                    "recent": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UploadBatchSummary"
+                        }
+                    },
+                    "batch": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UploadWorkspaceBatch"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "version": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "batch",
+                    "chunk_bytes",
+                    "max_file_bytes",
+                    "max_files",
+                    "owner_id",
+                    "recent",
+                    "transport",
+                    "version"
+                ]
+            },
+            "UploadWorkspaceBatch": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/UploadWorkspaceBatchStatusEnum"
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 30
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "access_policy": {
+                        "$ref": "#/components/schemas/AccessPolicyEnum"
+                    },
+                    "ocr_strategy": {
+                        "$ref": "#/components/schemas/OcrStrategyEnum"
+                    },
+                    "duplicate_policy": {
+                        "$ref": "#/components/schemas/DuplicatePolicyEnum"
+                    },
+                    "external_enrichment_enabled": {
+                        "type": "boolean"
+                    },
+                    "ai_suggestions_enabled": {
+                        "type": "boolean"
+                    },
+                    "expected_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "completed_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "failed_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "notes": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UploadWorkspaceItem"
+                        },
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "items",
+                    "updated_at"
+                ]
+            },
+            "UploadWorkspaceBatchStatusEnum": {
+                "enum": [
+                    "received",
+                    "processing",
+                    "partial",
+                    "completed",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `received` - 已接收\n* `processing` - 处理中\n* `partial` - 部分完成\n* `completed` - 已完成\n* `failed` - 失败"
+            },
+            "UploadWorkspaceItem": {
+                "type": "object",
+                "description": "The upload table needs a summary, not every catalog edit/history panel.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source_filename": {
+                        "type": "string",
+                        "maxLength": 800
+                    },
+                    "byte_size": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/UploadWorkspaceItemStatusEnum"
+                    },
+                    "stage_progress": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "error_code": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "error_message": {
+                        "type": "string"
+                    },
+                    "dispatch_status": {
+                        "$ref": "#/components/schemas/DispatchStatusEnum"
+                    },
+                    "dispatch_task_id": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "dispatch_attempts": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "recognized_metadata": {},
+                    "preflight_summary": {},
+                    "edition": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "metadata_candidates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MetadataCandidate"
+                        },
+                        "readOnly": true
+                    },
+                    "review_data": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "can_manage_publication": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "is_stalled": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "suggested_action": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "staging": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "can_manage_publication",
+                    "id",
+                    "is_stalled",
+                    "metadata_candidates",
+                    "review_data",
+                    "source_filename",
+                    "staging",
+                    "suggested_action",
+                    "updated_at"
+                ]
+            },
+            "UploadWorkspaceItemStatusEnum": {
+                "enum": [
+                    "received",
+                    "validating",
+                    "deduplicating",
+                    "extracting",
+                    "ocr",
+                    "metadata",
+                    "linking",
+                    "indexing",
+                    "preparing_public_asset",
+                    "syncing_cloud",
+                    "ready",
+                    "published",
+                    "needs_review",
+                    "failed",
+                    "withdrawn",
+                    "deleted"
+                ],
+                "type": "string",
+                "description": "* `received` - 已接收\n* `validating` - 校验中\n* `deduplicating` - 查重中\n* `extracting` - 提取中\n* `ocr` - OCR 中\n* `metadata` - 识别元数据\n* `linking` - 建立关联\n* `indexing` - 建立索引\n* `preparing_public_asset` - 准备公开文件\n* `syncing_cloud` - 同步云端\n* `ready` - 可发布\n* `published` - 已发布\n* `needs_review` - 需要处理\n* `failed` - 失败\n* `withdrawn` - 已下架\n* `deleted` - 已删除"
             },
             "User": {
                 "type": "object",

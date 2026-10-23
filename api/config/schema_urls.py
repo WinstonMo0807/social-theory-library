@@ -12,6 +12,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
+    "upload-workspace", "upload-workspace-receipt",
     "admin-site-sources", "admin-site-receipt",
     "admin-recycle", "admin-recycle-detail",
     "local-services", "local-service-check",
@@ -71,7 +72,7 @@ urlpatterns = [
         "asset-access", "asset-file", "admin-asset-preview", "backup-job-list", "reader-ocr-status",
         "storage-workspace", "storage-command", "storage-backup-detail",
     }])),
-    path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name == "ocr-workspace"])),
+    path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name in {"ocr-workspace", "upload-workspace", "upload-workspace-receipt"}])),
     path("api/reading/", include([
         pattern for pattern in reading_router.urls
         if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views", "reading.parallel_views", "reading.graph_views", "reading.path_views"}

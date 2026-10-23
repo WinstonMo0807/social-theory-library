@@ -210,6 +210,7 @@ def serialize_staging_session(item: UploadItem) -> dict:
     }
     return {
         "upload_session_id": str(item.id),
+        "client_token": item.processing_token,
         "batch_id": str(item.batch_id),
         "source_filename": item.source_filename,
         "file_size": item.staging_file_size,
@@ -292,7 +293,7 @@ def create_r2_upload(
         ).count()
         if active_count >= settings.R2_MAX_ACTIVE_UPLOADS_PER_USER:
             raise R2StagingError("当前账户同时进行的 PDF 上传已达到上限。")
-        if batch.items.count() >= min(batch.expected_count, 5):
+        if batch.items.count() >= min(batch.expected_count, 50):
             raise R2StagingError("该批次已达到预定文件数量。")
         item_id = uuid.uuid4()
         part_size = settings.R2_UPLOAD_PART_SIZE

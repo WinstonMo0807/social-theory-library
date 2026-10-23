@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M02上传批次
+
+保留299，新增upload-workspace GET/POST及commands/{request_id} GET/POST，共301。owner+UPLOAD权限、版本+固定请求编号。批次策略沿原模型，50文件位；transport由服务端配置返回。批次items仅上传所需摘要；原布尔/对象响应类型补明确声明。无新迁移。
+
 ## 2026-10-23 M31/M32内容编排
 
 保留298，新增admin/content-placements/pages GET，共299。原sources增加准确版本筛选/作者/文献类型/主题/语言/可读性/排序和scholar/issue类型；24条分页。原save可传groups，item新增display_fields/internal_goal/reason_format；internal_goal从匿名投影移除，富文本限制沿原规范。来源类型、组结构、can_withdraw及公开/编辑URL同步契约。没有新增存储、任务或迁移。

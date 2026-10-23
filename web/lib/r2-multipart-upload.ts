@@ -1,5 +1,6 @@
-import { apiRequest, getServerSessionCredential } from "./api";
+import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "./api";
 import { r2StagingStatusLabel } from "./ingestion-staging-status";
+import { withPrivateOwner } from "./api/private-owner";
 import { UploadRateMeter } from "./upload-metrics";
 
 const PART_CONCURRENCY = 3;
@@ -18,6 +19,7 @@ export type R2CompletedPart = {
 export type R2StagingSession = {
   upload_session_id: string;
   batch_id: string;
+  client_token: string;
   source_filename: string;
   file_size: number;
   file_last_modified: number;
@@ -52,7 +54,7 @@ export type R2UploadSnapshot = {
   filename: string;
   fileSize: number;
   fileLastModified: number;
-  status: "waiting" | "uploading" | "connection_waiting" | "retrying" | "uploaded" | "failed" | "aborted";
+  status: "paused" | "waiting" | "uploading" | "connection_waiting" | "retrying" | "uploaded" | "failed" | "aborted";
   message: string;
   uploadedBytes: number;
   progress: number;
@@ -65,6 +67,9 @@ export type R2UploadSnapshot = {
 
 type InternalTask = R2UploadSnapshot & {
   file: File;
+  owner: string;
+  controller: AbortController;
+  paused: boolean;
   token: string;
   meter: UploadRateMeter;
   lastByteAt: number;
@@ -137,6 +142,32 @@ function wait(milliseconds: number) {
 }
 
 export class R2MultipartUploadManager {
+  private owner = "";
+  constructor() { if (typeof window !== "undefined") subscribeToSessionChanges(() => this.bindOwner("")); }
+  bindOwner(owner: string) {
+    if (owner === this.owner) return;
+    for (const task of this.tasks.values()) task.controller.abort();
+    for (const request of this.requests.values()) request.abort();
+    this.tasks.clear(); this.running.clear(); this.owner = owner; this.stopTickerIfIdle(); this.emit(true);
+  }
+  pause(taskId: string, paused = true) {
+    const task = this.tasks.get(taskId); if (!task || !this.running.has(taskId)) return;
+    task.paused = paused;
+    task.status = paused ? "paused" : "uploading";
+    task.message = paused ? "完成当前分段后暂停，已确认分段保留" : "继续上传未完成分段";
+    this.emit(true);
+  }
+  private async checkpoint(task: InternalTask) {
+    task.controller.signal.throwIfAborted();
+    if (task.owner !== this.owner) throw Error("上传账户已变化，请重新读取上传记录。");
+    while (task.paused) { task.status = "paused"; task.message = "上传已暂停，已确认分段保留"; this.emit(true); await wait(200); task.controller.signal.throwIfAborted(); }
+  }
+  private request<T>(task: InternalTask, path: string, options: RequestInit = {}, _credential?: string | null) {
+    void _credential;
+    const signal = AbortSignal.any([task.controller.signal, AbortSignal.timeout(60000)]);
+    return withPrivateOwner(task.owner, () => apiRequest<T>(path, {...options,signal,headers:{...options.headers,"X-Editor-Owner":task.owner}}, getServerSessionCredential(), false), signal);
+  }
+
   private tasks = new Map<string, InternalTask>();
   private listeners = new Set<(snapshots: R2UploadSnapshot[]) => void>();
   private requests = new Map<string, XMLHttpRequest>();
@@ -182,8 +213,9 @@ export class R2MultipartUploadManager {
     }
   }
 
-  async start(file: File, batchId: string, token: string) {
-    const existing = this.findByFile(file);
+  async start(file: File, batchId: string, token: string, owner: string) {
+    this.bindOwner(owner);
+    const existing = this.tasks.get(token);
     if (existing && this.running.has(existing.taskId)) {
       return this.running.get(existing.taskId) as Promise<R2StagingSession>;
     }
@@ -199,7 +231,10 @@ export class R2MultipartUploadManager {
     return promise;
   }
 
-  async resume(file: File, session: R2StagingSession) {
+  async resume(file: File, session: R2StagingSession, owner: string) {
+    this.bindOwner(owner);
+    const existing=Array.from(this.tasks.values()).find(task=>task.sessionId===session.upload_session_id&&this.running.has(task.taskId));
+    if(existing)return this.running.get(existing.taskId)!;
     const task = this.newTask(file, session.batch_id, session.upload_session_id, session.upload_session_id);
     this.applySession(task, session);
     this.tasks.set(task.taskId, task);
@@ -213,19 +248,18 @@ export class R2MultipartUploadManager {
     return promise;
   }
 
-  async abort(sessionId: string) {
+  async abort(sessionId: string, owner: string) {
+    if(owner!==this.owner)throw Error("上传账户已变化，请重新读取记录。");
     const task = Array.from(this.tasks.values()).find((value) => value.sessionId === sessionId);
     if (task) {
+      task.controller.abort();task.paused=false;
       for (const [key, request] of this.requests) {
         if (key.startsWith(`${task.taskId}:`)) request.abort();
       }
     }
     const token = getServerSessionCredential();
-    const session = await apiRequest<R2StagingSession>(
-      `/ingestion/uploads/r2/${sessionId}/abort/`,
-      { method: "POST", body: "{}" },
-      token,
-    );
+    const signal=AbortSignal.timeout(60000);
+    const session = await withPrivateOwner(owner,()=>apiRequest<R2StagingSession>(`/ingestion/uploads/r2/${sessionId}/abort/`,{method:"POST",body:"{}",signal,headers:{"X-Editor-Owner":owner}},token,false),signal);
     if (task) {
       task.status = "aborted";
       task.message = "上传已取消";
@@ -239,6 +273,7 @@ export class R2MultipartUploadManager {
     const now = performance.now();
     return {
       taskId: token,
+      owner: this.owner, controller: new AbortController(), paused: false,
       sessionId,
       batchId,
       filename: file.name,
@@ -289,8 +324,9 @@ export class R2MultipartUploadManager {
 
   private async run(task: InternalTask, existingSession?: R2StagingSession) {
     try {
+      await this.checkpoint(task);
       const token = getServerSessionCredential();
-      const session = existingSession || await apiRequest<R2StagingSession>(
+      const session = existingSession || await this.request<R2StagingSession>(task,
         "/ingestion/uploads/r2/init/",
         {
           method: "POST",
@@ -314,10 +350,11 @@ export class R2MultipartUploadManager {
 
       const pending = task.parts.filter((part) => part.status !== "completed");
       for (let offset = 0; offset < pending.length; offset += PART_CONCURRENCY) {
+        await this.checkpoint(task);
         const wave = pending.slice(offset, offset + PART_CONCURRENCY);
-        const signed = await apiRequest<{
+        const signed = await this.request<{
           parts: Array<{ part_number: number; size: number; url: string; expires_in: number }>;
-        }>(
+        }>(task,
           `/ingestion/uploads/r2/${task.sessionId}/parts/sign/`,
           {
             method: "POST",
@@ -329,10 +366,11 @@ export class R2MultipartUploadManager {
         await Promise.all(wave.map((part) => this.uploadPart(task, part, urlByPart.get(part.partNumber) || "")));
       }
 
+      await this.checkpoint(task);
       const completed = task.parts
         .map((part) => ({ part_number: part.partNumber, etag: part.etag }))
         .sort((left, right) => left.part_number - right.part_number);
-      const finalSession = await apiRequest<R2StagingSession>(
+      const finalSession = await this.request<R2StagingSession>(task,
         `/ingestion/uploads/r2/${task.sessionId}/complete/`,
         { method: "POST", body: JSON.stringify({ parts: completed }) },
         token,
@@ -347,7 +385,7 @@ export class R2MultipartUploadManager {
       this.emit(true);
       return finalSession;
     } catch (reason) {
-      task.status = "failed";
+      task.status = task.controller.signal.aborted?"aborted":"failed";
       task.currentSpeedBps = 0;
       task.etaSeconds = null;
       task.error = reason instanceof Error ? reason.message : "上传失败。";
@@ -363,6 +401,7 @@ export class R2MultipartUploadManager {
     let url = initialUrl;
     let lastError: unknown = null;
     for (let attempt = 1; attempt <= MAX_PART_ATTEMPTS; attempt += 1) {
+      await this.checkpoint(task);
       part.attempt = attempt;
       part.loadedBytes = 0;
       part.status = attempt === 1 ? "uploading" : "retrying";
@@ -373,9 +412,9 @@ export class R2MultipartUploadManager {
       this.recalculate(task, 0, true);
       try {
         if (!url || attempt > 1) {
-          const signed = await apiRequest<{
+          const signed = await this.request<{
             parts: Array<{ part_number: number; url: string }>;
-          }>(
+          }>(task,
             `/ingestion/uploads/r2/${task.sessionId}/parts/sign/`,
             { method: "POST", body: JSON.stringify({ part_numbers: [part.partNumber] }) },
             getServerSessionCredential(),
@@ -388,11 +427,12 @@ export class R2MultipartUploadManager {
         await semaphore.acquire();
         let etag: string;
         try {
+          await this.checkpoint(task);
           etag = await this.putPart(task, part, payload, url);
         } finally {
           semaphore.release();
         }
-        await apiRequest(
+        await this.request(task,
           `/ingestion/uploads/r2/${task.sessionId}/parts/confirm/`,
           {
             method: "POST",
@@ -413,6 +453,7 @@ export class R2MultipartUploadManager {
         this.recalculate(task, 0, true);
         return;
       } catch (reason) {
+        task.controller.signal.throwIfAborted();
         lastError = reason;
         const failure = reason instanceof UploadPartError
           ? reason
@@ -434,7 +475,10 @@ export class R2MultipartUploadManager {
 
   private putPart(task: InternalTask, part: R2PartState, payload: Blob, url: string) {
     return new Promise<string>((resolve, reject) => {
+      task.controller.signal.throwIfAborted();
       const request = new XMLHttpRequest();
+      const cancelled = () => request.abort();
+      task.controller.signal.addEventListener("abort", cancelled, {once:true});
       const requestKey = `${task.taskId}:${part.partNumber}`;
       let lastLoaded = 0;
       let lastByteAt = performance.now();
@@ -456,6 +500,7 @@ export class R2MultipartUploadManager {
         }
       }, 1_000);
       const finish = () => {
+        task.controller.signal.removeEventListener("abort", cancelled);
         clearInterval(watchdog);
         this.requests.delete(requestKey);
       };
@@ -520,7 +565,7 @@ export class R2MultipartUploadManager {
     failure: UploadPartError,
   ) {
     try {
-      await apiRequest(
+      await this.request(task,
         `/ingestion/uploads/r2/${task.sessionId}/parts/failure/`,
         {
           method: "POST",
@@ -592,12 +637,13 @@ export class R2MultipartUploadManager {
 
 export const r2MultipartUploadManager = new R2MultipartUploadManager();
 
-export async function loadR2StagingSessions() {
-  const response = await apiRequest<{ results: R2StagingSession[] }>(
+export async function loadR2StagingSessions(owner?: string) {
+  const load = () => apiRequest<{ results: R2StagingSession[] }>(
     "/ingestion/uploads/r2/",
     {},
     getServerSessionCredential(),
   );
+  const response = owner ? await withPrivateOwner(owner, load) : await load();
   return response.results;
 }
 

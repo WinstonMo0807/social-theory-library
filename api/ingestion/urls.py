@@ -1,4 +1,5 @@
 from django.urls import path
+from .upload_workspace import UploadWorkspaceView, UploadBatchReceiptView
 from .ocr_workspace_views import OCRWorkspaceView
 
 from .views import (
@@ -43,6 +44,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path("upload-workspace/", UploadWorkspaceView.as_view(), name="upload-workspace"),
+    path("upload-workspace/commands/<uuid:request_id>/", UploadBatchReceiptView.as_view(), name="upload-workspace-receipt"),
     path("ocr-workspace/<uuid:asset_id>/", OCRWorkspaceView.as_view(), name="ocr-workspace"),
     path("dashboard/", DashboardView.as_view(), name="ingestion-dashboard"),
     path("queue-health/", QueueHealthView.as_view(), name="ingestion-queue-health"),

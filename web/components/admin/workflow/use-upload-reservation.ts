@@ -1,0 +1,18 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
+import { withPrivateOwner, PrivateOwnerVerificationError } from "@/lib/api/private-owner";
+
+export type BatchSummary = {id:string;label:string;expected_count:number;completed_count:number;failed_count:number;status:string;version:string;created_at:string};
+type Receipt = {owner_id:string;request_id:string;state:"applied"|"cancelled";batch:BatchSummary|null};
+type Body = {action:"reserve"|"rename";batch_id?:string;expected_version?:string;policy?:Record<string,unknown>;label?:string};
+export function useUploadReservation(owner:string) {
+  const key=`stl-upload-reservation:${owner}`,lifetime=useRef<AbortController|null>(null),original=useRef<(Body&{request_id:string})|null>(null),sending=useRef(false);
+  const [canRetry,setCanRetry]=useState(false),[ready,setReady]=useState(false),[recovery,setRecovery]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  useEffect(()=>{const controller=new AbortController();lifetime.current=controller;queueMicrotask(()=>{if(controller.signal.aborted)return;try{setRecovery(sessionStorage.getItem(key)||"");setReady(true);}catch{setError("浏览器不能保存上传请求编号，请保留当前页面。");}});return()=>controller.abort();},[key]);
+  function clear(){sessionStorage.removeItem(key);original.current=null;setCanRetry(false);setRecovery("");}
+  async function request(path:string,options:RequestInit){const signal=AbortSignal.any([lifetime.current!.signal,AbortSignal.timeout(45000)]);return withPrivateOwner(owner,()=>apiRequest<Receipt>(path,{...options,signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),signal);}
+  async function send(body?:Body){if(!ready||sending.current)return null;sending.current=true;setBusy(true);setError("");try{if(!original.current){if(!body||sessionStorage.getItem(key))throw Error("请先查回上次批次请求。");original.current={...body,request_id:crypto.randomUUID()};sessionStorage.setItem(key,original.current.request_id);setRecovery(original.current.request_id);setCanRetry(true);}const receipt=await request("/ingestion/upload-workspace/",{method:"POST",body:JSON.stringify(original.current)});if(receipt.owner_id!==owner||receipt.request_id!==original.current.request_id||receipt.state!=="applied"||!receipt.batch)throw Error("批次回执不匹配，请先查回原请求。");clear();return receipt.batch;}catch(reason){if(reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,401,403,404,409].includes(reason.status))clear();if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"批次请求尚未确认，请查回记录。");return null;}finally{sending.current=false;if(!lifetime.current?.signal.aborted)setBusy(false);}}
+  async function lookup(cancel=false){if(!recovery||sending.current)return null;sending.current=true;setBusy(true);setError("");try{const receipt=await request(`/ingestion/upload-workspace/commands/${recovery}/`,cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{});if(receipt.owner_id!==owner||receipt.request_id!==recovery)throw Error("批次回执与当前账户不一致。");clear();return receipt;}catch(reason){if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"暂时无法查回批次请求。");return null;}finally{sending.current=false;if(!lifetime.current?.signal.aborted)setBusy(false);}}
+  return {ready,recovery,busy,error,send,lookup,canRetry};
+}

@@ -2673,6 +2673,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingestion/upload-workspace/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ingestion_upload_workspace_retrieve"];
+        put?: never;
+        post: operations["ingestion_upload_workspace_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingestion/upload-workspace/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ingestion_upload_workspace_commands_retrieve"];
+        put?: never;
+        post: operations["ingestion_upload_workspace_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/annotations/": {
         parameters: {
             query?: never;
@@ -4977,6 +5009,13 @@ export interface components {
             configuration?: unknown;
         };
         /**
+         * @description * `public` - 公开访问
+         *     * `registered` - 登录读者
+         *     * `restricted` - 受限访问
+         * @enum {string}
+         */
+        AccessPolicyEnum: "public" | "registered" | "restricted";
+        /**
          * @description * `inherit` - 继承版本权限
          *     * `private` - 仅后台可用
          *     * `registered` - 登录读者
@@ -5888,6 +5927,25 @@ export interface components {
          * @enum {string}
          */
         CalibrationStatusEnum: "unverified" | "needs_review" | "confirmed" | "native" | "matched" | "generated";
+        CandidateEvidence: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            asset?: string | null;
+            /** Format: uuid */
+            source_record?: string | null;
+            /** Format: int64 */
+            page_number?: number | null;
+            bbox?: unknown;
+            text_quote?: string;
+            source_kind: string;
+            external_identifier?: string;
+            extraction_method?: string;
+            model_name?: string;
+            model_revision?: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         CapabilityOutput: {
             id: string;
             label: string;
@@ -6790,6 +6848,15 @@ export interface components {
             token: string;
         };
         /**
+         * @description * `pending` - 等待派发
+         *     * `queued` - 已进入队列
+         *     * `running` - 工作者处理中
+         *     * `completed` - 任务已完成
+         *     * `failed` - 派发失败
+         * @enum {string}
+         */
+        DispatchStatusEnum: "pending" | "queued" | "running" | "completed" | "failed";
+        /**
          * @description * `authors` - authors
          *     * `year` - year
          *     * `type` - type
@@ -6812,6 +6879,13 @@ export interface components {
          * @enum {string}
          */
         DocumentTypeEnum: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
+        /**
+         * @description * `review` - 发现重复时人工确认
+         *     * `block_exact` - 阻止完全重复文件
+         *     * `allow` - 允许继续入库
+         * @enum {string}
+         */
+        DuplicatePolicyEnum: "review" | "block_exact" | "allow";
         EditionCompact: {
             /** Format: uuid */
             readonly id: string;
@@ -8681,6 +8755,14 @@ export interface components {
             };
         };
         /**
+         * @description * `proposed` - 待审核
+         *     * `accepted` - 已接受
+         *     * `rejected` - 已拒绝
+         *     * `superseded` - 已被替代
+         * @enum {string}
+         */
+        LifecycleEnum: "proposed" | "accepted" | "rejected" | "superseded";
+        /**
          * @description * `create` - create
          *     * `edit` - edit
          *     * `add` - add
@@ -9433,6 +9515,31 @@ export interface components {
             id: string;
             expected_revision: number;
         };
+        MetadataCandidate: {
+            /** Format: uuid */
+            readonly id: string;
+            field_name: string;
+            value: unknown;
+            source: string;
+            evidence?: unknown;
+            /** Format: double */
+            confidence?: number;
+            selected?: boolean;
+            lifecycle?: components["schemas"]["LifecycleEnum"];
+            normalized_value?: unknown;
+            /** Format: uuid */
+            source_record?: string | null;
+            conflict_group?: string;
+            score_factors?: unknown;
+            is_locked?: boolean;
+            accepted_by?: number | null;
+            /** Format: date-time */
+            accepted_at?: string | null;
+            rejected_by?: number | null;
+            /** Format: date-time */
+            rejected_at?: string | null;
+            readonly evidence_records: components["schemas"]["CandidateEvidence"][];
+        };
         /**
          * @description * `reject` - reject
          *     * `reopen` - reopen
@@ -9773,6 +9880,13 @@ export interface components {
          * @enum {string}
          */
         ObjectTypeEnum: "knowledge_node" | "reading_path" | "discipline" | "subdiscipline" | "topic";
+        /**
+         * @description * `auto` - 自动检测
+         *     * `force` - 强制 OCR
+         *     * `skip` - 跳过 OCR
+         * @enum {string}
+         */
+        OcrStrategyEnum: "auto" | "force" | "skip";
         OutlineBatchRequest: {
             asset_ids: string[];
             /** Format: uuid */
@@ -15623,6 +15737,12 @@ export interface components {
          */
         TopicWorkSourceStatusEnum: "available" | "no_fulltext" | "planned";
         /**
+         * @description * `local` - local
+         *     * `r2` - r2
+         * @enum {string}
+         */
+        TransportEnum: "local" | "r2";
+        /**
          * @description * `search` - search
          *     * `counterargument` - counterargument
          * @enum {string}
@@ -15656,6 +15776,158 @@ export interface components {
             /** Format: uuid */
             request_id: string;
         };
+        /**
+         * @description * `reserve` - reserve
+         *     * `rename` - rename
+         * @enum {string}
+         */
+        UploadBatchCommandActionEnum: "reserve" | "rename";
+        UploadBatchCommandRequest: {
+            action: components["schemas"]["UploadBatchCommandActionEnum"];
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            batch_id?: string;
+            expected_version?: string;
+            policy?: components["schemas"]["UploadBatchCreateRequest"];
+            label?: string;
+        };
+        /** @description Validate the intake policy once, before any file enters the batch. */
+        UploadBatchCreateRequest: {
+            expected_count: number;
+            /** @default  */
+            label: string;
+            /** @default  */
+            notes: string;
+            /** @default public */
+            access_policy: components["schemas"]["AccessPolicyEnum"];
+            /** @default auto */
+            ocr_strategy: components["schemas"]["OcrStrategyEnum"];
+            /** @default review */
+            duplicate_policy: components["schemas"]["DuplicatePolicyEnum"];
+            /** @default false */
+            external_enrichment_enabled: boolean;
+            /** @default false */
+            ai_suggestions_enabled: boolean;
+        };
+        UploadBatchReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            batch: components["schemas"]["UploadBatchSummary"] | null;
+        };
+        UploadBatchSummary: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            expected_count: number;
+            completed_count: number;
+            failed_count: number;
+            status: string;
+            version: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        UploadReceiptCancelRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
+        UploadWorkspace: {
+            owner_id: string;
+            transport: components["schemas"]["TransportEnum"];
+            max_files: number;
+            max_file_bytes: number;
+            chunk_bytes: number;
+            recent: components["schemas"]["UploadBatchSummary"][];
+            batch: components["schemas"]["UploadWorkspaceBatch"] | null;
+            version: string;
+        };
+        UploadWorkspaceBatch: {
+            /** Format: uuid */
+            readonly id: string;
+            status?: components["schemas"]["UploadWorkspaceBatchStatusEnum"];
+            source?: string;
+            label?: string;
+            access_policy?: components["schemas"]["AccessPolicyEnum"];
+            ocr_strategy?: components["schemas"]["OcrStrategyEnum"];
+            duplicate_policy?: components["schemas"]["DuplicatePolicyEnum"];
+            external_enrichment_enabled?: boolean;
+            ai_suggestions_enabled?: boolean;
+            /** Format: int64 */
+            expected_count?: number;
+            /** Format: int64 */
+            completed_count?: number;
+            /** Format: int64 */
+            failed_count?: number;
+            notes?: string;
+            readonly items: components["schemas"]["UploadWorkspaceItem"][];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description * `received` - 已接收
+         *     * `processing` - 处理中
+         *     * `partial` - 部分完成
+         *     * `completed` - 已完成
+         *     * `failed` - 失败
+         * @enum {string}
+         */
+        UploadWorkspaceBatchStatusEnum: "received" | "processing" | "partial" | "completed" | "failed";
+        /** @description The upload table needs a summary, not every catalog edit/history panel. */
+        UploadWorkspaceItem: {
+            /** Format: uuid */
+            readonly id: string;
+            source_filename: string;
+            /** Format: int64 */
+            byte_size?: number;
+            status?: components["schemas"]["UploadWorkspaceItemStatusEnum"];
+            /** Format: int64 */
+            stage_progress?: number;
+            error_code?: string;
+            error_message?: string;
+            dispatch_status?: components["schemas"]["DispatchStatusEnum"];
+            dispatch_task_id?: string;
+            /** Format: int64 */
+            dispatch_attempts?: number;
+            recognized_metadata?: unknown;
+            preflight_summary?: unknown;
+            /** Format: uuid */
+            edition?: string | null;
+            readonly metadata_candidates: components["schemas"]["MetadataCandidate"][];
+            readonly review_data: {
+                [key: string]: unknown;
+            } | null;
+            readonly can_manage_publication: boolean;
+            readonly is_stalled: boolean;
+            readonly suggested_action: string;
+            readonly staging: {
+                [key: string]: unknown;
+            } | null;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description * `received` - 已接收
+         *     * `validating` - 校验中
+         *     * `deduplicating` - 查重中
+         *     * `extracting` - 提取中
+         *     * `ocr` - OCR 中
+         *     * `metadata` - 识别元数据
+         *     * `linking` - 建立关联
+         *     * `indexing` - 建立索引
+         *     * `preparing_public_asset` - 准备公开文件
+         *     * `syncing_cloud` - 同步云端
+         *     * `ready` - 可发布
+         *     * `published` - 已发布
+         *     * `needs_review` - 需要处理
+         *     * `failed` - 失败
+         *     * `withdrawn` - 已下架
+         *     * `deleted` - 已删除
+         * @enum {string}
+         */
+        UploadWorkspaceItemStatusEnum: "received" | "validating" | "deduplicating" | "extracting" | "ocr" | "metadata" | "linking" | "indexing" | "preparing_public_asset" | "syncing_cloud" | "ready" | "published" | "needs_review" | "failed" | "withdrawn" | "deleted";
         User: {
             readonly id: number;
             /**
@@ -21830,6 +22102,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OCRWorkspaceCommandResult"];
+                };
+            };
+        };
+    };
+    ingestion_upload_workspace_retrieve: {
+        parameters: {
+            query?: {
+                batch?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadWorkspace"];
+                };
+            };
+        };
+    };
+    ingestion_upload_workspace_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadBatchCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["UploadBatchCommandRequest"];
+                "multipart/form-data": components["schemas"]["UploadBatchCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadBatchReceipt"];
+                };
+            };
+        };
+    };
+    ingestion_upload_workspace_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadBatchReceipt"];
+                };
+            };
+        };
+    };
+    ingestion_upload_workspace_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadReceiptCancelRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["UploadReceiptCancelRequest"];
+                "multipart/form-data": components["schemas"]["UploadReceiptCancelRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadBatchReceipt"];
                 };
             };
         };
