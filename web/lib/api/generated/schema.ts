@@ -11196,9 +11196,10 @@ export interface components {
          *     * `edit` - edit
          *     * `adopt` - adopt
          *     * `restore` - restore
+         *     * `export` - export
          * @enum {string}
          */
-        OutlineCommandActionEnum: "rebuild" | "edit" | "adopt" | "restore";
+        OutlineCommandActionEnum: "rebuild" | "edit" | "adopt" | "restore" | "export";
         OutlineCommandRequest: {
             action: components["schemas"]["OutlineCommandActionEnum"];
             expected_revision?: number;

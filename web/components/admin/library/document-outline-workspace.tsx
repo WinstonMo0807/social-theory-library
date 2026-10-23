@@ -9,10 +9,11 @@ import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { normalizePublicResourceUrl } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { useDocumentOutline } from "@/lib/api/use-persistent-workspace";
-import { actOnOutlineJob, adoptOutline, editOutline, readOutlineRevision, readOutlineState, rebuildOutline, type OutlineRevision, type OutlineState } from "@/lib/api/curation-workspace.client";
+import { actOnOutlineJob, adoptOutline, editOutline, exportOutline, readOutlineRevision, readOutlineState, rebuildOutline, type OutlineRevision, type OutlineState } from "@/lib/api/curation-workspace.client";
 import { filterOutline, outlinePosition, type OutlineCandidate } from "@/lib/api/document-outline";
 import { isTaskRunning } from "@/lib/api/task-polling";
 import { Dialog } from "@/components/ui/dialog";
+import { downloadWorkFile } from "./work-file-preview";
 import { OutlinePdfPreview } from "./outline-pdf-preview";
 import { editableOutline, moveOutlineSibling, orderOutline, outlineCommandNodes, outlineDescendants, outlineSourceLabels, outlineStatusLabels, type EditableOutlineNode } from "./outline-edit-state";
 import styles from "./document-outline.module.css";
@@ -22,17 +23,17 @@ type Draft = { revision: OutlineRevision | null; expected: number; nodes: Editab
 type Confirmation = { kind: "discard"; revision?: OutlineRevision } | { kind: "delete"; id: string } | { kind: "confirm"; ids: string[] } | { kind: "resave"; expected: number } | { kind: "adopt" | "restore"; revision: OutlineRevision; expected: number };
 const tabs: Array<[Tab, string]> = [["calibration", "目录校准"], ["candidates", "候选对比"], ["history", "修订历史"], ["reader", "读者预览"]];
 const originLabels: Record<string, string> = { automatic: "自动候选", manual: "人工修订", adopted: "已采用", restored: "历史恢复" };
-const jobLabels: Record<string, string> = { pending: "等待提取", queued: "等待提取", running: "正在提取", succeeded: "提取完成", completed: "提取完成", failed: "提取失败", cancelled: "已取消", paused: "已暂停" };
+const jobLabels: Record<string, string> = { pending: "等待处理", queued: "等待处理", running: "正在处理", succeeded: "已完成", completed: "已完成", failed: "处理失败", cancelled: "已取消", canceled: "已取消", paused: "已暂停" };
 const confirmed = (node: EditableOutlineNode) => Boolean(node.pdf_page && ["native", "confirmed"].includes(node.calibration_status || ""));
 const date = (value: string) => new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 
 export function DocumentOutlineWorkspace({ assetId }: { assetId: string }) {
   const user = useAdminSession();
   if (!user) return <p role="status">正在核对管理会话……</p>;
-  return <OutlineWorkspace key={`${user.id}:${assetId}`} assetId={assetId} ownerId={String(user.id)} canEdit={hasAdminCapability(user, "can_edit_metadata")} canRebuild={hasAdminCapability(user, "can_retry_jobs")} />;
+  return <OutlineWorkspace key={`${user.id}:${assetId}`} assetId={assetId} ownerId={String(user.id)} canEdit={hasAdminCapability(user, "can_edit_metadata")} canRebuild={hasAdminCapability(user, "can_retry_jobs")} canDownload={hasAdminCapability(user, "can_view_evidence")} />;
 }
 
-function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: rebuildAllowed }: { assetId: string; ownerId: string; canEdit: boolean; canRebuild: boolean }) {
+function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: rebuildAllowed, canDownload }: { assetId: string; ownerId: string; canEdit: boolean; canRebuild: boolean; canDownload: boolean }) {
   const resource = useDocumentOutline(assetId, ownerId);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [selectedId, setSelectedId] = useState("");
@@ -237,7 +238,8 @@ function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: 
       <div className={styles.actions}><button type="button" disabled={busy || (historyData?.history_page || 1) <= 1} onClick={() => void readHistoryPage((historyData?.history_page || 1) - 1)}>上一页</button><span>第 {historyData?.history_page || 1} 页</span><button type="button" disabled={busy || !historyData?.history_next_page} onClick={() => void readHistoryPage(historyData!.history_next_page!)}>下一页</button></div>
     </section> : null}
     </div>
-    {data.jobs.length ? <section className={styles.jobs} aria-label="目录提取任务"><h2>提取任务</h2>{data.jobs.map(job => <article key={job.id}><span>{jobLabels[job.status] || job.status}</span>{isTaskRunning(job.status) ? <progress max={100} value={job.progress} aria-label="目录提取进度" /> : null}<time>{date(job.updated_at)}</time>{job.error ? <p role="alert">{job.error}</p> : null}{canRebuild && (isTaskRunning(job.status) || ["failed", "cancelled"].includes(job.status)) ? <button type="button" disabled={busy} onClick={() => void command(`${job.id}:${job.status}`, async () => { await actOnOutlineJob(job.id, isTaskRunning(job.status) ? "cancel" : "retry"); return readOutlineState(assetId); }, "任务状态已更新。")}>{isTaskRunning(job.status) ? "取消任务" : "重试"}</button> : null}</article>)}</section> : null}
+    {tab === "reader" ? <div className={styles.notice}><p>将已采用目录写入独立 PDF 副本。原件、公共阅读文件和现有笔记保持原样；未采用的编辑不会写入副本。数字签名文件保留原件，不改写签名。</p><button type="button" disabled={!canRebuild || !canDownload || busy || dirty || !data.active?.reviewed || data.jobs.some(job => job.operation === "outline_export" && isTaskRunning(job.status))} onClick={() => { if (data.active) void command(`export:${data.active.id}`, async (_, requestId) => { await exportOutline(assetId, data.active!.id, requestId); return readOutlineState(assetId); }, "书签副本任务已保存，可在下方查看进度并下载。"); }}>生成已采用目录的书签副本</button>{dirty ? <p>当前输入尚未保存，请先处理编辑，再生成已采用版本的副本。</p> : !data.active?.reviewed ? <p>先校准并采用目录，再生成书签副本。</p> : null}</div> : null}
+    {data.jobs.length ? <section className={styles.jobs} aria-label="目录任务"><h2>目录任务</h2>{data.jobs.map(job => <article key={job.id}><span>{job.operation === "outline_export" ? "书签副本 · " : "目录提取 · "}{jobLabels[job.status] || job.status}</span>{isTaskRunning(job.status) ? <progress max={100} value={job.progress} aria-label="目录任务进度" /> : null}<time>{date(job.updated_at)}</time>{job.error ? <p role="alert">{job.error}</p> : null}{job.download_url && canDownload ? <><span>{job.outline_revision_id === data.active?.id ? "当前已采用目录" : "历史已采用目录副本"}</span><button type="button" disabled={busy} onClick={() => { setReading(true); void downloadWorkFile(ownerId, job.download_url!, "校准书签.pdf").then(() => { if (alive.current) setMessage("已开始下载独立书签副本，原件未改动。"); }).catch(reason => { if (alive.current) setMessage(reason instanceof Error ? reason.message : "副本下载暂未完成。"); }).finally(() => { if (alive.current) setReading(false); }); }}>下载书签副本</button></> : null}{canRebuild && (isTaskRunning(job.status) || job.status === "failed") ? <button type="button" disabled={busy} onClick={() => void command(`${job.id}:${job.status}`, async () => { await actOnOutlineJob(job.id, isTaskRunning(job.status) ? "cancel" : "retry"); return readOutlineState(assetId); }, "任务状态已更新。")}>{isTaskRunning(job.status) ? "取消任务" : "重试"}</button> : null}</article>)}</section> : null}
     <Dialog open={Boolean(confirmation)} className={styles.dialog} aria-labelledby="outline-confirm-title" onRequestClose={() => { if (!busy) setConfirmation(null); }}><h2 id="outline-confirm-title">{confirmation?.kind === "resave" ? "保留输入另存为新修订" : confirmation?.kind === "confirm" ? "确认目录节点" : confirmation?.kind === "discard" ? "载入其他修订" : confirmation?.kind === "delete" ? "移除目录节点" : confirmation?.kind === "restore" ? "恢复历史目录" : "采用当前目录"}</h2>
       <p>{confirmation?.kind === "resave" ? `当前输入 ${nodes.length} 个节点将另存为候选修订。第 ${confirmation.expected} 次修订与正在使用的目录均保留，不会自动采用本次输入。目录来源变化时仍须重新校准。` : confirmation?.kind === "confirm" ? `确认所选 ${confirmation.ids.length} 项的标题、物理页、印刷页码及跳转位置均已对照原文。未定位的节点不会被确认。` : confirmation?.kind === "discard" ? "当前未保存输入将被放弃。已经保存的历史修订继续保留。" : confirmation?.kind === "delete" ? "只从当前编辑目录移除这个节点，其子节点提升到上一级。原有 PDF 与已保存修订继续保留。" : "这会新增一个采用修订。已公开文件的读者目录将随之更新，旧目录与原文件保留。此操作不会发布尚未公开的书目。"}</p>
       {confirmation?.kind === "resave" ? <div className={styles.conflictChanges}><p>与最新修订相比，{conflictDifferences.length} 项内容不同（仅列出前 20 项；顺序以当前编辑目录为准）。</p>{conflictDifferences.slice(0, 20).map(item => <div key={item.id}><span>最新：{item.latest ? `${item.latest.title} · PDF ${item.latest.pdf_page || "待定位"}` : "不存在此节点"}</span><span>当前输入：{item.mine ? `${item.mine.title} · PDF ${item.mine.pdf_page || "待定位"}` : "移除此节点"}</span></div>)}</div> : null}

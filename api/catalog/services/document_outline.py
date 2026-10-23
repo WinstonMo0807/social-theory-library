@@ -491,9 +491,12 @@ def outline_state(asset, *, history_page=1):
             "history": [revision_payload(row, nodes=False) for row in revisions[start:start + 50]],
             "history_page": history_page, "history_count": count,
             "history_next_page": history_page + 1 if start + 50 < count else None,
-            "jobs": [{"id": str(job.pk), "status": job.status, "progress": job.progress,
+            "jobs": [{"id": str(job.pk), "status": job.status, "progress": job.progress, "operation": job.stats.get("operation"),
                       "error": job.error_message, "updated_at": job.updated_at, "result_revision_id": job.stats.get("result_revision_id")}
-                     for job in ProcessingJob.objects.filter(asset=asset, job_type="text_extraction", stats__operation="outline_rebuild").order_by("-created_at")[:10]]}
+                     | ({"download_url": f"/catalog/admin/editions/{asset.edition_id}/files/{job.stats['result_asset_id']}/content/?download=1",
+                         "outline_revision_id": job.stats.get("outline_revision_id")}
+                        if job.stats.get("operation") == "outline_export" and job.status == "succeeded" and job.stats.get("result_asset_id") else {})
+                     for job in ProcessingJob.objects.filter(asset=asset, job_type="text_extraction", stats__operation__in=["outline_rebuild", "outline_export"]).order_by("-created_at")[:10]]}
 
 
 def _assert_expected(asset, expected_revision):
@@ -647,7 +650,7 @@ def dispatch_outline_job(job_id, task_id):
 @transaction.atomic
 def outline_job_action(job_id, *, action, actor):
     # Match extraction's Asset → Job lock order when cancellation races commit.
-    target = ProcessingJob.objects.get(pk=job_id, job_type="text_extraction", stats__operation="outline_rebuild")
+    target = ProcessingJob.objects.get(pk=job_id, job_type="text_extraction", stats__operation__in=["outline_rebuild", "outline_export"])
     asset = Asset.objects.select_for_update().get(pk=target.asset_id)
     job = ProcessingJob.objects.select_for_update().get(pk=target.pk)
     before = {"status": job.status, "error_code": job.error_code, "error_message": job.error_message, "attempt": job.attempt}
@@ -661,6 +664,9 @@ def outline_job_action(job_id, *, action, actor):
         if job.status != "failed":
             raise OutlineConflict("只有失败的目录任务可以重试。")
         _source_current(asset)
+        if job.stats.get("operation") == "outline_export":
+            from catalog.services.outline_exports import export_revision
+            export_revision(asset, job.stats.get("outline_revision_id"))
         current_document = asset.document_revisions.filter(is_active=True).first()
         if asset.sha256 != job.stats.get("source_sha256") or str(current_document.pk if current_document else "") != str(job.stats.get("document_revision_id") or ""):
             raise OutlineConflict("任务绑定的正文已变化，请新建目录重建任务，原失败记录保留。")
@@ -671,7 +677,9 @@ def outline_job_action(job_id, *, action, actor):
     job.save(update_fields=["status", "task_id", "attempt", "error_code", "error_message", "finished_at", "updated_at"])
     AuditEvent.objects.create(actor=actor, action=f"outline.task.{action}", object_type="ProcessingJob", object_id=str(job.pk), before=before, after={"status": job.status})
     if action == "retry":
-        transaction.on_commit(lambda: dispatch_outline_job(str(job.pk), job.task_id))
+        from catalog.services.outline_exports import dispatch_export
+        dispatch = dispatch_export if job.stats.get("operation") == "outline_export" else dispatch_outline_job
+        transaction.on_commit(lambda: dispatch(str(job.pk), job.task_id))
     return job
 
 

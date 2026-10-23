@@ -310,6 +310,9 @@ def _update_ocr_edition_if_current(job, *, expected_status=None, **fields):
 
 
 def _dispatch_processing_job(job_id: str, job_type: str, task_id: str) -> bool:
+    if job_type == ProcessingJob.JobType.TEXT_EXTRACTION and ProcessingJob.objects.filter(pk=job_id, stats__operation="outline_export").exists():
+        from catalog.services.outline_exports import dispatch_export
+        return dispatch_export(job_id, task_id)
     if job_type == "text_extraction" and ProcessingJob.objects.filter(pk=job_id, stats__operation="concept_alignment").exists():
         from .concept_retry import dispatch_concept_job
         return dispatch_concept_job(job_id, task_id)

@@ -37,7 +37,7 @@ def recovery_state(job, *, now=None):
     eligible = last + timedelta(seconds=seconds) if last else None
     stale = bool(eligible and now >= eligible)
     supported = (discovery and stats.get("action") in {"build", "source"}
-                 or job.job_type == "ocr" or job.job_type == "text_extraction" and stats.get("operation") in {"outline_rebuild", "concept_alignment"})
+                 or job.job_type == "ocr" or job.job_type == "text_extraction" and stats.get("operation") in {"outline_rebuild", "outline_export", "concept_alignment"})
     exhausted = job.attempt >= job.max_attempts or discovery and job.status == "running" and job.attempt + 1 >= job.max_attempts
     allowed = supported and stale and not exhausted and not stats.get("retry_replacement_id")
     state = "recoverable" if allowed else "delayed" if stale else "waiting" if job.status == "pending" else "active"
@@ -80,9 +80,12 @@ def recover_processing_task(job, actor):
             elif job.job_type == "text_extraction" and job.stats.get("operation") == "concept_alignment":
                 from .concept_retry import current_source
                 current_source(job)
-            elif job.job_type == "text_extraction" and job.stats.get("operation") == "outline_rebuild":
+            elif job.job_type == "text_extraction" and job.stats.get("operation") in {"outline_rebuild", "outline_export"}:
                 from catalog.services.document_outline import _source_current
                 _source_current(job.asset)
+                if job.stats.get("operation") == "outline_export":
+                    from catalog.services.outline_exports import export_revision
+                    export_revision(job.asset, job.stats.get("outline_revision_id"))
                 document = job.asset.document_revisions.filter(is_active=True).first()
                 if (job.asset.sha256 != job.stats.get("source_sha256")
                         or str(document.pk if document else "") != str(job.stats.get("document_revision_id") or "")):

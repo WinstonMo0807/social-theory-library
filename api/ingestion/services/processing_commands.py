@@ -85,7 +85,7 @@ def task_actions(job, actor):
     if state in {"pending", "paused"}: actions.append("cancel")
     if kind == "ocr" and state == "failed" and job.stats.get("requested_mode") in {"all_pages", "selected_pages"}: actions.append("cancel")
     if state == "failed" and kind in {"ocr", "page_labels", "external_enrichment", "r2_staging"}: actions.append("retry")
-    if kind == "editorial_assistance" or kind == "text_extraction" and job.stats.get("operation") == "outline_rebuild":
+    if kind == "editorial_assistance" or kind == "text_extraction" and job.stats.get("operation") in {"outline_rebuild", "outline_export"}:
         if state in {"running", "failed"}: actions.append("cancel")
         if state == "failed": actions.append("retry")
     return actions + recover
@@ -107,7 +107,7 @@ def lock_task(source, identifier, actor, *, action=None):
     if isinstance(target, ProcessingJob) and target.job_type == "editorial_assistance":
         from catalog.services.curation_projects import lock_issue
         lock_issue(target.stats.get("issue_id"), actor, allow_archived=action == "cancel")
-    elif isinstance(target, ProcessingJob) and target.job_type == "text_extraction" and target.stats.get("operation") == "outline_rebuild":
+    elif isinstance(target, ProcessingJob) and target.job_type == "text_extraction" and target.stats.get("operation") in {"outline_rebuild", "outline_export"}:
         get_object_or_404(Asset.objects.select_for_update(), pk=target.asset_id)
     else:
         edition_id = getattr(target, "edition_id", None) or (target.asset.edition_id if target.asset_id else None)

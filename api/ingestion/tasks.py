@@ -258,6 +258,13 @@ def process_external_enrichment_job(self, job_id):
 
 
 @shared_task(bind=True, ignore_result=True)
+def process_outline_export(self, job_id):
+    from catalog.services.outline_exports import run_export
+    job = run_export(str(job_id), task_id=str(self.request.id or ""))
+    return {"id": str(job.pk), "status": job.status, "attempt": job.attempt}
+
+
+@shared_task(bind=True, ignore_result=True)
 def process_outline_job(self, job_id):
     from catalog.services.document_outline import run_outline_job
 

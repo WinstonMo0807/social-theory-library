@@ -35,7 +35,7 @@ const tabs=[["","全部任务"],["running","进行中"],["pending","等待中"],
 const detailTabs={progress:"任务进度",file:"文件信息",results:"识别结果",issues:"问题与重试",logs:"任务日志",settings:"处理设置"};
 const keyFor=(job:{source:string;id:string})=>`${job.source}:${job.id}`;
 const time=(value:string|null)=>value?new Date(value).toLocaleString("zh-CN",{hour12:false}):"尚无记录";
-function taskLabel(job:Job,types:Queue["job_types"]){return job.operation==="concept_alignment"?"概念对齐":job.operation==="outline_rebuild"?"章节目录生成":types.find(row=>row.value===job.job_type)?.label||job.job_type;}
+function taskLabel(job:Job,types:Queue["job_types"]){return job.operation==="concept_alignment"?"概念对齐":job.operation==="outline_export"?"已采用目录书签副本":job.operation==="outline_rebuild"?"章节目录生成":types.find(row=>row.value===job.job_type)?.label||job.job_type;}
 function stateLabel(job:Job){return job.pause_requested&&job.status==="running"?"等待当前步骤暂停":job.partial?"部分失败":job.recovery.state==="waiting_sources"?"等待来源汇总":states[job.status]||"状态待核实";}
 function useQueue(owner:string,path:string){const load=useCallback((url:string,signal:AbortSignal)=>apiRequest<Queue>(url,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),[owner]);return usePersistentWorkspace<Queue>(path,owner,data=>data.results.some(job=>["pending","running"].includes(job.status)||["pending","running"].includes(job.followup?.retry_status||""))?5000:null,load);}
 function subscribeCompact(callback:()=>void){const media=window.matchMedia("(max-width:800px)");media.addEventListener("change",callback);return()=>media.removeEventListener("change",callback);}

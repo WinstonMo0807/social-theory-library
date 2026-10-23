@@ -45051,10 +45051,11 @@
                     "rebuild",
                     "edit",
                     "adopt",
-                    "restore"
+                    "restore",
+                    "export"
                 ],
                 "type": "string",
-                "description": "* `rebuild` - rebuild\n* `edit` - edit\n* `adopt` - adopt\n* `restore` - restore"
+                "description": "* `rebuild` - rebuild\n* `edit` - edit\n* `adopt` - adopt\n* `restore` - restore\n* `export` - export"
             },
             "OutlineCommandRequest": {
                 "type": "object",

@@ -38,7 +38,7 @@ class OutlineNodeSerializer(serializers.Serializer):
 
 
 class OutlineCommandSerializer(serializers.Serializer):
-    action = serializers.ChoiceField(choices=["rebuild", "edit", "adopt", "restore"])
+    action = serializers.ChoiceField(choices=["rebuild", "edit", "adopt", "restore", "export"])
     expected_revision = serializers.IntegerField(min_value=0, required=False)
     revision_id = serializers.UUIDField(required=False)
     base_revision_id = serializers.UUIDField(required=False, allow_null=True)
@@ -71,13 +71,21 @@ class AdminDocumentOutlineView(AdminPrivateResponseMixin, APIView):
         command.is_valid(raise_exception=True)
         data = command.validated_data
         action = data["action"]
-        capability = Capability.RETRY_JOBS if action == "rebuild" else Capability.EDIT_METADATA
+        capability = Capability.RETRY_JOBS if action in {"rebuild", "export"} else Capability.EDIT_METADATA
         if not has_capability(request.user, capability):
             return Response({"detail": "当前账户没有执行此目录操作的权限。"}, status=403)
         asset = get_object_or_404(Asset, pk=asset_id, kind=Asset.Kind.NORMALIZED)
         if not data.get("request_id"):
             return Response({"detail": "目录操作需要 request_id，以便安全重试。"}, status=400)
         try:
+            if action == "export":
+                from catalog.services.outline_exports import queue_export
+                if not has_capability(request.user, Capability.VIEW_EVIDENCE):
+                    return Response({"detail": "当前账户不能下载审核文件。"}, status=403)
+                if not data.get("revision_id"):
+                    return Response({"detail": "请指定已采用目录的修订。"}, status=400)
+                job = queue_export(asset.pk, revision_id=data["revision_id"], request_id=data["request_id"], actor=request.user)
+                return Response({"job_id": str(job.pk), "status": job.status}, status=202 if job.status in {"pending", "running"} else 200)
             if action == "rebuild":
                 if not data.get("request_id"):
                     return Response({"detail": "重建需要 request_id，以便安全重试。"}, status=400)
@@ -185,7 +193,7 @@ class AdminOutlineJobView(AdminPrivateResponseMixin, APIView):
     def post(self, request, job_id):
         command = OutlineJobCommandSerializer(data=request.data)
         command.is_valid(raise_exception=True)
-        get_object_or_404(ProcessingJob, pk=job_id, job_type="text_extraction", stats__operation="outline_rebuild")
+        get_object_or_404(ProcessingJob, pk=job_id, job_type="text_extraction", stats__operation__in=["outline_rebuild", "outline_export"])
         try:
             job = outline_job_action(job_id, action=command.validated_data["action"], actor=request.user)
         except OutlineConflict as exc:
