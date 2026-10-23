@@ -79,3 +79,4 @@
 .header-search {
   font-size: calc(var(--stl-type-body) + var(--font-bump));
 }
+@media (min-width:761px) { .site-header[data-stl-account=true] .reader-account-menu-toggle { display:none; } }

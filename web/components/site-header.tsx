@@ -18,6 +18,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { logoutCurrentSession } from "@/lib/api";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
+import { confirmUnsavedBeforeAccountChange } from "@/lib/use-unsaved-form";
+import { ReaderAccountMenu } from "./reader-account-menu";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { usePublicNavigationReturn } from "@/lib/public-navigation-return";
 import { ActionButton, AsyncStatus } from "./action-feedback";
@@ -105,7 +107,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   }
 
   async function logout() {
-    if (beforeLogout && !beforeLogout()) return;
+    if (beforeLogout ? !beforeLogout() : !confirmUnsavedBeforeAccountChange()) return;
     const actionKey = "logout";
     if (!startAction(actionKey)) return;
     setLogoutError("");
@@ -157,9 +159,10 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
           <span>{config.navigation.search}</span>
         </Link>
         <ThemeToggle />
+        {readerCenterRoute && user ? <ReaderAccountMenu key={user.id} user={user} onLogout={logout} onPreferences={() => setOpen(true)} pending={pendingAction === "logout"} error={logoutError} /> : null}
         <IconButton
           ref={menuButtonRef}
-          className="icon-button menu-button"
+          className={`icon-button menu-button${readerCenterRoute && user ? " reader-account-menu-toggle" : ""}`}
           type="button"
           aria-label={open ? "关闭菜单" : "打开菜单"}
           aria-expanded={open}
@@ -169,6 +172,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
           {open ? <X size={25} /> : <Menu size={25} />}
         </IconButton>
       </div>
+      {logoutError && !open ? <p className="site-navigation-returned" role="alert">{logoutError}</p> : null}
       {navigationReturn.returned ? <p className="site-navigation-returned" role="status">已返回先前页面</p> : null}
       {open ? (
         <Drawer open={open} onRequestClose={closeMenu} initialFocusRef={closeButtonRef} className="site-menu-layer" id="site-menu" aria-labelledby="site-menu-title">
@@ -206,6 +210,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
                   <Settings size={18} />
                   <span><strong>账户设置</strong></span><ChevronRight size={15} />
                 </Link>
+                {user ? <Link data-auth-full-page href="/login?next=%2Faccount" onClick={closeMenu}><CircleUserRound size={18} /><span><strong>切换账户</strong><small>登录另一账户，私人资料不会合并</small></span><ChevronRight size={15} /></Link> : null}
                 {user?.capabilities?.includes("access_back_office") ? <Link href="/admin" prefetch={false} onClick={closeMenu}><Settings size={18} /><span><strong>管理后台</strong></span><ChevronRight size={15} /></Link> : null}
                 <Link href="/help" prefetch={false} onClick={closeMenu} aria-current={isActive("/help") ? "page" : undefined}><CircleHelp size={18} /><span><strong>帮助与支持</strong></span><ChevronRight size={15} /></Link>
                 <Link href="/about" prefetch={false} onClick={closeMenu} aria-current={isActive("/about") ? "page" : undefined}><ArrowUpRight size={18} /><span><strong>关于我们</strong></span><ChevronRight size={15} /></Link>
