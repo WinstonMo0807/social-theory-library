@@ -11447,6 +11447,137 @@
                 }
             }
         },
+        "/api/distribution/storage/": {
+            "get": {
+                "operationId": "distribution_storage_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StorageSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/distribution/storage/backups/{backup_id}/": {
+            "get": {
+                "operationId": "distribution_storage_backups_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "backup_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BackupDetailOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/distribution/storage/commands/": {
+            "post": {
+                "operationId": "distribution_storage_commands_create",
+                "tags": [
+                    "distribution"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StorageCommandInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StorageCommandInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StorageCommandInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StorageCommandOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/ingestion/ocr-workspace/{asset_id}/": {
             "get": {
                 "operationId": "ingestion_ocr_workspace_retrieve",
@@ -24758,6 +24889,39 @@
                 "type": "string",
                 "description": "* `database` - database"
             },
+            "BackupDetailOutput": {
+                "type": "object",
+                "properties": {
+                    "backup": {
+                        "$ref": "#/components/schemas/BackupOutput"
+                    },
+                    "verifications": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BackupVerificationOutput"
+                        }
+                    },
+                    "rehearsals": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RestoreReport"
+                        }
+                    },
+                    "rehearsals_limited": {
+                        "type": "boolean"
+                    },
+                    "technical_error": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "backup",
+                    "rehearsals",
+                    "rehearsals_limited",
+                    "technical_error",
+                    "verifications"
+                ]
+            },
             "BackupJob": {
                 "type": "object",
                 "properties": {
@@ -24852,6 +25016,233 @@
                 ],
                 "type": "string",
                 "description": "* `queued` - 等待\n* `running` - 执行中\n* `completed` - 完成\n* `failed` - 失败"
+            },
+            "BackupOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "status_label": {
+                        "type": "string"
+                    },
+                    "include_originals": {
+                        "type": "boolean"
+                    },
+                    "scope": {
+                        "type": "string"
+                    },
+                    "archive_name": {
+                        "type": "string"
+                    },
+                    "location": {
+                        "type": "string"
+                    },
+                    "archive_bytes": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "checksum": {
+                        "type": "string"
+                    },
+                    "duration_seconds": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "error_message": {
+                        "type": "string"
+                    },
+                    "verification": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/BackupVerificationOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "restore_status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "archive_bytes",
+                    "archive_name",
+                    "checksum",
+                    "completed_at",
+                    "created_at",
+                    "duration_seconds",
+                    "error_message",
+                    "id",
+                    "include_originals",
+                    "location",
+                    "restore_status",
+                    "scope",
+                    "started_at",
+                    "status",
+                    "status_label",
+                    "verification"
+                ]
+            },
+            "BackupPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BackupOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "BackupScheduleOutput": {
+                "type": "object",
+                "properties": {
+                    "scope": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "interval_hours": {
+                        "type": "integer"
+                    },
+                    "next_run_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "last_job_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "last_job_status": {
+                        "type": "string"
+                    },
+                    "last_error": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "enabled",
+                    "interval_hours",
+                    "label",
+                    "last_error",
+                    "last_job_id",
+                    "last_job_status",
+                    "next_run_at",
+                    "scope",
+                    "version"
+                ]
+            },
+            "BackupVerificationOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "backup_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "status_label": {
+                        "type": "string"
+                    },
+                    "stalled": {
+                        "type": "boolean"
+                    },
+                    "expected_checksum": {
+                        "type": "string"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "error_message": {
+                        "type": "string"
+                    },
+                    "database_verified": {
+                        "type": "boolean"
+                    },
+                    "originals_verified": {
+                        "type": "integer"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "restore_verified": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "backup_id",
+                    "completed_at",
+                    "created_at",
+                    "database_verified",
+                    "detail",
+                    "error_message",
+                    "expected_checksum",
+                    "id",
+                    "originals_verified",
+                    "restore_verified",
+                    "stalled",
+                    "started_at",
+                    "status",
+                    "status_label"
+                ]
             },
             "BibliographicLookupRequest": {
                 "type": "object",
@@ -26093,6 +26484,39 @@
                     "source_id",
                     "status",
                     "units"
+                ]
+            },
+            "CleanupPreview": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string"
+                    },
+                    "can_execute": {
+                        "type": "boolean"
+                    },
+                    "candidate_count": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "candidate_bytes": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "protected_count": {
+                        "type": "integer"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "can_execute",
+                    "candidate_bytes",
+                    "candidate_count",
+                    "detail",
+                    "protected_count",
+                    "status"
                 ]
             },
             "CommentCommandRequest": {
@@ -50037,6 +50461,101 @@
                 "type": "string",
                 "description": "* `library` - library\n* `works` - works\n* `passages` - passages\n* `filtered` - filtered"
             },
+            "RestorePlan": {
+                "type": "object",
+                "properties": {
+                    "backup_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "archive_name": {
+                        "type": "string"
+                    },
+                    "archive_sha256": {
+                        "type": "string"
+                    },
+                    "integrity_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "restore_executed": {
+                        "type": "boolean"
+                    },
+                    "ready_for_rehearsal": {
+                        "type": "boolean"
+                    },
+                    "target": {
+                        "type": "string"
+                    },
+                    "command": {
+                        "type": "string"
+                    },
+                    "report_option": {
+                        "type": "string"
+                    },
+                    "requirements": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "archive_name",
+                    "archive_sha256",
+                    "backup_id",
+                    "command",
+                    "integrity_verified_at",
+                    "ready_for_rehearsal",
+                    "report_option",
+                    "requirements",
+                    "restore_executed",
+                    "target"
+                ]
+            },
+            "RestoreReport": {
+                "type": "object",
+                "properties": {
+                    "checked_at": {
+                        "type": "string"
+                    },
+                    "archive_sha256": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "archive_sha256",
+                    "checked_at",
+                    "detail",
+                    "status"
+                ]
+            },
+            "RetentionRule": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "policy": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "label",
+                    "policy"
+                ]
+            },
             "ReviewStatusEnum": {
                 "enum": [
                     "suggested",
@@ -52855,6 +53374,304 @@
                 },
                 "required": [
                     "proposition"
+                ]
+            },
+            "StorageCategory": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "bytes": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "bytes",
+                    "label"
+                ]
+            },
+            "StorageCommandInputOperationEnum": {
+                "enum": [
+                    "create_backup",
+                    "verify_archive",
+                    "restore_plan",
+                    "close_stalled_verification",
+                    "save_schedule"
+                ],
+                "type": "string",
+                "description": "* `create_backup` - create_backup\n* `verify_archive` - verify_archive\n* `restore_plan` - restore_plan\n* `close_stalled_verification` - close_stalled_verification\n* `save_schedule` - save_schedule"
+            },
+            "StorageCommandInputRequest": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "$ref": "#/components/schemas/StorageCommandInputOperationEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "include_originals": {
+                        "type": "boolean"
+                    },
+                    "retry_from_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "backup_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_checksum": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "verification_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/StorageCommandInputScopeEnum"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "interval_hours": {
+                        "type": "integer",
+                        "maximum": 720,
+                        "minimum": 6
+                    },
+                    "first_run_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    }
+                },
+                "required": [
+                    "operation",
+                    "request_id"
+                ]
+            },
+            "StorageCommandInputScopeEnum": {
+                "enum": [
+                    "database",
+                    "originals"
+                ],
+                "type": "string",
+                "description": "* `database` - database\n* `originals` - originals"
+            },
+            "StorageCommandOutput": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "operation": {
+                        "type": "string"
+                    },
+                    "backup": {
+                        "$ref": "#/components/schemas/BackupOutput"
+                    },
+                    "verification": {
+                        "$ref": "#/components/schemas/BackupVerificationOutput"
+                    },
+                    "restore_plan": {
+                        "$ref": "#/components/schemas/RestorePlan"
+                    },
+                    "schedule_saved": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "operation",
+                    "request_id"
+                ]
+            },
+            "StorageFileType": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "bytes": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "bytes",
+                    "count",
+                    "label"
+                ]
+            },
+            "StorageLocation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "total_bytes": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "used_bytes": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "free_bytes": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "used_percent": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "readable": {
+                        "type": "boolean"
+                    },
+                    "writable": {
+                        "type": "boolean"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "free_bytes",
+                    "id",
+                    "label",
+                    "readable",
+                    "status",
+                    "total_bytes",
+                    "used_bytes",
+                    "used_percent",
+                    "writable"
+                ]
+            },
+            "StorageSchedule": {
+                "type": "object",
+                "properties": {
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "plans": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BackupScheduleOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "configured",
+                    "detail",
+                    "plans"
+                ]
+            },
+            "StorageSnapshot": {
+                "type": "object",
+                "properties": {
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "permissions": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "boolean"
+                        }
+                    },
+                    "locations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StorageLocation"
+                        }
+                    },
+                    "file_types": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StorageFileType"
+                        }
+                    },
+                    "catalog_file_bytes": {
+                        "type": "integer"
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StorageCategory"
+                        }
+                    },
+                    "file_statistics_notice": {
+                        "type": "string"
+                    },
+                    "schedule": {
+                        "$ref": "#/components/schemas/StorageSchedule"
+                    },
+                    "backups": {
+                        "$ref": "#/components/schemas/BackupPage"
+                    },
+                    "verifications": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BackupVerificationOutput"
+                        }
+                    },
+                    "rehearsals": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RestoreReport"
+                        }
+                    },
+                    "rehearsals_limited": {
+                        "type": "boolean"
+                    },
+                    "retention": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RetentionRule"
+                        }
+                    },
+                    "cleanup": {
+                        "$ref": "#/components/schemas/CleanupPreview"
+                    }
+                },
+                "required": [
+                    "backups",
+                    "catalog_file_bytes",
+                    "categories",
+                    "checked_at",
+                    "cleanup",
+                    "file_statistics_notice",
+                    "file_types",
+                    "locations",
+                    "permissions",
+                    "rehearsals",
+                    "rehearsals_limited",
+                    "retention",
+                    "schedule",
+                    "verifications"
                 ]
             },
             "StrengthEnum": {

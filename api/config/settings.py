@@ -273,6 +273,7 @@ REST_FRAMEWORK = {
         "semantic_search_user": os.getenv("SEMANTIC_SEARCH_USER_RATE", "120/min"),
         "library_qa": os.getenv("LIBRARY_QA_RATE", "30/hour"),
         "local_service_check": os.getenv("LOCAL_SERVICE_CHECK_RATE", "30/min"),
+        "storage_maintenance": os.getenv("STORAGE_MAINTENANCE_RATE", "12/hour"),
         "public_usage_event": os.getenv("PUBLIC_USAGE_EVENT_RATE", "120/min"),
         "capability_worker": os.getenv("CAPABILITY_REMOTE_WORKER_RATE", "600/hour"),
     },
@@ -355,6 +356,7 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_TIME_LIMIT = 60 * 60
+CELERY_IMPORTS = ("distribution.storage_tasks",)
 INGESTION_TASK_QUEUE = os.getenv("INGESTION_TASK_QUEUE", "ingestion").strip() or "ingestion"
 SEARCH_EVALUATION_TASK_QUEUE = os.getenv("SEARCH_EVALUATION_TASK_QUEUE", "celery").strip() or "celery"
 QUERY_LEXICON_TASK_QUEUE = os.getenv("QUERY_LEXICON_TASK_QUEUE", "celery").strip() or "celery"
@@ -404,6 +406,8 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "retry_on_timeout": True,
 }
 CELERY_BEAT_SCHEDULE = {
+    "dispatch-opted-in-backups": {"task": "distribution.storage_tasks.dispatch_due_backups", "schedule": 60,
+        "options": {"queue": "celery", "expires": 50}},
     "purge-expired-booklist-items": {"task": "reading.tasks.purge_expired_booklist_items", "schedule": 3600,
         "options": {"queue": "celery", "expires": 3500}},
     "refresh-source-follows": {"task": "reading.refresh_source_follows", "schedule": 15 * 60},

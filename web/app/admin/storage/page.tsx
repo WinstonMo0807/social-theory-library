@@ -1,2 +1,2 @@
-import { DistributionAdmin } from "@/components/admin-sections";
-export default function Page() { return <DistributionAdmin />; }
+import { StorageWorkspace } from "@/components/admin/storage-workspace";
+export default function Page() { return <StorageWorkspace />; }

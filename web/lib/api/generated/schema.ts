@@ -2529,6 +2529,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/distribution/storage/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["distribution_storage_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/distribution/storage/backups/{backup_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["distribution_storage_backups_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/distribution/storage/commands/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["distribution_storage_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingestion/ocr-workspace/{asset_id}/": {
         parameters: {
             query?: never;
@@ -5592,6 +5640,13 @@ export interface components {
          * @enum {string}
          */
         BackendEnum: "database";
+        BackupDetailOutput: {
+            backup: components["schemas"]["BackupOutput"];
+            verifications: components["schemas"]["BackupVerificationOutput"][];
+            rehearsals: components["schemas"]["RestoreReport"][];
+            rehearsals_limited: boolean;
+            technical_error: string;
+        };
         BackupJob: {
             /** Format: uuid */
             readonly id: string;
@@ -5621,6 +5676,68 @@ export interface components {
          * @enum {string}
          */
         BackupJobStatusEnum: "queued" | "running" | "completed" | "failed";
+        BackupOutput: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            status_label: string;
+            include_originals: boolean;
+            scope: string;
+            archive_name: string;
+            location: string;
+            archive_bytes: number | null;
+            checksum: string;
+            duration_seconds: number | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            completed_at: string | null;
+            error_message: string;
+            verification: components["schemas"]["BackupVerificationOutput"] | null;
+            restore_status: string;
+        };
+        BackupPage: {
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["BackupOutput"][];
+        };
+        BackupScheduleOutput: {
+            scope: string;
+            label: string;
+            enabled: boolean;
+            interval_hours: number;
+            /** Format: date-time */
+            next_run_at: string | null;
+            version: string;
+            /** Format: uuid */
+            last_job_id: string | null;
+            last_job_status: string;
+            last_error: string;
+        };
+        BackupVerificationOutput: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            backup_id: string;
+            status: string;
+            status_label: string;
+            stalled: boolean;
+            expected_checksum: string;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            error_message: string;
+            database_verified: boolean;
+            originals_verified: number;
+            detail: string;
+            restore_verified: boolean;
+        };
         BibliographicLookupRequest: {
             /** Format: uuid */
             edition_id: string;
@@ -5984,6 +6101,14 @@ export interface components {
             readonly next_page: number | null;
             readonly units: unknown;
             readonly notice: string;
+        };
+        CleanupPreview: {
+            status: string;
+            can_execute: boolean;
+            candidate_count: number | null;
+            candidate_bytes: number | null;
+            protected_count: number;
+            detail: string;
         };
         CommentCommandRequest: {
             /** Format: uuid */
@@ -13234,6 +13359,31 @@ export interface components {
          * @enum {string}
          */
         ResearchScopeKindEnum: "library" | "works" | "passages" | "filtered";
+        RestorePlan: {
+            /** Format: uuid */
+            backup_id: string;
+            archive_name: string;
+            archive_sha256: string;
+            /** Format: date-time */
+            integrity_verified_at: string | null;
+            restore_executed: boolean;
+            ready_for_rehearsal: boolean;
+            target: string;
+            command: string;
+            report_option: string;
+            requirements: string[];
+        };
+        RestoreReport: {
+            checked_at: string;
+            archive_sha256: string;
+            status: string;
+            detail: string;
+        };
+        RetentionRule: {
+            label: string;
+            policy: string;
+            detail: string;
+        };
         /**
          * @description * `suggested` - 系统建议
          *     * `approved` - 人工确认
@@ -14032,6 +14182,95 @@ export interface components {
             temporal_scope?: unknown;
             geographic_scope?: unknown;
             population_scope?: unknown;
+        };
+        StorageCategory: {
+            label: string;
+            bytes: number | null;
+        };
+        /**
+         * @description * `create_backup` - create_backup
+         *     * `verify_archive` - verify_archive
+         *     * `restore_plan` - restore_plan
+         *     * `close_stalled_verification` - close_stalled_verification
+         *     * `save_schedule` - save_schedule
+         * @enum {string}
+         */
+        StorageCommandInputOperationEnum: "create_backup" | "verify_archive" | "restore_plan" | "close_stalled_verification" | "save_schedule";
+        StorageCommandInputRequest: {
+            operation: components["schemas"]["StorageCommandInputOperationEnum"];
+            /** Format: uuid */
+            request_id: string;
+            include_originals?: boolean;
+            /** Format: uuid */
+            retry_from_id?: string;
+            /** Format: uuid */
+            backup_id?: string;
+            expected_checksum?: string;
+            /** Format: uuid */
+            verification_id?: string;
+            scope?: components["schemas"]["StorageCommandInputScopeEnum"];
+            enabled?: boolean;
+            interval_hours?: number;
+            /** Format: date-time */
+            first_run_at?: string | null;
+            expected_version?: string;
+        };
+        /**
+         * @description * `database` - database
+         *     * `originals` - originals
+         * @enum {string}
+         */
+        StorageCommandInputScopeEnum: "database" | "originals";
+        StorageCommandOutput: {
+            /** Format: uuid */
+            request_id: string;
+            operation: string;
+            backup?: components["schemas"]["BackupOutput"];
+            verification?: components["schemas"]["BackupVerificationOutput"];
+            restore_plan?: components["schemas"]["RestorePlan"];
+            schedule_saved?: boolean;
+        };
+        StorageFileType: {
+            label: string;
+            bytes: number;
+            count: number;
+        };
+        StorageLocation: {
+            id: string;
+            label: string;
+            status: string;
+            total_bytes: number | null;
+            used_bytes: number | null;
+            free_bytes: number | null;
+            /** Format: double */
+            used_percent: number | null;
+            readable: boolean;
+            writable: boolean;
+            detail: string;
+        };
+        StorageSchedule: {
+            configured: boolean;
+            detail: string;
+            plans: components["schemas"]["BackupScheduleOutput"][];
+        };
+        StorageSnapshot: {
+            /** Format: date-time */
+            checked_at: string;
+            permissions: {
+                [key: string]: boolean;
+            };
+            locations: components["schemas"]["StorageLocation"][];
+            file_types: components["schemas"]["StorageFileType"][];
+            catalog_file_bytes: number;
+            categories: components["schemas"]["StorageCategory"][];
+            file_statistics_notice: string;
+            schedule: components["schemas"]["StorageSchedule"];
+            backups: components["schemas"]["BackupPage"];
+            verifications: components["schemas"]["BackupVerificationOutput"][];
+            rehearsals: components["schemas"]["RestoreReport"][];
+            rehearsals_limited: boolean;
+            retention: components["schemas"]["RetentionRule"][];
+            cleanup: components["schemas"]["CleanupPreview"];
         };
         /**
          * @description * `high` - 高
@@ -20800,6 +21039,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BackupJob"];
+                };
+            };
+        };
+    };
+    distribution_storage_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageSnapshot"];
+                };
+            };
+        };
+    };
+    distribution_storage_backups_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                backup_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupDetailOutput"];
+                };
+            };
+        };
+    };
+    distribution_storage_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorageCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StorageCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["StorageCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageCommandOutput"];
                 };
             };
         };

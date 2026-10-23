@@ -79,3 +79,26 @@ class BackupJob(UUIDTimeStampedModel):
     error_message = models.TextField(blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+
+
+class BackupVerification(UUIDTimeStampedModel):
+    """Archive integrity is independent of backup creation and restore rehearsal."""
+    backup = models.ForeignKey(BackupJob, on_delete=models.PROTECT, related_name="verifications")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="backup_verifications")
+    status = models.CharField(max_length=20, choices=BackupJob.Status.choices, default=BackupJob.Status.QUEUED, db_index=True)
+    expected_checksum = models.CharField(max_length=64)
+    report = models.JSONField(default=dict, blank=True)
+    error_message = models.CharField(max_length=500, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+
+class BackupSchedule(UUIDTimeStampedModel):
+    """Two explicit opt-in schedules over the existing backup job service."""
+    scope = models.CharField(max_length=20, unique=True, choices=[("database", "数据库与清单"), ("originals", "数据库、清单与原件")])
+    enabled = models.BooleanField(default=False)
+    interval_hours = models.PositiveIntegerField(default=24)
+    next_run_at = models.DateTimeField(null=True, blank=True)
+    configured_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="backup_schedules")
+    last_job = models.ForeignKey(BackupJob, null=True, blank=True, on_delete=models.SET_NULL, related_name="schedules")
+    last_error = models.CharField(max_length=500, blank=True)

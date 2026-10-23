@@ -67,6 +67,7 @@ urlpatterns = [
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
     path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name in {
         "asset-access", "asset-file", "admin-asset-preview", "backup-job-list", "reader-ocr-status",
+        "storage-workspace", "storage-command", "storage-backup-detail",
     }])),
     path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name == "ocr-workspace"])),
     path("api/reading/", include([

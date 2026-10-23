@@ -1,2 +1,2 @@
-import { SettingsAdmin } from "@/components/admin-sections";
-export default function Page() { return <SettingsAdmin scope="backups" />; }
+import { StorageWorkspace } from "@/components/admin/storage-workspace";
+export default function Page() { return <StorageWorkspace />; }

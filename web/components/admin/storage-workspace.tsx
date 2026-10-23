@@ -1,0 +1,162 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronRight, CircleAlert, Database, Download, FileCheck2, HardDrive, History, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
+import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
+import { withPrivateOwner } from "@/lib/api/private-owner";
+import type { components } from "@/lib/api/generated/schema";
+import styles from "./storage-workspace.module.css";
+
+type Snapshot = components["schemas"]["StorageSnapshot"];
+type Backup = components["schemas"]["BackupOutput"];
+type Detail = components["schemas"]["BackupDetailOutput"];
+type Verification = components["schemas"]["BackupVerificationOutput"];
+type Command = components["schemas"]["StorageCommandInputRequest"];
+type Reply = components["schemas"]["StorageCommandOutput"];
+type Plan = components["schemas"]["RestorePlan"];
+type Schedule = components["schemas"]["BackupScheduleOutput"];
+type Intent = Omit<Command,"request_id">;
+const base = "/distribution/storage/";
+const tabs = [{id:"backups",label:"备份记录"},{id:"verifications",label:"校验结果"},{id:"rehearsals",label:"恢复演练"},{id:"failed",label:"失败记录"}];
+const date = (value?:string|null) => value ? new Date(value).toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}) : "尚无记录";
+const bytes = (value:number|null|undefined) => {
+  if(value===null||value===undefined)return "未采集";
+  if(!value)return "0 B";
+  const unit=Math.min(4,Math.floor(Math.log(value)/Math.log(1024)));
+  return `${(value/1024**unit).toLocaleString("zh-CN",{maximumFractionDigits:unit?1:0})} ${["B","KB","MB","GB","TB"][unit]}`;
+};
+const tone = (status:string) => status==="completed"||status==="available"?"ready":status==="failed"||status==="unavailable"?"failed":status==="low_space"?"limited":"unknown";
+const active = (status:string) => status==="queued"||status==="running";
+const poll = (value:Snapshot) => value.backups.results.some(row=>active(row.status))||value.verifications.some(row=>active(row.status)&&!row.stalled)?5000:null;
+
+function download(value:unknown,name:string) {
+  const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:"application/json;charset=utf-8"}));
+  const anchor=document.createElement("a");anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+export function StorageWorkspace() {
+  const user=useAdminSession(),[epoch,setEpoch]=useState(0);
+  useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
+  if(!hasAdminCapability(user,"can_view_system_status"))return <div className="admin-panel"><h1>存储、备份与恢复准备</h1><p>当前账户没有查看运行状态的权限。</p></div>;
+  return <Workspace key={`${user?.id}:${epoch}`} owner={String(user?.id||"")} />;
+}
+
+function Workspace({owner}:{owner:string}) {
+  const [tab,setTab]=useState("backups"),[status,setStatus]=useState(""),[page,setPage]=useState(1);
+  const [selected,setSelected]=useState(""),[showCreate,setShowCreate]=useState(false),[message,setMessage]=useState("");
+  const [plan,setPlan]=useState<Plan|null>(null),[unresolved,setUnresolved]=useState<Command|null>(null);
+  const [schedule,setSchedule]=useState<Schedule|null>(null);
+  const [showLocations,setShowLocations]=useState(false),[showProtection,setShowProtection]=useState(false);
+  const query=`${base}?page=${page}&status=${tab==="failed"?"failed":status}`;
+  const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Snapshot>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
+  const resource=usePersistentWorkspace<Snapshot>(query,owner,poll,load);
+  const lifecycle=useRef<AbortController|null>(null),busy=useRef(false),pending=useRef<Command|null>(null);
+  useEffect(()=>{const controller=new AbortController();lifecycle.current=controller;return()=>controller.abort();},[]);
+  const data=resource.data, primary=data?.locations[0], disabled=resource.pending||!!unresolved;
+
+  async function command(intent:Intent, retry=false) {
+    if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted||pending.current&&!retry)return;
+    const controller=lifecycle.current;
+    const values=pending.current||{...intent,request_id:crypto.randomUUID()};
+    pending.current=values;busy.current=true;setMessage("");setUnresolved(values);
+    let reply:Reply|undefined;
+    try {
+      const result=await resource.mutate(JSON.stringify(values),async(snapshot)=>{
+        const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
+        reply=await withPrivateOwner(owner,()=>apiRequest<Reply>(base+"commands/",{method:"POST",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},body:JSON.stringify(values)},getServerSessionCredential()),signal);
+        // A received command is authoritative even if the following list read fails.
+        return snapshot;
+      });
+      if(controller.signal.aborted||!result||!reply)return;
+      pending.current=null;setUnresolved(null);
+      if(reply.restore_plan){setPlan(reply.restore_plan);setTab("rehearsals");setMessage("演练准备清单已生成，尚未执行恢复。");}
+      else if(reply.schedule_saved){setSchedule(null);setMessage("备份计划已保存。实际执行结果将进入备份记录。");}
+      else if(reply.backup){setShowCreate(false);setSelected(reply.backup.id);setMessage("备份请求已登记；生成结果以任务记录为准。");}
+      else{setMessage(values.operation==="close_stalled_verification"?"超时记录已关闭，归档保留。可另行发起校验。":"校验请求已登记，不会解压或覆盖现有文件。");}
+    } catch(reason) {
+      if(controller.signal.aborted)return;
+      if(reason instanceof ApiRequestError&&reason.status>=400&&reason.status<500){pending.current=null;setUnresolved(null);}
+      setMessage(reason instanceof Error?reason.message:"操作暂未确认，请使用原请求查回。");
+    } finally {if(!controller.signal.aborted)busy.current=false;}
+  }
+
+  const selectTab=(id:string)=>{setTab(id);setPage(1);};
+  const verify=(row:Backup)=>void command({operation:"verify_archive",backup_id:row.id,expected_checksum:row.checksum});
+  const prepare=(row:Backup)=>void command({operation:"restore_plan",backup_id:row.id,expected_checksum:row.checksum});
+  const closeStalled=(row:Verification)=>void command({operation:"close_stalled_verification",backup_id:row.backup_id,expected_checksum:row.expected_checksum,verification_id:row.id});
+
+  return <main className={styles.page} aria-busy={resource.loading||resource.pending}>
+    <div className={styles.breadcrumb}><Link href="/admin">系统</Link><ChevronRight size={12}/><Link href="/admin/processing/status">运行维护</Link><ChevronRight size={12}/><span>存储、备份与恢复准备</span></div>
+    <header className={styles.title}><div><h1>存储、备份与恢复准备</h1><p>管理原件、衍生文件和备份，知道恢复是否经过验证。</p></div><div className={styles.actions}><small>上次更新：{date(data?.checked_at)}</small><button onClick={()=>resource.reload()} disabled={resource.pending||resource.loading}><RefreshCw size={15}/>刷新</button><button className={styles.primary} onClick={()=>setShowCreate(true)} disabled={!data?.permissions.can_backup||disabled}><Database size={15}/>发起备份</button></div></header>
+    {resource.error?<div className={styles.alert} role="alert"><CircleAlert size={18}/><p>{resource.error}</p><button onClick={()=>resource.reload()}>重新读取</button></div>:null}
+    {message?<p className={styles.message} role="status">{message}</p>:null}
+    {unresolved&&!resource.pending?<div className={styles.notice}><CircleAlert size={18}/><p>上次操作尚未确认。保留原请求编号，避免重复发起任务。</p><button onClick={()=>void command(unresolved,true)}>查回原请求</button></div>:null}
+    {resource.loading?<div className={styles.empty} role="status"><HardDrive size={28}/><p>正在读取存储用量与备份记录</p></div>:null}
+    {data?<>
+      {data.locations.some(row=>row.status!=="available")?<div className={styles.alert}><CircleAlert size={19}/><div><strong>{data.locations.some(row=>row.status==="low_space")?"部分存储空间不足":"部分存储暂不可读取"}</strong><p>{data.locations.filter(row=>row.status!=="available").map(row=>`${row.label}：${row.status==="low_space"?`可用 ${bytes(row.free_bytes)}`:"目录或访问权限待核对"}`).join("；")}</p></div><button onClick={()=>setShowLocations(true)}>查看存储详情</button></div>:null}
+      <div className={styles.overview}>
+        <section className={styles.panel}><header><h2>存储位置 / 用量</h2><button onClick={()=>setShowLocations(value=>!value)}>查看详情 <ChevronRight size={14}/></button></header><div className={styles.capacity}><span>馆藏所在卷</span><strong>{bytes(primary?.used_bytes)}</strong><span>/ {bytes(primary?.total_bytes)}</span></div><div className={styles.meterRow}><meter min={0} max={100} value={primary?.used_percent??0} aria-label={primary?.used_percent===null?"所在卷容量未采集":`所在卷已用 ${primary?.used_percent}%`}/><span>{primary?.used_percent===null?"—":`${primary?.used_percent}%`}</span></div><ul className={styles.categories}>{data.categories.map((row,index)=><li key={row.label}><i data-color={index}/><span>{row.label}</span><strong>{bytes(row.bytes)}</strong></li>)}</ul><p className={styles.hint}>{data.file_statistics_notice}</p></section>
+        <section className={styles.panel}><header><h2>文件类型分布</h2><span>馆藏登记</span></header><div className={styles.fileTypes}><FileRing rows={data.file_types} total={data.catalog_file_bytes}/><ul className={styles.legend}>{data.file_types.map((row,index)=><li key={row.label}><i data-color={index}/><div><strong>{row.label}</strong><span>{bytes(row.bytes)} · {row.count.toLocaleString()} 个</span></div><small>{data.catalog_file_bytes?`${Math.round(row.bytes*100/data.catalog_file_bytes)}%`:"—"}</small></li>)}</ul></div></section>
+        <section className={styles.panel}><header><h2>备份任务状态</h2><button onClick={()=>selectTab("backups")}>查看记录 <ChevronRight size={14}/></button></header>{data.schedule.plans.map((item,index)=><div className={styles.schedule} key={item.scope}>{index?<HardDrive size={19}/>:<Database size={19}/>}<div><strong>{item.label}</strong><p>{item.enabled?`每 ${item.interval_hours} 小时 · 下次 ${date(item.next_run_at)}`:"尚未启用定时计划"}</p>{item.last_error?<p role="status" data-tone="failed">{item.last_error}</p>:null}{item.last_job_id&&data.permissions.can_backup?<button onClick={()=>setSelected(item.last_job_id!)}>查看上次任务</button>:null}</div>{data.permissions.can_backup?<button disabled={disabled} onClick={()=>setSchedule(item)}>{item.enabled?"调整":"设置"}</button>:<span>{item.enabled?"已启用":"未启用"}</span>}</div>)}<p className={styles.hint}>{data.schedule.detail}</p><Link className={styles.textLink} href="/admin/distribution">查看分发与云存储配置 <ChevronRight size={13}/></Link></section>
+      </div>
+      {showLocations?<section className={styles.panel}><header><h2>存储位置状态</h2><button onClick={()=>setShowLocations(false)}>收起详情</button></header><div className={styles.tableScroll}><table><thead><tr><th>存储位置</th><th>容量</th><th>已用</th><th>可用</th><th>目录状态</th><th>访问权限</th></tr></thead><tbody>{data.locations.map(row=><tr key={row.id}><th>{row.label}</th><td>{bytes(row.total_bytes)}</td><td>{bytes(row.used_bytes)}</td><td>{bytes(row.free_bytes)}</td><td><span className={styles.status} data-tone={tone(row.status)}>{row.status==="available"?"目录可读":row.status==="low_space"?"空间不足":"暂不可读"}</span></td><td>{row.readable?"可读":"不可读"} / {row.writable?"具有写权限":"未确认写权限"}</td></tr>)}</tbody></table></div><p className={styles.hint}>容量来自所在卷；多个配置目录可能共用同一个卷，不能相加。未执行写入探测，云存储按原分发服务查看。</p></section>:null}
+      <div className={styles.recordHeading}><nav className={styles.tabs} aria-label="备份与恢复记录">{tabs.map(item=><button key={item.id} aria-current={tab===item.id?"page":undefined} onClick={()=>selectTab(item.id)}>{item.label}</button>)}</nav><div className={styles.actions}>{tab==="backups"?<label className={styles.filter}>任务状态<select value={status} onChange={event=>{setStatus(event.target.value);setPage(1);}}><option value="">全部任务</option><option value="queued">等待</option><option value="running">执行中</option><option value="completed">完成</option><option value="failed">失败</option></select></label>:null}<button onClick={()=>download({checked_at:data.checked_at,scope:tab==="backups"||tab==="failed"?`第 ${page} 页`:"当前显示记录",records:tab==="verifications"?data.verifications:tab==="rehearsals"?data.rehearsals:data.backups.results},`stl-storage-${tab}.json`)}><Download size={14}/>导出当前记录</button></div></div>
+      <div className={styles.notice}><CircleAlert size={17}/><strong>最近恢复演练：{!data.permissions.can_prepare_restore?"需要维护权限":data.rehearsals.length?date(data.rehearsals[0].checked_at):"尚无可核实记录"}</strong><button onClick={()=>selectTab("rehearsals")}>查看恢复演练 <ChevronRight size={14}/></button><p>备份生成后仍需校验，并在隔离环境中核对恢复结果。</p></div>
+      {tab==="backups"||tab==="failed"?<><BackupTable rows={data.backups.results} canInspect={data.permissions.can_backup} onSelect={setSelected}/><div className={styles.pagination}><span>共 {data.backups.count} 条记录 · 第 {page} 页</span><button disabled={page<=1||resource.pending} onClick={()=>setPage(value=>value-1)}>上一页</button><button disabled={page*data.backups.page_size>=data.backups.count||resource.pending} onClick={()=>setPage(value=>value+1)}>下一页</button></div></>:tab==="verifications"?<VerificationList rows={data.verifications} canOperate={data.permissions.can_verify} disabled={disabled} onSelect={setSelected} onCloseStalled={closeStalled}/>:<section className={styles.panel}><header><h2>恢复演练记录</h2><span>最近 50 条可核实记录</span></header>{data.rehearsals.length?<div className={styles.tableScroll}><table><thead><tr><th>演练时间</th><th>归档身份</th><th>已完成范围</th></tr></thead><tbody>{data.rehearsals.map((row,index)=><tr key={`${row.archive_sha256}:${row.checked_at}:${index}`}><td>{date(row.checked_at)}</td><td className={styles.checksum}>{row.archive_sha256}</td><td>{row.detail}</td></tr>)}</tbody></table></div>:<div className={styles.empty}><History size={27}/><strong>暂无恢复演练记录</strong><p>选择已完成的备份，先校验归档，再查看隔离恢复准备清单。</p></div>}{data.rehearsals_limited?<p className={styles.hint}>记录目录无法完整读取或超过本页读取范围，请核对备份记录目录。</p>:null}{!data.permissions.can_prepare_restore?<p className={styles.hint}>恢复记录与准备清单仅对具有备份维护权限的账户显示。</p>:null}{plan?<div className={styles.plan}><h3>隔离恢复准备清单</h3><p>{plan.archive_name}</p><span className={styles.status} data-tone={plan.ready_for_rehearsal?"ready":"limited"}>{plan.ready_for_rehearsal?"已存在归档校验记录":"请先校验归档"}</span><ol>{plan.requirements.map(text=><li key={text}>{text}</li>)}</ol><button onClick={()=>download(plan,`stl-restore-plan-${plan.backup_id}.json`)}><Download size={14}/>下载准备清单</button><p className={styles.hint}>当前只生成清单，未发起数据库恢复。</p></div>:null}</section>}
+      <div className={styles.bottom}><section className={styles.panel}><header><h2>数据保留规则</h2><ShieldCheck size={17}/></header><div className={styles.tableScroll}><table><thead><tr><th>数据类型</th><th>保留策略</th><th>说明</th></tr></thead><tbody>{data.retention.map(row=><tr key={row.label}><th>{row.label}</th><td>{row.policy}</td><td>{row.detail}</td></tr>)}</tbody></table></div><p className={styles.hint}>读者私人内容沿原读者中心设置管理；维护页面不会改写本人偏好。</p></section><section className={styles.panel}><header><h2>清理衍生缓存</h2><button onClick={()=>{setShowProtection(true);resource.reload();}} disabled={resource.pending}>核对保护范围</button></header><div className={styles.protection}><ShieldCheck size={18}/><strong>{data.cleanup.protected_count.toLocaleString()} 个登记文件受到保护</strong></div><p className={styles.hint}>{data.cleanup.detail}</p>{showProtection?<ul className={styles.protectionList}><li>原始 PDF、历史版本与当前阅读派生文件不进入清理。</li><li>OCR 成果、已选封面和在用媒体不能仅按文件类型删除。</li><li>账户、私人笔记、模型及活动索引保持原有归属与保护。</li></ul>:null}<p className={styles.hint}>缓存候选扫描与可执行清单尚未接通，当前没有执行清理入口。</p></section></div>
+    </>:null}
+    {selected&&data?.permissions.can_backup?<BackupDetails key={selected} owner={owner} id={selected} revision={data.checked_at} disabled={disabled} onClose={()=>setSelected("")} onVerify={verify} onPrepare={row=>{setSelected("");prepare(row);}} onRetry={row=>void command({operation:"create_backup",include_originals:row.include_originals,retry_from_id:row.id})} onCloseStalled={closeStalled}/>:null}
+    {showCreate?<CreateBackup disabled={disabled} onClose={()=>setShowCreate(false)} onCreate={include=>void command({operation:"create_backup",include_originals:include})}/>:null}
+    {schedule?<ScheduleEditor value={schedule} disabled={disabled} onClose={()=>setSchedule(null)} onSave={values=>void command(values)}/>:null}
+  </main>;
+}
+
+function FileRing({rows,total}:{rows:Snapshot["file_types"];total:number}) {
+  let offset=0;
+  const segments=rows.map((row,index)=>{const start=offset,length=total?row.bytes*100/total:0;offset+=length;return <circle key={row.label} cx="60" cy="60" r="46" pathLength="100" fill="none" strokeWidth="17" strokeDasharray={`${length} ${100-length}`} strokeDashoffset={-start} data-color={index}/>;});
+  return <div className={styles.ring}><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="46" fill="none" strokeWidth="17" className={styles.ringTrack}/><g transform="rotate(-90 60 60)">{total?segments:null}</g></svg><div><strong>{bytes(total)}</strong><span>登记文件</span></div></div>;
+}
+
+function BackupTable({rows,canInspect,onSelect}:{rows:Backup[];canInspect:boolean;onSelect:(id:string)=>void}) {
+  if(!rows.length)return <div className={styles.empty}><Database size={28}/><strong>暂无符合条件的备份记录</strong><p>已有文件不会自动算作备份；可按权限发起并查看实际任务结果。</p></div>;
+  return <div className={styles.tableScroll}><table className={styles.backupTable}><thead><tr><th>开始时间</th><th>任务类型</th><th>备份内容</th><th>存储位置</th><th>大小</th><th>用时</th><th>状态</th><th>操作</th></tr></thead><tbody>{rows.map(row=><tr key={row.id} data-failed={row.status==="failed"||undefined}><td><time dateTime={row.started_at||row.created_at}>{date(row.started_at||row.created_at)}</time></td><td>归档备份</td><td>{row.scope}</td><td title={row.archive_name}>{row.location}</td><td>{bytes(row.archive_bytes)}</td><td>{row.duration_seconds===null?"—":`${row.duration_seconds} 秒`}</td><td><span className={styles.status} data-tone={tone(row.status)}>{row.status_label}</span></td><td>{canInspect?<button aria-label={`查看 ${date(row.created_at)} 的备份详情`} onClick={()=>onSelect(row.id)}>查看详情</button>:<span>仅查看状态</span>}</td></tr>)}</tbody></table></div>;
+}
+
+function VerificationList({rows,canOperate,disabled,onSelect,onCloseStalled}:{rows:Verification[];canOperate:boolean;disabled:boolean;onSelect:(id:string)=>void;onCloseStalled:(row:Verification)=>void}) {
+  if(!rows.length)return <div className={styles.empty}><FileCheck2 size={28}/><strong>暂无归档校验记录</strong><p>备份生成和校验分别记录。选择已完成的备份后可以发起校验。</p></div>;
+  return <div className={styles.tableScroll}><table><thead><tr><th>发起时间</th><th>校验状态</th><th>结果与下一步</th><th>操作</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td>{date(row.created_at)}</td><td><span className={styles.status} data-tone={row.stalled?"limited":tone(row.status)}>{row.status_label}</span></td><td>{row.error_message||row.detail||(row.stalled?"已超过任务时限，请关闭本条超时记录后再决定是否重新校验。":"归档只读校验等待完成。")}{row.status==="completed"?<small className={styles.block}>数据库文件校验已完成，包含原件 {row.originals_verified} 个。未执行恢复。</small>:null}</td><td>{canOperate?<div className={styles.rowActions}><button onClick={()=>onSelect(row.backup_id)}>查看备份</button>{row.stalled?<button disabled={disabled} onClick={()=>onCloseStalled(row)}>关闭超时记录</button>:null}</div>:"仅查看状态"}</td></tr>)}</tbody></table></div>;
+}
+
+function BackupDetails({owner,id,revision,disabled,onClose,onVerify,onPrepare,onRetry,onCloseStalled}:{owner:string;id:string;revision:string;disabled:boolean;onClose:()=>void;onVerify:(row:Backup)=>void;onPrepare:(row:Backup)=>void;onRetry:(row:Backup)=>void;onCloseStalled:(row:Verification)=>void}) {
+  const dialog=useRef<HTMLDialogElement>(null);
+  const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Detail>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
+  const resource=usePersistentWorkspace<Detail>(`${base}backups/${id}/`,owner,value=>active(value.backup.status)||value.verifications.some(row=>active(row.status)&&!row.stalled)?5000:null,load);
+  const reload=resource.reload;
+  useEffect(()=>reload(),[revision,reload]);
+  useEffect(()=>{const node=dialog.current;node?.showModal();return()=>node?.close();},[]);
+  const row=resource.data?.backup;
+  return <dialog ref={dialog} className={styles.dialog} onCancel={onClose} aria-labelledby="backup-detail-title"><header><div><span>备份记录</span><h2 id="backup-detail-title">备份详情与恢复准备</h2></div><button aria-label="关闭备份详情" onClick={onClose}><X size={18}/></button></header>{resource.error?<p role="alert">{resource.error}<button onClick={()=>resource.reload()}>重新读取</button></p>:null}{resource.loading?<p role="status">正在读取备份详情…</p>:null}{row?<><dl className={styles.details}><div><dt>状态</dt><dd><span className={styles.status} data-tone={tone(row.status)}>{row.status_label}</span></dd></div><div><dt>备份内容</dt><dd>{row.scope}</dd></div><div><dt>归档文件</dt><dd>{row.archive_name}</dd></div><div><dt>归档大小</dt><dd>{bytes(row.archive_bytes)}</dd></div><div><dt>发起时间</dt><dd>{date(row.created_at)}</dd></div><div><dt>完成时间</dt><dd>{date(row.completed_at)}</dd></div><div><dt>归档身份</dt><dd className={styles.checksum}>{row.checksum||"尚未生成"}</dd></div></dl>{row.error_message?<div className={styles.alert}><CircleAlert size={18}/><p>{row.error_message}</p></div>:null}{resource.data?.technical_error?<details className={styles.technical}><summary>查看错误详情</summary><pre>{resource.data.technical_error}</pre></details>:null}<div className={styles.actions}>{row.status==="failed"?<button className={styles.primary} disabled={disabled} onClick={()=>onRetry(row)}>重新发起备份</button>:null}{row.status==="completed"?<><button className={styles.primary} disabled={disabled||resource.data?.verifications.some(item=>active(item.status))} onClick={()=>onVerify(row)}><FileCheck2 size={15}/>校验归档</button><button disabled={disabled} onClick={()=>onPrepare(row)}>准备隔离恢复</button></>:null}<button onClick={()=>resource.reload()}>刷新详情</button></div><h3>归档校验记录</h3><VerificationList rows={resource.data?.verifications||[]} canOperate disabled={disabled} onSelect={()=>resource.reload()} onCloseStalled={onCloseStalled}/><h3>恢复演练记录</h3>{resource.data?.rehearsals.length?resource.data.rehearsals.map((item,index)=><p key={`${item.checked_at}:${index}`}>{date(item.checked_at)} · {item.detail}</p>):<p className={styles.hint}>这份归档尚无可核实的恢复演练记录。</p>}</>:null}</dialog>;
+}
+
+function CreateBackup({disabled,onClose,onCreate}:{disabled:boolean;onClose:()=>void;onCreate:(include:boolean)=>void}) {
+  const dialog=useRef<HTMLDialogElement>(null),[include,setInclude]=useState(false);
+  useEffect(()=>{const node=dialog.current;node?.showModal();return()=>node?.close();},[]);
+  return <dialog ref={dialog} className={styles.dialog} onCancel={onClose} aria-labelledby="create-backup-title"><form onSubmit={event=>{event.preventDefault();onCreate(include);}}><header><div><span>创建备份任务</span><h2 id="create-backup-title">发起备份</h2></div><button type="button" aria-label="关闭备份设置" onClick={onClose}><X size={18}/></button></header><p>数据库与馆藏文件清单将写入配置的 NAS 备份目录。已有归档和原件保留。</p><label className={styles.checkbox}><input type="checkbox" checked={include} disabled={disabled} onChange={event=>setInclude(event.target.checked)}/><span><strong>同时包含原始文件</strong><small>归档会增大并占用存储空间；原件副本将按现有校验身份核对。</small></span></label><p className={styles.hint}>数据库可能包含账户与私人资料。归档沿原维护权限保存，不生成公共下载链接。完成后请分别进行归档校验和隔离恢复。</p><footer><button type="button" onClick={onClose}>返回</button><button className={styles.primary} type="submit" disabled={disabled}><Database size={15}/>确认发起备份</button></footer></form></dialog>;
+}
+
+function ScheduleEditor({value,disabled,onClose,onSave}:{value:Schedule;disabled:boolean;onClose:()=>void;onSave:(values:Intent)=>void}) {
+  const dialog=useRef<HTMLDialogElement>(null);
+  const [enabled,setEnabled]=useState(value.enabled),[hours,setHours]=useState(value.interval_hours);
+  const [first,setFirst]=useState(()=>{
+    const target=value.next_run_at?new Date(value.next_run_at):new Date(Date.now()+3600000);
+    return new Date(target.getTime()-target.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  });
+  useEffect(()=>{const node=dialog.current;node?.showModal();return()=>node?.close();},[]);
+  return <dialog ref={dialog} className={styles.dialog} onCancel={onClose} aria-labelledby="backup-schedule-title"><form onSubmit={event=>{
+    event.preventDefault();
+    onSave({operation:"save_schedule",scope:value.scope as "database"|"originals",enabled,interval_hours:hours,first_run_at:enabled?new Date(first).toISOString():null,expected_version:value.version});
+  }}><header><div><span>备份计划</span><h2 id="backup-schedule-title">{value.label}</h2></div><button type="button" aria-label="关闭备份计划" onClick={onClose}><X size={18}/></button></header><label className={styles.checkbox}><input type="checkbox" checked={enabled} disabled={disabled} onChange={event=>setEnabled(event.target.checked)}/><span><strong>启用定时备份</strong><small>由现有后台任务服务执行。上次任务未结束时不会叠加同一计划的任务。</small></span></label><div className={styles.scheduleFields}><label>执行间隔（小时）<input type="number" min={6} max={720} required value={hours} disabled={disabled} onChange={event=>setHours(Number(event.target.value))}/></label><label>首次执行时间（本地时区）<input type="datetime-local" value={first} required={enabled} disabled={disabled||!enabled} onChange={event=>setFirst(event.target.value)}/></label></div><p className={styles.hint}>最短间隔 6 小时，最长 30 天。每次生成独立归档，仍需单独校验和演练；已有备份不会自动删除。配置账户失去维护权限时，计划自动暂停。</p><footer><button type="button" onClick={onClose}>返回</button><button type="submit" className={styles.primary} disabled={disabled}>保存计划</button></footer></form></dialog>;
+}

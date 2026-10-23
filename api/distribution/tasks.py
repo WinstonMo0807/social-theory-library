@@ -6,6 +6,7 @@ import tarfile
 import tempfile
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 
 from catalog.models import Asset
@@ -64,20 +65,32 @@ def _sha256(path: Path) -> str:
     return file_sha256(path)
 
 
+def enqueue_backup_archive(job_id):
+    try:
+        create_backup_archive.apply_async(args=[str(job_id)], ignore_result=True)
+    except Exception:
+        BackupJob.objects.filter(pk=job_id, status=BackupJob.Status.QUEUED).update(
+            status=BackupJob.Status.FAILED, error_message="备份队列暂不可用，请检查后台任务服务后重新创建备份。",
+            completed_at=timezone.now(), updated_at=timezone.now())
+
+
 @shared_task(bind=True, ignore_result=True)
 def create_backup_archive(self, job_id):
-    job = BackupJob.objects.select_related("requested_by").get(pk=job_id)
-    root = settings.NAS_BACKUP_ROOT.resolve()
-    destination = Path(job.destination_path).resolve()
-    if destination != root and root not in destination.parents:
-        raise RuntimeError("备份目标超出配置的 NAS 备份根目录。")
-    destination.mkdir(parents=True, exist_ok=True)
-    job.status = BackupJob.Status.RUNNING
-    job.started_at = timezone.now()
-    job.error_message = ""
-    job.save(update_fields=["status", "started_at", "error_message", "updated_at"])
+    with transaction.atomic():
+        job = BackupJob.objects.select_for_update().get(pk=job_id)
+        if job.status != BackupJob.Status.QUEUED:
+            return job.archive_path if job.status == BackupJob.Status.COMPLETED else None
+        job.status = BackupJob.Status.RUNNING
+        job.started_at = timezone.now()
+        job.error_message = ""
+        job.save(update_fields=["status", "started_at", "error_message", "updated_at"])
     archive = None
     try:
+        root = settings.NAS_BACKUP_ROOT.resolve()
+        destination = Path(job.destination_path).resolve()
+        if destination != root and root not in destination.parents:
+            raise RuntimeError("备份目标超出配置的 NAS 备份根目录。")
+        destination.mkdir(parents=True, exist_ok=True)
         backup_created_at = timezone.now()
         stamp = backup_created_at.strftime("%Y%m%d-%H%M%S")
         archive = destination / f"library-backup-{stamp}-{str(job.id)[:8]}.tar.gz"
@@ -99,14 +112,18 @@ def create_backup_archive(self, job_id):
                     "exists": source.exists(),
                 }
                 assets.append(record)
-                if (
-                    source.exists()
-                    and job.include_originals
-                    and asset.kind == Asset.Kind.ORIGINAL
-                ):
-                    target = staging / "originals" / asset.file.name
+                if job.include_originals and asset.kind == Asset.Kind.ORIGINAL:
+                    if not source.is_file():
+                        raise RuntimeError(f"原始文件 {asset.id} 不存在，未生成不完整备份。")
+                    original_root = (staging / "originals").resolve()
+                    target = (original_root / asset.file.name).resolve()
+                    if original_root not in target.parents:
+                        raise RuntimeError(f"原始文件 {asset.id} 的备份相对路径无效。")
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(source, target)
+                    if (not asset.sha256 or _sha256(target) != asset.sha256
+                            or (asset.byte_size and target.stat().st_size != asset.byte_size)):
+                        raise RuntimeError(f"原始文件 {asset.id} 的备份副本校验失败，源文件保留。")
             manifest = {
                 "schema": 1,
                 "created_at": backup_created_at.isoformat(),

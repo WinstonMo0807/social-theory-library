@@ -544,11 +544,6 @@ class BackupJobListView(generics.ListCreateAPIView):
 
             raise ValidationError({"destination_path": "备份目录必须位于配置的 NAS 备份根目录内。"})
         job = serializer.save(requested_by=self.request.user)
-        from .tasks import create_backup_archive
+        from .tasks import enqueue_backup_archive
 
-        transaction.on_commit(
-            lambda: create_backup_archive.apply_async(
-                args=[str(job.id)],
-                ignore_result=True,
-            )
-        )
+        transaction.on_commit(lambda: enqueue_backup_archive(job.id))
