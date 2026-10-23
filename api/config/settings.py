@@ -186,6 +186,8 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "CurationProjectVisibilityEnum": ["team", "staff"],
+        "CurationProjectActionEnum": ["create", "save", "duplicate", "archive", "restore", "create_article", "attach_article", "reorder"],
         "IndexMaintenanceActionEnum": ["rebuild", "activate", "retry", "reconcile"],
         "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel"],
         "ProcessingTaskSourceEnum": ["processing_job", "semantic_index_job"],

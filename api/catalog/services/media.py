@@ -311,7 +311,7 @@ def select_work_cover(edition_id, media_id, *, actor):
     return select_work_image(edition_id, media_id, slot="cover", actor=actor)
 
 
-def media_reference_inventory(media_id):
+def media_reference_inventory(media_id, *, actor=None):
     """Read persisted current/draft/history references without opening files."""
     from django.db.models import Q
     from catalog.models import CatalogPublicationMedia, EditorialRevisionMedia, Work, Person, ScholarProfile, KnowledgeNode, ReadingPath, Discipline, Subdiscipline, RecommendationIssue
@@ -328,7 +328,13 @@ def media_reference_inventory(media_id):
                            "detail": f"公开修订 {revision.revision} · {revision.get_status_display()}",
                            "editor_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#publication",
                            "public_url": publication["public_url"] if current else ""})
-    drafts = list(EditorialRevisionMedia.objects.filter(rendition__media_id=media_id).select_related("editorial_revision").order_by("-created_at", "pk"))
+    from catalog.services.curation_projects import visible_issues, visible_projects
+    drafts = list(EditorialRevisionMedia.objects.filter(rendition__media_id=media_id).filter(
+        ~Q(editorial_revision__target_type="recommendation_issue") | Q(editorial_revision__target_id__in=visible_issues(actor).values("pk"))
+    ).select_related("editorial_revision").order_by("-created_at", "pk"))
+    for project in visible_projects(actor).filter(cover_rendition__media_id=media_id):
+        references.append({"id": f"project:{project.pk}", "kind": "canonical", "label": project.title,
+            "detail": "策划项目选图", "editor_url": f"/admin/recommendations?project={project.pk}", "public_url": ""})
     target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline, "recommendation_issue": RecommendationIssue}
     labels = {}
     for kind, model in target_models.items():

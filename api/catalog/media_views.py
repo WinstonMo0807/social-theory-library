@@ -126,7 +126,7 @@ class MediaDetailView(MediaEditorView):
     @extend_schema(responses=MediaDetailSerializer)
     def get(self, request, media_id):
         media = get_object_or_404(MediaAsset.objects.prefetch_related("renditions"), pk=media_id)
-        media.references = media_reference_inventory(media.pk)
+        media.references = media_reference_inventory(media.pk, actor=request.user)
         return Response(MediaDetailSerializer(media).data)
 
     @extend_schema(request=MediaMetadataSerializer, responses=MediaAssetSerializer)

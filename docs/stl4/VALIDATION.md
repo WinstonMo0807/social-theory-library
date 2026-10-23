@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-23 M14静态记录
+
+7da059：`tmp/stl4-project-static-20261023.py`退出0，25 AST、禁连DB22 SQL编译；离线catalog/ingestion模型无迁移差异，内置及accounts元数据差异未处理；OpenAPI0错误10既有警告。`tmp/stl4-project-contracts-20261023.mjs`323路径/CSS解析。3a6369→c2a803：web tsc --noEmit --incremental false退出0。bf4a50：新页面、路由、原文章编辑器/useIssueDraft/types定向ESLint0，仅原img建议。首次ESLint effect问题已修复；新增契约命名冲突已消除。迁移0079只保存。未运行测试、浏览器、真实业务、评测、迁移或生产；并发/权限/视觉不能记为验收通过。
+
 ## 2026-10-23 M13检索索引与查询词维护
 
 前置7b2c44a。唯一PDF119–121三图实际读取。检索主入口改接既定Discovery实际覆盖，纸白双栏、材料查找/状态/文本修订、索引任务、候选/历史版本与查询词来源。保留原SemanticIndexAdmin于显式legacy入口。未创建新模型管理或质量评测方案，未执行检索。

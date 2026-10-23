@@ -44,6 +44,10 @@ def processing_task_page(params, actor):
     if kind and kind not in ProcessingJob.JobType.values:
         raise ValidationError({"job_type": "请选择有效的任务类型。"})
     jobs = ProcessingJob.objects.all()
+    from catalog.services.curation_projects import visible_issues
+    visible_issue_keys = visible_issues(actor).annotate(visible_key=Replace(Cast("pk", CharField()), Value("-"), Value(""))).values("visible_key")
+    jobs = jobs.annotate(project_issue_key=Replace(KeyTextTransform("issue_id", "stats"), Value("-"), Value(""), output_field=CharField())).filter(
+        ~Q(job_type="editorial_assistance") | Q(project_issue_key__in=visible_issue_keys))
     semantic = SemanticIndexJob.objects.all()
     for key, lookup in (("date_from", "created_at__date__gte"), ("date_to", "created_at__date__lte")):
         if params.get(key):

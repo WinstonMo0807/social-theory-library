@@ -53,6 +53,9 @@ class AdminPrivateResponseMixin(PrivateAccountResponses):
         expected = request.headers.get("X-Editor-Owner")
         if expected is not None and expected != str(request.user.pk):
             raise PermissionDenied("编辑账户已变化，请重新读取当前资料。")
+        if kwargs.get("issue_id"):
+            from catalog.services.curation_projects import require_issue_access
+            require_issue_access(kwargs["issue_id"], request.user)
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)

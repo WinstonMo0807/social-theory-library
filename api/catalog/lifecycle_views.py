@@ -211,7 +211,10 @@ class AdminEntityLifecycleView(AdminPrivateResponseMixin, APIView):
         queryset = config.model.objects.all()
         if kind == "scholar":
             queryset = queryset.select_related("person")
-        return config, get_object_or_404(queryset, pk=pk)
+        obj = get_object_or_404(queryset, pk=pk)
+        from .services.curation_projects import protect_related_object
+        protect_related_object(obj, self.request.user)
+        return config, obj
 
     def get(self, request, kind, pk):
         config, obj = self._object(kind, pk)

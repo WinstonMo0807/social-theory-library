@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M14（323路径）
+
+新增admin/curation-projects列表/固定命令、{project_id}详情、commands/{request_id}查回/停止、people协作者显示名称分页。ProjectValues/Command/Article/Material/Problem/Activity均具名契约；原文章集合补实际page/pages/page_size，后台文章补只读项目上下文（不加入公开payload）。原文章、选材、助手、媒体与发布接口继续复用；项目范围同时过滤旁路。SQL与OpenAPI仅离线静态生成，无接口请求。
+
 ## 2026-10-23 索引维护
 
 保留316路径，新增index-maintenance、commands与terms，共319。材料阶段、任务、版本、词条、操作/回执具名契约与TypeScript同步。原Discovery读模型保持兼容。

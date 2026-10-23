@@ -4,7 +4,7 @@ import json
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import CharField, F, OuterRef, Subquery, UUIDField, Value
+from django.db.models import CharField, F, OuterRef, Subquery, UUIDField, Value, Q
 from django.db.models.functions import Cast, Coalesce, Replace
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 
@@ -28,8 +28,13 @@ class RecoveryConflict(APIException):
     default_detail = "对象或关联状态已变化，请重新预览恢复影响。"
 
 
-def collection_queries(*, search="", kind="", state="", since=None):
-    entries = RecycleEntry.objects.filter(model_label__in=RECYCLE_MODELS).order_by()
+def collection_queries(*, search="", kind="", state="", since=None, actor=None):
+    from .services.curation_projects import visible_issues
+    from .models import RecommendationIssueItem
+    issues = visible_issues(actor, include_recycled=True).values("pk")
+    entries = RecycleEntry.objects.filter(model_label__in=RECYCLE_MODELS).filter(
+        ~Q(model_label="catalog.recommendationissue") | Q(object_id__in=issues)).filter(
+        ~Q(model_label="catalog.recommendationissueitem") | Q(object_id__in=RecommendationIssueItem.all_objects.filter(issue_id__in=issues).values("pk"))).order_by()
     if search:
         entries = entries.filter(name__icontains=search)
     if kind:
@@ -79,8 +84,8 @@ def row_payload(row):
         "label":LABELS.get(row["kind"], "管理内容"), "destination":DESTINATIONS.get(row["kind"], "/admin")}
 
 
-def directory(*, search="", kind="", state="", since=None, page=1):
-    filters={"search":search,"kind":kind,"since":since}
+def directory(*, search="", kind="", state="", since=None, page=1, actor=None):
+    filters={"search":search,"kind":kind,"since":since,"actor":actor}
     query=collection_query(**filters,state=state)
     counts={name:collection_query(**filters,state=name).count() for name in ("deleted","archived","restored")}
     return {"count":query.count(),"page":page,"page_size":20,"counts":counts,
@@ -89,11 +94,15 @@ def directory(*, search="", kind="", state="", since=None, page=1):
         "notice":"回收与归档保留原对象身份及文件。恢复后不自动发布，也不重启处理；其他变更栏显示回收恢复记录。"}
 
 
-def object_and_entry(kind, identifier, *, lock=False):
+def object_and_entry(kind, identifier, *, lock=False, actor=None):
     config=LIFECYCLE_MODELS.get(kind)
     if not config or config.model._meta.label_lower not in RECYCLE_MODELS:
         raise NotFound("不支持的恢复对象。")
     query=config.model.all_objects
+    from .services.curation_projects import protect_related_object
+    candidate = query.filter(pk=identifier).first()
+    if candidate: protect_related_object(candidate, actor, lock=lock)
+    elif kind in {"recommendation-issue", "recommendation-item"}: raise NotFound("原文章对象不可用。")
     if lock:
         query=query.select_for_update()
     obj=query.filter(pk=identifier).first()
@@ -106,7 +115,7 @@ def object_and_entry(kind, identifier, *, lock=False):
     return config,obj,entry
 
 
-def dependency_rows(obj):
+def dependency_rows(obj, actor=None):
     """Only catalog objects; never traverse reader notes, lists or usage records."""
     rows, total = [], 0
     model_kinds={value.model._meta.label_lower:key for key,value in LIFECYCLE_MODELS.items()}
@@ -114,7 +123,8 @@ def dependency_rows(obj):
         label=relation.related_model._meta.label_lower
         if label not in model_kinds or not relation.get_accessor_name():
             continue
-        query=relation.related_model.all_objects.filter(**{relation.field.name:obj}).order_by("pk")
+        from .services.curation_projects import filter_related_objects
+        query=filter_related_objects(relation.related_model.all_objects.filter(**{relation.field.name:obj}),actor).order_by("pk")
         count=query.count();total+=count
         room=min(10,50-len(rows))
         if room<=0:
@@ -143,11 +153,11 @@ def dependency_rows(obj):
 
 
 def detail(kind, identifier, actor, *, locked=None):
-    config,obj,entry=locked or object_and_entry(kind,identifier)
+    config,obj,entry=locked or object_and_entry(kind,identifier,actor=actor)
     deleted=bool(entry and entry.restored_at is None)
     archived=bool(obj and config.status_field and getattr(obj,config.status_field)==config.archived_value)
     state="deleted" if deleted else "archived" if archived else "restored"
-    deps,total=dependency_rows(obj) if obj else ([],0)
+    deps,total=dependency_rows(obj,actor) if obj else ([],0)
     blockers=[row["detail"] for row in deps if row["blocking"]]
     if obj is None:
         blockers.append("原数据库对象缺失，不能从回收标记重建。请核对备份与历史。")
@@ -198,7 +208,7 @@ def confirm_restore(request, values):
         if receipt.actor_id!=actor.pk or receipt.after.get("fingerprint")!=fingerprint:
             raise RecoveryConflict("该请求编号对应其他恢复操作。")
         return receipt.after["result"]
-    locked=object_and_entry(values["kind"],values["object_id"],lock=True)
+    locked=object_and_entry(values["kind"],values["object_id"],lock=True,actor=actor)
     preview=detail(values["kind"],values["object_id"],actor,locked=locked)
     if preview["version"]!=values["expected_version"]:
         raise RecoveryConflict()

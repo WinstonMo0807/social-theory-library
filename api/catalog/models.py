@@ -6382,11 +6382,30 @@ class ScholarRelation(UUIDTimeStampedModel):
         constraints = [models.CheckConstraint(condition=~models.Q(source_scholar=models.F("target_scholar")), name="scholar_relation_distinct_ends")]
 
 
+class CurationProject(UUIDTimeStampedModel):
+    """Private editorial organization; publication remains on each original issue."""
+
+    title = models.CharField(max_length=600)
+    question = models.TextField(blank=True)
+    introduction = models.TextField(blank=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="owned_curation_projects")
+    collaborators = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="curation_projects")
+    visibility = models.CharField(max_length=12, choices=[("team", "仅项目团队"), ("staff", "馆内编辑")], default="team")
+    cover_rendition = models.ForeignKey(MediaRendition, null=True, blank=True, on_delete=models.PROTECT, related_name="curation_projects")
+    planned_for = models.DateField(null=True, blank=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at", "pk"]
+
+
 class RecommendationIssue(UUIDTimeStampedModel):
     """An issue's public text is the immutable active EditorialRevision."""
 
     slug = models.SlugField(max_length=180, unique=True)
     title = models.CharField(max_length=600)
+    project = models.ForeignKey(CurationProject, null=True, blank=True, on_delete=models.PROTECT, related_name="articles")
+    project_position = models.PositiveIntegerField(default=0)
     active_revision = models.ForeignKey(EditorialRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="active_recommendation_issues")
     scheduled_revision = models.ForeignKey(EditorialRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="scheduled_recommendation_issues")
     scheduled_for = models.DateTimeField(null=True, blank=True, db_index=True)

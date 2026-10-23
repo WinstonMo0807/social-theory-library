@@ -57,21 +57,23 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     try {
       return await withPrivateOwner(owner,()=>apiRequest<T>(url,{...init,signal,headers:{...init.headers,"X-Editor-Owner":owner}},getServerSessionCredential()),signal);
     } catch(reason) {
-      if(!lifetime?.signal.aborted && reason instanceof ApiRequestError && [401,403].includes(reason.status)) {
-        setDraft(null);setSaved(null);setRecovery(null);setSessionInvalid(true);setInitialError("当前账户或编辑权限已变化，请重新读取工作。");
+      const articleAccessRead=url.split("?")[0]===endpoint||url.split("?")[0]===`${endpoint}presence/`;
+      if(!lifetime?.signal.aborted && reason instanceof ApiRequestError && ([401,403].includes(reason.status)||articleAccessRead&&[404,410].includes(reason.status))) {
+        try{sessionStorage.removeItem(key);}catch{/* No further private persistence when access is lost. */}
+        setDraft(null);setSaved(null);setPending(null);setRecovery(null);setSessionInvalid(true);setInitialError("当前账户、项目范围或编辑权限已变化，请重新读取工作。");
         lifetime?.abort();
       }
       throw reason;
     }
-  },[owner]);
+  },[owner,key,endpoint]);
   useEffect(()=>{
     const controller=new AbortController(); active.current=controller; action.current=false;
     queueMicrotask(()=>{if(!controller.signal.aborted){setDraft(null);setSaved(null);setPending(null);setRecovery(null);setBusy("");setInitialError("");setConflict(false);setSessionInvalid(false);setAutoBlocked(false);setMessage("");}});
-    if(owner)void request<IssueDraft>(endpoint+(fullPreview?"preview/":"")).then(value=>{
+    queueMicrotask(()=>{if(!owner||controller.signal.aborted)return;void request<IssueDraft>(endpoint+(fullPreview?"preview/":"")).then(value=>{
       if(controller.signal.aborted)return;
       setDraft(value);setSaved(value);
       if(!fullPreview)setRecovery(readRecovery(key,owner,issueId));
-    }).catch(reason=>{if(!controller.signal.aborted)setInitialError(reason instanceof Error?reason.message:"草稿读取失败。");});
+    }).catch(reason=>{if(!controller.signal.aborted)setInitialError(reason instanceof Error?reason.message:"草稿读取失败。");});});
     const unsubscribe=subscribeToSessionChanges(()=>{
       controller.abort();try{sessionStorage.removeItem(key);}catch{/* Storage can be disabled. */}
       setDraft(null);setSaved(null);setPending(null);setRecovery(null);setSessionInvalid(true);setInitialError("登录状态已变化，请重新读取当前账户的工作。");
@@ -87,7 +89,7 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
   },[input,dirty,pending,recovery,fullPreview,key,owner,issueId,sessionInvalid]);
   const accept=useCallback((value:IssueDraft)=>{setDraft(value);setSaved(value);setPending(null);setConflict(false);setAutoBlocked(false);setManualRequired(false);},[]);
   function update(patch:Partial<IssueDraft>) {
-    if(action.current || pending || sessionInvalid || recovery)return;
+    if(action.current || pending || sessionInvalid || recovery || draft?.project_archived)return;
     setDraft(value=>value?{...value,...patch}:value);setAutoBlocked(false);
   }
   function discardChanges() {
@@ -95,7 +97,7 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     accept(saved);setMessage("已放弃本次未保存修改，恢复到最近保存的版本。");
   }
   const save=useCallback(async(automatic=false,retry=false)=>{
-    if(!draft || action.current || compositionActive.current || sessionInvalid || conflict || recovery || (pending&&!retry) || (!dirty&&!pending) || automatic&&manualRequired)return;
+    if(!draft || draft.project_archived || action.current || compositionActive.current || sessionInvalid || conflict || recovery || (pending&&!retry) || (!dirty&&!pending) || automatic&&manualRequired)return;
     const lifetime=active.current;action.current=true;setBusy("save");setMessage("");
     const requestId=pending?.requestId || crypto.randomUUID();
     const command=pending || {requestId,body:JSON.stringify({...issueInput(draft),request_id:requestId,autosave:automatic})};

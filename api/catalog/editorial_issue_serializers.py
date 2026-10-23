@@ -164,6 +164,9 @@ class PublicEditorialDirectorySerializer(serializers.Serializer):
 
 
 class RecommendationIssueSerializer(serializers.Serializer):
+    project_id = serializers.UUIDField(read_only=True, allow_null=True)
+    project_title = serializers.CharField(read_only=True, allow_blank=True)
+    project_archived = serializers.BooleanField(read_only=True)
     selection_workspace = serializers.DictField(required=False, help_text="仅后台：策划问题、筛选范围与准确选材；materials为只读当前解析。公开响应不含此字段。")
     id = serializers.UUIDField(read_only=True)
     slug = serializers.CharField(required=False)
@@ -201,6 +204,9 @@ class RecommendationIssueSerializer(serializers.Serializer):
 
 class RecommendationIssueCollectionSerializer(serializers.Serializer):
     count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    pages = serializers.IntegerField()
     next = serializers.CharField(allow_null=True)
     previous = serializers.CharField(allow_null=True)
     current = RecommendationIssueSerializer(allow_null=True)

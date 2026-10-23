@@ -55,9 +55,13 @@ def authorize(actor, page_type, *, publishing=False):
         raise PermissionDenied("当前账户不能编辑或发布此页面的内容编排。")
 
 
-def parent_object(page_type, page_id, *, public=False, lock=False):
+def parent_object(page_type, page_id, *, public=False, lock=False, actor=None):
     if page_type not in PAGES:
         raise ValidationError({"page_type": "未知页面类型。"})
+    if page_type == "issue" and not public:
+        from catalog.services.curation_projects import require_issue_access, lock_issue
+        if lock: return lock_issue(shared_curation.identifier(page_id), actor)
+        require_issue_access(shared_curation.identifier(page_id), actor)
     model, status_field, _ = PAGES[page_type]
     rows = model.objects.all()
     if page_type == "site":
@@ -134,13 +138,16 @@ def _source(target, *, public=False):
     if kind in {"scholar", "issue"}:
         from catalog.site_layout import source_card
         rows = ScholarProfile.objects.select_related("person") if kind == "scholar" else RecommendationIssue.objects.all()
+        if kind == "issue":
+            # Shared page references may expose only an explicitly published article.
+            rows = ledger.published_issues()
         row = get_object_or_404(rows, pk=key)
         try:
             card = source_card({"type": kind, "id": str(key)})
             source = {"type": kind, "id": str(key), "title": card["title"], "summary": card["description"],
                       "href": card["href"], "image_url": card["image_url"], "public_eligible": True}
         except Http404:
-            if public:
+            if public or kind == "issue":
                 raise
             source = {"type": kind, "id": str(key), "title": _title(row), "public_eligible": False}
         source["edit_url"] = PAGES[kind][2] + str(key)
@@ -355,7 +362,7 @@ def _resolved_items(items, *, public=False):
 def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
     if not public:
         authorize(actor, page_type)
-    parent = parent_object(page_type, page_id, public=public)
+    parent = parent_object(page_type, page_id, public=public, actor=actor)
     rows = revisions(page_type, parent.pk)
     latest = rows.first()
     published = rows.filter(status="published").first()
@@ -497,7 +504,7 @@ def command(page_type, page_id, data, actor):
     if set(data) - allowed or "confirmed_only" in data and not isinstance(data["confirmed_only"], bool):
         raise ValidationError("编排请求包含不支持的字段。")
     authorize(actor, page_type, publishing=action in {"publish", "withdraw"})
-    parent = parent_object(page_type, page_id, lock=True)
+    parent = parent_object(page_type, page_id, lock=True, actor=actor)
     request_id = str(shared_curation.identifier(data.get("request_id")))
     fingerprint = sha256(json.dumps(data, cls=DjangoJSONEncoder, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     key = target_id(page_type, parent.pk)

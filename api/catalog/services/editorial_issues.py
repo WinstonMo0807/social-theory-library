@@ -174,7 +174,8 @@ def create_issue(data, actor):
 
 @transaction.atomic
 def save_issue(identifier, data, actor):
-    issue = RecommendationIssue.objects.select_for_update().get(pk=identifier)
+    from catalog.services.curation_projects import lock_issue
+    issue = lock_issue(identifier, actor)
     from catalog.services.shared_curation import identifier as parse_id
     request_id = str(parse_id(data["request_id"])) if data.get("request_id") else ""
     fingerprint = sha256(json.dumps(data, cls=DjangoJSONEncoder, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
@@ -314,7 +315,8 @@ def issue_save_receipt(issue, request_id, actor):
 
 @transaction.atomic
 def publish_issue(identifier, expected, actor):
-    issue = RecommendationIssue.objects.select_for_update().get(pk=identifier)
+    from catalog.services.curation_projects import lock_issue
+    issue = lock_issue(identifier, actor)
     _check_version("recommendation_issue", issue.pk, expected)
     revision = _latest("recommendation_issue", issue.pk)
     if not revision or revision.status != "draft":
@@ -443,6 +445,9 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     if not public:
         latest = _latest("recommendation_issue", issue.pk)
         payload.update(edit_version=edit_version("recommendation_issue", issue.pk),
+            project_id=str(issue.project_id) if issue.project_id else None,
+            project_title=issue.project.title if issue.project_id else "",
+            project_archived=bool(issue.project_id and issue.project.archived_at),
             draft_revision_id=str(latest.pk) if latest and latest.status == "draft" else None,
             has_unpublished_changes=bool(latest and latest.status == "draft"),
             saved_at=latest.created_at.isoformat() if latest else None,
@@ -457,7 +462,8 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
 
 @transaction.atomic
 def link_planned_item(issue_id, item_id, data, actor):
-    issue = RecommendationIssue.objects.select_for_update().get(pk=issue_id)
+    from catalog.services.curation_projects import lock_issue
+    issue = lock_issue(issue_id, actor)
     _check_version("recommendation_issue", issue.pk, data.get("edit_version"))
     item = RecommendationIssueItem.objects.select_for_update().get(pk=item_id, issue=issue)
     if not item.cataloging_session_id:

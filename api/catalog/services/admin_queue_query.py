@@ -144,7 +144,8 @@ def _hydrate(keys, *, user=None):
     edition_ids = [row["queue_id"].split(":", 1)[1] for row in keys if row["queue_id"].startswith("edition:")]
     item_ids = [row["queue_id"].split(":", 1)[1] for row in keys if row["queue_id"].startswith("upload:")]
     by_id = {f"edition:{edition.pk}": edition_summary(edition, user=user) for edition in load_admin_editions(Edition.objects.filter(pk__in=edition_ids))}
-    for item in RecommendationIssueItem.objects.filter(cataloging_session__edition_id__in=edition_ids).select_related("issue", "cataloging_session"):
+    from catalog.services.curation_projects import visible_issues
+    for item in RecommendationIssueItem.objects.filter(cataloging_session__edition_id__in=edition_ids, issue_id__in=visible_issues(user).values("pk")).select_related("issue", "cataloging_session"):
         row = by_id.get(f"edition:{item.cataloging_session.edition_id}")
         if row is not None:
             row.setdefault("recommendation_sources", []).append({"id": str(item.issue_id), "title": item.issue.title, "url": f"/admin/recommendations/issues/{item.issue_id}"})

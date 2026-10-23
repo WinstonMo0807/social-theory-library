@@ -37,7 +37,7 @@ def collection(request, queryset, *, public=False):
         params["page"] = number
         return f"{request.path}?{params.urlencode()}"
     current = service.published_issues().order_by("-effective_display_from", "-created_at").first()
-    return {"count": paginator.count, "next": page_url(page.next_page_number()) if page.has_next() else None,
+    return {"count": paginator.count, "page": page.number, "page_size": paginator.per_page, "pages": paginator.num_pages, "next": page_url(page.next_page_number()) if page.has_next() else None,
             "previous": page_url(page.previous_page_number()) if page.has_previous() else None,
             "results": [service.issue_payload(row, public=public) for row in page.object_list],
             "current": service.issue_payload(current, public=True) if current else None}
@@ -115,13 +115,16 @@ class AdminIssueListView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
         return [CanEditMetadata()] if self.request.method == "POST" else [CanAccessBackOffice()]
     @extend_schema(operation_id="catalog_admin_recommendation_issues_list", responses=AdminRecommendationIssueCollectionSerializer)
     def get(self, request):
-        issues = RecommendationIssue.objects.select_related("active_revision", "scheduled_revision")
+        from catalog.services.curation_projects import visible_issues
+        issues = visible_issues(request.user).select_related("active_revision", "scheduled_revision")
+        if request.query_params.get("unassigned") == "1": issues = issues.filter(project__isnull=True)
+        if request.query_params.get("mine") == "1": issues = issues.filter(created_by=request.user)
         upcoming = issues.filter(scheduled_revision__status="published", scheduled_for__gt=timezone.now())
         drafts = EditorialRevision.objects.filter(target_type="recommendation_issue", target_id=OuterRef("pk"), status="draft")
         payload = collection(request, issues)
         # Dashboard metrics describe the inventory, independently of a search
         # or page. A published issue can also have a draft or a future revision.
-        payload["summary"] = {"total": issues.count(), "published": service.published_issues().count(),
+        payload["summary"] = {"total": issues.count(), "published": service.published_issues().filter(pk__in=issues.values("pk")).count(),
                               "drafts": issues.filter(Exists(drafts)).count(), "scheduled": upcoming.count()}
         payload["upcoming"] = [service.issue_payload(row, revision=row.scheduled_revision)
                                for row in upcoming.order_by("scheduled_for", "id")[:3]]
@@ -285,6 +288,6 @@ class IssueItemCoverView(APIView):
         return response
 
 
-class AdminIssueItemCoverView(IssueItemCoverView):
+class AdminIssueItemCoverView(AdminPrivateResponseMixin, IssueItemCoverView):
     permission_classes = [CanAccessBackOffice]
     admin_preview = True

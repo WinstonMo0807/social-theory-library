@@ -78,7 +78,8 @@ def suggestions(issue, actor, *, query="", kind="all", batch=1):
 
 @transaction.atomic
 def dismiss(issue_id, actor, data):
-    issue = get_object_or_404(RecommendationIssue.objects.select_for_update(), pk=issue_id)
+    from catalog.services.curation_projects import lock_issue
+    issue = lock_issue(issue_id, actor)
     request_id = str(identifier(data.get("request_id")))
     token = data.get("token")
     if not isinstance(token, str) or len(token) > 4000:

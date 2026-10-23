@@ -121,7 +121,7 @@ class AdminRecycleView(AdminPrivateResponseMixin, APIView):
     def get(self, request):
         require_editor(request.user)
         query=RecoveryQuery(data=request.query_params);query.is_valid(raise_exception=True)
-        return Response(directory(**query.validated_data))
+        return Response(directory(actor=request.user,**query.validated_data))
 
     @extend_schema(request=RecoveryConfirmInput,responses=RecoveryResult)
     def post(self, request):

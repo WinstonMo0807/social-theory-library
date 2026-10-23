@@ -21,6 +21,8 @@ def recycle_object(obj, *, actor, kind, name, reason=""):
     label = obj._meta.label_lower
     if label not in RECYCLE_MODELS:
         raise ValidationError("该对象不支持移入回收站。")
+    from catalog.services.curation_projects import protect_related_object
+    protect_related_object(obj, actor, lock=True)
     obj = type(obj).all_objects.select_for_update().get(pk=obj.pk)
     entry = RecycleEntry.objects.filter(model_label=label, object_id=obj.pk).first()
     if entry and entry.restored_at is None:
@@ -121,6 +123,9 @@ def restore_object(entry_id, *, actor):
     if entry.model_label not in RECYCLE_MODELS:
         raise ValidationError("该对象不支持回收恢复。")
     model = apps.get_model(entry.model_label)
+    from catalog.services.curation_projects import protect_related_object
+    obj = model.all_objects.get(pk=entry.object_id)
+    protect_related_object(obj, actor, lock=True)
     obj = model.all_objects.select_for_update().get(pk=entry.object_id)
     # Same lock order as deletion: original object, then its ledger row.
     entry = RecycleEntry.objects.select_for_update().get(pk=entry_id)

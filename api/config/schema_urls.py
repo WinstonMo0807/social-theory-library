@@ -12,6 +12,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
+    "curation-projects", "curation-project-detail", "curation-project-receipt", "curation-project-people",
     "index-maintenance", "index-maintenance-receipt", "index-maintenance-terms",
     "media-workspace", "media-workspace-receipt",
     "workspace-save-receipt", "admin-work-workspace-edits",

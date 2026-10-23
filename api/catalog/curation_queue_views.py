@@ -124,6 +124,7 @@ def _placements(user, *, query="", pending_only=True):
 
 
 def draft_querysets(user, *, query="", owner_id=None, pending_only=True):
+    from catalog.services.curation_projects import visible_issues
     # These read permissions mirror the existing object editors. An object
     # which the user cannot open is not exposed merely through this inventory.
     staff = has_capability(user, Capability.ACCESS_BACK_OFFICE)
@@ -133,7 +134,7 @@ def draft_querysets(user, *, query="", owner_id=None, pending_only=True):
         _objects(models.Topic.objects.exclude(curation__has_key="topic_merge"), "topic", "主题", F("name"), "name", "editorial_status", "/admin/topics/", can_edit=staff, query=query, pending_only=pending_only),
         _objects(models.Discipline.objects.all(), "discipline", "学科", F("name"), "name", "editorial_status", "/admin/theories/disciplines?discipline=", can_edit=staff, query=query, pending_only=pending_only),
         _objects(models.Subdiscipline.objects.all(), "subdiscipline", "子学科", F("name"), "name", "editorial_status", "/admin/theories/subdisciplines?subdiscipline=", can_edit=staff, query=query, pending_only=pending_only),
-        _objects(models.RecommendationIssue.objects.all(), "recommendation_issue", "推荐期", F("title"), "title", None, "/admin/recommendations/issues/", can_edit=has_capability(user, Capability.EDIT_METADATA), query=query, pending_only=pending_only),
+        _objects(visible_issues(user), "recommendation_issue", "推荐期", F("title"), "title", None, "/admin/recommendations/issues/", can_edit=has_capability(user, Capability.EDIT_METADATA), query=query, pending_only=pending_only),
     ]
     if knowledge:
         rows += [

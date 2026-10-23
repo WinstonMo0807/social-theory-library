@@ -362,7 +362,7 @@ class PlacementReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
         receipt = AuditEvent.objects.filter(action="content_placement.command", object_type=service.KIND,
             object_id=key, request_id=str(request_id), actor=actor).first()
         if receipt is None:
-            service.parent_object(page_type, page_id, lock=True)
+            service.parent_object(page_type, page_id, lock=True, actor=actor)
             receipt = AuditEvent.objects.create(actor=actor, action="content_placement.command", object_type=service.KIND,
                 object_id=key, request_id=str(request_id), before={},
                 after={"operation": "cancelled", "revision_id": None, "fingerprint": ""})
@@ -375,7 +375,7 @@ class PlacementHistoryView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
     @extend_schema(responses=PlacementHistoryPageSerializer)
     def get(self, request, page_type, page_id):
         service.authorize(request.user, page_type)
-        parent = service.parent_object(page_type, page_id)
+        parent = service.parent_object(page_type, page_id, actor=request.user)
         rows = service.revisions(page_type, parent.pk)
         return Response(_page(request, rows, lambda row: {
             "id": str(row.pk), "revision": row.revision, "base_revision": row.base_revision,

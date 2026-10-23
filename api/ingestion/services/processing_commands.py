@@ -9,7 +9,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from catalog.models import Asset, Edition, RecommendationIssue, SemanticIndexJob
+from catalog.models import Asset, Edition, SemanticIndexJob
 from catalog.services.editorial_issues import EditConflict
 from common.capabilities import Capability, has_capability
 from ingestion.models import AuditEvent, ProcessingJob
@@ -68,12 +68,13 @@ def command_actor(request):
     return actor
 
 
-def lock_task(source, identifier):
+def lock_task(source, identifier, actor, *, action=None):
     model = SemanticIndexJob if source == "semantic_index_job" else ProcessingJob
     target = get_object_or_404(model.objects.select_related("asset"), pk=identifier)
     # Follow each existing worker's parent -> task lock order.
     if isinstance(target, ProcessingJob) and target.job_type == "editorial_assistance":
-        get_object_or_404(RecommendationIssue.objects.select_for_update(), pk=target.stats.get("issue_id"))
+        from catalog.services.curation_projects import lock_issue
+        lock_issue(target.stats.get("issue_id"), actor, allow_archived=action == "cancel")
     elif isinstance(target, ProcessingJob) and target.job_type == "text_extraction" and target.stats.get("operation") == "outline_rebuild":
         get_object_or_404(Asset.objects.select_for_update(), pk=target.asset_id)
     else:
@@ -104,14 +105,17 @@ def run_processing_command(request, handler):
         if prior:
             if not prior.after.get("cancelled") and prior.after.get("signature") != signature: raise EditConflict("此编号已用于其他任务操作。")
             return Response(command_receipt(prior))
-        job = lock_task(data["source"], data["job_id"])
+        job = lock_task(data["source"], data["job_id"], actor, action=data["action"])
         if task_version(job) != data["expected_version"]: raise EditConflict("任务状态或执行轮次已变化，请读取最新进度后操作。")
         if data["action"] not in task_actions(job, actor): raise EditConflict("当前任务不支持此操作，请查看任务状态与原处理入口。")
     elif request.data.get("action") in {"pause", "resume", "retry", "cancel"}:
         source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"]).run_validation(request.data.get("source", "processing_job"))
         job_id = serializers.UUIDField().run_validation(request.data.get("job_id"))
-        job = lock_task(source, job_id)
+        job = lock_task(source, job_id, actor, action=request.data["action"])
         if request.data["action"] not in task_actions(job, actor): raise EditConflict("当前任务不支持此操作，请读取最新状态。")
+    if isinstance(job, ProcessingJob) and job.job_type == "editorial_assistance":
+        from catalog.services.curation_projects import require_issue_access
+        require_issue_access(job.stats.get("issue_id"), actor)
     response = handler()
     if response.status_code >= 400:
         # Legacy handlers sometimes discover unsupported retries after a write.

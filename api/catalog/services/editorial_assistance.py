@@ -45,11 +45,9 @@ def _sources(references):
 @transaction.atomic
 def request_assistance(issue_id, data, actor):
     _authorize(actor)
-    from django.contrib.auth import get_user_model
-    issue = get_object_or_404(RecommendationIssue.objects.select_for_update(), pk=issue_id)
-    # Match save_issue -> open_cataloging_session: issue, then actor. Keeping
-    # the opposite order here deadlocks with adding a planned item in another tab.
-    get_user_model().objects.select_for_update().get(pk=actor.pk)
+    from catalog.services.curation_projects import lock_issue
+    issue = lock_issue(issue_id, actor)
+    # All article mutations now share actor -> project -> article locks.
     request_id = str(identifier(data.get("request_id")))
     fingerprint = _fingerprint(data)
     job_key = f"editorial:{actor.pk}:{request_id}"
@@ -116,6 +114,9 @@ def run_assistance(job_id, task_id):
     try:
         issue = RecommendationIssue.objects.get(pk=job.stats["issue_id"])
         _authorize(job.created_by)
+        from catalog.services.curation_projects import require_issue_access
+        require_issue_access(issue.pk, job.created_by)
+        if issue.project_id and issue.project.archived_at: raise PermissionDenied("项目已归档。")
         ledger._check_version("recommendation_issue", issue.pk, job.stats["edit_version"])
         sources = _sources(job.stats["references"])
         source_keys = {row["source_key"] for row in sources}
@@ -163,7 +164,8 @@ def run_assistance(job_id, task_id):
                                 "source_keys": list(dict.fromkeys(keys)), "gap": gap, "level": level,
                                 "target_block_id": target, "original_text": editable[target]["text"] if target else ""})
         with transaction.atomic():
-            issue = RecommendationIssue.objects.select_for_update().get(pk=issue.pk)
+            from catalog.services.curation_projects import lock_issue
+            issue = lock_issue(issue.pk, job.created_by)
             current = ProcessingJob.objects.select_for_update().get(pk=job.pk)
             if current.task_id != task_id or current.status != "running":
                 return current
@@ -184,6 +186,8 @@ def run_assistance(job_id, task_id):
 
 def assistance_payload(job, actor):
     _authorize(actor)
+    from catalog.services.curation_projects import require_issue_access
+    require_issue_access(job.stats["issue_id"], actor)
     # Reading a crashed job can make it retryable without pretending it finished.
     if job.status in {"pending", "running"} and job.updated_at < timezone.now() - timedelta(minutes=30):
         ProcessingJob.objects.filter(pk=job.pk, status=job.status, task_id=job.task_id,
@@ -212,7 +216,8 @@ def assistance_payload(job, actor):
 def assistance_action(job_id, data, actor):
     _authorize(actor)
     target = get_object_or_404(ProcessingJob, pk=job_id, job_type=JOB_TYPE)
-    issue = get_object_or_404(RecommendationIssue.objects.select_for_update(), pk=target.stats["issue_id"])
+    from catalog.services.curation_projects import lock_issue
+    issue = lock_issue(target.stats["issue_id"], actor, allow_archived=data.get("action") == "cancel")
     job = ProcessingJob.objects.select_for_update().get(pk=target.pk)
     action = data.get("action")
     request_id = str(identifier(data["request_id"])) if data.get("request_id") else ""
