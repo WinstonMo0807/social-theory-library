@@ -51724,6 +51724,29 @@
                     "worker_alive"
                 ]
             },
+            "ProcessingOutcomeIssue": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "label",
+                    "message",
+                    "url"
+                ]
+            },
             "ProcessingReceipt": {
                 "type": "object",
                 "properties": {
@@ -52286,6 +52309,12 @@
                         ],
                         "nullable": true
                     },
+                    "outcome_issues": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingOutcomeIssue"
+                        }
+                    },
                     "pause_requested": {
                         "type": "boolean"
                     },
@@ -52402,6 +52431,7 @@
                     "max_attempts",
                     "ocr_progress",
                     "operation",
+                    "outcome_issues",
                     "partial",
                     "pause_requested",
                     "permission_reason",

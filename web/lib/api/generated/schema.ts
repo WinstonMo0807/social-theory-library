@@ -13414,6 +13414,12 @@ export interface components {
             protected_page_indexes?: number[];
             reviewed_page_indexes?: number[];
         };
+        ProcessingOutcomeIssue: {
+            code: string;
+            label: string;
+            message: string;
+            url: string;
+        };
         ProcessingReceipt: {
             owner_id: string;
             /** Format: uuid */
@@ -13592,6 +13598,7 @@ export interface components {
             recovery: components["schemas"]["ProcessingRecovery"];
             retry_selection: components["schemas"]["ProcessingRetrySelection"];
             followup: components["schemas"]["ProcessingFollowup"] | null;
+            outcome_issues: components["schemas"]["ProcessingOutcomeIssue"][];
             pause_requested: boolean;
             last_error: string;
             error_code: string;

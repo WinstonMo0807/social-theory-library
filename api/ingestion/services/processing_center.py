@@ -2,7 +2,7 @@
 from collections import Counter
 from uuid import UUID
 
-from django.db.models import CharField, Count, Q, Value
+from django.db.models import CharField, Count, F, Q, Value
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast, Replace
 from django.utils import timezone
@@ -121,12 +121,14 @@ def task_querysets(params, actor):
 
 def processing_task_page(params, actor):
     jobs, semantic, kind, status = task_querysets(params, actor)
+    from .processing_outcomes import workspace_status
+    jobs = jobs.annotate(view_state=workspace_status() if params.get("workspace") == "1" else F("status"))
     size = page_number(params.get("page_size"), 30, 100)
     requested_page = page_number(params.get("page"))
     # Count the complete matching scope, not the current page or a capped sample.
     matrix = Counter()
-    for row in jobs.order_by().values("job_type", "status").annotate(total=Count("pk")):
-        matrix[(row["job_type"], row["status"])] += row["total"]
+    for row in jobs.order_by().values("job_type", "view_state").annotate(total=Count("pk")):
+        matrix[(row["job_type"], row["view_state"])] += row["total"]
     for row in semantic.order_by().values("status").annotate(total=Count("pk")):
         matrix[("semantic_index", SEMANTIC_STATUS[row["status"]])] += row["total"]
     counts = {state: sum(n for (task_kind, task_state), n in matrix.items() if task_state == state and (not kind or task_kind == kind)) for state in ProcessingJob.Status.values}
@@ -137,7 +139,7 @@ def processing_task_page(params, actor):
         if kind != "semantic_index":
             semantic = semantic.none()
     if status:
-        jobs = jobs.filter(status=status)
+        jobs = jobs.filter(view_state=status)
         semantic = semantic.filter(status__in=[key for key, value in SEMANTIC_STATUS.items() if value == status])
     count = sum(n for (task_kind, task_state), n in matrix.items() if (not kind or task_kind == kind) and (not status or task_state == status))
     pages = max(1, (count + size - 1) // size)

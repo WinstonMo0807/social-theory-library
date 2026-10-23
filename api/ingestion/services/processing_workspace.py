@@ -4,6 +4,7 @@ from .processing_identity import processing_edition
 from .processing_recovery import recovery_state
 from .processing_retry import failed_ocr_pages
 from .processing_followup import followup_state
+from .processing_outcomes import outcome_issues
 
 
 def workspace_task(job, row, actor):
@@ -18,6 +19,8 @@ def workspace_task(job, row, actor):
     recovery = recovery_state(job)
     recovery["can_recover"] = "recover" in actions
     followup = followup_state(job)
+    files_url = f"/admin/library/works/{edition.work_id}/files?edition={edition.pk}" if edition else ""
+    issues = outcome_issues(job, files_url=files_url, workbench_url=row.get("workbench_url", ""))
     if followup:
         followup["can_configure"] = "configure_followup" in actions
     ocr = row.get("ocr_progress")
@@ -35,7 +38,8 @@ def workspace_task(job, row, actor):
     return {**row, "version": task_version(job), "actions": actions, "pause_requested": bool(job.pause_requested_at),
             "file_id": str(file_asset.source_asset_id or file_asset.pk) if file_asset else None,
             "retry_url": f"/admin/processing?task_id={stats['retry_replacement_id']}&task_source={row['source']}" if stats.get("retry_replacement_id") else "",
-            "partial": job.status == "partial" or bool(stats.get("partial")), "heartbeat_at": heartbeat,
+            "partial": job.status == "partial" or bool(stats.get("partial")) or job.status == "succeeded" and bool(issues), "heartbeat_at": heartbeat,
+            "outcome_issues": issues,
             "failure_pages": failed_pages[:200], "failure_page_count": len(failed_pages), "failure_location": failure_location,
             "retry_selection": {"state": retry_selection.get("state", "") if retry_selection.get("state") in {"active", "completed", "continued"} else "",
                                 "pages": retry_pages[:200], "count": len(retry_pages)},
@@ -51,5 +55,5 @@ def workspace_task(job, row, actor):
             "counts": counts, "permission_reason": "" if actions else ocr.get("resume_reason", "") if ocr else "当前状态没有可执行操作，请查看原处理入口。",
             "result_urls": {"ocr": f"/admin/library/assets/{ocr['source_asset_id'] if ocr and row['status'] == 'failed' and ocr.get('source_asset_id') else asset.pk}/ocr" if asset else "",
                             "outline": f"/admin/library/assets/{asset.pk}/outline" if asset else "",
-                            "files": f"/admin/library/works/{edition.work_id}/files?edition={edition.pk}" if edition else "",
+                            "files": files_url,
                             "index": "/admin/processing/semantic-index" if row["job_type"] in {"discovery_index", "semantic_index"} else ""}}

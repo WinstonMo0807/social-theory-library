@@ -85,6 +85,13 @@ class ProcessingFollowupSerializer(serializers.Serializer):
     counts = serializers.DictField(child=serializers.IntegerField())
 
 
+class ProcessingOutcomeIssueSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    label = serializers.CharField()
+    message = serializers.CharField()
+    url = serializers.CharField(allow_blank=True)
+
+
 class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
@@ -107,6 +114,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     recovery = ProcessingRecoverySerializer()
     retry_selection = ProcessingRetrySelectionSerializer()
     followup = ProcessingFollowupSerializer(allow_null=True)
+    outcome_issues = ProcessingOutcomeIssueSerializer(many=True)
     pause_requested = serializers.BooleanField()
     last_error = serializers.CharField(allow_blank=True)
     error_code = serializers.CharField(allow_blank=True)

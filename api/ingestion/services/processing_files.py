@@ -9,6 +9,7 @@ from django.db.models.functions import Cast, Coalesce, Concat, Replace, RowNumbe
 from common.capabilities import Capability, has_capability
 from ingestion.models import ProcessingJob
 from .processing_center import SEMANTIC_STATUS, page_number, task_querysets, task_rows
+from .processing_outcomes import workspace_status
 
 
 def stage_query(rows, source):
@@ -21,7 +22,7 @@ def stage_query(rows, source):
         then=Concat(Value('file:'), Replace(asset, Value('-'), Value('')))),
         default=Concat(Value(f'task:{source}:'), Replace(Cast('pk', CharField()), Value('-'), Value(''))), output_field=CharField())
     stage = Case(When(stats__operation='outline_rebuild', then=Value('outline_rebuild')), default=F('job_type'), output_field=CharField()) if ordinary else Value('semantic_index', output_field=CharField())
-    normalized = F('status') if ordinary else Case(*[When(status=old, then=Value(new)) for old,new in SEMANTIC_STATUS.items()], output_field=CharField())
+    normalized = workspace_status() if ordinary else Case(*[When(status=old, then=Value(new)) for old,new in SEMANTIC_STATUS.items()], output_field=CharField())
     return rows.order_by().annotate(file_key=group, stage_key=stage,
         task_kind=F('job_type') if ordinary else Value('semantic_index', output_field=CharField()), task_state=normalized,
         store=Value(source, output_field=CharField()), task_pk=Cast('pk', CharField()), task_created=F('created_at'),

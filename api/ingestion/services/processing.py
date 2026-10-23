@@ -1329,6 +1329,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                     actor=job.created_by,
                     schedule_ocr=False,
                 )
+                stats.pop("front_matter_warning", None)
                 stats["external_corroboration"] = "explicit_free_lookup_required"
             except Exception as exc:
                 # Front-matter candidates are derived and remain optional for
@@ -1342,6 +1343,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                 allow_targeted_ocr=False,
             )
             stats["publication_place_candidates"] = len(place_evidence)
+            stats.pop("publication_place_warning", None)
         except Exception as exc:
             # Metadata enrichment must not turn a usable OCR result into a
             # failed reading artifact.
@@ -1353,6 +1355,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                     job.upload_item,
                     taxonomy_candidates,
                 )
+                stats.pop("taxonomy_candidate_warning", None)
             except Exception as exc:
                 stats["taxonomy_candidate_warning"] = str(exc)[:2000]
         reason_counts = (asset.validation_details or {}).get("ocr_reason_counts") or {}
@@ -1371,6 +1374,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                     "sha256": derivative.sha256,
                     "validation_status": derivative.validation_status,
                 }
+                stats.pop("ocr_pdf_warning", None)
                 unlocated_blocks = (derivative.validation_details or {}).get("unlocated_blocks", 0)
                 if unlocated_blocks:
                     stats["ocr_pdf_warning"] = f"{unlocated_blocks} 个文字块缺少可靠坐标，下载副本保留对应原图；独立 OCR 正文仍可用。"
@@ -1389,10 +1393,12 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         try:
             from .processing_followup import run_concept_followup
             stats["theory_suggestions"] = run_concept_followup(job)
+            stats.pop("theory_suggestion_warning", None)
         except Exception as exc:
             stats["theory_suggestion_warning"] = str(exc)[:2000]
         try:
             queue_page_label_job(asset, upload_item=job.upload_item, actor=job.created_by, force=True)
+            stats.pop("page_label_warning", None)
         except Exception as exc:
             # Text and its publication event are already durable; retain the
             # optional page-label failure instead of re-running paid OCR.

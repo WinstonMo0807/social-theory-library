@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 M09后续部分失败
+
+ProcessingWorkspaceTask新增outcome_issues[{code,label,message,url}]，只回传已知后续阶段的安全说明与原入口。原status仍代表执行记录，partial=true表示成功正文存在后续问题。新版workspace的failed筛选包含这些任务，succeeded只含无已知后续问题的成功任务；逐文件与按任务计数使用同一SQL表达式。旧processing-center仍按原存储状态计数，无新端点/迁移。
+
 ## 2026-10-24 处理队列后续概念对齐
 
 原任务命令增加configure_followup及必填align_concepts布尔值；仅OCR、尚未开始该阶段、当前VIEW_SYSTEM_STATUS/RETRY_JOBS权限可用。仍必填request_id/source/job_id/expected_version与X-Editor-Owner；重复/停止/来源变化沿原回执和409冲突。其他动作不能附带该设置。新建OCR可传align_concepts，进入原OCR启动指纹及创建事务；目录任务拒绝该参数。
