@@ -9,6 +9,8 @@ def workspace_task(job, row, actor):
     stats = row.pop("stats", {}) or {}
     edition = processing_edition(job)
     asset = job.asset if job.asset_id else None
+    upload = getattr(job, "upload_item", None)
+    file_asset = asset or (upload.asset if upload and upload.asset_id else None)
     heartbeat = getattr(job, "heartbeat_at", None)
     actions = task_actions(job, actor)
     ocr = row.get("ocr_progress")
@@ -18,6 +20,7 @@ def workspace_task(job, row, actor):
     cover_id = edition.work.cover_rendition_id if edition else None
     counts = {key: value for key in ("target_pages", "processed_pages", "completed_pages", "total_pages", "failed_pages", "indexed_chunks", "failed_chunks", "completed_chunks", "total_chunks") if isinstance(value := stats.get(key), int) and not isinstance(value, bool) and value >= 0}
     return {**row, "version": task_version(job), "actions": actions, "pause_requested": bool(job.pause_requested_at),
+            "file_id": str(file_asset.source_asset_id or file_asset.pk) if file_asset else None,
             "retry_url": f"/admin/processing?task_id={stats['retry_replacement_id']}&task_source={row['source']}" if stats.get("retry_replacement_id") else "",
             "partial": job.status == "partial" or bool(stats.get("partial")), "heartbeat_at": heartbeat,
             "heartbeat_stale": bool(heartbeat and job.status == "running" and (timezone.now() - heartbeat).total_seconds() > 90),

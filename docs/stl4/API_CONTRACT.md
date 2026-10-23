@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 文件阶段队列（仍326路径）
+
+processing-workspace新增group_by=file/task与file_id。具名ProcessingWorkspaceFile、任务file_id、files/group_by/stage_count与生成类型同步。文件模式results为当前展开阶段，files为分组分页；count/total/counts计文件或独立任务组，状态可重叠；每组展开最多20项，stage_count给真实范围数量。任务历史模式保持原分页。未新增写命令。
+
 ## 2026-10-23 全项目来源与预览（326路径）
 
 新增GET admin/curation-projects/{project_id}/sources/（q/origin/scope/page，ProjectSources）与preview/（ProjectPreview）。来源按项目所有文章当前修订归集、30项分页，附录接口保留；预览最多200篇原文章元信息，选择后沿原受保护预览和公开页，不返回整项目长正文。均按项目可见范围与X-Editor-Owner过滤，private/no-store；无写操作。

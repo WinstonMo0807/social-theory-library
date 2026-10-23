@@ -193,6 +193,7 @@ SPECTACULAR_SETTINGS = {
         "IndexMaintenanceActionEnum": ["rebuild", "activate", "retry", "reconcile"],
         "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel"],
         "ProcessingTaskSourceEnum": ["processing_job", "semantic_index_job"],
+        "ProcessingGroupingEnum": ["file", "task"],
         "CatalogIdentityModeEnum": ["use_edition", "new_version", "new_work"],
         "PlacementSourceKindEnum": ["work", "edition", "node", "span", "scholar", "issue"],
         "PathDependencyKindEnum": ["learning_order", "theory_related"],

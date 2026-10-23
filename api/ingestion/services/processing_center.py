@@ -31,14 +31,12 @@ def page_number(value, default=1, maximum=None):
     return min(number, maximum) if maximum else number
 
 
-def processing_task_page(params, actor):
+def task_querysets(params, actor):
     kind = str(params.get("job_type") or "").strip()
     status = str(params.get("status") or "").strip()
     query = str(params.get("q") or "").strip()[:200]
     edition_id = str(params.get("edition_id") or "").strip()
     work_id = str(params.get("work_id") or "").strip()
-    size = page_number(params.get("page_size"), 30, 100)
-    requested_page = page_number(params.get("page"))
     if status and status not in ProcessingJob.Status.values:
         raise ValidationError({"status": "请选择有效的任务状态。"})
     if kind and kind not in ProcessingJob.JobType.values:
@@ -110,6 +108,21 @@ def processing_task_page(params, actor):
             | Q(upload_item__edition__work_id=work_id)
         )
         semantic = semantic.filter(asset__edition__work_id=work_id)
+    if params.get("file_id"):
+        try: file_id = UUID(str(params["file_id"]))
+        except (TypeError, ValueError): raise ValidationError({"file_id": "文件来源编号无效。"})
+        # Exact stored derivation only; do not merge same-name or same-edition files.
+        asset_match = Q(asset_id=file_id, asset__source_asset_id__isnull=True) | Q(asset__source_asset_id=file_id)
+        upload_match = Q(asset_id__isnull=True) & (Q(upload_item__asset_id=file_id, upload_item__asset__source_asset_id__isnull=True) | Q(upload_item__asset__source_asset_id=file_id))
+        jobs = jobs.filter(asset_match | upload_match)
+        semantic = semantic.filter(asset_match)
+    return jobs, semantic, kind, status
+
+
+def processing_task_page(params, actor):
+    jobs, semantic, kind, status = task_querysets(params, actor)
+    size = page_number(params.get("page_size"), 30, 100)
+    requested_page = page_number(params.get("page"))
     # Count the complete matching scope, not the current page or a capped sample.
     matrix = Counter()
     for row in jobs.order_by().values("job_type", "status").annotate(total=Count("pk")):
@@ -134,8 +147,20 @@ def processing_task_page(params, actor):
     refs = list(jobs.order_by().annotate(source=Value("processing_job", output_field=CharField())).values("id", "created_at", "source").union(
         semantic.order_by().annotate(source=Value("semantic_index_job", output_field=CharField())).values("id", "created_at", "source"), all=True,
     ).order_by("-created_at", "-source", "-id")[offset:offset + size])
+    rows = task_rows(refs, actor, workspace=params.get("workspace") == "1")
+    return {
+        "results": [rows[(row["source"], str(row["id"]))] for row in refs if (row["source"], str(row["id"])) in rows],
+        "count": count, "page": page, "page_size": size, "pages": pages,
+        "next_page": page + 1 if page < pages else None, "previous_page": page - 1 if page > 1 else None,
+        "counts": counts, "type_counts": types, "total_counts": totals, "total": sum(matrix.values()),
+        "can_manage": has_capability(actor, Capability.RETRY_JOBS),
+        "ordering": "-created_at,-source,-id",
+    }
+
+
+def task_rows(refs, actor, *, workspace=False):
     job_rows = list(ProcessingJob.objects.filter(pk__in=[row["id"] for row in refs if row["source"] == "processing_job"]).select_related(
-        "edition__work", "edition__active_catalog_revision", "asset__edition__work", "asset__edition__active_catalog_revision", "upload_item__edition__work", "upload_item__edition__active_catalog_revision",
+        "edition__work", "edition__active_catalog_revision", "asset__edition__work", "asset__edition__active_catalog_revision", "upload_item__edition__work", "upload_item__edition__active_catalog_revision", "upload_item__asset",
     ).prefetch_related("edition__catalog_revisions", "asset__edition__catalog_revisions", "upload_item__edition__catalog_revisions"))
     semantic_rows = list(SemanticIndexJob.objects.filter(pk__in=[row["id"] for row in refs if row["source"] == "semantic_index_job"]).select_related("asset__edition__work"))
     titles = task_titles([*job_rows, *semantic_rows])
@@ -165,15 +190,8 @@ def processing_task_page(params, actor):
             }
             if ordinary and job.job_type == "ocr":
                 row["ocr_progress"] = progress_row(job, actor=actor, event=events.get(str((job.stats or {}).get("knowledge_publication_event_id") or "")), edition=processing_edition(job), legacy_controls=True)
-            if params.get("workspace") == "1":
+            if workspace:
                 from .processing_workspace import workspace_task
                 row = workspace_task(job, row, actor)
             rows[(source, str(job.pk))] = row
-    return {
-        "results": [rows[(row["source"], str(row["id"]))] for row in refs if (row["source"], str(row["id"])) in rows],
-        "count": count, "page": page, "page_size": size, "pages": pages,
-        "next_page": page + 1 if page < pages else None, "previous_page": page - 1 if page > 1 else None,
-        "counts": counts, "type_counts": types, "total_counts": totals, "total": sum(matrix.values()),
-        "can_manage": has_capability(actor, Capability.RETRY_JOBS),
-        "ordering": "-created_at,-source,-id",
-    }
+    return rows

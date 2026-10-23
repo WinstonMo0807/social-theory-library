@@ -14120,6 +14120,20 @@
                     },
                     {
                         "in": "query",
+                        "name": "file_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "group_by",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "job_type",
                         "schema": {
                             "type": "string"
@@ -50396,6 +50410,14 @@
                     "pages"
                 ]
             },
+            "ProcessingGroupingEnum": {
+                "enum": [
+                    "file",
+                    "task"
+                ],
+                "type": "string",
+                "description": "* `file` - file\n* `task` - task"
+            },
             "ProcessingLog": {
                 "type": "object",
                 "properties": {
@@ -50627,6 +50649,15 @@
                             "$ref": "#/components/schemas/ProcessingWorkspaceTask"
                         }
                     },
+                    "files": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingWorkspaceFile"
+                        }
+                    },
+                    "group_by": {
+                        "$ref": "#/components/schemas/ProcessingGroupingEnum"
+                    },
                     "count": {
                         "type": "integer"
                     },
@@ -50689,6 +50720,53 @@
                     "total_counts"
                 ]
             },
+            "ProcessingWorkspaceFile": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "submitted_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "has_file": {
+                        "type": "boolean"
+                    },
+                    "stages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingWorkspaceTask"
+                        }
+                    },
+                    "stage_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "cover_url",
+                    "edition_label",
+                    "filename",
+                    "has_file",
+                    "key",
+                    "stage_count",
+                    "stages",
+                    "submitted_at",
+                    "title"
+                ]
+            },
             "ProcessingWorkspaceTask": {
                 "type": "object",
                 "properties": {
@@ -50719,6 +50797,11 @@
                         "nullable": true
                     },
                     "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "file_id": {
                         "type": "string",
                         "format": "uuid",
                         "nullable": true
@@ -50838,6 +50921,7 @@
                     "engine",
                     "error_code",
                     "file",
+                    "file_id",
                     "finished_at",
                     "heartbeat_at",
                     "heartbeat_stale",

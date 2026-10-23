@@ -1,5 +1,13 @@
 # 验收记录
 
+## 2026-10-23 文件阶段队列静态检查
+
+`.venv/Scripts/python.exe tmp/stl4-processing-files-static-20261023.py`：d98002/6611ef/f2cbc1阶段语法、8条SQLite/PostgreSQL ORM SQL编译与OpenAPI0错误10旧警告。首次571446发现task_id注解冲突，改task_pk后通过。数据库连接被主动禁止；这些编译不验证组合SQL实际执行及查询性能。
+
+`node tmp/stl4-processing-files-contracts-20261023.mjs`：8afb24退出0；最后契约生成一次Windows UNKNOWN写入失败，重试d52e50退出0，仍326路径，CSS解析0。TypeScript noEmit e0e3fb→b9baa0退出0；目标ESLint24dab5/faab0a退出0；cee27d→0bda94最终TypeScript退出0。没有测试、浏览器、实际任务操作、索引/模型评测、迁移或生产。
+
+最终验收待核实：同文件多阶段/不同文件同名不合并、两个任务来源、最新任务替换与仍在途旧任务、超过20阶段转历史、日期筛选语义、重叠状态数量、全历史分页、普通任务直达、空库与权限撤销、批量部分成功恢复、数据库组合SQL及NAS负载、移动布局。
+
 ## 2026-10-23 项目来源与完整预览静态检查
 
 `.venv/Scripts/python.exe tmp/stl4-project-sources-static-20261023.py`：521400退出0，6 AST、10条禁连DB SQL编译、OpenAPI0错误10个原声明警告。`node tmp/stl4-project-sources-contracts-20261023.mjs`：2df222退出0，324→326路径、TypeScript契约与PostCSS。`node node_modules/typescript/bin/tsc --noEmit --incremental false`：88fc9d→48df37退出0。目标4组件ESLint e348d5退出0，仅原img建议；最后汇总组件c13380退出0；70cfcd→bbca86最后TypeScript退出0。差异空白检查无错误。未测试/浏览器/业务/迁移/部署。

@@ -61,6 +61,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     edition_id = serializers.UUIDField(allow_null=True)
     work_id = serializers.UUIDField(allow_null=True)
     asset_id = serializers.UUIDField(allow_null=True)
+    file_id = serializers.UUIDField(allow_null=True)
     job_type = serializers.CharField()
     status = serializers.CharField()
     partial = serializers.BooleanField()
@@ -102,8 +103,22 @@ class ProcessingLogSerializer(serializers.Serializer):
     status = serializers.CharField(allow_blank=True)
 
 
+class ProcessingWorkspaceFileSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    title = serializers.CharField()
+    edition_label = serializers.CharField()
+    filename = serializers.CharField(allow_blank=True)
+    cover_url = serializers.CharField(allow_blank=True)
+    submitted_at = serializers.DateTimeField()
+    has_file = serializers.BooleanField()
+    stages = ProcessingWorkspaceTaskSerializer(many=True)
+    stage_count = serializers.IntegerField()
+
+
 class ProcessingWorkspaceSerializer(serializers.Serializer):
     results = ProcessingWorkspaceTaskSerializer(many=True)
+    files = ProcessingWorkspaceFileSerializer(many=True, required=False)
+    group_by = serializers.ChoiceField(choices=["file", "task"], required=False)
     count = serializers.IntegerField()
     page = serializers.IntegerField()
     pages = serializers.IntegerField()
@@ -135,12 +150,18 @@ class ProcessingStopSerializer(serializers.Serializer):
 class ProcessingWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
 
-    @extend_schema(parameters=[OpenApiParameter(name, type=str) for name in ("q", "job_type", "status", "edition_id", "work_id", "task_id", "task_source", "date_from", "date_to", "page")], responses=ProcessingWorkspaceSerializer)
+    @extend_schema(parameters=[OpenApiParameter(name, type=str) for name in ("q", "job_type", "status", "edition_id", "work_id", "file_id", "group_by", "task_id", "task_source", "date_from", "date_to", "page")], responses=ProcessingWorkspaceSerializer)
     def get(self, request):
         if not has_capability(request.user, Capability.VIEW_SYSTEM_STATUS):
             raise PermissionDenied("当前账户不能查看完整处理队列，请从材料页查看所属版本的处理记录。")
         params = request.query_params.copy(); params["workspace"] = "1"; params["page_size"] = "20"
-        payload = processing_task_page(params, request.user)
+        if params.get("group_by") not in {None, "file", "task"}: raise ValidationError({"group_by": "请选择文件阶段或任务历史。"})
+        if params.get("group_by") == "file" and not params.get("task_id"):
+            from ingestion.services.processing_files import processing_file_page
+            payload = processing_file_page(params, request.user)
+        else:
+            payload = processing_task_page(params, request.user)
+            payload.update(group_by="task", files=[])
         logs = []
         if params.get("task_id") and payload["results"]:
             for row in AuditEvent.objects.filter(object_id=params["task_id"], object_type__in=["ProcessingJob", "processing_job", "SemanticIndexJob", "semantic_index_job"]).order_by("-created_at", "pk")[:100]:

@@ -13078,6 +13078,12 @@ export interface components {
             bytes: number | null;
             is_current: boolean | null;
         };
+        /**
+         * @description * `file` - file
+         *     * `task` - task
+         * @enum {string}
+         */
+        ProcessingGroupingEnum: "file" | "task";
         ProcessingLog: {
             /** Format: uuid */
             id: string;
@@ -13145,6 +13151,8 @@ export interface components {
         };
         ProcessingWorkspace: {
             results: components["schemas"]["ProcessingWorkspaceTask"][];
+            files?: components["schemas"]["ProcessingWorkspaceFile"][];
+            group_by?: components["schemas"]["ProcessingGroupingEnum"];
             count: number;
             page: number;
             pages: number;
@@ -13162,6 +13170,18 @@ export interface components {
             checked_at: string;
             logs: components["schemas"]["ProcessingLog"][];
         };
+        ProcessingWorkspaceFile: {
+            key: string;
+            title: string;
+            edition_label: string;
+            filename: string;
+            cover_url: string;
+            /** Format: date-time */
+            submitted_at: string;
+            has_file: boolean;
+            stages: components["schemas"]["ProcessingWorkspaceTask"][];
+            stage_count: number;
+        };
         ProcessingWorkspaceTask: {
             /** Format: uuid */
             id: string;
@@ -13175,6 +13195,8 @@ export interface components {
             work_id: string | null;
             /** Format: uuid */
             asset_id: string | null;
+            /** Format: uuid */
+            file_id: string | null;
             job_type: string;
             status: string;
             partial: boolean;
@@ -24427,6 +24449,8 @@ export interface operations {
                 date_from?: string;
                 date_to?: string;
                 edition_id?: string;
+                file_id?: string;
+                group_by?: string;
                 job_type?: string;
                 page?: string;
                 q?: string;
