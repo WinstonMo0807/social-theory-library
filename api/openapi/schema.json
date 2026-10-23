@@ -7913,6 +7913,14 @@
                 "operationId": "recovery_object_detail",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "check_files",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
                         "in": "path",
                         "name": "kind",
                         "schema": {
@@ -59182,6 +59190,9 @@
                     },
                     "notice": {
                         "type": "string"
+                    },
+                    "storage": {
+                        "$ref": "#/components/schemas/RecoveryStorage"
                     }
                 },
                 "required": [
@@ -59203,6 +59214,7 @@
                     "operator",
                     "reason",
                     "record_state",
+                    "storage",
                     "title",
                     "updated_at",
                     "version"
@@ -59416,6 +59428,28 @@
                     "reason",
                     "record_state",
                     "title"
+                ]
+            },
+            "RecoveryStorage": {
+                "type": "object",
+                "properties": {
+                    "state": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "total": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "checked_at",
+                    "state",
+                    "total"
                 ]
             },
             "RegisterRequest": {

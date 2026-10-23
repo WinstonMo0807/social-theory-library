@@ -71,13 +71,27 @@ function Workspace({owner}:{owner:string}){
 function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onLock,onChanged}:{owner:string;target:Target;initialCommand:Request|null;preserve:(value:Request|null)=>void;onSelect:(value:Target)=>void;onClose:()=>void;onLock:(value:boolean)=>void;onChanged:()=>void}){
   const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Detail>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
   const resource=usePersistentWorkspace<Detail>(`${base}${target.kind}/${target.object_id}/`,owner,undefined,load);
-  const [tab,setTab]=useState("basic"),[preview,setPreview]=useState<Detail|null>(null),[message,setMessage]=useState(""),[unknown,setUnknown]=useState<Request|null>(initialCommand),[submitting,setSubmitting]=useState(false);
+  const [tab,setTab]=useState("basic"),[preview,setPreview]=useState<Detail|null>(null),[message,setMessage]=useState(""),[unknown,setUnknown]=useState<Request|null>(initialCommand),[submitting,setSubmitting]=useState(false),[checking,setChecking]=useState(false);
   const lifecycle=useRef<AbortController|null>(null),pending=useRef<Request|null>(initialCommand),busy=useRef(false);
   useEffect(()=>{const controller=new AbortController();lifecycle.current=controller;return()=>controller.abort();},[]);
   const data=resource.data;
   useUnsavedForm(Boolean(unknown),false);
+  async function previewRestore(){
+    if(busy.current||pending.current||!lifecycle.current||lifecycle.current.signal.aborted)return;
+    const controller=lifecycle.current;
+    busy.current=true;setChecking(true);onLock(true);setMessage("");
+    try{
+      const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
+      const checked=await withPrivateOwner(owner,()=>apiRequest<Detail>(`${base}${target.kind}/${target.object_id}/?check_files=true`,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),signal);
+      if(controller.signal.aborted)return;
+      if(checked.kind!==target.kind||checked.object_id!==target.object_id)throw Error("核对结果与当前对象不一致，请重新读取详情。");
+      if(!checked.can_restore){setMessage(checked.blockers.join(" ")||"当前对象不能恢复，请重新读取详情并核对权限。");return;}
+      setPreview(checked);
+    }catch(reason){if(!controller.signal.aborted)setMessage(reason instanceof Error?reason.message:"关联与文件尚未核对完成，请稍后重试。");}
+    finally{if(!controller.signal.aborted){busy.current=false;setChecking(false);onLock(false);}}
+  }
   async function restore(){
-    if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted||(!preview&&!pending.current))return;
+    if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted||(!preview?.can_restore&&!pending.current))return;
     const controller=lifecycle.current;
     const values=pending.current||{request_id:createRequestKey(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true};
     try{preserve(values);}catch{setMessage("浏览器不能保存原恢复请求，尚未提交。请保留本页并恢复浏览器存储后再继续。");return;}
@@ -95,19 +109,19 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
       if(reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,401,403,404,409,410,422].includes(reason.status)){try{preserve(null);pending.current=null;setUnknown(null);setPreview(null);onLock(false);}catch{setMessage("恢复被拒绝，但原请求暂不能清除，请保留本页并恢复浏览器存储。");}}
     }finally{if(!controller.signal.aborted){busy.current=false;setSubmitting(false);}}
   }
-  const disabled=submitting||!!unknown;
-  return <aside className={styles.detail} aria-label="对象详情" aria-busy={resource.loading||submitting}>
+  const disabled=submitting||checking||!!unknown;
+  return <aside className={styles.detail} aria-label="对象详情" aria-busy={resource.loading||submitting||checking}>
     <button className={styles.closeDetail} onClick={onClose} disabled={disabled}><X size={16}/>关闭详情</button>
     {resource.error?<div className={styles.error} role="alert">{resource.error}<button onClick={()=>resource.reload()}>重新读取</button></div>:null}
     {resource.loading?<div className={styles.empty} role="status">正在读取对象与关联…</div>:null}
     {message?<p className={styles.message} role="status">{message}</p>:null}
     {unknown&&!submitting?<div className={styles.notice}><CircleAlert size={17}/><div><strong>原请求尚未确认</strong><p>按原编号继续核对；未收到的请求会按原版本提交，已执行的请求只返回原记录。</p><button onClick={()=>void restore()}>按原编号核对并继续</button></div></div>:null}
-    {data?<><header className={styles.objectHeader}>{data.cover_url?<img src={data.cover_url} alt={`${data.title}封面`}/>:<div className={styles.detailIcon}><BookOpen size={34}/><span>{data.label}</span></div>}<div><h2>{data.title}</h2><p>{data.label}</p><span className={styles.state} data-state={data.record_state}>{labels[data.record_state]}</span><p>{date(data.changed_at)} · {data.operator}</p><button className={styles.primary} disabled={!data.can_restore||disabled} onClick={()=>setPreview(data)}>预览恢复影响</button></div></header><div className={styles.notice}><CircleAlert size={17}/><p>{data.notice}</p></div>
+    {data?<><header className={styles.objectHeader}>{data.cover_url?<img src={data.cover_url} alt={`${data.title}封面`}/>:<div className={styles.detailIcon}><BookOpen size={34}/><span>{data.label}</span></div>}<div><h2>{data.title}</h2><p>{data.label}</p><span className={styles.state} data-state={data.record_state}>{labels[data.record_state]}</span><p>{date(data.changed_at)} · {data.operator}</p><button className={styles.primary} disabled={!data.can_restore||disabled} onClick={()=>void previewRestore()}>{checking?"正在核对关联与文件…":"预览恢复影响"}</button></div></header><div className={styles.notice}><CircleAlert size={17}/><p>{data.notice}</p></div>
       <nav className={styles.tabs} aria-label="对象详情栏目">{[["basic","基本信息"],["dependencies",`关联依赖（${data.dependency_count}）`],["history",`变更历史（${data.history.length}）`]].map(([key,label])=><button key={key} aria-current={tab===key?"page":undefined} onClick={()=>setTab(key)}>{label}</button>)}</nav>
       {data.blockers.length?<div className={styles.blockers}><CircleAlert size={18}/><div><strong>恢复前需要处理</strong><ul>{data.blockers.map(value=><li key={value}>{value}</li>)}</ul></div></div>:null}
       {tab==="basic"?<><dl className={styles.information}>{[["对象类型",data.label],["原位置",data.destination],["创建时间",date(data.created_at)],["最后修改",date(data.updated_at)],["操作时间",date(data.changed_at)],["操作人",data.operator],["操作原因",data.reason]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{label==="原位置"?<Link href={value}>前往原管理列表 <ChevronRight size={12}/></Link>:value}</dd></div>)}</dl><h3>关联依赖</h3><Dependencies data={data} disabled={disabled} onSelect={onSelect}/><h3>最近变更</h3><Changes rows={data.history.slice(0,4)}/></>:tab==="dependencies"?<Dependencies data={data} disabled={disabled} onSelect={onSelect}/>:<><p className={styles.hint}>显示最近30条原对象审计摘要，不含私人内容或原始操作载荷。</p><Changes rows={data.history}/></>}
       <Link className={styles.originalLink} href={data.destination}>查看原管理入口 <ChevronRight size={14}/></Link>
-      <ConfirmDialog open={!!preview} title="确认恢复对象" description={preview?.notice||""} details={preview?[preview.title,`关联摘要：${preview.dependency_count} 项；其他已删除对象需单独恢复。`,...preview.blockers,...(message?[message]:[])]:[]} confirmLabel={submitting?"正在恢复…":"确认恢复（保持未发布）"} pending={submitting} onCancel={()=>{if(!unknown)setPreview(null);}} onConfirm={()=>void restore()}/>
+      <ConfirmDialog open={!!preview} title="确认恢复对象" description={preview?.notice||""} details={preview?[preview.title,`关联摘要：${preview.dependency_count} 项；其他已删除对象需单独恢复。`,...(preview.storage.state==="checked"?[`已核对 ${preview.storage.total} 份登记文件的存在与大小，不含内容完整性校验。`]:[]),...preview.blockers,...(message?[message]:[])]:[]} confirmLabel={submitting?"正在恢复…":"确认恢复（保持未发布）"} pending={submitting} onCancel={()=>{if(!unknown)setPreview(null);}} onConfirm={()=>void restore()}/>
     </>:null}
   </aside>;
 }

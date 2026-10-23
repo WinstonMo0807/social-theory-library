@@ -1,7 +1,9 @@
 """Protected recovery views over the existing reversible deletion ledger."""
 from hashlib import sha256
 import json
+from pathlib import Path
 
+from django.core.exceptions import SuspiciousFileOperation
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import CharField, F, OuterRef, Subquery, UUIDField, Value, Q
@@ -188,7 +190,42 @@ def dependency_rows(obj, actor=None):
     return rows,total
 
 
-def detail(kind, identifier, actor, *, locked=None):
+def source_file_check(obj, kind):
+    """Explicit preflight of retained originals/current reader files, never a repair."""
+    from django.utils import timezone
+    from .models import Asset
+    if not obj or kind not in {"work", "edition"}:
+        return {"state":"not_required","checked_at":None,"total":0,"checks":[],"blockers":[]}
+    query=Asset.objects.filter(edition__work_id=obj.pk) if kind=="work" else Asset.objects.filter(edition_id=obj.pk)
+    query=query.filter(Q(kind=Asset.Kind.ORIGINAL)|Q(kind__in=[Asset.Kind.NORMALIZED,Asset.Kind.OCR_PDF],is_current=True)).order_by("pk")
+    total=query.count()
+    # ponytail: bound one synchronous preflight; unusually large histories need a queued inspector.
+    if total>200:
+        return {"state":"incomplete","checked_at":timezone.now(),"total":total,"checks":[],
+            "blockers":["原件与当前阅读文件超过200份，本次未完成存储核对。请先由维护人员核对完整文件记录，不能把部分检查当作完成。"]}
+    checks=[]
+    for asset in query:
+        state,size="available",None
+        try:
+            if not asset.file or not asset.file.storage.exists(asset.file.name):state="missing"
+            else:
+                # The project's canonical Asset storage is local NAS FileSystemStorage.
+                if not Path(asset.file.path).is_file():state="missing"
+                else:
+                    size=asset.file.size
+                    if size<=0 or asset.byte_size>0 and size!=asset.byte_size:state="size_changed"
+        except (OSError,ValueError,NotImplementedError,SuspiciousFileOperation):state="unavailable"
+        checks.append({"asset_id":str(asset.pk),"source_sha256":asset.sha256,"size":size,"state":state})
+    missing=sum(row["state"]=="missing" for row in checks)
+    changed=sum(row["state"]=="size_changed" for row in checks)
+    unavailable=sum(row["state"]=="unavailable" for row in checks)
+    blockers=([f"登记的原件或当前阅读文件有{missing}份缺失，先核对存储挂载或从备份恢复文件。"] if missing else [])
+    if changed:blockers.append(f"有{changed}份文件大小与登记不符，请先在原文件管理中校验，不覆盖原件。")
+    if unavailable:blockers.append(f"有{unavailable}份文件暂不可核对，请先恢复存储访问。")
+    return {"state":"blocked" if blockers else "checked","checked_at":timezone.now(),"total":total,"checks":checks,"blockers":blockers}
+
+
+def detail(kind, identifier, actor, *, locked=None, check_files=False):
     config,obj,entry=locked or object_and_entry(kind,identifier,actor=actor)
     deleted=bool(entry and entry.restored_at is None)
     archived=bool(obj and config.status_field and getattr(obj,config.status_field)==config.archived_value)
@@ -205,6 +242,8 @@ def detail(kind, identifier, actor, *, locked=None):
         blockers.append("已归并人物必须从原归并历史处理，不能通过回收恢复解除身份归并。")
     if obj and kind=="topic" and (obj.curation or {}).get("topic_merge"):
         blockers.append("已归并主题须从原归并记录处理。")
+    storage=source_file_check(obj,kind) if check_files else {"state":"pending" if kind in {"work","edition"} else "not_required","checked_at":None,"total":None,"checks":[],"blockers":[]}
+    blockers.extend(storage["blockers"])
     required=Capability.EDIT_METADATA if deleted else Capability.PUBLISH_AUTHORITY
     can_restore=bool(obj and (deleted or archived) and not blockers and has_capability(actor,required))
     label=config.model._meta.label_lower
@@ -214,13 +253,15 @@ def detail(kind, identifier, actor, *, locked=None):
     title=_name(obj,config.name_field) if obj else entry.name
     before=entry.before if entry and isinstance(entry.before,dict) else {}
     version=sha256(json.dumps({"kind":kind,"id":identifier,"object_updated":obj.updated_at if obj else None,
-        "entry_updated":entry.updated_at if entry else None,"state":state,"dependencies":deps,"total":total,"blockers":blockers},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
+        "entry_updated":entry.updated_at if entry else None,"state":state,"dependencies":deps,"total":total,"blockers":blockers,
+        "files":storage["checks"]},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
     return {"kind":kind,"object_id":str(identifier),"entry_id":str(entry.pk) if entry else None,"title":title,"label":LABELS[kind],
         "record_state":state,"version":version,"destination":DESTINATIONS[kind],"cover_url":cover_url(obj,kind),
         "created_at":obj.created_at if obj else None,"updated_at":obj.updated_at if obj else None,
         "changed_at":entry.updated_at if entry and not archived else obj.updated_at,"operator":entry.deleted_by.display_name if deleted and entry.deleted_by else "详见变更历史",
         "reason":str(before.get("_recycle_reason") or "原记录未保存操作原因"),"dependencies":deps,"dependency_count":total,
         "dependencies_limited":total>len(deps),"history":changes,"blockers":blockers,"can_restore":can_restore,
+        "storage":{"state":storage["state"],"checked_at":storage["checked_at"],"total":storage["total"]},
         "notice":"恢复原对象和保留的关联，保持未发布；不自动恢复其他已删除对象，不覆盖同名内容，不重启任务。"}
 
 
@@ -241,7 +282,7 @@ def confirm_restore(request, values):
             raise RecoveryConflict("该请求编号对应其他恢复操作。")
         return receipt.after["result"]
     locked=object_and_entry(values["kind"],values["object_id"],lock=True,actor=actor)
-    preview=detail(values["kind"],values["object_id"],actor,locked=locked)
+    preview=detail(values["kind"],values["object_id"],actor,locked=locked,check_files=True)
     if preview["version"]!=values["expected_version"]:
         raise RecoveryConflict()
     if not preview["can_restore"]:

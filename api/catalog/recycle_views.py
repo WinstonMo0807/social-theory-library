@@ -74,6 +74,16 @@ class RecoveryHistory(serializers.Serializer):
     detail = serializers.CharField()
 
 
+class RecoveryStorage(serializers.Serializer):
+    state = serializers.CharField()
+    checked_at = serializers.DateTimeField(allow_null=True)
+    total = serializers.IntegerField(allow_null=True)
+
+
+class RecoveryDetailQuery(serializers.Serializer):
+    check_files = serializers.BooleanField(default=False)
+
+
 class RecoveryDetail(serializers.Serializer):
     kind = serializers.CharField()
     object_id = serializers.UUIDField()
@@ -96,6 +106,7 @@ class RecoveryDetail(serializers.Serializer):
     blockers = serializers.ListField(child=serializers.CharField())
     can_restore = serializers.BooleanField()
     notice = serializers.CharField()
+    storage = RecoveryStorage()
 
 
 class RecoveryConfirmInput(serializers.Serializer):
@@ -144,7 +155,8 @@ class AdminRecycleView(AdminPrivateResponseMixin, APIView):
 class AdminRecycleDetailView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
 
-    @extend_schema(operation_id="recovery_object_detail",responses=RecoveryDetail)
+    @extend_schema(operation_id="recovery_object_detail",parameters=[RecoveryDetailQuery],responses=RecoveryDetail)
     def get(self, request, kind, object_id):
         require_editor(request.user)
-        return Response(detail(kind,object_id,request.user))
+        query=RecoveryDetailQuery(data=request.query_params);query.is_valid(raise_exception=True)
+        return Response(detail(kind,object_id,request.user,**query.validated_data))

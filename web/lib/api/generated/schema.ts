@@ -15572,6 +15572,7 @@ export interface components {
             blockers: string[];
             can_restore: boolean;
             notice: string;
+            storage: components["schemas"]["RecoveryStorage"];
         };
         RecoveryDirectory: {
             count: number;
@@ -15630,6 +15631,12 @@ export interface components {
             cover_url: string;
             label: string;
             destination: string;
+        };
+        RecoveryStorage: {
+            state: string;
+            /** Format: date-time */
+            checked_at: string | null;
+            total: number | null;
         };
         RegisterRequest: {
             /** Format: email */
@@ -22213,7 +22220,9 @@ export interface operations {
     };
     recovery_object_detail: {
         parameters: {
-            query?: never;
+            query?: {
+                check_files?: boolean;
+            };
             header?: never;
             path: {
                 kind: string;
