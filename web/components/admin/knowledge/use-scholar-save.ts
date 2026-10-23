@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
@@ -21,7 +22,7 @@ export function useScholarSave<K extends "scholar" | "topic" | "timeline" | "pat
     const request = controller.current; if (!actor || !ready || !request || request.signal.aborted) throw Error("正在核对编辑账户及原请求，请稍后。");
     if (!pending.current) {
       if (sessionStorage.getItem(key(actor,kind))) throw Error("存在未核对的保存，请先读取原请求回执。");
-      pending.current = { id: crypto.randomUUID(), path, body, headers, method };
+      pending.current = { id: createRequestKey(), path, body, headers, method };
       sessionStorage.setItem(key(actor,kind), pending.current.id); setRecovery(pending.current.id); setCanRetry(true);
     }
     if (acting.current) throw Error("正在核对原保存，请稍后。");

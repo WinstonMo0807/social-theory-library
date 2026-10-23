@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
@@ -120,7 +121,7 @@ function Editor(props: { actor: string; edit: Edit; canAssign: boolean; onLocked
   function preview(event: FormEvent) { event.preventDefault(); if (uncertain) return; void run(signal => accountRequest<AccountPreview>(actor, "preview/", { method: "POST", signal, body: JSON.stringify(input) }), value => { setPrepared({ input, preview: value }); setConfirmed(false); }); }
   function save() {
     if (sending.current || !matches || !confirmed) return;
-    const data = pending.current || { ...prepared.input, request_id: crypto.randomUUID(), preview_hash: prepared.preview.preview_hash, confirmed: true };
+    const data = pending.current || { ...prepared.input, request_id: createRequestKey(), preview_hash: prepared.preview.preview_hash, confirmed: true };
     try { onPending(data.request_id); } catch { setMessage("无法保存最少请求标识，本次未提交，请允许会话存储后重试。"); return; }
     pending.current = data; setUncertain(true);
     void run(signal => accountRequest<AccountReceipt>(actor, "command/", { method: "POST", signal, body: JSON.stringify(data) }), value => { pending.current = null; setPassword(""); onDone(value); });

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { ArrowRight, Download, FileText, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -48,7 +49,7 @@ export function ReaderMaterials({ rows, ownerId, cards, onChanged }: { rows: Rea
   async function submit(kind?: Intent["kind"]) {
     const controller = requests.current;
     if (!controller || controller.signal.aborted || sending.current) return;
-    const command = intent ?? (kind && chosen.length ? { requestId: crypto.randomUUID(), kind, targets: chosen.map(row => ({ category: leaves[row.kind], id: row.id, revision: row.revision })) } : null);
+    const command = intent ?? (kind && chosen.length ? { requestId: createRequestKey(), kind, targets: chosen.map(row => ({ category: leaves[row.kind], id: row.id, revision: row.revision })) } : null);
     if (!command) return;
     sending.current = true; setBusy(true); setMessage("");
     try {

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useSearchParams} from "next/navigation";
 import {FileClock,RefreshCw} from "lucide-react";
@@ -85,7 +86,7 @@ function HistoryWorkspace({objectType,objectId}:{objectType:string;objectId:stri
       setError(cause instanceof Error?cause.message:"操作结果尚未确认，请核对原请求。");
     }finally{acting.current=false;if(!lifetime.current?.signal.aborted)setBusy(false);}
   }
-  async function submit(){if(!confirm||!agreed||!reason.trim()||locked||confirm.version!==data?.edit_version)return;await send({format:1,owner,objectType,objectId,command:{action:confirm.action,request_key:crypto.randomUUID(),expected_version:confirm.version,reason:reason.trim(),...(confirm.source?{source_revision_id:confirm.source.id}:{})}});}
+  async function submit(){if(!confirm||!agreed||!reason.trim()||locked||confirm.version!==data?.edit_version)return;await send({format:1,owner,objectType,objectId,command:{action:confirm.action,request_key:createRequestKey(),expected_version:confirm.version,reason:reason.trim(),...(confirm.source?{source_revision_id:confirm.source.id}:{})}});}
   async function clearConfirmed(){
     if(!clearAgreed||acting.current||!data)return;acting.current=true;setBusy(true);
     try{await request<History>(endpoint);clear();setRecordProblem(false);setClearOpen(false);setMessage("已清除本标签页记录。服务端修订保留，请重新核对后操作。");reload();}

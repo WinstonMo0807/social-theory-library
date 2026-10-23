@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../request-key";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "../api";
 import { privateRequest, researchRecordPath, type ResearchCollection, type ResearchRecord } from "./research.client";
@@ -82,7 +83,7 @@ export function usePersistentWorkspace<T>(path: string, ownerId: string | null, 
     pendingRef.current = true;
     revision.current += 1;
     const expectedIdentity = identity;
-    const requestId = operation.current?.fingerprint === fingerprint ? operation.current.requestId : crypto.randomUUID();
+    const requestId = operation.current?.fingerprint === fingerprint ? operation.current.requestId : createRequestKey();
     operation.current = { fingerprint, requestId };
     setState(previous => previous?.key === identity ? { ...previous, pending: true, error: "", conflict: false } : previous);
     try {

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, GripVertical, Plus, Trash2, X } from "lucide-react";
 import type { IssueBlock, IssueSourceReference } from "@/lib/api/recommendation-issues.types";
@@ -22,7 +23,7 @@ export function ArticleBodyFields({issueId,blocks,onChange,selected,onSelect,pro
   function move(index:number,destination:number) { if(disabled||destination<0||destination>=blocks.length||index===destination)return;const rows=[...blocks];const [item]=rows.splice(index,1);rows.splice(destination,0,item);onChange(rows); }
   function append(type:IssueBlock["type"],choice?:IssueSourceChoice) {
     if(disabled||blocks.length>=150)return;
-    const block:IssueBlock={id:crypto.randomUUID(),type,text:"",...(choice?{target:choice.target,resolved_sources:[choice.source],source_status:"available" as const}:{}),...(type==="comparison"?{dimensions:["比较维度"],rows:[]}:{}),...(type==="analysis"?{references:choice?[choice.target]:[],style:"paragraph" as const}:{}),...(type==="image"?{alt_text:"",source:"",image_rendition_id:null}:{})};
+    const block:IssueBlock={id:createRequestKey(),type,text:"",...(choice?{target:choice.target,resolved_sources:[choice.source],source_status:"available" as const}:{}),...(type==="comparison"?{dimensions:["比较维度"],rows:[]}:{}),...(type==="analysis"?{references:choice?[choice.target]:[],style:"paragraph" as const}:{}),...(type==="image"?{alt_text:"",source:"",image_rendition_id:null}:{})};
     if(type==="analysis")delete block.target;
     onChange([...blocks,block]);onSelect(block.id!);setInserting(false);setNewType(null);
   }

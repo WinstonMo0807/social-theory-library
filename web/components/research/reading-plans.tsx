@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LockKeyhole, Plus } from "lucide-react";
@@ -49,7 +50,7 @@ function PlanList({ ownerId }: { ownerId: string }) {
     setBusy(true); setError("");
     const data = { ...settings, ...(selected.length ? { references: selected.map(researchEvidenceReference) } : {}) };
     const fingerprint = JSON.stringify(data);
-    if (request.current.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
+    if (request.current.fingerprint !== fingerprint) request.current = { fingerprint, id: createRequestKey() };
     try {
       if (!alive.current) return;
       const record = await withPrivateOwner(ownerId, () => createReadingPlan({ ...data, request_id: request.current.id }));

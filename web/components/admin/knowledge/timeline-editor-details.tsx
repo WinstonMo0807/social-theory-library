@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -15,7 +16,7 @@ export function TimelineSupplementalSources({ owner, value, onChange }: { owner:
   const [picking, setPicking] = useState("");
   const change = (id: string, patch: Partial<TimelineSourceRecord>) => onChange({ ...value, confirmed: false, sources: value.sources.map(row => row.id === id ? { ...row, ...patch } : row) });
   return <section className={styles.sources} aria-label="补充出处与来源分歧">
-    <header><h3>补充出处</h3><button type="button" disabled={value.sources.length >= 20} onClick={() => onChange({ ...value, confirmed:false, sources:[...value.sources,{id:crypto.randomUUID(),kind:"book",citation:"",locator:"",quote:"",status:"related",asset_id:null,page:null}] })}>＋ 添加证据</button></header>
+    <header><h3>补充出处</h3><button type="button" disabled={value.sources.length >= 20} onClick={() => onChange({ ...value, confirmed:false, sources:[...value.sources,{id:createRequestKey(),kind:"book",citation:"",locator:"",quote:"",status:"related",asset_id:null,page:null}] })}>＋ 添加证据</button></header>
     {!value.sources.length ? <p>可添加相关研究或不同记载，保留各自出处。</p> : null}
     {value.sources.map((row,index) => <details key={row.id} open={row.id === picking || !row.citation} className={styles.source}>
       <summary>证据 {index + 2} · {row.status === "disputed" ? "存疑" : row.status === "adopted" ? "辅助采用" : "相关研究"} · {row.citation || "待填写出处"}</summary>

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
@@ -29,7 +30,7 @@ export function WorkFileRightsDialog({ state, ownerId, onClose, onSaved, onRefre
     if (inFlight.current || stale || !dirty || !base.source_asset_id || !base.updated_at || !current.can_edit) return;
     const input = { expected_asset_updated_at: base.updated_at, rights_note: note };
     const key = JSON.stringify([base.source_asset_id, input]);
-    const request_key = receipt.current?.key === key ? receipt.current.request : crypto.randomUUID();
+    const request_key = receipt.current?.key === key ? receipt.current.request : createRequestKey();
     receipt.current = { key, request: request_key }; inFlight.current = true; setBusy(true); setError("");
     try {
       const result = await withPrivateOwner(ownerId, () => updateWorkFileRights(state.edition!.id, base.source_asset_id!, { ...input, request_key }));

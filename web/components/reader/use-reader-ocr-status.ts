@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
 import { pollBudgetExpired } from "@/lib/api/task-polling";
@@ -125,7 +126,7 @@ export function useReaderOcrStatus({ assetId, documentRevisionId, ownerId, canMa
     const data = dataRef.current;
     if (!data?.job || !ownerId || !canManage || pending.current || operation.current || current?.conflict
       || !(action === "pause" ? data.can_pause : data.can_resume)) return;
-    operation.current = { action, request_id: crypto.randomUUID(), job_id: data.job.id, job_version: data.job.job_version,
+    operation.current = { action, request_id: createRequestKey(), job_id: data.job.id, job_version: data.job.job_version,
       source_sha256: data.source_sha256, document_revision_id: data.document_revision_id };
     void send(operation.current, false);
   }

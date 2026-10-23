@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
@@ -17,7 +18,7 @@ export function usePlacementCommand(owner: string, nodeId: string, pageType: Pla
     try {
       if (!original.current) {
         if (!body || sessionStorage.getItem(key)) throw Error("请先查回原请求，不能用新内容覆盖未知结果。");
-        original.current = { ...body, request_id: crypto.randomUUID() };
+        original.current = { ...body, request_id: createRequestKey() };
         sessionStorage.setItem(key, original.current.request_id); setRecovery(original.current.request_id); setCanRetry(true);
       }
       const signal = AbortSignal.any([lifetime.current!.signal, AbortSignal.timeout(60000)]);

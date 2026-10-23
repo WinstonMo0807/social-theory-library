@@ -118,8 +118,7 @@ function contributorRoleLabel(role: string) {
 }
 
 function createDraftSessionId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
-  return `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return createRequestKey();
 }
 
 function blankStep(key: WorkflowStepKey, current: WorkflowStepKey): WorkflowStep {

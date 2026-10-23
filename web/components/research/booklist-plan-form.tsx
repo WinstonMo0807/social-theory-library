@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,7 +45,7 @@ export function BooklistPlanForm({ owner, row, selected, onBusy, onClose }: { ow
     const parent = controller.current;
     if (!parent || parent.signal.aborted || sending.current || broken) return;
     const command = intent.current || (settings && data?.ready ? { ...settings, expected_version: row.version, source_token: data.source_token,
-      request_id: crypto.randomUUID(), ...(selected.length ? { item_ids: [...selected] } : {}) } : null);
+      request_id: createRequestKey(), ...(selected.length ? { item_ids: [...selected] } : {}) } : null);
     const id = lookup ? requestId : command?.request_id;
     if (!id || !lookup && !command) return;
     sending.current = true; setBusy(true); onBusy(true); setMessage("");

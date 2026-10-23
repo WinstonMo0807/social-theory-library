@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
@@ -99,7 +100,7 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
   const save=useCallback(async(automatic=false,retry=false)=>{
     if(!draft || draft.project_archived || action.current || compositionActive.current || sessionInvalid || conflict || recovery || (pending&&!retry) || (!dirty&&!pending) || automatic&&manualRequired)return;
     const lifetime=active.current;action.current=true;setBusy("save");setMessage("");
-    const requestId=pending?.requestId || crypto.randomUUID();
+    const requestId=pending?.requestId || createRequestKey();
     const command=pending || {requestId,body:JSON.stringify({...issueInput(draft),request_id:requestId,autosave:automatic})};
     // Persist the fixed command before sending. Reload must query the receipt,
     // rather than create a new request that can create another planned item.

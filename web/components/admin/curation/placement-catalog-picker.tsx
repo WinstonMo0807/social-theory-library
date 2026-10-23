@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useCallback, useState } from "react";
 import { ArrowDown, ArrowUp, GripVertical, LayoutGrid, List, X } from "lucide-react";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
@@ -26,7 +27,7 @@ export function PlacementCatalogPicker({owner,title,groups,existing,onFinish,onC
     if(!choice.source.public_eligible||!choice.source.reader_url){setMessage("此版本尚未核实可读全文，请先在馆藏中补充并发布准确来源。");return;}
     if(selected.some(row=>row.source?.work_id===sourceKey(choice))){setMessage("已加入此作品。更换版本前请先从已选清单移除原版本。");return;}
     if(selected.length+existing.length>=100){setMessage("每个页面最多编排100项，请先整理已有内容。");return;}
-    setSelected([...selected,{id:crypto.randomUUID(),target:choice.target,source:choice.source,area:target.area,group:target.name,reason:"",internal_goal:"",display_fields:["authors","year","type","tags"]}]);setMessage("");
+    setSelected([...selected,{id:createRequestKey(),target:choice.target,source:choice.source,area:target.area,group:target.name,reason:"",internal_goal:"",display_fields:["authors","year","type","tags"]}]);setMessage("");
   }
   function move(id:string,index:number) {setSelected(rows=>{const next=[...rows],from=next.findIndex(row=>row.id===id);if(from<0||index<0||index>=next.length)return rows;const [row]=next.splice(from,1);next.splice(index,0,row);return next;});}
   function patch(id:string,values:Partial<Item>) {setSelected(rows=>rows.map(row=>row.id===id?{...row,...values}:row));}

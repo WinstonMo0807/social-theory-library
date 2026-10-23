@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
 import { BookOpen, GitBranch, LockKeyhole, Plus, X } from "lucide-react";
@@ -97,7 +98,7 @@ function ForkForm({ owner, id, data, selected }: { owner: string; id: string; da
   function clear() { sessionStorage.removeItem(storageKey); setRecovery(null); pending.current = null; setCanRetry(false); }
   async function execute(lookup = false) {
     const request = requests.current; if (!request || request.signal.aborted || sending.current || broken) return;
-    const command = pending.current || (!lookup && !recovery ? { turn_id: data.turn.id, expected_revision: data.turn.revision, expected_project_revision: data.project_revision, request_id: crypto.randomUUID(), title, question, reference_ids: ids, include_notes: includeNotes } : null);
+    const command = pending.current || (!lookup && !recovery ? { turn_id: data.turn.id, expected_revision: data.turn.revision, expected_project_revision: data.project_revision, request_id: createRequestKey(), title, question, reference_ids: ids, include_notes: includeNotes } : null);
     const requestId = lookup ? recovery : command?.request_id; if (!requestId) return;
     sending.current = true; setBusy(true); setMessage("");
     try {

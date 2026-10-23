@@ -1,5 +1,7 @@
 "use client";
 
+import { writeClipboardText } from "@/lib/clipboard";
+import { createRequestKey } from "../../lib/request-key";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/api";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
@@ -64,12 +66,12 @@ function Groups({ owner }: { owner: string }) {
   function command(value: Omit<GroupCommand, "request_id" | "expected_revision">, captured?: Confirm) {
     if (!data && !captured) return;
     const groupId = captured?.group || data!.group.id, revision = captured?.revision || data!.group.revision;
-    const requestId = crypto.randomUUID();
+    const requestId = createRequestKey();
     submit({ path: `/reading/groups/${groupId}/`, group_id: groupId, request_id: requestId,
       body: { ...value, request_id: requestId, expected_revision: revision } });
   }
   function create() {
-    const requestId = crypto.randomUUID();
+    const requestId = createRequestKey();
     submit({ path: "/reading/groups/", request_id: requestId, body: { request_id: requestId, title: title.trim(), kind } });
   }
   function accept(body: { token?: string; invitation_id?: string }) {
@@ -84,7 +86,7 @@ function Groups({ owner }: { owner: string }) {
       const invite = current.invitations.find(row => row.id === invitationId);
       if (!invite?.token) throw Error("邀请已接受、撤回或到期，请重新读取当前邀请。");
       return groupInviteLink(invite.token);
-    }, value => { void navigator.clipboard.writeText(value).then(() => { setManual(""); action.setMessage("邀请链接已复制，请自行交给对应账户。链接不会授予其他账户成员身份。"); }).catch(() => setManual(value)); });
+    }, value => { void writeClipboardText(value).then(() => { setManual(""); action.setMessage("邀请链接已复制，请自行交给对应账户。链接不会授予其他账户成员身份。"); }).catch(() => setManual(value)); });
   }
   if (action.invalid) return <div className={styles.empty} role="alert"><p>当前账户或权限需要重新核对，已隐藏原账户的小组资料。</p><button onClick={() => window.location.reload()}>重新核对账户</button></div>;
   return <>

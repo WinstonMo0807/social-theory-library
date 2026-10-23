@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../lib/request-key";
 import Link from "next/link";
 import { Bookmark } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
@@ -56,7 +57,7 @@ export function SaveTopicButton({ topicId, onChange, commands: sharedCommands }:
     let operation = commands.memory.current.get(topicId);
     if (!operation || operation.owner !== owner) {
       if (!current) return;
-      operation = { owner, input: { topic: topicId, saved: !current.saved, expected_version: current.version, request_id: crypto.randomUUID() }, dispatched: false };
+      operation = { owner, input: { topic: topicId, saved: !current.saved, expected_version: current.version, request_id: createRequestKey() }, dispatched: false };
       commands.memory.current.set(topicId, operation); commands.changed();
     }
     const controller = new AbortController(), generation = epoch.current;

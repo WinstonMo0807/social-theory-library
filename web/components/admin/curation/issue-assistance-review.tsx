@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/api";
 import type { EditorialAssistance } from "@/lib/api/curation-workspace.client";
@@ -48,10 +49,10 @@ export function IssueAssistanceReview({issueId,version,selection,blocks,operatio
     catch(reason){if(lifetime.current?.signal.aborted)return;const definite=reason instanceof ApiRequestError&&reason.status>0&&reason.status<500;if(definite){setPending(null);onPending(false);}setError(definite?(reason as Error).message:"暂时无法确认操作结果。请重试同一请求，或读取任务历史核对；已选材料保持原样。");}
     finally{inFlight.current=false;if(!lifetime.current?.signal.aborted)setBusy(false);}
   }
-  function start(){if(locked||!selectedReady||!selection.question.trim()||Object.keys(edits).length)return;void send({path:endpoint,refresh:false,body:JSON.stringify({request_id:crypto.randomUUID(),edit_version:version,operation,question:selection.question,references:selection.references})});}
+  function start(){if(locked||!selectedReady||!selection.question.trim()||Object.keys(edits).length)return;void send({path:endpoint,refresh:false,body:JSON.stringify({request_id:createRequestKey(),edit_version:version,operation,question:selection.question,references:selection.references})});}
   function act(action:"adopt"|"dismiss"|"retry"|"cancel",id?:string){
     if(!task||locked)return;
-    void send({path:editorialAssistancePath(issueId,task.id),refresh:action==="adopt",body:JSON.stringify({action,request_id:crypto.randomUUID(),edit_version:task.edit_version,task_token:task.task_token,...(id?{suggestion_ids:[id]}:{}),...(id&&edits[id]!==undefined?{edits:{[id]:edits[id]}}:{})})});
+    void send({path:editorialAssistancePath(issueId,task.id),refresh:action==="adopt",body:JSON.stringify({action,request_id:createRequestKey(),edit_version:task.edit_version,task_token:task.task_token,...(id?{suggestion_ids:[id]}:{}),...(id&&edits[id]!==undefined?{edits:{[id]:edits[id]}}:{})})});
   }
   async function refresh(){if(!task||busy)return;try{const value=await request<Task>(editorialAssistancePath(issueId,task.id),{signal:lifetime.current?.signal});if(!lifetime.current?.signal.aborted){setTask(value);setAttempt(n=>n+1);setError("");}}catch(reason){if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"任务读取失败。");}}
   const stale=Boolean(task&&(task.draft_changed||task.edit_version!==version));

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { Bell, BellOff, Check, RefreshCw } from "lucide-react";
@@ -51,7 +52,7 @@ export function SourceFollowControl({ ownerId, path, scholarProfileId, topicId, 
     let pending = commands.memory.current.get(key);
     if (pending?.owner !== ownerId) pending = undefined;
     if (!pending && action) {
-      pending = { owner: ownerId, dispatched: false, input: { path, ...(scholarProfileId ? { scholar_profile_id: scholarProfileId } : {}), ...(topicId ? { topic_id: topicId } : {}), action, expected_revision: row?.revision ?? 0, request_id: crypto.randomUUID() } };
+      pending = { owner: ownerId, dispatched: false, input: { path, ...(scholarProfileId ? { scholar_profile_id: scholarProfileId } : {}), ...(topicId ? { topic_id: topicId } : {}), action, expected_revision: row?.revision ?? 0, request_id: createRequestKey() } };
       commands.memory.current.set(key, pending); commands.changed();
     }
     if (!pending) return;

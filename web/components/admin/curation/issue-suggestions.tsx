@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, Lightbulb, RefreshCw, UserRound, X } from "lucide-react";
 import { ApiRequestError } from "@/lib/api";
@@ -28,13 +29,13 @@ export function IssueSuggestions({issueId,version,disabled,blocks,request,onInse
   const included=(row:Candidate)=>blocks.some(block=>block.target?.type===row.target.type&&block.target.id===row.target.id&&block.target.edition_id===row.target.edition_id);
   function insert(row:Candidate) {
     if(disabled||stale||inFlight.current||included(row)||blocks.length>=150)return;
-    onInsert({id:crypto.randomUUID(),type:row.kind,text:"",target:row.target,resolved_sources:[row.source],source_status:"available"});
+    onInsert({id:createRequestKey(),type:row.kind,text:"",target:row.target,resolved_sources:[row.source],source_status:"available"});
     setMessage(`已将“${row.source.title}”加入当前草稿，请补充导读并核对来源。`);setSelected(null);
   }
   async function dismiss(row:Candidate) {
     if(disabled||stale||inFlight.current || pending&&pending.key!==row.key)return;
     inFlight.current=true;setBusy(row.key);setMessage("");
-    const command=pending || {key:row.key,body:JSON.stringify({request_id:crypto.randomUUID(),token:row.token})};setPending(command);
+    const command=pending || {key:row.key,body:JSON.stringify({request_id:createRequestKey(),token:row.token})};setPending(command);
     try {
       await request<{dismissed:boolean;key:string}>(endpoint,{method:"POST",body:command.body,signal:lifetime.current?.signal});
       if(lifetime.current?.signal.aborted)return;

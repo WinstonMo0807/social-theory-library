@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { readAllPages } from "@/lib/api/read-all-pages";
@@ -262,7 +263,7 @@ export function useReaderRecords({
       return false;
     }
     const payload: AnnotationSavePayload = {
-      request_id: crypto.randomUUID(), asset: assetId, page: draft.pageId, kind: draft.kind,
+      request_id: createRequestKey(), asset: assetId, page: draft.pageId, kind: draft.kind,
       quote: draft.quote.trim(), body: draft.body.trim(),
       tags: [...new Set((finalTags ?? draft.tags ?? []).map(tag => tag.trim()).filter(Boolean))],
       color: "yellow",

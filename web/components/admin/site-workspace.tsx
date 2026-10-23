@@ -1,4 +1,5 @@
 "use client";
+import { createRequestKey } from "../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, GripVertical, Plus, X } from "lucide-react";
 import { normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
@@ -41,7 +42,7 @@ function Workspace({home,stats,owner,fullPreview=false}:Props&{owner:string}){
   function select(area:HomeArea,id:string){setSelection({area,id});setTab("settings");setMobileOpen(true);}
   function update(area:HomeArea,items:HomeSlot[]|null){setDraft(current=>current?{...current,home_layout:{...current.home_layout,[area]:items}}:current);}
   function move(area:HomeArea,id:string,position:number){if(!draft||locked)return;const items=[...(draft.home_layout[area]||[])],index=items.findIndex(row=>row.id===id);if(index<0||position<0||position>=items.length)return;items.splice(position,0,...items.splice(index,1));update(area,items);}
-  function choose(choice:HomeChoice,destination=picker){if(!draft||!destination||locked)return;const id=destination.replace||crypto.randomUUID();const old=draft.home_layout[destination.area]||[];if(!destination.replace&&old.length>=5)return;
+  function choose(choice:HomeChoice,destination=picker){if(!draft||!destination||locked)return;const id=destination.replace||createRequestKey();const old=draft.home_layout[destination.area]||[];if(!destination.replace&&old.length>=5)return;
     if(old.some(row=>row.id!==id&&row.target.type===choice.target.type&&row.target.id===choice.target.id))return;
     const slot:HomeSlot={id,target:choice.target,title:"",description:"",cover_rendition_id:null,visible:true};
     update(destination.area,destination.replace?old.map(row=>row.id===id?slot:row):[...old,slot]);setCache(current=>({...current,[id]:{...choice.source,id}}));setCovers(current=>{const next={...current};delete next[id];return next;});select(destination.area,id);setPicker(null);

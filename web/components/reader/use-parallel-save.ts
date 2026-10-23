@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/api";
 import { compactParallelReference, parallelRequest, type ParallelData, type ParallelRecord } from "@/lib/api/parallel-reader.client";
@@ -62,7 +63,7 @@ export function useParallelSave(ownerId: number | undefined, onSaved: (record: P
   }
   function save(data: ParallelData, record: ParallelRecord | null) {
     if (!ownerId || pending.current || operation.current || state.conflictTaskId) return;
-    const requestId = crypto.randomUUID();
+    const requestId = createRequestKey();
     const op: Operation = {
       path: `/reading/parallel-tasks/${record ? `${record.id}/` : ""}`, method: record ? "PATCH" : "POST", requestId, taskId: record?.id,
       body: JSON.stringify({ request_id: requestId, ...(record ? { expected_revision: record.revision } : {}), data: compactParallelData(data) }),

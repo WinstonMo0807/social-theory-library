@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileUp, History } from "lucide-react";
@@ -103,7 +104,7 @@ function VersionUploadForm({ record, ownerId, disabled, onUpload, onClose, onRef
     if (!file || pending.current || disabled || stale || identityError || !alive.current) return;
     pending.current = true; setBusy(true); setError("");
     const fingerprint = JSON.stringify({ expectedRevision, onlyChanged });
-    if (operation.current?.file !== file || operation.current.fingerprint !== fingerprint) operation.current = { file, fingerprint, id: crypto.randomUUID() };
+    if (operation.current?.file !== file || operation.current.fingerprint !== fingerprint) operation.current = { file, fingerprint, id: createRequestKey() };
     try {
       const created = await withPrivateOwner(ownerId, () => {
         if (!alive.current) throw new DOMException("Session changed", "AbortError");

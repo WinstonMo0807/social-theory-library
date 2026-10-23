@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -95,7 +96,7 @@ function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: 
   }
   function selectNode(node: EditableOutlineNode) { setSelectedId(node.id); if (node.pdf_page) setPreviewPage(node.pdf_page); setPane("edit"); }
   function addNode(child = false) {
-    const id = crypto.randomUUID();
+    const id = createRequestKey();
     const parent = child ? currentId || null : currentNode?.parent_id || null;
     const node: EditableOutlineNode = { id, title: "新目录节点", chapter_title: "", index: 0, level: 1, parent_id: parent, pdf_page: null, printed_label: "", source: "manual", calibration_status: "needs_review" };
     const position = currentNode ? nodes.findLastIndex(row => descendants.has(row.id)) + 1 : nodes.length;

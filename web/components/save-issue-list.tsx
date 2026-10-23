@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../lib/request-key";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -19,7 +20,7 @@ export function SaveIssueList({ slug, revisionId }: { slug:string;revisionId?:st
   const currentResult=result?.owner_id===owner?result:null;
   async function act(lookup=false){
     if(busy.current||!revisionId||!owner)return;
-    const original=command||{owner,request_id:crypto.randomUUID(),public_revision_id:revisionId};
+    const original=command||{owner,request_id:createRequestKey(),public_revision_id:revisionId};
     setMessageOwner(owner);
     if(original.owner!==owner){setMessage("登录账户已变化。请恢复原账户后核对这次保存，当前请求仍保留。");return;}
     busy.current=true;setPending(true);setCommand(original);setMessage("");

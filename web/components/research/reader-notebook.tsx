@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -162,7 +163,7 @@ function NoteEditor({ owner, original, addNote = false, onSaved, onCancel }: { o
     event.preventDefault(); const request = controller.current;
     if (!request || request.signal.aborted || sending.current || !ready || broken || recovery && !pending.current) return;
     sending.current = true; setBusy(true); setMessage("");
-    const data = pending.current || { expected_version: original.revision, ...(addNote ? { request_id: crypto.randomUUID() } : {}), ...(labelOnly ? { label: body } : { body, tags: [...new Set(tags.split(/[，,]/).map(value => value.trim()).filter(Boolean))] }) };
+    const data = pending.current || { expected_version: original.revision, ...(addNote ? { request_id: createRequestKey() } : {}), ...(labelOnly ? { label: body } : { body, tags: [...new Set(tags.split(/[，,]/).map(value => value.trim()).filter(Boolean))] }) };
     try {
       if (addNote) { sessionStorage.setItem(storageKey, String(data.request_id)); pending.current = data; setCanRetry(true); setRecovery(String(data.request_id)); }
       const saved = await withPrivateOwner(owner, () => notebookRequest<NotebookRecord>(owner, addNote ? `${notebookRecordPath(original)}note/` : notebookRecordPath(original), { method: addNote ? "POST" : "PATCH", signal: request.signal, body: JSON.stringify(data) }), request.signal);
@@ -217,7 +218,7 @@ function NotebookActions({ owner, chosen, onChanged }: { owner: string; chosen: 
     }); return () => { active = false; };
   }, [storageKey]);
   async function submit(kind?: BulkIntent["kind"], selectedRows = chosen) {
-    const request = controller.current, action = intent || (kind && selectedRows.length ? { requestId: crypto.randomUUID(), kind, targets: selectedRows.map(target) } : null);
+    const request = controller.current, action = intent || (kind && selectedRows.length ? { requestId: createRequestKey(), kind, targets: selectedRows.map(target) } : null);
     if (!action || !request || request.signal.aborted || sending.current || broken) return;
     sending.current = true; setBusy(true); setMessage("");
     try {
@@ -288,7 +289,7 @@ function ProjectForm({ owner, rows, onDone }: { owner: string; rows: NotebookRec
     event.preventDefault(); const request = controller.current;
     if (!request || request.signal.aborted || sending.current || broken || (recovery && !pending.current) || !project?.revision) return;
     sending.current = true; setBusy(true); setMessage("");
-    const data = pending.current || { request_id: crypto.randomUUID(), project_id: project.id, expected_revision: project.revision, targets: rows.map(target), note };
+    const data = pending.current || { request_id: createRequestKey(), project_id: project.id, expected_revision: project.revision, targets: rows.map(target), note };
     pending.current = data; setUncertain(true);
     try {
       const identity = { request_id: data.request_id, project_id: data.project_id };

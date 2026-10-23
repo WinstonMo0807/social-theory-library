@@ -1,5 +1,7 @@
 "use client";
 
+import { writeClipboardText } from "@/lib/clipboard";
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { CheckCircle2, Copy, Mail } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -84,7 +86,7 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
   function send(original?: ShareCreateInput) {
     if (pending.current && original !== pending.current) return;
     if (!original && (!prepared || !ready || !confirmed)) return;
-    const body: ShareCreateInput = original || { ...prepared!.input, request_id: crypto.randomUUID(), preview_hash: prepared!.output.preview_hash, confirmed: true };
+    const body: ShareCreateInput = original || { ...prepared!.input, request_id: createRequestKey(), preview_hash: prepared!.output.preview_hash, confirmed: true };
     pending.current = body; setRetryReady(true); remember(body.request_id);
     void action.run(signal => sharingRequest<ShareReceipt>(owner, "/reading/shares/", { method: "POST", body: JSON.stringify(body), signal }), finish, reason => {
       if (reason instanceof ApiRequestError && reason.status >= 400 && reason.status < 500) {
@@ -98,7 +100,7 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
       const current = await sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${receipt.request_id}`, { signal });
       if (!current.token) throw Error("此分享的公开链接已经到期或撤回。");
       return shareLink(current.share.id, current.token);
-    }, link => { void navigator.clipboard.writeText(link).then(() => { setManual(""); setActionMessage("分享链接已复制。持有链接的人可查看已确认的内容摘要。"); }).catch(() => setManual(link)); });
+    }, link => { void writeClipboardText(link).then(() => { setManual(""); setActionMessage("分享链接已复制。持有链接的人可查看已确认的内容摘要。"); }).catch(() => setManual(link)); });
   }
   if (action.invalid) return <div className={styles.empty} role="alert"><p>账户或权限需要重新核对，已隐藏原账户内容。</p><button onClick={() => window.location.reload()}>重新核对账户</button></div>;
   return <>

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AdminListPages, useAdminListPage } from "@/components/admin/knowledge/list-pages";
@@ -90,11 +91,11 @@ function key(prefix: string) {
 }
 
 function emptyItem(): PathItemDraft {
-  return { ...emptyMaterial, id:crypto.randomUUID(), key: key("item"), node: null, node_name: "", work: null, work_name: "", recommendation_reason: "", prerequisite: "", is_required: false, editorial_note: "" };
+  return { ...emptyMaterial, id:createRequestKey(), key: key("item"), node: null, node_name: "", work: null, work_name: "", recommendation_reason: "", prerequisite: "", is_required: false, editorial_note: "" };
 }
 
 function emptyStage(position: number): StageDraft {
-  return { ...emptyLearning, id:crypto.randomUUID(), estimated_reading: "", key: key("stage"), name: `第 ${position + 1} 阶段`, description: "", items: [emptyItem()] };
+  return { ...emptyLearning, id:createRequestKey(), estimated_reading: "", key: key("stage"), name: `第 ${position + 1} 阶段`, description: "", items: [emptyItem()] };
 }
 
 function normalizePath(value: unknown): ReadingPathRow {

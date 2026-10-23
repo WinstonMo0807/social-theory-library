@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -131,7 +132,7 @@ function CommandPreview({ actor, input, onClose, onSaved, stayOnPage = false }: 
     const request = controller.current; if (!preview || sending.current || !request || request.signal.aborted) return;
     sending.current = true; setBusy(true); setError("");
     try {
-      if (!pending.current) { const old = sessionStorage.getItem(storageKey(actor)); if (old) throw Error("上次保存尚未核对，请先关闭此预览并读取原请求回执。"); pending.current = { ...input, preview_hash: preview.preview_hash, confirmed: true, request_id: crypto.randomUUID() }; sessionStorage.setItem(storageKey(actor), pending.current.request_id); window.dispatchEvent(new Event("stl-person-request")); }
+      if (!pending.current) { const old = sessionStorage.getItem(storageKey(actor)); if (old) throw Error("上次保存尚未核对，请先关闭此预览并读取原请求回执。"); pending.current = { ...input, preview_hash: preview.preview_hash, confirmed: true, request_id: createRequestKey() }; sessionStorage.setItem(storageKey(actor), pending.current.request_id); window.dispatchEvent(new Event("stl-person-request")); }
       const result = await authorityRequest<AuthorityReceipt>(actor, "workspace/command/", { method: "POST", body: JSON.stringify(pending.current), signal: request.signal });
       if (result.request_id !== pending.current.request_id || !["applied","cancelled"].includes(result.state) || result.state==="applied"&&!result.person_id) throw Error("回执与原请求不一致，请核对操作记录。");
       sessionStorage.removeItem(storageKey(actor)); window.dispatchEvent(new Event("stl-person-request")); if (!request.signal.aborted) { if(result.state==="cancelled"){pending.current=null;setUncertain(false);setError("此请求已停止，输入仍保留。请返回修改后重新预览。");return;} onSaved(); if (!stayOnPage && result.person_id) { router.push(personPage(result.person_id)); router.refresh(); } }

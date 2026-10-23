@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { ArrowRight, Check, FileText, LockKeyhole, RefreshCw, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
@@ -121,7 +122,7 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
     }
     if (scope === "private_materials" && !privateSourceIds.length) { setError("请明确勾选至少一份已解析的本人来源，或选择仅馆藏范围。"); return; }
     pending.current = true; setBusy(true); setError("");
-    if (request.current.file !== file || request.current.fingerprint !== fingerprint) request.current = { file, fingerprint, id: crypto.randomUUID() };
+    if (request.current.file !== file || request.current.fingerprint !== fingerprint) request.current = { file, fingerprint, id: createRequestKey() };
     try {
       const record = await withPrivateOwner(ownerId, () => createCitationAudit(file, request.current.id, undefined, { checks: enabledChecks, scope, private_source_ids: scope === "private_materials" ? privateSourceIds : [] }));
       if (!alive.current) return;

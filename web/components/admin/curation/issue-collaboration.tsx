@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import styles from "./issue-editor.module.css";
 
@@ -10,7 +11,7 @@ export function IssueCollaboration({issueId,version,editing,request,onHistory}:{
   const mode=useRef(editing);useEffect(()=>{mode.current=editing;},[editing]);
   const endpoint=`/catalog/admin/recommendation-issues/${issueId}/`;
   useEffect(()=>{
-    const controller=new AbortController(),session=crypto.randomUUID();let timer=0,running=false,changed=false;
+    const controller=new AbortController(),session=createRequestKey();let timer=0,running=false,changed=false;
     async function pulse() {
       if(controller.signal.aborted)return;
       if(running){changed=true;return;}

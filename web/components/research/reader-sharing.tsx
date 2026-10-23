@@ -1,5 +1,6 @@
 "use client";
 
+import { writeClipboardText } from "@/lib/clipboard";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
@@ -59,7 +60,7 @@ function PrivateContent({ id, owner, reviewer }: { id: string; owner: string; re
       const result = await sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${data.share.request_id}`, { signal });
       if (!result.token) throw Error("此分享没有有效的公开链接。");
       return shareLink(id, result.token);
-    }, link => { void navigator.clipboard.writeText(link).then(() => action.setMessage("公开摘要链接已复制。")).catch(() => setManual(link)); });
+    }, link => { void writeClipboardText(link).then(() => action.setMessage("公开摘要链接已复制。")).catch(() => setManual(link)); });
   }
   if (action.invalid) return <p role="alert">账户或权限已变化，请重新核对登录后打开分享。</p>;
   return <><div className={styles.viewerHeader}><Link href="/account/sharing">返回分享记录</Link><span className={styles.muted}>只展示本次确认的摘要范围</span></div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import type { IssueBlock, IssueSelection, IssueSourceReference, RecommendationIssue } from "@/lib/api/recommendation-issues.types";
@@ -26,7 +27,7 @@ export function IssueSelectionWorkbench({draft,owner,dirty,disabled,pending,requ
   function insert(choice:IssueSourceChoice){
     const type=types[choice.target.type];if(locked||!type||draft.body_blocks.length>=150)return;
     if(draft.body_blocks.some(block=>block.target&&key(block.target)===key(choice.target))){setMessage("这份准确材料已在正文中，可回编辑区补充导读。");return;}
-    onChange({body_blocks:[...draft.body_blocks,{id:crypto.randomUUID(),type,text:"",target:choice.target,resolved_sources:[choice.source],source_status:"available"}]});setMessage("已将准确来源追加到文章草稿。原文只读，请回编辑区填写导读。");
+    onChange({body_blocks:[...draft.body_blocks,{id:createRequestKey(),type,text:"",target:choice.target,resolved_sources:[choice.source],source_status:"available"}]});setMessage("已将准确来源追加到文章草稿。原文只读，请回编辑区填写导读。");
   }
   const missing=selection.references.filter(ref=>!selection.materials?.some(row=>key(row.target)===key(ref)&&row.available&&row.public_eligible));
   return <section className={styles.workbench} aria-label="策划选材工作台"><div className={styles.continue}><button type="button" disabled={pending||disabled} onClick={onClose}>继续编辑 →</button></div>

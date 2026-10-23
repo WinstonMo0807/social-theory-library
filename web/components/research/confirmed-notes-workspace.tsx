@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { BookOpen, Check, ChevronRight, Download, FileText, LockKeyhole, MoreVertical, Plus, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
@@ -218,7 +219,7 @@ function MemoryProposal({ ownerId, onClose, onInvalid, onSaved }: { ownerId: str
     pending.current = true; setBusy(true); setError("");
     const data = { annotation_id: note.id, body, kind };
     const fingerprint = JSON.stringify(data);
-    if (request.current.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
+    if (request.current.fingerprint !== fingerprint) request.current = { fingerprint, id: createRequestKey() };
     try { const result = await withPrivateOwner(ownerId, () => proposeMemory({ ...data, request_id: request.current.id })); if (alive.current) onSaved(result); }
     catch (reason) { if (alive.current) { setError(reason instanceof Error ? reason.message : "保存失败，输入仍保留。"); if (reason instanceof PrivateOwnerVerificationError || reason instanceof ApiRequestError && [401, 403].includes(reason.status)) onInvalid(); if (reason instanceof ApiRequestError && reason.status >= 400 && reason.status < 500) request.current = { fingerprint: "", id: "" }; } }
     finally { pending.current = false; if (alive.current) setBusy(false); }

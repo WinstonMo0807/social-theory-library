@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight, CircleAlert, Database, Download, FileCheck2, HardDrive, History, RefreshCw, ShieldCheck, X } from "lucide-react";
@@ -60,7 +61,7 @@ function Workspace({owner}:{owner:string}) {
   async function command(intent:Intent, retry=false) {
     if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted||pending.current&&!retry)return;
     const controller=lifecycle.current;
-    const values=pending.current||{...intent,request_id:crypto.randomUUID()};
+    const values=pending.current||{...intent,request_id:createRequestKey()};
     pending.current=values;busy.current=true;setMessage("");setUnresolved(values);
     let reply:Reply|undefined;
     try {

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { FilePlus2, LockKeyhole } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
@@ -55,7 +56,7 @@ export function CitationPrivateSourcePicker({ ownerId, selectedIds, onChange, di
     if (!file || pending.current || blocked || !alive.current) return;
     pending.current = true; setBusy(true); setError(""); setNotice("");
     const fingerprint = JSON.stringify({ title: title.trim(), citation: citation.trim(), scan_ocr: scan });
-    if (operation.current?.file !== file || operation.current.fingerprint !== fingerprint) operation.current = { file, fingerprint, id: crypto.randomUUID() };
+    if (operation.current?.file !== file || operation.current.fingerprint !== fingerprint) operation.current = { file, fingerprint, id: createRequestKey() };
     try {
       await withPrivateOwner(ownerId, () => createPrivateCitationSource(file, { request_id: operation.current!.id, title: title.trim(), citation: citation.trim(), scan_ocr: scan }));
       if (!alive.current) return;

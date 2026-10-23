@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../lib/request-key";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { UploadBatchView, type UploadDisplayRow } from "@/components/admin/workflow/upload-batch-view";
@@ -264,10 +265,7 @@ async function contentFingerprint(owner:string,file:File) {
 }
 
 function uploadToken() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return createRequestKey();
 }
 
 function chunkByteLength(totalBytes: number, chunkSize: number, chunkIndex: number) {

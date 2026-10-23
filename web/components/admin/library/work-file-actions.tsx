@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { Check, FileText, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ApiRequestError, subscribeToSessionChanges, type UploadProgress } from "@/lib/api";
@@ -31,7 +32,7 @@ export function NewWorkEditionDialog({ state, ownerId, onClose, onCreated, onRef
     if (busy || stale || !label.trim()) return;
     const value = { expected_work_updated_at: base, version_label: label.trim(), publication_year: year ? Number(year) : null, publisher: publisher.trim() };
     const fingerprint = JSON.stringify(value);
-    const request_key = receipt.current?.fingerprint === fingerprint ? receipt.current.id : crypto.randomUUID();
+    const request_key = receipt.current?.fingerprint === fingerprint ? receipt.current.id : createRequestKey();
     receipt.current = { fingerprint, id: request_key }; setBusy(true); setError("");
     try {
       const result = await withPrivateOwner(ownerId, () => createWorkEdition(state.work.id, { ...value, request_key }));
@@ -133,7 +134,7 @@ export function UploadWorkFileDialog({ state, ownerId, action, onClose, onAccept
     if (outcome === "unknown") { await checkReceipt(); return; }
     if (!file || invalid || transfer.current || (stale && !outcome) || !acknowledged || !alive.current) return;
     const key = JSON.stringify({ edition: base.id, updated: base.updated_at, reader: base.current_reader_asset_id, action, generateReader });
-    const requestKey = nonce.current?.key === key && nonce.current.file === file ? nonce.current.id : crypto.randomUUID();
+    const requestKey = nonce.current?.key === key && nonce.current.file === file ? nonce.current.id : createRequestKey();
     nonce.current = { key, id: requestKey, file };
     const controller = new AbortController(); transfer.current = controller;
     setBusy(true); setError(""); setProgress(null);

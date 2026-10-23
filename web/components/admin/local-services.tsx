@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, ChevronRight, CircleAlert, Clock3, FileText, Link2, Play, RefreshCw, SlidersHorizontal, Sparkles } from "lucide-react";
@@ -50,7 +51,7 @@ function LocalServicesWorkspace({owner}:{owner:string}) {
           if(stop.current||controller.signal.aborted)break;
           setChecking(service.id);
           const key=`${service.id}:${service.configuration_version}`;
-          const requestId=receipts.current.get(key)||crypto.randomUUID();receipts.current.set(key,requestId);
+          const requestId=receipts.current.get(key)||createRequestKey();receipts.current.set(key,requestId);
           const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(60000)]);
           await withPrivateOwner(owner,()=>apiRequest<Observation>(path+"check/",{method:"POST",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},
             body:JSON.stringify({request_id:requestId,service_id:service.id,configuration_version:service.configuration_version})},getServerSessionCredential()),signal);

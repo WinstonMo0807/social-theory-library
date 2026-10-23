@@ -53,6 +53,7 @@ export function LocalResearchTransfer({ ownerId, onChanged }: { ownerId: string;
   async function transfer() {
     const controller = request.current;
     if (!snapshot || !selected.length || !acknowledged || saving.current || !controller || controller.signal.aborted) return;
+    if (!globalThis.crypto?.subtle) { setMessage("当前浏览器连接不支持转存所需的安全摘要。请通过本站 HTTPS 入口继续；也可以先保存下方原始记录。本机内容尚未上传或改变。"); return; }
     saving.current = true; setBusy(true); setMessage("");
     let completed = 0;
     let next = { ...receipts };

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -71,7 +72,7 @@ function Issue({ id, issueId, ownerId, retrySession }: { id: string; issueId: st
       scope: available.length ? { kind: "passages", references: available.map(researchEvidenceReference), allow_neighbors: false } : { kind: "library" },
     };
     const fingerprint = JSON.stringify(body);
-    if (transferRequest.current?.fingerprint !== fingerprint) transferRequest.current = { fingerprint, requestId: crypto.randomUUID() };
+    if (transferRequest.current?.fingerprint !== fingerprint) transferRequest.current = { fingerprint, requestId: createRequestKey() };
     const operation = transferRequest.current;
     try {
       const project = await withPrivateOwner(ownerId, async () => {

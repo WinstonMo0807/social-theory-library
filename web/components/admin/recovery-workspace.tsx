@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArchiveRestore, BookOpen, Check, ChevronRight, CircleAlert, History, RefreshCw, Search, X } from "lucide-react";
@@ -61,7 +62,7 @@ function ObjectDetail({owner,target,onSelect,onClose,onLock,onChanged}:{owner:st
   async function restore(){
     if(busy.current||!lifecycle.current||(!preview&&!pending.current))return;
     const controller=lifecycle.current;
-    const values=pending.current||{request_id:crypto.randomUUID(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true};
+    const values=pending.current||{request_id:createRequestKey(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true};
     pending.current=values;setUnknown(values);busy.current=true;onLock(true);setMessage("");
     try{
       let result:Result|undefined;

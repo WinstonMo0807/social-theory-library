@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { Bookmark, Copy, Quote, Share2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -71,7 +72,7 @@ function Actions({ node, owner, ready }: { node: NodeIdentity; owner: string | n
           setUnknown(null); setSaveError("收藏已在其他页面改变，已读取当前状态。"); return;
         }
       }
-      operation ??= { saved: !state?.saved, expected_version: state?.version ?? "0", request_id: crypto.randomUUID() };
+      operation ??= { saved: !state?.saved, expected_version: state?.version ?? "0", request_id: createRequestKey() };
       const value = await knowledgeSaveRequest(node.id, owner, controller.signal, operation);
       if (!live.current) return;
       if (value.receipt?.request_id !== operation.request_id || value.receipt.applied_saved !== operation.saved) {

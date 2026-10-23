@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -61,7 +62,7 @@ export function ArticleComments({issueId,revisionId,slug,onCount}:{issueId:strin
     }catch(reason){if(alive.current){const rejected=!lookup&&reason instanceof ApiRequestError&&[400,409,429].includes(reason.status);if(rejected){setPending(null);setAttempt(value=>value+1);}setMessage({owner,text:`${reason instanceof Error?reason.message:"操作结果尚未确认。"}${rejected?" 当前输入已保留，请核对后重新操作。":" 原请求已保留，可核对结果或用原请求重试。"}`});verifySession();}}
     finally{running.current=false;if(alive.current)setBusy(false);}
   }
-  function begin(){if(!owner||!currentDraft.confirmed||!currentDraft.byline.trim()||!currentDraft.body.trim())return;void send({owner,submit:{request_id:crypto.randomUUID(),public_revision_id:revisionId,byline:currentDraft.byline.trim(),body:currentDraft.body.trim(),confirm_public:true}});}
+  function begin(){if(!owner||!currentDraft.confirmed||!currentDraft.byline.trim()||!currentDraft.body.trim())return;void send({owner,submit:{request_id:createRequestKey(),public_revision_id:revisionId,byline:currentDraft.byline.trim(),body:currentDraft.body.trim(),confirm_public:true}});}
   function pager(data:ArticleCommentPage|null|undefined,current:number,change:(value:number)=>void,label:string){return data && (data.previous||data.next)?<nav aria-label={label}><button disabled={!data.previous} onClick={()=>change(current-1)}>上一页</button><span>第 {data.page} / {data.total_pages} 页</span><button disabled={!data.next} onClick={()=>change(current+1)}>下一页</button></nav>:null;}
   return <section id="article-comments" className={styles.comments}><header><h2>读者评论{shown?.data?`（${shown.data.count}）`:""}</h2><button type="button" onClick={()=>setAttempt(value=>value+1)}>刷新评论</button></header><p>此处展示当前文章版本经审核公开的评论。读者观点由本人署名，不代表馆藏原文或策划者结论。</p>
     {shown?.error?<p role="alert">{shown.error}</p>:shown?.data?shown.data.results.length?shown.data.results.map(row=><article key={row.id}><strong>{row.byline}</strong><time dateTime={row.created_at}>{new Date(row.created_at).toLocaleDateString("zh-CN")}</time><p>{row.body}</p></article>):<p>当前版本还没有公开评论。</p>:<p role="status">正在读取公开评论…</p>}

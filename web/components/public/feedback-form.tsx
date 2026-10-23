@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
@@ -35,7 +36,7 @@ export function FeedbackForm({ initialCategory = "content", initialPath = "" }: 
     event.preventDefault(); if (operation.current || !consent || body.trim().length < 4 || body.trim().length > 500) return;
     const data = { category, body: body.trim(), contact: contact.trim(), path: safeFeedbackPath(path), consent: true as const };
     const fingerprint = JSON.stringify(data);
-    if (nonce.current?.fingerprint !== fingerprint) nonce.current = { fingerprint, request_id: crypto.randomUUID() };
+    if (nonce.current?.fingerprint !== fingerprint) nonce.current = { fingerprint, request_id: createRequestKey() };
     const input: FeedbackInput = { ...data, request_id: nonce.current.request_id };
     const request = new AbortController(), version = epoch.current; operation.current = request; setState("pending"); setMessage("");
     try {

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, classifyClientError, getServerSessionCredential, isUnauthenticatedError, subscribeToSessionChanges } from "@/lib/api";
 import { readAllPages } from "@/lib/api/read-all-pages";
@@ -131,7 +132,7 @@ export function useResearchProject(id: string, includeTurns = false) {
     if (session.status !== "authenticated") retrySession(); else setAttempt((value) => value + 1);
   }
   function requestId(fingerprint: string) {
-    if (request.current.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
+    if (request.current.fingerprint !== fingerprint) request.current = { fingerprint, id: createRequestKey() };
     return request.current.id;
   }
   async function run(operation: () => Promise<unknown>, success: string) {

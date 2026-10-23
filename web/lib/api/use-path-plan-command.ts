@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../request-key";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "../api";
 import { PrivateOwnerVerificationError } from "./private-owner";
@@ -29,7 +30,7 @@ export function usePathPlanCommand(owner: string, id: string, pendingRef: RefObj
     if (payload && current) return false;
     if (!current) {
       if (!payload) return false;
-      current = { owner, id, payload: { ...payload, request_id: crypto.randomUUID() }, dispatched: false };
+      current = { owner, id, payload: { ...payload, request_id: createRequestKey() }, dispatched: false };
       pendingRef.current = current;
     }
     const operation = current, controller = new AbortController();

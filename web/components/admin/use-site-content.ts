@@ -1,4 +1,5 @@
 "use client";
+import { createRequestKey } from "../../lib/request-key";
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { withPrivateOwner, PrivateOwnerVerificationError } from "@/lib/api/private-owner";
@@ -42,7 +43,7 @@ export function useSiteContent(owner:string) {
     if(running.current||!draft||blocked||(publish&&dirty))return;
     const original=pending.current;
     if(original&&!original.body){setMessage("请先查回上次操作，或停止尚未执行的原请求。");return;}
-    const value=original||{id:crypto.randomUUID(),action:publish?"publish" as const:"save" as const,body:JSON.stringify(publish?{edit_version:draft.edit_version,confirm:true}:{config:draft.config,about_blocks:draft.about_blocks,home_layout:draft.home_layout,edit_version:draft.edit_version})};
+    const value=original||{id:createRequestKey(),action:publish?"publish" as const:"save" as const,body:JSON.stringify(publish?{edit_version:draft.edit_version,confirm:true}:{config:draft.config,about_blocks:draft.about_blocks,home_layout:draft.home_layout,edit_version:draft.edit_version})};
     remember(value);running.current=true;setBusy(true);setMessage("");
     try{const data=await request<SiteContentDraft>(`${siteBase}${value.action==="publish"?"publish/":""}`,{method:value.action==="publish"?"POST":"PUT",headers:{"Idempotency-Key":value.id},body:value.body});
       if(active.current?.signal.aborted)return;remember(null);setDraft(data);setSaved(data);resource.reload();setMessage(data.replayed?"已查回原操作；当前显示服务器最新内容。":value.action==="publish"?"网站内容已发布。":"已保存草稿，公开首页在确认发布后更新。");

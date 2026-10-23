@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
@@ -28,7 +29,7 @@ function RecycleButton({kind,id,name,onDeleted,disabled=false,owner}:Props&{owne
   async function remove(reason: string) {
     if (busyRef.current||!owner||!lifecycle.current||lifecycle.current.signal.aborted) return;
     const controller=lifecycle.current;
-    const operation=intent.current||{id:crypto.randomUUID(),reason};intent.current=operation;
+    const operation=intent.current||{id:createRequestKey(),reason};intent.current=operation;
     busyRef.current=true;
     setBusy(true);
     setMessage("");

@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { subscribeToSessionChanges } from "@/lib/api";
@@ -23,7 +24,7 @@ export function WorkFilePublicPreparation({ editionId, file, ownerId, onClose, o
   const close = () => { if (!inFlight.current) onClose(); };
   async function prepare() {
     if (inFlight.current || !confirmed || result || !file.public_preparation.can_prepare) return;
-    if (!request.current) request.current = crypto.randomUUID();
+    if (!request.current) request.current = createRequestKey();
     const request_key = request.current;
     inFlight.current = true; setBusy(true); setError("");
     try {

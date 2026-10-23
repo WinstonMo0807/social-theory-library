@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, FileText, History, RefreshCw } from "lucide-react";
@@ -70,7 +71,7 @@ export function PublicationLedger({editionId,backHref,onChanged,view="desk"}:{ed
   function start(kind:"publish"|"withdraw"|"restore",revision?:Revision){if(!data)return;setAction({kind,revision,version:data.version,fingerprint:data.preparation.fingerprint});setReason("");setConfirmed(false);}
   function submit(){
     if(!data||!action||action.version!==data.version||action.fingerprint!==data.preparation.fingerprint||busy||pending||!confirmed||action.kind!=="publish"&&!reason.trim())return;
-    const body=action.kind==="restore"?{revision_id:action.revision!.id,request_key:crypto.randomUUID(),reason:reason.trim(),expected_version:data.version}:{action:action.kind,edition_id:editionId,prepared_fingerprint:data.preparation.fingerprint,expected_version:data.version,confirm_warnings:true,...(action.kind==="withdraw"?{reason:reason.trim()}:{} )};
+    const body=action.kind==="restore"?{revision_id:action.revision!.id,request_key:createRequestKey(),reason:reason.trim(),expected_version:data.version}:{action:action.kind,edition_id:editionId,prepared_fingerprint:data.preparation.fingerprint,expected_version:data.version,confirm_warnings:true,...(action.kind==="withdraw"?{reason:reason.trim()}:{} )};
     const url=action.kind==="restore"?`/catalog/admin/editions/${editionId}/publication/rollback/`:`/catalog/admin/library/works/${data.work_id}/publication/?edition=${editionId}`;
     void send({version:1,owner,edition:editionId,kind:action.kind,url,body:JSON.stringify(body),at:Date.now()});
   }

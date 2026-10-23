@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, ArrowUpRight, BookOpen, Download, FileText, History, Plus, RefreshCw, Upload } from "lucide-react";
@@ -64,7 +65,7 @@ function Workspace({ workId, ownerId }: { workId: string; ownerId: string }) {
     finally { inFlight.current = false; if (alive.current) setBusy(""); }
   }
   async function generate(file: WorkFile) {
-    const input = generations.current.get(file.id) || { request_key: crypto.randomUUID(), expected_asset_updated_at: file.updated_at };
+    const input = generations.current.get(file.id) || { request_key: createRequestKey(), expected_asset_updated_at: file.updated_at };
     generations.current.set(file.id, input);
     try {
       const receipt = await withPrivateOwner(ownerId, () => generateWorkFileReader(file.generate_reader_url, input));

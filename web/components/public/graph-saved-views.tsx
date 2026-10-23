@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { Bookmark, FolderOpen, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
@@ -132,7 +133,7 @@ function SavedViews({ view, title: defaultTitle, onRestore, disabled, owner, rea
     <Dialog open={open} onRequestClose={() => { if (!busy) setOpen(false); }} className={styles.savedDialog} aria-labelledby="saved-graph-title">
       <header><h2 id="saved-graph-title">我的图谱视图</h2><button type="button" aria-label="关闭保存视图" disabled={busy} onClick={() => setOpen(false)}><X size={19} /></button></header>
       <p>保存当前中心、范围与显示位置。打开时重新读取公开关系与来源。</p>
-      <form onSubmit={event => { event.preventDefault(); if (view && title.trim() && !unknown) void mutate({ method: "POST", request_id: crypto.randomUUID(), data: { title: title.trim(), view } }); }}>
+      <form onSubmit={event => { event.preventDefault(); if (view && title.trim() && !unknown) void mutate({ method: "POST", request_id: createRequestKey(), data: { title: title.trim(), view } }); }}>
         <label>视图名称<input value={title} maxLength={120} required onChange={event => setTitle(event.target.value)} disabled={busy || !!unknown} /></label>
         <button type="submit" className={styles.primaryButton} disabled={busy || disabled || !!unknown || !view || !title.trim()}>保存为新视图</button>
       </form>
@@ -144,8 +145,8 @@ function SavedViews({ view, title: defaultTitle, onRestore, disabled, owner, rea
       {loading ? <p role="status">正在读取我的视图…</p> : list ? <>
         {list.results.length ? <ul className={styles.savedList}>{list.results.map(row => <li key={row.id}><strong>{row.data.title}</strong><small>{new Date(row.updated_at).toLocaleString("zh-CN")}</small><div>
           <button type="button" disabled={busy || !!unknown} onClick={() => void restore(row.id)}>打开视图</button>
-          <button type="button" disabled={busy || disabled || !!unknown || !view} onClick={() => { if (view) void mutate({ method: "PATCH", id: row.id, request_id: crypto.randomUUID(), expected_revision: row.revision, data: { title: row.data.title, view } }); }}>更新为当前视图</button>
-          {deleteId === row.id ? <><button type="button" disabled={busy || !!unknown} onClick={() => void mutate({ method: "DELETE", id: row.id, request_id: crypto.randomUUID(), expected_revision: row.revision })}>确认删除</button><button type="button" disabled={busy} onClick={() => setDeleteId("")}>取消</button></> : <button type="button" disabled={busy || !!unknown} onClick={() => setDeleteId(row.id)}>删除</button>}
+          <button type="button" disabled={busy || disabled || !!unknown || !view} onClick={() => { if (view) void mutate({ method: "PATCH", id: row.id, request_id: createRequestKey(), expected_revision: row.revision, data: { title: row.data.title, view } }); }}>更新为当前视图</button>
+          {deleteId === row.id ? <><button type="button" disabled={busy || !!unknown} onClick={() => void mutate({ method: "DELETE", id: row.id, request_id: createRequestKey(), expected_revision: row.revision })}>确认删除</button><button type="button" disabled={busy} onClick={() => setDeleteId("")}>取消</button></> : <button type="button" disabled={busy || !!unknown} onClick={() => setDeleteId(row.id)}>删除</button>}
         </div></li>)}</ul> : <p className={styles.empty}>还没有保存的图谱视图。</p>}
         <nav className={styles.pagination} aria-label="已保存图谱分页"><button type="button" disabled={!list.previous || busy || loading} onClick={() => void readPage(page - 1)}>上一页</button><span>第 {page} 页</span><button type="button" disabled={!list.next || busy || loading} onClick={() => void readPage(page + 1)}>下一页</button></nav>
       </> : null}

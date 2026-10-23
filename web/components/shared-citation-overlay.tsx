@@ -1,5 +1,6 @@
 "use client";
 
+import { createRequestKey } from "../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
 import { Check, Copy, Download, Info, LoaderCircle, MoreHorizontal, Plus, RefreshCw, Trash2, X } from "lucide-react";
@@ -171,7 +172,7 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
   }, [basketOpen, basketPage, localRows, attempt, validationTick]);
 
   function nonce(fingerprint: string) {
-    if (request.current.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
+    if (request.current.fingerprint !== fingerprint) request.current = { fingerprint, id: createRequestKey() };
     return request.current.id;
   }
   async function assertOwner() {
