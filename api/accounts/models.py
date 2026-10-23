@@ -35,6 +35,13 @@ class ReaderProfile(UUIDTimeStampedModel):
     newsletter_enabled = models.BooleanField(default=False)
 
 
+class AccountAvatar(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name="account_avatar")
+    image_ciphertext = models.BinaryField(default=bytes, blank=True)
+    revision = models.PositiveIntegerField(default=1)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
 class RecoveryCode(UUIDTimeStampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recovery_codes")
     code_hash = models.CharField(max_length=255)

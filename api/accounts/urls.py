@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from .serializers import VersionedTokenRefreshSerializer
 from .activation_views import ActivationView, InvitationView
+from .avatar_views import AvatarView, AvatarImageView, AvatarReceiptView
 from .cookies import enforce_cookie_csrf, expose_csrf_cookie, set_auth_cookies
 from .user_management_views import (ManagementWorkspaceView, ManagementRolesView, ManagementPreviewView,
     ManagementCommandView, ManagementReceiptView, ManagementHistoryView)
@@ -62,6 +63,9 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("token/refresh/", ThrottledTokenRefreshView.as_view(), name="token-refresh"),
     path("me/", CurrentUserView.as_view(), name="current-user"),
+    path("me/avatar/", AvatarView.as_view(), name="account-avatar"),
+    path("me/avatar/commands/<uuid:request_id>/", AvatarReceiptView.as_view(), name="account-avatar-receipt"),
+    path("users/<int:user_id>/avatar/", AvatarImageView.as_view(), name="account-avatar-image"),
     path("capabilities/", CurrentCapabilitiesView.as_view(), name="current-capabilities"),
     path("users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("users/workspace/", ManagementWorkspaceView.as_view(), name="account-management-workspace"),

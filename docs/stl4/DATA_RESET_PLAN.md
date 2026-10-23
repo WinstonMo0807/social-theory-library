@@ -1,5 +1,9 @@
 # 账号保留型业务重置
 
+## 2026-10-24 新增账户资料保留范围
+
+AccountAvatar及User类型account_*、旧admin_update_user/admin_set_password、AccountAvatar类型profile_avatar_*审计属于账户身份、邀请或防止迟到请求的必要关联，必须保留。accounts0004尚未执行，现重置工具对新头像表会按未知表阻止；邀请审计位于混合AuditEvent，接下来需将账户相关行从业务重置范围排除并纳入备份恢复指纹。此登记不授权执行迁移或清理。
+
 ## 2026-10-23 新增业务表登记
 
 reading/0024仅声明ReaderGroup/Member/Invite与ReaderShare/Notice，均为业务关系，不替代或重建User/认证权限。尚未应用迁移，也未清理数据。未来已确认重置范围需包括这五类业务及加密范围、令牌和通知，先核对外键、备份恢复与当前实例；不得因本登记执行重置。日常本人隐私删除使用关闭/撤回和最少防重建回执，不等于全库清理。

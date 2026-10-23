@@ -1,0 +1,17 @@
+.avatar { width: 44px; height: 44px; display: inline-grid; place-items: center; flex-shrink: 0; overflow: hidden; background: var(--annotation); color: var(--ink); font: 600 21px var(--serif); }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.editor { padding-block: 18px; border-block: 1px solid var(--line); margin-block: 18px; color: var(--ink); }
+.editor h3 { margin: 0; font: 600 20px var(--serif); }
+.row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.row .avatar { width: 72px; height: 72px; }
+.editor p { font-size: 13px; line-height: 1.8; color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.editor button, .dialog button { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 8px 13px; cursor: pointer; }
+.editor button:disabled, .dialog button:disabled { opacity: .5; cursor: not-allowed; }
+.editor input[type=file] { max-width: 100%; margin-top: 12px; }
+.preview { width: 96px; height: 96px; object-fit: cover; }
+.dialog { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; width: min(440px, calc(100vw - 32px)); padding: 24px; }
+.dialog::backdrop { background: rgb(0 0 0 / .4); }
+.dialog h3 { margin-top: 0; font: 600 22px var(--serif); }
+.dialog p { line-height: 1.8; font-size: 14px; }
+.editor button:focus-visible, .editor input:focus-visible, .dialog button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }

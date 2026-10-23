@@ -44,6 +44,7 @@ import { DisplayPreferences } from "./display-preferences";
 import { ReaderOverview } from "./research/reader-overview";
 import { ResearchCenterNav } from "./research/research-center-nav";
 import { SaveTopicButton, useTopicSaveCommands } from "./save-topic-button";
+import { ProfileAvatarEditor } from "./profile-avatar-editor";
 
 const tabs = [
   [BookOpen, "概览"],
@@ -642,6 +643,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
         {active === "账户设置" ? (
           <DataPanel title="账户与数据">
             <article className="reader-data-row"><Settings size={17} /><div><strong>{user.display_name}</strong><p>{user.email}</p></div></article>
+            <ProfileAvatarEditor owner={String(session.user!.id)} name={user.display_name} />
             <form className="profile-name-form" onSubmit={updateProfile}><label><span>显示名称</span><input value={profileName} onChange={(event) => setProfileName(event.target.value)} required /></label><ActionButton className="button secondary" type="submit" state={pendingAction === "update-profile" ? "pending" : "idle"} pendingLabel="正在保存" disabled={Boolean(pendingAction) && pendingAction !== "update-profile"}>保存名称</ActionButton></form>
             <DisplayPreferences />
             <Link className="button secondary" href="/reset-password">重置密码</Link>

@@ -64,6 +64,7 @@ def record(user, actor, invitation=None):
         "activation_state": account_activation.status(user, invitation),
         "can_renew_invitation": can_edit and (user.role == "reader" or is_library_owner(actor)) and account_activation.can_renew(user, invitation),
         "can_revoke_invitation": can_edit and account_activation.can_renew(user, invitation),
+        "avatar_revision": getattr(user, "_avatar_revision", None),
         "notice": "账户管理权限不授予阅读他人私人研究、笔记、密钥或资料导出的权限。"}
 
 

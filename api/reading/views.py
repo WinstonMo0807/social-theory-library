@@ -347,6 +347,7 @@ class ReaderDataExportView(PrivateAccountResponses, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from accounts.avatars import export as export_avatar
         context = {"request": request}
         from .research import research_export, serialize_record
         from .privacy import annotation_export, operation_output, profile_data, export_item, rows
@@ -366,6 +367,7 @@ class ReaderDataExportView(PrivateAccountResponses, APIView):
                 "search_history": [serialize_record(row, request.user) for row in ReaderSearchRecord.objects.filter(user=request.user)],
                 "data_operations": [operation_output(row) for row in ReaderDataOperation.objects.filter(user=request.user)],
                 "profile": {
+                    "avatar": export_avatar(request.user),
                     "email": request.user.email,
                     "display_name": request.user.display_name,
                     "created_at": request.user.date_joined,

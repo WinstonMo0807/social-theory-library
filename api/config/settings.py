@@ -281,6 +281,7 @@ REST_FRAMEWORK = {
         "login": os.getenv("AUTH_LOGIN_RATE", "12/min"),
         "register": os.getenv("AUTH_REGISTER_RATE", "8/hour"),
         "password_reset": os.getenv("AUTH_PASSWORD_RESET_RATE", "6/hour"),
+        "profile_avatar": os.getenv("PROFILE_AVATAR_RATE", "30/hour"),
         "token_refresh": os.getenv("AUTH_TOKEN_REFRESH_RATE", "60/hour"),
         "exact_search_anon": os.getenv("EXACT_SEARCH_ANON_RATE", "60/min"),
         "exact_search_user": os.getenv("EXACT_SEARCH_USER_RATE", "240/min"),

@@ -32,6 +32,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/me/avatar/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_me_avatar_retrieve"];
+        put?: never;
+        post: operations["auth_me_avatar_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me/avatar/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_me_avatar_commands_retrieve"];
+        put?: never;
+        post: operations["auth_me_avatar_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/password/confirm/": {
         parameters: {
             query?: never;
@@ -74,6 +106,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["auth_register_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/users/{user_id}/avatar/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_users_avatar_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6458,6 +6506,42 @@ export interface components {
          * @enum {string}
          */
         AvailabilityEnum: "all" | "readable" | "no_fulltext" | "planned";
+        /**
+         * @description * `set` - set
+         *     * `remove` - remove
+         * @enum {string}
+         */
+        AvatarCommandActionEnum: "set" | "remove";
+        AvatarCommandRequest: {
+            action: components["schemas"]["AvatarCommandActionEnum"];
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            confirmed: boolean;
+            /** Format: binary */
+            image?: string;
+        };
+        AvatarReceipt: {
+            owner_id: string;
+            has_avatar: boolean;
+            revision: number;
+            expected_version: string;
+            /** Format: date-time */
+            updated_at: string | null;
+            notice: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+        };
+        AvatarState: {
+            owner_id: string;
+            has_avatar: boolean;
+            revision: number;
+            expected_version: string;
+            /** Format: date-time */
+            updated_at: string | null;
+            notice: string;
+        };
         /**
          * @description * `database` - database
          * @enum {string}
@@ -16821,6 +16905,9 @@ export interface components {
             geographic_scope?: unknown;
             population_scope?: unknown;
         };
+        StopAvatarRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
         StopPendingAccountRequest: {
             /** Format: uuid */
             request_id: string;
@@ -18094,6 +18181,7 @@ export interface components {
             activation_state: string;
             can_renew_invitation: boolean;
             can_revoke_invitation: boolean;
+            avatar_revision: number | null;
             notice: string;
         };
         /**
@@ -18603,6 +18691,98 @@ export interface operations {
             };
         };
     };
+    auth_me_avatar_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvatarState"];
+                };
+            };
+        };
+    };
+    auth_me_avatar_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvatarCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AvatarCommandRequest"];
+                "multipart/form-data": components["schemas"]["AvatarCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvatarReceipt"];
+                };
+            };
+        };
+    };
+    auth_me_avatar_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvatarReceipt"];
+                };
+            };
+        };
+    };
+    auth_me_avatar_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopAvatarRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StopAvatarRequest"];
+                "multipart/form-data": components["schemas"]["StopAvatarRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvatarReceipt"];
+                };
+            };
+        };
+    };
     auth_password_confirm_create: {
         parameters: {
             query?: never;
@@ -18674,6 +18854,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    auth_users_avatar_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
                 };
             };
         };

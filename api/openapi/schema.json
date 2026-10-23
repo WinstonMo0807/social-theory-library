@@ -113,6 +113,176 @@
                 }
             }
         },
+        "/api/auth/me/avatar/": {
+            "get": {
+                "operationId": "auth_me_avatar_retrieve",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AvatarState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "auth_me_avatar_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AvatarCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AvatarCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AvatarCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AvatarReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/me/avatar/commands/{request_id}/": {
+            "get": {
+                "operationId": "auth_me_avatar_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AvatarReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "auth_me_avatar_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopAvatarRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopAvatarRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopAvatarRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AvatarReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/auth/password/confirm/": {
             "post": {
                 "operationId": "auth_password_confirm_create",
@@ -234,6 +404,45 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/users/{user_id}/avatar/": {
+            "get": {
+                "operationId": "auth_users_avatar_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "image/png": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
                                 }
                             }
                         },
@@ -29075,6 +29284,120 @@
                 ],
                 "type": "string",
                 "description": "* `all` - all\n* `readable` - readable\n* `no_fulltext` - no_fulltext\n* `planned` - planned"
+            },
+            "AvatarCommandActionEnum": {
+                "enum": [
+                    "set",
+                    "remove"
+                ],
+                "type": "string",
+                "description": "* `set` - set\n* `remove` - remove"
+            },
+            "AvatarCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/AvatarCommandActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "image": {
+                        "type": "string",
+                        "format": "binary",
+                        "writeOnly": true
+                    }
+                },
+                "required": [
+                    "action",
+                    "confirmed",
+                    "expected_version",
+                    "request_id"
+                ]
+            },
+            "AvatarReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "has_avatar": {
+                        "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "expected_version": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "has_avatar",
+                    "notice",
+                    "owner_id",
+                    "request_id",
+                    "revision",
+                    "state",
+                    "updated_at"
+                ]
+            },
+            "AvatarState": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "has_avatar": {
+                        "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "expected_version": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "has_avatar",
+                    "notice",
+                    "owner_id",
+                    "revision",
+                    "updated_at"
+                ]
             },
             "BackendEnum": {
                 "enum": [
@@ -63572,6 +63895,17 @@
                     "proposition"
                 ]
             },
+            "StopAvatarRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
             "StopPendingAccountRequest": {
                 "type": "object",
                 "properties": {
@@ -68003,12 +68337,17 @@
                     "can_revoke_invitation": {
                         "type": "boolean"
                     },
+                    "avatar_revision": {
+                        "type": "integer",
+                        "nullable": true
+                    },
                     "notice": {
                         "type": "string"
                     }
                 },
                 "required": [
                     "activation_state",
+                    "avatar_revision",
                     "can_change_role",
                     "can_edit",
                     "can_renew_invitation",

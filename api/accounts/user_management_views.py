@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from common.permissions import CanManageUsers
 from common.private_responses import PrivateAccountResponses
-from .models import User
+from .models import AccountAvatar, User
 from .ownership import is_library_owner
 from . import user_management as service
 
@@ -68,6 +68,7 @@ class UserOutput(serializers.Serializer):
     activation_state = serializers.CharField()
     can_renew_invitation = serializers.BooleanField()
     can_revoke_invitation = serializers.BooleanField()
+    avatar_revision = serializers.IntegerField(allow_null=True)
     notice = serializers.CharField()
 
 
@@ -182,7 +183,8 @@ class ManagementWorkspaceView(ManagementBase):
         data = ManagementQuery(data=request.query_params)
         data.is_valid(raise_exception=True)
         options = data.validated_data
-        rows = User.objects.all().order_by("-date_joined", "-pk")
+        accounts = User.objects.annotate(_avatar_revision=Subquery(AccountAvatar.objects.filter(user_id=OuterRef("pk")).exclude(image_ciphertext=b"").values("revision")[:1]))
+        rows = accounts.order_by("-date_joined", "-pk")
         if options["q"]:
             rows = rows.filter(Q(username__icontains=options["q"]) | Q(email__icontains=options["q"]) | Q(display_name__icontains=options["q"]))
         if options["role"]:
@@ -198,7 +200,7 @@ class ManagementWorkspaceView(ManagementBase):
             raise NotFound("此页已没有账户，请返回第一页。")
         selected = None
         if options.get("user_id"):
-            selected = User.objects.filter(pk=options["user_id"]).first()
+            selected = accounts.filter(pk=options["user_id"]).first()
             if selected is None:
                 raise NotFound("所选账户已不存在。")
         entries = list(rows[(page - 1) * size:page * size])

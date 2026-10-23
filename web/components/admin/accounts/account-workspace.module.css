@@ -33,7 +33,9 @@
 .pager span { margin-right: auto; color: var(--muted); }
 .detail { border: 1px solid var(--line); background: var(--surface); padding: 20px; align-self: start; }
 .profile { display: flex; gap: 15px; align-items: center; margin-bottom: 22px; }
-.avatar { width: 64px; height: 72px; background: var(--annotation); display: grid; place-items: center; font: 600 25px var(--serif); flex-shrink: 0; }
+.profile .avatar { width: 64px; height: 72px; background: var(--annotation); display: grid; place-items: center; font: 600 25px var(--serif); flex-shrink: 0; }
+.identity { display: flex; align-items: center; gap: 10px; }
+.identity .listAvatar { width: 36px; height: 36px; border-radius: 50%; }
 .profile h2 { font: 600 23px/1.5 var(--serif); margin: 0 0 5px; }
 .profile p { margin: 3px 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .profile button { margin-left: auto; flex-shrink: 0; }
