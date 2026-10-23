@@ -4,7 +4,7 @@ FROM ${BASE_IMAGE}
 USER root
 WORKDIR /app
 COPY --chown=node:node web/package.json web/package-lock.json ./
-COPY offline/web-runtime-node-modules-2.5.0-linux-x64.tar.gz /tmp/web-runtime-node-modules.tar.gz
+COPY offline/security-20261024/web-runtime-linux-x64.tar.gz /tmp/web-runtime-node-modules.tar.gz
 RUN rm -rf /app/node_modules \
     && tar -xzf /tmp/web-runtime-node-modules.tar.gz -C /app \
     && rm /tmp/web-runtime-node-modules.tar.gz \
@@ -14,6 +14,7 @@ RUN rm -rf /app/node_modules \
 RUN rm -rf /app/dist
 COPY --chown=node:node web/dist ./dist
 COPY --chown=node:node web/scripts ./scripts
+RUN node scripts/verify-runtime-dependencies.mjs --archive
 RUN rm -rf /app/public
 COPY --chown=node:node web/public ./public
 COPY web/docker-entrypoint.sh /usr/local/bin/library-web-entrypoint

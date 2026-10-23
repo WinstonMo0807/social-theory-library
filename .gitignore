@@ -120,6 +120,7 @@ celerybeat-schedule*
 # Release packages and bundled binary dependencies
 /release/
 /offline/python-wheels/
+/offline/security-*/
 /offline/*.tar.gz
 /offline/*.tgz
 /ocr_service/vendor/*.whl

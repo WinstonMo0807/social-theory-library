@@ -6,6 +6,12 @@ ENV OPENBLAS_CORETYPE=ATOM \
 
 USER root
 WORKDIR /app
+COPY offline/security-20261024/ocr-runtime/requirements-linux.lock /tmp/stl-requirements.txt
+COPY offline/security-20261024/ocr-runtime/wheels/ /tmp/stl-security-wheels/
+RUN python -m pip install --no-index --find-links=/tmp/stl-security-wheels pip==26.2.2 \
+    && python -m pip install --no-index --find-links=/tmp/stl-security-wheels --require-hashes --no-deps -r /tmp/stl-requirements.txt \
+    && python -m pip check \
+    && rm -rf /tmp/stl-security-wheels /tmp/stl-requirements.txt
 COPY ocr_service/vendor/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl /tmp/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl
 RUN printf '%s  %s\n' \
       '80d0ed4ce96859395cf634d4c3e06df4527ea2abdffc826f24b8f6bc68656f39' \

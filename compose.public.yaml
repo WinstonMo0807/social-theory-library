@@ -338,7 +338,7 @@ services:
 
   edge:
     <<: *service-hardening
-    image: nginx:1.27-alpine
+    image: nginx:1.30.6-alpine
     expose:
       - "80"
     environment:
