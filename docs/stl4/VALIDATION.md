@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-23 项目附录汇总静态记录
+
+af8c5e：tmp/stl4-project-materials-static-20261023.py退出0（5 AST、禁连DB8 SQL编译，0契约错误/10既有警告）；对应contracts脚本324路径及CSS解析。d5edda→bea7b4 TypeScript noEmit0；2f0afb新工作区ESLint0；dac59e差异空白0。未执行测试/浏览器/业务请求/迁移/生产。来源并发变化、分页全量范围与权限撤销需正式验收。
+
 ## 2026-10-23 M14静态记录
 
 7da059：`tmp/stl4-project-static-20261023.py`退出0，25 AST、禁连DB22 SQL编译；离线catalog/ingestion模型无迁移差异，内置及accounts元数据差异未处理；OpenAPI0错误10既有警告。`tmp/stl4-project-contracts-20261023.mjs`323路径/CSS解析。3a6369→c2a803：web tsc --noEmit --incremental false退出0。bf4a50：新页面、路由、原文章编辑器/useIssueDraft/types定向ESLint0，仅原img建议。首次ESLint effect问题已修复；新增契约命名冲突已消除。迁移0079只保存。未运行测试、浏览器、真实业务、评测、迁移或生产；并发/权限/视觉不能记为验收通过。

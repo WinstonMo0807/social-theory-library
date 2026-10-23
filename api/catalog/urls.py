@@ -43,7 +43,7 @@ from .person_resolution_views import (
 )
 from .person_authority_views import (AuthorityDirectoryView, AuthorityDetailView, AuthorityPreviewView, AuthorityCommandView, AuthorityReceiptView)
 from .index_maintenance_views import IndexMaintenanceView, IndexMaintenanceReceiptView, IndexTermsView
-from .curation_project_views import CurationProjectView, CurationProjectDetailView, CurationProjectReceiptView, CurationProjectPeopleView
+from .curation_project_views import CurationProjectView, CurationProjectDetailView, CurationProjectReceiptView, CurationProjectPeopleView, CurationProjectMaterialsView
 from .scholar_commands import ScholarSaveReceiptView
 from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView, MediaCollectionView
 from .scholar_media_views import ScholarPortraitSelectionView, PublicPersonPortraitView
@@ -250,6 +250,7 @@ urlpatterns = [
     path("admin/curation-projects/people/", CurationProjectPeopleView.as_view(), name="curation-project-people"),
     path("admin/curation-projects/commands/<uuid:request_id>/", CurationProjectReceiptView.as_view(), name="curation-project-receipt"),
     path("admin/curation-projects/<uuid:project_id>/", CurationProjectDetailView.as_view(), name="curation-project-detail"),
+    path("admin/curation-projects/<uuid:project_id>/materials/", CurationProjectMaterialsView.as_view(), name="curation-project-materials"),
     path("admin/index-maintenance/", IndexMaintenanceView.as_view(), name="index-maintenance"),
     path("admin/index-maintenance/commands/<uuid:request_id>/", IndexMaintenanceReceiptView.as_view(), name="index-maintenance-receipt"),
     path("admin/index-maintenance/terms/", IndexTermsView.as_view(), name="index-maintenance-terms"),

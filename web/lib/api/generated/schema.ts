@@ -448,6 +448,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/curation-projects/{project_id}/materials/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_curation_projects_materials_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/curation-projects/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -13323,6 +13339,20 @@ export interface components {
             article_id: string;
             article_title: string;
         };
+        ProjectMaterials: {
+            results: components["schemas"]["ProjectMaterial"][];
+            count: number;
+            page: number;
+            pages: number;
+            page_size: number;
+            totals: {
+                [key: string]: number;
+            };
+            article_count: number;
+            /** Format: date-time */
+            checked_at: string;
+            scope_notice: string;
+        };
         ProjectPeople: {
             results: components["schemas"]["ProjectPerson"][];
             count: number;
@@ -18637,6 +18667,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectDetail"];
+                };
+            };
+        };
+    };
+    catalog_admin_curation_projects_materials_retrieve: {
+        parameters: {
+            query?: {
+                page?: string;
+                q?: string;
+                scope?: string;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMaterials"];
                 };
             };
         };

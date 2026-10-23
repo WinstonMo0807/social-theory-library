@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 项目附录汇总（324路径）
+
+新增GET admin/curation-projects/{project_id}/materials/，沿项目范围读取全部文章当前附录，q/scope/page、30项分页、全项目总量/待补量及具名ProjectMaterials响应。只有当前页正文说明被解析，材料状态复用原文章呈现。未提供正文来源全项目检查完成保证；接口不写业务数据。
+
 ## 2026-10-23 M14（323路径）
 
 新增admin/curation-projects列表/固定命令、{project_id}详情、commands/{request_id}查回/停止、people协作者显示名称分页。ProjectValues/Command/Article/Material/Problem/Activity均具名契约；原文章集合补实际page/pages/page_size，后台文章补只读项目上下文（不加入公开payload）。原文章、选材、助手、媒体与发布接口继续复用；项目范围同时过滤旁路。SQL与OpenAPI仅离线静态生成，无接口请求。

@@ -127,6 +127,18 @@ class ProjectActivitySerializer(serializers.Serializer):
     actor = serializers.CharField()
 
 
+class ProjectMaterialsSerializer(serializers.Serializer):
+    results = ProjectMaterialSerializer(many=True)
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    pages = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    totals = serializers.DictField(child=serializers.IntegerField())
+    article_count = serializers.IntegerField()
+    checked_at = serializers.DateTimeField()
+    scope_notice = serializers.CharField()
+
+
 class ProjectDetailSerializer(ProjectCardSerializer):
     version = serializers.CharField()
     articles = ProjectArticleSerializer(many=True)
@@ -267,6 +279,16 @@ class ProjectPeopleSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     page = serializers.IntegerField()
     pages = serializers.IntegerField()
+
+
+class CurationProjectMaterialsView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanAccessBackOffice]
+
+    @extend_schema(responses=ProjectMaterialsSerializer, parameters=[OpenApiParameter(name, type=str) for name in ("q", "scope", "page")])
+    def get(self, request, project_id):
+        from catalog.services.project_materials import directory
+        project = get_object_or_404(service.visible_projects(request.user), pk=project_id)
+        return Response(ProjectMaterialsSerializer(directory(project, request.query_params)).data)
 
 
 class CurationProjectPeopleView(AdminPrivateResponseMixin, APIView):

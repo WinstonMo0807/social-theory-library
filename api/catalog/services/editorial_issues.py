@@ -378,7 +378,7 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     if payload.get("cover_rendition_id"):
         rid = payload["cover_rendition_id"]
         payload["cover_url"] = f"/api/catalog/editorial-media/{rid}/" if public else f"/api/catalog/admin/media/renditions/{rid}/file/"
-    records = {str(row.pk): row for row in issue.items.select_related("cataloging_session")}
+    records = {str(row.pk): row for row in issue.items.filter(pk__in=[item["id"] for item in payload.get("items", [])]).select_related("cataloging_session")}
     if public:
         # Immutable issue text retains history. Recovery makes an item editable,
         # but only a newly published issue can expose that restored item again.
