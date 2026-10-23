@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-23 任务配置与失败定位静态检查
+
+`.venv/Scripts/python.exe tmp/stl4-processing-creation-static-20261023.py`（a6ce17）退出0，12 Python AST、6条SQLite/PostgreSQL SQL编译，连接被禁止；OpenAPI0错误10条原声明警告。`node tmp/stl4-processing-creation-contracts-20261023.mjs`（21428d/0b0100）退出0，327路径/生成类型/CSS。`node node_modules/typescript/bin/tsc --noEmit --incremental false`（d7f673→08594a）退出0。目标4组件ESLint（aa9006）退出0，原OCR页面2条img建议。首次TypeScript发现JSON响应需收窄，已修复；新增来源路由已加入正式契约范围。
+
+未运行测试、浏览器、实际OCR/索引请求、迁移或生产。`api/tests/test_stl4_processing_creation_20261023.py`两项只写入，覆盖丢失响应后的重放、来源冲突、停止待定请求、账户不一致及Discovery失败审计。正式验收另需指定页边界/人工页与核验页跳过、OCR服务参数、目录并发复用、换账户与刷新恢复、实际失败页及字符范围、成功片段跳过、部分成果导出、移动弹层与源PDF逐图核对；均待核实。
+
 ## 2026-10-23 文件阶段队列静态检查
 
 `.venv/Scripts/python.exe tmp/stl4-processing-files-static-20261023.py`：d98002/6611ef/f2cbc1阶段语法、8条SQLite/PostgreSQL ORM SQL编译与OpenAPI0错误10旧警告。首次571446发现task_id注解冲突，改task_pk后通过。数据库连接被主动禁止；这些编译不验证组合SQL实际执行及查询性能。

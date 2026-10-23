@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 任务配置（327路径）
+
+新增GET processing-workspace/sources/{edition_id}/具名ProcessingSource，沿原OCR读取当前文件与任务阻断，无服务探测。原POST扩展ProcessingCreation（create、task_type=ocr/outline、asset_id、source_version、confirmed及OCR可选page_indexes/task_options），返回原ProcessingReceipt，查回/停止同commands路由。创建不接受新公开发布指令。原任务响应新增failure_pages/failure_page_count/failure_location与已保存OCR策略，失败页最多200条；实际索引片段字符偏移以来源单元为基准。Discovery重试/恢复同原固定命令协议。
+
 ## 2026-10-23 文件阶段队列（仍326路径）
 
 processing-workspace新增group_by=file/task与file_id。具名ProcessingWorkspaceFile、任务file_id、files/group_by/stage_count与生成类型同步。文件模式results为当前展开阶段，files为分组分页；count/total/counts计文件或独立任务组，状态可重叠；每组展开最多20项，stage_count给真实范围数量。任务历史模式保持原分页。未新增写命令。

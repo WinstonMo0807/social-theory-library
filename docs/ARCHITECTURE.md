@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 处理任务创建与原队列复用
+
+processing_creation仅对原start_catalog_ocr与queue_outline_rebuild提供配置入口，复用ProcessingJob/AuditEvent和processing.workspace.command回执。与原停止操作共享账户锁，版本与文件身份在事务内复核；OCR不隐式取消进行中任务，目录相同来源进行中时复用。没有模型、存储或执行器迁移。Discovery继续原source/generation身份与逐片段幂等写入，新增当前单元定位及重试前审计；未新增检索方案。
+
 ## 2026-10-23 处理文件读模型
 
 ProcessingJob与SemanticIndexJob继续独立保留原身份。文件模式沿存储的Asset.source_asset或本文件身份分组，未关联文件的记录按任务身份单列；窗口查询选择最新阶段并保留在途/暂停记录，再分组分页，固定SQL结构与绑定参数。只展开当前20组×每组最多20条，全部记录沿原任务分页。原权限筛选和呈现共用，未新增任务或数据迁移。

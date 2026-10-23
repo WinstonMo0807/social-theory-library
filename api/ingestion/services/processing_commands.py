@@ -46,6 +46,8 @@ def task_actions(job, actor):
         if job.operation not in {"build", "rebuild"}: return []
         return (["pause"] if job.status in {"queued", "running"} and not job.pause_requested_at else []) + (["resume"] if job.status == "paused" else []) + (["cancel"] if job.status in {"queued", "paused"} else []) + (["retry"] if job.status in {"failed", "partial"} and job.asset_id else [])
     kind, state = job.job_type, job.status
+    if kind == "discovery_index":
+        return ["retry"] if state == "failed" else ["resume", "cancel"] if state == "paused" else ["cancel"] if state == "pending" else []
     actions = []
     if kind in {"ocr", "external_enrichment"}:
         if state in {"pending", "running"} and not job.pause_requested_at: actions.append("pause")

@@ -21,7 +21,7 @@ from catalog.services.discovery_inference import chunk_text, embed_texts, infere
 from catalog.services.discovery_projection import meili, active_generation, DiscoveryIndexError
 from catalog.services.discovery_sources import SOURCE_TYPES, edition_revision, fingerprint, get_source, iter_source_headers, source_queryset, source_units
 from catalog.services.contribution_projection import contribution_projection
-from ingestion.models import ProcessingJob
+from ingestion.models import AuditEvent, ProcessingJob
 
 logger = logging.getLogger(__name__)
 JOB_TYPE = "discovery_index"
@@ -140,10 +140,12 @@ def request_rebuild(actor=None, *, activate=True):
 
 
 @transaction.atomic
-def retry_job(job_id):
+def retry_job(job_id, *, actor=None):
     job = ProcessingJob.objects.select_for_update().filter(pk=job_id, job_type=JOB_TYPE).first()
     if not job or job.status not in {"failed", "paused"}:
         raise DiscoveryIndexError("not_retryable", "该任务当前不能重试。")
+    before = {"status": job.status, "error_code": job.error_code, "error_message": job.error_message,
+              "attempt": job.attempt, "active_unit": job.stats.get("active_unit"), "completed_units": job.stats.get("completed_units", 0)}
     # Retrying retains the same source/generation identity and successful chunks.
     job.attempt = 0
     if job.stats.get("action") == "source":
@@ -154,6 +156,8 @@ def retry_job(job_id):
             raise DiscoveryIndexError("superseded", "该任务对应的资料已更新或版本已停用，请等待最新资料重新排队。")
     job.save(update_fields=["attempt"])
     _enqueue_job(job)
+    AuditEvent.objects.create(actor=actor, action="discovery.retry_from_checkpoint", object_type="processing_job", object_id=str(job.pk),
+        before=before, after={"status": job.status, "task_id": job.task_id})
     return job
 
 
@@ -305,6 +309,8 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
     existing = DiscoveryDocument.objects.filter(pk=identifier, vector_ready=True, keyword_ready=True).first()
     if existing and (header["channel"] != "passages" or existing.payload.get("responsibility_projection") == 1):
         return
+    _guard_job(job, stats={**job.stats, "active_unit": {"unit_id": unit["unit_id"], "pdf_page": unit["metadata"].get("pdf_page"),
+        "start_offset": child["start"], "end_offset": child["end"]}})
     input_hash = fingerprint([generation.config_snapshot["embedding_artifact"], child["embedding_text"]])
     vector = None
     previous = DiscoveryDocument.objects.filter(generation=generation, input_hash=input_hash, vector_ready=True).first()
@@ -364,6 +370,8 @@ def process_source(job, generation):
     for unit_index, unit in enumerate(source_units(kind, source, header)):
         if unit_index < completed_units:
             continue
+        location = {"unit_id": unit["unit_id"], "pdf_page": unit["metadata"].get("pdf_page"), "start_offset": None, "end_offset": None}
+        _guard_job(job, stats={**job.stats, "active_unit": location})
         # Canonical spans/pages remain intact; a pathological page is partitioned
         # into exact original windows before tokenizer requests, with offsets kept.
         for base in range(0, len(unit["text"]), 60000):
@@ -378,7 +386,7 @@ def process_source(job, generation):
                     # Completed children are durable; replay only the current unit.
                     _guard_job(job, stats={**job.stats, "completed_units": unit_index})
                     return False
-        _guard_job(job, stats={**job.stats, "completed_units": unit_index + 1})
+        _guard_job(job, stats={**job.stats, "completed_units": unit_index + 1, "active_unit": None})
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务不再回写完成状态。")
     docs = DiscoveryDocument.objects.filter(generation=generation, source_type=kind, source_id=source_id, source_revision=header["source_revision"])

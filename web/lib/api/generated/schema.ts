@@ -3073,6 +3073,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingestion/processing-workspace/sources/{edition_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ingestion_processing_workspace_sources_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingestion/upload-workspace/": {
         parameters: {
             query?: never;
@@ -10831,6 +10847,15 @@ export interface components {
             pdf_page: number;
             source_fingerprint: string;
         };
+        OCRTaskOptions: {
+            languages: components["schemas"]["LanguagesEnum"][];
+            layout: boolean;
+            /** Format: double */
+            quality_threshold: number;
+            detect_spreads: boolean;
+            detect_garbled: boolean;
+            skip_reviewed: boolean;
+        };
         OCRTaskOptionsRequest: {
             languages: components["schemas"]["LanguagesEnum"][];
             layout: boolean;
@@ -13072,6 +13097,34 @@ export interface components {
             action: components["schemas"]["ProcessingCommandActionEnum"];
             expected_version: string;
         };
+        /**
+         * @description * `create` - create
+         * @enum {string}
+         */
+        ProcessingCreationActionEnum: "create";
+        ProcessingCreationRequest: {
+            action: components["schemas"]["ProcessingCreationActionEnum"];
+            /** Format: uuid */
+            request_id: string;
+            task_type: components["schemas"]["ProcessingCreationTypeEnum"];
+            /** Format: uuid */
+            asset_id: string;
+            source_version: string;
+            confirmed: boolean;
+            page_indexes?: number[];
+            task_options?: components["schemas"]["OCRTaskOptionsRequest"];
+        };
+        /**
+         * @description * `ocr` - ocr
+         *     * `outline` - outline
+         * @enum {string}
+         */
+        ProcessingCreationTypeEnum: "ocr" | "outline";
+        ProcessingFailureLocation: {
+            pdf_page: number | null;
+            start_offset: number | null;
+            end_offset: number | null;
+        };
         ProcessingFile: {
             filename: string;
             pages: number | null;
@@ -13123,6 +13176,9 @@ export interface components {
             can_resume: boolean;
             can_cancel: boolean;
             resume_reason: string;
+            task_options?: components["schemas"]["OCRTaskOptions"] | null;
+            protected_page_indexes?: number[];
+            reviewed_page_indexes?: number[];
         };
         ProcessingReceipt: {
             owner_id: string;
@@ -13135,6 +13191,30 @@ export interface components {
             action: string;
             next_url: string;
             result: unknown;
+        };
+        ProcessingSource: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            work_id: string;
+            title: string;
+            edition_label: string;
+            can_run: boolean;
+            denied_reason: string;
+            paused: boolean;
+            provider_label: string;
+            files: components["schemas"]["ProcessingSourceFile"][];
+            active_job_id: string;
+        };
+        ProcessingSourceFile: {
+            /** Format: uuid */
+            id: string;
+            filename: string;
+            version: number;
+            page_count: number;
+            source_version: string;
+            can_run: boolean;
+            reason: string;
         };
         ProcessingStopRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
@@ -13170,6 +13250,7 @@ export interface components {
             checked_at: string;
             logs: components["schemas"]["ProcessingLog"][];
         };
+        ProcessingWorkspaceCommandRequest: components["schemas"]["ProcessingCommandRequest"] | components["schemas"]["ProcessingCreationRequest"];
         ProcessingWorkspaceFile: {
             key: string;
             title: string;
@@ -13213,6 +13294,9 @@ export interface components {
             pause_requested: boolean;
             last_error: string;
             error_code: string;
+            failure_pages: number[];
+            failure_page_count: number;
+            failure_location: components["schemas"]["ProcessingFailureLocation"] | null;
             version: string;
             actions: components["schemas"]["ProcessingCommandActionEnum"][];
             permission_reason: string;
@@ -24482,11 +24566,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["ProcessingCommandRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ProcessingCommandRequest"];
-                "multipart/form-data": components["schemas"]["ProcessingCommandRequest"];
+                "application/json": components["schemas"]["ProcessingWorkspaceCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ProcessingWorkspaceCommandRequest"];
+                "multipart/form-data": components["schemas"]["ProcessingWorkspaceCommandRequest"];
             };
         };
         responses: {
@@ -24544,6 +24628,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProcessingReceipt"];
+                };
+            };
+        };
+    };
+    ingestion_processing_workspace_sources_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessingSource"];
                 };
             };
         };

@@ -14215,21 +14215,20 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/ProcessingCommandRequest"
+                                "$ref": "#/components/schemas/ProcessingWorkspaceCommandRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/ProcessingCommandRequest"
+                                "$ref": "#/components/schemas/ProcessingWorkspaceCommandRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/ProcessingCommandRequest"
+                                "$ref": "#/components/schemas/ProcessingWorkspaceCommandRequest"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "security": [
                     {
@@ -14341,6 +14340,45 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ProcessingReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/ingestion/processing-workspace/sources/{edition_id}/": {
+            "get": {
+                "operationId": "ingestion_processing_workspace_sources_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessingSource"
                                 }
                             }
                         },
@@ -43545,6 +43583,45 @@
                     "source_fingerprint"
                 ]
             },
+            "OCRTaskOptions": {
+                "type": "object",
+                "properties": {
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LanguagesEnum"
+                        },
+                        "maxItems": 3,
+                        "minItems": 1
+                    },
+                    "layout": {
+                        "type": "boolean"
+                    },
+                    "quality_threshold": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "detect_spreads": {
+                        "type": "boolean"
+                    },
+                    "detect_garbled": {
+                        "type": "boolean"
+                    },
+                    "skip_reviewed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "detect_garbled",
+                    "detect_spreads",
+                    "languages",
+                    "layout",
+                    "quality_threshold",
+                    "skip_reviewed"
+                ]
+            },
             "OCRTaskOptionsRequest": {
                 "type": "object",
                 "properties": {
@@ -50384,6 +50461,90 @@
                     "source"
                 ]
             },
+            "ProcessingCreationActionEnum": {
+                "enum": [
+                    "create"
+                ],
+                "type": "string",
+                "description": "* `create` - create"
+            },
+            "ProcessingCreationRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/ProcessingCreationActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "task_type": {
+                        "$ref": "#/components/schemas/ProcessingCreationTypeEnum"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "page_indexes": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "minimum": 1
+                        },
+                        "maxItems": 20000,
+                        "minItems": 1
+                    },
+                    "task_options": {
+                        "$ref": "#/components/schemas/OCRTaskOptionsRequest"
+                    }
+                },
+                "required": [
+                    "action",
+                    "asset_id",
+                    "confirmed",
+                    "request_id",
+                    "source_version",
+                    "task_type"
+                ]
+            },
+            "ProcessingCreationTypeEnum": {
+                "enum": [
+                    "ocr",
+                    "outline"
+                ],
+                "type": "string",
+                "description": "* `ocr` - ocr\n* `outline` - outline"
+            },
+            "ProcessingFailureLocation": {
+                "type": "object",
+                "properties": {
+                    "pdf_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "start_offset": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "end_offset": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "end_offset",
+                    "pdf_page",
+                    "start_offset"
+                ]
+            },
             "ProcessingFile": {
                 "type": "object",
                 "properties": {
@@ -50536,6 +50697,26 @@
                     },
                     "resume_reason": {
                         "type": "string"
+                    },
+                    "task_options": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/OCRTaskOptions"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "protected_page_indexes": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "reviewed_page_indexes": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
                     }
                 },
                 "required": [
@@ -50604,6 +50785,94 @@
                     "result",
                     "source",
                     "state"
+                ]
+            },
+            "ProcessingSource": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "can_run": {
+                        "type": "boolean"
+                    },
+                    "denied_reason": {
+                        "type": "string"
+                    },
+                    "paused": {
+                        "type": "boolean"
+                    },
+                    "provider_label": {
+                        "type": "string"
+                    },
+                    "files": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingSourceFile"
+                        }
+                    },
+                    "active_job_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "active_job_id",
+                    "can_run",
+                    "denied_reason",
+                    "edition_id",
+                    "edition_label",
+                    "files",
+                    "paused",
+                    "provider_label",
+                    "title",
+                    "work_id"
+                ]
+            },
+            "ProcessingSourceFile": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    },
+                    "source_version": {
+                        "type": "string"
+                    },
+                    "can_run": {
+                        "type": "boolean"
+                    },
+                    "reason": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "can_run",
+                    "filename",
+                    "id",
+                    "page_count",
+                    "reason",
+                    "source_version",
+                    "version"
                 ]
             },
             "ProcessingStopRequest": {
@@ -50718,6 +50987,16 @@
                     "results",
                     "total",
                     "total_counts"
+                ]
+            },
+            "ProcessingWorkspaceCommandRequest": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/ProcessingCommandRequest"
+                    },
+                    {
+                        "$ref": "#/components/schemas/ProcessingCreationRequest"
+                    }
                 ]
             },
             "ProcessingWorkspaceFile": {
@@ -50849,6 +51128,23 @@
                     "error_code": {
                         "type": "string"
                     },
+                    "failure_pages": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "failure_page_count": {
+                        "type": "integer"
+                    },
+                    "failure_location": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProcessingFailureLocation"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "version": {
                         "type": "string"
                     },
@@ -50920,6 +51216,9 @@
                     "edition_label",
                     "engine",
                     "error_code",
+                    "failure_location",
+                    "failure_page_count",
+                    "failure_pages",
                     "file",
                     "file_id",
                     "finished_at",

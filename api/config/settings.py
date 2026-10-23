@@ -194,6 +194,7 @@ SPECTACULAR_SETTINGS = {
         "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel"],
         "ProcessingTaskSourceEnum": ["processing_job", "semantic_index_job"],
         "ProcessingGroupingEnum": ["file", "task"],
+        "ProcessingCreationTypeEnum": ["ocr", "outline"],
         "CatalogIdentityModeEnum": ["use_edition", "new_version", "new_work"],
         "PlacementSourceKindEnum": ["work", "edition", "node", "span", "scholar", "issue"],
         "PathDependencyKindEnum": ["learning_order", "theory_related"],

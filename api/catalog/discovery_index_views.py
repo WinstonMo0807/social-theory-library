@@ -203,7 +203,7 @@ class DiscoveryIndexView(AdminPrivateResponseMixin, APIView):
             else:
                 if not data.validated_data.get("job_id"):
                     raise ValidationError({"job_id": "请选择需要重试的任务。"})
-                job = retry_job(data.validated_data["job_id"])
+                job = retry_job(data.validated_data["job_id"], actor=request.user)
         except DiscoveryIndexError as exc:
             raise ValidationError({"detail": str(exc), "code": exc.code})
         return Response({"job_id": str(job.pk), "status": job.status,

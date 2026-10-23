@@ -234,7 +234,7 @@ class IndexMaintenanceView(EditorialErrorMixin, DiscoveryIndexView):
                 elif data["action"] == "retry":
                     target = get_object_or_404(ProcessingJob.objects.select_for_update(), pk=data["job_id"], job_type="discovery_index")
                     if task_version(target) != data["expected_job_version"]: raise EditConflict("任务执行轮次已变化，请读取最新状态。")
-                    job = retry_job(target.pk); message = "原索引任务已重新排队，成功片段与来源身份保留。"
+                    job = retry_job(target.pk, actor=actor); message = "原索引任务已重新排队，成功片段与来源身份保留。"
                 elif data["action"] == "activate":
                     target = get_object_or_404(SemanticIndexVersion.discovery_objects, pk=data["generation_id"])
                     _activate_generation(target); message = "已切换检索版本，原版本及派生记录保留。"

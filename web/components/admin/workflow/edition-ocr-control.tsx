@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { useAdminSession } from "@/lib/admin-session";
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
@@ -170,18 +170,19 @@ function EditionOcrControlState({ editionId, workId, owner }: { editionId: strin
   </section>;
 }
 
-export function CatalogOcrPicker() {
+type CatalogPickerProps = { renderEdition?: (editionId: string, workId: string) => ReactNode; disabled?: boolean; initialWorkId?: string; initialEditionId?: string };
+export function CatalogOcrPicker(props: CatalogPickerProps = {}) {
   const user = useAdminSession();
   const [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <CatalogOcrPickerState key={`${user.id}:${epoch}`} owner={String(user.id)} /> : null;
+  return user ? <CatalogOcrPickerState key={`${user.id}:${epoch}`} owner={String(user.id)} {...props} /> : null;
 }
 
-function CatalogOcrPickerState({ owner }: { owner: string }) {
+function CatalogOcrPickerState({ owner, renderEdition, disabled = false, initialWorkId, initialEditionId }: { owner: string } & CatalogPickerProps) {
   const parameters = useSearchParams();
-  const initialWork = parameters.get("work") || "";
+  const initialWork = initialWorkId || parameters.get("work") || parameters.get("work_id") || "";
   const [works, setWorks] = useState<EntityValue[]>(initialWork ? [{ id: initialWork, name: "已选馆藏" }] : []);
-  const [edition, setEdition] = useState(parameters.get("edition") || "");
+  const [edition, setEdition] = useState(initialEditionId || parameters.get("edition") || parameters.get("edition_id") || "");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<CollectionPage<WorkLibraryRow> | null>(null);
   const [error, setError] = useState("");
@@ -192,15 +193,17 @@ function CatalogOcrPickerState({ owner }: { owner: string }) {
     if (work) void withPrivateOwner(owner, () => apiRequest<CollectionPage<WorkLibraryRow>>(`/catalog/admin/library/works/?view=editions&work_id=${encodeURIComponent(work)}&page=${page}`, { signal: controller.signal, headers: { "X-Editor-Owner": owner } }, getServerSessionCredential(), false), controller.signal).then((result) => { if (!controller.signal.aborted) { setData(result); setError(""); } }).catch((reason) => { if (!controller.signal.aborted) { setData(null); setError(reason instanceof Error ? reason.message : "版本读取失败"); } });
     return () => controller.abort();
   }, [owner, work, page, refresh]);
-  return <section className="catalog-ocr-picker admin-panel" aria-label="按馆藏 PDF 识别文字">
-    <h2>选择馆藏 PDF 进行文字识别</h2><p>已发布和未发布馆藏都可选择。无需寻找上传编号，选择作品和出版版本即可。</p>
-    <EntityPicker owner={owner} label="需要识别的馆藏" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={works} onChange={(values) => { setWorks(values.slice(-1)); setEdition(""); setPage(1); setData(null); setError(""); }} />
+  return <section className="catalog-ocr-picker admin-panel" aria-label="选择馆藏 PDF">
+    <h2>{renderEdition ? "选择处理材料" : "选择馆藏 PDF 进行文字识别"}</h2><p>已发布和未发布馆藏都可选择。选择作品、出版版本及当前文件。</p>
+    <fieldset disabled={disabled} style={{ border: 0, padding: 0, margin: 0 }}><legend className="sr-only">馆藏与出版版本</legend>
+    <EntityPicker owner={owner} label="馆藏作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={works} onChange={(values) => { setWorks(values.slice(-1)); setEdition(""); setPage(1); setData(null); setError(""); }} />
     {error ? <p role="alert">{error}<button type="button" onClick={() => setRefresh((n) => n + 1)}>重试版本查询</button></p> : null}
-    {work ? <><label><span>需要识别的出版版本</span><select value={edition} onChange={(event) => setEdition(event.target.value)} disabled={!data}>
+    {work ? <><label><span>出版版本</span><select value={edition} onChange={(event) => setEdition(event.target.value)} disabled={!data}>
       <option value="">请选择出版版本</option>
       {edition && !data?.results.some((row) => row.id === edition) ? <option value={edition}>已选版本（在其他分页）</option> : null}
       {data?.results.map((row) => <option key={row.id} value={row.id}>{row.label || "出版信息待补"}{row.is_primary ? "（主版本）" : ""}</option>)}
     </select></label><nav className="catalog-ocr-actions" aria-label="OCR 出版版本分页"><span>{data ? `共 ${data.count} 个版本，第 ${page} 页` : "正在读取…"}</span><button type="button" disabled={!data?.previous} onClick={() => { setData(null); setError(""); setPage((n) => n - 1); }}>上一页版本</button><button type="button" disabled={!data?.next} onClick={() => { setData(null); setError(""); setPage((n) => n + 1); }}>下一页版本</button></nav></> : null}
-    {work && edition ? <EditionOcrControl key={edition} editionId={edition} workId={work} /> : null}
+    </fieldset>
+    {work && edition ? renderEdition ? renderEdition(edition, work) : <EditionOcrControl key={edition} editionId={edition} workId={work} /> : null}
   </section>;
 }

@@ -2879,6 +2879,18 @@ class ProcessingCenterView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
             except (ValueError, DRFValidationError) as exc:
                 return Response({"detail": str(exc)}, status=409)
             return Response({"job_id": str(job.pk), "status": job.status}, status=202)
+        if job.job_type == "discovery_index" and action in {"retry", "resume"}:
+            from catalog.services.discovery_indexing import index_writer, retry_job
+            from catalog.services.discovery_projection import DiscoveryIndexError
+
+            try:
+                with index_writer() as acquired:
+                    if not acquired:
+                        return Response({"detail": "索引正在写入，请稍后读取最新状态再操作。"}, status=409)
+                    job = retry_job(job.pk, actor=request.user)
+            except DiscoveryIndexError as exc:
+                return Response({"detail": str(exc)}, status=409)
+            return Response({"job_id": str(job.pk), "status": job.status}, status=202)
         if job.job_type == "text_extraction" and job.stats.get("operation") == "outline_rebuild" and action in {"retry", "cancel"}:
             from catalog.services.document_outline import outline_job_action
 

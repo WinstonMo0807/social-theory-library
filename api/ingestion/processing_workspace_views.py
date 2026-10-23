@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, PolymorphicProxySerializer, extend_schema
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -14,7 +14,9 @@ from common.permissions import IsLibraryStaff
 from ingestion.models import AuditEvent, ProcessingJob
 from ingestion.services.processing_center import processing_task_page
 from ingestion.services.processing_commands import (ACTION, ProcessingCommandSerializer, command_actor, command_receipt, run_processing_command)
+from ingestion.services.processing_creation import ProcessingCreationSerializer, create_processing_task
 from ingestion.views import ProcessingCenterView
+from ingestion.ocr_workspace_views import OCRTaskOptionsSerializer
 
 
 class ProcessingFileSerializer(serializers.Serializer):
@@ -50,6 +52,15 @@ class ProcessingOCRProgressSerializer(serializers.Serializer):
     can_resume = serializers.BooleanField()
     can_cancel = serializers.BooleanField()
     resume_reason = serializers.CharField(allow_blank=True)
+    task_options = OCRTaskOptionsSerializer(allow_null=True, required=False)
+    protected_page_indexes = serializers.ListField(child=serializers.IntegerField(), required=False)
+    reviewed_page_indexes = serializers.ListField(child=serializers.IntegerField(), required=False)
+
+
+class ProcessingFailureLocationSerializer(serializers.Serializer):
+    pdf_page = serializers.IntegerField(allow_null=True)
+    start_offset = serializers.IntegerField(allow_null=True)
+    end_offset = serializers.IntegerField(allow_null=True)
 
 
 class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
@@ -74,6 +85,9 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     pause_requested = serializers.BooleanField()
     last_error = serializers.CharField(allow_blank=True)
     error_code = serializers.CharField(allow_blank=True)
+    failure_pages = serializers.ListField(child=serializers.IntegerField())
+    failure_page_count = serializers.IntegerField()
+    failure_location = ProcessingFailureLocationSerializer(allow_null=True)
     version = serializers.CharField()
     actions = serializers.ListField(child=serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel"]))
     permission_reason = serializers.CharField(allow_blank=True)
@@ -171,10 +185,46 @@ class ProcessingWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, AP
         payload.update(job_types=[{"value": value, "label": label} for value, label in ProcessingJob.JobType.choices], checked_at=timezone.now(), logs=logs)
         return Response(payload)
 
-    @extend_schema(request=ProcessingCommandSerializer, responses=ProcessingReceiptSerializer)
+    @extend_schema(request=PolymorphicProxySerializer(component_name="ProcessingWorkspaceCommand", serializers=[ProcessingCommandSerializer, ProcessingCreationSerializer], resource_type_field_name=None), responses=ProcessingReceiptSerializer)
     def post(self, request):
+        if request.data.get("action") == "create":
+            return Response(create_processing_task(request))
         serializer = ProcessingCommandSerializer(data=request.data); serializer.is_valid(raise_exception=True)
         return run_processing_command(request, lambda: ProcessingCenterView()._perform_action(request))
+
+
+class ProcessingSourceFileSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    filename = serializers.CharField()
+    version = serializers.IntegerField()
+    page_count = serializers.IntegerField()
+    source_version = serializers.CharField()
+    can_run = serializers.BooleanField()
+    reason = serializers.CharField(allow_blank=True)
+
+
+class ProcessingSourceSerializer(serializers.Serializer):
+    edition_id = serializers.UUIDField()
+    work_id = serializers.UUIDField()
+    title = serializers.CharField()
+    edition_label = serializers.CharField()
+    can_run = serializers.BooleanField()
+    denied_reason = serializers.CharField(allow_blank=True)
+    paused = serializers.BooleanField()
+    provider_label = serializers.CharField()
+    files = ProcessingSourceFileSerializer(many=True)
+    active_job_id = serializers.CharField(allow_blank=True)
+
+
+class ProcessingSourceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [IsLibraryStaff]
+
+    @extend_schema(responses=ProcessingSourceSerializer)
+    def get(self, request, edition_id):
+        from ingestion.services.catalog_ocr import edition_for, ocr_context
+        if not has_capability(request.user, Capability.VIEW_SYSTEM_STATUS):
+            raise PermissionDenied("当前账户不能查看处理任务，请从材料页核对文件。")
+        return Response(ProcessingSourceSerializer(ocr_context(edition_for(edition_id), request.user)).data)
 
 
 class ProcessingReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):

@@ -2,7 +2,7 @@ from django.urls import path
 from .intake_confirmation import IntakeConfirmationView, IntakeReceiptView
 from .upload_workspace import UploadWorkspaceView, UploadBatchReceiptView
 from .ocr_workspace_views import OCRWorkspaceView
-from .processing_workspace_views import ProcessingWorkspaceView, ProcessingReceiptView
+from .processing_workspace_views import ProcessingWorkspaceView, ProcessingReceiptView, ProcessingSourceView
 
 from .views import (
     BatchDetailView,
@@ -55,6 +55,7 @@ urlpatterns = [
     path("queue-health/", QueueHealthView.as_view(), name="ingestion-queue-health"),
     path("processing-center/", ProcessingCenterView.as_view(), name="processing-center"),
     path("processing-workspace/", ProcessingWorkspaceView.as_view(), name="processing-workspace"),
+    path("processing-workspace/sources/<uuid:edition_id>/", ProcessingSourceView.as_view(), name="processing-workspace-source"),
     path("processing-workspace/commands/<uuid:request_id>/", ProcessingReceiptView.as_view(), name="processing-workspace-receipt"),
     path("review-tasks/", ReviewTaskListView.as_view(), name="review-task-list"),
     path("review-tasks/<uuid:task_id>/action/", ReviewTaskActionView.as_view(), name="review-task-action"),
