@@ -76,7 +76,7 @@ urlpatterns = [
         "asset-access", "asset-file", "admin-asset-preview", "backup-job-list", "reader-ocr-status",
         "storage-workspace", "storage-command", "storage-backup-detail",
     }])),
-    path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name in {"ocr-workspace", "upload-workspace", "upload-workspace-receipt", "intake-confirmation", "intake-confirmation-receipt"}])),
+    path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name in {"processing-workspace", "processing-workspace-receipt", "ocr-workspace", "upload-workspace", "upload-workspace-receipt", "intake-confirmation", "intake-confirmation-receipt"}])),
     path("api/reading/", include([
         pattern for pattern in reading_router.urls
         if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views", "reading.parallel_views", "reading.graph_views", "reading.path_views"}

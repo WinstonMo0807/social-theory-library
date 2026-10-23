@@ -2740,7 +2740,11 @@ class WithdrawUploadItemView(APIView):
         )
 
 
-class ProcessingCenterView(APIView):
+from catalog.editorial_issue_views import EditorialErrorMixin
+from catalog.editorial_read import AdminPrivateResponseMixin
+
+
+class ProcessingCenterView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
 
     def get(self, request):
@@ -2783,6 +2787,10 @@ class ProcessingCenterView(APIView):
         return response
 
     def post(self, request):
+        from .services.processing_commands import run_processing_command
+        return run_processing_command(request, lambda: self._perform_action(request))
+
+    def _perform_action(self, request):
         if not has_capability(request.user, Capability.RETRY_JOBS):
             return Response({"detail": "只有管理员或系统所有者可以发起、暂停、恢复、重试或取消处理任务。"}, status=403)
         action = str(request.data.get("action") or "").strip()
@@ -2850,15 +2858,14 @@ class ProcessingCenterView(APIView):
                     return Response({"detail": str(exc)}, status=409)
                 return Response({"job_id": str(job.id), "status": job.status}, status=202)
             if action == "retry" and job.asset_id:
-                job.status = SemanticIndexJob.Status.CANCELED
-                job.finished_at = timezone.now()
-                job.save(update_fields=["status", "finished_at", "updated_at"])
                 replacement = queue_semantic_job(
                     job.asset,
                     force=True,
                     actor=request.user,
                     index_version=job.index_version,
                 )
+                if replacement is None:
+                    return Response({"detail": "当前文件不满足索引建立条件，原失败记录已保留。"}, status=409)
                 return Response({"job_id": str(replacement.id), "status": replacement.status}, status=202)
             return Response({"detail": "该语义任务当前不能执行所选操作。"}, status=409)
         job = get_object_or_404(
@@ -2946,9 +2953,6 @@ class ProcessingCenterView(APIView):
             )
             return Response({"status": job.status})
         if action == "retry" and (job.asset_id or job.upload_item_id):
-            job.status = ProcessingJob.Status.CANCELED
-            job.finished_at = timezone.now()
-            job.save(update_fields=["status", "finished_at", "updated_at"])
             if job.job_type == ProcessingJob.JobType.OCR:
                 replacement = queue_ocr_job(
                     job.asset,

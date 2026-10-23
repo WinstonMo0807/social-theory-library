@@ -1,0 +1,177 @@
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from catalog.editorial_issue_views import EditorialErrorMixin
+from catalog.editorial_read import AdminPrivateResponseMixin
+from common.capabilities import Capability, has_capability
+from common.permissions import IsLibraryStaff
+from ingestion.models import AuditEvent, ProcessingJob
+from ingestion.services.processing_center import processing_task_page
+from ingestion.services.processing_commands import (ACTION, ProcessingCommandSerializer, command_actor, command_receipt, run_processing_command)
+from ingestion.views import ProcessingCenterView
+
+
+class ProcessingFileSerializer(serializers.Serializer):
+    filename = serializers.CharField(allow_blank=True)
+    pages = serializers.IntegerField(allow_null=True)
+    bytes = serializers.IntegerField(allow_null=True)
+    is_current = serializers.BooleanField(allow_null=True)
+
+
+class ProcessingOCRProgressSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    status = serializers.CharField()
+    phase = serializers.CharField(allow_blank=True)
+    phase_label = serializers.CharField()
+    completed_pages = serializers.IntegerField(allow_null=True)
+    total_pages = serializers.IntegerField(allow_null=True)
+    percent = serializers.FloatField(allow_null=True)
+    active_pages = serializers.ListField(child=serializers.IntegerField())
+    updated_at = serializers.DateTimeField()
+    started_at = serializers.DateTimeField(allow_null=True)
+    heartbeat_at = serializers.DateTimeField(allow_null=True)
+    phase_elapsed_seconds = serializers.IntegerField()
+    stale = serializers.BooleanField()
+    worker_alive = serializers.BooleanField()
+    service_activity = serializers.CharField()
+    error = serializers.CharField(allow_blank=True)
+    warnings = serializers.ListField(child=serializers.CharField())
+    source_asset_id = serializers.CharField(allow_blank=True)
+    result_asset_id = serializers.CharField(allow_blank=True)
+    public_result = serializers.CharField()
+    workbench_url = serializers.CharField(allow_blank=True)
+    can_pause = serializers.BooleanField()
+    can_resume = serializers.BooleanField()
+    can_cancel = serializers.BooleanField()
+    resume_reason = serializers.CharField(allow_blank=True)
+
+
+class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
+    title = serializers.CharField()
+    title_has_unpublished_changes = serializers.BooleanField()
+    edition_label = serializers.CharField()
+    edition_id = serializers.UUIDField(allow_null=True)
+    work_id = serializers.UUIDField(allow_null=True)
+    asset_id = serializers.UUIDField(allow_null=True)
+    job_type = serializers.CharField()
+    status = serializers.CharField()
+    partial = serializers.BooleanField()
+    progress = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+    started_at = serializers.DateTimeField(allow_null=True)
+    finished_at = serializers.DateTimeField(allow_null=True)
+    heartbeat_at = serializers.DateTimeField(allow_null=True)
+    heartbeat_stale = serializers.BooleanField()
+    pause_requested = serializers.BooleanField()
+    last_error = serializers.CharField(allow_blank=True)
+    error_code = serializers.CharField(allow_blank=True)
+    version = serializers.CharField()
+    actions = serializers.ListField(child=serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel"]))
+    permission_reason = serializers.CharField(allow_blank=True)
+    retry_url = serializers.CharField(allow_blank=True)
+    operation = serializers.CharField(allow_blank=True)
+    cover_url = serializers.CharField(allow_blank=True)
+    engine = serializers.CharField(allow_blank=True)
+    attempt = serializers.IntegerField()
+    max_attempts = serializers.IntegerField()
+    settings_version = serializers.CharField(allow_blank=True)
+    workbench_url = serializers.CharField(allow_blank=True)
+    file = ProcessingFileSerializer()
+    counts = serializers.DictField(child=serializers.IntegerField())
+    ocr_progress = ProcessingOCRProgressSerializer(allow_null=True)
+    result_urls = serializers.DictField(child=serializers.CharField(allow_blank=True))
+
+
+class ProcessingTaskTypeSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    label = serializers.CharField()
+
+
+class ProcessingLogSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    at = serializers.DateTimeField()
+    action = serializers.CharField()
+    status = serializers.CharField(allow_blank=True)
+
+
+class ProcessingWorkspaceSerializer(serializers.Serializer):
+    results = ProcessingWorkspaceTaskSerializer(many=True)
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    pages = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    counts = serializers.DictField(child=serializers.IntegerField())
+    total_counts = serializers.DictField(child=serializers.IntegerField())
+    total = serializers.IntegerField()
+    can_manage = serializers.BooleanField()
+    job_types = ProcessingTaskTypeSerializer(many=True)
+    checked_at = serializers.DateTimeField()
+    logs = ProcessingLogSerializer(many=True)
+
+
+class ProcessingReceiptSerializer(serializers.Serializer):
+    owner_id = serializers.CharField()
+    request_id = serializers.UUIDField()
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
+    job_id = serializers.UUIDField(allow_null=True)
+    source = serializers.CharField(allow_blank=True)
+    action = serializers.CharField(allow_blank=True)
+    next_url = serializers.CharField(allow_blank=True)
+    result = serializers.JSONField()
+
+
+class ProcessingStopSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+
+class ProcessingWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [IsLibraryStaff]
+
+    @extend_schema(parameters=[OpenApiParameter(name, type=str) for name in ("q", "job_type", "status", "edition_id", "work_id", "task_id", "task_source", "date_from", "date_to", "page")], responses=ProcessingWorkspaceSerializer)
+    def get(self, request):
+        if not has_capability(request.user, Capability.VIEW_SYSTEM_STATUS):
+            raise PermissionDenied("当前账户不能查看完整处理队列，请从材料页查看所属版本的处理记录。")
+        params = request.query_params.copy(); params["workspace"] = "1"; params["page_size"] = "20"
+        payload = processing_task_page(params, request.user)
+        logs = []
+        if params.get("task_id") and payload["results"]:
+            for row in AuditEvent.objects.filter(object_id=params["task_id"], object_type__in=["ProcessingJob", "processing_job", "SemanticIndexJob", "semantic_index_job"]).order_by("-created_at", "pk")[:100]:
+                # No raw payloads, prompts, exception traces or reader content.
+                logs.append({"id": str(row.pk), "at": row.created_at, "action": row.action,
+                             "status": (row.after or {}).get("status") or ((row.after or {}).get("result") or {}).get("status") or ""})
+        payload.update(job_types=[{"value": value, "label": label} for value, label in ProcessingJob.JobType.choices], checked_at=timezone.now(), logs=logs)
+        return Response(payload)
+
+    @extend_schema(request=ProcessingCommandSerializer, responses=ProcessingReceiptSerializer)
+    def post(self, request):
+        serializer = ProcessingCommandSerializer(data=request.data); serializer.is_valid(raise_exception=True)
+        return run_processing_command(request, lambda: ProcessingCenterView()._perform_action(request))
+
+
+class ProcessingReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [IsLibraryStaff]
+
+    @extend_schema(responses=ProcessingReceiptSerializer)
+    def get(self, request, request_id):
+        if request.headers.get("X-Editor-Owner") != str(request.user.pk) or not has_capability(request.user, Capability.RETRY_JOBS):
+            raise PermissionDenied("请使用当前任务管理账户查回原操作。")
+        return Response(command_receipt(get_object_or_404(AuditEvent, actor=request.user, action=ACTION, request_id=str(request_id))))
+
+    @extend_schema(request=ProcessingStopSerializer, responses=ProcessingReceiptSerializer)
+    @transaction.atomic
+    def post(self, request, request_id):
+        actor = command_actor(request)
+        if request.headers.get("X-Editor-Owner") != str(actor.pk): raise PermissionDenied("登录账户已变化。")
+        serializer = ProcessingStopSerializer(data=request.data); serializer.is_valid(raise_exception=True)
+        if set(request.data) != {"action"}: raise ValidationError("仅能停止原待定请求。")
+        row = AuditEvent.objects.filter(actor=actor, action=ACTION, request_id=str(request_id)).first()
+        if not row: row = AuditEvent.objects.create(actor=actor, action=ACTION, object_type="processing_command", object_id="", request_id=str(request_id), after={"cancelled": True})
+        return Response(command_receipt(row))

@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 处理工作区
+
+保留314路径，增加processing-workspace和commands，共316。任务/文件/OCR进度/日志/命令/回执具名序列化器与TypeScript契约同步。旧processing-center接口保留原OCR创建与高级控制协议。
+
 ## 2026-10-23 媒体工作区
 
 保留312路径，新增media-workspace读写与commands查回/停止，共314。请求与响应纳入具名序列化器；原图私有文件入口不进入公开契约。原media/cover服务保持兼容，无迁移。

@@ -32,6 +32,8 @@ import { OcrTaskMonitor } from "./ocr-task-monitor";
 import { FunctionalHealthPanel, type FunctionalHealthSurface } from "./functional-health-panel";
 import { WorkflowInspector } from "./admin/inspector/workflow-inspector";
 import { DiscoveryIndexPanel } from "./discovery-index-panel";
+import { useSearchParams } from "next/navigation";
+import { ProcessingWorkspace } from "./admin/processing-workspace";
 
 type Attempt = {
   id: string;
@@ -320,6 +322,11 @@ function TaskPagination({ page, pages, count, busy, onChange, label }: { page: n
 }
 
 export function ProcessingCenter() {
+  const params = useSearchParams(), surface = params.get("surface");
+  return surface && !["documents", "overview"].includes(surface) ? <LegacyProcessingCenter/> : <ProcessingWorkspace/>;
+}
+
+function LegacyProcessingCenter() {
   const user = useAdminSession();
   const canRemoveRecords = hasAdminCapability(user, "can_edit_metadata");
   const [items, setItems] = useState<ProcessingItem[]>([]);

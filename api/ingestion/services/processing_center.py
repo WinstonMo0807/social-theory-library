@@ -7,6 +7,7 @@ from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast, Replace
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+from django.utils.dateparse import parse_date
 
 from catalog.models import KnowledgePublicationEvent, RecommendationIssue, SemanticIndexJob
 from common.capabilities import Capability, has_capability
@@ -44,6 +45,14 @@ def processing_task_page(params, actor):
         raise ValidationError({"job_type": "请选择有效的任务类型。"})
     jobs = ProcessingJob.objects.all()
     semantic = SemanticIndexJob.objects.all()
+    for key, lookup in (("date_from", "created_at__date__gte"), ("date_to", "created_at__date__lte")):
+        if params.get(key):
+            try:
+                value = parse_date(str(params[key]))
+            except ValueError:
+                value = None
+            if value is None: raise ValidationError({key: "日期须为 YYYY-MM-DD。"})
+            jobs, semantic = jobs.filter(**{lookup: value}), semantic.filter(**{lookup: value})
     # A dashboard link identifies one record across the two existing stores.
     # Invalid identity never falls back to an unrelated first page.
     task_id = str(params.get("task_id") or "").strip()
@@ -152,6 +161,9 @@ def processing_task_page(params, actor):
             }
             if ordinary and job.job_type == "ocr":
                 row["ocr_progress"] = progress_row(job, actor=actor, event=events.get(str((job.stats or {}).get("knowledge_publication_event_id") or "")), edition=processing_edition(job), legacy_controls=True)
+            if params.get("workspace") == "1":
+                from .processing_workspace import workspace_task
+                row = workspace_task(job, row, actor)
             rows[(source, str(job.pk))] = row
     return {
         "results": [rows[(row["source"], str(row["id"]))] for row in refs if (row["source"], str(row["id"])) in rows],

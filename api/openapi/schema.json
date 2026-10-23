@@ -13379,6 +13379,248 @@
                 }
             }
         },
+        "/api/ingestion/processing-workspace/": {
+            "get": {
+                "operationId": "ingestion_processing_workspace_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "date_from",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "date_to",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "job_type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "task_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "task_source",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessingWorkspace"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "ingestion_processing_workspace_create",
+                "tags": [
+                    "ingestion"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProcessingCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProcessingCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProcessingCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessingReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/ingestion/processing-workspace/commands/{request_id}/": {
+            "get": {
+                "operationId": "ingestion_processing_workspace_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessingReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "ingestion_processing_workspace_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProcessingStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProcessingStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProcessingStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessingReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/ingestion/upload-workspace/": {
             "get": {
                 "operationId": "ingestion_upload_workspace_retrieve",
@@ -39113,7 +39355,7 @@
                         "default": false
                     },
                     "source": {
-                        "$ref": "#/components/schemas/SourceEnum"
+                        "$ref": "#/components/schemas/MappingPageSourceEnum"
                     },
                     "confidence": {
                         "type": "number",
@@ -39161,7 +39403,7 @@
                         "default": false
                     },
                     "source": {
-                        "$ref": "#/components/schemas/SourceEnum"
+                        "$ref": "#/components/schemas/MappingPageSourceEnum"
                     },
                     "confidence": {
                         "type": "number",
@@ -39175,6 +39417,19 @@
                     "page_type",
                     "pdf_page"
                 ]
+            },
+            "MappingPageSourceEnum": {
+                "enum": [
+                    "manual",
+                    "pdf_page_labels",
+                    "embedded_text",
+                    "ocr",
+                    "sequence",
+                    "file_index",
+                    "unknown"
+                ],
+                "type": "string",
+                "description": "* `manual` - manual\n* `pdf_page_labels` - pdf_page_labels\n* `embedded_text` - embedded_text\n* `ocr` - ocr\n* `sequence` - sequence\n* `file_index` - file_index\n* `unknown` - unknown"
             },
             "MappingPrecedingRevision": {
                 "type": "object",
@@ -48716,6 +48971,541 @@
                     "updated_at"
                 ]
             },
+            "ProcessingCommandActionEnum": {
+                "enum": [
+                    "pause",
+                    "resume",
+                    "retry",
+                    "cancel"
+                ],
+                "type": "string",
+                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel"
+            },
+            "ProcessingCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/ProcessingTaskSourceEnum"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/ProcessingCommandActionEnum"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "job_id",
+                    "request_id",
+                    "source"
+                ]
+            },
+            "ProcessingFile": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string"
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "bytes": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "is_current": {
+                        "type": "boolean",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "bytes",
+                    "filename",
+                    "is_current",
+                    "pages"
+                ]
+            },
+            "ProcessingLog": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "action",
+                    "at",
+                    "id",
+                    "status"
+                ]
+            },
+            "ProcessingOCRProgress": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "phase": {
+                        "type": "string"
+                    },
+                    "phase_label": {
+                        "type": "string"
+                    },
+                    "completed_pages": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "percent": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "active_pages": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "heartbeat_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "phase_elapsed_seconds": {
+                        "type": "integer"
+                    },
+                    "stale": {
+                        "type": "boolean"
+                    },
+                    "worker_alive": {
+                        "type": "boolean"
+                    },
+                    "service_activity": {
+                        "type": "string"
+                    },
+                    "error": {
+                        "type": "string"
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "source_asset_id": {
+                        "type": "string"
+                    },
+                    "result_asset_id": {
+                        "type": "string"
+                    },
+                    "public_result": {
+                        "type": "string"
+                    },
+                    "workbench_url": {
+                        "type": "string"
+                    },
+                    "can_pause": {
+                        "type": "boolean"
+                    },
+                    "can_resume": {
+                        "type": "boolean"
+                    },
+                    "can_cancel": {
+                        "type": "boolean"
+                    },
+                    "resume_reason": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "active_pages",
+                    "can_cancel",
+                    "can_pause",
+                    "can_resume",
+                    "completed_pages",
+                    "error",
+                    "heartbeat_at",
+                    "id",
+                    "percent",
+                    "phase",
+                    "phase_elapsed_seconds",
+                    "phase_label",
+                    "public_result",
+                    "result_asset_id",
+                    "resume_reason",
+                    "service_activity",
+                    "source_asset_id",
+                    "stale",
+                    "started_at",
+                    "status",
+                    "total_pages",
+                    "updated_at",
+                    "warnings",
+                    "workbench_url",
+                    "worker_alive"
+                ]
+            },
+            "ProcessingReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "result": {}
+                },
+                "required": [
+                    "action",
+                    "job_id",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "result",
+                    "source",
+                    "state"
+                ]
+            },
+            "ProcessingStopRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "ProcessingTaskSourceEnum": {
+                "enum": [
+                    "processing_job",
+                    "semantic_index_job"
+                ],
+                "type": "string",
+                "description": "* `processing_job` - processing_job\n* `semantic_index_job` - semantic_index_job"
+            },
+            "ProcessingTaskType": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "label",
+                    "value"
+                ]
+            },
+            "ProcessingWorkspace": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingWorkspaceTask"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "total_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "total": {
+                        "type": "integer"
+                    },
+                    "can_manage": {
+                        "type": "boolean"
+                    },
+                    "job_types": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingTaskType"
+                        }
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "logs": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingLog"
+                        }
+                    }
+                },
+                "required": [
+                    "can_manage",
+                    "checked_at",
+                    "count",
+                    "counts",
+                    "job_types",
+                    "logs",
+                    "page",
+                    "page_size",
+                    "pages",
+                    "results",
+                    "total",
+                    "total_counts"
+                ]
+            },
+            "ProcessingWorkspaceTask": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/ProcessingTaskSourceEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "title_has_unpublished_changes": {
+                        "type": "boolean"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "job_type": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "partial": {
+                        "type": "boolean"
+                    },
+                    "progress": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "heartbeat_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "heartbeat_stale": {
+                        "type": "boolean"
+                    },
+                    "pause_requested": {
+                        "type": "boolean"
+                    },
+                    "last_error": {
+                        "type": "string"
+                    },
+                    "error_code": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "actions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingCommandActionEnum"
+                        }
+                    },
+                    "permission_reason": {
+                        "type": "string"
+                    },
+                    "retry_url": {
+                        "type": "string"
+                    },
+                    "operation": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "engine": {
+                        "type": "string"
+                    },
+                    "attempt": {
+                        "type": "integer"
+                    },
+                    "max_attempts": {
+                        "type": "integer"
+                    },
+                    "settings_version": {
+                        "type": "string"
+                    },
+                    "workbench_url": {
+                        "type": "string"
+                    },
+                    "file": {
+                        "$ref": "#/components/schemas/ProcessingFile"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "ocr_progress": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProcessingOCRProgress"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "result_urls": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "actions",
+                    "asset_id",
+                    "attempt",
+                    "counts",
+                    "cover_url",
+                    "created_at",
+                    "edition_id",
+                    "edition_label",
+                    "engine",
+                    "error_code",
+                    "file",
+                    "finished_at",
+                    "heartbeat_at",
+                    "heartbeat_stale",
+                    "id",
+                    "job_type",
+                    "last_error",
+                    "max_attempts",
+                    "ocr_progress",
+                    "operation",
+                    "partial",
+                    "pause_requested",
+                    "permission_reason",
+                    "progress",
+                    "result_urls",
+                    "retry_url",
+                    "settings_version",
+                    "source",
+                    "started_at",
+                    "status",
+                    "title",
+                    "title_has_unpublished_changes",
+                    "version",
+                    "work_id",
+                    "workbench_url"
+                ]
+            },
             "ProfileStateEnum": {
                 "enum": [
                     "available",
@@ -57470,19 +58260,6 @@
                     "deleted",
                     "request_id"
                 ]
-            },
-            "SourceEnum": {
-                "enum": [
-                    "manual",
-                    "pdf_page_labels",
-                    "embedded_text",
-                    "ocr",
-                    "sequence",
-                    "file_index",
-                    "unknown"
-                ],
-                "type": "string",
-                "description": "* `manual` - manual\n* `pdf_page_labels` - pdf_page_labels\n* `embedded_text` - embedded_text\n* `ocr` - ocr\n* `sequence` - sequence\n* `file_index` - file_index\n* `unknown` - unknown"
             },
             "SourceEventOutput": {
                 "type": "object",

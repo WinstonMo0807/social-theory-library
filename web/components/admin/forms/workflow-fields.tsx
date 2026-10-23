@@ -3,6 +3,7 @@
 import { Check, ChevronsUpDown, Lock, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { Input, Select, Textarea } from "@/components/ui/controls";
 
 export type SelectOption = { value: string; label: string };
@@ -159,6 +160,7 @@ export function RepeatableField<T>({
 }
 
 export function EntityPicker({
+  owner,
   label,
   endpoint,
   values,
@@ -169,6 +171,7 @@ export function EntityPicker({
   placeholder = "搜索已有条目",
   allowUnresolved = false,
 }: {
+  owner?: string;
   label: string;
   endpoint: string;
   values: EntityValue[];
@@ -201,11 +204,13 @@ export function EntityPicker({
     const token = getServerSessionCredential();
     if (!token) return;
     let active = true;
+    const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError("");
       const suffix = query.trim() && queryParam ? `${endpoint.includes("?") ? "&" : "?"}${encodeURIComponent(queryParam)}=${encodeURIComponent(query.trim())}` : "";
-      void apiRequest<{ results?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>>(`${endpoint}${suffix}`, {}, token)
+      const load = () => apiRequest<{ results?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>>(`${endpoint}${suffix}`, { signal: controller.signal, ...(owner ? { headers: { "X-Editor-Owner": owner } } : {}) }, token, !owner);
+      void (owner ? withPrivateOwner(owner, load, controller.signal) : load())
         .then((payload) => {
           if (!active) return;
           const rows = Array.isArray(payload) ? payload : payload.results ?? [];
@@ -220,8 +225,8 @@ export function EntityPicker({
         .catch((reason) => { if (active) { setOptions([]); setError(reason instanceof Error ? reason.message : "馆内条目暂时无法读取，请重试。"); } })
         .finally(() => { if (active) setLoading(false); });
     }, 180);
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [endpoint, idField, nameField, open, query, queryParam, retry]);
+    return () => { active = false; controller.abort(); window.clearTimeout(timer); };
+  }, [owner, endpoint, idField, nameField, open, query, queryParam, retry]);
 
   const unresolvedOption = allowUnresolved && query.trim()
     ? { id: null, name: query.trim(), status: "unresolved" } satisfies EntityValue

@@ -16,14 +16,14 @@ export async function ownedImage(owner:string,path:string,signal:AbortSignal){
 }
 
 export function PrivateMediaImage({owner,path,alt}:{owner:string;path:string;alt:string}){
-  const [result,setResult]=useState<{key:string;src:string;error:string}|null>(null),[attempt,setAttempt]=useState(0);
-  const key=`${owner}:${path}:${attempt}`;
+  const [result,setResult]=useState<{key:string;src:string;error:string}|null>(null);
+  const key=`${owner}:${path}`;
   useEffect(()=>{if(!path)return;const abort=new AbortController();let src="";
     void ownedImage(owner,path,AbortSignal.any([abort.signal,AbortSignal.timeout(30000)])).then(blob=>{src=URL.createObjectURL(blob);if(!abort.signal.aborted)setResult({key,src,error:""});else URL.revokeObjectURL(src);}).catch(reason=>{if(!abort.signal.aborted)setResult({key,src:"",error:reason instanceof Error?reason.message:"图片读取失败。"});});
     return()=>{abort.abort();if(src)URL.revokeObjectURL(src);};
   },[owner,path,key]);
   const current=result?.key===key?result:null;
-  return !path?<span className={styles.empty}>尚无图片</span>:current?.error?<span role="alert">{current.error}<button type="button" onClick={()=>setAttempt(value=>value+1)}>重新加载</button></span>:current?.src?<img src={current.src} alt={alt} loading="lazy"/>:<span role="status">正在读取图片…</span>;
+  return !path?<span className={styles.empty}>尚无图片</span>:current?.error?<span role="status" title={current.error}>图片暂不可用</span>:current?.src?<img src={current.src} alt={alt} loading="lazy"/>:<span role="status">正在读取图片…</span>;
 }
 
 export function MediaCrop({owner,mediaId,value,onChange,onReady,disabled}:{owner:string;mediaId:string;value:MediaTransform;onChange:(value:MediaTransform)=>void;onReady:(ready:boolean)=>void;disabled:boolean}){

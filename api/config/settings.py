@@ -186,6 +186,8 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "ProcessingCommandActionEnum": ["pause", "resume", "retry", "cancel"],
+        "ProcessingTaskSourceEnum": ["processing_job", "semantic_index_job"],
         "CatalogIdentityModeEnum": ["use_edition", "new_version", "new_work"],
         "PlacementSourceKindEnum": ["work", "edition", "node", "span", "scholar", "issue"],
         "PathDependencyKindEnum": ["learning_order", "theory_related"],

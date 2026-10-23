@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { useAdminSession } from "@/lib/admin-session";
+import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
+import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { createRequestKey } from "@/lib/request-key";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EntityPicker, type EntityValue } from "../forms/workflow-fields";
@@ -51,77 +54,95 @@ export function OcrProgressDisplay({ job, compact = false }: { job: OcrProgress;
 
 /** Both entry points read the same persisted job; no health probes or external calls on polling. */
 export function EditionOcrControl({ editionId, workId = "" }: { editionId: string; workId?: string }) {
-  return <EditionOcrControlState key={`${workId}:${editionId}`} editionId={editionId} workId={workId} />;
+  const user = useAdminSession();
+  const [epoch, setEpoch] = useState(0);
+  useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
+  return user ? <EditionOcrControlState key={`${user.id}:${epoch}:${workId}:${editionId}`} owner={String(user.id)} editionId={editionId} workId={workId} /> : null;
 }
 
-function EditionOcrControlState({ editionId, workId }: { editionId: string; workId: string }) {
-  const [data, setData] = useState<OcrContext | null>(null);
+function EditionOcrControlState({ editionId, workId, owner }: { editionId: string; workId: string; owner: string }) {
   const [fileId, setFileId] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const [refresh, setRefresh] = useState(0);
   const [historyPage, setHistoryPage] = useState(1);
+  const [unresolved, setUnresolved] = useState(false);
+  const [ready, setReady] = useState(false);
   const inFlight = useRef(false);
+  const mounted = useRef(true);
+  const mutation = useRef<AbortController | null>(null);
   const request = useRef<{ file: string; version: string; id: string } | null>(null);
-  const token = getServerSessionCredential();
+  const storageKey = `stl-catalog-ocr:${owner}:${editionId}`;
+  const load = useCallback((url: string, signal: AbortSignal) => apiRequest<OcrContext>(url, { signal, cache: "no-store", headers: { "X-Editor-Owner": owner } }, getServerSessionCredential(), false), [owner]);
+  const resource = usePersistentWorkspace<OcrContext>(`${endpoint}?ocr_edition_id=${encodeURIComponent(editionId)}&work_id=${encodeURIComponent(workId)}&ocr_page=${historyPage}`, owner, data => data.active_job_id ? 2000 : null, load);
+  const data = resource.data;
   useEffect(() => {
-    let disposed = false;
-    let timer: ReturnType<typeof setTimeout>;
-    let controller: AbortController | null = null;
-    async function poll() {
-      controller = new AbortController();
-      const timeout = setTimeout(() => controller?.abort(), 12_000);
-      try {
-        const result = await apiRequest<OcrContext>(`${endpoint}?ocr_edition_id=${encodeURIComponent(editionId)}&work_id=${encodeURIComponent(workId)}&ocr_page=${historyPage}`, { signal: controller.signal }, token);
-        if (!disposed) { setData(result); setError(""); }
-      } catch (reason) {
-        if (!disposed) setError(`${reason instanceof Error ? reason.message : "进度读取失败"}。最后一次结果保留，正在自动重试；请勿反复提交识别。`);
-      } finally {
-        clearTimeout(timeout);
-        if (!disposed) timer = setTimeout(poll, document.hidden ? 10_000 : 2_000);
+    mounted.current = true;
+    let active = true;
+    queueMicrotask(() => {
+    if (!active) return;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+      if (saved && [saved.file, saved.version, saved.id].every(value => typeof value === "string" && value)) {
+        request.current = saved; setFileId(saved.file); setUnresolved(true);
       }
+      setReady(true);
+    } catch {
+      setError("无法读取本次识别的恢复记录。请恢复浏览器会话存储后重新打开，避免重复提交。");
     }
-    if (editionId) void poll();
-    return () => { disposed = true; clearTimeout(timer); controller?.abort(); };
-  }, [editionId, workId, historyPage, refresh, token]);
+    });
+    return () => { active = false; mounted.current = false; mutation.current?.abort(); };
+  }, [storageKey]);
   const current = data?.edition_id === editionId && data.page === historyPage ? data : null;
   const file = current?.files.find((row) => row.id === fileId);
   const jobs = current?.jobs ?? [];
   const active = current?.active_job_id || jobs.find((job) => ["pending", "running", "paused"].includes(job.status))?.id;
   async function action(actionName: string, job?: OcrProgress) {
-    if (inFlight.current || !current || (!job && !file)) return;
+    if (!ready || inFlight.current || !current || (!job && !file && !request.current)) return;
     if (actionName === "cancel_catalog_ocr" && !window.confirm(`取消《${current.title}》这次文字识别？原 PDF、已保存文字和读者记录都会保留。`)) return;
     inFlight.current = true; setPending(true); setError("");
     const controller = new AbortController();
+    mutation.current = controller;
     const timeout = setTimeout(() => controller.abort(), 15_000);
     try {
-      if (!job && (!request.current || request.current.file !== file!.id)) request.current = { file: file!.id, version: file!.source_version, id: createRequestKey() };
-      const receipt = await apiRequest<{ job: OcrProgress; replayed?: boolean }>(endpoint, { method: "POST", signal: controller.signal, body: JSON.stringify(job ? {
+      if (!job && !request.current) {
+        const intent = { file: file!.id, version: file!.source_version, id: createRequestKey() };
+        sessionStorage.setItem(storageKey, JSON.stringify(intent));
+        request.current = intent;
+      }
+      const receipt = await withPrivateOwner(owner, () => apiRequest<{ job: OcrProgress; replayed?: boolean }>(endpoint, { method: "POST", signal: controller.signal, headers: { "X-Editor-Owner": owner }, body: JSON.stringify(job ? {
         action: actionName, edition_id: editionId, job_id: job.id,
       } : {
         action: "start_ocr", edition_id: editionId, asset_id: request.current!.file,
         source_version: request.current!.version, request_id: request.current!.id, confirmed: true,
-      }) }, token);
+      }) }, getServerSessionCredential(), false), controller.signal);
+      if (!mounted.current) return;
       setMessage(receipt.replayed ? "已找回之前提交的任务，没有重复识别。" : job ? "任务操作已保存，请查看下方实际状态。" : "识别任务已建立，可以离开本页；重新打开仍可查看进度。不是已经识别完成。");
       setHistoryPage(1);
-      setData((value) => value?.edition_id === editionId ? { ...value, active_job_id: ["pending", "running", "paused"].includes(receipt.job.status) ? receipt.job.id : "", jobs: [receipt.job, ...value.jobs.filter((row) => row.id !== receipt.job.id)], job_count: Math.max(1, value.job_count) } : value);
-      request.current = null; setConfirm(false);
+      if (!job) { sessionStorage.removeItem(storageKey); request.current = null; setUnresolved(false); }
+      resource.reload(); setConfirm(false);
     } catch (reason) {
+      if (!mounted.current) return;
+      if (!job && request.current) {
+        const rejected = reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400, 403, 404, 409, 422].includes(reason.status);
+        if (rejected) { sessionStorage.removeItem(storageKey); request.current = null; }
+        setUnresolved(!rejected);
+      }
       setConfirm(false);
       setError(controller.signal.aborted ? "提交响应超时，任务可能已经建立。请先查看任务；再次确认提交会使用同一次请求，不会重复识别。" : reason instanceof Error ? reason.message : "操作失败，请重试同一次请求。");
-    } finally { clearTimeout(timeout); inFlight.current = false; setPending(false); }
+    } finally { clearTimeout(timeout); inFlight.current = false; if (mounted.current) setPending(false); }
   }
   return <section className="catalog-ocr-control" aria-label="馆藏 PDF 文字识别">
     <h3>重新识别 PDF 文字</h3>
     <p>对当前出版版本的 PDF 重新进行全文 OCR。书目信息和人工确认内容不变，原文件、旧页标识及读者笔记保留。</p>
-    {!current && !error ? <p role="status">正在读取这个版本的文件和任务…</p> : null}
-    {error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setRefresh((n) => n + 1)}>重新读取进度</button></div> : null}
+    {!current && !error && !resource.error ? <p role="status">正在读取这个版本的文件和任务…</p> : null}
+    {error || resource.error ? <div role="alert"><p>{error || resource.error}</p><button type="button" onClick={resource.reload}>重新读取进度</button></div> : null}
+    {unresolved ? <p role="status">上次识别请求尚未确认，请沿原编号重新取得结果；这可能执行尚未送达的原请求。<button type="button" disabled={!current || pending || !ready} onClick={() => void action("start_ocr")}>重新确认原请求</button></p> : null}
     {current ? <>
       <p><strong>{current.title}</strong> · {current.edition_label}</p>
       {current.title_has_unpublished_changes ? <p>这里显示已保存的新馆藏名称，尚未发布；仍对应原来的作品、出版版本和文件。</p> : null}
-      <label><span>需要识别的 PDF</span><select value={fileId} disabled={pending} onChange={(event) => { setFileId(event.target.value); request.current = null; setMessage(""); }}>
+      <label><span>需要识别的 PDF</span><select value={fileId} disabled={pending || unresolved} onChange={(event) => { setFileId(event.target.value); request.current = null; setMessage(""); }}>
         <option value="">请选择文件</option>
         {current.files.map((row) => <option key={row.id} value={row.id} disabled={!row.can_run}>{row.filename} · 文件版本 {row.version} · {row.page_count} 页{row.reason ? ` · ${row.reason}` : ""}</option>)}
       </select></label>
@@ -129,10 +150,10 @@ function EditionOcrControlState({ editionId, workId }: { editionId: string; work
       {!current.files.length ? <p>这个版本还没有可识别的阅读 PDF，请先补充文件并完成校验。</p> : null}
       {!current.can_run ? <p>{current.denied_reason}</p> : null}
       {current.paused ? <p>OCR 已全局暂停，新任务会保存为暂停状态；不会擅自恢复其他任务。</p> : null}
-      <button type="button" className="button secondary" disabled={!file?.can_run || !current.can_run || pending || Boolean(active)} onClick={() => setConfirm(true)}>重新识别整份 PDF</button>
+      <button type="button" className="button secondary" disabled={!ready || unresolved || !file?.can_run || !current.can_run || pending || Boolean(active)} onClick={() => setConfirm(true)}>重新识别整份 PDF</button>
       {active ? <p>本版本已有未结束任务，请先完成、继续或取消该任务，避免重复识别。{historyPage > 1 ? <button type="button" onClick={() => setHistoryPage(1)}>返回最近任务</button> : null}</p> : null}
       {message ? <p role="status">{message}</p> : null}
-      <p>每 2 秒查询一次实际结果。最近读取：<time dateTime={current.checked_at}>{new Date(current.checked_at).toLocaleTimeString("zh-CN")}</time>；这不是 OCR 完成时间。</p>
+      <p>有未结束任务时自动读取进度，离开页面或长时间等待后暂停刷新。最近读取：<time dateTime={current.checked_at}>{new Date(current.checked_at).toLocaleTimeString("zh-CN")}</time>；这不是 OCR 完成时间。</p>
       {jobs.length ? <div className="catalog-ocr-jobs">{jobs.map((job, index) => <details key={job.id} open={index === 0}>
         <summary>{index === 0 ? "最近一次识别" : "历史识别"} · {job.phase_label}</summary>
         <OcrProgressDisplay job={job} />
@@ -150,6 +171,13 @@ function EditionOcrControlState({ editionId, workId }: { editionId: string; work
 }
 
 export function CatalogOcrPicker() {
+  const user = useAdminSession();
+  const [epoch, setEpoch] = useState(0);
+  useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
+  return user ? <CatalogOcrPickerState key={`${user.id}:${epoch}`} owner={String(user.id)} /> : null;
+}
+
+function CatalogOcrPickerState({ owner }: { owner: string }) {
   const parameters = useSearchParams();
   const initialWork = parameters.get("work") || "";
   const [works, setWorks] = useState<EntityValue[]>(initialWork ? [{ id: initialWork, name: "已选馆藏" }] : []);
@@ -161,12 +189,12 @@ export function CatalogOcrPicker() {
   const work = works.at(-1)?.id ?? "";
   useEffect(() => {
     const controller = new AbortController();
-    if (work) void apiRequest<CollectionPage<WorkLibraryRow>>(`/catalog/admin/library/works/?view=editions&work_id=${encodeURIComponent(work)}&page=${page}`, { signal: controller.signal }, getServerSessionCredential()).then((result) => { if (!controller.signal.aborted) setData(result); }).catch((reason) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "版本读取失败"); });
+    if (work) void withPrivateOwner(owner, () => apiRequest<CollectionPage<WorkLibraryRow>>(`/catalog/admin/library/works/?view=editions&work_id=${encodeURIComponent(work)}&page=${page}`, { signal: controller.signal, headers: { "X-Editor-Owner": owner } }, getServerSessionCredential(), false), controller.signal).then((result) => { if (!controller.signal.aborted) { setData(result); setError(""); } }).catch((reason) => { if (!controller.signal.aborted) { setData(null); setError(reason instanceof Error ? reason.message : "版本读取失败"); } });
     return () => controller.abort();
-  }, [work, page, refresh]);
+  }, [owner, work, page, refresh]);
   return <section className="catalog-ocr-picker admin-panel" aria-label="按馆藏 PDF 识别文字">
     <h2>选择馆藏 PDF 进行文字识别</h2><p>已发布和未发布馆藏都可选择。无需寻找上传编号，选择作品和出版版本即可。</p>
-    <EntityPicker label="需要识别的馆藏" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={works} onChange={(values) => { setWorks(values.slice(-1)); setEdition(""); setPage(1); setData(null); setError(""); }} />
+    <EntityPicker owner={owner} label="需要识别的馆藏" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={works} onChange={(values) => { setWorks(values.slice(-1)); setEdition(""); setPage(1); setData(null); setError(""); }} />
     {error ? <p role="alert">{error}<button type="button" onClick={() => setRefresh((n) => n + 1)}>重试版本查询</button></p> : null}
     {work ? <><label><span>需要识别的出版版本</span><select value={edition} onChange={(event) => setEdition(event.target.value)} disabled={!data}>
       <option value="">请选择出版版本</option>

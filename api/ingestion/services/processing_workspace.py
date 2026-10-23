@@ -1,0 +1,32 @@
+"""Presentation facts only; processing remains in its existing task services."""
+from django.utils import timezone
+from .processing_commands import task_actions, task_version
+from .processing_identity import processing_edition
+
+
+def workspace_task(job, row, actor):
+    row = dict(row)
+    stats = row.pop("stats", {}) or {}
+    edition = processing_edition(job)
+    asset = job.asset if job.asset_id else None
+    heartbeat = getattr(job, "heartbeat_at", None)
+    actions = task_actions(job, actor)
+    ocr = row.get("ocr_progress")
+    if ocr:
+        if not ocr["can_resume"]: actions = [action for action in actions if action not in {"resume", "retry"}]
+        if not ocr["can_cancel"] and row["status"] == "failed": actions = [action for action in actions if action != "cancel"]
+    cover_id = edition.work.cover_rendition_id if edition else None
+    counts = {key: value for key in ("target_pages", "processed_pages", "completed_pages", "total_pages", "failed_pages", "indexed_chunks", "failed_chunks", "completed_chunks", "total_chunks") if isinstance(value := stats.get(key), int) and not isinstance(value, bool) and value >= 0}
+    return {**row, "version": task_version(job), "actions": actions, "pause_requested": bool(job.pause_requested_at),
+            "retry_url": f"/admin/processing?task_id={stats['retry_replacement_id']}&task_source={row['source']}" if stats.get("retry_replacement_id") else "",
+            "partial": job.status == "partial" or bool(stats.get("partial")), "heartbeat_at": heartbeat,
+            "heartbeat_stale": bool(heartbeat and job.status == "running" and (timezone.now() - heartbeat).total_seconds() > 90),
+            "operation": "outline_rebuild" if stats.get("operation") == "outline_rebuild" else "",
+            "file": {"filename": row.get("source_filename", ""), "pages": asset.page_count if asset else None,
+                     "bytes": asset.byte_size if asset else None, "is_current": asset.is_current if asset else None},
+            "cover_url": f"/api/catalog/admin/media/renditions/{cover_id}/file/" if cover_id else "",
+            "counts": counts, "permission_reason": "" if actions else ocr.get("resume_reason", "") if ocr else "当前状态没有可执行操作，请查看原处理入口。",
+            "result_urls": {"ocr": f"/admin/library/assets/{asset.pk}/ocr" if asset else "",
+                            "outline": f"/admin/library/assets/{asset.pk}/outline" if asset else "",
+                            "files": f"/admin/library/works/{edition.work_id}/files?edition={edition.pk}" if edition else "",
+                            "index": "/admin/processing/semantic-index" if row["job_type"] in {"discovery_index", "semantic_index"} else ""}}
