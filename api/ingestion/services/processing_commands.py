@@ -21,10 +21,13 @@ class ProcessingCommandSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     job_id = serializers.UUIDField()
     source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
-    action = serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup"])
+    action = serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup", "transfer"])
     expected_version = serializers.CharField(max_length=64)
     page_indexes = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1, max_length=20000, required=False)
     align_concepts = serializers.BooleanField(required=False)
+    target = serializers.ChoiceField(choices=["nas", "remote"], required=False)
+    target_version = serializers.CharField(min_length=64, max_length=64, required=False)
+    acknowledge_remote = serializers.BooleanField(required=False)
 
     def validate(self, value):
         if set(self.initial_data) - set(self.fields):
@@ -33,6 +36,12 @@ class ProcessingCommandSerializer(serializers.Serializer):
             raise serializers.ValidationError("仅原 OCR 任务的失败重试可以指定页序。")
         if (value["action"] == "configure_followup") != ("align_concepts" in value):
             raise serializers.ValidationError("调整后续操作时必须明确是否进行概念对齐，此设置不能附带在其他操作中。")
+        transfer_fields = {"target", "target_version", "acknowledge_remote"}
+        if value["action"] == "transfer":
+            if not transfer_fields.issubset(value) or value["source"] != "processing_job":
+                raise serializers.ValidationError("转移任务必须明确目标服务、配置版本和远程发送确认。")
+        elif transfer_fields.intersection(value):
+            raise serializers.ValidationError("其他任务操作不能附带服务转移参数。")
         return value
 
 
@@ -40,7 +49,7 @@ def task_version(job):
     # Heartbeats/progress do not invalidate a command for the same worker delivery.
     values = [str(job.pk), job.task_id, job.status, getattr(job, "attempt", getattr(job, "attempts", 0)),
               str(job.pause_requested_at), str(job.asset_id), str(getattr(job, "edition_id", "")),
-              (job.stats or {}).get("retry_replacement_id", ""), (job.stats or {}).get("after_processing"), (job.stats or {}).get("concept_retry_job_id"),
+              (job.stats or {}).get("retry_replacement_id", ""), (job.stats or {}).get("after_processing"), (job.stats or {}).get("ocr_service_binding"), (job.stats or {}).get("concept_retry_job_id"),
               ((job.stats or {}).get("concept_alignment") or {}).get("state")]
     return sha256(json.dumps(values).encode()).hexdigest()
 
@@ -63,6 +72,9 @@ def task_actions(job, actor):
     actions = []
     if kind == "ocr" and has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
         from .processing_followup import followup_state
+        from .ocr_transfer import can_transfer
+        if has_capability(actor, Capability.MANAGE_AI) and can_transfer(job):
+            actions.append("transfer")
         if state == "succeeded" and followup_state(job)["state"] == "failed" and not job.stats.get("concept_retry_job_id"):
             actions.append("retry_followup")
         if followup_state(job)["can_configure"]:
@@ -113,14 +125,14 @@ def command_receipt(row):
 def run_processing_command(request, handler):
     actor = command_actor(request)
     request.user = actor
-    if (request.data.get("action") in {"recover", "configure_followup", "retry_followup"} or request.data.get("action") == "retry" and "page_indexes" in request.data) and not has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
+    if (request.data.get("action") in {"recover", "configure_followup", "retry_followup", "transfer"} or request.data.get("action") == "retry" and "page_indexes" in request.data) and not has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
         raise PermissionDenied("当前账户不能调整处理队列中的任务。")
-    if request.data.get("action") in {"recover", "configure_followup", "retry_followup"} and not request.data.get("request_id"):
+    if request.data.get("action") in {"recover", "configure_followup", "retry_followup", "transfer"} and not request.data.get("request_id"):
         raise ValidationError("此操作必须使用当前页面的固定请求编号。")
     if request.data.get("action") == "retry" and "page_indexes" in request.data and not request.data.get("request_id"):
         raise ValidationError("选择失败页重试必须使用固定请求编号。")
     # OCR creation already owns its request_id contract and receipt shape.
-    identifier = request.data.get("request_id") if request.data.get("action") in {"pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup"} else None
+    identifier = request.data.get("request_id") if request.data.get("action") in {"pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup", "transfer"} else None
     data, signature, job = None, "", None
     if identifier:
         if request.headers.get("X-Editor-Owner") != str(actor.pk): raise PermissionDenied("请从当前账户的任务页面提交操作。")
@@ -144,7 +156,14 @@ def run_processing_command(request, handler):
         require_issue_access(job.stats.get("issue_id"), actor)
     if data is not None and "page_indexes" in data and (not isinstance(job, ProcessingJob) or job.job_type != "ocr"):
         raise ValidationError("只有原 OCR 任务的失败重试可以选择页序。")
-    if data is not None and data["action"] == "retry_followup":
+    if data is not None and data["action"] == "transfer":
+        from .ocr_transfer import transfer_ocr_job
+        try:
+            response = Response(transfer_ocr_job(job, actor=actor, target=data["target"],
+                version=data["target_version"], acknowledge_remote=data["acknowledge_remote"]), status=202)
+        except ValueError as exc:
+            raise EditConflict(str(exc)) from exc
+    elif data is not None and data["action"] == "retry_followup":
         from .concept_retry import queue_concept_retry
         try:
             child = queue_concept_retry(job, actor)

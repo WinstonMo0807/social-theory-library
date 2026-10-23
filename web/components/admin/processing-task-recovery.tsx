@@ -36,7 +36,7 @@ export function ProcessingTaskRecovery({ job, disabled, onRecover, onRefresh }: 
       <p className={styles.recoveryTitle}>{job.title}</p>
       <p>恢复前会再次核对任务活动、原材料与操作权限。已保存的页、片段和任务记录保留。</p>
       <p>{job.pause_requested ? "本任务已经请求暂停，恢复时优先保存为暂停状态。" : job.status === "pending" ? "排队任务将沿原执行编号重新通知处理队列。" : "仍符合恢复条件时，将从已保存的检查点重新派发；原执行轮次不能再提交结果。"}</p>
-      <p className={styles.note}>由原处理队列分配可用服务，当前不能指定另一台设备。提交后请依据最新进度确认实际状态。</p>
+      <p className={styles.note}>本操作保留当前服务选择。需要更换 OCR 服务时，请使用任务中的“迁移到其他节点”。提交后请依据最新进度确认实际状态。</p>
       <div className={styles.actions}><button type="button" onClick={() => { setConfirm(false); onRefresh(); }}>继续等待</button><button type="button" className={styles.primary} disabled={disabled} onClick={() => { setConfirm(false); void onRecover(); }}>确认核对并恢复</button></div>
     </Dialog>
   </section>;

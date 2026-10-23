@@ -167,6 +167,8 @@ def task_rows(refs, actor, *, workspace=False):
     semantic_rows = list(SemanticIndexJob.objects.filter(pk__in=[row["id"] for row in refs if row["source"] == "semantic_index_job"]).select_related("asset__edition__work"))
     retry_ids = [(job.stats or {}).get("concept_retry_job_id") for job in job_rows if (job.stats or {}).get("concept_retry_job_id")]
     retry_states = {str(pk): state for pk, state in ProcessingJob.objects.filter(pk__in=retry_ids).values_list("pk", "status")} if workspace and retry_ids else {}
+    from .ocr_provider import ocr_runtime_config
+    ocr_config = ocr_runtime_config() if workspace and any(job.job_type == "ocr" for job in job_rows) else None
     titles = task_titles([*job_rows, *semantic_rows])
     events = {str(event.pk): event for event in KnowledgePublicationEvent.objects.filter(
         pk__in=[(job.stats or {}).get("knowledge_publication_event_id") for job in job_rows if (job.stats or {}).get("knowledge_publication_event_id")],
@@ -196,6 +198,6 @@ def task_rows(refs, actor, *, workspace=False):
                 row["ocr_progress"] = progress_row(job, actor=actor, event=events.get(str((job.stats or {}).get("knowledge_publication_event_id") or "")), edition=processing_edition(job), legacy_controls=True)
             if workspace:
                 from .processing_workspace import workspace_task
-                row = workspace_task(job, row, actor, retry_status=retry_states.get((job.stats or {}).get("concept_retry_job_id"), ""))
+                row = workspace_task(job, row, actor, ocr_config=ocr_config, retry_status=retry_states.get((job.stats or {}).get("concept_retry_job_id"), ""))
             rows[(source, str(job.pk))] = row
     return rows

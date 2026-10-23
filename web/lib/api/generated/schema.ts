@@ -13298,9 +13298,10 @@ export interface components {
          *     * `recover` - recover
          *     * `configure_followup` - configure_followup
          *     * `retry_followup` - retry_followup
+         *     * `transfer` - transfer
          * @enum {string}
          */
-        ProcessingCommandActionEnum: "pause" | "resume" | "retry" | "cancel" | "recover" | "configure_followup" | "retry_followup";
+        ProcessingCommandActionEnum: "pause" | "resume" | "retry" | "cancel" | "recover" | "configure_followup" | "retry_followup" | "transfer";
         ProcessingCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -13311,6 +13312,9 @@ export interface components {
             expected_version: string;
             page_indexes?: number[];
             align_concepts?: boolean;
+            target?: components["schemas"]["ProcessingOCRTargetEnum"];
+            target_version?: string;
+            acknowledge_remote?: boolean;
         };
         /**
          * @description * `create` - create
@@ -13417,6 +13421,26 @@ export interface components {
             task_options?: components["schemas"]["OCRTaskOptions"] | null;
             protected_page_indexes?: number[];
             reviewed_page_indexes?: number[];
+        };
+        ProcessingOCRTarget: {
+            id: components["schemas"]["ProcessingOCRTargetEnum"];
+            label: string;
+            configured: boolean;
+            version: string;
+            external: boolean;
+        };
+        /**
+         * @description * `nas` - nas
+         *     * `remote` - remote
+         * @enum {string}
+         */
+        ProcessingOCRTargetEnum: "nas" | "remote";
+        ProcessingOCRTransfer: {
+            current: string;
+            current_label: string;
+            configuration_changed: boolean;
+            can_transfer: boolean;
+            targets: components["schemas"]["ProcessingOCRTarget"][];
         };
         ProcessingOutcomeIssue: {
             code: string;
@@ -13602,6 +13626,7 @@ export interface components {
             recovery: components["schemas"]["ProcessingRecovery"];
             retry_selection: components["schemas"]["ProcessingRetrySelection"];
             followup: components["schemas"]["ProcessingFollowup"] | null;
+            transfer: components["schemas"]["ProcessingOCRTransfer"] | null;
             outcome_issues: components["schemas"]["ProcessingOutcomeIssue"][];
             pause_requested: boolean;
             last_error: string;

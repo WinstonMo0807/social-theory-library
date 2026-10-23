@@ -30,6 +30,12 @@ def record_heartbeat(job_id, task_id, activity=None):
 
 @contextmanager
 def ocr_request_lease(job, identity):
+    from .ocr_transfer import active_ocr_config
+    config = active_ocr_config.get() or {}
+    remote = config.get("mode") == "remote_only"
+    base_url = config.get("remote_url") if remote else config.get("nas_url", settings.PADDLEOCR_SERVICE_URL)
+    base_url = base_url.rstrip("/").removesuffix("/v1/parse-pdf")
+    headers = {"Authorization": f"Bearer {settings.OCR_REMOTE_API_KEY}"} if remote else {}
     token = request_identity.set(identity)
     stop = threading.Event()
     record_heartbeat(job.pk, job.task_id)
@@ -42,7 +48,7 @@ def ocr_request_lease(job, identity):
                 activity = "unavailable"
                 try:
                     with httpx.Client(trust_env=False, timeout=3) as client:
-                        response = client.get(settings.PADDLEOCR_SERVICE_URL.rstrip("/") + "/v1/requests/" + identity)
+                        response = client.get(base_url + "/v1/requests/" + identity, headers=headers)
                         if response.status_code == 200:
                             state = response.json().get("state")
                             if state in {"queued", "running", "completed", "failed"}:

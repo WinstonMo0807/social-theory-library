@@ -7,7 +7,7 @@ from .processing_followup import followup_state
 from .processing_outcomes import outcome_issues
 
 
-def workspace_task(job, row, actor, *, retry_status=""):
+def workspace_task(job, row, actor, *, retry_status="", ocr_config=None):
     row = dict(row)
     stats = row.pop("stats", {}) or {}
     edition = processing_edition(job)
@@ -19,6 +19,8 @@ def workspace_task(job, row, actor, *, retry_status=""):
     recovery = recovery_state(job)
     recovery["can_recover"] = "recover" in actions
     followup = followup_state(job)
+    from .ocr_transfer import transfer_state
+    transfer = transfer_state(job, actor, ocr_config) if ocr_config is not None else None
     files_url = f"/admin/library/works/{edition.work_id}/files?edition={edition.pk}" if edition else ""
     issues = outcome_issues(job, files_url=files_url, workbench_url=row.get("workbench_url", ""))
     if followup:
@@ -46,7 +48,7 @@ def workspace_task(job, row, actor, *, retry_status=""):
                                 "pages": retry_pages[:200], "count": len(retry_pages)},
             "heartbeat_stale": job.status == "running" and recovery["state"] in {"recoverable", "delayed"},
             "recovery": recovery,
-            "followup": followup,
+            "followup": followup, "transfer": transfer,
             "operation": stats["operation"] if stats.get("operation") in {"outline_rebuild", "concept_alignment"} else "",
             "can_export_results": row["source"] == "processing_job" and (row["job_type"] == "ocr" or stats.get("operation") == "outline_rebuild"
                 or row["job_type"] == "discovery_index" and stats.get("action") == "source" and stats.get("source_type") == "edition"),

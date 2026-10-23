@@ -95,6 +95,22 @@ class ProcessingOutcomeIssueSerializer(serializers.Serializer):
     url = serializers.CharField(allow_blank=True)
 
 
+class ProcessingOCRTargetSerializer(serializers.Serializer):
+    id = serializers.ChoiceField(choices=["nas", "remote"])
+    label = serializers.CharField()
+    configured = serializers.BooleanField()
+    version = serializers.CharField()
+    external = serializers.BooleanField()
+
+
+class ProcessingOCRTransferSerializer(serializers.Serializer):
+    current = serializers.CharField(allow_blank=True)
+    current_label = serializers.CharField()
+    configuration_changed = serializers.BooleanField()
+    can_transfer = serializers.BooleanField()
+    targets = ProcessingOCRTargetSerializer(many=True)
+
+
 class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     source = serializers.ChoiceField(choices=["processing_job", "semantic_index_job"])
@@ -117,6 +133,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     recovery = ProcessingRecoverySerializer()
     retry_selection = ProcessingRetrySelectionSerializer()
     followup = ProcessingFollowupSerializer(allow_null=True)
+    transfer = ProcessingOCRTransferSerializer(allow_null=True)
     outcome_issues = ProcessingOutcomeIssueSerializer(many=True)
     pause_requested = serializers.BooleanField()
     last_error = serializers.CharField(allow_blank=True)
@@ -125,7 +142,7 @@ class ProcessingWorkspaceTaskSerializer(serializers.Serializer):
     failure_page_count = serializers.IntegerField()
     failure_location = ProcessingFailureLocationSerializer(allow_null=True)
     version = serializers.CharField()
-    actions = serializers.ListField(child=serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup"]))
+    actions = serializers.ListField(child=serializers.ChoiceField(choices=["pause", "resume", "retry", "cancel", "recover", "configure_followup", "retry_followup", "transfer"]))
     permission_reason = serializers.CharField(allow_blank=True)
     retry_url = serializers.CharField(allow_blank=True)
     operation = serializers.CharField(allow_blank=True)

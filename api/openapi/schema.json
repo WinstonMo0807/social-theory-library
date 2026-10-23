@@ -51349,10 +51349,11 @@
                     "cancel",
                     "recover",
                     "configure_followup",
-                    "retry_followup"
+                    "retry_followup",
+                    "transfer"
                 ],
                 "type": "string",
-                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel\n* `recover` - recover\n* `configure_followup` - configure_followup\n* `retry_followup` - retry_followup"
+                "description": "* `pause` - pause\n* `resume` - resume\n* `retry` - retry\n* `cancel` - cancel\n* `recover` - recover\n* `configure_followup` - configure_followup\n* `retry_followup` - retry_followup\n* `transfer` - transfer"
             },
             "ProcessingCommandRequest": {
                 "type": "object",
@@ -51386,6 +51387,17 @@
                         "minItems": 1
                     },
                     "align_concepts": {
+                        "type": "boolean"
+                    },
+                    "target": {
+                        "$ref": "#/components/schemas/ProcessingOCRTargetEnum"
+                    },
+                    "target_version": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "acknowledge_remote": {
                         "type": "boolean"
                     }
                 },
@@ -51735,6 +51747,71 @@
                     "warnings",
                     "workbench_url",
                     "worker_alive"
+                ]
+            },
+            "ProcessingOCRTarget": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "$ref": "#/components/schemas/ProcessingOCRTargetEnum"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "external": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "configured",
+                    "external",
+                    "id",
+                    "label",
+                    "version"
+                ]
+            },
+            "ProcessingOCRTargetEnum": {
+                "enum": [
+                    "nas",
+                    "remote"
+                ],
+                "type": "string",
+                "description": "* `nas` - nas\n* `remote` - remote"
+            },
+            "ProcessingOCRTransfer": {
+                "type": "object",
+                "properties": {
+                    "current": {
+                        "type": "string"
+                    },
+                    "current_label": {
+                        "type": "string"
+                    },
+                    "configuration_changed": {
+                        "type": "boolean"
+                    },
+                    "can_transfer": {
+                        "type": "boolean"
+                    },
+                    "targets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessingOCRTarget"
+                        }
+                    }
+                },
+                "required": [
+                    "can_transfer",
+                    "configuration_changed",
+                    "current",
+                    "current_label",
+                    "targets"
                 ]
             },
             "ProcessingOutcomeIssue": {
@@ -52322,6 +52399,14 @@
                         ],
                         "nullable": true
                     },
+                    "transfer": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProcessingOCRTransfer"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "outcome_issues": {
                         "type": "array",
                         "items": {
@@ -52459,6 +52544,7 @@
                     "status",
                     "title",
                     "title_has_unpublished_changes",
+                    "transfer",
                     "version",
                     "work_id",
                     "workbench_url"

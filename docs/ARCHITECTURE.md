@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 OCR任务服务绑定
+
+ocr_transfer沿ProcessingJob.stats保存target/configuration指纹，目标只来自原ocr_runtime配置。上下文局部绑定一次页请求，既有extract/provider调用不变；变更配置后不再发送。人工转移沿账户→Edition→ProcessingJob锁、原固定回执、after-commit派发，不新增库/队列/迁移。远程需MANAGE_AI与明确发送确认，心跳跟随所选服务；原执行编号无法写页和文件进度。
+
 ## 2026-10-24 M09原队列的指定任务恢复
 
 processing_recovery只汇总真实活动并调用原恢复服务。recover_stalled_processing_jobs可按job_id限定，候选与OCR摘要修复均保持该范围；原定时全局恢复行为保留。Discovery人工恢复复用index_writer的非阻塞写入锁和原_enqueue_job/_dispatch，核对原代际/来源修订/任务归属，正常协调等待不重派。调用方沿账户→原父对象→任务锁与固定AuditEvent回执串行，不新增任务存储、设备路由或数据库schema。原worker的task_id写入保护继续生效。

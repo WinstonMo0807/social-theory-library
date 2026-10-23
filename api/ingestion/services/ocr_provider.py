@@ -142,7 +142,8 @@ def _request_document_gateway(
 
 
 def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None, task_options: dict | None = None):
-    config = ocr_runtime_config()
+    from .ocr_transfer import active_ocr_config
+    config = active_ocr_config.get() or ocr_runtime_config()
     providers = []
     if config["mode"] in {"nas_preferred", "nas_only"}:
         providers.append(

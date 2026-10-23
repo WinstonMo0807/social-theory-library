@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 OCR任务服务转移
+
+原processing-workspace命令新增transfer + target(nas/remote) + target_version + acknowledge_remote，必须request_id/expected_version/owner头。需VIEW_SYSTEM_STATUS/RETRY_JOBS/MANAGE_AI，原来源/暂停/恢复保护期有效。任务transfer只返回安全标签、配置完整性与指纹，配置完整≠在线。每页重验固定配置；同一命令回放不重复派发。仍333路径，无迁移。
+
 ## 2026-10-24 概念结果来源范围
 
 GET catalog/admin/theory-system/review-tasks/增加work/file UUID查询条件，两者同时传入时AND过滤；非法编号400，空结果不扩大范围。ProcessingFollowup增加result_url；概念结果链接统一携带review_work/review_file/review_status=all/processing_task，界面明确当前来源范围、清除范围和返回原任务。原编辑/审核/发布权限保持原边界，无新增端点或迁移，333路径。

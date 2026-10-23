@@ -1044,6 +1044,15 @@ def _ocr_phase(job, stats, phase, *, pages=()):
 
 
 @transaction.atomic
+def _save_claimed_ocr_progress(job, asset, claim_task_id):
+    Edition.objects.select_for_update().get(pk=job.edition_id)
+    current = ProcessingJob.objects.select_for_update().filter(pk=job.pk, status="running", task_id=claim_task_id).first()
+    if current is None:
+        raise OCRClaimSuperseded()
+    asset.save(update_fields=["validation_details", "updated_at"])
+
+
+@transaction.atomic
 def _persist_claimed_ocr_pages(job, pages, claim_task_id):
     Edition.objects.select_for_update().get(pk=job.edition_id)
     current = ProcessingJob.objects.select_for_update(of=("self",)).select_related("edition").get(pk=job.pk)
@@ -1171,8 +1180,10 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             _ocr_phase(job, stats, "recognizing", pages=batch_indexes)
             from .ocr_heartbeat import ocr_request_lease
             identity = sha256(f"{job.pk}:{asset.pk}:{asset.sha256}:{batch_indexes}".encode()).hexdigest()
-            with ocr_request_lease(job, identity):
+            from .ocr_transfer import active_ocr_config, bound_ocr_service, target_version
+            with bound_ocr_service(stats.get("ocr_service_binding")), ocr_request_lease(job, identity):
                 pages, provider = extract_ocr_page_batch(local_path, batch_indexes, **({"task_options": stats["task_options"]} if stats.get("task_options") else {}))
+                used_config = active_ocr_config.get()
             returned_indexes = {page.index for page in pages}
             if returned_indexes != set(batch_indexes) or len(pages) != len(batch_indexes):
                 raise ValueError(
@@ -1192,6 +1203,8 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             stats.update(
                 {
                     "engine": provider,
+                    "last_ocr_model": used_config["remote_model"] if provider == "remote_ocr" else "",
+                    "last_ocr_configuration": target_version(used_config, "remote" if provider == "remote_ocr" else "nas"),
                     "providers": providers,
                     "total_pages": document_page_count,
                     "target_pages": target_page_count,
@@ -1213,7 +1226,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
                     "updated_at": timezone.now().isoformat(),
                 },
             }
-            asset.save(update_fields=["validation_details", "updated_at"])
+            _save_claimed_ocr_progress(job, asset, claim_task_id)
             progress = min(
                 90,
                 max(
@@ -1314,12 +1327,12 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             page_indexes=completed_ocr_pages,
             provider=provider,
             model=(
-                runtime_config["remote_model"]
+                stats.get("last_ocr_model", runtime_config["remote_model"])
                 if provider == "remote_ocr"
                 else ""
             ),
             provider_version=(
-                job.settings_version
+                stats.get("last_ocr_configuration") or job.settings_version
                 or runtime_config["saved_configuration_version"]
             ),
             actor=job.created_by,
