@@ -12,6 +12,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
+    "timeline-save-receipt", "timeline-similar",
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
     "topic-organization", "topic-save-receipt", "topic-organization-preview",
     "topic-list", "topic-detail", "admin-topic-list", "admin-topic-detail",

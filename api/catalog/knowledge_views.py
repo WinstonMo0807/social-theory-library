@@ -24,6 +24,7 @@ from common.permissions import IsLibraryStaff
 
 from .editorial_read import AdminEditorialDraftReadMixin
 from .relation_editorial_views import StagedRelationEditorMixin
+from .timeline_editor_views import TimelineCommandMixin
 
 from .models import (
     AboutPageBlock,
@@ -595,7 +596,7 @@ class AdminSubdisciplineDetailView(
         )
 
 
-class AdminTheoryTimelineListView(StagedRelationEditorMixin, generics.ListCreateAPIView):
+class AdminTheoryTimelineListView(TimelineCommandMixin, StagedRelationEditorMixin, generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
     editorial_target_type = "timeline_event"
     public_status_field = "review_status"
@@ -655,7 +656,7 @@ class AdminTheoryTimelineListView(StagedRelationEditorMixin, generics.ListCreate
         return super().perform_create(serializer)
 
 
-class AdminTheoryTimelineDetailView(StagedRelationEditorMixin, generics.RetrieveUpdateDestroyAPIView):
+class AdminTheoryTimelineDetailView(TimelineCommandMixin, StagedRelationEditorMixin, generics.RetrieveUpdateDestroyAPIView):
     editorial_target_type = "timeline_event"
     public_status_field = "review_status"
     public_status_value = "approved"

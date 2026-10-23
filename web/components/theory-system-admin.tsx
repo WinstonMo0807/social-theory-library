@@ -1,5 +1,8 @@
 "use client";
 
+import { useScholarSave } from "./admin/knowledge/use-scholar-save";
+import { TimelineSupplementalSources, TimelineSimilarCheck, emptyTimelineDetails, type TimelineEditorialDetails } from "./admin/knowledge/timeline-editor-details";
+import timelineStyles from "./admin/knowledge/timeline-editor.module.css";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
@@ -32,7 +35,7 @@ import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-vi
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { adminListHref, adminPageNumber } from "@/lib/admin-route-context";
 import { KnowledgeImagePanel } from "./admin/media/knowledge-image-panel";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent, ReactNode, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
@@ -43,7 +46,7 @@ import {
   StringListEditor,
   StructuredRowsEditor,
 } from "@/components/structured-editors";
-import { apiRequest as baseApiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { apiRequest as baseApiRequest, getServerSessionCredential, subscribeToSessionChanges, normalizePublicResourceUrl } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { useActionGuard } from "@/lib/use-action-guard";
@@ -1264,6 +1267,9 @@ type TimelineRelation = {
 };
 
 type TimelineEvent = {
+  start_date?: string|null;
+  end_date?: string|null;
+  editorial_details?: TimelineEditorialDetails;
   id: string;
   title: string;
   description: string;
@@ -1271,7 +1277,7 @@ type TimelineEvent = {
   start_year: number | null;
   end_year: number | null;
   date_label: string;
-  date_precision?: "unknown" | "year" | "approximate" | "range";
+  date_precision?: "unknown" | "year" | "approximate" | "range" | "day" | "month";
   subject_edition?: string | null;
   orientation: string;
   source: string;
@@ -1294,13 +1300,16 @@ type TimelineEvent = {
 };
 
 type TimelineDraft = {
+  start_date: string;
+  end_date: string;
+  editorial_details: TimelineEditorialDetails;
   title: string;
   description: string;
   event_type: string;
   start_year: string;
   end_year: string;
   date_label: string;
-  date_precision: "unknown" | "year" | "approximate" | "range";
+  date_precision: "unknown" | "year" | "approximate" | "range" | "day" | "month";
   subject_edition: string;
   source: string;
   source_work: string;
@@ -1319,6 +1328,7 @@ type TimelineDraft = {
 };
 
 const timelineTypes = [
+  ["birth","人物出生"], ["death","人物去世"], ["appointment","任职任教"],
   ["publication", "重要著作出版"],
   ["concept_proposed", "理论概念提出"],
   ["school_formation", "学派形成"],
@@ -1334,6 +1344,8 @@ const timelineTypes = [
 ] as const;
 
 const emptyTimelineDraft: TimelineDraft = {
+  start_date:"",end_date:"",
+  editorial_details: emptyTimelineDetails(),
   title: "",
   description: "",
   event_type: "publication",
@@ -1360,6 +1372,8 @@ const emptyTimelineDraft: TimelineDraft = {
 
 function timelineToDraft(event: TimelineEvent): TimelineDraft {
   return {
+    start_date:event.start_date||"",end_date:event.end_date||"",
+    editorial_details: { ...emptyTimelineDetails(), ...event.editorial_details },
     title: event.title,
     description: event.description,
     event_type: event.event_type,
@@ -1492,7 +1506,18 @@ export function NormalizedTimelineAdmin() {
   return <TimelineEditor key={`${account}:${search.get("node") || "all"}:${search.get("event") || "list"}`} nodeId={search.get("node") || ""} requestedId={search.get("event") || ""} />;
 }
 
+function timelineConfirmationKey(value:TimelineDraft) {
+  const content=Object.fromEntries(Object.entries(value).filter(([name])=>!["review_status","display_order","confidence","editorial_details"].includes(name)));
+  const {editorial_details}=value;
+  return JSON.stringify({...content,sources:editorial_details.sources,time_note:editorial_details.time_note,conflict_note:editorial_details.conflict_note});
+}
+
 function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nodeId?: string }) {
+  const session=useAdminSession(), owner=String(session?.id||"");
+  const command=useScholarSave(owner,"timeline");
+  const canEdit=hasAdminCapability(session,"can_edit_draft_authority");
+  const canCreate=hasAdminCapability(session,"can_create_authority");
+  const previewRef=useRef<HTMLElement>(null);
   const opened = useRef(false);
   const apiRequest = useEditorRequest();
   const location = useEditorListLocation();
@@ -1501,7 +1526,8 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const canPublish = hasAdminCapability(useAdminSession(), "can_publish_authority");
   const [editing, setEditing] = useState<TimelineEvent | null>(null);
   const initialDraft = useMemo(() => ({ ...emptyTimelineDraft, nodes: nodeId ? [nodeId] : [] }), [nodeId]);
-  const [draft, setDraft] = useState<TimelineDraft>(initialDraft);
+  const [draft, setSavedDraft] = useState<TimelineDraft>(initialDraft);
+  const setDraft=useCallback((next:SetStateAction<TimelineDraft>)=>setSavedDraft(previous=>{const value=typeof next === "function"?next(previous):next;return timelineConfirmationKey(previous)===timelineConfirmationKey(value)?value:{...value,editorial_details:{...value.editorial_details,confirmed:false}};}),[]);
   const timelineDirty = useUnsavedForm(draft, editing ? timelineToDraft(editing) : initialDraft);
   const disciplineFilter = location.search.get("discipline") || "";
   const typeFilter = location.search.get("event_type") || "";
@@ -1533,20 +1559,22 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const disciplines = useAdminData<Page<Discipline>>("/catalog/admin/disciplines/");
   const works = useAdminData<Page<WorkCompact>>("/catalog/works/");
   const scholars = useAdminData<Page<ScholarCompact>>("/catalog/admin/scholars/");
+  const relatedPreview=useAdminData<Page<import("@/lib/api/knowledge.types").NormalizedTimelineEvent>>(draft.scholar||nodeId?`/catalog/theory-system/timeline/?${new URLSearchParams(draft.scholar?{author:draft.scholar}:{node:nodeId})}`:null);
+  const previewScholar=useAdminData<{preferred_name:string;portrait:string;birth_year:number|null;death_year:number|null;summary:string}>(draft.scholar?`/catalog/admin/scholars/${draft.scholar}/`:null);
   const requested = useAdminData<TimelineEvent>(requestedId ? `/catalog/admin/theory-timeline/${requestedId}/` : null);
   const wrongNode = Boolean(nodeId && requested.data && !requested.data.relations.some((row) => row.node === nodeId));
   useEffect(() => {
     if (!requested.data || wrongNode || opened.current) return;
     const selected=requested.data;
-    const timer=window.setTimeout(()=>{opened.current=true;setEditing(selected);setDraft(timelineToDraft(selected));},0);
+    const timer=window.setTimeout(()=>{opened.current=true;setEditing(selected);setSavedDraft(timelineToDraft(selected));},0);
     return()=>window.clearTimeout(timer);
   }, [requested.data, wrongNode]);
 
   function start(event?: TimelineEvent) {
-    if (pendingAction || (timelineDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一个事件吗？"))) return;
+    if (pendingAction || command.recovery || (timelineDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一个事件吗？"))) return;
     if ((event?.id || "") !== requestedId) { location.update({ event: event?.id ?? null }); return; }
     setEditing(event ?? null);
-    setDraft(event ? timelineToDraft(event) : { ...initialDraft });
+    setSavedDraft(event ? timelineToDraft(event) : { ...initialDraft });
     setMessage("");
     setMessageState("idle");
     setEntityLabels({});
@@ -1555,7 +1583,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
 
   async function saveEvent(event: FormEvent) {
     event.preventDefault();
-    if (wrongNode || (nodeId && !selectedNode.data)) return;
+    if (!canEdit || (!editing && !canCreate) || wrongNode || (nodeId && !selectedNode.data)) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = editing ? `save-timeline-event:${editing.id}` : "create-timeline-event";
@@ -1568,6 +1596,8 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
       ...(editing?.relations.filter((row) => !row.node && !row.discipline) ?? []),
     ];
     const payload = {
+      editorial_details: draft.editorial_details,
+      start_date: draft.start_date||null, end_date:draft.end_date||null,
       title: draft.title,
       description: draft.description,
       event_type: draft.event_type,
@@ -1596,9 +1626,9 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
       relations,
     };
     try {
-      const saved = await apiRequest<TimelineEvent>(`/catalog/admin/theory-timeline/${editing ? `${editing.id}/` : ""}`, { method: editing ? "PATCH" : "POST", headers: editing ? editorialHeaders(editing) : undefined, body: JSON.stringify(payload) }, token);
+      const saved = await command.save<TimelineEvent>(`/catalog/admin/theory-timeline/${editing ? `${editing.id}/` : ""}`, JSON.stringify(payload), editing ? editorialHeaders(editing) : {}, editing ? "PATCH" : "POST");
       setEditing(saved);
-      setDraft(timelineToDraft(saved));
+      setSavedDraft(timelineToDraft(saved));
       setMessage(saved.editorial_revision ? "修改已保存，尚未公开。核对事件预览后，再确认发布。" : "事件已保存，尚未公开。选择准备公开并保存后，可确认发布。");
       setEditConflict(false);
       setMessageState("success");
@@ -1614,13 +1644,13 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
 
   async function publishEvent() {
     const revision = editing?.editorial_revision;
-    if (!revision || timelineDirty || !canPublish || !window.confirm("确认发布此事件的已保存修改？公开时间线和关联页面会使用这些内容。")) return;
+    if (!revision || command.recovery || timelineDirty || !canPublish || !window.confirm("确认发布此事件的已保存修改？公开时间线和关联页面会使用这些内容。")) return;
     if (!startAction("publish-timeline")) return;
     try {
       await apiRequest(revision.publish_url, { method: "POST", body: "{}" }, getServerSessionCredential());
       const saved = await apiRequest<TimelineEvent>(`/catalog/admin/theory-timeline/${editing!.id}/`, {}, getServerSessionCredential());
       setEditing(saved);
-      setDraft(timelineToDraft(saved));
+      setSavedDraft(timelineToDraft(saved));
       setMessage(saved.review_status === "approved" ? "事件修改已发布。相关搜索的后台更新可能尚未完成。" : "事件已下线，公开时间线不再展示。后台更新可能尚未完成。");
       setMessageState("success");
       events.refresh();
@@ -1631,7 +1661,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   }
 
   async function removeEvent() {
-    if (!editing || !window.confirm(`删除“${editing.title}”吗？`)) return;
+    if (!editing || command.recovery || !window.confirm(`删除“${editing.title}”吗？`)) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = `delete-timeline-event:${editing.id}`;
@@ -1653,19 +1683,29 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
     }
   }
 
+  async function recoverSave(cancel=false) {
+    try { const receipt=await command.lookup(cancel); if(!receipt)return;
+    if(receipt.exists && receipt.timeline_id) { location.update({event:receipt.timeline_id}); if(receipt.timeline_id===requestedId) { const saved=await apiRequest<TimelineEvent>(`/catalog/admin/theory-timeline/${receipt.timeline_id}/`);setEditing(saved);setSavedDraft(timelineToDraft(saved)); } }
+    setMessage(receipt.state==="cancelled"?"原请求已停止，当前输入保留，可重新保存。":receipt.exists?"已找回原保存。请核对已保存内容。":"原保存已完成，但事件后来已删除，不会重复创建。");setMessageState("success");events.refresh();
+    }catch(reason){setMessage(reason instanceof Error?reason.message:"原保存已完成，但当前详情暂未读到，请重新打开原事件。");setMessageState("error");}
+  }
+
   const timelineNodeName = (id: string) => entityLabels[id] || (selectedNode.data?.id === id ? selectedNode.data.canonical_name_zh : "") || nodes.data?.results.find((item) => item.id === id)?.canonical_name_zh || editing?.relations.find((row) => row.node === id)?.node_name || "已选择理论";
   const timelineDisciplineName = (id: string) => entityLabels[id] || disciplines.data?.results.find((item) => item.id === id)?.name || editing?.relations.find((row) => row.discipline === id)?.discipline_name || "已选择学科";
   const timelineScholarName = (id: string) => scholars.data?.results.find((item) => item.id === id)?.preferred_name || entityLabels[id] || "已选择学者";
   const timelineWorkName = (id: string) => works.data?.results.find((item) => item.id === id)?.title || entityLabels[id] || "已选择馆藏";
 
   return (
-    <AdminFrame eyebrow="理论管理 / 时间线" title={nodeId ? `${selectedNode.data?.canonical_name_zh || "所选理论"}的时间线` : "全部理论事件"} description="填写事件标题、发生时间和说明，再注明来源。保存后，确认发布才会更新所关联理论的页面和公开时间线。" actions={<Link className="admin-outline-button" href={`/theories/timeline${selectedNode.data ? `?node=${encodeURIComponent(selectedNode.data.slug)}` : ""}`} target="_blank">查看当前公开时间线 <ExternalLink size={14} /></Link>}>
+    <AdminFrame eyebrow="理论管理 / 时间线" title="时间线事件编辑" description="填写事件标题、发生时间和说明，再注明来源。保存后，确认发布才会更新所关联理论的页面和公开时间线。" actions={<Link className="admin-outline-button" href={`/theories/timeline${selectedNode.data ? `?node=${encodeURIComponent(selectedNode.data.slug)}` : ""}`} target="_blank">查看当前公开时间线 <ExternalLink size={14} /></Link>}>
       <nav aria-label="时间线返回位置"><Link href={safeAdminHref(location.search.get("returnTo"), nodeId ? `/admin/theories/${nodeId}` : "/admin/theories")}>返回{selectedNode.data?.canonical_name_zh || "理论管理"}</Link>{nodeId ? <> · <Link href="/admin/theories/timeline">查看全部理论事件</Link></> : null}</nav>
       <ErrorNotice message={selectedNode.error} retry={selectedNode.refresh} />
       {nodeId && !selectedNode.data ? <p>尚未读取到所选理论。不会改为另一个理论，也不能在此新建事件。</p> : null}
       {wrongNode ? <p role="alert">这个事件不属于当前理论。请返回事件所属理论，或从全部理论事件中查看。</p> : null}
       <p>同一事件可以关联多个理论，修改会影响所有关联理论。关联学者或馆藏用于说明事件涉及谁、哪部作品，不会自动替代学者生平或主题发展内容。</p>
-      <div className="timeline-admin-grid">
+      <div className={timelineStyles.workspace}><div className="timeline-admin-grid">
+        <div className={timelineStyles.toolbar}><small>{timelineDirty?"有未保存修改":editing?"已保存内容":"尚未保存"}{editing?.editorial_revision?" · 待发布修改":""}</small><div><button className="admin-outline-button" type="button" onClick={()=>previewRef.current?.scrollIntoView({behavior:"smooth",block:"start"})}>预览</button><button className="admin-outline-button" type="submit" form="timeline-editor-form" disabled={!canEdit||Boolean(pendingAction)||!command.ready||Boolean(command.recovery)}>保存草稿</button><button className="button" type="button" disabled={!canPublish||timelineDirty||Boolean(pendingAction)||Boolean(command.recovery)||!editing?.editorial_revision} onClick={()=>void publishEvent()}>发布</button></div></div>
+        {command.recovery?<div role="status"><p>原保存结果尚未确认，请先核对这次请求。</p><button type="button" onClick={()=>void recoverSave()}>查回原请求</button>{command.canRetry?<button type="submit" form="timeline-editor-form">重试原保存</button>:null}<button type="button" onClick={()=>void recoverSave(true)}>停止未完成请求</button></div>:null}{command.error?<p role="alert">{command.error}</p>:null}
+        <details className={timelineStyles.directory}><summary>查找与切换事件 · {events.data?.count ?? "正在读取"}</summary>
         <section className="admin-panel normalized-timeline-list">
           <form className="theory-admin-filters timeline" onSubmit={(event) => { event.preventDefault(); location.update({ q: query.trim(), page: 1 }); }}>
             <ResearchEntityPicker label="学科筛选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_timeline" field="filter_discipline" values={onePickerValue(disciplineFilter, timelineDisciplineName(disciplineFilter))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDisciplineFilter(picked?.id ?? ""); }} />
@@ -1684,39 +1724,48 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
           </tr>)}</tbody></table></div>
           {!events.loading && !events.data?.results.length ? <div className="theory-admin-empty"><Clock3 size={22} /><strong>没有符合筛选条件的事件</strong></div> : null}
           <EditorListPages data={events.data} page={page} pageKey="page" label="事件列表分页" ordering="按发生年份从早到晚，同年按排序与标题排列" busy={events.loading} href={location.href} />
-        </section>
+        </section></details>
 
-        <div className="timeline-focused-editor"><form className="admin-panel timeline-event-editor" onSubmit={saveEvent}>
+        <div className="timeline-focused-editor"><form id="timeline-editor-form" className="admin-panel timeline-event-editor" onSubmit={saveEvent}>
           <ErrorNotice message={requested.error} retry={requested.refresh} />
           {requestedId && !requested.data ? <p>正在读取所选事件。</p> : null}
-          <fieldset className="dedicated-editor-fields" disabled={Boolean(pendingAction) || Boolean(requestedId && !requested.data) || wrongNode || Boolean(nodeId && !selectedNode.data)}>
+          <fieldset className="dedicated-editor-fields" disabled={!canEdit || (!editing && !canCreate) || !command.ready || Boolean(command.recovery) || Boolean(pendingAction) || Boolean(requestedId && !requested.data) || wrongNode || Boolean(nodeId && !selectedNode.data)}>
           <header><div><h2>{editing ? "编辑事件" : "新建事件"}</h2><p>标题、时间、说明、关联理论和来源会用于公开时间线。证据原文用于复核；有有效阅读文件和页码时，读者可打开馆藏出处。</p></div>{editing ? <ActionButton type="button" state={pendingAction === `delete-timeline-event:${editing.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-timeline-event:${editing.id}`} onClick={() => void removeEvent()}><Trash2 size={14} />删除</ActionButton> : null}</header>
+          <section className={timelineStyles.column}><h2>基本信息</h2>
           <label><span>事件标题</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label>
           <label><span>说明</span><textarea rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
           <div className="inline-fields"><label><span>开始年</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label></div>
           <div className="inline-fields"><label><span>显示时期</span><input value={draft.date_label} onChange={(event) => setDraft({ ...draft, date_label: event.target.value })} placeholder="例如 20世纪中期" /></label><label><span>事件类型</span><select value={draft.event_type} onChange={(event) => setDraft({ ...draft, event_type: event.target.value })}>{timelineTypes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
-          <label><span>时间确定程度</span><select name="date_precision" value={draft.date_precision} onChange={event => setDraft({ ...draft, date_precision: event.target.value as TimelineDraft["date_precision"] })}>
+          <label><span>时间确定程度</span><select name="date_precision" value={draft.date_precision} onChange={event => setDraft({ ...draft, start_date:"",end_date:"",date_precision: event.target.value as TimelineDraft["date_precision"],editorial_details:{...draft.editorial_details,confirmed:false} })}>
+            <option value="day">日期</option><option value="month">月份</option>
             <option value="unknown">未明确，保留原日期说明</option>
             <option value="year">确切年份</option>
             <option value="approximate">约略年份</option>
             <option value="range">已知年份范围</option>
           </select></label>
+          {draft.date_precision==="day"||draft.date_precision==="month"?<div className="inline-fields"><label>开始日期<input required type={draft.date_precision==="month"?"month":"date"} value={draft.date_precision==="month"?draft.start_date.slice(0,7):draft.start_date} onChange={event=>{const value=event.target.value;setDraft({...draft,start_date:value?(draft.date_precision==="month"?`${value}-01`:value):"",start_year:value.slice(0,4),editorial_details:{...draft.editorial_details,confirmed:false}});}}/></label><label>结束日期（可留空）<input type={draft.date_precision==="month"?"month":"date"} value={draft.date_precision==="month"?draft.end_date.slice(0,7):draft.end_date} onChange={event=>{const value=event.target.value;setDraft({...draft,end_date:value?(draft.date_precision==="month"?`${value}-01`:value):"",end_year:value.slice(0,4),editorial_details:{...draft.editorial_details,confirmed:false}});}}/></label></div>:null}
           <p>确切年份只填写一个年份；约略年份至少填写一端；年份范围需要开始、结束两端。已有文字日期不会自动推断为确切年份。</p>
+          <label><span>时间说明</span><textarea rows={2} maxLength={2000} value={draft.editorial_details.time_note} onChange={event=>setDraft({...draft,editorial_details:{...draft.editorial_details,time_note:event.target.value,confirmed:false}})}/></label>
+          <h2>关联内容</h2>
           <ResearchEntityPicker label="理论传统和知识理论或概念，可多选" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_timeline" field="nodes" multiple values={manyPickerValues(draft.nodes, timelineNodeName)} onChange={(next) => { setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, nodes: next.flatMap((value) => value.id ? [value.id] : []) }); }} />
           <ResearchEntityPicker label="关联学科，可多选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_timeline" field="disciplines" multiple values={manyPickerValues(draft.disciplines, timelineDisciplineName)} onChange={(next) => { setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, disciplines: next.flatMap((value) => value.id ? [value.id] : []) }); }} />
           <div className="inline-fields"><ResearchEntityPicker label="关联学者" endpoint="/catalog/admin/scholars/" entityType="person" step="maintenance_theory_timeline" field="scholar" values={onePickerValue(draft.scholar, timelineScholarName(draft.scholar))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, scholar: picked?.id ?? "" }); }} /><ResearchEntityPicker label="关联馆藏" endpoint="/catalog/admin/library/works/" entityType="work" step="maintenance_theory_timeline" field="work" values={onePickerValue(draft.work, timelineWorkName(draft.work))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft(current => ({ ...current, work: picked?.id ?? "", subject_edition: current.work === (picked?.id ?? "") ? current.subject_edition : "" })); }} /></div>
           <TimelineSubjectEdition key={`${editing?.id || "new"}:${draft.work}`} work={draft.work} value={draft.subject_edition} onChange={subject_edition => setDraft(current => ({ ...current, subject_edition }))} />
-          <label><span>来源</span><input value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })} placeholder="书目、论文或馆藏来源" /></label>
+          <TimelineSimilarCheck owner={owner} input={{title:draft.title,event_type:draft.event_type,start_year:draft.start_year?Number(draft.start_year):null,work:draft.work||null,scholar:draft.scholar||null,exclude:editing?.id||null}} reason={draft.editorial_details.duplicate_reason} onReason={value=>setDraft({...draft,editorial_details:{...draft.editorial_details,duplicate_reason:value}})}/>
+          </section><section className={timelineStyles.column}><h2>出处与证据</h2>
+          <label><span>主要出处</span><input maxLength={1000} value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })} placeholder="书目、论文或馆藏来源" /></label>
           <TimelineEvidenceFields draft={draft} saved={editing} workName={entityLabels[draft.source_work] || editing?.evidence_file?.work_title || "已选择出处馆藏"} onLabels={(values) => setEntityLabels((current) => ({ ...current, ...pickerLabels(values) }))} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
           <label><span>证据原文或来源说明</span><textarea rows={4} value={draft.evidence_text} onChange={(event) => setDraft({ ...draft, evidence_text: event.target.value })} /></label>
+          <TimelineSupplementalSources owner={owner} value={draft.editorial_details} onChange={editorial_details=>setDraft({...draft,editorial_details})}/>
+          <h2>人工确认与发布</h2><label className={timelineStyles.confirmation}><input type="checkbox" checked={draft.editorial_details.confirmed} onChange={event=>setDraft({...draft,editorial_details:{...draft.editorial_details,confirmed:event.target.checked}})}/>已核对上述出处及分歧说明</label><p>确认记录与来源相符后，才可发布已保存的修改。</p><label>内部编辑备注<textarea rows={2} maxLength={2000} value={draft.editorial_details.editor_note} onChange={event=>setDraft({...draft,editorial_details:{...draft.editorial_details,editor_note:event.target.value}})}/></label>
           <div className="inline-fields"><label><span>保存后的安排</span><select value={draft.review_status} onChange={(event) => setDraft({ ...draft, review_status: event.target.value })}><option value="suggested">留待核对</option><option value="approved" disabled={!canPublish && editing?.review_status !== "approved"}>准备公开</option><option value="rejected">不采用或准备下线</option></select></label><label><span>排序</span><input type="number" value={draft.display_order} onChange={(event) => setDraft({ ...draft, display_order: Number(event.target.value) })} /></label></div>
           <ActionButton className="button" type="submit" state={pendingAction?.startsWith("save-timeline-event:") || pendingAction === "create-timeline-event" ? "pending" : "idle"} pendingLabel="正在保存事件" disabled={Boolean(pendingAction)}><Save size={15} />保存事件</ActionButton>
-          </fieldset>
+          </section></fieldset>
           <SavedDraftActions revision={editing?.editorial_revision} dirty={timelineDirty} busy={Boolean(pendingAction)} impact="请核对上方的事件预览与关联对象。确认发布后，公开时间线和关联页面会更新。" publish={() => void publishEvent()} />
           <EditorialConflictHelp visible={editConflict} href={location.href({ event: editing?.id ?? null })} />
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
-        </form><aside className="timeline-current-preview"><header><strong>当前事件 · 实时预览</strong><span>{timelineDirty ? "有未保存修改" : "已保存内容"}</span></header><TheoryTimelinePublicList detailLinks={false} events={[{id:editing?.id || "draft",title:draft.title,description:draft.description,event_type:draft.event_type,start_year:draft.start_year === "" ? null : Number(draft.start_year),end_year:draft.end_year === "" ? null : Number(draft.end_year),date_label:draft.date_label,date_precision:draft.date_precision,source:draft.source,evidence_page:Number(draft.evidence_page)||null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:null}]}/></aside></div>
-      </div>
+        </form><aside ref={previewRef} className="timeline-current-preview" tabIndex={-1}>{previewScholar.data?<div className={timelineStyles.scholar}>{previewScholar.data.portrait?<img src={normalizePublicResourceUrl(previewScholar.data.portrait)} alt=""/>:null}<div><h3>{previewScholar.data.preferred_name}</h3><p>{previewScholar.data.birth_year??"生年待核"} — {previewScholar.data.death_year??""}</p><p>{previewScholar.data.summary}</p></div></div>:null}<ErrorNotice message={previewScholar.error} retry={previewScholar.refresh}/><header><strong>当前事件 · 实时预览</strong><span>{timelineDirty ? "有未保存修改" : "已保存内容"}</span></header><TheoryTimelinePublicList detailLinks={false} events={[{id:editing?.id || "draft",start_date:draft.start_date||null,end_date:draft.end_date||null,title:draft.title,description:draft.description,event_type:draft.event_type,start_year:draft.start_year === "" ? null : Number(draft.start_year),end_year:draft.end_year === "" ? null : Number(draft.end_year),date_label:draft.date_label,date_precision:draft.date_precision,source:draft.source,evidence_page:Number(draft.evidence_page)||null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:null}]}/>{draft.scholar||nodeId?<><h3>已公开的相关事件</h3><ErrorNotice message={relatedPreview.error} retry={relatedPreview.refresh}/>{relatedPreview.loading?<p>正在读取关联时间线…</p>:<TheoryTimelinePublicList events={(relatedPreview.data?.results||[]).filter(row=>row.id!==editing?.id).slice(0,5)}/>}<Link href={`/theories/timeline?${new URLSearchParams(draft.scholar?{author:draft.scholar}:{node:nodeId})}`} target="_blank">查看完整时间线</Link></>:null}</aside></div>
+      </div></div>
     </AdminFrame>
   );
 }

@@ -9,7 +9,7 @@ export type TimelineSource = {
 };
 export type TimelineEvent = Omit<NormalizedTimelineEvent, "relations"> & {
   origin_kind: "timeline_event";
-  date_precision: "unknown" | "year" | "approximate" | "range";
+  date_precision: "unknown" | "year" | "approximate" | "range" | "day" | "month";
   subject_edition: (TheoryWorkCompact & { version_label: string }) | null;
   subject_status: "available" | "unavailable" | "unspecified";
   subject_work: { id: string; title: string; detail_href: string | null } | null;
@@ -56,8 +56,12 @@ export function timelineHref(path: string, filters: TimelineFilters, changes: Re
   return `${path}${params.size ? `?${params}` : ""}`;
 }
 
-export function timelineDate(event: Pick<NormalizedTimelineEvent, "date_label" | "start_year" | "end_year" | "date_precision">) {
+export function timelineDate(event: Pick<NormalizedTimelineEvent, "date_label" | "start_year" | "end_year" | "date_precision" | "start_date" | "end_date">) {
   if (event.date_label) return event.date_label;
+  if ((event.date_precision === "month" || event.date_precision === "day") && event.start_date) {
+    const format=(value:string)=>event.date_precision === "month" ? value.slice(0,7) : value;
+    return format(event.start_date)+(event.end_date && event.end_date !== event.start_date ? ` — ${format(event.end_date)}` : "");
+  }
   const from = event.start_year, to = event.end_year;
   const year = from ?? to;
   if (year === null) return "时间未详";
@@ -68,6 +72,7 @@ export function timelineDate(event: Pick<NormalizedTimelineEvent, "date_label" |
 }
 
 export const timelineTypeLabels: Record<string, string> = {
+  birth:"人物出生", death:"人物去世", appointment:"任职任教",
   publication: "作品出版", concept_proposed: "概念使用", translation: "译本出版",
   scholar: "学者生平", school_formation: "学派形成", institution: "学术机构",
   debate: "学术争论", theoretical_turn: "理论转向", china_reception: "学术传播",

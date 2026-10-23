@@ -5,10 +5,10 @@ import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/a
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
 
 type Pending = { id: string; path: string; body: string; headers: Record<string, string>; method: string };
-type Receipt<K extends "scholar" | "topic"> = { actor_id: string; request_id: string; saved_version: string; exists: boolean; state:"applied"|"cancelled" } & Record<`${K}_id`,string|null>;
+type Receipt<K extends "scholar" | "topic" | "timeline"> = { actor_id: string; request_id: string; saved_version: string; exists: boolean; state:"applied"|"cancelled" } & Record<`${K}_id`,string|null>;
 const key = (actor: string, kind: string) => `stl-${kind}-save:${actor}`;
 
-export function useScholarSave<K extends "scholar" | "topic" = "scholar">(actor: string, kind: K = "scholar" as K) {
+export function useScholarSave<K extends "scholar" | "topic" | "timeline" = "scholar">(actor: string, kind: K = "scholar" as K) {
   const acting = useRef(false);
   const pending = useRef<Pending | null>(null), controller = useRef<AbortController | null>(null);
   const [recovery, setRecovery] = useState(""), [ready, setReady] = useState(false), [error, setError] = useState(""), [canRetry, setCanRetry] = useState(false);
@@ -47,7 +47,7 @@ export function useScholarSave<K extends "scholar" | "topic" = "scholar">(actor:
     acting.current = true;
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(30000)]);
     try {
-      const result = await withPrivateOwner(actor, () => apiRequest<Receipt<K>>(`/catalog/admin/${kind === "topic" ? "topics" : "scholars"}/commands/${recovery}/`, {
+      const result = await withPrivateOwner(actor, () => apiRequest<Receipt<K>>(`/catalog/admin/${kind === "topic" ? "topics" : kind === "timeline" ? "theory-timeline" : "scholars"}/commands/${recovery}/`, {
         cache: "no-store", signal, headers: { "X-Editor-Owner": actor },...(cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{}),
       }, getServerSessionCredential(), false), signal);
       if (result.actor_id !== actor || result.request_id !== recovery) throw Error("原请求回执不匹配。");

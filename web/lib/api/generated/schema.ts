@@ -1471,6 +1471,38 @@ export interface paths {
         patch: operations["catalog_admin_theory_timeline_partial_update"];
         trace?: never;
     };
+    "/api/catalog/admin/theory-timeline/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_timeline_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_theory_timeline_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-timeline/similar/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_theory_timeline_similar_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/today-work/": {
         parameters: {
             query?: never;
@@ -4856,6 +4888,11 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+            editorial_details?: unknown;
+            /** Format: date */
+            start_date?: string | null;
+            /** Format: date */
+            end_date?: string | null;
             /** Format: uuid */
             discipline?: string | null;
             /** Format: uuid */
@@ -4903,6 +4940,11 @@ export interface components {
             readonly has_unpublished_changes: boolean;
         };
         AdminTheoryTimelineEventRequest: {
+            editorial_details?: unknown;
+            /** Format: date */
+            start_date?: string | null;
+            /** Format: date */
+            end_date?: string | null;
             /** Format: uuid */
             discipline?: string | null;
             /** Format: uuid */
@@ -6106,13 +6148,15 @@ export interface components {
             results: components["schemas"]["CurationSource"][];
         };
         /**
-         * @description * `unknown` - 精度未确认
+         * @description * `day` - 日期
+         *     * `month` - 月份
+         *     * `unknown` - 精度未确认
          *     * `year` - 确切年份
          *     * `approximate` - 约年
          *     * `range` - 时间区间
          * @enum {string}
          */
-        DatePrecisionEnum: "unknown" | "year" | "approximate" | "range";
+        DatePrecisionEnum: "day" | "month" | "unknown" | "year" | "approximate" | "range";
         DirectoryDiscipline: {
             /** Format: uuid */
             id: string;
@@ -6751,7 +6795,10 @@ export interface components {
          */
         EntityLevelEnum: "tradition" | "school" | "branch";
         /**
-         * @description * `scholar` - 学者
+         * @description * `birth` - 人物出生
+         *     * `death` - 人物去世
+         *     * `appointment` - 任职任教
+         *     * `scholar` - 学者
          *     * `publication` - 重要发表
          *     * `concept_proposed` - 理论概念提出
          *     * `school_formation` - 学派形成
@@ -6765,7 +6812,7 @@ export interface components {
          *     * `development` - 发展
          * @enum {string}
          */
-        EventTypeEnum: "scholar" | "publication" | "concept_proposed" | "school_formation" | "debate" | "institution" | "theoretical_turn" | "translation" | "china_reception" | "institutionalization" | "formation" | "development";
+        EventTypeEnum: "birth" | "death" | "appointment" | "scholar" | "publication" | "concept_proposed" | "school_formation" | "debate" | "institution" | "theoretical_turn" | "translation" | "china_reception" | "institutionalization" | "formation" | "development";
         EvidenceAnchorInput: {
             /** Format: uuid */
             evidence_span_id?: string;
@@ -8990,6 +9037,10 @@ export interface components {
             title: string;
             description?: string;
             event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: date */
+            start_date?: string | null;
+            /** Format: date */
+            end_date?: string | null;
             /** Format: int64 */
             start_year?: number | null;
             /** Format: int64 */
@@ -9023,6 +9074,10 @@ export interface components {
             title: string;
             description?: string;
             event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: date */
+            start_date?: string | null;
+            /** Format: date */
+            end_date?: string | null;
             /** Format: int64 */
             start_year?: number | null;
             /** Format: int64 */
@@ -10096,6 +10151,11 @@ export interface components {
             stage_groups?: components["schemas"]["PathStageGroupInputRequest"][];
         };
         PatchedAdminTheoryTimelineEventRequest: {
+            editorial_details?: unknown;
+            /** Format: date */
+            start_date?: string | null;
+            /** Format: date */
+            end_date?: string | null;
             /** Format: uuid */
             discipline?: string | null;
             /** Format: uuid */
@@ -14078,6 +14138,11 @@ export interface components {
             title: string;
             description?: string;
             event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: date */
+            start_date?: string | null;
+            /** Format: date */
+            end_date?: string | null;
+            date_precision?: components["schemas"]["DatePrecisionEnum"];
             /** Format: int64 */
             start_year?: number | null;
             /** Format: int64 */
@@ -14217,6 +14282,18 @@ export interface components {
             name: string;
             slug: string;
         };
+        TimelineSaveReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            timeline_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
         TimelineScholar: {
             /** Format: uuid */
             id: string;
@@ -14226,6 +14303,34 @@ export interface components {
             slug: string;
             href: string;
             portrait_url: string;
+        };
+        TimelineSimilarInputRequest: {
+            title?: string;
+            event_type?: components["schemas"]["EventTypeEnum"];
+            /** Format: uuid */
+            work?: string | null;
+            /** Format: uuid */
+            scholar?: string | null;
+            /** Format: uuid */
+            exclude?: string | null;
+            start_year?: number | null;
+        };
+        TimelineSimilarResult: {
+            count: number;
+            truncated: boolean;
+            results: components["schemas"]["TimelineSimilarRow"][];
+        };
+        TimelineSimilarRow: {
+            /** Format: uuid */
+            readonly id: string;
+            title: string;
+            event_type: components["schemas"]["EventTypeEnum"];
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            date_label?: string;
+            review_status?: components["schemas"]["ReviewStatusEnum"];
         };
         TimelineSubjectEdition: {
             /** Format: uuid */
@@ -18446,6 +18551,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminTheoryTimelineEvent"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineSaveReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineSaveReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_similar_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TimelineSimilarInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TimelineSimilarInputRequest"];
+                "multipart/form-data": components["schemas"]["TimelineSimilarInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineSimilarResult"];
                 };
             };
         };

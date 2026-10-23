@@ -43,6 +43,13 @@ def validate_relation_patch(target, patch):
         keys = [_relation_key(row) for row in rows]
         if len(set(keys)) != len(keys):
             raise EditorialRevisionError("同一对象的时间线关联不能重复。")
+    if "editorial_details" in patch:
+        from catalog.timeline_editor import validate_timeline_details
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            patch["editorial_details"] = validate_timeline_details(patch["editorial_details"], target)
+        except DRFValidationError as error:
+            raise EditorialRevisionError(str(error.detail)) from error
     preview = copy(target)
     for name, value in patch.items():
         if name == "timeline_relations":
@@ -61,7 +68,7 @@ def validate_relation_patch(target, patch):
         try:
             validate_timeline_identity(**{
                 name: getattr(preview, name)
-                for name in ("work", "subject_edition", "start_year", "end_year", "date_precision")
+                for name in ("work", "subject_edition", "start_year", "end_year", "date_precision", "start_date", "end_date")
             })
             validate_timeline_file(preview.evidence_asset, preview.evidence_page)
         except (ValueError, ObjectDoesNotExist) as error:

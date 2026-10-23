@@ -1,3 +1,4 @@
+from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
 from catalog.scholar_work_views import ScholarWorkSelectionView
 from django.urls import path
@@ -630,6 +631,8 @@ urlpatterns = [
         AdminEntityLifecycleView.as_view(),
         name="admin-entity-lifecycle",
     ),
+    path("admin/theory-timeline/commands/<uuid:request_id>/", TimelineSaveReceiptView.as_view(), name="timeline-save-receipt"),
+    path("admin/theory-timeline/similar/", TimelineSimilarView.as_view(), name="timeline-similar"),
     path("admin/theory-timeline/", AdminTheoryTimelineListView.as_view(), name="admin-theory-timeline-list"),
     path("admin/theory-timeline/<uuid:pk>/", AdminTheoryTimelineDetailView.as_view(), name="admin-theory-timeline-detail"),
     path("admin/recommendations/", AdminRecommendationListView.as_view(), name="admin-recommendation-list"),

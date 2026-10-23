@@ -2637,13 +2637,23 @@ class PersonTopicRelation(UUIDTimeStampedModel):
 
 
 class TheoryTimelineEvent(UUIDTimeStampedModel):
+    # Private editorial evidence; public serializers expose only the approved primary citation.
+    editorial_details = models.JSONField(default=dict, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+
     class DatePrecision(models.TextChoices):
+        DAY = "day", "日期"
+        MONTH = "month", "月份"
         UNKNOWN = "unknown", "精度未确认"
         YEAR = "year", "确切年份"
         APPROXIMATE = "approximate", "约年"
         RANGE = "range", "时间区间"
 
     class EventType(models.TextChoices):
+        BIRTH = "birth", "人物出生"
+        DEATH = "death", "人物去世"
+        APPOINTMENT = "appointment", "任职任教"
         SCHOLAR = "scholar", "学者"
         PUBLICATION = "publication", "重要发表"
         CONCEPT_PROPOSED = "concept_proposed", "理论概念提出"
@@ -2708,7 +2718,7 @@ class TheoryTimelineEvent(UUIDTimeStampedModel):
         max_length=16, choices=DatePrecision.choices, default=DatePrecision.UNKNOWN,
     )
     orientation = models.CharField(max_length=20, default="neutral")
-    source = models.CharField(max_length=120, blank=True)
+    source = models.CharField(max_length=1000, blank=True)
     evidence_asset = models.ForeignKey(
         Asset,
         null=True,

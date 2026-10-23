@@ -206,6 +206,8 @@ export type KnowledgeNodeDetail = KnowledgeNodeListItem & {
 };
 
 export type NormalizedTimelineEvent = {
+  start_date?: string | null;
+  end_date?: string | null;
   id: string;
   title: string;
   description: string;
@@ -213,7 +215,7 @@ export type NormalizedTimelineEvent = {
   start_year: number | null;
   end_year: number | null;
   date_label: string;
-  date_precision?: "unknown" | "year" | "approximate" | "range";
+  date_precision?: "unknown" | "year" | "approximate" | "range" | "day" | "month";
   source: string;
   evidence_page: number | null;
   evidence_printed_label: string;

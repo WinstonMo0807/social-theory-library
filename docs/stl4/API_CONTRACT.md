@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M23时间线编辑
+
+M23保留285条，新增事件similar POST和commands/{request_id} GET/POST，合计287。原事件新增精度日期及私有editorial_details；公开只明确新增日期/精度字段，不加入私有核对资料。新建要求固定请求和owner，更新保留If-Match，详见TIMELINE_EDITOR_20261023。
+
 ## 2026-10-23 M22主题编辑
 
 新增topics/organization GET（parent/q/exclude/page）、{id}/organization-preview POST只读提议、commands/{request_id} GET/POST。原Scholar commands也增加POST cancel_pending。回执state applied/cancelled，停止时对象ID允许null；已完成写入不被撤销。Topic保存必需owner，新建固定UUID；原If-Match和权限不变。285路径，公开别名沿原正式快照；详细字段见TOPIC_EDITOR_20261023。

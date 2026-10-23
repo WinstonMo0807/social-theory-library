@@ -60,7 +60,7 @@ TARGET_POLICIES = {
         KnowledgeRelation, frozenset({"source_node", "target_node", "relation_type", "direction", "description", "evidence_source", "confidence", "status"}),
     ),
     EditorialRevision.TargetType.TIMELINE_EVENT: EditorialTargetPolicy(
-        TheoryTimelineEvent, frozenset({"title", "description", "image", "event_type", "start_year", "end_year", "date_label", "date_precision", "orientation", "source", "evidence_asset", "evidence_page", "evidence_printed_label", "evidence_text", "confidence", "review_status", "display_order", "discipline", "theory_school", "subdiscipline", "scholar", "work", "subject_edition", "timeline_relations"}),
+        TheoryTimelineEvent, frozenset({"title", "description", "image", "event_type", "start_year", "end_year", "date_label", "date_precision", "orientation", "source", "evidence_asset", "evidence_page", "evidence_printed_label", "evidence_text", "confidence", "review_status", "display_order", "discipline", "theory_school", "subdiscipline", "scholar", "work", "subject_edition", "timeline_relations", "editorial_details", "start_date", "end_date"}),
     ),
     EditorialRevision.TargetType.WORK: EditorialTargetPolicy(
         Work,
@@ -1742,6 +1742,12 @@ def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=
 
     next_status = getattr(target, "status", getattr(target, "editorial_status", getattr(target, "review_status", None)))
     if isinstance(target, TheoryTimelineEvent) and next_status == "approved":
+        from catalog.timeline_editor import ensure_timeline_publication
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            ensure_timeline_publication(target)
+        except DRFValidationError as error:
+            raise EditorialRevisionError(str(error.detail)) from error
         target.reviewed_by, target.reviewed_at = actor, timezone.now()
     if hasattr(target, "published_at") and next_status is not None:
         if next_status == "published" and previous_status != "published":

@@ -7,6 +7,7 @@ import { CollectionLink } from "@/components/collection-link";
 import { timelineDate } from "@/lib/api/timeline.types";
 
 export const theoryTimelineEventTypeLabels: Record<string, string> = {
+  birth:"人物出生", death:"人物去世", appointment:"任职任教",
   publication: "重要著作出版",
   concept_proposed: "理论概念提出",
   school_formation: "学派形成",

@@ -2116,6 +2116,9 @@ class TheoryTimelineEventSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "event_type",
+            "start_date",
+            "end_date",
+            "date_precision",
             "start_year",
             "end_year",
             "date_label",
@@ -2541,6 +2544,10 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
              "edit_version", "editorial_revision", "public_status", "has_unpublished_changes")
         read_only_fields = ("reviewed_by", "reviewed_at")
 
+    def validate_editorial_details(self, value):
+        from catalog.timeline_editor import validate_timeline_details
+        return validate_timeline_details(value, self.instance)
+
     @extend_schema_field(TimelineAdminEvidenceFileSerializer(allow_null=True))
     def get_evidence_file(self, obj):
         from catalog.services.timeline_evidence import admin_timeline_file
@@ -2552,7 +2559,7 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
             try:
                 validate_timeline_identity(**{
                     name: attrs.get(name, getattr(self.instance, name, "unknown" if name == "date_precision" else None))
-                    for name in ("work", "subject_edition", "start_year", "end_year", "date_precision")
+                    for name in ("work", "subject_edition", "start_year", "end_year", "date_precision", "start_date", "end_date")
                 })
             except ValueError as error:
                 raise serializers.ValidationError(str(error)) from error
@@ -2587,7 +2594,7 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
             "review_status",
             getattr(self.instance, "review_status", RelationReviewStatus.SUGGESTED),
         )
-        if review_status == RelationReviewStatus.APPROVED and not has_capability(
+        if review_status == RelationReviewStatus.APPROVED and (not self.instance or review_status != self.instance.review_status) and not has_capability(
             user,
             Capability.PUBLISH_AUTHORITY,
         ):

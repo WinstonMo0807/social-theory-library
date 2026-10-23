@@ -6788,6 +6788,149 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-timeline/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_timeline_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineSaveReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_timeline_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineSaveReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-timeline/similar/": {
+            "post": {
+                "operationId": "catalog_admin_theory_timeline_similar_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TimelineSimilarInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TimelineSimilarInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TimelineSimilarInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineSimilarResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/today-work/": {
             "get": {
                 "operationId": "catalog_admin_today_work_retrieve",
@@ -22462,6 +22605,17 @@
                         "format": "date-time",
                         "readOnly": true
                     },
+                    "editorial_details": {},
+                    "start_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
                     "discipline": {
                         "type": "string",
                         "format": "uuid",
@@ -22534,7 +22688,7 @@
                     },
                     "source": {
                         "type": "string",
-                        "maxLength": 120
+                        "maxLength": 1000
                     },
                     "evidence_asset": {
                         "type": "string",
@@ -22633,6 +22787,17 @@
             "AdminTheoryTimelineEventRequest": {
                 "type": "object",
                 "properties": {
+                    "editorial_details": {},
+                    "start_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
                     "discipline": {
                         "type": "string",
                         "format": "uuid",
@@ -22706,7 +22871,7 @@
                     },
                     "source": {
                         "type": "string",
-                        "maxLength": 120
+                        "maxLength": 1000
                     },
                     "evidence_asset": {
                         "type": "string",
@@ -26458,13 +26623,15 @@
             },
             "DatePrecisionEnum": {
                 "enum": [
+                    "day",
+                    "month",
                     "unknown",
                     "year",
                     "approximate",
                     "range"
                 ],
                 "type": "string",
-                "description": "* `unknown` - 精度未确认\n* `year` - 确切年份\n* `approximate` - 约年\n* `range` - 时间区间"
+                "description": "* `day` - 日期\n* `month` - 月份\n* `unknown` - 精度未确认\n* `year` - 确切年份\n* `approximate` - 约年\n* `range` - 时间区间"
             },
             "DirectoryDiscipline": {
                 "type": "object",
@@ -28568,6 +28735,9 @@
             },
             "EventTypeEnum": {
                 "enum": [
+                    "birth",
+                    "death",
+                    "appointment",
                     "scholar",
                     "publication",
                     "concept_proposed",
@@ -28582,7 +28752,7 @@
                     "development"
                 ],
                 "type": "string",
-                "description": "* `scholar` - 学者\n* `publication` - 重要发表\n* `concept_proposed` - 理论概念提出\n* `school_formation` - 学派形成\n* `debate` - 争论\n* `institution` - 机构\n* `theoretical_turn` - 理论转向\n* `translation` - 重要译介\n* `china_reception` - 进入中国学界\n* `institutionalization` - 学科制度化\n* `formation` - 形成\n* `development` - 发展"
+                "description": "* `birth` - 人物出生\n* `death` - 人物去世\n* `appointment` - 任职任教\n* `scholar` - 学者\n* `publication` - 重要发表\n* `concept_proposed` - 理论概念提出\n* `school_formation` - 学派形成\n* `debate` - 争论\n* `institution` - 机构\n* `theoretical_turn` - 理论转向\n* `translation` - 重要译介\n* `china_reception` - 进入中国学界\n* `institutionalization` - 学科制度化\n* `formation` - 形成\n* `development` - 发展"
             },
             "EvidenceAnchorInput": {
                 "type": "object",
@@ -36273,6 +36443,16 @@
                     "event_type": {
                         "$ref": "#/components/schemas/EventTypeEnum"
                     },
+                    "start_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
                     "start_year": {
                         "type": "integer",
                         "maximum": 9223372036854775807,
@@ -36293,7 +36473,7 @@
                     },
                     "source": {
                         "type": "string",
-                        "maxLength": 120
+                        "maxLength": 1000
                     },
                     "evidence_page": {
                         "type": "integer",
@@ -36443,6 +36623,16 @@
                     "event_type": {
                         "$ref": "#/components/schemas/EventTypeEnum"
                     },
+                    "start_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
                     "start_year": {
                         "type": "integer",
                         "maximum": 9223372036854775807,
@@ -36463,7 +36653,7 @@
                     },
                     "source": {
                         "type": "string",
-                        "maxLength": 120
+                        "maxLength": 1000
                     },
                     "evidence_page": {
                         "type": "integer",
@@ -39676,6 +39866,17 @@
             "PatchedAdminTheoryTimelineEventRequest": {
                 "type": "object",
                 "properties": {
+                    "editorial_details": {},
+                    "start_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
                     "discipline": {
                         "type": "string",
                         "format": "uuid",
@@ -39749,7 +39950,7 @@
                     },
                     "source": {
                         "type": "string",
-                        "maxLength": 120
+                        "maxLength": 1000
                     },
                     "evidence_asset": {
                         "type": "string",
@@ -53145,6 +53346,19 @@
                     "event_type": {
                         "$ref": "#/components/schemas/EventTypeEnum"
                     },
+                    "start_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "date_precision": {
+                        "$ref": "#/components/schemas/DatePrecisionEnum"
+                    },
                     "start_year": {
                         "type": "integer",
                         "maximum": 9223372036854775807,
@@ -53678,6 +53892,45 @@
                     "slug"
                 ]
             },
+            "TimelineSaveReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "timeline_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_version": {
+                        "type": "string"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "request_id",
+                    "saved_version",
+                    "state",
+                    "timeline_id"
+                ]
+            },
             "TimelineScholar": {
                 "type": "object",
                 "properties": {
@@ -53709,6 +53962,104 @@
                     "person_id",
                     "portrait_url",
                     "slug"
+                ]
+            },
+            "TimelineSimilarInputRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "scholar": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "exclude": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "nullable": true
+                    }
+                }
+            },
+            "TimelineSimilarResult": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "truncated": {
+                        "type": "boolean"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineSimilarRow"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "results",
+                    "truncated"
+                ]
+            },
+            "TimelineSimilarRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "event_type": {
+                        "$ref": "#/components/schemas/EventTypeEnum"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "date_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "review_status": {
+                        "$ref": "#/components/schemas/ReviewStatusEnum"
+                    }
+                },
+                "required": [
+                    "event_type",
+                    "id",
+                    "title"
                 ]
             },
             "TimelineSubjectEdition": {

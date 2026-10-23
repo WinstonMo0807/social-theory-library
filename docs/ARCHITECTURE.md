@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M23时间线编辑
+
+M23复用TheoryTimelineEvent/TimelineEventRelation/EditorialRevision/AuditEvent；catalog0076增事件日期与私有editorial_details，不建独立人物、文件或时间线。原公共时间线/学者页读取同一发布事件，私有编辑资料不公开。迁移仅文件，未执行。
+
 ## 2026-10-23 M22主题编辑
 
 M22主题层级继续Topic.parent，别名继续search_aliases，编排继续curation和EditorialRevision；实际保存/发布/原合并共享层级事务锁。直接发布与修订发布统一可公开关联最低条件。保存复用ScholarCommandMixin的类型配置和AuditEvent，另补两种身份的未知请求停止标记，见docs/stl4/TOPIC_EDITOR_20261023.md。

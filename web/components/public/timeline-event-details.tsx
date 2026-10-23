@@ -9,7 +9,7 @@ import { timelineDate, timelineHref, timelineTypeLabels, type TimelineEventDetai
 import styles from "./theory-timeline.module.css";
 
 const tabs = ["事件详情", "相关事件", "引用与影响", "原文片段"];
-const precisionLabels = { unknown: "时间不确定", year: "年份已确认", approximate: "约年", range: "时间区间" };
+const precisionLabels = { month:"月份已确认", day:"日期已确认", unknown: "时间不确定", year: "年份已确认", approximate: "约年", range: "时间区间" };
 const sourceLabels = {
   available: "已有可阅读的原文来源",
   unavailable: "原文来源当前不可用",

@@ -6,7 +6,18 @@ from catalog.models import Asset, Page
 from catalog.services.publication_eligibility import active_document_q
 
 
-def validate_timeline_identity(*, work, subject_edition, start_year, end_year, date_precision):
+def validate_timeline_identity(*, work, subject_edition, start_year, end_year, date_precision, start_date=None, end_date=None):
+    if date_precision in {"month", "day"}:
+        if not start_date or start_year != start_date.year:
+            raise ValueError("精确日期须填写起始日期，并与开始年份一致。")
+        if end_date and (end_date < start_date or end_year != end_date.year):
+            raise ValueError("结束日期不能早于起始日期，且应与结束年份一致。")
+        if not end_date and end_year not in (None, start_year):
+            raise ValueError("跨年日期须填写明确的结束日期。")
+        if date_precision == "month" and (start_date.day != 1 or (end_date and end_date.day != 1)):
+            raise ValueError("月份精度仅保存到月份，不记录推定日期。")
+    elif start_date or end_date:
+        raise ValueError("年份或约年不应携带未声明的精确日期。")
     if subject_edition and work and subject_edition.work_id != work.pk:
         raise ValueError("事件所属版本不属于所选作品；出处文献可以是另一作品，请分别选择。")
     if start_year is not None and end_year is not None and end_year < start_year:

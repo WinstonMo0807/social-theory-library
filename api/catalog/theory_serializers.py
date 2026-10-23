@@ -1602,6 +1602,8 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "event_type",
+            "start_date",
+            "end_date",
             "start_year",
             "end_year",
             "date_label",
