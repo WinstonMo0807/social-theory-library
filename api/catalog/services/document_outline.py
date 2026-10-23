@@ -22,7 +22,7 @@ from catalog.services.page_geometry import locator_geometry, native_geometry, va
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v3"
+PARSER_VERSION = "outline-v4"
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*录|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(r"^(?P<title>.+?)\s*(?:[.．·…_]{2,}|\s{2,}|\t)\s*(?P<label>\d{1,5}|[ivxlcdmIVXLCDM]{1,12})\s*$")
@@ -136,16 +136,26 @@ def extract_outline(asset, path, *, progress=None):
     segments and ambiguous repeated labels. A whole-book offset is never guessed.
     """
     import fitz
+    from catalog.services.outline_headings import styled_headings
     nodes, diagnostics, geometry, native_pages = [], [], {}, {}
+    native_headings = []
+    manual_pages = set(asset.pages.filter(is_text_manual=True).values_list("index", flat=True))
     if progress:
         progress("bookmarks", 0, asset.page_count)
     with fitz.open(str(path)) as document:
         if len(document) != asset.page_count:
             raise OutlineConflict("实际 PDF 页数与文件校验记录不一致，请重新校验文件后生成目录。")
         for number, pdf_page in enumerate(document, start=1):
+            if progress and (number == 1 or number % 10 == 0 or number == len(document)):
+                progress("native_headings", number, len(document))
             geometry[number] = {"pdf_width": pdf_page.rect.width, "pdf_height": pdf_page.rect.height,
                                 "rotation": pdf_page.rotation, "cropbox": list(pdf_page.cropbox)}
             native_pages[number] = native_geometry(pdf_page)
+            if number not in manual_pages:
+                blocks = pdf_page.get_text("dict", flags=fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES).get("blocks", [])
+                native_headings.extend((number, row) for row in styled_headings(blocks))
+                if len(native_headings) > 20000:
+                    raise ValueError("字号标题候选超过 20000 项，请分段校准；未保存截断结果。")
         for ordinal, entry in enumerate(document.get_toc(simple=False)):
             level, title, page = entry[:3]
             title = _title(title)
@@ -203,7 +213,30 @@ def extract_outline(asset, path, *, progress=None):
     # PaddleOCR returns rendered pixmap pixels. Native text blocks use MuPDF's
     # unrotated points. Keep their actual space and reference geometry; the
     # Reader adapter must not consume either as a naked PDF-point coordinate.
-    for block in asset.pages.filter(index__gte=1, index__lte=asset.page_count).exclude(index__in=contents_pages).values("index", "width", "height", "geometry", "text_source", "blocks__text", "blocks__bbox"):
+    repeating = defaultdict(set)
+    heading_keys = set(headings)
+    for number, row in native_headings:
+        repeating[_match_key(row["text"])].add(number)
+    suppressed = {key for key, numbers in repeating.items() if len(numbers) >= max(3, math.ceil(asset.page_count * .1))}
+    for number, row in native_headings:
+        title = _title(row["text"])
+        if number in contents_pages or _match_key(title) in suppressed or not _readable(title):
+            continue
+        locator = {"bbox": row["bbox"], "coordinate_unit": "pdf_points", "coordinate_space": "pymupdf_unrotated",
+                   "source_width": native_pages[number]["crop_box"][2] - native_pages[number]["crop_box"][0],
+                   "source_height": native_pages[number]["crop_box"][3] - native_pages[number]["crop_box"][1],
+                   "page_geometry": geometry[number], "heading_observation": {k: v for k, v in row.items() if k not in {"text", "bbox"}}}
+        locator.update(locator_geometry(row["bbox"], native_pages[number]))
+        titles[_match_key(title)].append((number, locator))
+        if (title, number) not in heading_keys:
+            headings.append((title, number))
+            heading_keys.add((title, number))
+    headings.sort(key=lambda item: item[1])
+    if suppressed:
+        diagnostics.append({"code": "repeated_heading_observations", "count": len(suppressed), "message": "重复出现的大字号文字可能是页眉，未自动补入目录；可从原文人工核对。"})
+    for processed, block in enumerate(asset.pages.filter(index__gte=1, index__lte=asset.page_count).exclude(index__in=contents_pages).values("index", "width", "height", "geometry", "text_source", "blocks__text", "blocks__bbox").iterator(chunk_size=500), start=1):
+        if progress and processed % 500 == 0:
+            progress("source_locations", block["index"], asset.page_count)
         title = _title(block["blocks__text"])
         box = block["blocks__bbox"]
         if title and len(title) <= 180 and isinstance(box, list) and len(box) == 4 and all(type(value) in {int, float} and math.isfinite(value) for value in box):
@@ -230,6 +263,8 @@ def extract_outline(asset, path, *, progress=None):
     matched_native, printed_stack = set(), []
     last_page = 0
     for ordinal, (title, label, contents_page) in enumerate(contents_rows):
+        if progress and ordinal % 200 == 0:
+            progress("match_contents", ordinal, len(contents_rows))
         title_matches = titles.get(_match_key(title), [])
         label_pages = labels.get(label.casefold(), [])
         matches = [hit for hit in title_matches if (not label_pages or hit[0] in label_pages) and hit[0] >= last_page]
@@ -649,8 +684,11 @@ def run_outline_job(job_id, *, task_id):
         return job
     cleanup = None
     def progress(stage, completed, total):
+        start, weight = {"bookmarks": (5, 0), "native_headings": (5, 25),
+                         "contents_and_headings": (30, 30), "source_locations": (60, 20),
+                         "match_contents": (80, 10)}.get(stage, (80, 10))
         updated = ProcessingJob.objects.filter(pk=job.pk, task_id=task_id, status="running").update(
-            heartbeat_at=timezone.now(), progress=min(90, 5 + round(80 * completed / max(1, total))),
+            heartbeat_at=timezone.now(), progress=min(90, start + round(weight * completed / max(1, total))),
             stats={**job.stats, "stage": stage, "completed_pages": completed, "total_pages": total}, updated_at=timezone.now())
         if not updated:
             raise OutlineJobInterrupted()
