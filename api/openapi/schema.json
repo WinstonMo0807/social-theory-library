@@ -3444,6 +3444,271 @@
                 }
             }
         },
+        "/api/catalog/admin/index-maintenance/": {
+            "get": {
+                "operationId": "catalog_admin_index_maintenance_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "jobs_page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "scope",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "versions_page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IndexMaintenance"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_index_maintenance_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IndexMaintenanceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/index-maintenance/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_index_maintenance_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IndexMaintenanceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_index_maintenance_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IndexMaintenanceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/index-maintenance/terms/": {
+            "get": {
+                "operationId": "catalog_admin_index_maintenance_terms_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "entity_type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IndexTerms"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/knowledge-media/{object_type}/{object_id}/": {
             "get": {
                 "operationId": "catalog_admin_knowledge_media_retrieve",
@@ -34687,6 +34952,496 @@
                     "status"
                 ]
             },
+            "IndexActiveGeneration": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "index_uid": {
+                        "type": "string"
+                    },
+                    "model": {
+                        "type": "string"
+                    },
+                    "revision": {
+                        "type": "string"
+                    },
+                    "artifact_id": {
+                        "type": "string"
+                    },
+                    "dimensions": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "pipeline": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "artifact_id",
+                    "created_at",
+                    "dimensions",
+                    "id",
+                    "index_uid",
+                    "model",
+                    "pipeline",
+                    "revision"
+                ]
+            },
+            "IndexGeneration": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "model": {
+                        "type": "string"
+                    },
+                    "revision": {
+                        "type": "string"
+                    },
+                    "dimensions": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "expected_count": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "activated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "verified_at": {
+                        "type": "string"
+                    },
+                    "error": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "activated_at",
+                    "count",
+                    "created_at",
+                    "dimensions",
+                    "error",
+                    "expected_count",
+                    "id",
+                    "model",
+                    "revision",
+                    "status",
+                    "verified_at"
+                ]
+            },
+            "IndexMaintenance": {
+                "type": "object",
+                "properties": {
+                    "active_generation": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/IndexActiveGeneration"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "model": {
+                        "$ref": "#/components/schemas/IndexMaintenanceModel"
+                    },
+                    "summary": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "capabilities": {
+                        "$ref": "#/components/schemas/IndexMaintenanceCapabilities"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IndexMaterial"
+                        }
+                    },
+                    "jobs": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IndexMaintenanceJob"
+                        }
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IndexMaintenanceWarning"
+                        }
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "versions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IndexGeneration"
+                        }
+                    },
+                    "versions_count": {
+                        "type": "integer"
+                    },
+                    "versions_page": {
+                        "type": "integer"
+                    },
+                    "jobs_count": {
+                        "type": "integer"
+                    },
+                    "jobs_page": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "active_generation",
+                    "capabilities",
+                    "checked_at",
+                    "count",
+                    "jobs",
+                    "jobs_count",
+                    "jobs_page",
+                    "model",
+                    "page",
+                    "page_size",
+                    "results",
+                    "summary",
+                    "version",
+                    "versions",
+                    "versions_count",
+                    "versions_page",
+                    "warnings"
+                ]
+            },
+            "IndexMaintenanceActionEnum": {
+                "enum": [
+                    "rebuild",
+                    "activate",
+                    "retry",
+                    "reconcile"
+                ],
+                "type": "string",
+                "description": "* `rebuild` - rebuild\n* `activate` - activate\n* `retry` - retry\n* `reconcile` - reconcile"
+            },
+            "IndexMaintenanceCapabilities": {
+                "type": "object",
+                "properties": {
+                    "rebuild": {
+                        "type": "boolean"
+                    },
+                    "retry": {
+                        "type": "boolean"
+                    },
+                    "reconcile": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "rebuild",
+                    "reconcile",
+                    "retry"
+                ]
+            },
+            "IndexMaintenanceCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/IndexMaintenanceActionEnum"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_job_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "generation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "request_id"
+                ]
+            },
+            "IndexMaintenanceJob": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "progress": {
+                        "type": "integer"
+                    },
+                    "error_message": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "can_retry": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "action",
+                    "can_retry",
+                    "created_at",
+                    "error_message",
+                    "id",
+                    "progress",
+                    "status",
+                    "title",
+                    "version"
+                ]
+            },
+            "IndexMaintenanceModel": {
+                "type": "object",
+                "properties": {
+                    "ready": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "message",
+                    "ready"
+                ]
+            },
+            "IndexMaintenanceReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "job_id",
+                    "message",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "state"
+                ]
+            },
+            "IndexMaintenanceStopRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "IndexMaintenanceWarning": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "IndexMaterial": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "title_has_unpublished_changes": {
+                        "type": "boolean"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "published": {
+                        "type": "boolean"
+                    },
+                    "asset_id": {
+                        "type": "string"
+                    },
+                    "source_revision": {
+                        "type": "string"
+                    },
+                    "readable": {
+                        "$ref": "#/components/schemas/IndexStage"
+                    },
+                    "text": {
+                        "$ref": "#/components/schemas/IndexStage"
+                    },
+                    "keyword": {
+                        "$ref": "#/components/schemas/IndexStage"
+                    },
+                    "vector": {
+                        "$ref": "#/components/schemas/IndexStage"
+                    },
+                    "knowledge": {
+                        "$ref": "#/components/schemas/IndexStage"
+                    },
+                    "last_activity": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "retry_allowed": {
+                        "type": "boolean"
+                    },
+                    "overdue": {
+                        "type": "boolean"
+                    },
+                    "workbench_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "cover_url",
+                    "edition_id",
+                    "edition_label",
+                    "job_id",
+                    "keyword",
+                    "knowledge",
+                    "last_activity",
+                    "overdue",
+                    "published",
+                    "readable",
+                    "retry_allowed",
+                    "source_revision",
+                    "text",
+                    "title",
+                    "title_has_unpublished_changes",
+                    "vector",
+                    "work_id",
+                    "workbench_url"
+                ]
+            },
+            "IndexStage": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "completed_pages": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "message",
+                    "status"
+                ]
+            },
             "IndexStatus": {
                 "type": "object",
                 "properties": {
@@ -34729,6 +35484,109 @@
                     "results",
                     "summary",
                     "warnings"
+                ]
+            },
+            "IndexTerm": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "term": {
+                        "type": "string"
+                    },
+                    "entity_label": {
+                        "type": "string"
+                    },
+                    "entity_type": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "term_type": {
+                        "type": "string"
+                    },
+                    "trust_level": {
+                        "type": "string"
+                    },
+                    "source_kind": {
+                        "type": "string"
+                    },
+                    "public_active": {
+                        "type": "boolean"
+                    },
+                    "admin_resolvable": {
+                        "type": "boolean"
+                    },
+                    "edit_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "admin_resolvable",
+                    "edit_url",
+                    "entity_label",
+                    "entity_type",
+                    "id",
+                    "language",
+                    "public_active",
+                    "source_kind",
+                    "term",
+                    "term_type",
+                    "trust_level"
+                ]
+            },
+            "IndexTerms": {
+                "type": "object",
+                "properties": {
+                    "initialized": {
+                        "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "entries": {
+                        "type": "integer"
+                    },
+                    "public_active_entries": {
+                        "type": "integer"
+                    },
+                    "pending_events": {
+                        "type": "integer"
+                    },
+                    "failed_events": {
+                        "type": "integer"
+                    },
+                    "terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IndexTerm"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "entries",
+                    "failed_events",
+                    "initialized",
+                    "page",
+                    "pages",
+                    "pending_events",
+                    "public_active_entries",
+                    "revision",
+                    "terms"
                 ]
             },
             "IntakeChoice": {

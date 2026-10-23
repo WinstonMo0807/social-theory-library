@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 索引维护
+
+保留316路径，新增index-maintenance、commands与terms，共319。材料阶段、任务、版本、词条、操作/回执具名契约与TypeScript同步。原Discovery读模型保持兼容。
+
 ## 2026-10-23 处理工作区
 
 保留314路径，增加processing-workspace和commands，共316。任务/文件/OCR进度/日志/命令/回执具名序列化器与TypeScript契约同步。旧processing-center接口保留原OCR创建与高级控制协议。

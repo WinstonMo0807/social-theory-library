@@ -816,6 +816,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/index-maintenance/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_index_maintenance_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_index_maintenance_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/index-maintenance/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_index_maintenance_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_index_maintenance_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/index-maintenance/terms/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_index_maintenance_terms_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/knowledge-media/{object_type}/{object_id}/": {
         parameters: {
             query?: never;
@@ -8312,6 +8360,146 @@ export interface components {
             status: string;
             message: string;
         };
+        IndexActiveGeneration: {
+            /** Format: uuid */
+            id: string;
+            index_uid: string;
+            model: string;
+            revision: string;
+            artifact_id: string;
+            dimensions: number | null;
+            pipeline: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        IndexGeneration: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            model: string;
+            revision: string;
+            dimensions: number | null;
+            count: number;
+            expected_count: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            activated_at: string | null;
+            verified_at: string;
+            error: string;
+        };
+        IndexMaintenance: {
+            active_generation: components["schemas"]["IndexActiveGeneration"] | null;
+            model: components["schemas"]["IndexMaintenanceModel"];
+            summary: {
+                [key: string]: number;
+            };
+            capabilities: components["schemas"]["IndexMaintenanceCapabilities"];
+            count: number;
+            page: number;
+            page_size: number;
+            results: components["schemas"]["IndexMaterial"][];
+            jobs: components["schemas"]["IndexMaintenanceJob"][];
+            warnings: components["schemas"]["IndexMaintenanceWarning"][];
+            version: string;
+            /** Format: date-time */
+            checked_at: string;
+            versions: components["schemas"]["IndexGeneration"][];
+            versions_count: number;
+            versions_page: number;
+            jobs_count: number;
+            jobs_page: number;
+        };
+        /**
+         * @description * `rebuild` - rebuild
+         *     * `activate` - activate
+         *     * `retry` - retry
+         *     * `reconcile` - reconcile
+         * @enum {string}
+         */
+        IndexMaintenanceActionEnum: "rebuild" | "activate" | "retry" | "reconcile";
+        IndexMaintenanceCapabilities: {
+            rebuild: boolean;
+            retry: boolean;
+            reconcile: boolean;
+        };
+        IndexMaintenanceCommandRequest: {
+            /** Format: uuid */
+            request_id: string;
+            action: components["schemas"]["IndexMaintenanceActionEnum"];
+            expected_version: string;
+            /** Format: uuid */
+            job_id?: string;
+            expected_job_version?: string;
+            /** Format: uuid */
+            generation_id?: string;
+            confirmed?: boolean;
+        };
+        IndexMaintenanceJob: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            progress: number;
+            error_message: string;
+            /** Format: date-time */
+            created_at: string;
+            title: string;
+            action: string;
+            version: string;
+            can_retry: boolean;
+        };
+        IndexMaintenanceModel: {
+            ready: boolean | null;
+            message: string;
+        };
+        IndexMaintenanceReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            next_url: string;
+            message: string;
+            /** Format: uuid */
+            job_id: string | null;
+        };
+        IndexMaintenanceStopRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
+        IndexMaintenanceWarning: {
+            message: string;
+        };
+        IndexMaterial: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            work_id: string;
+            title: string;
+            title_has_unpublished_changes: boolean;
+            edition_label: string;
+            cover_url: string;
+            published: boolean;
+            asset_id: string;
+            source_revision: string;
+            readable: components["schemas"]["IndexStage"];
+            text: components["schemas"]["IndexStage"];
+            keyword: components["schemas"]["IndexStage"];
+            vector: components["schemas"]["IndexStage"];
+            knowledge: components["schemas"]["IndexStage"];
+            /** Format: date-time */
+            last_activity: string;
+            /** Format: uuid */
+            job_id: string | null;
+            retry_allowed: boolean;
+            overdue: boolean;
+            workbench_url: string;
+        };
+        IndexStage: {
+            status: string;
+            message: string;
+            count?: number;
+            completed_pages?: number;
+            total_pages?: number;
+        };
         IndexStatus: {
             active_generation: unknown;
             model: unknown;
@@ -8323,6 +8511,32 @@ export interface components {
             results: unknown[];
             jobs: unknown[];
             warnings: unknown[];
+        };
+        IndexTerm: {
+            /** Format: uuid */
+            id: string;
+            term: string;
+            entity_label: string;
+            entity_type: string;
+            language: string;
+            term_type: string;
+            trust_level: string;
+            source_kind: string;
+            public_active: boolean;
+            admin_resolvable: boolean;
+            edit_url: string;
+        };
+        IndexTerms: {
+            initialized: boolean;
+            revision: number | null;
+            count: number;
+            page: number;
+            pages: number;
+            entries: number;
+            public_active_entries: number;
+            pending_events: number;
+            failed_events: number;
+            terms: components["schemas"]["IndexTerm"][];
         };
         IntakeChoice: {
             mode: components["schemas"]["CatalogIdentityModeEnum"];
@@ -18852,6 +19066,128 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    catalog_admin_index_maintenance_retrieve: {
+        parameters: {
+            query?: {
+                edition_id?: string;
+                jobs_page?: string;
+                page?: string;
+                q?: string;
+                scope?: string;
+                versions_page?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexMaintenance"];
+                };
+            };
+        };
+    };
+    catalog_admin_index_maintenance_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndexMaintenanceCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IndexMaintenanceCommandRequest"];
+                "multipart/form-data": components["schemas"]["IndexMaintenanceCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexMaintenanceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_index_maintenance_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexMaintenanceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_index_maintenance_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndexMaintenanceStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IndexMaintenanceStopRequest"];
+                "multipart/form-data": components["schemas"]["IndexMaintenanceStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexMaintenanceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_index_maintenance_terms_retrieve: {
+        parameters: {
+            query?: {
+                entity_type?: string;
+                page?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexTerms"];
                 };
             };
         };

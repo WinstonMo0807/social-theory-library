@@ -42,6 +42,7 @@ from .person_resolution_views import (
     AdminPersonMergeRecordView, AdminPersonMergeRollbackView,
 )
 from .person_authority_views import (AuthorityDirectoryView, AuthorityDetailView, AuthorityPreviewView, AuthorityCommandView, AuthorityReceiptView)
+from .index_maintenance_views import IndexMaintenanceView, IndexMaintenanceReceiptView, IndexTermsView
 from .scholar_commands import ScholarSaveReceiptView
 from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView, MediaCollectionView
 from .scholar_media_views import ScholarPortraitSelectionView, PublicPersonPortraitView
@@ -244,6 +245,9 @@ urlpatterns = [
     path("admin/local-services/check/", LocalServiceCheckView.as_view(), name="local-service-check"),
     path("theory-system/directory/", TheoryDirectoryView.as_view(), name="theory-system-directory"),
     path("admin/discovery-index/", DiscoveryIndexView.as_view(), name="admin-discovery-index"),
+    path("admin/index-maintenance/", IndexMaintenanceView.as_view(), name="index-maintenance"),
+    path("admin/index-maintenance/commands/<uuid:request_id>/", IndexMaintenanceReceiptView.as_view(), name="index-maintenance-receipt"),
+    path("admin/index-maintenance/terms/", IndexTermsView.as_view(), name="index-maintenance-terms"),
     path("admin/evidence-curation/sources/", CurationSourcesView.as_view(), name="admin-curation-sources"),
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/", AdminEvidenceCurationView.as_view(), name="admin-evidence-curation"),
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/publish/", PublishEvidenceCurationView.as_view(), name="admin-evidence-curation-publish"),

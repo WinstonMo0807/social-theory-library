@@ -12,6 +12,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
+    "index-maintenance", "index-maintenance-receipt", "index-maintenance-terms",
     "media-workspace", "media-workspace-receipt",
     "workspace-save-receipt", "admin-work-workspace-edits",
     "admin-field-assistant-lookup", "admin-field-assistant-adopt", "admin-field-assistant-reject", "admin-field-assistant-create", "admin-field-assistant-duplicates",

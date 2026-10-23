@@ -9,9 +9,10 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from catalog.editorial_read import AdminPrivateResponseMixin
 
 from catalog.discovery_index_models import DiscoveryDocument, DiscoverySourceState
-from catalog.models import Asset, CatalogingSession, Edition, KnowledgeProjectionDelivery, Page
+from catalog.models import Asset, Edition, KnowledgeProjectionDelivery, Page
 from catalog.services.discovery_inference import DiscoveryInferenceError, inference_health
 from catalog.services.discovery_indexing import request_rebuild, retry_job
 from catalog.services.discovery_projection import active_generation, DiscoveryIndexError, discovery_coverage
@@ -60,8 +61,9 @@ def _integer(params, field, default, maximum):
     return value
 
 
-class DiscoveryIndexView(APIView):
+class DiscoveryIndexView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
+    maintenance = False
 
     @extend_schema(responses=IndexStatusSerializer, parameters=[
         OpenApiParameter("page", int), OpenApiParameter("page_size", int)])
@@ -72,6 +74,26 @@ class DiscoveryIndexView(APIView):
         latest_asset = Asset.objects.filter(edition_id=OuterRef("pk"), kind="normalized", is_current=True).order_by("-version", "-created_at")
         editions = Edition.objects.select_related("work", "active_catalog_revision").annotate(
             effective_asset_id=Coalesce("active_catalog_revision__reader_asset_id", Subquery(latest_asset.values("pk")[:1])))
+        all_editions = editions
+        query = str(request.query_params.get("q") or "").strip()[:200]
+        if query:
+            from ingestion.services.processing_identity import draft_title_work_ids
+            editions = editions.filter(Q(work__title__icontains=query) | Q(work_id__in=draft_title_work_ids(query)) | Q(publisher__icontains=query))
+        if request.query_params.get("edition_id"):
+            identifier = serializers.UUIDField().run_validation(request.query_params["edition_id"])
+            editions = editions.filter(pk=identifier)
+        scope = request.query_params.get("scope", "all")
+        if scope not in {"all", "failed", "text_missing", "file_missing"}:
+            raise ValidationError({"scope": "请选择有效的资料状态。"})
+        if scope == "failed":
+            failures = ProcessingJob.objects.filter(job_type="discovery_index", status="failed", edition_id=OuterRef("pk"))
+            editions = editions.filter(Exists(failures))
+        elif scope == "file_missing":
+            readable_assets = Asset.objects.filter(pk=OuterRef("effective_asset_id"), status="ready", validation_status="valid")
+            editions = editions.filter(~Exists(readable_assets))
+        elif scope == "text_missing":
+            text_pages_query = Page.objects.filter(asset_id=OuterRef("effective_asset_id")).exclude(text="")
+            editions = editions.filter(~Exists(text_pages_query))
         total = editions.count()
         rows = list(editions.order_by("-updated_at", "id")[(page - 1) * page_size:page * page_size])
         assets = {str(row.pk): row for row in Asset.objects.filter(pk__in=[row.effective_asset_id for row in rows if row.effective_asset_id])}
@@ -85,12 +107,12 @@ class DiscoveryIndexView(APIView):
             for item in DiscoveryDocument.objects.filter(generation=generation, source_type="edition",
                 source_id__in=[row.pk for row in rows]).values("source_id", "source_revision").annotate(
                     keywords=Count("id", filter=Q(keyword_ready=True)), vectors=Count("id", filter=Q(vector_ready=True)))} if generation else {}
-        sessions = {str(row.edition_id): str(row.pk) for row in CatalogingSession.objects.filter(
-            edition_id__in=[row.pk for row in rows]).order_by("created_at")}
         deliveries = {str(row["event__catalog_revision_id"]): row for row in KnowledgeProjectionDelivery.objects.filter(
             event__catalog_revision_id__in=[row.active_catalog_revision_id for row in rows if row.active_catalog_revision_id],
             consumer="knowledge_graph").values("event__catalog_revision_id", "status", "last_error_message").order_by("updated_at")}
         results = []
+        from ingestion.services.processing_identity import edition_titles
+        titles = edition_titles(rows)
         for row in rows:
             asset = assets.get(str(row.effective_asset_id))
             state = states.get(str(row.pk))
@@ -116,7 +138,10 @@ class DiscoveryIndexView(APIView):
             knowledge = _stage("ready" if delivery and delivery["status"] == "completed" else "failed" if delivery and delivery["status"] == "failed" else "pending",
                 delivery["last_error_message"] if delivery and delivery["last_error_message"] else "按当前馆藏发布修订核对知识关系投影。")
             last_activity = max(filter(None, [state.indexed_at if state else None, job.updated_at if job else None, row.updated_at]))
-            results.append({"edition_id": str(row.pk), "title": row.work.title, "asset_id": str(asset.pk) if asset else "",
+            results.append({"edition_id": str(row.pk), "work_id": str(row.work_id), **titles[str(row.work_id)], "asset_id": str(asset.pk) if asset else "",
+                "edition_label": " · ".join(str(value) for value in [row.publication_year, row.publisher, row.version_label] if value),
+                "cover_url": f"/api/catalog/admin/media/renditions/{row.work.cover_rendition_id}/file/" if row.work.cover_rendition_id else "",
+                "published": row.pk in published_ids,
                 "source_revision": str(row.active_catalog_revision.document_revision_id or "") if row.active_catalog_revision else "",
                 "readable": _stage(read_status, "阅读文件已通过校验。" if readable else "阅读文件尚未就绪。"),
                 "text": _stage(text_status, "页数表示含可检索文字的页面，空白页不计入。OCR状态：" + row.get_ocr_status_display(), completed_pages=text_pages, total_pages=pages),
@@ -125,25 +150,31 @@ class DiscoveryIndexView(APIView):
                 "knowledge": knowledge, "last_activity": last_activity.isoformat(), "job_id": str(job.pk) if job else None,
                 "retry_allowed": bool(can_retry and job and job.status == "failed"),
                 "overdue": bool(header and not done and row.updated_at < timezone.now() - timedelta(hours=24)),
-                "workbench_url": f"/admin/cataloging/{sessions[str(row.pk)]}" if str(row.pk) in sessions else ""})
+                "workbench_url": f"/admin/library/works/{row.work_id}?edition={row.pk}"})
         warnings = []
-        try:
-            health = inference_health()
-            emb = bool(health.get("models", {}).get("embedding", {}).get("inference_completed"))
-            rer = bool(health.get("models", {}).get("reranker", {}).get("inference_completed"))
-            model = {"ready": emb and rer, "embedding_ready": emb, "reranker_ready": rer,
-                     "message": "本地编码与重排已实际执行。" if emb and rer else "模型文件已准备，尚未完成本次服务启动后的编码和重排确认。"}
-        except DiscoveryInferenceError:
-            model = {"ready": False, "embedding_ready": False, "reranker_ready": False, "message": "本地推理服务暂不可用；请检查模型准备与容器状态。"}
+        if self.maintenance:
+            model = {"ready": None, "embedding_ready": None, "reranker_ready": None,
+                     "message": "本页只展示已保存索引记录，模型当前运行状态请查看服务状态。"}
+        else:
+            try:
+                health = inference_health()
+                emb = bool(health.get("models", {}).get("embedding", {}).get("inference_completed"))
+                rer = bool(health.get("models", {}).get("reranker", {}).get("inference_completed"))
+                model = {"ready": emb and rer, "embedding_ready": emb, "reranker_ready": rer,
+                         "message": "本地编码与重排已实际执行。" if emb and rer else "模型文件已准备，尚未完成本次服务启动后的编码和重排确认。"}
+            except DiscoveryInferenceError:
+                model = {"ready": False, "embedding_ready": False, "reranker_ready": False,
+                         "message": "本地推理服务暂不可用；请检查模型准备与容器状态。"}
         from catalog.services.semantic_search import viewer_access_statuses
         coverage = discovery_coverage(viewer_access_statuses(authenticated=True, staff=True))
         has_text = Page.objects.filter(asset_id=OuterRef("effective_asset_id")).exclude(text="")
-        text_total = editions.filter(ocr_status__in=["not_required", "succeeded"]).filter(Exists(has_text)).count()
+        text_total = all_editions.filter(ocr_status__in=["not_required", "succeeded"]).filter(Exists(has_text)).count()
         graph_total = Edition.objects.filter(active_catalog_revision__knowledge_events__deliveries__consumer="knowledge_graph",
             active_catalog_revision__knowledge_events__deliveries__status="completed").distinct().count()
         jobs = list(ProcessingJob.objects.filter(job_type="discovery_index").order_by("-created_at").values(
             "id", "status", "progress", "error_message", "created_at")[:20])
-        summary = {"readable": Asset.objects.filter(kind="normalized", is_current=True, status="ready", validation_status="valid").values("edition_id").distinct().count(),
+        summary = {"total_editions": all_editions.count(), "eligible_editions": coverage.get("eligible_editions", 0), "published_editions": coverage.get("published_editions", 0),
+            "readable": Asset.objects.filter(kind="normalized", is_current=True, status="ready", validation_status="valid").values("edition_id").distinct().count(),
             "text_ready": text_total, "keyword_ready": coverage.get("indexed_editions", 0), "vector_ready": coverage.get("vector_editions", 0),
             "knowledge_ready": graph_total, "waiting": coverage.get("pending_editions", 0),
             "failed": ProcessingJob.objects.filter(job_type="discovery_index", status="failed").count()}

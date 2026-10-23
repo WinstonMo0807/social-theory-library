@@ -19,6 +19,7 @@ from catalog.models import (
     QueryLexiconGeneration,
     QueryLexiconState,
     Topic,
+    Work,
 )
 from catalog.services.query_lexicon.sync import dry_run_reconciliation, rebuild_query_lexicon
 from catalog.services.query_lexicon.registry import SOURCE_REGISTRY_VERSION
@@ -27,6 +28,7 @@ from ingestion.models import ProcessingJob
 
 def _entry_label(row: QueryLexiconEntry) -> str:
     model = {
+        QueryLexiconEntry.EntityType.WORK: Work,
         QueryLexiconEntry.EntityType.PERSON: Person,
         QueryLexiconEntry.EntityType.KNOWLEDGE_NODE: KnowledgeNode,
         QueryLexiconEntry.EntityType.TOPIC: Topic,
@@ -44,16 +46,22 @@ def _entry_label(row: QueryLexiconEntry) -> str:
         return target.preferred_name
     if isinstance(target, KnowledgeNode):
         return target.canonical_name_zh
+    if isinstance(target, Work):
+        return target.title
     return getattr(target, "name", str(target))
 
 
-def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: int = 60) -> dict:
+def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: int = 60, page: int = 1) -> dict:
     try:
         limit = max(1, min(int(limit), 200))
     except (TypeError, ValueError):
         limit = 60
+    try:
+        page = max(1, int(page))
+    except (TypeError, ValueError):
+        page = 1
     state = QueryLexiconState.objects.select_related("active_generation").first()
-    if state is None:
+    if state is None or state.active_generation_id is None:
         return {
             "initialized": False,
             "revision": None,
@@ -66,6 +74,7 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
             "pending_events": 0,
             "failed_events": 0,
             "last_reconciliation": None,
+            "count": 0, "page": 1, "pages": 1,
         }
     generation = state.active_generation
     entries = QueryLexiconEntry.objects.filter(generation=generation)
@@ -74,8 +83,11 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
     query = str(query or "").strip()
     if query:
         entries = entries.filter(Q(term__icontains=query) | Q(normalized_term__icontains=query))
+    count = entries.count()
+    pages = max(1, (count + limit - 1) // limit)
+    page = min(page, pages)
     rows = []
-    for row in entries.order_by("entity_type", "normalized_term")[:limit]:
+    for row in entries.order_by("entity_type", "normalized_term", "id")[(page - 1) * limit:page * limit]:
         rows.append(
             {
                 "id": str(row.id),
@@ -116,6 +128,7 @@ def query_lexicon_workspace(*, query: str = "", entity_type: str = "", limit: in
     ).count()
     return {
         "initialized": True,
+        "count": count, "page": page, "pages": pages,
         "revision": state.revision,
         "generation": {
             "id": str(generation.id),
