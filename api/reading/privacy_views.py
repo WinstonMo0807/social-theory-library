@@ -1,4 +1,4 @@
-from drf_spectacular.utils import OpenApiTypes, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -98,9 +98,14 @@ class ReaderDataOperationViewSet(PrivateResponses, viewsets.GenericViewSet):
         record.refresh_from_db()
         return Response(privacy.operation_output(record))
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @extend_schema(parameters=[OpenApiParameter("export_format", str, enum=["json", "zip", "csv"], default="json")],
+        responses={(200, "application/json"): OpenApiTypes.OBJECT, (200, "application/zip"): OpenApiTypes.BINARY, (200, "text/csv"): OpenApiTypes.BINARY})
     @action(detail=True, methods=["get"])
     def download(self, request, pk=None):
+        format_ = request.query_params.get("export_format", "json")
+        if format_ != "json":
+            from .privacy_exports import download
+            return download(request.user, pk, format_)
         response = Response(privacy.download_operation(request.user, pk))
         response["Content-Disposition"] = f'attachment; filename="reader-data-{research.identifier(pk)}.json"'
         response["X-Content-Type-Options"] = "nosniff"

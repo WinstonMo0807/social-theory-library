@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { BookOpen, ChevronRight, Clock3, Database, Download, FileText, Globe2, Info, LockKeyhole, RefreshCw, Settings, ShieldCheck, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
-import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
+import { PrivateOwnerVerificationError } from "@/lib/api/private-owner";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
-import { commandPrivacyOperation, downloadPrivacyOperation, operationPath, privacyActive, privacyPath, savePrivacyPreferences,
+import { commandPrivacyOperation, operationPath, privacyActive, privacyPath, savePrivacyPreferences,
   type EraseCategory, type ExportCategory, type PrivacyItem, type PrivacyItems, type PrivacyOperation, type PrivacyOperations, type PrivacySummary, type RetentionKey } from "@/lib/api/privacy.client";
+import { canExportFolder, downloadPrivacyFiles, type PrivacyExportFormat } from "@/lib/api/privacy-export.client";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { Dialog } from "@/components/ui/dialog";
@@ -40,6 +41,7 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
   const [page, setPage] = useState(1);
   const items = usePersistentWorkspace<PrivacyItems>(`${privacyPath}items/?category=${category}&page=${page}`, ownerId);
   const [selected, setSelected] = useState<PrivacyItem[]>([]);
+  const [format, setFormat] = useState<PrivacyExportFormat>("zip");
   const [exports, setExports] = useState<ExportCategory[]>(["research", "notes"]);
   const [draft, setDraft] = useState<{ revision: number; retention: Record<RetentionKey, boolean> } | null>(null);
   const [mobileTab, setMobileTab] = useState(exportOnly ? "export" : "settings");
@@ -95,7 +97,7 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
             <Section number="02" title="保留哪些记录" subtitle="保存记录不等于允许个性化使用。关闭后，已有资料继续保留。"><div className={styles.retention}>{(Object.keys(retentionLabels) as RetentionKey[]).map(key => <label key={key}><input type="checkbox" checked={(draft?.retention || data.retention)[key]} onChange={event => setDraft(current => ({ revision: current?.revision ?? data.revision, retention: { ...(current?.retention || data.retention), [key]: event.target.checked } }))} /><span><strong>{retentionLabels[key]}</strong><small>{retentionCopy[key]}</small></span></label>)}</div><p className={styles.info}><Info size={15} />当前检索任务所需临时会话按原有时限保留，不属于长期搜索记录。</p>{draft ? <div className={styles.actions}><button onClick={() => setDraft(null)}>读取最新设置并重新选择</button><button className={styles.primary} disabled={summary.pending} onClick={() => void savePreferences()}>保存设置</button></div> : null}</Section>
           </div> : null}
           <div className={styles.exportSection}>
-            <Section number={exportOnly ? "01" : "03"} title="导出资料" subtitle="选择要导出的内容类型，保留来源与版本信息，不默认包含原件。"><div className={styles.exportOptions}>{(Object.keys(exportLabels) as ExportCategory[]).map(key => <label key={key} data-selected={exports.includes(key)}><input type="checkbox" checked={exports.includes(key)} onChange={event => setExports(current => event.target.checked ? [...current, key] : current.filter(value => value !== key))} /><span><strong>{exportLabels[key]}</strong><small>{exportCopy[key]}</small></span></label>)}</div><p className={styles.info}><Info size={15} />只导出本人选择的资料。取消勾选不会删除内容。</p><div className={styles.actions}><span>导出格式：<strong>JSON</strong></span><button className={styles.primary} disabled={summary.pending || preparation.locked || selectedTotal === 0 || selectedTotal > data.max_operation_items} onClick={() => void prepare("export")}><Download size={15} />准备导出</button></div>{selectedTotal === 0 ? <div className={styles.emptyExport}><FileText size={22} /><strong>无可导出内容</strong><p>所选类别暂时没有资料。可以重新选择，或先创建研究、笔记与阅读计划。</p></div> : selectedTotal > data.max_operation_items ? <p className={styles.error}>所选 {selectedTotal} 项超过单次 {data.max_operation_items} 项限制，请分类型或在相应工作台逐项导出。</p> : null}
+            <Section number={exportOnly ? "01" : "03"} title="导出资料" subtitle="选择要导出的内容类型，保留来源与版本信息，不默认包含原件。"><div className={styles.exportOptions}>{(Object.keys(exportLabels) as ExportCategory[]).map(key => <label key={key} data-selected={exports.includes(key)}><input type="checkbox" checked={exports.includes(key)} onChange={event => setExports(current => event.target.checked ? [...current, key] : current.filter(value => value !== key))} /><span><strong>{exportLabels[key]}</strong><small>{exportCopy[key]}</small></span></label>)}</div><p className={styles.info}><Info size={15} />只导出本人选择的资料。取消勾选不会删除内容。</p><ExportFormatChoice value={format} onChange={setFormat} disabled={preparation.busy} /><div className={styles.actions}><span>来源、版本与失败清单随文件保留</span><button className={styles.primary} disabled={summary.pending || preparation.locked || selectedTotal === 0 || selectedTotal > data.max_operation_items} onClick={() => void prepare("export")}><Download size={15} />准备导出</button></div>{selectedTotal === 0 ? <div className={styles.emptyExport}><FileText size={22} /><strong>无可导出内容</strong><p>所选类别暂时没有资料。可以重新选择，或先创建研究、笔记与阅读计划。</p></div> : selectedTotal > data.max_operation_items ? <p className={styles.error}>所选 {selectedTotal} 项超过单次 {data.max_operation_items} 项限制，请分类型或在相应工作台逐项导出。</p> : null}
               {data.operations.filter(row => row.kind === "export").slice(0, 2).map(row => <OperationStrip key={row.id} operation={row} onOpen={() => setFocused(row.id)} />)}
             </Section>
           </div>
@@ -115,7 +117,7 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
           <div className={styles.recentHeading}><h3>最近操作记录</h3><button onClick={() => setHistory(true)}>查看全部 <ChevronRight size={12} /></button></div>{data.operations.length ? <ol className={styles.recent}>{data.operations.slice(0, 4).map(row => <li key={row.id}><button onClick={() => setFocused(row.id)}>{row.kind === "export" ? "导出资料" : "删除资料"} · {statusLabels[row.status]}</button><time>{dateLabel(row.updated_at)}</time></li>)}</ol> : <p className={styles.quiet}>暂无资料任务。</p>}{data.preference_history.slice(0, 2).map((entry, index) => <p className={styles.quiet} key={`${entry.at}:${index}`}>更新隐私设置<time>{dateLabel(entry.at)}</time></p>)}</section>
       </> : null}</aside>
     </div>
-    {data && focused ? <OperationDialog key={focused} id={focused} ownerId={ownerId} titles={Object.fromEntries(selected.map(row => [row.id, row.title]))} onClose={() => setFocused(null)} onChanged={changed} onInvalid={failed} /> : null}
+    {data && focused ? <OperationDialog key={focused} id={focused} ownerId={ownerId} initialFormat={format} titles={Object.fromEntries(selected.map(row => [row.id, row.title]))} onClose={() => setFocused(null)} onChanged={changed} onInvalid={failed} /> : null}
     {data && history ? <OperationHistory ownerId={ownerId} onClose={() => setHistory(false)} onSelect={id => { setHistory(false); setFocused(id); }} /> : null}
   </div></div>;
 }
@@ -130,10 +132,12 @@ function OperationStrip({ operation: row, onOpen }: { operation: PrivacyOperatio
   return <div className={styles.operationStrip} data-state={row.status}><Info size={17} /><div><strong>{row.kind === "export" ? "资料导出" : "资料删除"} · {statusLabels[row.status]}</strong><p>已完成 {row.completed} 项{row.failed ? `，${row.failed} 项未完成` : ""}{row.remaining ? `，剩余 ${row.remaining} 项` : ""}。{privacyActive(row.status) ? "可以离开后继续查看。" : ""}</p></div><button onClick={onOpen}>查看任务</button></div>;
 }
 
-export function OperationDialog({ id, ownerId, titles, onClose, onChanged, onInvalid }: { id: string; ownerId: string; titles: Record<string, string>; onClose: () => void; onChanged: () => void; onInvalid: (reason: unknown) => void }) {
+export function OperationDialog({ id, ownerId, titles, onClose, onChanged, onInvalid, initialFormat = "zip" }: { id: string; ownerId: string; initialFormat?: PrivacyExportFormat; titles: Record<string, string>; onClose: () => void; onChanged: () => void; onInvalid: (reason: unknown) => void }) {
   const workspace = usePersistentWorkspace<PrivacyOperation>(operationPath(id), ownerId, data => privacyActive(data.status) ? 2000 : null);
   const [acknowledgedRevision, setAcknowledgedRevision] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [format, setFormat] = useState<PrivacyExportFormat>(initialFormat);
+  const downloadLock = useRef(false);
   const [notice, setNotice] = useState("");
   const alive = useRef(true);
   const requestAbort = useRef<AbortController | null>(null);
@@ -147,23 +151,22 @@ export function OperationDialog({ id, ownerId, titles, onClose, onChanged, onInv
     } catch (reason) { onInvalid(reason); }
   }
   async function download() {
-    if (downloading) return;
-    setDownloading(true); setNotice("");
+    const controller = requestAbort.current;
+    if (downloadLock.current || !controller || controller.signal.aborted) return;
+    downloadLock.current = true; setDownloading(true); setNotice("");
     try {
-      const output = await withPrivateOwner(ownerId, () => downloadPrivacyOperation(ownerId, id, requestAbort.current?.signal), requestAbort.current?.signal);
-      if (!alive.current) return;
-      const url = URL.createObjectURL(new Blob([JSON.stringify(output, null, 2)], { type: "application/json;charset=utf-8" }));
-      const anchor = document.createElement("a"); anchor.href = url; anchor.download = `书库资料-${id}.json`; anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setNotice(`已准备 ${output.records.length} 项资料并开始下载。${output.unavailable_since_preparation.length ? `其中 ${output.unavailable_since_preparation.length} 项在准备后已变化，详细原因在文件中列出。` : ""}`);
-    } catch (reason) { onInvalid(reason); if (alive.current) setNotice(reason instanceof Error ? reason.message : "下载暂未完成。"); }
-    finally { if (alive.current) setDownloading(false); }
+      const message = await downloadPrivacyFiles(ownerId, id, format, controller.signal);
+      if (alive.current) setNotice(message);
+    } catch (reason) { onInvalid(reason); if (alive.current) setNotice(reason instanceof Error ? reason.message : "下载暂未完成，原任务仍保留。"); }
+    finally { downloadLock.current = false; if (alive.current) setDownloading(false); }
   }
+
   return <Dialog open onRequestClose={onClose} className={styles.dialog} aria-labelledby="privacy-operation-title"><header><div><h2 id="privacy-operation-title">{row?.kind === "erase" ? "删除资料与影响" : "导出资料"}</h2><p>仅处理本次明确选择的本人资料。</p></div><button aria-label="关闭任务" onClick={onClose}><X size={18} /></button></header>
     {workspace.error ? <div className={styles.error} role="alert">{workspace.error}<button onClick={workspace.reload}>重新读取</button></div> : null}
     {notice ? <p role="status" className={styles.feedback}>{notice}</p> : null}
     {!row ? <p role="status">正在读取任务…</p> : <><div className={styles.jobStatus}><strong>{statusLabels[row.status]}</strong><span>{dateLabel(row.updated_at)}</span></div>
-      {row.status === "preview" ? <><p>将处理 {row.preview.length} 项。请核对内容与影响；资料或授权发生变化时会停止删除并要求重新预览。</p><ul className={styles.impactList}>{row.preview.map(target => <li key={`${target.category}:${target.id}`}><strong>{target.title || titles[target.id] || `${leafLabels[target.category]} · ${target.id.slice(0, 8)}`}</strong><p>{target.impact.message}</p>{target.current === false ? <small>这项资料已有变化；请关闭此预览，重新选择后再提交。</small> : null}{target.impact.scope_count ? <small>涉及 {target.impact.scope_count} 个笔记使用范围，将撤销对应授权。</small> : null}</li>)}</ul><label className={styles.acknowledgement}><input type="checkbox" checked={acknowledgedRevision === row.revision} onChange={event => setAcknowledgedRevision(event.target.checked ? row.revision : null)} />我已核对所选资料和影响，确认删除。账户、原始馆藏及未选择资料保留。</label></> : <><p>已完成 {row.completed} / {row.total} 项{row.failed ? `，${row.failed} 项未完成` : ""}。</p><progress max={row.total || 1} value={row.completed + row.failed} aria-label="资料任务已处理项目" /><ol className={styles.steps}><li data-current={privacyActive(row.status)}><span />{row.kind === "erase" ? "逐项复核版本与删除影响" : "复核所选资料与来源"}</li><li data-current={row.status === "completed"}><span />{row.kind === "erase" ? "清理关联授权与派生资料" : "准备 JSON 下载"}</li><li data-current={row.status === "completed"}><span />保存处理结果</li></ol>{row.error_code ? <p className={styles.error}>{failureLabels[row.error_code] || "任务未完成，请查看结果后重试。"}</p> : null}{row.results.some(result => result.status === "failed") ? <ul className={styles.failures}>{row.results.filter(result => result.status === "failed").map(result => <li key={`${result.category}:${result.id}`}>{leafLabels[result.category]} · {result.id.slice(0, 8)}：{failureLabels[result.error_code] || "未能完成"}</li>)}</ul> : null}</>}
+      {row.status === "preview" ? <><p>将处理 {row.preview.length} 项。请核对内容与影响；资料或授权发生变化时会停止删除并要求重新预览。</p><ul className={styles.impactList}>{row.preview.map(target => <li key={`${target.category}:${target.id}`}><strong>{target.title || titles[target.id] || `${leafLabels[target.category]} · ${target.id.slice(0, 8)}`}</strong><p>{target.impact.message}</p>{target.current === false ? <small>这项资料已有变化；请关闭此预览，重新选择后再提交。</small> : null}{target.impact.scope_count ? <small>涉及 {target.impact.scope_count} 个笔记使用范围，将撤销对应授权。</small> : null}</li>)}</ul><label className={styles.acknowledgement}><input type="checkbox" checked={acknowledgedRevision === row.revision} onChange={event => setAcknowledgedRevision(event.target.checked ? row.revision : null)} />我已核对所选资料和影响，确认删除。账户、原始馆藏及未选择资料保留。</label></> : <><p>已完成 {row.completed} / {row.total} 项{row.failed ? `，${row.failed} 项未完成` : ""}。</p><progress max={row.total || 1} value={row.completed + row.failed} aria-label="资料任务已处理项目" /><ol className={styles.steps}><li data-current={privacyActive(row.status)}><span />{row.kind === "erase" ? "逐项复核版本与删除影响" : "复核所选资料与来源"}</li><li data-current={row.status === "completed"}><span />{row.kind === "erase" ? "清理关联授权与派生资料" : "准备资料与下载清单"}</li><li data-current={row.status === "completed"}><span />保存处理结果</li></ol>{row.error_code ? <p className={styles.error}>{failureLabels[row.error_code] || "任务未完成，请查看结果后重试。"}</p> : null}{row.results.some(result => result.status === "failed") ? <ul className={styles.failures}>{row.results.filter(result => result.status === "failed").map(result => <li key={`${result.category}:${result.id}`}>{leafLabels[result.category]} · {result.id.slice(0, 8)}：{failureLabels[result.error_code] || "未能完成"}</li>)}</ul> : null}</>}
+      {row.kind === "export" ? <ExportFormatChoice value={format} onChange={setFormat} disabled={downloading} /> : null}
       <p className={styles.info}><Info size={15} />{row.notice}</p><footer><button onClick={onClose}>稍后查看</button>{row.download_available ? <button disabled={downloading} onClick={() => void download()}><Download size={14} />{downloading ? "正在准备…" : "查看成功文件"}</button> : null}{row.status === "preview" ? <button className={styles.danger} disabled={acknowledgedRevision !== row.revision || workspace.pending || !row.preview.length} onClick={() => void command("confirm")}><Trash2 size={14} />确认删除所选资料</button> : null}{privacyActive(row.status) || row.status === "preview" ? <button disabled={workspace.pending} onClick={() => void command("cancel")}>取消此任务</button> : null}{["partial", "failed", "canceled"].includes(row.status) && row.completed < row.total ? <button className={styles.primary} disabled={workspace.pending} onClick={() => void command("retry")}>{row.kind === "erase" ? "重新预览剩余资料" : "重试未完成项"}</button> : null}</footer>
     </>}
   </Dialog>;
@@ -173,4 +176,14 @@ function OperationHistory({ ownerId, onClose, onSelect }: { ownerId: string; onC
   const [page, setPage] = useState(1);
   const workspace = usePersistentWorkspace<PrivacyOperations>(`${operationPath()}?page=${page}`, ownerId, data => data.results.some(row => privacyActive(row.status)) ? 2500 : null);
   return <Dialog open onRequestClose={onClose} className={styles.dialog} aria-labelledby="privacy-history-title"><header><h2 id="privacy-history-title">资料操作历史</h2><button aria-label="关闭历史" onClick={onClose}><X size={18} /></button></header>{workspace.error ? <div className={styles.error} role="alert">{workspace.error}<button onClick={workspace.reload}>重新读取</button></div> : null}{workspace.data ? <>{workspace.data.results.length ? workspace.data.results.map(row => <OperationStrip key={row.id} operation={row} onOpen={() => onSelect(row.id)} />) : <p className={styles.emptyList}>暂无导出或删除任务。</p>}<div className={styles.pagination}><span>共 {workspace.data.count} 项</span><button disabled={page === 1} onClick={() => setPage(value => value - 1)}>上一页</button><span>第 {page} 页</span><button disabled={!workspace.data.next} onClick={() => setPage(value => value + 1)}>下一页</button></div></> : <p role="status">正在读取历史…</p>}</Dialog>;
+}
+
+function ExportFormatChoice({ value, onChange, disabled }: { value: PrivacyExportFormat; onChange: (format: PrivacyExportFormat) => void; disabled: boolean }) {
+  const fieldId = useId();
+  const [folderSupported, setFolderSupported] = useState(false);
+  useEffect(() => { queueMicrotask(() => setFolderSupported(canExportFolder())); }, []);
+  return <fieldset className={styles.formats} disabled={disabled}><legend>输出格式</legend>
+    {([["zip", "ZIP 压缩包（推荐）"], ["folder", "单独文件夹"], ["csv", "CSV（便于进一步处理）"], ["json", "JSON"]] as const).map(([key, label]) => <label key={key}><input type="radio" name={fieldId} checked={value === key} disabled={key === "folder" && !folderSupported} onChange={() => onChange(key)} />{label}</label>)}
+    {!folderSupported ? <small>当前浏览器或连接不支持直接选择文件夹；ZIP 解压后保留同样的分类目录。</small> : value === "folder" ? <small>下载时选择保存位置，每次创建新目录。部分保存会保留已写文件并提示，不覆盖已有资料。</small> : null}
+  </fieldset>;
 }

@@ -1,5 +1,15 @@
 # Social Theory Library 当前进度
 
+## 2026-10-24 按最终PDF补齐隐私导出格式
+
+前置543994b。实际重读唯一PDF223/225后补齐原R32输出格式：ZIP（推荐）、单独文件夹、CSV，同时保留JSON。四种格式共享原ReaderDataOperation与本人选择，不创建新的任务或业务库；切换格式不重新处理资料。ZIP按类别与UUID组织单项JSON和manifest；CSV为UTF-8 BOM、完整记录JSON及失败/下载时变化项目，复用csv_cell阻止表格公式。服务端内存打包，不落盘、不包含馆藏原件或凭据。
+
+ZIP/CSV发送前再核对来源资格和资料修订，比较时仅排除下载时钟及来源关注的本次checked_at，保留真实版本/公开状态/内容变化核对；响应带本人、原任务和数量，前端核对后触发下载。文件夹通过浏览器原生选择器、本人验证与独立新目录逐项保存，manifest记录未完成/完成，中途失败不删除或覆盖已有目录。非安全连接或不支持选择器时明确提示使用ZIP，不能假装已保存文件夹。格式选择沿PDF原输出栏、原日夜变量与窄屏换行。
+
+7de886禁连DB契约0错误10既有警告；b7eb93同步345路径；e17eac五AST，后续两份最终AST；5ce819目标ESLint0错误1既有img提示；3530e3→991ecb TypeScript noEmit0；015c7a CSS解析。ZIP清单、CSV中文/公式、来源时钟与撤回区分、他人隔离和格式化中资料改变用例只编写未运行。未执行测试、浏览器、实际导出、目录写入、迁移或部署，真实交互和像素验收仍待核实。继续其他已登记缺项及内网预览准备。
+
+文件夹兼容边界依据MDN官方文档：[showDirectoryPicker](https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker)、[createWritable](https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle/createWritable)，2026-10-24核对；该资料仅用于技术接口，视觉仍只参考最终PDF。
+
 ## 2026-10-24 读者资料原请求恢复与迟到提交隔离
 
 前置a9d8099。按读者整类grill-me自问，沿唯一PDF183/185重新核对总览，实际重读223/225。原读者中心只清本机恢复信息不能停止迟到请求；隐私页原编号只留内存。现两个入口共用本人/原UUID的会话恢复记录与服务端查回、停止操作；User行锁串行创建与停止，已有任务返回原详情，未创建写最少停止回执。身份核验、权限及404不清编号，409保留等待查回；已创建删除仍须独立预览和确认。原偏好/准备/任务命令写入重新核对账户启用和token版本，无新表。

@@ -456,7 +456,7 @@ def privacy_summary(user):
             "erase_counts": {group: sum(rows(user, leaf).count() for leaf in leaves) for group, leaves in ERASE_GROUPS.items()},
             "operations": [operation_output(row) for row in ReaderDataOperation.objects.filter(user=user)[:6]],
             "preference_history": profile_data(user).get("privacy_history", [])[-8:][::-1],
-            "max_operation_items": MAX_ITEMS, "export_formats": ["json"], "notice": NOTICE}
+            "max_operation_items": MAX_ITEMS, "export_formats": ["zip", "folder", "csv", "json"], "notice": NOTICE}
 
 
 def admission(user):
@@ -708,7 +708,7 @@ def download_operation(user, pk):
         total_bytes += len(json.dumps(record, ensure_ascii=False, default=str).encode())
         if total_bytes > MAX_DOWNLOAD_BYTES:
             raise ValidationError("文件超过单次导出限制，请重新选择较小范围。")
-        output.append({"category": target["category"], "record": record})
+        output.append({"category": target["category"], "id": target["id"], "revision": target["revision"], "record": record})
     return {"schema_version": 1, "owner_id": str(user.pk), "operation_id": str(row.id),
             "prepared_at": row.finished_at, "downloaded_at": timezone.now(), "records": output,
             "unavailable_since_preparation": unavailable,

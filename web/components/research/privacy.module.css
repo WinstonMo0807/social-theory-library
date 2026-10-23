@@ -150,3 +150,8 @@
   .selection { position: sticky; bottom: 0; padding: 12px 0; background: var(--night-white, #fff); border-top: 1px solid var(--night-line, #e7dfd0); } .selection > span { flex: 1; } .selection button { font-size: 10px; padding: 6px 7px; } .selection button:nth-child(2) { display: none; }
   .notices > div { grid-template-columns: 1fr; gap: 0; } .notices { padding-top: 16px; } .operationStrip { flex-wrap: wrap; } .operationStrip button { margin-left: auto; } .dialog { padding: 18px; } .dialog h2 { font-size: 22px; } .dialog footer button { flex: 1; } .jobStatus { flex-wrap: wrap; }
 }
+.formats { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin: 14px 0; padding: 0; border: 0; min-width: 0; }
+.formats legend { padding: 0; margin-bottom: 6px; font-weight: 600; }
+.formats label { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; font-size: 12px; }
+.formats input { accent-color: var(--night-gold, #967647); }
+.formats small { flex-basis: 100%; color: var(--night-muted, #928570); font-size: 11px; }

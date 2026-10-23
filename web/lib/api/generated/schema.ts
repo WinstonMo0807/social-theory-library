@@ -29343,7 +29343,9 @@ export interface operations {
     };
     reading_privacy_operations_download_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                export_format?: "csv" | "json" | "zip";
+            };
             header?: never;
             path: {
                 /** @description 标识此 reader data operation 的 UUID 字符串。 */
@@ -29361,6 +29363,8 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                    "application/zip": string;
+                    "text/csv": string;
                 };
             };
         };

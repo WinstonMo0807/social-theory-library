@@ -22579,6 +22579,19 @@
                 "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "export_format",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "csv",
+                                "json",
+                                "zip"
+                            ],
+                            "default": "json"
+                        }
+                    },
+                    {
                         "in": "path",
                         "name": "id",
                         "schema": {
@@ -22607,6 +22620,18 @@
                                 "schema": {
                                     "type": "object",
                                     "additionalProperties": {}
+                                }
+                            },
+                            "application/zip": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            },
+                            "text/csv": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
                                 }
                             }
                         },

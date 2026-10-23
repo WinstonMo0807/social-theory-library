@@ -54,7 +54,8 @@ export async function recoverPrivacyRequest(ownerId: string, requestId: string, 
 export function commandPrivacyOperation(ownerId: string, id: string, expectedRevision: number, action: "confirm" | "cancel" | "retry", signal?: AbortSignal) {
   return privacyOwnerRequest<PrivacyOperation>(ownerId, `${operationPath(id)}command/`, { method: "POST", signal, body: JSON.stringify({ expected_revision: expectedRevision, action }) });
 }
+export type PrivacyExport = { owner_id: string; operation_id: string; records: Array<{ category: string; id: string; revision: string; record: Record<string, unknown> }>; unavailable_since_preparation: unknown[]; failed: unknown[]; notice: string; schema_version: number; prepared_at: string | null; downloaded_at: string };
 export function downloadPrivacyOperation(ownerId: string, id: string, signal?: AbortSignal) {
-  return privacyOwnerRequest<{ owner_id: string; operation_id: string; records: unknown[]; unavailable_since_preparation: unknown[] }>(
+  return privacyOwnerRequest<PrivacyExport>(
     ownerId, `${operationPath(id)}download/`, { method: "GET", signal });
 }

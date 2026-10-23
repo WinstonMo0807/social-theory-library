@@ -156,6 +156,7 @@ CORS_ALLOW_HEADERS = [
     "range",
 ]
 CORS_EXPOSE_HEADERS = [
+    "X-Reader-Owner", "X-Privacy-Operation", "X-Privacy-Record-Count", "X-Privacy-Unavailable-Count",
     "Accept-Ranges",
     "Content-Disposition",
     "Content-Length",
