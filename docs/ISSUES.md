@@ -1,5 +1,13 @@
 # 当前问题
 
+## 2026-10-24 OCR独立运行包补齐
+
+功能检查点1f66906已保存。安全升级最终补查原PaddlePaddle 3.3.1独立wheel，发现其--no-deps安装路径需要显式补入httpx/protobuf/opt_einsum/networkx/safetensors及间接httpcore。已更新OCR依赖和安装门禁，保留原Paddle版本/校验及模型，OCR Linux包增至84项；三服务198项与Paddle原包另1项公告查询0命中。
+
+14ef2f→b4b0e2下载完成，7e5163公告结果，a2dee5核对原wheel依赖与准备包版本均满足。未执行测试、构建、模型或生产。详见DEPENDENCY_SECURITY_UPGRADE_20261024.md最终补查节；真实Paddle/protobuf兼容性与镜像系统包仍待验收。
+
+继续开发的最新功能是M09原文献索引成功片段导出及发送前账户/权限复核。后续从M09失联恢复和原部分视图继续；Discovery源任务以updated_at记录检查点，全库协调任务可能正常等待子任务，恢复UI不得仅凭缺少heartbeat_at推断失联。全站仍未清零，原有未提交修改保留。
+
 ## 2026-10-24 M09原索引任务成功片段导出
 
 前置安全升级检查点0ac51fd。实际重读唯一PDF第108页，在原结果面板接单份文献Discovery任务的按PDF页序导出，复用原ProcessingJob/DiscoverySourceState/DiscoveryDocument及原公开来源核验。仅取关键词和向量均已确认写入的片段，绑定原任务、索引代际、文献与原文修订，保留单元内字符范围和来源；不从全库或旧修订补结果，不触发新模型/索引/评测。

@@ -19,7 +19,7 @@
 
 - 新 Web Linux x64/glibc 运行归档位于 `offline/security-20261024/web-runtime-linux-x64.tar.gz`，原旧归档保留。新归档按当前 npm 锁文件安装，禁用第三方安装钩子，仅执行已有 Vinext 文件补丁。193 个本地运行包、194 个 Linux 运行包的版本与锁文件匹配。
 - Web 锁文件 SHA256 为 `7b64c876bfa36537fb8b030f883a3850b78b95fd82ea6f5fd7930d0e417b2e04`；归档 SHA256 为 `d40410679212ce63840847926fa30ee229f8a37f989c80e869fdd0287d04a2ba`。归档内锁指纹和 `verify-runtime-dependencies.mjs` 阻止离线构建继续使用不符版本的 Node / node_modules。该检查不证明应用功能正常。
-- Python API 3.12、OCR 3.11、推理 3.12 的 Linux wheels 分别位于同目录 `api-runtime` / `ocr-runtime` / `inference-runtime`。各有 `wheels/`、逐包 SHA256 的 `requirements-linux.lock` 和 `runtime-manifest.json`。分别 76 / 78 / 38 个包。
+- Python API 3.12、OCR 3.11、推理 3.12 的 Linux wheels 分别位于同目录 `api-runtime` / `ocr-runtime` / `inference-runtime`。各有 `wheels/`、逐包 SHA256 的 `requirements-linux.lock` 和 `runtime-manifest.json`。最终分别 76 / 84 / 38 个包。
 - 复用 `scripts/prepare_discovery_runtime.py`，新增 requirements/Python 版本参数、可选依赖递归核对及 Linux 平台标记核对。实际补齐了 Windows 下载时漏掉的 OCR uvloop。只读取顶层 wheel 元数据，避免将 setuptools 内部 vendored 元数据认作第二个包。
 - offline API/OCR Dockerfile 改为新目录和带哈希的精确版本安装；推理离线 Dockerfile沿已有锁文件流程并加入 pip 依赖一致性检查。所有服务准备包包含 pip 26.2.2。
 - 新依赖归档、wheels、安装清单及下载运行物均已被 Git 忽略，没有提交二进制包或私人数据。第一次跨平台下载目录 api-wheels / ocr-wheels / inference-wheels 仍保留，但 Dockerfile 不再使用它们。
@@ -49,3 +49,11 @@ Web 准备脚本 `scripts/prepare_web_runtime.py` 接受 `--node`、`--npm-cli` 
 正式验收时需构建新镜像，核对实际 Node / Python / Nginx 及系统包补丁，执行原有重要业务和权限用例、OCR/推理实际调用，再按授权发布。`offline/web.Dockerfile` 仍需要由新版依赖构建的 `web/dist`；旧 BASE_IMAGE 的 Node 不达基线会被阻止。原历史冻结版发布打包脚本不能直接当本轮发布入口。推理 bundle 还需沿原发布步骤装入当前源码/Dockerfile。未生成新应用 dist 或发布整包。
 
 安全升级不能记作全站完成。当前功能继续接 M09 索引结果与失败恢复，333 契约和 96 源码接入 / 110 部分 / 3 排除项待实施的视图状态保持，实际运行与逐图验收另记。
+
+## 最终补查：独立 Paddle wheel 的间接依赖
+
+在功能检查点1f66906后，补读原本单独以 `--no-deps` 安装的 PaddlePaddle 3.3.1 wheel。该原包本次 OSV 查询0命中，但其依赖没有完整出现在OCR准备包：缺少 httpx、protobuf、opt_einsum、networkx、safetensors。旧镜像可能已带其中部分包，不能据此认定新镜像也完整，或把旧包留作升级结果。
+
+已按该 wheel 的实际 METADATA 补入 OCR requirements，保留它精确要求的 opt_einsum 3.3.0；准备包采用 httpx 0.28.1、protobuf 7.36.2、networkx 3.6.1、safetensors 0.8.0及间接httpcore 1.0.9。OCR包数由78变为84，三服务198项版本重新查询0命中，独立Paddle原包另1项查询0命中。Docker安装后加入依赖一致性门禁，未运行镜像中的导入/计算指令，Paddle/protobuf实际运行兼容性继续列入统一验收。
+
+ab3657为Paddle包元数据/公告读取，42a9e8记录缺项；14ef2f→b4b0e2补齐下载成功，7e5163记录最终198项0命中。这些步骤只读取元数据、下载包和生成哈希清单，没有执行OCR模型。

@@ -18,6 +18,7 @@ RUN printf '%s  %s\n' \
       '/tmp/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl' | sha256sum -c - \
     && (python -m pip uninstall -y paddlepaddle >/dev/null 2>&1 || true) \
     && python -m pip install --no-index --force-reinstall --no-deps /tmp/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl \
+    && python -m pip check \
     && python -c 'import numpy as np, paddle; assert paddle.__version__ == "3.3.1", paddle.__version__; actual = paddle.matmul(paddle.to_tensor([[1.0, 2.0], [3.0, 4.0]], dtype="float32"), paddle.to_tensor([[2.0], [1.0]], dtype="float32")).numpy(); np.testing.assert_allclose(actual, np.array([[4.0], [10.0]], dtype=np.float32), rtol=0, atol=0)' \
     && rm -f /tmp/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl
 COPY --chown=ocr:ocr ocr_service/app.py /app/app.py
