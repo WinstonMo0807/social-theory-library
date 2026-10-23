@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import type { components } from "@/lib/api/generated/schema";
 import { FileText, Plus, RefreshCw, Search, X } from "lucide-react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -24,6 +24,7 @@ type Action="pause"|"resume"|"retry"|"cancel"|"recover"|"configure_followup"|"re
 type Job=components["schemas"]["ProcessingWorkspaceTask"];
 type Queue=components["schemas"]["ProcessingWorkspace"];
 type FileRow=components["schemas"]["ProcessingWorkspaceFile"];
+type CommandConfirmation={rows:Job[];action:"cancel"|"retry_followup"};
 type CommandOptions={page_indexes?:number[];align_concepts?:boolean};
 type Command=CommandOptions & {source:string;job_id:string;action:Action;expected_version:string};
 type Receipt={owner_id:string;request_id:string;state:"applied"|"cancelled";next_url:string;job_id:string|null;source:string;action:string;result:{status?:string;job_id?:string}};
@@ -44,6 +45,7 @@ export function ProcessingWorkspace(){const user=useAdminSession(),[epoch,setEpo
 function QueueWorkspace({owner}:{owner:string}){
   const params=useSearchParams(),router=useRouter(),pathname=usePathname();
   const status=params.get("status")||"",kind=params.get("type")||"",q=params.get("q")||"",[query,setQuery]=useState(q),[selected,setSelected]=useState<string[]>([]),[newTask,setNewTask]=useState(false),[message,setMessage]=useState(""),[bulk,setBulk]=useState(false);
+  const [confirmation,setConfirmation]=useState<CommandConfirmation|null>(null);
   const [creationSeed,setCreationSeed]=useState<ProcessingTaskSeed>({});
   const mounted=useRef(true),sending=useRef(false);useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const requestParams=new URLSearchParams({status,job_type:kind,q,page:params.get("page")||"1",group_by:params.get("view")==="tasks"?"task":"file"});for(const name of ["edition_id","work_id","file_id","task_id","task_source","date_from","date_to"])if(params.get(name))requestParams.set(name,params.get(name)!);
@@ -56,9 +58,9 @@ function QueueWorkspace({owner}:{owner:string}){
   function change(values:Record<string,string|number|null>){setSelected([]);router.push(adminListHref(pathname,params.toString(),values));}
   function search(event:FormEvent){event.preventDefault();change({q:query||null,page:1});}
   async function accept(result:Receipt|null){if(!result||!mounted.current)return;setMessage(result.state==="cancelled"?"未执行的原操作已停止。":`任务操作已记录${result.result.status?`，当前状态：${states[result.result.status]||result.result.status}`:""}。后台任务进度以最新记录为准。`);resource.reload();detail.reload();}
-  async function execute(rows:Job[],action:Action,options?:CommandOptions){if(locked||sending.current)return;const actionable=rows.filter(row=>row.actions.includes(action));if(!actionable.length)return;if(action==="retry_followup"&&!window.confirm("仅重试原文的概念对齐，识别文字、原PDF和人工审核决定继续保留。确认建立后续任务吗？"))return;if(action==="cancel"&&!window.confirm(`取消所选 ${actionable.length} 项任务吗？已保存结果保留。正在完成的步骤可能先保存，请以最终回执为准。`))return;
+  async function execute(rows:Job[],action:Action,options?:CommandOptions,confirmed=false){if(locked||sending.current)return;const actionable=rows.filter(row=>row.actions.includes(action));if(!actionable.length)return;if(!confirmed&&(action==="cancel"||action==="retry_followup")){setConfirmation({rows:actionable,action});return;}
     sending.current=true;setBulk(true);setMessage("");let done=0;
-    try{for(const row of actionable){if(!mounted.current)break;const result=await command.send({source:row.source,job_id:row.id,action,expected_version:row.version,...options});if(!result)break;if(result.state==="applied")done++;if(mounted.current)setSelected(current=>current.filter(value=>value!==keyFor(row)));}
+    try{for(const row of actionable){if(!mounted.current)break;const result=await command.send({source:row.source,job_id:row.id,action,expected_version:row.version,...options});if(!result||result.state!=="applied")break;done++;if(mounted.current)setSelected(current=>current.filter(value=>value!==keyFor(row)));}
       if(mounted.current){setMessage(`${done} / ${actionable.length} 项操作已确认。${done<actionable.length?"其余任务保留选择，请核对错误或查回原请求后继续。":""}`);resource.reload();detail.reload();}
     }finally{sending.current=false;if(mounted.current)setBulk(false);}
   }
@@ -80,7 +82,21 @@ function QueueWorkspace({owner}:{owner:string}){
     </section>{selection?<TaskInspector onClose={()=>change({selection:null,task_id:null,task_source:null})}><button type="button" className={styles.closeDetail} onClick={()=>change({selection:null,task_id:null,task_source:null})} aria-label="关闭任务详情"><X size={18}/></button>{commandFeedback}{detail.error?<p role="alert">{detail.error}<button type="button" onClick={detail.reload}>重新读取</button></p>:job&&detail.data?<TaskDetail key={keyFor(job)} owner={owner} job={job} data={detail.data} disabled={locked} onAction={execute} onSelect={select} onRefresh={()=>{detail.reload();resource.reload();}} onRerun={()=>{setCreationSeed({workId:job.work_id||undefined,editionId:job.edition_id||undefined,assetId:job.ocr_progress?.source_asset_id||job.asset_id||undefined,taskType:job.operation==="outline_rebuild"?"outline":"ocr"});setNewTask(true);}} buttons={<JobActions job={job} disabled={locked} onAction={execute}/>}/>:detail.data?<p role="status">此任务已不存在或不在当前可查看范围内。请关闭详情后重新选择。</p>:<p role="status">正在读取任务详情…</p>}</TaskInspector>:null}</div>
     <footer className={styles.links}><span>进度更新时间：{time(data?.checked_at||null)}</span><nav><Link href="/admin/processing?surface=workers">任务与暂停记录</Link><Link href="/admin/processing/semantic-index">检索索引</Link><Link href="/admin/processing/status">服务状态</Link><Link href="/admin/processing/settings">处理设置</Link></nav></footer>
     <Dialog open={newTask} onRequestClose={()=>setNewTask(false)} className={styles.dialog} aria-labelledby="new-processing-task"><header><h2 id="new-processing-task">新建处理任务</h2><button type="button" onClick={()=>setNewTask(false)} aria-label="关闭新建任务"><X size={18}/></button></header>{newTask?<ProcessingTaskComposer owner={owner} seed={creationSeed} onCreated={(result,message)=>{setNewTask(false);setMessage(message);resource.reload();detail.reload();if(result.next_url)router.push(safeAdminHref(result.next_url));}}/>:null}</Dialog>
+    <TaskCommandConfirmation operation={confirmation} disabled={locked} types={data?.job_types||[]} onClose={()=>setConfirmation(null)} onConfirm={()=>{if(!confirmation)return;const target=confirmation;setConfirmation(null);void execute(target.rows,target.action,undefined,true);}}/>
   </main>;
+}
+
+function TaskCommandConfirmation({operation,disabled,types,onClose,onConfirm}:{operation:CommandConfirmation|null;disabled:boolean;types:Queue["job_types"];onClose:()=>void;onConfirm:()=>void}){
+  const titleId=useId(),descriptionId=useId();
+  if(!operation)return null;
+  const retry=operation.action==="retry_followup";
+  return <Dialog open onRequestClose={onClose} className={`${styles.dialog} ${styles.recoveryDialog}`} aria-labelledby={titleId} aria-describedby={descriptionId}>
+    <header><h2 id={titleId}>{retry?"只重试概念对齐":"取消所选任务"}</h2><button type="button" aria-label="关闭操作确认" onClick={onClose}><X size={18}/></button></header>
+    <p id={descriptionId}>{retry?"为以下材料建立概念对齐接续任务，原识别文字与人工审核决定继续保留。":"取消以下任务尚未执行的步骤，已保存的页、片段和处理记录继续保留。正在完成的步骤可能先保存，请以最终回执为准。"}</p>
+    <ul className={styles.commandTargets}>{operation.rows.map(row=><li key={keyFor(row)}><strong>{row.title}</strong><span>{row.edition_label}</span><small>{taskLabel(row,types)} · {stateLabel(row)}</small></li>)}</ul>
+    <p className={styles.note}>本次涉及 {operation.rows.length} 项任务。提交时重新核对当前账户、任务状态与执行轮次；状态已变化时保留原记录并提示重新读取。</p>
+    <div className={styles.actions}><button type="button" onClick={onClose}>返回任务</button><button type="button" className={styles.primary} disabled={disabled} onClick={onConfirm}>{retry?"确认重试概念对齐":`确认取消这 ${operation.rows.length} 项`}</button></div>
+  </Dialog>;
 }
 
 function TaskDetail({owner,job,data,buttons,disabled,onAction,onSelect,onRerun,onRefresh}:{owner:string;job:Job;data:Queue;buttons:ReactNode;disabled:boolean;onAction:(rows:Job[],action:Action,options?:CommandOptions)=>Promise<void>;onSelect:(row:Job)=>void;onRerun:()=>void;onRefresh:()=>void}){
