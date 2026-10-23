@@ -29554,6 +29554,12 @@
                     "status_label": {
                         "type": "string"
                     },
+                    "stalled": {
+                        "type": "boolean"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
                     "include_originals": {
                         "type": "boolean"
                     },
@@ -29619,10 +29625,12 @@
                     "location",
                     "restore_status",
                     "scope",
+                    "stalled",
                     "started_at",
                     "status",
                     "status_label",
-                    "verification"
+                    "verification",
+                    "version"
                 ]
             },
             "BackupPage": {
@@ -63961,10 +63969,11 @@
                     "verify_archive",
                     "restore_plan",
                     "close_stalled_verification",
-                    "save_schedule"
+                    "save_schedule",
+                    "close_stalled_backup"
                 ],
                 "type": "string",
-                "description": "* `create_backup` - create_backup\n* `verify_archive` - verify_archive\n* `restore_plan` - restore_plan\n* `close_stalled_verification` - close_stalled_verification\n* `save_schedule` - save_schedule"
+                "description": "* `create_backup` - create_backup\n* `verify_archive` - verify_archive\n* `restore_plan` - restore_plan\n* `close_stalled_verification` - close_stalled_verification\n* `save_schedule` - save_schedule\n* `close_stalled_backup` - close_stalled_backup"
             },
             "StorageCommandInputRequest": {
                 "type": "object",

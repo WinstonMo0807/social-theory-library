@@ -85,7 +85,9 @@ def backup_payload(row, *, latest=None):
     size = manifest.get("archive_bytes")
     duration = (row.completed_at - row.started_at).total_seconds() if row.completed_at and row.started_at else None
     error = "备份未完成，现有归档及原件保留。请核对备份目录、数据库备份工具与后台任务。" if row.status == "failed" else ""
-    return {"id": str(row.pk), "status": row.status, "status_label": row.get_status_display(),
+    stalled = backup_stalled(row)
+    return {"id": str(row.pk), "status": row.status, "status_label": "执行状态待核对" if stalled else row.get_status_display(),
+        "stalled": stalled, "version": row.updated_at.isoformat(),
         "include_originals": row.include_originals, "scope": "数据库、文件清单与原件" if row.include_originals else "数据库与文件清单",
         "archive_name": Path(row.archive_path).name if row.archive_path else "尚未生成归档", "location": "配置的 NAS 备份目录",
         "archive_bytes": size if isinstance(size, int) and size >= 0 else None,
@@ -93,6 +95,13 @@ def backup_payload(row, *, latest=None):
         "created_at": row.created_at, "started_at": row.started_at, "completed_at": row.completed_at,
         "error_message": error, "verification": verification_payload(latest) if latest else None,
         "restore_status": "not_verified"}
+
+
+def backup_stalled(row):
+    # Match the configured worker hard limit, with a short delivery margin.
+    limit = getattr(settings, "CELERY_TASK_TIME_LIMIT", None)
+    return bool(isinstance(limit, (int, float)) and limit > 0 and row.status in {"queued", "running"}
+                and (row.started_at or row.created_at) < timezone.now() - timedelta(seconds=limit + 100))
 
 
 def restore_reports(checksum=None):
@@ -202,6 +211,29 @@ def storage_command(request, values):
         raise PermissionDenied("账户会话或备份维护权限已变化。")
     operation, identifier = values["operation"], values["request_id"]
     acquire_entity_lock("backup_workspace_command", identifier)
+    if operation == "close_stalled_backup":
+        fingerprint = sha256(json.dumps(values, cls=DjangoJSONEncoder, sort_keys=True).encode()).hexdigest()
+        receipt = AuditEvent.objects.filter(action="storage_backup_closed", request_id=str(identifier)).first()
+        if receipt:
+            if receipt.actor_id != actor.pk or receipt.after.get("fingerprint") != fingerprint:
+                raise StorageConflict("原请求编号已用于其他备份操作。")
+            return {"request_id": str(identifier), "operation": operation, "backup": backup_payload(
+                BackupJob.objects.get(pk=receipt.object_id))}
+        if BackupJob.objects.filter(pk=identifier).exists() or BackupVerification.objects.filter(pk=identifier).exists() or AuditEvent.objects.filter(request_id=str(identifier)).exists():
+            raise StorageConflict("请求编号已用于其他存储操作。")
+        job = BackupJob.objects.select_for_update().filter(pk=values["backup_id"]).first()
+        if job is None:
+            raise NotFound("备份记录不存在。")
+        if job.updated_at.isoformat() != values["expected_version"] or not backup_stalled(job):
+            raise StorageConflict("任务状态已变化或尚未超过任务时限，请重新读取。")
+        before = {"status": job.status, "started_at": job.started_at.isoformat() if job.started_at else None}
+        job.status = "failed"
+        job.completed_at = timezone.now()
+        job.error_message = "管理员已关闭超时备份记录。未终止工作进程；旧任务不再登记成功，已有归档和原件保留。可重新发起备份。"
+        job.save(update_fields=["status", "completed_at", "error_message", "updated_at"])
+        AuditEvent.objects.create(actor=actor, action="storage_backup_closed", object_type="BackupJob", object_id=str(job.pk),
+            request_id=str(identifier), before=before, after={"fingerprint": fingerprint, "status": "failed"})
+        return {"request_id": str(identifier), "operation": operation, "backup": backup_payload(job)}
     if operation == "save_schedule":
         scope = values["scope"]
         fingerprint = sha256(json.dumps(values, cls=DjangoJSONEncoder, sort_keys=True).encode()).hexdigest()

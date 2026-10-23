@@ -21,6 +21,19 @@ from .database_backup import (
 from .services import sync_asset_to_cloud
 
 
+class BackupDeliveryClosed(Exception):
+    """A closed delivery must not overwrite the administrator's decision."""
+
+
+def _backup_delivery_open(job):
+    return BackupJob.objects.filter(pk=job.pk, status=BackupJob.Status.RUNNING, started_at=job.started_at).exists()
+
+
+def _require_backup_delivery(job):
+    if not _backup_delivery_open(job):
+        raise BackupDeliveryClosed("原备份任务已关闭。")
+
+
 @shared_task(
     bind=True,
     ignore_result=True,
@@ -85,6 +98,7 @@ def create_backup_archive(self, job_id):
         job.error_message = ""
         job.save(update_fields=["status", "started_at", "error_message", "updated_at"])
     archive = None
+    owns_archive = False
     try:
         root = settings.NAS_BACKUP_ROOT.resolve()
         destination = Path(job.destination_path).resolve()
@@ -93,13 +107,16 @@ def create_backup_archive(self, job_id):
         destination.mkdir(parents=True, exist_ok=True)
         backup_created_at = timezone.now()
         stamp = backup_created_at.strftime("%Y%m%d-%H%M%S")
-        archive = destination / f"library-backup-{stamp}-{str(job.id)[:8]}.tar.gz"
+        archive = destination / f"library-backup-{stamp}-{job.id}.tar.gz"
         with tempfile.TemporaryDirectory(prefix="library-backup-", dir=destination) as temporary:
             staging = Path(temporary)
+            _require_backup_delivery(job)
             database = create_database_dump(staging)
+            _require_backup_delivery(job)
             migration_heads = applied_migration_heads()
             assets = []
             for asset in Asset.objects.select_related("edition__work").all().iterator(chunk_size=200):
+                _require_backup_delivery(job)
                 source = Path(asset.file.path)
                 record = {
                     "id": str(asset.id),
@@ -140,10 +157,13 @@ def create_backup_archive(self, job_id):
                 json.dumps(manifest, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            with tarfile.open(archive, "w:gz") as tar:
-                for path in sorted(staging.rglob("*")):
-                    if path.is_file():
-                        tar.add(path, arcname=path.relative_to(staging))
+            with archive.open("xb") as archive_output:
+                owns_archive = True
+                with tarfile.open(fileobj=archive_output, mode="w:gz") as tar:
+                    for path in sorted(staging.rglob("*")):
+                        _require_backup_delivery(job)
+                        if path.is_file():
+                            tar.add(path, arcname=path.relative_to(staging))
         job.status = BackupJob.Status.COMPLETED
         job.archive_path = str(archive)
         job.checksum = _sha256(archive)
@@ -163,28 +183,24 @@ def create_backup_archive(self, job_id):
             "migration_heads": migration_heads,
         }
         job.completed_at = timezone.now()
-        job.save(
-            update_fields=[
-                "status",
-                "archive_path",
-                "checksum",
-                "manifest",
-                "completed_at",
-                "updated_at",
-            ]
-        )
+        accepted = BackupJob.objects.filter(pk=job.pk, status=BackupJob.Status.RUNNING, started_at=job.started_at).update(
+            status=job.status, archive_path=job.archive_path, checksum=job.checksum, manifest=job.manifest,
+            completed_at=job.completed_at, updated_at=timezone.now())
+        if not accepted:
+            raise BackupDeliveryClosed("原备份任务已关闭，不再登记迟到归档。")
         return str(archive)
     except Exception as exc:
-        if archive is not None and archive.exists():
+        if owns_archive and archive is not None and archive.exists():
             try:
                 archive.unlink()
             except OSError:
                 pass
-        job.status = BackupJob.Status.FAILED
-        job.error_message = redact_backup_error(
+        if isinstance(exc, BackupDeliveryClosed):
+            return None
+        error_message = redact_backup_error(
             str(exc),
             secrets=(settings.DATABASES["default"].get("PASSWORD"),),
         )
-        job.completed_at = timezone.now()
-        job.save(update_fields=["status", "error_message", "completed_at", "updated_at"])
+        BackupJob.objects.filter(pk=job.pk, status=BackupJob.Status.RUNNING, started_at=job.started_at).update(
+            status=BackupJob.Status.FAILED, error_message=error_message, completed_at=timezone.now(), updated_at=timezone.now())
         raise

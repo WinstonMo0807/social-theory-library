@@ -8,7 +8,7 @@ from .storage_workspace import storage_snapshot, storage_command, backup_detail
 
 
 class StorageCommandInput(serializers.Serializer):
-    operation = serializers.ChoiceField(choices=["create_backup", "verify_archive", "restore_plan", "close_stalled_verification", "save_schedule"])
+    operation = serializers.ChoiceField(choices=["create_backup", "verify_archive", "restore_plan", "close_stalled_verification", "save_schedule", "close_stalled_backup"])
     request_id = serializers.UUIDField()
     include_originals = serializers.BooleanField(required=False)
     retry_from_id = serializers.UUIDField(required=False)
@@ -27,6 +27,10 @@ class StorageCommandInput(serializers.Serializer):
         return super().to_internal_value(data)
 
     def validate(self, attrs):
+        if attrs["operation"] == "close_stalled_backup":
+            if set(attrs) != {"operation", "request_id", "backup_id", "expected_version"}:
+                raise serializers.ValidationError("关闭超时备份需明确原任务及当前版本。")
+            return attrs
         if attrs["operation"] == "save_schedule":
             required = {"operation", "request_id", "scope", "enabled", "interval_hours", "expected_version"}
             allowed = required | {"first_run_at"}
@@ -63,6 +67,8 @@ class BackupOutput(serializers.Serializer):
     id = serializers.UUIDField()
     status = serializers.CharField()
     status_label = serializers.CharField()
+    stalled = serializers.BooleanField()
+    version = serializers.CharField()
     include_originals = serializers.BooleanField()
     scope = serializers.CharField()
     archive_name = serializers.CharField()

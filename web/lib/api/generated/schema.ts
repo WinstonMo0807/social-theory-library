@@ -6588,6 +6588,8 @@ export interface components {
             id: string;
             status: string;
             status_label: string;
+            stalled: boolean;
+            version: string;
             include_originals: boolean;
             scope: string;
             archive_name: string;
@@ -16926,9 +16928,10 @@ export interface components {
          *     * `restore_plan` - restore_plan
          *     * `close_stalled_verification` - close_stalled_verification
          *     * `save_schedule` - save_schedule
+         *     * `close_stalled_backup` - close_stalled_backup
          * @enum {string}
          */
-        StorageCommandInputOperationEnum: "create_backup" | "verify_archive" | "restore_plan" | "close_stalled_verification" | "save_schedule";
+        StorageCommandInputOperationEnum: "create_backup" | "verify_archive" | "restore_plan" | "close_stalled_verification" | "save_schedule" | "close_stalled_backup";
         StorageCommandInputRequest: {
             operation: components["schemas"]["StorageCommandInputOperationEnum"];
             /** Format: uuid */
