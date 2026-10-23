@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
-import { withPrivateOwner } from "@/lib/api/private-owner";
+import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { accountRequest, type AccountCommand, type AccountDirectory, type AccountHistory, type AccountInput, type AccountPreview, type AccountReceipt, type AccountRoles, type ManagedUser } from "@/lib/api/account-management.client";
 import { Dialog } from "@/components/ui/dialog";
@@ -31,6 +32,7 @@ function Workspace({ actor }: { actor: string }) {
   const [tab, setTab] = useState<"accounts" | "roles" | "history">("accounts"), [page, setPage] = useState(1);
   const [q, setQ] = useState(""), [role, setRole] = useState(""), [status, setStatus] = useState(""), [size, setSize] = useState(10), [selected, setSelected] = useState<number | null>(null);
   const [edit, setEdit] = useState<Edit | null>(null), [locked, setLocked] = useState(false), [message, setMessage] = useState("");
+  const [dirty, setDirty] = useState(false), [closing, setClosing] = useState(false), [stopping, setStopping] = useState(false);
   const [recovery, setRecovery] = useState<string | null>(null), [ready, setReady] = useState(false), [broken, setBroken] = useState(false);
   const controller = useRef<AbortController | null>(null), recovering = useRef(false);
   const load = useCallback((path: string, signal: AbortSignal) => accountRequest<AccountDirectory>(actor, path, { signal }), [actor]);
@@ -48,29 +50,38 @@ function Workspace({ actor }: { actor: string }) {
     });
     return () => { request.abort(); off(); };
   }, [actor]);
-  function clearRecovery() { sessionStorage.removeItem(storageKey(actor)); setRecovery(null); setBroken(false); }
+  function clearRecovery() {
+    try { sessionStorage.removeItem(storageKey(actor)); setRecovery(null); setBroken(false); return true; }
+    catch { setMessage("服务器结果已确认，但本机请求标识暂时无法清除；请恢复会话存储后再次查回。不会重复提交。"); return false; }
+  }
   function pending(id: string) { sessionStorage.setItem(storageKey(actor), id); setRecovery(id); }
-  async function lookup() {
+  function closeEditor() { if (locked) return; if (dirty || recovery) setClosing(true); else setEdit(null); }
+  async function lookup(stop = false) {
     const request = controller.current;
     if (!recovery || !request || request.signal.aborted || recovering.current) return;
     recovering.current = true; setLocked(true); setMessage("");
     try {
-      const result = await withPrivateOwner(actor, () => accountRequest<AccountReceipt>(actor, `receipt/?${new URLSearchParams({ request_id: recovery })}`, { signal: request.signal }), request.signal);
-      if (result.request_id !== recovery) throw Error("返回回执与原请求不一致。");
-      if (!request.signal.aborted) { clearRecovery(); setSelected(result.exists ? result.user_id : null); accounts.reload(); setMessage(result.exists ? "原操作已保存，已定位目标账户。" : "原操作已完成，目标账户随后已删除，不会重新创建。"); }
+      const result = await withPrivateOwner(actor, () => accountRequest<AccountReceipt>(actor, stop ? "receipt/" : `receipt/?${new URLSearchParams({ request_id: recovery })}`, {
+        signal: request.signal, ...(stop ? { method: "POST", body: JSON.stringify({ request_id: recovery, action: "cancel_pending" }) } : {}),
+      }), request.signal);
+      if (result.request_id !== recovery || !["applied", "cancelled"].includes(result.state)) throw Error("返回回执与原请求不一致。");
+      if (!request.signal.aborted && clearRecovery()) { setEdit(null); setStopping(false); setSelected(result.exists ? result.user_id : null); accounts.reload(); setMessage(result.state === "cancelled" ? "原请求尚未执行，现已停止；迟到请求不会再修改账户。" : result.exists ? "原操作已保存，已定位目标账户；不会再次执行或撤销。" : "原操作已完成，目标账户随后已删除，不会重新创建。"); }
     } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "无法查回原请求，请先核对操作记录。"); }
     finally { recovering.current = false; if (!request.signal.aborted) setLocked(false); }
   }
+  useUnsavedForm(Boolean(recovery) && !edit, false);
   const blocked = locked || !ready || Boolean(recovery) || broken;
-  const editor = edit ? <Editor actor={actor} edit={edit} canAssign={data?.can_assign_roles || false} onLocked={setLocked} onPending={pending} onClear={clearRecovery} onDone={receipt => { clearRecovery(); setEdit(null); setSelected(receipt.exists ? receipt.user_id : null); accounts.reload(); setMessage("账户操作已保存，操作记录已同步。"); }} onReload={row => { setEdit({ ...edit, original: row }); accounts.reload(); }} /> : null;
+  const editor = edit ? <Editor actor={actor} edit={edit} canAssign={data?.can_assign_roles || false} onDirty={setDirty} onLocked={setLocked} onPending={pending} onClear={clearRecovery} onDone={receipt => { if (!clearRecovery()) return false; setEdit(null); setSelected(receipt.exists ? receipt.user_id : null); accounts.reload(); setMessage("账户操作已保存，操作记录已同步。"); return true; }} onReload={row => { setEdit({ ...edit, original: row }); accounts.reload(); }} /> : null;
   return <main className={styles.page}><p className={styles.crumb}>系统 › 账户与权限</p><header className={styles.heading}><div><h1>账户、角色与权限</h1><p>管理谁能策划、发布和维护系统，不默认查看私人研究。</p></div><button className={styles.primary} disabled={blocked || Boolean(edit)} onClick={() => setEdit({ operation: "create", original: null })}>＋ 新建账户</button></header>
     <div className={styles.tabs}>{([["accounts", "账户列表"], ["roles", "角色与能力"], ["history", "操作记录"]] as const).map(([value, label]) => <button key={value} aria-pressed={tab === value} disabled={Boolean(edit)} onClick={() => setTab(value)}>{label}</button>)}</div>
     {message ? <p className={styles.notice} role="status">{message}</p> : null}
-    {recovery || broken ? <div className={styles.notice}><p>原账户操作的结果尚未确认。只保留了请求标识，没有在浏览器保存密码或账户资料。</p>{recovery ? <button disabled={locked || Boolean(edit)} onClick={() => void lookup()}>查回原操作</button> : null}<button disabled={locked || Boolean(edit)} onClick={() => { if (window.confirm("请先核对操作记录与目标账户。确认结束本次请求恢复？已保存操作不会撤销。")) clearRecovery(); }}>已核对，结束恢复</button></div> : null}
+    {recovery || broken ? <div className={styles.notice}><p>原账户操作的结果尚未确认。只保留了请求标识，没有在浏览器保存密码或账户资料。</p>{recovery ? <><button disabled={locked || Boolean(edit)} onClick={() => void lookup()}>查回原操作</button><button disabled={locked || Boolean(edit)} onClick={() => setStopping(true)}>停止尚未执行的原请求</button></> : <p>请恢复会话存储后重新打开本页读取原编号；无法读取时请先核对操作记录，不能直接开始另一项写入。</p>}</div> : null}
     {tab === "roles" ? <Roles actor={actor} /> : tab === "history" ? <History actor={actor} /> : <div className={styles.grid}><section aria-label="账户列表"><form className={styles.filters} onSubmit={event => { event.preventDefault(); setQ(String(new FormData(event.currentTarget).get("q") || "")); setPage(1); }}><label className={styles.search}><input name="q" defaultValue={q} maxLength={180} placeholder="搜索姓名、账号或邮箱…" aria-label="搜索账户" /><button>搜索</button></label><label>角色<select value={role} onChange={event => { setRole(event.target.value); setPage(1); }}><option value="">全部角色</option><option value="reader">读者</option><option value="editor">内容编辑</option><option value="admin">系统管理员 / 馆长</option></select></label><label>状态<select value={status} onChange={event => { setStatus(event.target.value); setPage(1); }}><option value="">全部状态</option><option value="active">已启用</option><option value="inactive">已停用</option></select></label></form>
       {accounts.error ? <div className={styles.error} role="alert">{accounts.error}<button onClick={() => { setPage(1); accounts.reload(); }}>重新读取</button></div> : !data ? <p role="status">正在读取账户…</p> : <><table className={styles.table}><thead><tr><th>姓名 / 账号</th><th>角色</th><th>状态</th><th>最后登录</th></tr></thead><tbody>{data.results.map(row => <tr key={row.id} data-selected={selected === row.id}><td><button className={styles.name} disabled={Boolean(edit) || locked} onClick={() => setSelected(row.id)} aria-label={`查看${row.display_name}账户`}><strong>{row.display_name}</strong><small>{row.username}</small><small>{row.email}</small></button></td><td><span className={styles.badge}>{row.role_label}</span></td><td><span className={styles.status} data-active={row.is_active}>{row.is_active ? "已启用" : "已停用"}</span></td><td>{stamp(row.last_login)}</td></tr>)}</tbody></table>{!data.results.length ? <p className={styles.empty}>当前条件下没有账户。</p> : null}<Pager page={page} total={data.total_pages} count={data.count} onPage={setPage} /><label className={styles.muted}>每页 <select value={size} onChange={event => { setSize(Number(event.target.value)); setPage(1); }}>{[10, 20, 50].map(value => <option key={value}>{value}</option>)}</select> 个账户</label></>}
-    </section><aside className={styles.detail}>{edit?.operation === "update" ? <><header className={styles.profile}><div><h2>编辑账户与角色</h2><p>{edit.original?.display_name} · {edit.original?.email}</p></div><button disabled={locked} onClick={() => setEdit(null)}>返回详情</button></header>{editor}</> : data?.selected ? <Detail key={`${data.selected.id}:${data.selected.version}`} actor={actor} user={data.selected} blocked={blocked} onEdit={operation => setEdit({ operation, original: data.selected })} /> : <div className={styles.empty}>选择一个账户，核对资料与实际能力。</div>}</aside></div>}
-    {edit && edit.operation !== "update" ? <Dialog open onRequestClose={() => { if (!locked) setEdit(null); }} className={styles.dialog} aria-label={edit.operation === "create" ? "新建账户" : edit.operation === "password" ? "设置新密码" : "编辑账户与角色"}><header><h2>{edit.operation === "create" ? "新建账户" : edit.operation === "password" ? "设置新密码" : "编辑账户与角色"}</h2><button disabled={locked} aria-label="关闭" onClick={() => setEdit(null)}>×</button></header>{editor}</Dialog> : null}
+    </section><aside className={styles.detail}>{edit?.operation === "update" ? <><header className={styles.profile}><div><h2>编辑账户与角色</h2><p>{edit.original?.display_name} · {edit.original?.email}</p></div><button disabled={locked} onClick={closeEditor}>返回详情</button></header>{editor}</> : data?.selected ? <Detail key={`${data.selected.id}:${data.selected.version}`} actor={actor} user={data.selected} blocked={blocked} onEdit={operation => setEdit({ operation, original: data.selected })} /> : <div className={styles.empty}>选择一个账户，核对资料与实际能力。</div>}</aside></div>}
+    {edit && edit.operation !== "update" ? <Dialog open onRequestClose={closeEditor} className={styles.dialog} aria-label={edit.operation === "create" ? "新建账户" : edit.operation === "password" ? "设置新密码" : "编辑账户与角色"}><header><h2>{edit.operation === "create" ? "新建账户" : edit.operation === "password" ? "设置新密码" : "编辑账户与角色"}</h2><button disabled={locked} aria-label="关闭" onClick={closeEditor}>×</button></header>{editor}</Dialog> : null}
+    <Dialog open={closing} onRequestClose={() => setClosing(false)} className={styles.dialog} aria-label="离开账户编辑"><h2>离开当前编辑？</h2><p>{recovery ? "原操作结果仍待确认。关闭后将保留原编号，可查回结果或停止尚未执行的请求；密码和其他未保存输入会清除。" : "当前输入尚未保存，关闭后将丢弃本次修改。"}</p><div className={styles.actions}><button onClick={() => setClosing(false)}>继续编辑</button><button disabled={locked} onClick={() => { setClosing(false); setEdit(null); }}>关闭编辑</button></div></Dialog>
+    <Dialog open={stopping} onRequestClose={() => { if (!locked) setStopping(false); }} className={styles.dialog} aria-label="停止尚未执行的账户请求"><h2>核对并停止原请求</h2><p>先核对服务器记录。若已执行，将返回已保存结果；若尚未执行，将停止该请求并阻止迟到的原提交。不会撤销已保存账户、重置密码或创建新账户。</p><div className={styles.actions}><button disabled={locked} onClick={() => setStopping(false)}>返回</button><button disabled={locked} onClick={() => void lookup(true)}>{locked ? "正在核对…" : "核对并停止"}</button></div>{message ? <p role="status">{message}</p> : null}</Dialog>
   </main>;
 }
 
@@ -96,8 +107,8 @@ function History({ actor, userId }: { actor: string; userId?: number }) {
   return resource.error ? <p className={styles.error} role="alert">{resource.error}<button onClick={() => { setPage(1); resource.reload(); }}>重新读取</button></p> : !data ? <p role="status">正在读取操作记录…</p> : <><table className={styles.table}><thead><tr><th>时间</th><th>操作者</th><th>操作内容</th></tr></thead><tbody>{data.results.map(row => <tr key={row.id}><td>{stamp(row.created_at)}</td><td>{row.actor}</td><td>{row.action}<small>账户 #{row.user_id}</small>{Object.entries(row.after).map(([key, value]) => <small key={key}>{({ display_name: "显示名", role: "角色", is_active: "状态" })[key] || key}：{key === "is_active" ? value ? "已启用" : "已停用" : key === "role" ? ({ admin: "系统管理员", editor: "内容编辑", reviewer: "原审核角色", reader: "读者" })[String(value)] || String(value) : String(value)}</small>)}{row.password_reset ? <small>已设置新密码，不记录密码内容。</small> : null}{row.sessions_revoked ? <small>原登录凭证已失效。</small> : null}</td></tr>)}</tbody></table>{!data.results.length ? <p className={styles.empty}>暂无账户操作记录。</p> : null}<Pager page={page} total={data.total_pages} count={data.count} onPage={setPage} /></>;
 }
 
-function Editor(props: { actor: string; edit: Edit; canAssign: boolean; onLocked: (value: boolean) => void; onPending: (id: string) => void; onClear: () => void; onDone: (receipt: AccountReceipt) => void; onReload: (row: ManagedUser) => void }) {
-  const { actor, edit, canAssign, onLocked, onPending, onClear, onDone, onReload } = props;
+function Editor(props: { actor: string; edit: Edit; canAssign: boolean; onDirty: (value: boolean) => void; onLocked: (value: boolean) => void; onPending: (id: string) => void; onClear: () => boolean; onDone: (receipt: AccountReceipt) => boolean; onReload: (row: ManagedUser) => void }) {
+  const { actor, edit, canAssign, onDirty, onLocked, onPending, onClear, onDone, onReload } = props;
   const original = edit.original;
   const [name, setName] = useState(original?.display_name || ""), [username, setUsername] = useState(""), [email, setEmail] = useState(""), [password, setPassword] = useState("");
   const [role, setRole] = useState<AccountInput["role"]>((original?.role === "reviewer" ? "editor" : original?.role || "reader") as AccountInput["role"]), [active, setActive] = useState(original?.is_active || false);
@@ -106,6 +117,9 @@ function Editor(props: { actor: string; edit: Edit; canAssign: boolean; onLocked
   const controller = useRef<AbortController | null>(null), sending = useRef(false), pending = useRef<AccountCommand | null>(null);
   useEffect(() => { const request = new AbortController(); controller.current = request; const off = subscribeToSessionChanges(() => request.abort()); return () => { request.abort(); off(); onLocked(false); }; }, [actor, onLocked]);
   const input: AccountInput = edit.operation === "create" ? { operation: "create", username, email, display_name: name, role: role || "reader", is_active: active, password } : edit.operation === "password" ? { operation: "password", user_id: original!.id, expected_version: original!.version, password } : { operation: "update", user_id: original!.id, expected_version: original!.version, ...(!original?.is_owner ? { display_name: name } : {}), is_active: active, ...(role !== (original?.role === "reviewer" ? "editor" : original?.role) ? { role } : {}) };
+  const draft = { name, username, email, password, role, active, uncertain };
+  const dirty = useUnsavedForm(draft, { name: original?.display_name || "", username: "", email: "", password: "", role: original?.role === "reviewer" ? "editor" : original?.role || "reader", active: original?.is_active || false, uncertain: false });
+  useEffect(() => { onDirty(dirty); return () => onDirty(false); }, [dirty, onDirty]);
   const matches = prepared && JSON.stringify(prepared.input) === JSON.stringify(input);
   async function run<T>(action: (signal: AbortSignal) => Promise<T>, done: (value: T) => void) {
     const request = controller.current; if (!request || request.signal.aborted || sending.current) return;
@@ -114,7 +128,7 @@ function Editor(props: { actor: string; edit: Edit; canAssign: boolean; onLocked
     catch (reason) {
       if (request.signal.aborted) return;
       if (reason instanceof ApiRequestError && [401, 403].includes(reason.status)) setInvalid(true);
-      if (reason instanceof ApiRequestError && [400, 404, 409].includes(reason.status)) { pending.current = null; setUncertain(false); onClear(); setPrepared(null); setConfirmed(false); }
+      if (reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400, 409].includes(reason.status) && onClear()) { pending.current = null; setUncertain(false); setPrepared(null); setConfirmed(false); }
       setMessage(reason instanceof Error ? reason.message : "操作结果尚未确认，请保留原请求。密码仅留在本次弹层内存。");
     } finally { sending.current = false; if (!request.signal.aborted) { setBusy(false); onLocked(false); } }
   }
@@ -124,7 +138,7 @@ function Editor(props: { actor: string; edit: Edit; canAssign: boolean; onLocked
     const data = pending.current || { ...prepared.input, request_id: createRequestKey(), preview_hash: prepared.preview.preview_hash, confirmed: true };
     try { onPending(data.request_id); } catch { setMessage("无法保存最少请求标识，本次未提交，请允许会话存储后重试。"); return; }
     pending.current = data; setUncertain(true);
-    void run(signal => accountRequest<AccountReceipt>(actor, "command/", { method: "POST", signal, body: JSON.stringify(data) }), value => { pending.current = null; setPassword(""); onDone(value); });
+    void run(signal => accountRequest<AccountReceipt>(actor, "command/", { method: "POST", signal, body: JSON.stringify(data) }), value => { if (value.request_id !== data.request_id || value.state !== "applied" || !value.user_id) throw Error("返回回执与原账户请求不一致，请查回核对。"); if (onDone(value)) { pending.current = null; setPassword(""); } });
   }
   async function reload() {
     if (!original || uncertain || !window.confirm("读取最新账户资料会清空本弹层未保存的修改，继续吗？")) return;

@@ -112,7 +112,8 @@ class ManagementPreview(serializers.Serializer):
 class ManagementReceipt(serializers.Serializer):
     actor_id = serializers.CharField()
     request_id = serializers.UUIDField()
-    user_id = serializers.IntegerField()
+    user_id = serializers.IntegerField(allow_null=True)
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
     exists = serializers.BooleanField()
     version = serializers.CharField(allow_null=True)
     operation = serializers.CharField()
@@ -220,12 +221,23 @@ class ReceiptQuery(serializers.Serializer):
     request_id = serializers.UUIDField()
 
 
+class StopPendingAccount(StrictInput):
+    request_id = serializers.UUIDField()
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+
 class ManagementReceiptView(ManagementBase):
     @extend_schema(parameters=[ReceiptQuery], responses=ManagementReceipt)
     def get(self, request):
         data = ReceiptQuery(data=request.query_params)
         data.is_valid(raise_exception=True)
         return Response(service.lookup(request.user, data.validated_data["request_id"]))
+
+    @extend_schema(request=StopPendingAccount, responses=ManagementReceipt)
+    def post(self, request):
+        data = StopPendingAccount(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(service.stop_pending(request.user, data.validated_data["request_id"]))
 
 
 class ManagementHistoryView(ManagementBase):

@@ -121,7 +121,7 @@ export interface paths {
         };
         get: operations["auth_users_receipt_retrieve"];
         put?: never;
-        post?: never;
+        post: operations["auth_users_receipt_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10225,7 +10225,8 @@ export interface components {
             actor_id: string;
             /** Format: uuid */
             request_id: string;
-            user_id: number;
+            user_id: number | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
             exists: boolean;
             version: string | null;
             operation: string;
@@ -16742,6 +16743,11 @@ export interface components {
             geographic_scope?: unknown;
             population_scope?: unknown;
         };
+        StopPendingAccountRequest: {
+            /** Format: uuid */
+            request_id: string;
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
         StorageCategory: {
             label: string;
             bytes: number | null;
@@ -18668,6 +18674,31 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementReceipt"];
+                };
+            };
+        };
+    };
+    auth_users_receipt_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopPendingAccountRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StopPendingAccountRequest"];
+                "multipart/form-data": components["schemas"]["StopPendingAccountRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {

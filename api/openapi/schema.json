@@ -433,6 +433,52 @@
                         "description": ""
                     }
                 }
+            },
+            "post": {
+                "operationId": "auth_users_receipt_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopPendingAccountRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopPendingAccountRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StopPendingAccountRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ManagementReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
             }
         },
         "/api/auth/users/roles/": {
@@ -41638,7 +41684,11 @@
                         "format": "uuid"
                     },
                     "user_id": {
-                        "type": "integer"
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
                     },
                     "exists": {
                         "type": "boolean"
@@ -41661,6 +41711,7 @@
                     "exists",
                     "operation",
                     "request_id",
+                    "state",
                     "user_id",
                     "version"
                 ]
@@ -63307,6 +63358,22 @@
                 },
                 "required": [
                     "proposition"
+                ]
+            },
+            "StopPendingAccountRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action",
+                    "request_id"
                 ]
             },
             "StorageCategory": {

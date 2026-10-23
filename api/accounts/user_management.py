@@ -141,9 +141,31 @@ def lookup(actor, request_id):
     event = AuditEvent.objects.filter(pk=request_id, actor=actor, action__startswith="account_", object_type="User").first()
     if event is None:
         raise NotFound("尚未找到本次账户操作，请保留原请求核对。")
+    if event.action == "account_stop":
+        return {"actor_id": str(actor.pk), "request_id": str(event.pk), "user_id": None, "exists": False,
+            "version": None, "operation": "stop", "state": "cancelled", "created_at": event.created_at}
     user = User.objects.filter(pk=event.object_id).first()
     return {"actor_id": str(actor.pk), "request_id": str(event.pk), "user_id": int(event.object_id), "exists": user is not None,
-        "version": version(user) if user else None, "operation": event.action.removeprefix("account_"), "created_at": event.created_at}
+        "version": version(user) if user else None, "operation": event.action.removeprefix("account_"), "state": "applied", "created_at": event.created_at}
+
+
+@transaction.atomic
+def stop_pending(actor, request_id):
+    # The original command also locks this actor before checking its receipt.
+    current = User.objects.select_for_update().filter(pk=actor.pk).first()
+    if current is None:
+        raise PermissionDenied("当前账户已不存在。")
+    check_actor(current)
+    if not constant_time_compare(version(current), version(actor)):
+        raise AccountConflict("操作账户的权限或凭证已变化，请重新登录并核对。")
+    prior = AuditEvent.objects.filter(pk=request_id).first()
+    if prior:
+        if prior.actor_id != actor.pk or prior.object_type != "User" or not prior.action.startswith("account_"):
+            raise AccountConflict("此请求标识属于另一项操作，不能停止或清除。")
+    else:
+        AuditEvent.objects.create(pk=request_id, actor=current, action="account_stop", object_type="User",
+            object_id="", before={}, after={}, request_id=str(request_id))
+    return lookup(current, request_id)
 
 
 @transaction.atomic
@@ -161,6 +183,8 @@ def command(actor, data):
     fingerprint = digest(data)
     prior = AuditEvent.objects.filter(pk=identity).first()
     if prior:
+        if prior.actor_id == actor.pk and prior.action == "account_stop" and prior.object_type == "User":
+            raise AccountConflict("原请求已停止，没有再次修改账户。")
         if prior.actor_id != actor.pk or prior.action != "account_" + data["operation"] or prior.after.get("command_fingerprint") != fingerprint:
             raise AccountConflict("此请求标识已经用于其他操作，请查回原结果。")
         return lookup(current_actor, identity)
@@ -195,7 +219,7 @@ def command(actor, data):
     AuditEvent.objects.create(pk=identity, actor=current_actor, action="account_" + data["operation"], object_type="User", object_id=str(target.pk),
         before=before, after=after, request_id=str(identity))
     return {"actor_id": str(actor.pk), "request_id": str(identity), "user_id": target.pk, "exists": True,
-        "version": version(target), "operation": data["operation"], "created_at": AuditEvent.objects.only("created_at").get(pk=identity).created_at}
+        "version": version(target), "operation": data["operation"], "state": "applied", "created_at": AuditEvent.objects.only("created_at").get(pk=identity).created_at}
 
 
 def audit_rows():
