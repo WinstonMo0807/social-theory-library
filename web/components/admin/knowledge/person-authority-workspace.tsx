@@ -15,7 +15,7 @@ import { useApiResource } from "@/lib/api/use-api-resource";
 import { authorityRequest, type AuthorityValues, type AuthorityVariant, type AuthorityInput, type AuthorityCommand, type AuthorityPreview, type AuthorityReceipt, type AuthorityDirectory, type AuthorityDetail } from "@/lib/api/person-authority.client";
 import { asRecord, textValue, personApi, personPage, isPersonId, type PersonDuplicates } from "@/lib/api/person-resolution";
 import { Dialog } from "@/components/ui/dialog";
-import { BusinessImpact, History, PersonPicker, PreviewLoader, RecordWorkspace } from "./person-resolution-workspace";
+import { BusinessImpact, History, PersonMergeRecovery, PersonPicker, PreviewLoader, RecordWorkspace } from "./person-resolution-workspace";
 import styles from "./person-authority.module.css";
 
 const status: Record<string, string> = { draft: "草稿", needs_review: "待核验", verified: "已核验", merged: "已归并", archived: "已归档", rejected: "未采用" };
@@ -31,6 +31,7 @@ export function PersonAuthorityWorkspace() {
   const source = params.get("source") || "", target = params.get("target") || "", record = params.get("record") || "", create = params.get("new") === "1";
   if (![source, target, record].every(value => !value || isPersonId(value))) return <p role="alert">人物编号无效。<Link href={personPage()}>返回人物规范库</Link></p>;
   return <main className={styles.page} key={`${user.id}:${epoch}`}><nav className={styles.crumb} aria-label="面包屑"><Link href="/admin/knowledge">学者与知识</Link><span>›</span><Link href={personPage()}>人物规范库与身份核对</Link></nav>
+    {hasAdminCapability(user,"can_merge_authority")?<PersonMergeRecovery owner={String(user.id)}/>:null}
     {record ? <><h1>人物归并操作记录</h1><RecordWorkspace recordId={record} credential={getServerSessionCredential() ?? ""} /></> : source ? <PersonView key={source} actor={String(user.id)} id={source} target={target} canMerge={hasAdminCapability(user, "can_merge_authority")} /> : create ? <PersonEditor actor={String(user.id)} original={null} /> : <Directory actor={String(user.id)} />}
   </main>;
 }
@@ -58,6 +59,7 @@ function PersonView({ actor, id, target, canMerge }: { actor: string; id: string
 function PersonEditor({ actor, original, refresh, target = "", canMerge = false }: { actor: string; original: AuthorityDetail | null; refresh?: () => void; target?: string; canMerge?: boolean }) {
   const [values, setValues] = useState<AuthorityValues>(original?.values || blank), [variants, setVariants] = useState<AuthorityVariant[]>(original?.variants || []), [reason, setReason] = useState("");
   const [input, setInput] = useState<AuthorityInput | null>(null), [tab, setTab] = useState(target ? "similar" : "basic"), [identifier, setIdentifier] = useState(""), [identifierValue, setIdentifierValue] = useState(""), [notice, setNotice] = useState("");
+  useUnsavedForm({values,variants,reason,identifier,identifierValue},{values:original?.values||blank,variants:original?.variants||[],reason:"",identifier:"",identifierValue:""});
   const readOnly = original ? !original.can_edit || original.pending_draft : false;
   const set = <K extends keyof AuthorityValues>(key: K, value: AuthorityValues[K]) => setValues(current => ({ ...current, [key]: value }));
   function submit(event: FormEvent) { event.preventDefault(); if (readOnly) return; setInput({ operation: original ? "update" : "create", ...(original ? { person_id: original.id, expected_version: original.version } : {}), values, variants: variants.map(row => ({ ...(row.id ? { id: row.id } : {}), name: row.name, language: row.language, variant_type: row.variant_type, source_note: row.source_note, is_verified: row.is_verified, displayable: row.displayable })), reason }); }

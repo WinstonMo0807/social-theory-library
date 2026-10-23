@@ -1,210 +1,210 @@
-page,id,route,pdf_image_read,source_review,findings,runtime_visual_verification
-10,R01-main,/,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-11,R01-sub01,/,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-12,R01-states,/,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-13,R33-main,/help,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-14,R33-sub01,/about,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-15,R33-sub02,/help/[slug],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-16,R33-sub03,/feedback,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-17,R33-states,/help,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-18,R34-sub04,全局菜单组件（无独立路由）,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-20,R34-main,共享浮层,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-21,R34-sub01,共享浮层,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-22,R34-states,共享浮层,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-23,MISSING-01,/explore,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-24,R02-main,/explore/original,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-25,R02-sub01,/explore/original,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-26,R02-sub02,/explore/original,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-27,R02-states,/explore/original,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-28,R03-main,/explore/opinions,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-29,R03-states,/explore/opinions,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-30,R04-main,/explore/evidence,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-31,R04-sub01,/explore/evidence,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-32,R04-states,/explore/evidence,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-33,R10-main,/works/[slug],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-34,R10-sub01,/works/[slug],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-35,R10-states,/works/[slug],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-36,R08-main,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-37,R08-sub01,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-38,R08-sub02,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-39,R08-sub03,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-40,R08-states,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-41,R09-main,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-42,R09-sub01,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-43,R09-states,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
-45,MISSING-02,/theory-schools,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-46,R15-main,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-47,R15-sub01,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-48,R15-sub02,/theory-schools/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-49,R15-states,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-50,MISSING-05,/subdisciplines,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-51,NEW-T02,/subdisciplines/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-52,R17-main,/theories/graph,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-53,R17-sub01,/theories/graph?view=list,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-54,R17-sub02,/theories/directory,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-55,R17-states,/theories/graph,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-56,R16-main,/theories/timeline,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-57,R16-states,/theories/timeline,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-58,R20-main,/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-59,R20-sub01,/theories/reading-paths/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-60,R20-states,/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-62,R11-main,/scholars,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-63,R11-states,/scholars,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-64,R12-main,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-65,R12-sub01,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-66,R12-states,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-68,R13-main,/topics,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-69,R13-states,/topics,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-70,R14-main,/topics/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-71,R14-states,/topics/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-73,R18-main,/recommendations,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-74,R18-states,/recommendations,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-75,R19-main,/recommendations/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-76,R19-states,/recommendations/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-77,X03-main,/recommendations/[slug]?exhibit={stable-id},2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-78,X03-states,/recommendations/[slug]?exhibit={stable-id},2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
-80,M01-main,/admin,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-81,M01-states,/admin,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-82,M02-main,/admin/uploads,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-83,M02-sub01,/admin/uploads,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-84,M02-states,/admin/uploads,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-85,M03-main,/admin/intake/[itemId],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-86,M03-sub01,/admin/intake/[itemId],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-87,M03-states,/admin/intake/[itemId],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-88,M04-main,/admin/cataloging/new,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-89,M04-sub01,/admin/cataloging/new,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-90,M04-states,/admin/cataloging/new,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-91,M05-main,/admin/library/works/{workId},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-92,M05-sub01,/admin/library/works/{workId},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-93,M05-sub02,/admin/library/works/{workId},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-94,M05-states,/admin/library/works/{workId},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-95,M06-main,/admin/library/works/[id]/files,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-96,M06-sub01,/admin/library/works/[id]/files,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-97,M06-sub02,/admin/library/works/[id]/files,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-98,M06-states,/admin/library/works/[id]/files,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-99,M07-main,/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-100,M07-sub01,/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-101,M07-states,/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-102,M08-main,/admin/media?edition={editionId}&slot=cover|recommendation,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-103,M08-sub01,/admin/media?edition={editionId}&slot=cover|recommendation,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-104,M08-sub02,/admin/media?edition={editionId}&slot=cover|recommendation,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-105,M08-states,/admin/media?edition={editionId}&slot=cover|recommendation,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-106,M09-main,/admin/processing,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-107,M09-sub01,/admin/processing,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-108,M09-states,/admin/processing,2026-10-24 已读取原图,局部修正已接,指定OCR网关转移与断点保护已接，真实运行待验收,未运行测试/浏览器；未确认像素一致
-109,M10-main,/admin/library/assets/[assetId]/ocr,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-110,M10-sub01,/admin/library/assets/[assetId]/ocr,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-111,M10-states,/admin/library/assets/[assetId]/ocr,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-112,M11-main,/admin/library/assets/[id]/outline,2026-10-24 已读取原图,目录调用链已核对，局部修正已接,保留候选/人工确认/历史/原页预览；修复无诊断待复核漏选、旋转页落点，原生书签不再文案冒充人工确认,未运行测试/浏览器；未确认像素一致
-113,M11-sub01,/admin/library/assets/[id]/outline,2026-10-24 已读取原图,目录调用链已核对，局部修正已接,保留候选/人工确认/历史/原页预览；修复无诊断待复核漏选、旋转页落点，原生书签不再文案冒充人工确认,未运行测试/浏览器；未确认像素一致
-114,M11-sub02,/admin/library/assets/[id]/outline,2026-10-24 已读取原图,目录调用链已核对，局部修正已接,保留候选/人工确认/历史/原页预览；修复无诊断待复核漏选、旋转页落点，原生书签不再文案冒充人工确认,未运行测试/浏览器；未确认像素一致
-115,M11-states,/admin/library/assets/[id]/outline,2026-10-24 已读取原图,目录调用链已核对，局部修正已接,保留候选/人工确认/历史/原页预览；修复无诊断待复核漏选、旋转页落点，原生书签不再文案冒充人工确认,未运行测试/浏览器；未确认像素一致
-116,M12-main,/admin/library/assets/[id]/page-mapping,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-117,M12-sub01,/admin/library/assets/[id]/page-mapping,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-118,M12-states,/admin/library/assets/[id]/page-mapping,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-119,M13-main,/admin/processing/semantic-index,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-120,M13-sub01,/admin/processing/semantic-index,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-121,M13-states,/admin/processing/semantic-index,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-122,M14-main,/admin/recommendations,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-123,M14-states,/admin/recommendations,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-124,M15-main,/admin/recommendations/issues/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-125,M15-sub01,/admin/recommendations/issues/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-126,M15-sub02,/admin/recommendations/issues/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-127,M15-states,/admin/recommendations/issues/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-128,M16-main,/admin/recommendations/issues/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-129,M16-sub01,/admin/recommendations/issues/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-130,M16-states,/admin/recommendations/issues/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-131,M17-main,/admin/preview/works/[editionId]?review=1,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-132,M17-sub01,/admin/preview/works/[editionId]?review=1,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-133,M17-states,/admin/preview/works/[editionId]?review=1,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-134,M18-main,/admin/publication,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-135,M18-sub01,/admin/publication,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-136,NEW-A16,/admin/publication/[itemId],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-137,M18-states,/admin/publication,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-138,M19-main,/admin/people,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-139,M19-sub01,/admin/people,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-140,M19-sub02,/admin/people,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-141,M19-states,/admin/people,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-142,M20-main,/admin/scholars/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-143,M20-states,/admin/scholars/[id],本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-144,M21-main,/admin/knowledge,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-145,M21-sub01,/admin/knowledge,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-146,M21-states,/admin/knowledge,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-147,M22-main,/admin/topics,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-148,M22-states,/admin/topics,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-149,M23-main,/admin/theories/timeline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-150,M23-sub01,/admin/theories/timeline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-151,M23-states,/admin/theories/timeline,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-152,M24-main,/admin/theories/reading-paths,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-153,M24-sub01,/admin/theories/reading-paths,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-154,M24-states,/admin/theories/reading-paths,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-155,M25-main,/admin/users,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-156,M25-sub01,/admin/users,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-157,M25-states,/admin/users,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-158,M26-main,/admin/settings,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-159,M26-sub01,/admin/settings,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-160,M26-states,/admin/settings,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-161,M27-main,/admin/storage,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-162,M27-sub01,/admin/storage,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-163,M27-states,/admin/storage,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-164,M28-main,/admin/recycle,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-165,M28-sub01,/admin/recycle,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-166,M28-states,/admin/recycle,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-167,M29-main,/admin/about,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-168,M29-sub01,/admin/about,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-169,M29-states,/admin/about,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-170,M30-main,/admin/feedback,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-171,M30-sub01,/admin/feedback,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-172,M30-states,/admin/feedback,本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-173,M31-main,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-174,M31-sub01,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-175,M31-sub02,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-176,M31-states,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-177,M32-main,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-178,M32-sub01,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-179,M32-states,/admin/content及/admin/content/{page_type}/{page_id},本轮待重读,待逐控件核对,,未运行测试/浏览器；未确认像素一致
-181,R34-sub02,共享浮层,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-182,R34-sub03,共享浮层,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-183,R22-main,/account,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-184,NEW-R04,/account/research,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-185,R22-states,/account,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-186,R31-main,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-187,R31-sub01,/register,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-188,R31-sub02,/reset-password,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-189,R31-sub03,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-190,R31-states,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-191,R05-main,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-192,R05-sub01,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-193,R05-sub02,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-194,R05-states,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-195,R06-main,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-196,R06-sub01,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-197,R06-states,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-198,R07-main,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-199,R07-sub01,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-200,R07-states,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-201,R21-main,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-202,R21-sub01,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-203,R21-sub02,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-204,R21-states,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-205,R23-main,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-206,R23-sub01,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-207,R23-states,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-208,R25-main,/account/citation-audits,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-209,R25-sub01,/account/citation-audits/[id]/parse,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-210,R25-states,/account/citation-audits,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-211,R26-main,/account/citation-audits/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-212,R26-states,/account/citation-audits/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-213,R27-main,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-214,R27-sub01,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-215,R27-states,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-216,R28-main,/account/notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-217,R28-states,/account/notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-218,R29-main,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-219,R29-sub01,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-220,R29-states,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-221,R30-main,/account/research/[id]/history,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-222,R30-states,/account/research/[id]/history,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-223,R32-main,/account/settings/privacy,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-224,R32-sub01,/account/settings/privacy/export,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
-225,R32-states,/account/settings/privacy,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+﻿page,id,route,pdf_image_read,source_review,findings,runtime_visual_verification
+10,R01-main,/,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+11,R01-sub01,/,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+12,R01-states,/,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+13,R33-main,/help,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+14,R33-sub01,/about,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+15,R33-sub02,/help/[slug],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+16,R33-sub03,/feedback,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+17,R33-states,/help,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+18,R34-sub04,全局菜单组件（无独立路由）,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+20,R34-main,共享浮层,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+21,R34-sub01,共享浮层,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+22,R34-states,共享浮层,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+23,MISSING-01,/explore,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+24,R02-main,/explore/original,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+25,R02-sub01,/explore/original,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+26,R02-sub02,/explore/original,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+27,R02-states,/explore/original,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+28,R03-main,/explore/opinions,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+29,R03-states,/explore/opinions,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+30,R04-main,/explore/evidence,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+31,R04-sub01,/explore/evidence,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+32,R04-states,/explore/evidence,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+33,R10-main,/works/[slug],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+34,R10-sub01,/works/[slug],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+35,R10-states,/works/[slug],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+36,R08-main,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+37,R08-sub01,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+38,R08-sub02,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+39,R08-sub03,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+40,R08-states,/reader/[assetId],2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+41,R09-main,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+42,R09-sub01,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+43,R09-states,/reader/[assetId]?mode=parallel,2026-10-24 已读取原图（Sol逐张）,主页/探索分组源码复核已记录，U01–U05已修,见PUBLIC_USABILITY_AUDIT_20261024逐图记录；运行/视觉待验收,未运行测试/浏览器；未确认像素一致
+45,MISSING-02,/theory-schools,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+46,R15-main,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+47,R15-sub01,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+48,R15-sub02,/theory-schools/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+49,R15-states,/theories/nodes/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+50,MISSING-05,/subdisciplines,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+51,NEW-T02,/subdisciplines/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+52,R17-main,/theories/graph,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+53,R17-sub01,/theories/graph?view=list,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+54,R17-sub02,/theories/directory,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+55,R17-states,/theories/graph,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+56,R16-main,/theories/timeline,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+57,R16-states,/theories/timeline,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+58,R20-main,/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+59,R20-sub01,/theories/reading-paths/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+60,R20-states,/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+62,R11-main,/scholars,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+63,R11-states,/scholars,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+64,R12-main,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+65,R12-sub01,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+66,R12-states,/scholars/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+68,R13-main,/topics,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+69,R13-states,/topics,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+70,R14-main,/topics/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+71,R14-states,/topics/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+73,R18-main,/recommendations,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+74,R18-states,/recommendations,2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+75,R19-main,/recommendations/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+76,R19-states,/recommendations/[slug],2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+77,X03-main,/recommendations/[slug]?exhibit={stable-id},2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+78,X03-states,/recommendations/[slug]?exhibit={stable-id},2026-10-24 已逐张读取原图（Sol）,四个一级分类源码复核已记录；K01–K04源码已修,见KNOWLEDGE_USABILITY_AUDIT_20261024；实际运行待统一核实,未运行测试/浏览器；未确认像素一致
+80,M01-main,/admin,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,今日工作按待办类别、所有者、状态、类型筛选；逐条继续处理。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+81,M01-states,/admin,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无待办、无权限、加载失败有明确下一步，不填示例任务。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+82,M02-main,/admin/uploads,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,PDF批量收件，上传与识别分阶段；批次名、文件选择、状态表。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+83,M02-sub01,/admin/uploads,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,批次详情与恢复；已完成文件仍可继续编目，暂停/失败分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+84,M02-states,/admin/uploads,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,不支持/超限/部分失败/重复材料有逐项处理，不全批重做。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+85,M03-main,/admin/intake/[itemId],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,原文件与候选对照，明确使用已有版、新版或新作品。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+86,M03-sub01,/admin/intake/[itemId],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,同名不同书、原文与译本、内容完全重复需分别决定。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+87,M03-states,/admin/intake/[itemId],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无候选、候选不确定、处理中、失败可保存或延期。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+88,M04-main,/admin/cataloging/new,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,先建书目，材料类型、责任者和版本分组；保存与继续补文件。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+89,M04-sub01,/admin/cataloging/new,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,单篇文章有期刊、年卷期、页码、DOI，责任角色明确。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+90,M04-states,/admin/cataloging/new,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无封面不妨碍草稿，重复提醒/失败保留当前输入。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+91,M05-main,/admin/library/works/{workId},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,并列编辑栏目与作品/版本侧栏，当前草稿与公开状态分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+92,M05-sub01,/admin/library/works/{workId},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,题名、作者等字段有来源候选与人工编辑，预览对应当前对象。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+93,M05-sub02,/admin/library/works/{workId},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,多窗口比较最新与未保存修改，逐项选择合并。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+94,M05-states,/admin/library/works/{workId},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,未保存、冲突、无权限/失败不伪装成功，输入可继续。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+95,M06-main,/admin/library/works/[id]/files,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,出版版本、原件、阅读副本、公开状态分别管理。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+96,M06-sub01,/admin/library/works/[id]/files,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,补充与替换预览，明确保留旧文件并说明影响。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+97,M06-sub02,/admin/library/works/[id]/files,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,历史文件及引用影响可看；不自动把旧引用改绑新文件。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+98,M06-states,/admin/library/works/[id]/files,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无文件/处理中/失败时仍能管理书目，旧可用版继续服务。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+99,M07-main,/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,字段助手逐字段显示当前值、候选、依据和采用选择。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+100,M07-sub01,/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,单字段差异与人工锁；只重生指定候选，不覆盖人工决定。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+101,M07-states,/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无模型/无证据/低质量OCR仍可人工填写，不编造补全。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+102,M08-main,/admin/media?edition={editionId}&slot=cover|recommendation,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,封面用途、来源、许可、说明和当前/历史图分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+103,M08-sub01,/admin/media?edition={editionId}&slot=cover|recommendation,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,从准确PDF页选图后才准备候选，不以错误文件页代用。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+104,M08-sub02,/admin/media?edition={editionId}&slot=cover|recommendation,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,裁切/旋转/比例、历史封面恢复与多用途影响。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+105,M08-states,/admin/media?edition={editionId}&slot=cover|recommendation,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无封面/图片失败/权限不足有明确状态，缺可选图不硬阻断。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+106,M09-main,/admin/processing,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,任务按类型/阶段/状态列真实进度、结果与失败。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+107,M09-sub01,/admin/processing,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,详情、日志、安全暂停/继续与失败范围，保留完成结果。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+108,M09-states,/admin/processing,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,空队列/服务不可用/中断待核，不虚构ETA或假完成。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+109,M10-main,/admin/library/assets/[assetId]/ocr,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,原页、当前文字和人工修订对照，按实际物理页。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+110,M10-sub01,/admin/library/assets/[assetId]/ocr,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,问题页逐项核对/重试，人工文字与已核验页受保护。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+111,M10-states,/admin/library/assets/[assetId]/ocr,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无文字、低质量、识别中/失败及权限限制分别提示。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+112,M11-main,/admin/library/assets/[id]/outline,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,原生/目录页/正文候选与当前已采用目录分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+113,M11-sub01,/admin/library/assets/[id]/outline,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,同一页多个节点须正确相对落点，不全落页首。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+114,M11-sub02,/admin/library/assets/[id]/outline,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,候选审核、人工修订、历史恢复显式采用。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+115,M11-states,/admin/library/assets/[id]/outline,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,缺书签、异常候选、无文字时需要人工复核，不承诺全书正确。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+116,M12-main,/admin/library/assets/[id]/page-mapping,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,印刷标签与物理页分开，分段校准并预览影响。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+117,M12-sub01,/admin/library/assets/[id]/page-mapping,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,罗马前言、多段重编号、双页扫描和缺页显式记录。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+118,M12-states,/admin/library/assets/[id]/page-mapping,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,未确认/冲突/无可解析页有下一步，采用与发布分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+119,M13-main,/admin/processing/semantic-index,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,词法、语义、原文覆盖分别显示，明确为何搜不到。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+120,M13-sub01,/admin/processing/semantic-index,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,增量任务/候选索引/旧版切换有明确对象与进度。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+121,M13-states,/admin/processing/semantic-index,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无原文、未入索引、维度不符和服务失败不能都显示正常。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+122,M14-main,/admin/recommendations,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,策划项目/文章、负责人、团队、草稿/公开/归档。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+123,M14-states,/admin/recommendations,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,空项目、无权限、来源不足有明确继续动作。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+124,M15-main,/admin/recommendations/issues/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,专题结构块可编辑/排序/插入，正文与准确来源分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+125,M15-sub01,/admin/recommendations/issues/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,文本、人物、概念、比较、时间线等结构块有明确选择。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+126,M15-sub02,/admin/recommendations/issues/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,断线草稿/多人冲突保留本地与远端区别。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+127,M15-states,/admin/recommendations/issues/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,未保存/保存失败/来源失效不悄悄发布或清掉输入。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+128,M16-main,/admin/recommendations/issues/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,从同一馆藏按准确版本选材，智能建议有依据。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+129,M16-sub01,/admin/recommendations/issues/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,每项证据可核正文、采用修改后采用或忽略。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+130,M16-states,/admin/recommendations/issues/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无证据/模型失败/部分完成保留已选材料与结果。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+131,M17-main,/admin/preview/works/[editionId]?review=1,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,真实草稿预览与当前公开版分开，有检查清单。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+132,M17-sub01,/admin/preview/works/[editionId]?review=1,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,阻塞项定位准确修改，再返回原检查，不只泛化错误。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+133,M17-states,/admin/preview/works/[editionId]?review=1,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,未保存先保存，检查失败不显示完成，旧公开版保留。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+134,M18-main,/admin/publication,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,发布对象、当前稿/公开版和历史、撤回分别明确。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+135,M18-sub01,/admin/publication,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,撤回/恢复历史有影响确认，不直接重写旧历史。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+136,NEW-A16,/admin/publication/[itemId],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,最新替换图：版本差异、关联内容、PDF/OCR/定位/索引/授权检查。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+137,M18-states,/admin/publication,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,仅书目/全文模式、失败/权限/撤回有准确状态。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+138,M19-main,/admin/people,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,人物规范名、异名、身份来源与状态供核对。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+139,M19-sub01,/admin/people,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,原文名/译名/标识/角色和内部说明分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+140,M19-sub02,/admin/people,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,归并前比较证据、方向及受影响引用，不按相似度自动合并。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+141,M19-states,/admin/people,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,同名保留独立、证据不足与合并冲突有动作。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+142,M20-main,/admin/scholars/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,学者公开稿/草稿、人规范身份及作品/关系来源清楚。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+143,M20-states,/admin/scholars/[id],2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无头像/资料少可继续草稿，未确认关系不冒充事实。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+144,M21-main,/admin/knowledge,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,理论概念、原文用法、来源和关系可编辑。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+145,M21-sub01,/admin/knowledge,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,关系类型、方向、准确原文及确认状态逐项明确。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+146,M21-states,/admin/knowledge,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无证据、术语异名/冲突需人工核对，不自动合并。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+147,M22-main,/admin/topics,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,主题/学科树、材料选择、排序和公开预览。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+148,M22-states,/admin/topics,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,防循环、同名提醒、空材料/权限失败保留编辑。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+149,M23-main,/admin/theories/timeline,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,时间线事件、主体/出处与日期精度可编辑。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+150,M23-sub01,/admin/theories/timeline,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,年/范围/不确定日期、主体版本与证据版本分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+151,M23-states,/admin/theories/timeline,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,出处不足/日期冲突不虚造精确日期，保存为待核。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+152,M24-main,/admin/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,公共路径按目标/阶段/材料安排，准确阅读入口。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+153,M24-sub01,/admin/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,先修与相关关系分开，阶段顺序/循环需说明。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+154,M24-states,/admin/theories/reading-paths,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无材料/先修冲突/候选失败可人工继续，私人计划不被改写。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+155,M25-main,/admin/users,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,账户、角色、能力说明及列表真实状态。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+156,M25-sub01,/admin/users,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,角色变更前比较新增/保留/失去的能力及登录影响。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+157,M25-states,/admin/users,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无权限只读、冲突/会话变更先核对，不绕过鉴权。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+158,M26-main,/admin/settings,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,本地模型/外部服务、检查时间、任务与失败分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+159,M26-sub01,/admin/settings,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,能力不可用说明缺什么，保留人工流程。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+160,M26-states,/admin/settings,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,未检查/失联不显示绿灯，连接成功不等于质量通过。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+161,M27-main,/admin/storage,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,存储位置/登记文件/备份状态，真实用量与未知值。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+162,M27-sub01,/admin/storage,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,备份历史、归档校验与隔离恢复准备分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+163,M27-states,/admin/storage,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,低空间/目录断开/失败/无演练分别提示，清理先核影响。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+164,M28-main,/admin/recycle,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,回收与归档、依赖及历史，恢复原身份。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+165,M28-sub01,/admin/recycle,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,恢复前看依赖缺失与冲突，其他对象需分别处理。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+166,M28-states,/admin/recycle,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,恢复受阻不强行公开，无记录/无权限有下一步。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+167,M29-main,/admin/about,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,网站/关于/首页公共说明按草稿与当前公开分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+168,M29-sub01,/admin/about,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,首页槽位从已公开策划/学者/主题选择并排序。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+169,M29-states,/admin/about,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,来源撤回/缺图/空槽与并发保存有具体反馈。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+170,M30-main,/admin/feedback,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,检索与智能质量评审是人工真值与改进对照。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+171,M30-sub01,/admin/feedback,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,样本标注与原文对照，不靠模型自评分。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+172,M30-states,/admin/feedback,2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,缺标注、不再可比/过期/退化需明确，不虚报通过。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+173,M31-main,/admin/content及/admin/content/{page_type}/{page_id},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,文字清单、当前条目、读者预览三栏，分组排序。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+174,M31-sub01,/admin/content及/admin/content/{page_type}/{page_id},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,多选跨组移动、撤销/恢复仅改引用与顺序。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+175,M31-sub02,/admin/content及/admin/content/{page_type}/{page_id},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,本页推荐理由与全馆题名作者影响分开。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+176,M31-states,/admin/content及/admin/content/{page_type}/{page_id},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,未选择、多选、拖放、未保存/未发布/公开、手机操作均清楚。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+177,M32-main,/admin/content及/admin/content/{page_type}/{page_id},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,共用馆藏搜索筛选，已选清单/分组/对外理由/内部收获。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+178,M32-sub01,/admin/content及/admin/content/{page_type}/{page_id},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,选择准确版本与阅读落点，清单重排并返回编辑页。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+179,M32-states,/admin/content及/admin/content/{page_type}/{page_id},2026-10-24 已逐张读取原图（Sol）,管理整类源码追问；A01–A04已修，恢复/归并/选书边界已补源码,无结果、重复、仅书目全文未核实、版本不清须准确处理。；见ADMIN_USABILITY_AUDIT_20261024，不代表运行通过,未运行测试/浏览器；未确认像素一致
+181,R34-sub02,共享浮层,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+182,R34-sub03,共享浮层,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+183,R22-main,/account,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+184,NEW-R04,/account/research,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+185,R22-states,/account,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+186,R31-main,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+187,R31-sub01,/register,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+188,R31-sub02,/reset-password,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+189,R31-sub03,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+190,R31-states,/login,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+191,R05-main,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+192,R05-sub01,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+193,R05-sub02,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+194,R05-states,/account/research/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+195,R06-main,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+196,R06-sub01,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+197,R06-states,/account/research/[id]/compare,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+198,R07-main,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+199,R07-sub01,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+200,R07-states,/account/research/[id]/counter-evidence,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+201,R21-main,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+202,R21-sub01,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+203,R21-sub02,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+204,R21-states,/account/plans/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+205,R23-main,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+206,R23-sub01,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+207,R23-states,/account/confirmed-notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+208,R25-main,/account/citation-audits,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+209,R25-sub01,/account/citation-audits/[id]/parse,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+210,R25-states,/account/citation-audits,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+211,R26-main,/account/citation-audits/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+212,R26-states,/account/citation-audits/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+213,R27-main,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+214,R27-sub01,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+215,R27-states,/account/citation-audits/[id]/issues/[issueId],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+216,R28-main,/account/notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+217,R28-states,/account/notes,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+218,R29-main,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+219,R29-sub01,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+220,R29-states,/account/collections/[id],2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+221,R30-main,/account/research/[id]/history,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+222,R30-states,/account/research/[id]/history,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+223,R32-main,/account/settings/privacy,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+224,R32-sub01,/account/settings/privacy/export,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致
+225,R32-states,/account/settings/privacy,2026-10-24 已逐张读取原图（主线）,读者整类复核已记录；R01–R03源码已修，未运行验收,见READER_USABILITY_AUDIT_20261024；原图阅读不等于实施视觉验收,未运行测试/浏览器；未确认像素一致

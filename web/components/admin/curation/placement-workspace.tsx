@@ -13,7 +13,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { PlacementList, placementAuthors, placementGroupKey, placementGroups, placementType } from "@/components/public/placement-list";
 import { IssueTextEditor } from "./issue-text-editor";
 import { PreviewViewport } from "./fixed-page-editor";
-import { PlacementCatalogPicker } from "./placement-catalog-picker";
+import { PlacementCatalogPicker, type PlacementPickerDraft } from "./placement-catalog-picker";
 import { PlacementHistory } from "../knowledge/placement-history";
 import { PlacementSourcePicker } from "../knowledge/placement-source-picker";
 import { usePlacementCommand } from "../knowledge/use-placement-command";
@@ -42,7 +42,8 @@ function WorkspaceBody({owner,pageType,pageId}:{owner:string;pageType:PlacementP
   const data=resource.error?null:resource.data,base=data?snapshot(data):null,draft=editing?.current||base;
   const dirty=Boolean(editing&&JSON.stringify(payload(editing.current))!==JSON.stringify(payload(editing.base))),conflict=Boolean(editing&&data&&editing.version!==data.expected_revision);
   const locked=command.busy||Boolean(command.recovery)||!command.ready||!data||conflict;
-  useUnsavedForm(dirty||Boolean(command.recovery),false);
+  const [pickerDraft,setPickerDraft]=useState<PlacementPickerDraft>({selected:[],group:0});
+  useUnsavedForm(dirty||Boolean(command.recovery)||pickerDraft.selected.length>0,false);
   const selected=draft?.items.find(row=>row.id===active), selectedBase=editing?.base.items.find(row=>row.id===active);
   function change(next:Draft,coalesce=""){if(locked||!draft||!data?.expected_revision)return;const initial=editing||{version:data.expected_revision,base:draft,current:draft,past:[],future:[]};setEditing({...initial,current:next,coalesced:coalesce,past:coalesce&&initial.coalesced===coalesce?initial.past:[...initial.past.slice(-49),initial.current],future:[]});setNotice("");}
   function patch(id:string,values:Partial<Item>){if(draft)change({...draft,items:draft.items.map(row=>row.id===id?{...row,...values}:row)},`${id}:${Object.keys(values).sort().join(",")}`);}
@@ -59,7 +60,7 @@ function WorkspaceBody({owner,pageType,pageId}:{owner:string;pageType:PlacementP
   if(resource.error)return <main className={styles.page}><h1>内容编排</h1><p role="alert">{resource.error}</p>{feedback}<button onClick={resource.reload}>重新读取编排</button></main>;
   if(!data||!draft)return <main className={styles.page}><p role="status">正在读取当前页面的内容编排…</p></main>;
   const version=editing?.version||data.expected_revision||"0";
-  if(picker)return <main className={styles.page}><PlacementCatalogPicker owner={owner} title={data.title||"当前页面"} groups={draft.groups} existing={draft.items} blocked={locked} onCancel={()=>setPicker(false)} onFinish={(items,group)=>{if(locked)return;change({items:[...draft.items,...items],groups:placementGroups([...draft.items,...items],draft.groups.length?draft.groups:[group])});setPicker(false);if(items[0]){setActive(items[0].id);setMobile("edit");}}}/></main>;
+  if(picker)return <main className={styles.page}><PlacementCatalogPicker value={pickerDraft} onChange={setPickerDraft} owner={owner} title={data.title||"当前页面"} groups={draft.groups} existing={draft.items} blocked={locked} onCancel={()=>setPicker(false)} onFinish={(items,group)=>{if(locked)return;setPickerDraft({selected:[],group:0});change({items:[...draft.items,...items],groups:placementGroups([...draft.items,...items],draft.groups.length?draft.groups:[group])});setPicker(false);if(items[0]){setActive(items[0].id);setMobile("edit");}}}/></main>;
   const changedIds=editing?draft.items.filter(row=>JSON.stringify(payload({items:[row],groups:[]}))!==JSON.stringify(payload({items:editing.base.items.filter(old=>old.id===row.id),groups:[]}))).map(row=>row.id):[];
   return <main className={styles.page} data-mobile-panel={mobile}><nav className={styles.breadcrumb}><Link href="/admin/content">页面编排</Link><span>›</span><span>{data.title}</span><span>› 内容编排</span></nav><header className={styles.heading}><div><h1>内容编排：看得见、选得中、改得动</h1><p>组织阅读材料与本页文案，随时核对对应的读者展示。</p></div><div className={styles.actions}><span>{dirty?"未保存":data.state==="saved_unpublished"?"已保存未发布":data.state==="published"?"当前公开":data.state==="withdrawn"?"已撤回":"尚未编排"}</span><button disabled={locked||!editing?.past.length} onClick={undo}><Undo2 size={15}/>撤销</button><button disabled={locked||!editing?.future.length} onClick={redo}><Redo2 size={15}/>恢复</button><button onClick={()=>{setTab("content");setMobile("preview");}}>预览</button><button className={styles.primary} disabled={locked||!dirty} onClick={()=>void act({action:"save",expected_revision:version,...payload(draft)})}>保存草稿</button></div></header>{feedback}{conflict?<section className={styles.notice} role="alert"><p>页面已有更新，当前输入保留。请在下方核对最新版本，重新编辑后保存。</p><details><summary>查看当前已保存内容</summary><ul>{data.items.map(row=><li key={row.id}>{row.source?.title||"来源不可用"} · {row.group} · {row.reason}</li>)}</ul></details><button disabled={command.busy||Boolean(command.recovery)} onClick={()=>{if(window.confirm("放弃当前未保存输入，读取最新版本？"))setEditing(null);}}>采用最新版本重新编辑</button></section>:null}
     <nav className={styles.tabs} aria-label="编排区域">{[["content","文字内容清单"],["settings","页面设置"],["history","发布与记录"]].map(([key,label])=><button key={key} aria-pressed={tab===key} onClick={()=>setTab(key)}>{label}</button>)}</nav>

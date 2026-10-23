@@ -19,6 +19,38 @@ import {
 } from "@/lib/api/person-resolution";
 import styles from "./person-resolution.module.css";
 
+const mergeKey=(owner:string)=>`stl-person-merge-command:${owner}`;
+type PendingMerge={source:string;input:MergeInput};
+function pendingMerge(owner:string):PendingMerge|null{
+  const raw=sessionStorage.getItem(mergeKey(owner));if(!raw)return null;
+  const row=asRecord(JSON.parse(raw)),input=asRecord(row.input);
+  if(typeof row.source!=="string"||!isPersonId(row.source)||typeof input.target_person!=="string"||!isPersonId(input.target_person)||typeof input.idempotency_key!=="string"||!isPersonId(input.idempotency_key)||typeof input.fingerprint!=="string"||! /^[a-f0-9]{64}$/.test(input.fingerprint)||input.confirmed!==true)throw Error("原归并请求记录不完整，请保留本页并核对操作历史。");
+  return {source:row.source,input:{target_person:input.target_person,fingerprint:input.fingerprint,idempotency_key:input.idempotency_key,confirmed:true}};
+}
+function retainMerge(owner:string,source:string,input:MergeInput){
+  const previous=pendingMerge(owner);
+  if(previous&&(previous.source!==source||previous.input.idempotency_key!==input.idempotency_key))throw Error("另一次归并尚未确认，请先使用上方的原请求核对入口。");
+  sessionStorage.setItem(mergeKey(owner),JSON.stringify({source,input}));window.dispatchEvent(new Event("stl-person-merge-request"));
+}
+function clearMerge(owner:string,id:string){
+  if(pendingMerge(owner)?.input.idempotency_key===id){sessionStorage.removeItem(mergeKey(owner));window.dispatchEvent(new Event("stl-person-merge-request"));}
+}
+const mergeRejected=(reason:unknown)=>reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,401,403,404,409].includes(reason.status);
+
+export function PersonMergeRecovery({owner}:{owner:string}){
+  const router=useRouter(),active=useActiveView(),sending=useRef(false);
+  const [original,setOriginal]=useState<PendingMerge|null>(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
+  useEffect(()=>{let alive=true;const read=()=>{if(!alive)return;try{setOriginal(pendingMerge(owner));}catch(reason){setMessage(reason instanceof Error?reason.message:"无法读取原请求。");}};queueMicrotask(read);window.addEventListener("stl-person-merge-request",read);return()=>{alive=false;window.removeEventListener("stl-person-merge-request",read);};},[owner]);
+  async function recover(){if(!original||sending.current)return;sending.current=true;setBusy(true);setMessage("");try{
+    const result=await mergePerson(original.source,original.input,getServerSessionCredential()??"",owner);
+    if(!active.current)return;
+    if(result.source_person_id!==original.source||result.target_person_id!==original.input.target_person)throw Error("归并回执与原人物不一致，请保留请求继续核对。");
+    clearMerge(owner,original.input.idempotency_key);router.push(personPage(original.source,"",result.id));router.refresh();
+  }catch(reason){if(!active.current)return;if(mergeRejected(reason)){try{clearMerge(owner,original.input.idempotency_key);}catch{setMessage("请求已被拒绝，浏览器暂不能清除原编号，请核对操作记录。");return;}}setMessage(reason instanceof Error?reason.message:"原请求暂未确认。");}finally{sending.current=false;if(active.current)setBusy(false);}}
+  if(!original&&!message)return null;
+  return <aside className={styles.notice} role="status"><strong>人物归并结果核对</strong>{original?<><p>上次确认的归并尚未收到完整回执。只保留人物编号、核对版本和原请求号；继续时使用同一请求，已执行的操作不会再次归并。</p><button type="button" disabled={busy} onClick={()=>void recover()}>{busy?"正在核对…":"按原编号核对并继续"}</button></>:null}{message?<p>{message}</p>:null}</aside>;
+}
+
 const statusLabels: Record<string, string> = { verified: "已核验", draft: "草稿", needs_review: "待核验", merged: "已合并", archived: "已归档", rejected: "未采用" };
 const fieldLabels: Record<string, string> = {
   id: "记录编号", person_id: "人物编号", scholar_id: "学者档案编号", preferred_name: "规范名称", original_name: "原文名称",
@@ -146,18 +178,22 @@ function MergeReview({ preview, sourceId, targetId, credential, refresh }: { pre
   async function submit() {
     if (sending.current || !eligible || (!confirm && !attempt.current)) return;
     const input = attempt.current ?? { target_person: targetId, fingerprint: preview.fingerprint, confirmed: true, idempotency_key: createRequestKey() };
+    try { retainMerge(String(user?.id||""),sourceId,input); } catch(reason) { setFailure(reason instanceof Error?reason.message:"无法保存原归并请求，尚未提交。"); return; }
     attempt.current = input;
     sending.current = true;
     setBusy(true); setFailure("");
     try {
       const result = await mergePerson(sourceId, input, credential, String(user?.id || ""));
       if (!active.current) return;
+      if(result.source_person_id!==sourceId||result.target_person_id!==targetId)throw Error("归并回执与当前人物不一致，请查回原请求。");
+      clearMerge(String(user?.id||""),input.idempotency_key);
       router.replace(personPage(sourceId, "", result.id));
     } catch (reason) {
       if (!active.current) return;
       // An HTTP error after a committed write or a lost response is not proof
       // of failure. Reuse the exact body/key until the outcome is known.
-      const knownRejection = reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400, 401, 403, 404, 409].includes(reason.status);
+      const knownRejection = mergeRejected(reason);
+      if(knownRejection){try{clearMerge(String(user?.id||""),input.idempotency_key);attempt.current=null;}catch{setFailure("归并被拒绝，但浏览器暂不能清除原请求，请保留本页。");setUncertain(true);return;}}
       setUncertain(!knownRejection);
       setFailure(reason instanceof Error ? reason.message : "未收到完整操作结果。");
       setConfirm(false);
@@ -218,6 +254,7 @@ export function PersonResolutionWorkspace() {
   const credential = user ? getServerSessionCredential() : null;
   const valid = [sourceId, targetId, recordId].every((value) => !value || isPersonId(value)) && (!targetId || Boolean(sourceId));
   return <div className={`admin-page ${styles.workspace}`}><PageHeader title="人物查重与整理" description="核对重复作者及学者资料，确认影响范围后再合并。" actions={<Link prefetch={false} href="/admin/knowledge" className="button secondary">返回馆内知识</Link>} />
+    {allowed&&user?<PersonMergeRecovery key={user.id} owner={String(user.id)}/>:null}
     {!credential ? <p role="status">等待验证管理会话…</p> : !valid ? <p role="alert">人物或操作编号无效，请从馆内人物列表重新选择。<Link prefetch={false} href={personPage()}>返回列表</Link></p> : <div key={`${user?.id}:${allowed}`} className={styles.content}>{recordId ? allowed ? <RecordWorkspace key={recordId} recordId={recordId} credential={credential} /> : <p role="alert">合并记录与撤回仅向书库所有者开放。</p> : sourceId ? <SourceWorkspace key={sourceId} sourceId={sourceId} targetId={targetId} allowed={allowed} credential={credential} /> : <PersonPicker credential={credential} />}</div>}
   </div>;
 }
