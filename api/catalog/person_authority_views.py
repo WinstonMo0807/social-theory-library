@@ -133,10 +133,15 @@ class AuthorityPreview(serializers.Serializer):
 class AuthorityReceipt(serializers.Serializer):
     actor_id = serializers.CharField()
     request_id = serializers.UUIDField()
-    person_id = serializers.UUIDField()
+    person_id = serializers.UUIDField(allow_null=True)
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
     created_at = serializers.DateTimeField()
     operation = serializers.CharField()
     event_ids = serializers.ListField(child=serializers.UUIDField())
+
+
+class AuthorityStop(StrictInput):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
 
 
 class AuthorityBase(PrivateAccountResponses, APIView):
@@ -185,3 +190,8 @@ class AuthorityReceiptView(AuthorityBase):
     @extend_schema(responses=AuthorityReceipt)
     def get(self, request, request_id):
         return Response(AuthorityReceipt(service.receipt(request.user, request_id)).data)
+
+    @extend_schema(request=AuthorityStop, responses=AuthorityReceipt)
+    def post(self, request, request_id):
+        data = AuthorityStop(data=request.data); data.is_valid(raise_exception=True)
+        return Response(AuthorityReceipt(service.stop_pending(request.user, request_id)).data)

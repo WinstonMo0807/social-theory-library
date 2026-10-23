@@ -198,24 +198,46 @@ def prepare(actor, data, *, person=None, target=None):
 
 def receipt(actor, request_id):
     row = get_object_or_404(AuditEvent, pk=request_id, actor=actor, action=ACTION)
-    return {"actor_id": str(actor.pk), "request_id": str(row.pk), "person_id": row.object_id,
-        "created_at": row.created_at, "operation": row.after["operation"], "event_ids": row.after.get("event_ids", [])}
+    return {"actor_id": str(actor.pk), "request_id": str(row.pk), "person_id": None if row.after.get("cancelled") else row.object_id,
+        "created_at": row.created_at, "operation": row.after["operation"], "event_ids": row.after.get("event_ids", []),
+        "state": "cancelled" if row.after.get("cancelled") else "applied"}
 
 
-@transaction.atomic
-def command(actor, data):
+def locked_actor(actor):
     original_token = actor.token_version
     actor = get_object_or_404(User.objects.select_for_update(), pk=actor.pk, is_active=True)
     if actor.token_version != original_token:
         raise PermissionDenied("账户会话已变化，请重新登录。")
     if not has_capability(actor, Capability.EDIT_DRAFT_AUTHORITY):
         raise PermissionDenied("账户权限已变化，请重新登录。")
+    return actor
+
+
+@transaction.atomic
+def stop_pending(actor, request_id):
+    actor = locked_actor(actor)
+    acquire_generation_lock(shared=True)
+    acquire_entity_lock("person_authority_request", request_id)
+    prior = AuditEvent.objects.filter(pk=request_id).first()
+    if prior and (prior.action != ACTION or prior.actor_id != actor.pk):
+        raise AuthorityConflict("本次请求编号不能用于当前人物操作。")
+    if prior is None:
+        AuditEvent.objects.create(pk=request_id, actor=actor, action=ACTION, object_type="catalog.Person", object_id="",
+            after={"operation": "cancelled", "cancelled": True})
+    return receipt(actor, request_id)
+
+
+@transaction.atomic
+def command(actor, data):
+    actor = locked_actor(actor)
     acquire_generation_lock(shared=True)
     acquire_entity_lock("person_authority_request", data["request_id"])
     fingerprint = digest(data)
     prior = AuditEvent.objects.filter(pk=data["request_id"]).first()
     if prior:
-        if prior.action != ACTION or prior.actor_id != actor.pk or prior.after.get("fingerprint") != fingerprint:
+        if prior.action != ACTION or prior.actor_id != actor.pk:
+            raise AuthorityConflict("本次请求编号已用于不同操作。")
+        if not prior.after.get("cancelled") and prior.after.get("fingerprint") != fingerprint:
             raise AuthorityConflict("本次请求编号已用于不同操作。")
         return receipt(actor, prior.pk)
     if data["confirmed"] is not True:

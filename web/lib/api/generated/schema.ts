@@ -1484,7 +1484,7 @@ export interface paths {
         };
         get: operations["catalog_admin_people_workspace_receipts_retrieve"];
         put?: never;
-        post?: never;
+        post: operations["catalog_admin_people_workspace_receipts_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6205,11 +6205,15 @@ export interface components {
             /** Format: uuid */
             request_id: string;
             /** Format: uuid */
-            person_id: string;
+            person_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
             /** Format: date-time */
             created_at: string;
             operation: string;
             event_ids: string[];
+        };
+        AuthorityStopRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
         /**
          * @description * `draft` - draft
@@ -21228,6 +21232,33 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorityReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_people_workspace_receipts_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorityStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AuthorityStopRequest"];
+                "multipart/form-data": components["schemas"]["AuthorityStopRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {

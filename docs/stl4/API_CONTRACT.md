@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 人物原请求停止
+
+原people/workspace/receipts/{request_id}/增加POST {action:cancel_pending}，AuthorityReceipt增加state applied/cancelled，person_id在停止回执可空；旧成功回执仍有真实人物。332路径不变。写入与停止检查同一账户、会话token及规范编辑能力，并串行同一请求编号。
+
 ## 2026-10-23 知识术语草稿（332路径）
 
 新增knowledge-terms/ POST固定请求保存、{node_id}/ GET原记录与草稿、commands/{request_id}/ GET查回和POST cancel_pending。KnowledgeTermsSource/Command/Receipt具名契约，最多200项、当前owner、完整版本、原名称不可省略，支持查回早先其他知识对象的回执。数据仍是原EditorialRevision，保存不会触发公开发布。原理论功能开关继续约束读取/新建保存，回执停止可独立恢复。

@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-24 人物请求恢复静态检查
+
+a193d5：禁止DB生成OpenAPI0错误10旧警告，person_authority_views、person_authority服务、新恢复用例3 AST及生成类型/PostCSS退出0。`node node_modules/typescript/bin/tsc --noEmit --incremental false` 430572→b8c623退出0；person-authority-workspace目标ESLint df6d0d→d9cf81退出0。
+
+test_stl4_person_recovery_20261023.py仅保存，未运行；待统一验收核对停止早于保存、保存早于停止、迟到重放、同号不同操作者、目录恢复、弹层关闭及账户切换。当前无运行/视觉通过结论。
+
 ## 2026-10-23 知识术语维护静态检查
 
 `.venv/Scripts/python.exe tmp/stl4-knowledge-terms-static-20261023.py` c38bd4/41e068退出0：5个AST、主动禁止DB、OpenAPI0错误10旧警告。`node tmp/stl4-knowledge-terms-contracts-20261023.mjs` d8ac96退出0：329→332路径与类型生成、PostCSS；725eee两组件ESLint0；c04939→f7bb15 TypeScript noEmit0。新增用例语法解析0，没有运行测试。

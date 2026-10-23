@@ -6417,6 +6417,63 @@
                         "description": ""
                     }
                 }
+            },
+            "post": {
+                "operationId": "catalog_admin_people_workspace_receipts_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthorityStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthorityReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
             }
         },
         "/api/catalog/admin/public-feedback/": {
@@ -27901,7 +27958,11 @@
                     },
                     "person_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
                     },
                     "created_at": {
                         "type": "string",
@@ -27924,7 +27985,19 @@
                     "event_ids",
                     "operation",
                     "person_id",
-                    "request_id"
+                    "request_id",
+                    "state"
+                ]
+            },
+            "AuthorityStopRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
                 ]
             },
             "AuthorityValuesAuthorityStatusEnum": {
