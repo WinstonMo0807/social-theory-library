@@ -67264,6 +67264,11 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "document_stages": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "readOnly": true
+                    },
                     "updated_at": {
                         "type": "string",
                         "format": "date-time",
@@ -67272,6 +67277,7 @@
                 },
                 "required": [
                     "can_manage_publication",
+                    "document_stages",
                     "id",
                     "is_stalled",
                     "metadata_candidates",

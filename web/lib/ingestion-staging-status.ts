@@ -1,3 +1,26 @@
+export const INGESTION_TERMINAL_STATUSES = new Set([
+  "needs_review", "ready", "failed", "published", "withdrawn", "deleted",
+]);
+
+export type DocumentStage = {job_id:string|null;source:string;status:string;progress:number|null;updated_at?:string};
+export type UploadStageState = {status:string;updated_at?:string;document_stages?:Record<string,DocumentStage|null>};
+
+export function uploadSnapshotTime(item: UploadStageState) {
+  return Math.max(0, ...[item.updated_at, ...Object.values(item.document_stages || {}).map(stage=>stage?.updated_at)]
+    .map(value=>value?Date.parse(value)||0:0));
+}
+
+export function activeUploadStage(item?: UploadStageState) {
+  const stages = Object.values(item?.document_stages || {});
+  return stages.find(stage => stage?.job_id && stage.status === "running")
+    || stages.find(stage => stage?.job_id && stage.status === "paused")
+    || stages.find(stage => stage?.job_id && ["pending", "queued"].includes(stage.status));
+}
+
+export function uploadNeedsRefresh(item: UploadStageState) {
+  return !INGESTION_TERMINAL_STATUSES.has(item.status) || Boolean(activeUploadStage(item));
+}
+
 export const R2_STAGING_STATUS_LABELS: Record<string, string> = {
   uploading: "正在上传至临时区",
   uploaded: "PDF 已上传至临时区，等待导入书库存储",

@@ -8,6 +8,7 @@ import json
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils.crypto import salted_hmac
 from drf_spectacular.utils import extend_schema
@@ -20,7 +21,7 @@ from catalog.editorial_issue_views import EditorialErrorMixin
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.services.editorial_issues import EditConflict
 from common.permissions import CanUpload
-from ingestion.models import AuditEvent, UploadBatch
+from ingestion.models import AuditEvent, UploadBatch, UploadItem
 from ingestion.serializers import UploadBatchCreateSerializer, UploadBatchSerializer, UploadItemSerializer
 
 MAX_BATCH_FILES = 50
@@ -56,7 +57,7 @@ class UploadWorkspaceItemSerializer(UploadItemSerializer):
     class Meta(UploadItemSerializer.Meta):
         fields = ("id", "source_filename", "byte_size", "status", "stage_progress", "error_code", "error_message",
                   "dispatch_status", "dispatch_task_id", "dispatch_attempts", "recognized_metadata", "preflight_summary",
-                  "edition", "metadata_candidates", "review_data", "can_manage_publication", "is_stalled", "suggested_action", "staging", "updated_at")
+                  "edition", "metadata_candidates", "review_data", "can_manage_publication", "is_stalled", "suggested_action", "staging", "document_stages", "updated_at")
 
     def get_review_data(self, obj) -> dict | None:
         if not obj.edition_id:
@@ -134,7 +135,11 @@ class UploadWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVie
         actor = owner(request)
         query = UploadWorkspaceQuerySerializer(data=request.query_params); query.is_valid(raise_exception=True)
         rows = owned_batches(actor)
-        batch = get_object_or_404(rows.prefetch_related("items__edition__work", "items__metadata_candidates", "items__edition__contributions__person"), pk=query.validated_data["batch"]) if query.validated_data.get("batch") else None
+        from ingestion.services.document_stages import attach_document_stages, with_document_stage_ids
+        items = with_document_stage_ids(UploadItem.objects.select_related("edition__work").prefetch_related("metadata_candidates", "edition__contributions__person"))
+        batch = get_object_or_404(rows.prefetch_related(Prefetch("items", queryset=items)), pk=query.validated_data["batch"]) if query.validated_data.get("batch") else None
+        if batch:
+            attach_document_stages(batch.items.all())
         from ingestion.services.r2_staging import _configured
         return Response({"owner_id": str(actor.pk), "transport": "r2" if _configured() else "local",
                          "max_files": MAX_BATCH_FILES, "max_file_bytes": min(settings.MAX_UPLOAD_BYTES, 200 * 1024 * 1024),

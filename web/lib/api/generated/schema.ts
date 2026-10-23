@@ -17864,6 +17864,9 @@ export interface components {
             readonly staging: {
                 [key: string]: unknown;
             } | null;
+            readonly document_stages: {
+                [key: string]: unknown;
+            };
             /** Format: date-time */
             readonly updated_at: string;
         };
