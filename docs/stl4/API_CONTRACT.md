@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M22主题编辑
+
+新增topics/organization GET（parent/q/exclude/page）、{id}/organization-preview POST只读提议、commands/{request_id} GET/POST。原Scholar commands也增加POST cancel_pending。回执state applied/cancelled，停止时对象ID允许null；已完成写入不被撤销。Topic保存必需owner，新建固定UUID；原If-Match和权限不变。285路径，公开别名沿原正式快照；详细字段见TOPIC_EDITOR_20261023。
+
 ## 2026-10-23 M21概念编辑
 
 原content-placements命令增加可选publish.confirmed_only及内部意见/译义候选。新commands/{request_id}/支持GET本人回执和POST cancel_pending（已有则查回、未执行则锁内记录停止）；revision_id可null，state applied/cancelled。写入及回执必需owner，原权限/CAS保留。公开concept_usage允许字段不含内部说明或译义候选。282路径，保留281；类型同步。

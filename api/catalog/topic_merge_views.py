@@ -1,10 +1,12 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import CanMergeAuthority
 from catalog.models import Topic
+from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.services.topics import merge_topics, topic_merge_preview
 
 
@@ -15,7 +17,7 @@ class TopicMergeRequestSerializer(serializers.Serializer):
     confirmed = serializers.BooleanField()
 
 
-class AdminTopicMergePreviewView(APIView):
+class AdminTopicMergePreviewView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanMergeAuthority]
 
     def get(self, request, pk):
@@ -31,10 +33,12 @@ class AdminTopicMergePreviewView(APIView):
             return Response({"detail": str(error)}, status=409)
 
 
-class AdminTopicMergeView(APIView):
+class AdminTopicMergeView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanMergeAuthority]
 
     def post(self, request, pk):
+        if request.headers.get("X-Editor-Owner") != str(request.user.pk):
+            raise PermissionDenied("编辑账户已变化，请重新核对主题合并。")
         serializer = TopicMergeRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

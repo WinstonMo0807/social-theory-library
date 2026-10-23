@@ -13,6 +13,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 VERIFIED_NAMES = {
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
+    "topic-organization", "topic-save-receipt", "topic-organization-preview",
     "topic-list", "topic-detail", "admin-topic-list", "admin-topic-detail",
     "knowledge-entry-citation", "theory-system-overview", "knowledge-node-list", "knowledge-node-detail",
     "normalized-theory-timeline", "normalized-theory-timeline-detail", "reading-path-list", "reading-path-detail",

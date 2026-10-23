@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAdminSession } from "@/lib/admin-session";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
-import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type TopicOption = { id: string; name: string; editorial_status: string };
@@ -19,8 +20,8 @@ type MergePreview = {
 
 export function TopicMergePanel({ topicId, name, status }: { topicId: string; name: string; status: string }) {
   const router = useRouter();
-  const { state } = useSessionBootstrap();
-  const allowed = state.user?.capabilities?.includes("can_merge_authority") === true;
+  const user=useAdminSession(),owner=String(user?.id||"");
+  const allowed = user?.capabilities?.includes("can_merge_authority") === true;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<TopicOption[]>([]);
@@ -34,17 +35,17 @@ export function TopicMergePanel({ topicId, name, status }: { topicId: string; na
     if (!allowed || !open) return;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
-      apiRequest<{ results: TopicOption[] }>(
+      withPrivateOwner(owner,()=>apiRequest<{ results: TopicOption[] }>(
         `/catalog/admin/topics/?search=${encodeURIComponent(query.trim())}&page_size=30`,
-        { signal: controller.signal }, getServerSessionCredential(),
-      ).then((data) => {
+        { signal: controller.signal,cache:"no-store",headers:{"X-Editor-Owner":owner} }, getServerSessionCredential(),
+      ),controller.signal).then((data) => {
         if (!controller.signal.aborted) setOptions(data.results.filter((topic) => topic.id !== topicId && topic.editorial_status === "published"));
       }).catch((error: unknown) => {
         if (!controller.signal.aborted) setMessage(error instanceof Error ? error.message : "馆内主题暂时无法读取。");
       });
     }, 300);
     return () => { window.clearTimeout(timeout); controller.abort(); };
-  }, [allowed, open, query, topicId]);
+  }, [allowed, open, query, topicId, owner]);
 
   async function loadPreview() {
     if (!targetId) return;
@@ -52,10 +53,10 @@ export function TopicMergePanel({ topicId, name, status }: { topicId: string; na
     setMessage("");
     setPreview(null);
     try {
-      setPreview(await apiRequest<MergePreview>(
+      setPreview(await withPrivateOwner(owner,()=>apiRequest<MergePreview>(
         `/catalog/admin/topics/${topicId}/merge-preview/?target_topic=${targetId}`,
-        {}, getServerSessionCredential(),
-      ));
+        {cache:"no-store",signal:AbortSignal.timeout(30000),headers:{"X-Editor-Owner":owner}}, getServerSessionCredential(),
+      )));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "合并影响暂时无法读取。");
     } finally { setWorking(false); }
@@ -63,14 +64,15 @@ export function TopicMergePanel({ topicId, name, status }: { topicId: string; na
 
   async function merge(changeNote: string) {
     if (!preview?.can_merge || !preview.target || working) return;
+    const target=preview.target.id;
     setWorking(true);
     setMessage("");
     try {
-      const result = await apiRequest<{ target_id: string; detail: string }>(
+      const result = await withPrivateOwner(owner,()=>apiRequest<{ target_id: string; detail: string }>(
         `/catalog/admin/topics/${topicId}/merge/`,
-        { method: "POST", body: JSON.stringify({ target_topic: preview.target.id, fingerprint: preview.fingerprint, confirmed: true, change_note: changeNote }) },
-        getServerSessionCredential(),
-      );
+        { method: "POST",signal:AbortSignal.timeout(60000),headers:{"X-Editor-Owner":owner}, body: JSON.stringify({ target_topic: target, fingerprint: preview.fingerprint, confirmed: true, change_note: changeNote }) },
+        getServerSessionCredential(),false,
+      ));
       setConfirm(false);
       setMessage(result.detail);
       router.replace(`/admin/topics/${result.target_id}`);

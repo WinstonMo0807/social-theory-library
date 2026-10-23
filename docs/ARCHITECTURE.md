@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M22主题编辑
+
+M22主题层级继续Topic.parent，别名继续search_aliases，编排继续curation和EditorialRevision；实际保存/发布/原合并共享层级事务锁。直接发布与修订发布统一可公开关联最低条件。保存复用ScholarCommandMixin的类型配置和AuditEvent，另补两种身份的未知请求停止标记，见docs/stl4/TOPIC_EDITOR_20261023.md。
+
 ## 2026-10-23 M21概念编辑
 
 M21复用content_placement类型EditorialRevision和原AuditEvent，不新增业务表。概念用法公开字段与内部编辑字段在公共读取边界分开；confirmed_only选择性发布使用原版本和公开过滤。取消未知请求以同一User锁与AuditEvent停止记录阻止迟到写入。详见docs/stl4/CONCEPT_EDITOR_20261023.md。

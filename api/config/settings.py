@@ -186,6 +186,8 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "PendingEditorialSaveActionEnum": ["cancel_pending"],
+        "EditorialSaveReceiptStateEnum": ["applied", "cancelled"],
         "PersonAuthorityOperationEnum": ["create", "update", "decision"],
         "PersonIdentityDecisionEnum": ["independent", "needs_evidence"],
         "AuthorityNameTypeEnum": [("alias", "别名"), ("translation", "译名"), ("abbreviation", "简称"), ("historical", "历史名称"), ("transliteration", "音译")],

@@ -1260,7 +1260,10 @@ def _draft_published_editorial_change(
     )
 
 
-class AdminTopicListView(AdminEditorialDraftReadMixin, generics.ListCreateAPIView):
+from catalog.topic_editor_views import TopicCommandMixin
+
+
+class AdminTopicListView(TopicCommandMixin, AdminEditorialDraftReadMixin, generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
     editorial_target_type = "topic"
     permission_classes = [IsLibraryStaff]
@@ -1291,7 +1294,7 @@ class AdminTopicListView(AdminEditorialDraftReadMixin, generics.ListCreateAPIVie
             )
 
 
-class AdminTopicDetailView(AdminEditorialDraftReadMixin, generics.RetrieveUpdateDestroyAPIView):
+class AdminTopicDetailView(TopicCommandMixin, AdminEditorialDraftReadMixin, generics.RetrieveUpdateDestroyAPIView):
     editorial_target_type = "topic"
     permission_classes = [IsLibraryStaff]
     serializer_class = AdminTopicSerializer

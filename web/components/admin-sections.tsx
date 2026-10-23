@@ -61,6 +61,7 @@ type Paginated<T> = {
 };
 
 function useAdminResource<T>(path: string | null) {
+  const owner=String(useAdminSession()?.id||""), [identity,setIdentity]=useState("");
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -77,36 +78,39 @@ function useAdminResource<T>(path: string | null) {
     }
     const token = getServerSessionCredential();
     let active = true;
-    if (!token) {
+    const controller=new AbortController(),signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
+    const unsubscribe=subscribeToSessionChanges(()=>{controller.abort();setData(null);setIdentity("");});
+    if (!token || !owner) {
       Promise.resolve().then(() => {
         if (!active) return;
         setError("请先登录后台。");
         setLoading(false);
       });
       return () => {
-        active = false;
+        active = false; controller.abort(); unsubscribe();
       };
     }
-    apiRequest<T>(path, {}, token)
+    withPrivateOwner(owner,()=>apiRequest<T>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},token),signal)
       .then((payload) => {
         if (!active) return;
-        setData(payload);
+        setData(payload);setIdentity(`${owner}:${path}`);
         setError("");
       })
       .catch((reason) => {
         if (!active) return;
+        setData(null);
         setError(reason instanceof Error ? reason.message : "数据加载失败。");
       })
       .finally(() => {
         if (active) setLoading(false);
       });
     return () => {
-      active = false;
+      active = false; controller.abort(); unsubscribe();
     };
-  }, [path, revision]);
+  }, [path, revision, owner]);
 
   return {
-    data,
+    data:identity===`${owner}:${path}`?data:null,
     error,
     loading,
     refresh: () => {
@@ -138,6 +142,8 @@ type AdminTheory = {
 };
 
 type AdminTopic = {
+  selection_labels?:Record<string,string>;
+  search_aliases: string[];
   id: string;
   parent: string | null;
   editorial_revision?: { id: string } | null;
@@ -263,13 +269,16 @@ const emptyTaxonomy: TaxonomyDraft = {
   status: "draft",
 };
 
-export function TaxonomyAdmin({
-  mode = "combined",
-  entityId,
-}: {
-  mode?: "combined" | "theory" | "topic";
-  entityId?: string;
-}) {
+export function TaxonomyAdmin(props: {mode?: "combined" | "theory" | "topic";entityId?:string}) {
+  const user=useAdminSession(),[epoch,setEpoch]=useState(0);
+  useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
+  if(!user)return <p role="status">正在核对编辑账户…</p>;
+  return <TaxonomyWorkspace key={`${user.id}:${epoch}:${props.entityId||"list"}:${props.mode||"combined"}`} {...props} owner={String(user.id)}/>;
+}
+
+function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"theory"|"topic";entityId?:string;owner:string}) {
+  const command=useScholarSave(owner,"topic");
+  const user=useAdminSession(),canEdit=hasAdminCapability(user,"can_edit_draft_authority")&&(entityId!=="new"||hasAdminCapability(user,"can_create_authority"));
   const router = useRouter();
   const createName = useSearchParams().get("create")?.trim() ?? "";
   const editorOnly = entityId !== undefined;
@@ -355,7 +364,8 @@ export function TaxonomyAdmin({
   function editTopic(item: AdminTopic) {
     const curation = item.curation ?? {};
     setDraftState({
-      ...topicFields(curation, item.parent),
+      ...topicFields(curation, item.parent, item.search_aliases),
+      preview_labels:item.selection_labels||{},
       id: item.id,
       edit_version: item.edit_version,
       kind: "topic",
@@ -420,7 +430,7 @@ export function TaxonomyAdmin({
   async function save(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!token || (editorOnly && entityId !== "new" && draft.id !== entityId)) return false;
+    if (!canEdit || !token || (editorOnly && entityId !== "new" && draft.id !== entityId)) return false;
     if (!startAction("save-taxonomy")) return false;
     const submittedVersion = editVersion.current;
     setEditConflict(false);
@@ -473,6 +483,7 @@ export function TaxonomyAdmin({
           slug: draft.slug,
           description: draft.description,
           parent: draft.parentId || null,
+          search_aliases:draft.topicAliases.map(value=>value.trim()).filter(Boolean),
           problem_statement: draft.problemStatement,
           core_questions: splitLines(draft.coreQuestions),
           research_dimensions: splitLines(draft.researchDimensions),
@@ -485,11 +496,8 @@ export function TaxonomyAdmin({
         };
     let metadataSaved = false;
     try {
-      let saved = await apiRequest<AdminTheory | AdminTopic>(
-        `${base}/${draft.id ? `${draft.id}/` : ""}`,
-        { method: draft.id ? "PATCH" : "POST", headers: draft.id && draft.kind === "topic" ? editorialHeaders(draft) : undefined, body: JSON.stringify(body) },
-        token,
-      );
+      const path=`${base}/${draft.id ? `${draft.id}/` : ""}`,method=draft.id?"PATCH":"POST";
+      let saved = draft.kind === "topic" ? await command.save<AdminTopic>(path,JSON.stringify(body),draft.id?editorialHeaders(draft):{},method) : await withPrivateOwner(owner,()=>apiRequest<AdminTheory>(path,{method,body:JSON.stringify(body),headers:{"X-Editor-Owner":owner}},token));
       metadataSaved = true;
       // Preserve the successful write before a separate image request. A retry
       // must update this object with its latest version, never create it again.
@@ -501,7 +509,7 @@ export function TaxonomyAdmin({
         imageBody.append("hero_image", heroFile);
         saved = await apiRequest<AdminTheory | AdminTopic>(
           `${base}/${saved.id}/`,
-          { method: "PATCH", headers: draft.kind === "topic" ? editorialHeaders(saved) : undefined, body: imageBody },
+          { method: "PATCH", headers: { ...(draft.kind === "topic" ? editorialHeaders(saved) : {}), "X-Editor-Owner":owner }, body: imageBody },
           token,
         );
         setHeroFile(null);
@@ -514,11 +522,13 @@ export function TaxonomyAdmin({
         baseCuration: saved.curation ?? current.baseCuration,
         suggestions: saved.suggestions ?? current.suggestions,
       }));
+      if(draft.kind === "topic" && (saved as AdminTopic & {save_replayed?:boolean}).save_replayed) editTopic(saved as AdminTopic);
       unsaved.current = editVersion.current !== submittedVersion; setHasUnsaved(unsaved.current);
       prefills.clear();
       setMessage(`${draft.kind === "topic" ? "主题" : "理论"}资料已保存（${new Date().toLocaleTimeString("zh-CN")}）。${saved.editorial_revision ? "尚未发布，读者看到的内容未改变。" : saved.editorial_status === "published" ? "此资料已公开。" : "尚未公开。"}${entityId === "new" ? "已打开新建资料的编辑页。" : "你仍在当前编辑页。"}`);
       theories.refresh();
       topics.refresh();
+      detail.refresh();
       if (editorOnly && entityId === "new") {
         router.replace(
           draft.kind === "theory"
@@ -554,6 +564,7 @@ export function TaxonomyAdmin({
           ? "管理主题的公开页面、关键概念、时间线和馆藏关系。"
           : "自动识别提出候选，人工确认后写入作品关系。流派和主题保持为不同对象。"}
     >
+      {draft.kind === "topic" && command.recovery ? <aside role="status" className="form-message"><p>上次主题保存需要核对，刷新后只读取原回执，不重新建档。</p><button type="button" disabled={Boolean(pendingAction)} onClick={()=>void command.lookup().then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但主题后来已删除；未重新创建。");})}>读取原保存回执</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)} onClick={()=>void save(undefined,true)}>按原请求重试</button>:null}<button type="button" disabled={Boolean(pendingAction)} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原主题后来已删除，未重复创建。");});}}>停止未确认保存</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
       <div className={`taxonomy-layout ${editorOnly ? "editor-only" : ""}`}>
         {!editorOnly ? <section>
           {showTheories ? (
@@ -600,6 +611,7 @@ export function TaxonomyAdmin({
           ) : null}
         </section> : null}
         {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
+          <fieldset disabled={!canEdit||Boolean(pendingAction)||(draft.kind==="topic"&&(!command.ready||Boolean(command.recovery)))} style={{display:"contents"}}>
           <p>保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
           <header>
@@ -737,7 +749,7 @@ export function TaxonomyAdmin({
               />
             ) : null}
           </fieldset> : null}
-          {draft.kind === "topic" ? ["identity", "questions", "works", "scholars", "concepts", "articles", "paths", "sources"].map(section => <div data-editor-section={section} key={section}><TopicFieldsEditor topicId={draft.id} section={section} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></div>) : null}
+          {draft.kind === "topic" ? ["identity", "questions", "works", "scholars", "concepts", "articles", "paths", "sources"].map(section => <div data-editor-section={section} key={section}><TopicFieldsEditor topicId={draft.id} name={draft.name} section={section} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></div>) : null}
           {draft.kind === "theory" ? <StructuredRowsEditor focused
             label="概念关系图"
             rowLabel="关系"
@@ -766,6 +778,7 @@ export function TaxonomyAdmin({
             onChanged={(snapshot) => setDraft((current) => ({ ...current, status: snapshot.status }))}
             onDeleted={() => router.replace(draft.kind === "topic" ? "/admin/topics" : "/admin/theories?node_type=theory_tradition")}
           /> : null}
+          </fieldset>
         </form><div className="knowledge-object-editor-rail">{draft.id ? <EntityRelationsAdmin
           kind={draft.kind}
           entityId={draft.id}
@@ -1129,7 +1142,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
           {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{ q: submittedQuery }} />
         </section> : null}
-        {command.recovery ? <aside className="form-message" role="status"><p>有一次保存需要核对。表单正文只在当前页面内存中，刷新后只读取回执，不重复创建。</p><button type="button" disabled={saving} onClick={() => void command.lookup().then(receipt => { if (receipt?.exists) { unsaved.current = false; setHasUnsaved(false); detail.refresh(); router.replace(`/admin/scholars/${receipt.scholar_id}`); } else if (receipt) setMessage("原保存已完成，但学者后来已删除；未重复创建。"); })}>读取原保存回执</button>{command.canRetry ? <button type="button" disabled={saving} onClick={() => void save(undefined, true)}>按原请求重试保存</button> : null}</aside> : null}{command.error ? <p role="alert">{command.error}</p> : null}
+        {command.recovery ? <aside className="form-message" role="status"><p>有一次保存需要核对。表单正文只在当前页面内存中，刷新后只读取回执，不重复创建。</p><button type="button" disabled={saving} onClick={() => void command.lookup().then(receipt => { if (receipt?.exists) { unsaved.current = false; setHasUnsaved(false); detail.refresh(); router.replace(`/admin/scholars/${receipt.scholar_id}`); } else if (receipt) setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但学者后来已删除；未重复创建。"); })}>读取原保存回执</button>{command.canRetry ? <button type="button" disabled={saving} onClick={() => void save(undefined, true)}>按原请求重试保存</button> : null}<button type="button" disabled={saving} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/scholars/${receipt.scholar_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原学者后来已删除，未重复创建。");});}}>停止未确认保存</button></aside> : null}{command.error ? <p role="alert">{command.error}</p> : null}
 
         {editorOnly ? <KnowledgeVisualEditor portrait={draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => { setPortraitRevision(value => value + 1); detail.refresh(); }} /> : null} objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
 

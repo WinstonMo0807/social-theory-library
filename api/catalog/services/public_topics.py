@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 from uuid import uuid4
 
 from django.db import transaction
-from django.db.models import BooleanField, Case, CharField, Count, Exists, F, Func, JSONField, OuterRef, Q, Subquery, Value, When
+from django.db.models import BooleanField, Case, CharField, Count, Exists, F, Func, IntegerField, JSONField, OuterRef, Q, Subquery, Value, When
 from django.db.models.fields.json import KeyTextTransform, KeyTransform
 from django.db.models.functions import Coalesce, StrIndex
 from django.shortcuts import get_object_or_404
@@ -52,9 +52,11 @@ def validate_topic_parent(topic, parent_id):
         if current in seen:
             raise ValidationError({"parent": "主题不能以自身或后代为上级。"})
         seen.add(current)
-        row = Topic.objects.filter(pk=current).values("parent_id").first()
+        row = Topic.objects.filter(pk=current).values("parent_id", "curation").first()
         if row is None:
             raise ValidationError({"parent": "上级主题不存在。"})
+        if (row.get("curation") or {}).get("topic_merge"):
+            raise ValidationError({"parent": "合并后的旧主题不能再作为上级，请选择保留的主题。"})
         current = str(row["parent_id"]) if row["parent_id"] else None
     return identifier
 
@@ -203,6 +205,10 @@ def topic_id_for_public_slug(slug):
 def capture_topic_publication(topic, *, actor, change_note="发布主题"):
     """Direct administrative publication and audited merges share EditorialRevision."""
     from catalog.services.editorial_revision import editorial_target_snapshot
+    from catalog.topic_editor import lock_topic_hierarchy, ensure_topic_publication
+    lock_topic_hierarchy()
+    if topic.editorial_status == "published":
+        ensure_topic_publication(topic)
     Topic.objects.select_for_update().get(pk=topic.pk)
     latest = EditorialRevision.objects.filter(target_type="topic", target_id=topic.pk).order_by("-revision").first()
     revision = EditorialRevision.objects.create(target_type="topic", target_id=topic.pk,
@@ -239,6 +245,14 @@ def _tree():
             seen.add(current)
             current = parents[current]
     return topics, parents, descendants
+
+
+def _selected_first(rows, identifiers, ordering):
+    ids = _ids(identifiers)
+    if not ids:
+        return rows.order_by(*ordering)
+    return rows.annotate(editorial_position=Case(*[When(pk=identifier, then=Value(index)) for index, identifier in enumerate(ids)],
+        default=Value(len(ids)), output_field=IntegerField())).order_by("editorial_position", *ordering)
 
 
 def _editions(topic):
@@ -457,7 +471,8 @@ def _paths(topic, editions, nodes, params, path, request):
     from catalog.services.public_reading_paths import public_reading_path_snapshots
     explicit = set(_ids((topic.curation or {}).get("reading_path_ids")))
     # The candidate SQL is not membership proof: a withdrawn or revised material cannot keep a path related.
-    candidates = _path_candidates(topic, editions, nodes, explicit)
+    candidates = _selected_first(_path_candidates(topic, editions, nodes, explicit),
+        (topic.curation or {}).get("reading_path_ids", []), ("sort_order", "title", "pk"))
     edition_ids, node_ids = ({str(value) for value in rows.values_list("pk", flat=True)} for rows in (editions, nodes))
     page, size = _paging(params)
     if params.get("section", "overview") != "paths":
@@ -507,7 +522,7 @@ def public_topic_detail(slug, params=None, *, request=None, preview_topic=None):
     if question_type != "all":
         questions = questions.filter(node_type=question_type)
     concepts = nodes.filter(node_type="concept")
-    scholars = _scholars(topic)
+    scholars = _selected_first(_scholars(topic), curation.get("related_scholar_ids", []), ("public_name", "pk"))
     from catalog.services.public_scholars import _cards as scholar_cards
     articles, planned = _articles_and_planned(topic)
     readable = editions.filter(current_retrieval_source_q(asset_prefix="active_catalog_revision__reader_asset", access_statuses=("public", "inherit")))
@@ -527,7 +542,7 @@ def public_topic_detail(slug, params=None, *, request=None, preview_topic=None):
     # SQL ordering uses published metadata, never a newer working bibliography.
     works = works.annotate(public_title=KeyTextTransform("title", "active_catalog_revision__snapshot__work"))
     ordering = ("public_title", "pk") if sort == "title" else ("-active_catalog_revision__snapshot__edition__publication_year", "pk") if sort == "published" else ("-published_at", "pk")
-    works = works.order_by(*ordering)
+    works = _selected_first(works, [identifier for key in ("edition_ids", "foundational_edition_ids", "disputed_edition_ids") for identifier in _ids(curation.get(key))], ordering) if sort == "relevance" else works.order_by(*ordering)
     work_page = _page(works, params, path, transform=lambda rows: _work_rows(rows, topic), section="works")
     # Explicit planned records follow catalog versions; their page count remains exact.
     work_total = works.count()
@@ -541,8 +556,8 @@ def public_topic_detail(slug, params=None, *, request=None, preview_topic=None):
     work_page.update({key: value for key, value in page_meta.items() if key != "results"})
     evidence = _evidence(topic)
     result.update(public_revision=_revision(topic), introduction={key: getattr(topic, key) for key in ("description", "problem_statement", "formation_context", "core_questions", "research_dimensions", "methods")},
-        questions=_page(questions.order_by("sort_order", "canonical_name_zh", "pk"), params, path, transform=lambda rows: _knowledge_rows(rows, topic), section="questions"),
-        concepts=_page(concepts.order_by("sort_order", "canonical_name_zh", "pk"), params, path, transform=lambda rows: _knowledge_rows(rows, topic), section="concepts"),
+        questions=_page(_selected_first(questions, [*_ids(curation.get("question_node_ids")), *_ids(curation.get("debate_node_ids"))], ("sort_order", "canonical_name_zh", "pk")), params, path, transform=lambda rows: _knowledge_rows(rows, topic), section="questions"),
+        concepts=_page(_selected_first(concepts, curation.get("concept_node_ids", []), ("sort_order", "canonical_name_zh", "pk")), params, path, transform=lambda rows: _knowledge_rows(rows, topic), section="concepts"),
         works=work_page, scholars=_page(scholars, params, path, transform=scholar_cards, section="scholars"),
         articles=_page(articles, params, path, section="articles"), paths=_paths(topic, editions, nodes, params, path, request),
         evidence=_page(evidence, params, path, section="evidence"), featured_quote=next((row for row in evidence if row["id"] == (curation.get("featured_source_id") if "featured_source_id" in curation else curation.get("featured_passage_id"))), None),

@@ -3009,6 +3009,8 @@ class AdminTheorySchoolSerializer(serializers.ModelSerializer):
 
 
 class AdminTopicSerializer(serializers.ModelSerializer):
+    search_aliases = serializers.ListField(child=serializers.CharField(max_length=240), max_length=200, required=False)
+    selection_labels = serializers.SerializerMethodField()
     edit_version = serializers.CharField(read_only=True)
     work_count = serializers.SerializerMethodField()
     suggestions = serializers.SerializerMethodField()
@@ -3021,6 +3023,8 @@ class AdminTopicSerializer(serializers.ModelSerializer):
             "id",
             "edit_version",
             "name",
+            "search_aliases",
+            "selection_labels",
             "parent",
             "slug",
             "description",
@@ -3042,6 +3046,10 @@ class AdminTopicSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("id", "work_count", "suggestions", "created_at", "updated_at")
+
+    def get_selection_labels(self, obj) -> dict:
+        from catalog.topic_editor import topic_selection_labels
+        return topic_selection_labels(obj)
 
     def get_normalized_relations(self, obj) -> dict:
         return {
@@ -3127,7 +3135,7 @@ class AdminTopicSerializer(serializers.ModelSerializer):
     def validate_editorial_status(self, value):
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if value in {"published", "archived"} and not has_capability(
+        if value in {"published", "archived"} and (self.instance is None or value != self.instance.editorial_status) and not has_capability(
             user,
             Capability.PUBLISH_AUTHORITY,
         ):

@@ -1668,6 +1668,9 @@ def save_workflow_editorial_revision(
 def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=False, content_asset_id=None) -> EditorialRevision:
     if actor is None or not getattr(actor, "is_authenticated", False):
         raise EditorialRevisionError("发布必须记录实际操作人。")
+    if EditorialRevision.objects.filter(pk=revision_id, target_type="topic").exists():
+        from catalog.topic_editor import lock_topic_hierarchy
+        lock_topic_hierarchy()
     revision = EditorialRevision.objects.select_for_update().filter(pk=revision_id).first()
     if revision is None:
         raise EditorialRevisionError("编辑草稿不存在。")
@@ -1757,6 +1760,13 @@ def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=
         raise EditorialRevisionError(f"草稿不能发布：{message}") from exc
     target.save()
     _apply_special_fields(target, patch, actor)
+    if isinstance(target, Topic) and next_status == "published":
+        from catalog.topic_editor import ensure_topic_publication
+        from rest_framework.exceptions import ValidationError as APIValidationError
+        try:
+            ensure_topic_publication(target)
+        except APIValidationError as error:
+            raise EditorialRevisionError(str(error.detail)) from error
     if isinstance(target, ScholarProfile) and next_status == "published":
         from catalog.services.scholar_publication import (
             ScholarPublicationError,

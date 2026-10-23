@@ -5904,6 +5904,63 @@
                         "description": ""
                     }
                 }
+            },
+            "post": {
+                "operationId": "catalog_admin_scholars_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ScholarSaveReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
             }
         },
         "/api/catalog/admin/search/": {
@@ -7157,6 +7214,218 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/topics/{id}/organization-preview/": {
+            "post": {
+                "operationId": "catalog_admin_topics_organization_preview_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicOrganizationInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicOrganizationInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopicOrganizationInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TopicOrganizationPreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/topics/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_topics_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TopicReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_topics_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TopicReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/topics/organization/": {
+            "get": {
+                "operationId": "catalog_admin_topics_organization_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "exclude",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "parent",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TopicOrganization"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -22634,6 +22903,19 @@
                         "type": "string",
                         "maxLength": 240
                     },
+                    "search_aliases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 240
+                        },
+                        "maxItems": 200
+                    },
+                    "selection_labels": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "readOnly": true
+                    },
                     "parent": {
                         "type": "string",
                         "format": "uuid",
@@ -22712,6 +22994,7 @@
                     "id",
                     "name",
                     "normalized_relations",
+                    "selection_labels",
                     "suggestions",
                     "updated_at",
                     "work_count"
@@ -22724,6 +23007,15 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 240
+                    },
+                    "search_aliases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 240
+                        },
+                        "maxItems": 200
                     },
                     "parent": {
                         "type": "string",
@@ -28188,6 +28480,14 @@
                     "notice",
                     "paths"
                 ]
+            },
+            "EditorialSaveReceiptStateEnum": {
+                "enum": [
+                    "applied",
+                    "cancelled"
+                ],
+                "type": "string",
+                "description": "* `applied` - applied\n* `cancelled` - cancelled"
             },
             "EditorialSourceKindEnum": {
                 "enum": [
@@ -39511,6 +39811,15 @@
                         "minLength": 1,
                         "maxLength": 240
                     },
+                    "search_aliases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 240
+                        },
+                        "maxItems": 200
+                    },
                     "parent": {
                         "type": "string",
                         "format": "uuid",
@@ -41098,6 +41407,24 @@
                     "target_revision"
                 ]
             },
+            "PendingEditorialSaveActionEnum": {
+                "enum": [
+                    "cancel_pending"
+                ],
+                "type": "string",
+                "description": "* `cancel_pending` - cancel_pending"
+            },
+            "PendingSaveStopRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
             "PersonAuthorityOperationEnum": {
                 "enum": [
                     "create",
@@ -41749,18 +42076,11 @@
                     "results"
                 ]
             },
-            "PlacementCancelActionEnum": {
-                "enum": [
-                    "cancel_pending"
-                ],
-                "type": "string",
-                "description": "* `cancel_pending` - cancel_pending"
-            },
             "PlacementCancelRequest": {
                 "type": "object",
                 "properties": {
                     "action": {
-                        "$ref": "#/components/schemas/PlacementCancelActionEnum"
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
                     }
                 },
                 "required": [
@@ -42061,7 +42381,7 @@
                         "nullable": true
                     },
                     "state": {
-                        "$ref": "#/components/schemas/PlacementReceiptStateEnum"
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
                     },
                     "page_type": {
                         "type": "string"
@@ -42083,14 +42403,6 @@
                     "revision_id",
                     "state"
                 ]
-            },
-            "PlacementReceiptStateEnum": {
-                "enum": [
-                    "applied",
-                    "cancelled"
-                ],
-                "type": "string",
-                "description": "* `applied` - applied\n* `cancelled` - cancelled"
             },
             "PlacementRequest": {
                 "type": "object",
@@ -49474,7 +49786,11 @@
                     },
                     "scholar_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
                     },
                     "saved_version": {
                         "type": "string"
@@ -49493,7 +49809,8 @@
                     "exists",
                     "request_id",
                     "saved_version",
-                    "scholar_id"
+                    "scholar_id",
+                    "state"
                 ]
             },
             "ScholarWork": {
@@ -54241,6 +54558,125 @@
                     "slug"
                 ]
             },
+            "TopicOrganization": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicOrganizationRow"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "results",
+                    "total_pages"
+                ]
+            },
+            "TopicOrganizationInputRequest": {
+                "type": "object",
+                "properties": {
+                    "parent": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "curation": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                }
+            },
+            "TopicOrganizationPreview": {
+                "type": "object",
+                "properties": {
+                    "topic_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "parent_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "parent_changed": {
+                        "type": "boolean"
+                    },
+                    "descendant_count": {
+                        "type": "integer"
+                    },
+                    "public_descendant_count": {
+                        "type": "integer"
+                    },
+                    "content_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "can_publish": {
+                        "type": "boolean"
+                    },
+                    "problems": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "can_publish",
+                    "content_counts",
+                    "descendant_count",
+                    "parent_changed",
+                    "parent_id",
+                    "problems",
+                    "public_descendant_count",
+                    "topic_id"
+                ]
+            },
+            "TopicOrganizationRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "parent_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "editorial_status": {
+                        "type": "string"
+                    },
+                    "children_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "children_count",
+                    "editorial_status",
+                    "id",
+                    "name",
+                    "parent_id"
+                ]
+            },
             "TopicPathPage": {
                 "type": "object",
                 "properties": {
@@ -54375,6 +54811,45 @@
                         "nullable": true
                     }
                 }
+            },
+            "TopicReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "topic_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_version": {
+                        "type": "string"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "request_id",
+                    "saved_version",
+                    "state",
+                    "topic_id"
+                ]
             },
             "TopicRecommendations": {
                 "type": "object",

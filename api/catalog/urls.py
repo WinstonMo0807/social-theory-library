@@ -1,3 +1,4 @@
+from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
 from catalog.scholar_work_views import ScholarWorkSelectionView
 from django.urls import path
 from .home_views import HomeView
@@ -812,6 +813,9 @@ urlpatterns = [
     ),
     path("admin/theory-schools/", AdminTheorySchoolListView.as_view(), name="admin-theory-school-list"),
     path("admin/theory-schools/<uuid:pk>/", AdminTheorySchoolDetailView.as_view(), name="admin-theory-school-detail"),
+    path("admin/topics/organization/", TopicOrganizationView.as_view(), name="topic-organization"),
+    path("admin/topics/commands/<uuid:request_id>/", TopicReceiptView.as_view(), name="topic-save-receipt"),
+    path("admin/topics/<uuid:pk>/organization-preview/", TopicOrganizationPreviewView.as_view(), name="topic-organization-preview"),
     path("admin/topics/", AdminTopicListView.as_view(), name="admin-topic-list"),
     path("admin/topics/<uuid:pk>/", AdminTopicDetailView.as_view(), name="admin-topic-detail"),
     path("admin/topics/<uuid:pk>/merge-preview/", AdminTopicMergePreviewView.as_view(), name="admin-topic-merge-preview"),

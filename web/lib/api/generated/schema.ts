@@ -1340,7 +1340,7 @@ export interface paths {
         };
         get: operations["catalog_admin_scholars_commands_retrieve"];
         put?: never;
-        post?: never;
+        post: operations["catalog_admin_scholars_commands_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1523,6 +1523,54 @@ export interface paths {
         head?: never;
         /** @description Opt-in only on protected Admin views, never public catalog views. */
         patch: operations["catalog_admin_topics_partial_update"];
+        trace?: never;
+    };
+    "/api/catalog/admin/topics/{id}/organization-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_topics_organization_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/topics/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_topics_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_topics_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/topics/organization/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_topics_organization_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/catalog/admin/work-notices/": {
@@ -4947,6 +4995,10 @@ export interface components {
             readonly id: string;
             readonly edit_version: string;
             name: string;
+            search_aliases?: string[];
+            readonly selection_labels: {
+                [key: string]: unknown;
+            };
             /** Format: uuid */
             parent?: string | null;
             slug?: string;
@@ -4978,6 +5030,7 @@ export interface components {
         };
         AdminTopicRequest: {
             name: string;
+            search_aliases?: string[];
             /** Format: uuid */
             parent?: string | null;
             slug?: string;
@@ -6654,6 +6707,12 @@ export interface components {
             paths: components["schemas"]["EditorialRelatedPathRequest"][];
             notice: string;
         };
+        /**
+         * @description * `applied` - applied
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        EditorialSaveReceiptStateEnum: "applied" | "cancelled";
         /**
          * @description * `catalog` - catalog
          *     * `planned` - planned
@@ -10081,6 +10140,7 @@ export interface components {
         };
         PatchedAdminTopicRequest: {
             name?: string;
+            search_aliases?: string[];
             /** Format: uuid */
             parent?: string | null;
             slug?: string;
@@ -10578,6 +10638,14 @@ export interface components {
             retained_notes: string[];
         };
         /**
+         * @description * `cancel_pending` - cancel_pending
+         * @enum {string}
+         */
+        PendingEditorialSaveActionEnum: "cancel_pending";
+        PendingSaveStopRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
+        /**
          * @description * `create` - create
          *     * `update` - update
          *     * `decision` - decision
@@ -10760,13 +10828,8 @@ export interface components {
             results: components["schemas"]["PersonResolutionSummary"][];
             has_more: boolean;
         };
-        /**
-         * @description * `cancel_pending` - cancel_pending
-         * @enum {string}
-         */
-        PlacementCancelActionEnum: "cancel_pending";
         PlacementCancelRequest: {
-            action: components["schemas"]["PlacementCancelActionEnum"];
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
         /**
          * @description * `save` - save
@@ -10873,18 +10936,12 @@ export interface components {
             request_id: string;
             /** Format: uuid */
             revision_id: string | null;
-            state: components["schemas"]["PlacementReceiptStateEnum"];
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
             page_type: string;
             /** Format: uuid */
             page_id: string;
             exists: boolean;
         };
-        /**
-         * @description * `applied` - applied
-         *     * `cancelled` - cancelled
-         * @enum {string}
-         */
-        PlacementReceiptStateEnum: "applied" | "cancelled";
         PlacementRequest: {
             /** Format: uuid */
             id?: string;
@@ -13100,7 +13157,8 @@ export interface components {
             /** Format: uuid */
             request_id: string;
             /** Format: uuid */
-            scholar_id: string;
+            scholar_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
             saved_version: string;
             exists: boolean;
             /** Format: date-time */
@@ -14415,6 +14473,44 @@ export interface components {
             name: string;
             href: string;
         };
+        TopicOrganization: {
+            count: number;
+            page: number;
+            total_pages: number;
+            results: components["schemas"]["TopicOrganizationRow"][];
+        };
+        TopicOrganizationInputRequest: {
+            /** Format: uuid */
+            parent?: string | null;
+            curation?: {
+                [key: string]: unknown;
+            };
+        };
+        TopicOrganizationPreview: {
+            /** Format: uuid */
+            topic_id: string;
+            /** Format: uuid */
+            parent_id: string | null;
+            parent_changed: boolean;
+            descendant_count: number;
+            public_descendant_count: number;
+            content_counts: {
+                [key: string]: number;
+            };
+            can_publish: boolean;
+            problems: {
+                [key: string]: unknown;
+            }[];
+        };
+        TopicOrganizationRow: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            parent_id: string | null;
+            editorial_status: string;
+            children_count: number;
+        };
         TopicPathPage: {
             count: number;
             page: number;
@@ -14441,6 +14537,18 @@ export interface components {
             curation?: components["schemas"]["TopicPreviewCurationRequest"];
             /** Format: uuid */
             parent?: string | null;
+        };
+        TopicReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            topic_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
         };
         TopicRecommendations: {
             /** Format: uuid */
@@ -17893,6 +18001,33 @@ export interface operations {
             };
         };
     };
+    catalog_admin_scholars_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarSaveReceipt"];
+                };
+            };
+        };
+    };
     catalog_admin_search_retrieve: {
         parameters: {
             query?: {
@@ -18527,6 +18662,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminTopic"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_organization_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TopicOrganizationInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TopicOrganizationInputRequest"];
+                "multipart/form-data": components["schemas"]["TopicOrganizationInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicOrganizationPreview"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_organization_retrieve: {
+        parameters: {
+            query?: {
+                exclude?: string;
+                page?: string;
+                parent?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicOrganization"];
                 };
             };
         };

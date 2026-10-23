@@ -199,6 +199,16 @@ def _merge_relation(row, duplicate, *, changes):
 
 @transaction.atomic
 def merge_topics(source_id, target_id, *, actor, change_note="", expected_fingerprint=""):
+    from accounts.models import User
+    from common.capabilities import Capability, has_capability
+    from rest_framework.exceptions import PermissionDenied
+    from django.shortcuts import get_object_or_404
+    original = actor
+    actor = get_object_or_404(User.objects.select_for_update(), pk=original.pk, is_active=True)
+    if actor.token_version != original.token_version or not has_capability(actor, Capability.MERGE_AUTHORITY):
+        raise PermissionDenied("当前账户或主题合并权限已变化。")
+    from catalog.topic_editor import lock_topic_hierarchy
+    lock_topic_hierarchy()
     source_id, target_id = uuid.UUID(str(source_id)), uuid.UUID(str(target_id))
     if source_id == target_id:
         raise ValueError("不能将主题合并到自身。")
