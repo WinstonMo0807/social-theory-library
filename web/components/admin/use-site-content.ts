@@ -56,7 +56,10 @@ export function useSiteContent(owner:string) {
     }catch(error){failure(error);if(error instanceof ApiRequestError&&error.status===404)setMessage("尚未找到完成回执。可以重试原请求，或停止尚未执行的原请求；这不代表操作已失败。");}
     finally{running.current=false;if(!active.current?.signal.aborted)setBusy(false);}
   }
-  const conflict=Boolean(resource.data&&draft&&resource.data.edit_version!==draft.edit_version&&(resource.data.history[0]?.revision||0)>(draft.history[0]?.revision||0));
+  const remoteRevision=resource.data?.history[0],localRevision=draft?.history[0];
+  const conflict=Boolean(resource.data&&draft&&resource.data.edit_version!==draft.edit_version&&(
+    (remoteRevision?.revision||0)>(localRevision?.revision||0)||
+    remoteRevision?.id===localRevision?.id&&remoteRevision?.state==="published"&&localRevision?.state==="draft"));
   function useRemote(){if(resource.data){setDraft(resource.data);setSaved(resource.data);setMessage("已采用服务器最新内容。");}}
   function keepLocal(){if(resource.data&&draft){setSaved(resource.data);setDraft({...draft,edit_version:resource.data.edit_version});setMessage("已保留当前输入，请核对差异后重新保存。");}}
   return {draft,setDraft,saved,dirty,busy,message,operation,blocked,resource,persist,recover,conflict,useRemote,keepLocal};

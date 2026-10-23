@@ -60,6 +60,9 @@ def _latest(kind, identifier):
 
 def edit_version(kind, identifier):
     latest = _latest(kind, identifier)
+    if latest and kind == "site_content":
+        # Publishing the same revision is still a concurrent state change.
+        return f"{latest.pk}:{latest.status}"
     if latest and kind == "recommendation_issue":
         modified = RecommendationIssueItem.objects.filter(issue_id=identifier).aggregate(value=Max("updated_at"))["value"]
         return f"{latest.pk}:{modified.isoformat() if modified else ''}"
