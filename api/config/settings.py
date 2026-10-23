@@ -19,6 +19,8 @@ SECRET_KEY = os.getenv(
 )
 DEBUG = env_bool("DJANGO_DEBUG", True)
 PUBLIC_DEPLOYMENT_MODE = env_bool("PUBLIC_DEPLOYMENT_MODE", False)
+STL_VISUAL_REVIEW_ENABLED = env_bool("STL_VISUAL_REVIEW_ENABLED", False)
+STL_VISUAL_ATLAS_PATH = os.getenv("STL_VISUAL_ATLAS_PATH", str(BASE_DIR.parent / "output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf"))
 API_CONTRACT_VERSION = os.getenv("STL_API_VERSION", "4.0").strip() or "4.0"
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if host.strip()]
 LAN_HOST = os.getenv("LAN_HOST", "").strip()

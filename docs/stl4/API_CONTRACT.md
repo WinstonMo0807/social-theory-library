@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 预览批注
+
+内网预览新增visual-review、commands/{request_id}、references/{page}共3条路径；总336。固定request/owner/version、不可变AuditEvent与严格站内路径/坐标边界。默认关闭且PUBLIC_DEPLOYMENT_MODE强制404。
+
 ## 2026-10-24 OCR任务服务转移
 
 原processing-workspace命令新增transfer + target(nas/remote) + target_version + acknowledge_remote，必须request_id/expected_version/owner头。需VIEW_SYSTEM_STATUS/RETRY_JOBS/MANAGE_AI，原来源/暂停/恢复保护期有效。任务transfer只返回安全标签、配置完整性与指纹，配置完整≠在线。每页重验固定配置；同一命令回放不重复派发。仍333路径，无迁移。

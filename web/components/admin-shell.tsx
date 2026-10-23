@@ -32,6 +32,7 @@ const navigationGroups = [
 ] as const;
 
 const routeCapabilities: Record<string, string[]> = {
+  "/admin/visual-review": ["can_manage_users"],
   "/admin/content": ["can_edit_metadata", "can_edit_draft_authority"],
   "/admin/processing": ["can_view_system_status"],
   "/admin/publication": ["can_publish_work"],
@@ -58,6 +59,7 @@ const routeCapabilities: Record<string, string[]> = {
 // authority for every permission check.  It gives older session payloads a
 // safe, predictable fallback while newer payloads use the capability snapshot.
 const administratorOnlyRoutes = new Set([
+  "/admin/visual-review",
   "/admin/processing",
   "/admin/status",
   "/admin/system-health",

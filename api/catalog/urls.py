@@ -1,3 +1,4 @@
+from catalog.visual_review_views import VisualReviewView, VisualReviewReceiptView, VisualReviewReferenceView
 from catalog.local_service_views import LocalServicesView, LocalServiceCheckView
 from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
@@ -244,6 +245,9 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/visual-review/", VisualReviewView.as_view(), name="admin-visual-review"),
+    path("admin/visual-review/commands/<uuid:request_id>/", VisualReviewReceiptView.as_view(), name="admin-visual-review-receipt"),
+    path("admin/visual-review/references/<int:page>/", VisualReviewReferenceView.as_view(), name="admin-visual-review-reference"),
     path("admin/local-services/", LocalServicesView.as_view(), name="local-services"),
     path("admin/local-services/check/", LocalServiceCheckView.as_view(), name="local-service-check"),
     path("theory-system/directory/", TheoryDirectoryView.as_view(), name="theory-system-directory"),

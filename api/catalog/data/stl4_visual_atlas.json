@@ -1,0 +1,1883 @@
+[
+  {
+    "page": "10",
+    "id": "R01-main",
+    "module": "首页",
+    "title": "首页：从内容进入研究",
+    "route": "/",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行；首页策划头像公开字段待补"
+  },
+  {
+    "page": "11",
+    "id": "R01-sub01",
+    "module": "首页",
+    "title": "首页下半屏：完整头像与主题大图",
+    "route": "/",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行；首页策划头像公开字段待补"
+  },
+  {
+    "page": "12",
+    "id": "R01-states",
+    "module": "首页",
+    "title": "首页：从内容进入研究 · 状态",
+    "route": "/",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行；首页策划头像公开字段待补"
+  },
+  {
+    "page": "13",
+    "id": "R33-main",
+    "module": "首页",
+    "title": "帮助入口",
+    "route": "/help",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "14",
+    "id": "R33-sub01",
+    "module": "首页",
+    "title": "关于书库",
+    "route": "/about",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "15",
+    "id": "R33-sub02",
+    "module": "首页",
+    "title": "帮助文章",
+    "route": "/help/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "16",
+    "id": "R33-sub03",
+    "module": "首页",
+    "title": "提交反馈",
+    "route": "/feedback",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "17",
+    "id": "R33-states",
+    "module": "首页",
+    "title": "关于、使用帮助与反馈 · 状态",
+    "route": "/help",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "18",
+    "id": "R34-sub04",
+    "module": "首页",
+    "title": "全站导航与手机菜单",
+    "route": "全局菜单组件（无独立路由）",
+    "implementation_status": "源码已接入",
+    "visual_gaps": "真实窄屏、滚动/焦点与登录返回待统一运行验收"
+  },
+  {
+    "page": "20",
+    "id": "R34-main",
+    "module": "探索",
+    "title": "共享操作层：引用、选材与导出",
+    "route": "共享浮层",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "21",
+    "id": "R34-sub01",
+    "module": "探索",
+    "title": "复制引用与格式选择",
+    "route": "共享浮层",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "22",
+    "id": "R34-states",
+    "module": "探索",
+    "title": "共享操作层：引用、选材与导出 · 状态",
+    "route": "共享浮层",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "23",
+    "id": "MISSING-01",
+    "module": "探索",
+    "title": "探索总入口",
+    "route": "/explore",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "24",
+    "id": "R02-main",
+    "module": "探索",
+    "title": "馆藏检索与文献列表",
+    "route": "/explore/original",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "25",
+    "id": "R02-sub01",
+    "module": "探索",
+    "title": "高级筛选与范围选择",
+    "route": "/explore/original",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "26",
+    "id": "R02-sub02",
+    "module": "探索",
+    "title": "多版本作品展开",
+    "route": "/explore/original",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "27",
+    "id": "R02-states",
+    "module": "探索",
+    "title": "馆藏检索与文献列表 · 状态",
+    "route": "/explore/original",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "28",
+    "id": "R03-main",
+    "module": "探索",
+    "title": "观点检索：问题起点",
+    "route": "/explore/opinions",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "29",
+    "id": "R03-states",
+    "module": "探索",
+    "title": "观点检索：问题起点 · 状态",
+    "route": "/explore/opinions",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "30",
+    "id": "R04-main",
+    "module": "探索",
+    "title": "原文候选：跨作品发现",
+    "route": "/explore/evidence",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "31",
+    "id": "R04-sub01",
+    "module": "探索",
+    "title": "原文上下文与同书候选展开",
+    "route": "/explore/evidence",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行"
+  },
+  {
+    "page": "32",
+    "id": "R04-states",
+    "module": "探索",
+    "title": "原文候选：跨作品发现 · 状态",
+    "route": "/explore/evidence",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行；查询回执不等于逐章分析"
+  },
+  {
+    "page": "33",
+    "id": "R10-main",
+    "module": "探索",
+    "title": "作品详情与版本选择",
+    "route": "/works/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式响应式/焦点/逐图对照未执行；馆内借阅不由restricted权限推断"
+  },
+  {
+    "page": "34",
+    "id": "R10-sub01",
+    "module": "探索",
+    "title": "单篇期刊论文详情",
+    "route": "/works/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式响应式/焦点/逐图对照未执行；馆内借阅不由restricted权限推断"
+  },
+  {
+    "page": "35",
+    "id": "R10-states",
+    "module": "探索",
+    "title": "作品详情与版本选择 · 状态",
+    "route": "/works/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式响应式/焦点/逐图对照未执行；馆内借阅不由restricted权限推断"
+  },
+  {
+    "page": "36",
+    "id": "R08-main",
+    "module": "探索",
+    "title": "PDF 原文阅读器",
+    "route": "/reader/[assetId]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "全部桌面/手机布局、真实Range、长按、焦点和坐标待统一验收"
+  },
+  {
+    "page": "37",
+    "id": "R08-sub01",
+    "module": "探索",
+    "title": "目录搜索与多级展开",
+    "route": "/reader/[assetId]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "全部桌面/手机布局、真实Range、长按、焦点和坐标待统一验收"
+  },
+  {
+    "page": "38",
+    "id": "R08-sub02",
+    "module": "探索",
+    "title": "书内搜索结果",
+    "route": "/reader/[assetId]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "全部桌面/手机布局、真实Range、长按、焦点和坐标待统一验收"
+  },
+  {
+    "page": "39",
+    "id": "R08-sub03",
+    "module": "探索",
+    "title": "笔记批注与引用抽屉",
+    "route": "/reader/[assetId]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "全部桌面/手机布局、真实Range、长按、焦点和坐标待统一验收"
+  },
+  {
+    "page": "40",
+    "id": "R08-states",
+    "module": "探索",
+    "title": "PDF 原文阅读器 · 状态",
+    "route": "/reader/[assetId]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "真实OCR/队列/NAS、当前页保存暂停/续跑、公开与管理权限及全部桌面/手机状态待统一验收"
+  },
+  {
+    "page": "41",
+    "id": "R09-main",
+    "module": "探索",
+    "title": "原文与译本并读",
+    "route": "/reader/[assetId]?mode=parallel",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "全部桌面/手机/任务状态及真实候选/并发/权限待统一验收"
+  },
+  {
+    "page": "42",
+    "id": "R09-sub01",
+    "module": "探索",
+    "title": "手动对齐与私人保存",
+    "route": "/reader/[assetId]?mode=parallel",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "全部桌面/手机/任务状态及真实候选/并发/权限待统一验收"
+  },
+  {
+    "page": "43",
+    "id": "R09-states",
+    "module": "探索",
+    "title": "原文与译本并读 · 状态",
+    "route": "/reader/[assetId]?mode=parallel",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "全部桌面/手机/任务状态及真实候选/并发/权限待统一验收"
+  },
+  {
+    "page": "45",
+    "id": "MISSING-02",
+    "module": "理论流派",
+    "title": "理论流派总览",
+    "route": "/theory-schools",
+    "implementation_status": "源码已接入；正式验收待核实",
+    "visual_gaps": "桌面/移动像素、交互、真实数据待统一验收；旧子栏目及独立旧图谱/时间轴继续后续单元"
+  },
+  {
+    "page": "46",
+    "id": "R15-main",
+    "module": "理论流派",
+    "title": "概念与理论详情",
+    "route": "/theories/nodes/[slug]",
+    "implementation_status": "源码已接入；正式验收待核实",
+    "visual_gaps": "桌面/移动像素、交互、真实数据待统一验收；旧子栏目及独立旧图谱/时间轴继续后续单元"
+  },
+  {
+    "page": "47",
+    "id": "R15-sub01",
+    "module": "理论流派",
+    "title": "同词异义与译名比较",
+    "route": "/theories/nodes/[slug]",
+    "implementation_status": "源码已接入；正式验收待核实",
+    "visual_gaps": "桌面/移动像素、交互、真实数据待统一验收；旧子栏目及独立旧图谱/时间轴继续后续单元"
+  },
+  {
+    "page": "48",
+    "id": "R15-sub02",
+    "module": "理论流派",
+    "title": "理论流派详情：批判理论",
+    "route": "/theory-schools/[slug]",
+    "implementation_status": "源码已接入；正式验收待核实",
+    "visual_gaps": "桌面/移动像素、交互、真实数据待统一验收；旧子栏目及独立旧图谱/时间轴继续后续单元"
+  },
+  {
+    "page": "49",
+    "id": "R15-states",
+    "module": "理论流派",
+    "title": "概念与理论详情 · 状态",
+    "route": "/theories/nodes/[slug]",
+    "implementation_status": "源码已接入；正式验收待核实",
+    "visual_gaps": "桌面/移动像素、交互、真实数据待统一验收；旧子栏目及独立旧图谱/时间轴继续后续单元"
+  },
+  {
+    "page": "50",
+    "id": "MISSING-05",
+    "module": "理论流派",
+    "title": "分支学科总览",
+    "route": "/subdisciplines",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行；静态检查不代表验收通过。"
+  },
+  {
+    "page": "51",
+    "id": "NEW-T02",
+    "module": "理论流派",
+    "title": "分支学科详情：社会分层",
+    "route": "/subdisciplines/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行；静态检查不代表验收通过。"
+  },
+  {
+    "page": "52",
+    "id": "R17-main",
+    "module": "理论流派",
+    "title": "知识地图与学科目录",
+    "route": "/theories/graph",
+    "implementation_status": "源码接入；待统一验收",
+    "visual_gaps": "全量完成后统一桌面/移动/状态逐图验收；未映射旧流派图谱另行接续"
+  },
+  {
+    "page": "53",
+    "id": "R17-sub01",
+    "module": "理论流派",
+    "title": "知识地图与目录切换入口",
+    "route": "/theories/graph?view=list",
+    "implementation_status": "源码接入；待统一验收",
+    "visual_gaps": "全量完成后统一桌面/移动/状态逐图验收；未映射旧流派图谱另行接续"
+  },
+  {
+    "page": "54",
+    "id": "R17-sub02",
+    "module": "理论流派",
+    "title": "理论与学科目录展开视图",
+    "route": "/theories/directory",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态对照未执行；静态检查不代表验收通过。"
+  },
+  {
+    "page": "55",
+    "id": "R17-states",
+    "module": "理论流派",
+    "title": "知识地图与学科目录 · 状态",
+    "route": "/theories/graph",
+    "implementation_status": "源码接入；待统一验收",
+    "visual_gaps": "全量完成后统一桌面/移动/状态逐图验收；未映射旧流派图谱另行接续"
+  },
+  {
+    "page": "56",
+    "id": "R16-main",
+    "module": "理论流派",
+    "title": "学科与概念时间线",
+    "route": "/theories/timeline",
+    "implementation_status": "源码接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/交互状态逐图对照待全量实施后验收"
+  },
+  {
+    "page": "57",
+    "id": "R16-states",
+    "module": "理论流派",
+    "title": "学科与概念时间线 · 状态",
+    "route": "/theories/timeline",
+    "implementation_status": "源码接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/交互状态逐图对照待全量实施后验收"
+  },
+  {
+    "page": "58",
+    "id": "R20-main",
+    "module": "理论流派",
+    "title": "公共阅读路径",
+    "route": "/theories/reading-paths",
+    "implementation_status": "源码接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态逐图对照未运行；0072/0018未应用"
+  },
+  {
+    "page": "59",
+    "id": "R20-sub01",
+    "module": "理论流派",
+    "title": "公共阅读路线与阶段详情",
+    "route": "/theories/reading-paths/[slug]",
+    "implementation_status": "源码接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态逐图对照未运行；0072/0018未应用"
+  },
+  {
+    "page": "60",
+    "id": "R20-states",
+    "module": "理论流派",
+    "title": "公共阅读路径 · 状态",
+    "route": "/theories/reading-paths",
+    "implementation_status": "源码接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态逐图对照未运行；0072/0018未应用"
+  },
+  {
+    "page": "62",
+    "id": "R11-main",
+    "module": "学者",
+    "title": "学者总览",
+    "route": "/scholars",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态、迁移、真实服务和私人并发验收未运行；源码检查不等于视觉一致。"
+  },
+  {
+    "page": "63",
+    "id": "R11-states",
+    "module": "学者",
+    "title": "学者索引 · 状态",
+    "route": "/scholars",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态、迁移、真实服务和私人并发验收未运行；源码检查不等于视觉一致。"
+  },
+  {
+    "page": "64",
+    "id": "R12-main",
+    "module": "学者",
+    "title": "学者详情与学术脉络",
+    "route": "/scholars/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态、迁移、真实服务和私人并发验收未运行；源码检查不等于视觉一致。"
+  },
+  {
+    "page": "65",
+    "id": "R12-sub01",
+    "module": "学者",
+    "title": "学者关系与出处详情",
+    "route": "/scholars/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态、迁移、真实服务和私人并发验收未运行；源码检查不等于视觉一致。"
+  },
+  {
+    "page": "66",
+    "id": "R12-states",
+    "module": "学者",
+    "title": "学者详情与学术脉络 · 状态",
+    "route": "/scholars/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态、迁移、真实服务和私人并发验收未运行；源码检查不等于视觉一致。"
+  },
+  {
+    "page": "68",
+    "id": "R13-main",
+    "module": "主题",
+    "title": "主题总览",
+    "route": "/topics",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态及真实接口行为待统一验收"
+  },
+  {
+    "page": "69",
+    "id": "R13-states",
+    "module": "主题",
+    "title": "主题与专题方向索引 · 状态",
+    "route": "/topics",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态及真实接口行为待统一验收"
+  },
+  {
+    "page": "70",
+    "id": "R14-main",
+    "module": "主题",
+    "title": "主题详情与问题入口",
+    "route": "/topics/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态及真实接口行为待统一验收"
+  },
+  {
+    "page": "71",
+    "id": "R14-states",
+    "module": "主题",
+    "title": "主题详情与问题入口 · 状态",
+    "route": "/topics/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态及真实接口行为待统一验收"
+  },
+  {
+    "page": "73",
+    "id": "R18-main",
+    "module": "特别策划",
+    "title": "专题文章索引",
+    "route": "/recommendations",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/390px移动/交互状态对照及真实环境验收未执行"
+  },
+  {
+    "page": "74",
+    "id": "R18-states",
+    "module": "特别策划",
+    "title": "专题文章索引 · 状态",
+    "route": "/recommendations",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/390px移动/交互状态对照及真实环境验收未执行"
+  },
+  {
+    "page": "75",
+    "id": "R19-main",
+    "module": "特别策划",
+    "title": "专题文章与原文叙事",
+    "route": "/recommendations/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/390px移动/交互状态对照及真实环境验收未执行"
+  },
+  {
+    "page": "76",
+    "id": "R19-states",
+    "module": "特别策划",
+    "title": "专题文章与原文叙事 · 状态",
+    "route": "/recommendations/[slug]",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/390px移动/交互状态对照及真实环境验收未执行"
+  },
+  {
+    "page": "77",
+    "id": "X03-main",
+    "module": "特别策划",
+    "title": "原文微展览",
+    "route": "/recommendations/[slug]?exhibit={stable-id}",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/390px移动/交互状态对照及真实环境验收未执行"
+  },
+  {
+    "page": "78",
+    "id": "X03-states",
+    "module": "特别策划",
+    "title": "原文微展览 · 状态",
+    "route": "/recommendations/[slug]?exhibit={stable-id}",
+    "implementation_status": "源码已接入；待统一验收",
+    "visual_gaps": "正式桌面/390px移动/交互状态对照及真实环境验收未执行"
+  },
+  {
+    "page": "80",
+    "id": "M01-main",
+    "module": "管理端",
+    "title": "今日工作与继续处理",
+    "route": "/admin",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "顶部跨对象搜索和真实异常工作提醒已源码接入；编辑器依据已读PDF124–127专门图继续；严格逐图验收未运行"
+  },
+  {
+    "page": "81",
+    "id": "M01-states",
+    "module": "管理端",
+    "title": "今日工作与继续处理 · 状态",
+    "route": "/admin",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "顶部跨对象搜索和真实异常工作提醒已源码接入；编辑器依据已读PDF124–127专门图继续；严格逐图验收未运行"
+  },
+  {
+    "page": "82",
+    "id": "M02-main",
+    "module": "管理端",
+    "title": "批量收件与上传",
+    "route": "/admin/uploads",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "服务端任务暂停/重复原位比较/跨重载未知预约映射/精确几何"
+  },
+  {
+    "page": "83",
+    "id": "M02-sub01",
+    "module": "管理端",
+    "title": "批次详情与上传恢复",
+    "route": "/admin/uploads",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "服务端任务暂停/重复原位比较/跨重载未知预约映射/精确几何"
+  },
+  {
+    "page": "84",
+    "id": "M02-states",
+    "module": "管理端",
+    "title": "批量收件与上传 · 状态",
+    "route": "/admin/uploads",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "服务端任务暂停/重复原位比较/跨重载未知预约映射/精确几何"
+  },
+  {
+    "page": "85",
+    "id": "M03-main",
+    "module": "管理端",
+    "title": "收件确认与重复材料匹配",
+    "route": "/admin/intake/[itemId]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "复杂历史合并沿原工作页/精确几何/实际状态"
+  },
+  {
+    "page": "86",
+    "id": "M03-sub01",
+    "module": "管理端",
+    "title": "同名不同书与完全重复",
+    "route": "/admin/intake/[itemId]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "复杂历史合并沿原工作页/精确几何/实际状态"
+  },
+  {
+    "page": "87",
+    "id": "M03-states",
+    "module": "管理端",
+    "title": "收件确认与重复材料匹配 · 状态",
+    "route": "/admin/intake/[itemId]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "复杂历史合并沿原工作页/精确几何/实际状态"
+  },
+  {
+    "page": "88",
+    "id": "M04-main",
+    "module": "管理端",
+    "title": "新建书目：先材料后文件",
+    "route": "/admin/cataloging/new",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整预填来源/其他格式附件入口/精确几何/完整状态"
+  },
+  {
+    "page": "89",
+    "id": "M04-sub01",
+    "module": "管理端",
+    "title": "单篇论文编目",
+    "route": "/admin/cataloging/new",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整预填来源/其他格式附件入口/精确几何/完整状态"
+  },
+  {
+    "page": "90",
+    "id": "M04-states",
+    "module": "管理端",
+    "title": "新建书目：先材料后文件 · 状态",
+    "route": "/admin/cataloging/new",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整预填来源/其他格式附件入口/精确几何/完整状态"
+  },
+  {
+    "page": "91",
+    "id": "M05-main",
+    "module": "管理端",
+    "title": "馆藏目录与材料编辑",
+    "route": "/admin/library/works/{workId}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整人工锁操作/横向候选比较/精确视觉/运行状态"
+  },
+  {
+    "page": "92",
+    "id": "M05-sub01",
+    "module": "管理端",
+    "title": "馆藏条目编辑",
+    "route": "/admin/library/works/{workId}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整人工锁操作/横向候选比较/精确视觉/运行状态"
+  },
+  {
+    "page": "93",
+    "id": "M05-sub02",
+    "module": "管理端",
+    "title": "多窗口修改冲突",
+    "route": "/admin/library/works/{workId}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整人工锁操作/横向候选比较/精确视觉/运行状态"
+  },
+  {
+    "page": "94",
+    "id": "M05-states",
+    "module": "管理端",
+    "title": "馆藏目录与材料编辑 · 状态",
+    "route": "/admin/library/works/{workId}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整人工锁操作/横向候选比较/精确视觉/运行状态"
+  },
+  {
+    "page": "95",
+    "id": "M06-main",
+    "module": "管理端",
+    "title": "版本、文件与阅读副本",
+    "route": "/admin/library/works/[id]/files",
+    "implementation_status": "源码已接入（待统一验收）",
+    "visual_gaps": "桌面/移动与真实数据/大文件/任务/冲突状态待统一逐图验收。"
+  },
+  {
+    "page": "96",
+    "id": "M06-sub01",
+    "module": "管理端",
+    "title": "补充文件与替换预览",
+    "route": "/admin/library/works/[id]/files",
+    "implementation_status": "源码已接入（待统一验收）",
+    "visual_gaps": "桌面/移动与真实数据/大文件/任务/冲突状态待统一逐图验收。"
+  },
+  {
+    "page": "97",
+    "id": "M06-sub02",
+    "module": "管理端",
+    "title": "历史文件与引用影响",
+    "route": "/admin/library/works/[id]/files",
+    "implementation_status": "源码已接入（待统一验收）",
+    "visual_gaps": "桌面/移动与真实数据/大文件/任务/冲突状态待统一逐图验收。"
+  },
+  {
+    "page": "98",
+    "id": "M06-states",
+    "module": "管理端",
+    "title": "版本、文件与阅读副本 · 状态",
+    "route": "/admin/library/works/[id]/files",
+    "implementation_status": "源码已接入（待统一验收）",
+    "visual_gaps": "桌面/移动与真实数据/大文件/任务/冲突状态待统一逐图验收。"
+  },
+  {
+    "page": "99",
+    "id": "M07-main",
+    "module": "管理端",
+    "title": "字段候选与材料助手",
+    "route": "/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "原位完整关联材料/持久操作恢复/精确视觉/实际状态"
+  },
+  {
+    "page": "100",
+    "id": "M07-sub01",
+    "module": "管理端",
+    "title": "单字段候选差异与人工锁",
+    "route": "/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "原位完整关联材料/持久操作恢复/精确视觉/实际状态"
+  },
+  {
+    "page": "101",
+    "id": "M07-states",
+    "module": "管理端",
+    "title": "字段候选与材料助手 · 状态",
+    "route": "/admin/cataloging/{sessionId}/candidates；材料/知识编辑内同一助手",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "原位完整关联材料/持久操作恢复/精确视觉/实际状态"
+  },
+  {
+    "page": "102",
+    "id": "M08-main",
+    "module": "管理端",
+    "title": "封面与媒体资料",
+    "route": "/admin/media?edition={editionId}&slot=cover|recommendation",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "其他对象入口/各用途独立开关/旧文件历史/完整页面预览/精确视觉与实际状态"
+  },
+  {
+    "page": "103",
+    "id": "M08-sub01",
+    "module": "管理端",
+    "title": "PDF页选封面",
+    "route": "/admin/media?edition={editionId}&slot=cover|recommendation",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "其他对象入口/各用途独立开关/旧文件历史/完整页面预览/精确视觉与实际状态"
+  },
+  {
+    "page": "104",
+    "id": "M08-sub02",
+    "module": "管理端",
+    "title": "裁切与历史封面",
+    "route": "/admin/media?edition={editionId}&slot=cover|recommendation",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "其他对象入口/各用途独立开关/旧文件历史/完整页面预览/精确视觉与实际状态"
+  },
+  {
+    "page": "105",
+    "id": "M08-states",
+    "module": "管理端",
+    "title": "封面与媒体资料 · 状态",
+    "route": "/admin/media?edition={editionId}&slot=cover|recommendation",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "其他对象入口/各用途独立开关/旧文件历史/完整页面预览/精确视觉与实际状态"
+  },
+  {
+    "page": "106",
+    "id": "M09-main",
+    "module": "管理端",
+    "title": "处理中心与任务队列",
+    "route": "/admin/processing",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "其他结果类型、失败单元细分选择与后续其他阶段控制、指定服务真实运行、高级旧入口视觉统一、精确几何/真实状态与性能待核实"
+  },
+  {
+    "page": "107",
+    "id": "M09-sub01",
+    "module": "管理端",
+    "title": "任务详情与暂停恢复",
+    "route": "/admin/processing",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "其他结果类型、失败单元细分选择与后续其他阶段控制、指定服务真实运行、高级旧入口视觉统一、精确几何/真实状态与性能待核实"
+  },
+  {
+    "page": "108",
+    "id": "M09-states",
+    "module": "管理端",
+    "title": "处理中心与任务队列 · 状态",
+    "route": "/admin/processing",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "其他结果类型、失败单元细分选择与后续其他阶段控制、指定服务真实运行、高级旧入口视觉统一、精确几何/真实状态与性能待核实"
+  },
+  {
+    "page": "109",
+    "id": "M10-main",
+    "module": "管理端",
+    "title": "OCR 与页面文字质量",
+    "route": "/admin/processing/[id]/ocr",
+    "implementation_status": "源码已接入（待统一验收）",
+    "visual_gaps": "实际OCR/provider、人工保护/并发及完整桌面移动交互待统一验收。"
+  },
+  {
+    "page": "110",
+    "id": "M10-sub01",
+    "module": "管理端",
+    "title": "问题页与逐页重试",
+    "route": "/admin/processing/[id]/ocr",
+    "implementation_status": "源码已接入（待统一验收）",
+    "visual_gaps": "实际OCR/provider、人工保护/并发及完整桌面移动交互待统一验收。"
+  },
+  {
+    "page": "111",
+    "id": "M10-states",
+    "module": "管理端",
+    "title": "OCR 与页面文字质量 · 状态",
+    "route": "/admin/processing/[id]/ocr",
+    "implementation_status": "源码已接入（待统一验收）",
+    "visual_gaps": "实际OCR/provider、人工保护/并发及完整桌面移动交互待统一验收。"
+  },
+  {
+    "page": "112",
+    "id": "M11-main",
+    "module": "管理端",
+    "title": "自动目录与跳转校准",
+    "route": "/admin/library/assets/[id]/outline",
+    "implementation_status": "源码已接入",
+    "visual_gaps": "真实文件/任务/并发、管理壳层、移动断点及精确视觉待统一验收"
+  },
+  {
+    "page": "113",
+    "id": "M11-sub01",
+    "module": "管理端",
+    "title": "同页多目录节点",
+    "route": "/admin/library/assets/[id]/outline",
+    "implementation_status": "源码已接入",
+    "visual_gaps": "真实文件/任务/并发、管理壳层、移动断点及精确视觉待统一验收"
+  },
+  {
+    "page": "114",
+    "id": "M11-sub02",
+    "module": "管理端",
+    "title": "目录候选审核与恢复",
+    "route": "/admin/library/assets/[id]/outline",
+    "implementation_status": "源码已接入",
+    "visual_gaps": "真实文件/任务/并发、管理壳层、移动断点及精确视觉待统一验收"
+  },
+  {
+    "page": "115",
+    "id": "M11-states",
+    "module": "管理端",
+    "title": "自动目录与跳转校准 · 状态",
+    "route": "/admin/library/assets/[id]/outline",
+    "implementation_status": "源码已接入",
+    "visual_gaps": "真实文件/任务/并发、管理壳层、移动断点及精确视觉待统一验收"
+  },
+  {
+    "page": "116",
+    "id": "M12-main",
+    "module": "管理端",
+    "title": "印刷页码与物理页映射",
+    "route": "/admin/library/assets/[id]/page-mapping",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  },
+  {
+    "page": "117",
+    "id": "M12-sub01",
+    "module": "管理端",
+    "title": "分段页码映射与双页扫描",
+    "route": "/admin/library/assets/[id]/page-mapping",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  },
+  {
+    "page": "118",
+    "id": "M12-states",
+    "module": "管理端",
+    "title": "印刷页码与物理页映射 · 状态",
+    "route": "/admin/library/assets/[id]/page-mapping",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  },
+  {
+    "page": "119",
+    "id": "M13-main",
+    "module": "管理端",
+    "title": "检索索引与查询词维护",
+    "route": "/admin/processing/semantic-index",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "启停交互细节、真实服务与运行状态、精确几何及完整逐图验收待核实"
+  },
+  {
+    "page": "120",
+    "id": "M13-sub01",
+    "module": "管理端",
+    "title": "增量索引任务与旧版切换",
+    "route": "/admin/processing/semantic-index",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "启停交互细节、真实服务与运行状态、精确几何及完整逐图验收待核实"
+  },
+  {
+    "page": "121",
+    "id": "M13-states",
+    "module": "管理端",
+    "title": "检索索引与查询词维护 · 状态",
+    "route": "/admin/processing/semantic-index",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "启停交互细节、真实服务与运行状态、精确几何及完整逐图验收待核实"
+  },
+  {
+    "page": "122",
+    "id": "M14-main",
+    "module": "管理端",
+    "title": "策划项目与文章管理",
+    "route": "/admin/recommendations",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "旧文章/首页入口视觉统一、精确几何及完整运行状态待收口"
+  },
+  {
+    "page": "123",
+    "id": "M14-states",
+    "module": "管理端",
+    "title": "策划项目与文章管理 · 状态",
+    "route": "/admin/recommendations",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "旧文章/首页入口视觉统一、精确几何及完整运行状态待收口"
+  },
+  {
+    "page": "124",
+    "id": "M15-main",
+    "module": "管理端",
+    "title": "专题编辑器与结构化内容",
+    "route": "/admin/recommendations/issues/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "紧凑来源与结构块缩略图已接；整体控件/移动/输入法/状态及正式像素对照待统一验收，不宣称无差异"
+  },
+  {
+    "page": "125",
+    "id": "M15-sub01",
+    "module": "管理端",
+    "title": "添加结构块",
+    "route": "/admin/recommendations/issues/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "紧凑来源与结构块缩略图已接；整体控件/移动/输入法/状态及正式像素对照待统一验收，不宣称无差异"
+  },
+  {
+    "page": "126",
+    "id": "M15-sub02",
+    "module": "管理端",
+    "title": "断线草稿与冲突保留",
+    "route": "/admin/recommendations/issues/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "紧凑来源与结构块缩略图已接；整体控件/移动/输入法/状态及正式像素对照待统一验收，不宣称无差异"
+  },
+  {
+    "page": "127",
+    "id": "M15-states",
+    "module": "管理端",
+    "title": "专题编辑器与结构化内容 · 状态",
+    "route": "/admin/recommendations/issues/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "紧凑来源与结构块缩略图已接；整体控件/移动/输入法/状态及正式像素对照待统一验收，不宣称无差异"
+  },
+  {
+    "page": "128",
+    "id": "M16-main",
+    "module": "管理端",
+    "title": "策划选材与智能助手",
+    "route": "/admin/recommendations/issues/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "关联/层级/人工文字对比已接源码；整体控件/窄屏/正式逐图待核对；助手未知请求跨刷新需读历史"
+  },
+  {
+    "page": "129",
+    "id": "M16-sub01",
+    "module": "管理端",
+    "title": "证据选择与建议逐项采用",
+    "route": "/admin/recommendations/issues/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "关联/层级/人工文字对比已接源码；整体控件/窄屏/正式逐图待核对；助手未知请求跨刷新需读历史"
+  },
+  {
+    "page": "130",
+    "id": "M16-states",
+    "module": "管理端",
+    "title": "策划选材与智能助手 · 状态",
+    "route": "/admin/recommendations/issues/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "关联/层级/人工文字对比已接源码；整体控件/窄屏/正式逐图待核对；助手未知请求跨刷新需读历史"
+  },
+  {
+    "page": "131",
+    "id": "M17-main",
+    "module": "管理端",
+    "title": "真实预览与发布检查",
+    "route": "/admin/preview/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "文章与知识对象四区已接源码；固定页面、全原文授权自动预检、M18完整历史及全部桌面/移动/状态逐图仍待。"
+  },
+  {
+    "page": "132",
+    "id": "M17-sub01",
+    "module": "管理端",
+    "title": "发布阻塞与具体修正",
+    "route": "/admin/preview/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "文章与知识对象四区已接源码；固定页面、全原文授权自动预检、M18完整历史及全部桌面/移动/状态逐图仍待。"
+  },
+  {
+    "page": "133",
+    "id": "M17-states",
+    "module": "管理端",
+    "title": "真实预览与发布检查 · 状态",
+    "route": "/admin/preview/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "文章与知识对象四区已接源码；固定页面、全原文授权自动预检、M18完整历史及全部桌面/移动/状态逐图仍待。"
+  },
+  {
+    "page": "134",
+    "id": "M18-main",
+    "module": "管理端",
+    "title": "发布台、历史与撤回",
+    "route": "/admin/publication",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "出版版本及九类知识对象已部分接入；固定页面/其他对象、完整引用网络、完整历史页面及正式逐图仍待。图136另见PUBLICATION_CHECK_20261023。"
+  },
+  {
+    "page": "135",
+    "id": "M18-sub01",
+    "module": "管理端",
+    "title": "撤回与恢复历史版本",
+    "route": "/admin/publication",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "出版版本及九类知识对象已部分接入；固定页面/其他对象、完整引用网络、完整历史页面及正式逐图仍待。图136另见PUBLICATION_CHECK_20261023。"
+  },
+  {
+    "page": "136",
+    "id": "NEW-A16",
+    "module": "管理端",
+    "title": "发布对象：版本差异与发布检查",
+    "route": "/admin/publication/[itemId]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "仅出版版本；关联修改回原编目，保存状态只读；真实长文/移动/失败等全状态逐图待验。"
+  },
+  {
+    "page": "137",
+    "id": "M18-states",
+    "module": "管理端",
+    "title": "发布台、历史与撤回 · 状态",
+    "route": "/admin/publication",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "出版版本及九类知识对象已部分接入；固定页面/其他对象、完整引用网络、完整历史页面及正式逐图仍待。图136另见PUBLICATION_CHECK_20261023。"
+  },
+  {
+    "page": "138",
+    "id": "M19-main",
+    "module": "管理端",
+    "title": "人物规范库与身份核对",
+    "route": "/admin/people",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "精确几何/真实操作未验收；领域、媒体、署名沿原编辑入口接续"
+  },
+  {
+    "page": "139",
+    "id": "M19-sub01",
+    "module": "管理端",
+    "title": "人物详情与异名",
+    "route": "/admin/people",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "精确几何/真实操作未验收；领域、媒体、署名沿原编辑入口接续"
+  },
+  {
+    "page": "140",
+    "id": "M19-sub02",
+    "module": "管理端",
+    "title": "归并候选比较",
+    "route": "/admin/people",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "精确几何/真实操作未验收；领域、媒体、署名沿原编辑入口接续"
+  },
+  {
+    "page": "141",
+    "id": "M19-states",
+    "module": "管理端",
+    "title": "人物规范库与身份核对 · 状态",
+    "route": "/admin/people",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "精确几何/真实操作未验收；领域、媒体、署名沿原编辑入口接续"
+  },
+  {
+    "page": "142",
+    "id": "M20-main",
+    "module": "管理端",
+    "title": "学者公开页编辑",
+    "route": "/admin/scholars/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "富文本、完整原位关系/事件状态及精确几何待补；真实业务和响应式未验收"
+  },
+  {
+    "page": "143",
+    "id": "M20-states",
+    "module": "管理端",
+    "title": "学者公开页编辑 · 状态",
+    "route": "/admin/scholars/[id]",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "富文本、完整原位关系/事件状态及精确几何待补；真实业务和响应式未验收"
+  },
+  {
+    "page": "144",
+    "id": "M21-main",
+    "module": "管理端",
+    "title": "理论、概念与关系编辑",
+    "route": "/admin/knowledge",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "混合人物节点原位关系、完整图形方向、全站来源迁移、富文本与逐图状态仍待"
+  },
+  {
+    "page": "145",
+    "id": "M21-sub01",
+    "module": "管理端",
+    "title": "关系类型方向与来源",
+    "route": "/admin/knowledge",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "混合人物节点原位关系、完整图形方向、全站来源迁移、富文本与逐图状态仍待"
+  },
+  {
+    "page": "146",
+    "id": "M21-states",
+    "module": "管理端",
+    "title": "理论、概念与关系编辑 · 状态",
+    "route": "/admin/knowledge",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "混合人物节点原位关系、完整图形方向、全站来源迁移、富文本与逐图状态仍待"
+  },
+  {
+    "page": "147",
+    "id": "M22-main",
+    "module": "管理端",
+    "title": "主题、学科与分类组织",
+    "route": "/admin/topics",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "逐行关联说明、封面式批量排序/移动层级细节与逐图状态待完善"
+  },
+  {
+    "page": "148",
+    "id": "M22-states",
+    "module": "管理端",
+    "title": "主题、学科与分类组织 · 状态",
+    "route": "/admin/topics",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "逐行关联说明、封面式批量排序/移动层级细节与逐图状态待完善"
+  },
+  {
+    "page": "149",
+    "id": "M23-main",
+    "module": "管理端",
+    "title": "时间线事件编辑",
+    "route": "/admin/theories/timeline",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "正式事件归并/多角色人物卡/来源图片替换/移动页签折叠及精确几何仍待"
+  },
+  {
+    "page": "150",
+    "id": "M23-sub01",
+    "module": "管理端",
+    "title": "日期精度与出处",
+    "route": "/admin/theories/timeline",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "正式事件归并/多角色人物卡/来源图片替换/移动页签折叠及精确几何仍待"
+  },
+  {
+    "page": "151",
+    "id": "M23-states",
+    "module": "管理端",
+    "title": "时间线事件编辑 · 状态",
+    "route": "/admin/theories/timeline",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "正式事件归并/多角色人物卡/来源图片替换/移动页签折叠及精确几何仍待"
+  },
+  {
+    "page": "152",
+    "id": "M24-main",
+    "module": "管理端",
+    "title": "公共阅读路径编排",
+    "route": "/admin/theories/reading-paths",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "整条候选路线/先修图形/精确卡片拖动移动/新选未保存来源即时预览仍待"
+  },
+  {
+    "page": "153",
+    "id": "M24-sub01",
+    "module": "管理端",
+    "title": "阶段编排与先修冲突",
+    "route": "/admin/theories/reading-paths",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "整条候选路线/先修图形/精确卡片拖动移动/新选未保存来源即时预览仍待"
+  },
+  {
+    "page": "154",
+    "id": "M24-states",
+    "module": "管理端",
+    "title": "公共阅读路径编排 · 状态",
+    "route": "/admin/theories/reading-paths",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "整条候选路线/先修图形/精确卡片拖动移动/新选未保存来源即时预览仍待"
+  },
+  {
+    "page": "155",
+    "id": "M25-main",
+    "module": "管理端",
+    "title": "账户、角色与权限",
+    "route": "/admin/users",
+    "implementation_status": "部分接入",
+    "visual_gaps": "头像/邀请激活流程、精确视觉与实际权限并发验收未做"
+  },
+  {
+    "page": "156",
+    "id": "M25-sub01",
+    "module": "管理端",
+    "title": "用户详情与角色变更",
+    "route": "/admin/users",
+    "implementation_status": "部分接入",
+    "visual_gaps": "头像/邀请激活流程、精确视觉与实际权限并发验收未做"
+  },
+  {
+    "page": "157",
+    "id": "M25-states",
+    "module": "管理端",
+    "title": "账户、角色与权限 · 状态",
+    "route": "/admin/users",
+    "implementation_status": "部分接入",
+    "visual_gaps": "头像/邀请激活流程、精确视觉与实际权限并发验收未做"
+  },
+  {
+    "page": "158",
+    "id": "M26-main",
+    "module": "管理端",
+    "title": "本地模型与服务状态",
+    "route": "/admin/settings",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整原位配置、准确配额、全部移动/设备异常与精确视觉待补"
+  },
+  {
+    "page": "159",
+    "id": "M26-sub01",
+    "module": "管理端",
+    "title": "能力详情与本地模型不可用",
+    "route": "/admin/settings",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整原位配置、准确配额、全部移动/设备异常与精确视觉待补"
+  },
+  {
+    "page": "160",
+    "id": "M26-states",
+    "module": "管理端",
+    "title": "本地模型与服务状态 · 状态",
+    "route": "/admin/settings",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整原位配置、准确配额、全部移动/设备异常与精确视觉待补"
+  },
+  {
+    "page": "161",
+    "id": "M27-main",
+    "module": "管理端",
+    "title": "存储、备份与恢复准备",
+    "route": "/admin/storage",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "安全缓存扫描清理、保留规则编辑、增量/索引备份及精确逐图验收仍待"
+  },
+  {
+    "page": "162",
+    "id": "M27-sub01",
+    "module": "管理端",
+    "title": "备份历史与恢复准备",
+    "route": "/admin/storage",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "安全缓存扫描清理、保留规则编辑、增量/索引备份及精确逐图验收仍待"
+  },
+  {
+    "page": "163",
+    "id": "M27-states",
+    "module": "管理端",
+    "title": "存储、备份与恢复准备 · 状态",
+    "route": "/admin/storage",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "安全缓存扫描清理、保留规则编辑、增量/索引备份及精确逐图验收仍待"
+  },
+  {
+    "page": "164",
+    "id": "M28-main",
+    "module": "管理端",
+    "title": "回收、变更历史与恢复",
+    "route": "/admin/recycle",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "真实列表封面、完整引用依赖、筛选/批量/改名/存储核验和精确视觉仍待"
+  },
+  {
+    "page": "165",
+    "id": "M28-sub01",
+    "module": "管理端",
+    "title": "恢复对象与依赖缺失",
+    "route": "/admin/recycle",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "真实列表封面、完整引用依赖、筛选/批量/改名/存储核验和精确视觉仍待"
+  },
+  {
+    "page": "166",
+    "id": "M28-states",
+    "module": "管理端",
+    "title": "回收、变更历史与恢复 · 状态",
+    "route": "/admin/recycle",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "真实列表封面、完整引用依赖、筛选/批量/改名/存储核验和精确视觉仍待"
+  },
+  {
+    "page": "167",
+    "id": "M29-main",
+    "module": "管理端",
+    "title": "首页编排、关于与公共说明",
+    "route": "/admin/about",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "精确视觉/全部状态待正式验收；行内更多内容目录已补；独立公告及历史对比恢复待后续需求细化"
+  },
+  {
+    "page": "168",
+    "id": "M29-sub01",
+    "module": "管理端",
+    "title": "首页槽位编排",
+    "route": "/admin/about",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "精确视觉/全部状态待正式验收；行内更多内容目录已补；独立公告及历史对比恢复待后续需求细化"
+  },
+  {
+    "page": "169",
+    "id": "M29-states",
+    "module": "管理端",
+    "title": "首页编排、关于与公共说明 · 状态",
+    "route": "/admin/about",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "精确视觉/全部状态待正式验收；行内更多内容目录已补；独立公告及历史对比恢复待后续需求细化"
+  },
+  {
+    "page": "170",
+    "id": "M30-main",
+    "module": "管理端",
+    "title": "检索与智能质量评审",
+    "route": "/admin/feedback",
+    "implementation_status": "待实施",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "171",
+    "id": "M30-sub01",
+    "module": "管理端",
+    "title": "样本标注与原文对照",
+    "route": "/admin/feedback",
+    "implementation_status": "待实施",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "172",
+    "id": "M30-states",
+    "module": "管理端",
+    "title": "检索与智能质量评审 · 状态",
+    "route": "/admin/feedback",
+    "implementation_status": "待实施",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "173",
+    "id": "M31-main",
+    "module": "管理端",
+    "title": "内容编排：看得见、选得中、改得动",
+    "route": "/admin/content及/admin/content/{page_type}/{page_id}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整父模板嵌入、作品归并式选版本、跨目标页面选书与精确几何/运行验收待收口"
+  },
+  {
+    "page": "174",
+    "id": "M31-sub01",
+    "module": "管理端",
+    "title": "跨分组移动与撤销",
+    "route": "/admin/content及/admin/content/{page_type}/{page_id}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整父模板嵌入、作品归并式选版本、跨目标页面选书与精确几何/运行验收待收口"
+  },
+  {
+    "page": "175",
+    "id": "M31-sub02",
+    "module": "管理端",
+    "title": "本页文案与全馆书目影响",
+    "route": "/admin/content及/admin/content/{page_type}/{page_id}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整父模板嵌入、作品归并式选版本、跨目标页面选书与精确几何/运行验收待收口"
+  },
+  {
+    "page": "176",
+    "id": "M31-states",
+    "module": "管理端",
+    "title": "内容编排：看得见、选得中、改得动 · 状态",
+    "route": "/admin/content及/admin/content/{page_type}/{page_id}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整父模板嵌入、作品归并式选版本、跨目标页面选书与精确几何/运行验收待收口"
+  },
+  {
+    "page": "177",
+    "id": "M32-main",
+    "module": "管理端",
+    "title": "从馆藏选书与配置展示",
+    "route": "/admin/content及/admin/content/{page_type}/{page_id}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整父模板嵌入、作品归并式选版本、跨目标页面选书与精确几何/运行验收待收口"
+  },
+  {
+    "page": "178",
+    "id": "M32-sub01",
+    "module": "管理端",
+    "title": "选版本与已选清单",
+    "route": "/admin/content及/admin/content/{page_type}/{page_id}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整父模板嵌入、作品归并式选版本、跨目标页面选书与精确几何/运行验收待收口"
+  },
+  {
+    "page": "179",
+    "id": "M32-states",
+    "module": "管理端",
+    "title": "从馆藏选书与配置展示 · 状态",
+    "route": "/admin/content及/admin/content/{page_type}/{page_id}",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "完整父模板嵌入、作品归并式选版本、跨目标页面选书与精确几何/运行验收待收口"
+  },
+  {
+    "page": "181",
+    "id": "R34-sub02",
+    "module": "读者中心",
+    "title": "加入研究与导出",
+    "route": "共享浮层",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "正式桌面/移动/状态/焦点与业务尚未验收"
+  },
+  {
+    "page": "182",
+    "id": "R34-sub03",
+    "module": "读者中心",
+    "title": "分享或提交策划的内容范围",
+    "route": "共享浮层",
+    "implementation_status": "部分接入",
+    "visual_gaps": "跨对象组合、完整提案入编、精确视觉与真实账户并发操作待验收"
+  },
+  {
+    "page": "183",
+    "id": "R22-main",
+    "module": "读者中心",
+    "title": "读者中心：阅读、研究与私人资料",
+    "route": "/account",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "批量/转存/账户浮层和全部状态待收口；视觉未核实"
+  },
+  {
+    "page": "184",
+    "id": "NEW-R04",
+    "module": "读者中心",
+    "title": "研究会话总览",
+    "route": "/account/research",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "实际业务与精确视觉待统一验收"
+  },
+  {
+    "page": "185",
+    "id": "R22-states",
+    "module": "读者中心",
+    "title": "我的资料与研究档案 · 状态",
+    "route": "/account",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "批量/转存/账户浮层和全部状态待收口；视觉未核实"
+  },
+  {
+    "page": "186",
+    "id": "R31-main",
+    "module": "读者中心",
+    "title": "登录、注册与账户恢复",
+    "route": "/login",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "OAuth未开放；验证邮件/24小时链接及人工申诉/正式政策/完整真实返回投影仍待；纸白炭黑最高约定"
+  },
+  {
+    "page": "187",
+    "id": "R31-sub01",
+    "module": "读者中心",
+    "title": "注册",
+    "route": "/register",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "OAuth未开放；验证邮件/24小时链接及人工申诉/正式政策/完整真实返回投影仍待；纸白炭黑最高约定"
+  },
+  {
+    "page": "188",
+    "id": "R31-sub02",
+    "module": "读者中心",
+    "title": "账户恢复",
+    "route": "/reset-password",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "OAuth未开放；验证邮件/24小时链接及人工申诉/正式政策/完整真实返回投影仍待；纸白炭黑最高约定"
+  },
+  {
+    "page": "189",
+    "id": "R31-sub03",
+    "module": "读者中心",
+    "title": "会话过期与重新登录浮层",
+    "route": "/login",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "OAuth未开放；验证邮件/24小时链接及人工申诉/正式政策/完整真实返回投影仍待；纸白炭黑最高约定"
+  },
+  {
+    "page": "190",
+    "id": "R31-states",
+    "module": "读者中心",
+    "title": "登录、注册与账户恢复 · 状态",
+    "route": "/login",
+    "implementation_status": "部分接入；待统一验收",
+    "visual_gaps": "OAuth未开放；验证邮件/24小时链接及人工申诉/正式政策/完整真实返回投影仍待；纸白炭黑最高约定"
+  },
+  {
+    "page": "191",
+    "id": "R05-main",
+    "module": "读者中心",
+    "title": "持续研究工作区",
+    "route": "/account/research/[id]",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "192",
+    "id": "R05-sub01",
+    "module": "读者中心",
+    "title": "研究轮次与分支",
+    "route": "/account/research/[id]",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "193",
+    "id": "R05-sub02",
+    "module": "读者中心",
+    "title": "范围变更与新增证据",
+    "route": "/account/research/[id]",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "194",
+    "id": "R05-states",
+    "module": "读者中心",
+    "title": "持续研究工作区 · 状态",
+    "route": "/account/research/[id]",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "195",
+    "id": "R06-main",
+    "module": "读者中心",
+    "title": "选材比较与证据矩阵",
+    "route": "/account/research/[id]/compare",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "196",
+    "id": "R06-sub01",
+    "module": "读者中心",
+    "title": "单维度对照与缺失证据",
+    "route": "/account/research/[id]/compare",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "197",
+    "id": "R06-states",
+    "module": "读者中心",
+    "title": "选材比较与证据矩阵 · 状态",
+    "route": "/account/research/[id]/compare",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "尚未逐张阅读原始页面大图；联系表仅用于定位，不作为细节审核。"
+  },
+  {
+    "page": "198",
+    "id": "R07-main",
+    "module": "读者中心",
+    "title": "学术反证：检验一个判断",
+    "route": "/account/research/[id]/counter-evidence",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  },
+  {
+    "page": "199",
+    "id": "R07-sub01",
+    "module": "读者中心",
+    "title": "反证候选的分类纠正与归属复核",
+    "route": "/account/research/[id]/counter-evidence",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  },
+  {
+    "page": "200",
+    "id": "R07-states",
+    "module": "读者中心",
+    "title": "学术反证：检验一个判断 · 状态",
+    "route": "/account/research/[id]/counter-evidence",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  },
+  {
+    "page": "201",
+    "id": "R21-main",
+    "module": "读者中心",
+    "title": "我的阅读计划：可解释规则与手动调整",
+    "route": "/account/plans/[id]",
+    "implementation_status": "计划工作台已接入；统一验收待核实",
+    "visual_gaps": "桌面/移动尺寸与逐图视觉差异待正式验收；浏览器打印PDF分页待核实"
+  },
+  {
+    "page": "202",
+    "id": "R21-sub01",
+    "module": "读者中心",
+    "title": "生成计划的目标与时间",
+    "route": "/account/plans/[id]",
+    "implementation_status": "计划工作台已接入；统一验收待核实",
+    "visual_gaps": "桌面/移动尺寸与逐图视觉差异待正式验收；浏览器打印PDF分页待核实"
+  },
+  {
+    "page": "203",
+    "id": "R21-sub02",
+    "module": "读者中心",
+    "title": "调整顺序与先修冲突",
+    "route": "/account/plans/[id]",
+    "implementation_status": "计划工作台已接入；统一验收待核实",
+    "visual_gaps": "桌面/移动尺寸与逐图视觉差异待正式验收；浏览器打印PDF分页待核实"
+  },
+  {
+    "page": "204",
+    "id": "R21-states",
+    "module": "读者中心",
+    "title": "我的智能阅读计划 · 状态",
+    "route": "/account/plans/[id]",
+    "implementation_status": "计划工作台已接入；统一验收待核实",
+    "visual_gaps": "桌面/移动尺寸与逐图视觉差异待正式验收；浏览器打印PDF分页待核实"
+  },
+  {
+    "page": "205",
+    "id": "R23-main",
+    "module": "读者中心",
+    "title": "已确认笔记与使用范围",
+    "route": "/account/confirmed-notes",
+    "implementation_status": "源码已接入",
+    "visual_gaps": "像素、移动布局、原文更新、真实权限/任务与B02/B04待核实"
+  },
+  {
+    "page": "206",
+    "id": "R23-sub01",
+    "module": "读者中心",
+    "title": "从笔记形成记忆的主动确认",
+    "route": "/account/confirmed-notes",
+    "implementation_status": "源码已接入",
+    "visual_gaps": "像素、移动布局、原文更新、真实权限/任务与B02/B04待核实"
+  },
+  {
+    "page": "207",
+    "id": "R23-states",
+    "module": "读者中心",
+    "title": "个人学术记忆列表 · 状态",
+    "route": "/account/confirmed-notes",
+    "implementation_status": "源码已接入",
+    "visual_gaps": "像素、移动布局、原文更新、真实权限/任务与B02/B04待核实"
+  },
+  {
+    "page": "208",
+    "id": "R25-main",
+    "module": "读者中心",
+    "title": "论文引文体检：提交与任务",
+    "route": "/account/citation-audits",
+    "implementation_status": "部分接入",
+    "visual_gaps": "DOCX精确排版仍待实施；真实PDF定位、NAS/OCR、打印、桌面/移动布局及全量状态待统一验收。"
+  },
+  {
+    "page": "209",
+    "id": "R25-sub01",
+    "module": "读者中心",
+    "title": "上传解析与局部失败",
+    "route": "/account/citation-audits/[id]/parse",
+    "implementation_status": "源码已接入（待统一验收）",
+    "visual_gaps": "三栏与私人来源已接线；DOCX字体/Word分页和PDF实际定位、移动布局仍待统一验收。"
+  },
+  {
+    "page": "210",
+    "id": "R25-states",
+    "module": "读者中心",
+    "title": "论文引文体检：提交与任务 · 状态",
+    "route": "/account/citation-audits",
+    "implementation_status": "部分接入",
+    "visual_gaps": "DOCX精确排版仍待实施；真实PDF定位、NAS/OCR、打印、桌面/移动布局及全量状态待统一验收。"
+  },
+  {
+    "page": "211",
+    "id": "R26-main",
+    "module": "读者中心",
+    "title": "论文体检报告总览",
+    "route": "/account/citation-audits/[id]",
+    "implementation_status": "部分接入",
+    "visual_gaps": "DOCX精确排版仍待实施；真实PDF定位、NAS/OCR、打印、桌面/移动布局及全量状态待统一验收。"
+  },
+  {
+    "page": "212",
+    "id": "R26-states",
+    "module": "读者中心",
+    "title": "论文体检报告总览 · 状态",
+    "route": "/account/citation-audits/[id]",
+    "implementation_status": "部分接入",
+    "visual_gaps": "DOCX精确排版仍待实施；真实PDF定位、NAS/OCR、打印、桌面/移动布局及全量状态待统一验收。"
+  },
+  {
+    "page": "213",
+    "id": "R27-main",
+    "module": "读者中心",
+    "title": "引文问题详情与原文核验",
+    "route": "/account/citation-audits/[id]/issues/[issueId]",
+    "implementation_status": "部分接入",
+    "visual_gaps": "DOCX精确排版仍待实施；真实PDF定位、NAS/OCR、打印、桌面/移动布局及全量状态待统一验收。"
+  },
+  {
+    "page": "214",
+    "id": "R27-sub01",
+    "module": "读者中心",
+    "title": "译本匹配与人工决定",
+    "route": "/account/citation-audits/[id]/issues/[issueId]",
+    "implementation_status": "部分接入",
+    "visual_gaps": "DOCX精确排版仍待实施；真实PDF定位、NAS/OCR、打印、桌面/移动布局及全量状态待统一验收。"
+  },
+  {
+    "page": "215",
+    "id": "R27-states",
+    "module": "读者中心",
+    "title": "引文问题详情与原文核验 · 状态",
+    "route": "/account/citation-audits/[id]/issues/[issueId]",
+    "implementation_status": "部分接入",
+    "visual_gaps": "DOCX精确排版仍待实施；真实PDF定位、NAS/OCR、打印、桌面/移动布局及全量状态待统一验收。"
+  },
+  {
+    "page": "216",
+    "id": "R28-main",
+    "module": "读者中心",
+    "title": "笔记、摘录与书签",
+    "route": "/account/notes",
+    "implementation_status": "部分接入",
+    "visual_gaps": "精确几何、移动焦点与实际导出排版/全部账户并发业务验收待做；导出与恢复已接源码。"
+  },
+  {
+    "page": "217",
+    "id": "R28-states",
+    "module": "读者中心",
+    "title": "笔记、摘录与书签 · 状态",
+    "route": "/account/notes",
+    "implementation_status": "部分接入",
+    "visual_gaps": "精确几何、移动焦点与实际导出排版/全部账户并发业务验收待做；导出与恢复已接源码。"
+  },
+  {
+    "page": "218",
+    "id": "R29-main",
+    "module": "读者中心",
+    "title": "书单与材料集合",
+    "route": "/account/collections/[id]",
+    "implementation_status": "部分接入",
+    "visual_gaps": "章节与关联内容、导出封面、完整提案入编及正式视觉业务验收仍待；转计划和受限分享已接源码。"
+  },
+  {
+    "page": "219",
+    "id": "R29-sub01",
+    "module": "读者中心",
+    "title": "集合详情与排序",
+    "route": "/account/collections/[id]",
+    "implementation_status": "部分接入",
+    "visual_gaps": "章节与关联内容、导出封面、完整提案入编及正式视觉业务验收仍待；转计划和受限分享已接源码。"
+  },
+  {
+    "page": "220",
+    "id": "R29-states",
+    "module": "读者中心",
+    "title": "书单与材料集合 · 状态",
+    "route": "/account/collections/[id]",
+    "implementation_status": "部分接入",
+    "visual_gaps": "章节与关联内容、导出封面、完整提案入编及正式视觉业务验收仍待；转计划和受限分享已接源码。"
+  },
+  {
+    "page": "221",
+    "id": "R30-main",
+    "module": "读者中心",
+    "title": "研究过程回放",
+    "route": "/account/research/[id]/history",
+    "implementation_status": "部分接入",
+    "visual_gaps": "深层分支折叠/跨项目树、主题标签及完整快照编辑历史仍待；明确分享入口已接，不代表运行验收。"
+  },
+  {
+    "page": "222",
+    "id": "R30-states",
+    "module": "读者中心",
+    "title": "研究过程回放 · 状态",
+    "route": "/account/research/[id]/history",
+    "implementation_status": "部分接入",
+    "visual_gaps": "深层分支折叠/跨项目树、主题标签及完整快照编辑历史仍待；明确分享入口已接，不代表运行验收。"
+  },
+  {
+    "page": "223",
+    "id": "R32-main",
+    "module": "读者中心",
+    "title": "隐私与资料：选定笔记使用默认关闭",
+    "route": "/account/settings/privacy",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  },
+  {
+    "page": "224",
+    "id": "R32-sub01",
+    "module": "读者中心",
+    "title": "导出与删除资料",
+    "route": "/account/settings/privacy/export",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  },
+  {
+    "page": "225",
+    "id": "R32-states",
+    "module": "读者中心",
+    "title": "隐私、记忆偏好与资料导出 · 状态",
+    "route": "/account/settings/privacy",
+    "implementation_status": "已接入，统一验收待核实",
+    "visual_gaps": "桌面/移动逐图、真实任务、并发权限与运行状态尚待统一验收，不以控件绘制计完成"
+  }
+]

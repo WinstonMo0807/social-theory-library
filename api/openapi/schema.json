@@ -10336,6 +10336,243 @@
                 }
             }
         },
+        "/api/catalog/admin/visual-review/": {
+            "get": {
+                "operationId": "catalog_admin_visual_review_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_visual_review_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VisualReviewSaveRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VisualReviewSaveRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VisualReviewSaveRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VisualReviewReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VisualReviewReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/visual-review/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_visual_review_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VisualReviewReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_visual_review_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VisualReviewReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/visual-review/references/{page}/": {
+            "get": {
+                "operationId": "catalog_admin_visual_review_references_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "image/jpeg": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            },
+                            "image/png": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/work-notices/": {
             "get": {
                 "operationId": "catalog_admin_work_notices_retrieve",
@@ -30187,6 +30424,15 @@
                     "protected_count",
                     "status"
                 ]
+            },
+            "ColorEnum": {
+                "enum": [
+                    "#B44C3D",
+                    "#A17E42",
+                    "#282724"
+                ],
+                "type": "string",
+                "description": "* `#B44C3D` - #B44C3D\n* `#A17E42` - #A17E42\n* `#282724` - #282724"
             },
             "CommentCommandRequest": {
                 "type": "object",
@@ -59488,6 +59734,27 @@
                     "policy"
                 ]
             },
+            "ReviewPointRequest": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "y": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "x",
+                    "y"
+                ]
+            },
             "ReviewStatusEnum": {
                 "enum": [
                     "suggested",
@@ -59496,6 +59763,55 @@
                 ],
                 "type": "string",
                 "description": "* `suggested` - 系统建议\n* `approved` - 人工确认\n* `rejected` - 人工拒绝"
+            },
+            "ReviewStrokeRequest": {
+                "type": "object",
+                "properties": {
+                    "color": {
+                        "$ref": "#/components/schemas/ColorEnum"
+                    },
+                    "points": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReviewPointRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "color",
+                    "points"
+                ]
+            },
+            "ReviewViewportRequest": {
+                "type": "object",
+                "properties": {
+                    "width": {
+                        "type": "integer",
+                        "maximum": 3840,
+                        "minimum": 240
+                    },
+                    "height": {
+                        "type": "integer",
+                        "maximum": 2160,
+                        "minimum": 240
+                    },
+                    "scroll_x": {
+                        "type": "integer",
+                        "maximum": 1000000,
+                        "minimum": 0
+                    },
+                    "scroll_y": {
+                        "type": "integer",
+                        "maximum": 1000000,
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "height",
+                    "scroll_x",
+                    "scroll_y",
+                    "width"
+                ]
             },
             "RoleMatrix": {
                 "type": "object",
@@ -66956,6 +67272,103 @@
                 ],
                 "type": "string",
                 "description": "* `graph` - graph\n* `list` - list\n* `topics` - topics\n* `scholars` - scholars\n* `works` - works"
+            },
+            "VisualReviewReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "review_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "version": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "review_id",
+                    "state",
+                    "version"
+                ]
+            },
+            "VisualReviewSaveRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "review_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "atlas_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 48
+                    },
+                    "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                    },
+                    "viewport": {
+                        "$ref": "#/components/schemas/ReviewViewportRequest"
+                    },
+                    "strokes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReviewStrokeRequest"
+                        }
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 5000
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/VisualReviewSaveStatusEnum"
+                    }
+                },
+                "required": [
+                    "atlas_id",
+                    "expected_version",
+                    "note",
+                    "path",
+                    "request_id",
+                    "review_id",
+                    "status",
+                    "strokes",
+                    "viewport"
+                ]
+            },
+            "VisualReviewSaveStatusEnum": {
+                "enum": [
+                    "open",
+                    "resolved"
+                ],
+                "type": "string",
+                "description": "* `open` - open\n* `resolved` - resolved"
             },
             "WidthEnum": {
                 "enum": [

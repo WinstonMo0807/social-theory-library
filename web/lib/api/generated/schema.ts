@@ -2165,6 +2165,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/visual-review/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_visual_review_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_visual_review_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/visual-review/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_visual_review_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_visual_review_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/visual-review/references/{page}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_visual_review_references_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/work-notices/": {
         parameters: {
             query?: never;
@@ -6835,6 +6883,13 @@ export interface components {
             protected_count: number;
             detail: string;
         };
+        /**
+         * @description * `#B44C3D` - #B44C3D
+         *     * `#A17E42` - #A17E42
+         *     * `#282724` - #282724
+         * @enum {string}
+         */
+        ColorEnum: "#B44C3D" | "#A17E42" | "#282724";
         CommentCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -15697,6 +15752,12 @@ export interface components {
             policy: string;
             detail: string;
         };
+        ReviewPointRequest: {
+            /** Format: double */
+            x: number;
+            /** Format: double */
+            y: number;
+        };
         /**
          * @description * `suggested` - 系统建议
          *     * `approved` - 人工确认
@@ -15704,6 +15765,16 @@ export interface components {
          * @enum {string}
          */
         ReviewStatusEnum: "suggested" | "approved" | "rejected";
+        ReviewStrokeRequest: {
+            color: components["schemas"]["ColorEnum"];
+            points: components["schemas"]["ReviewPointRequest"][];
+        };
+        ReviewViewportRequest: {
+            width: number;
+            height: number;
+            scroll_x: number;
+            scroll_y: number;
+        };
         RoleMatrix: {
             actor_id: string;
             roles: components["schemas"]["RoleOutput"][];
@@ -17840,6 +17911,35 @@ export interface components {
          * @enum {string}
          */
         ViewModeEnum: "graph" | "list" | "topics" | "scholars" | "works";
+        VisualReviewReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            next_url: string;
+            /** Format: uuid */
+            review_id: string | null;
+            version: string;
+        };
+        VisualReviewSaveRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            review_id: string;
+            expected_version: string;
+            atlas_id: string;
+            path: string;
+            viewport: components["schemas"]["ReviewViewportRequest"];
+            strokes: components["schemas"]["ReviewStrokeRequest"][];
+            note: string;
+            status: components["schemas"]["VisualReviewSaveStatusEnum"];
+        };
+        /**
+         * @description * `open` - open
+         *     * `resolved` - resolved
+         * @enum {string}
+         */
+        VisualReviewSaveStatusEnum: "open" | "resolved";
         /**
          * @description * `320` - 320
          *     * `640` - 640
@@ -23300,6 +23400,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopicOrganization"];
+                };
+            };
+        };
+    };
+    catalog_admin_visual_review_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    catalog_admin_visual_review_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisualReviewSaveRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VisualReviewSaveRequest"];
+                "multipart/form-data": components["schemas"]["VisualReviewSaveRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisualReviewReceipt"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisualReviewReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_visual_review_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisualReviewReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_visual_review_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+                "application/x-www-form-urlencoded": {
+                    [key: string]: unknown;
+                };
+                "multipart/form-data": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisualReviewReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_visual_review_references_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
                 };
             };
         };
