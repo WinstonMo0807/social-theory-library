@@ -4107,6 +4107,189 @@
                 }
             }
         },
+        "/api/catalog/admin/index-maintenance/knowledge-terms/": {
+            "post": {
+                "operationId": "catalog_admin_index_maintenance_knowledge_terms_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeTermsCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeTermsCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KnowledgeTermsCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeTermsReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/index-maintenance/knowledge-terms/{node_id}/": {
+            "get": {
+                "operationId": "catalog_admin_index_maintenance_knowledge_terms_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "node_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeTermsSource"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/index-maintenance/knowledge-terms/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_index_maintenance_knowledge_terms_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeTermsReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_index_maintenance_knowledge_terms_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IndexMaintenanceStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KnowledgeTermsReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/index-maintenance/query/": {
             "post": {
                 "operationId": "catalog_admin_index_maintenance_query_create",
@@ -38790,6 +38973,222 @@
                     {
                         "$ref": "#/components/schemas/ScholarPreviewRequestRequest"
                     }
+                ]
+            },
+            "KnowledgeTermInput": {
+                "type": "object",
+                "properties": {
+                    "alias": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "language": {
+                        "type": "string",
+                        "maxLength": 16
+                    },
+                    "alias_type": {
+                        "$ref": "#/components/schemas/AuthorityNameTypeEnum"
+                    },
+                    "source_kind": {
+                        "$ref": "#/components/schemas/KnowledgeTermInputSourceKindEnum"
+                    },
+                    "is_verified": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "alias",
+                    "alias_type",
+                    "is_verified",
+                    "language",
+                    "source_kind"
+                ]
+            },
+            "KnowledgeTermInputRequest": {
+                "type": "object",
+                "properties": {
+                    "alias": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "language": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16
+                    },
+                    "alias_type": {
+                        "$ref": "#/components/schemas/AuthorityNameTypeEnum"
+                    },
+                    "source_kind": {
+                        "$ref": "#/components/schemas/KnowledgeTermInputSourceKindEnum"
+                    },
+                    "is_verified": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "alias",
+                    "alias_type",
+                    "is_verified",
+                    "language",
+                    "source_kind"
+                ]
+            },
+            "KnowledgeTermInputSourceKindEnum": {
+                "enum": [
+                    "editorial",
+                    "authority_import",
+                    "legacy_review",
+                    "pdf_evidence",
+                    "web_evidence",
+                    "other"
+                ],
+                "type": "string",
+                "description": "* `editorial` - 编辑确认\n* `authority_import` - 权威库导入\n* `legacy_review` - 历史名称复核\n* `pdf_evidence` - 馆藏 PDF 证据\n* `web_evidence` - 联网证据\n* `other` - 其他已记录来源"
+            },
+            "KnowledgeTermsCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeTermInputRequest"
+                        }
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 1000
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "aliases",
+                    "confirmed",
+                    "expected_version",
+                    "node_id",
+                    "reason",
+                    "request_id"
+                ]
+            },
+            "KnowledgeTermsReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "next_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "next_url",
+                    "node_id",
+                    "owner_id",
+                    "request_id",
+                    "revision_id",
+                    "state"
+                ]
+            },
+            "KnowledgeTermsSource": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "foreign_name": {
+                        "type": "string"
+                    },
+                    "node_type": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeTermInput"
+                        }
+                    },
+                    "saved_aliases": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeTermInput"
+                        }
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "can_edit": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "editor_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "aliases",
+                    "can_edit",
+                    "editor_url",
+                    "foreign_name",
+                    "node_id",
+                    "node_type",
+                    "notice",
+                    "owner_id",
+                    "revision_id",
+                    "saved_aliases",
+                    "status",
+                    "title",
+                    "version"
                 ]
             },
             "LanguagesEnum": {

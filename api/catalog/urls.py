@@ -44,6 +44,7 @@ from .person_resolution_views import (
 from .person_authority_views import (AuthorityDirectoryView, AuthorityDetailView, AuthorityPreviewView, AuthorityCommandView, AuthorityReceiptView)
 from .index_maintenance_views import IndexMaintenanceView, IndexMaintenanceReceiptView, IndexTermsView
 from .index_query_views import IndexQueryView, IndexQueryReceiptView
+from .index_knowledge_terms_views import KnowledgeTermsSourceView, KnowledgeTermsCommandView, KnowledgeTermsReceiptView
 from .curation_project_views import CurationProjectView, CurationProjectDetailView, CurationProjectReceiptView, CurationProjectPeopleView, CurationProjectMaterialsView, CurationProjectSourcesView, CurationProjectPreviewView
 from .scholar_commands import ScholarSaveReceiptView
 from .media_views import MediaListView, MediaDetailView, MediaRenditionView, MediaRenditionFileView, MediaCollectionView
@@ -259,6 +260,9 @@ urlpatterns = [
     path("admin/index-maintenance/terms/", IndexTermsView.as_view(), name="index-maintenance-terms"),
     path("admin/index-maintenance/query/", IndexQueryView.as_view(), name="index-maintenance-query"),
     path("admin/index-maintenance/query/commands/<uuid:request_id>/", IndexQueryReceiptView.as_view(), name="index-maintenance-query-receipt"),
+    path("admin/index-maintenance/knowledge-terms/", KnowledgeTermsCommandView.as_view(), name="index-knowledge-terms-command"),
+    path("admin/index-maintenance/knowledge-terms/commands/<uuid:request_id>/", KnowledgeTermsReceiptView.as_view(), name="index-knowledge-terms-receipt"),
+    path("admin/index-maintenance/knowledge-terms/<uuid:node_id>/", KnowledgeTermsSourceView.as_view(), name="index-knowledge-terms-source"),
     path("admin/evidence-curation/sources/", CurationSourcesView.as_view(), name="admin-curation-sources"),
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/", AdminEvidenceCurationView.as_view(), name="admin-evidence-curation"),
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/publish/", PublishEvidenceCurationView.as_view(), name="admin-evidence-curation-publish"),

@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-23 知识术语维护静态检查
+
+`.venv/Scripts/python.exe tmp/stl4-knowledge-terms-static-20261023.py` c38bd4/41e068退出0：5个AST、主动禁止DB、OpenAPI0错误10旧警告。`node tmp/stl4-knowledge-terms-contracts-20261023.mjs` d8ac96退出0：329→332路径与类型生成、PostCSS；725eee两组件ESLint0；c04939→f7bb15 TypeScript noEmit0。新增用例语法解析0，没有运行测试。
+
+`api/tests/test_stl4_knowledge_terms_20261023.py`待统一运行：保留既有草稿、保存不发布、不重复写入、改请求冲突、停止晚到请求、账户绑定，及正式应用时显式未核验值与原记录身份。视觉、真实发布同步、权限撤销、旧草稿缺字段、并发、关闭/刷新查回及移动弹层均待核实。
+
 ## 2026-10-23 人物异名维护静态检查
 
 `tmp/stl4-index-query-static-20261023.py` cb63fa禁止数据库OpenAPI0错误10旧警告；`node tmp/stl4-index-query-contracts-20261023.mjs` e3a849保留329路径并生成类型。ab35af对index_maintenance_views/person_authority_views/services/person_authority/新用例进行4个AST及person-authority CSS解析。目标index-maintenance和person-authority-workspace ESLint f57ce1退出0；TypeScript noEmit 781aa0→7ebc1a退出0。

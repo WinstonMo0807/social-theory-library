@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 查询词维护写回原知识草稿
+
+M13 knowledge-terms封装原KnowledgeNode/EditorialRevision/AuditEvent。只提交aliases字段，组合保存保留原草稿其他字段；公开采用仍由原发布与QueryLexicon变更事件负责。来源版本包含原编辑版本及正式/草稿别名，固定请求与停止按账户锁串行。原别名发布应用保留同名记录身份，显式is_verified决定优先于旧创建默认，无新存储或迁移。
+
 ## 2026-10-23 检索维护中的原查询会话
 
 M13预览沿原DiscoverySearchSession与推荐检索流水线，index.query.preview审计只串行请求身份及会话ID，不存第二份查询正文或材料。原会话创建后、提交派发前将所有通道权限收窄为public；正文限定作品，知识/策展沿原全库查询。读者中心搜索记录开关仍由原remember_search_after_commit处理。原DiscoveryView只对显式X-Editor-Owner头追加账户核对，不改变无此头的访客权限。没有新存储、队列或迁移。

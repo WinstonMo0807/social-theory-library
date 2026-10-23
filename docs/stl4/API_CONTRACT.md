@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 知识术语草稿（332路径）
+
+新增knowledge-terms/ POST固定请求保存、{node_id}/ GET原记录与草稿、commands/{request_id}/ GET查回和POST cancel_pending。KnowledgeTermsSource/Command/Receipt具名契约，最多200项、当前owner、完整版本、原名称不可省略，支持查回早先其他知识对象的回执。数据仍是原EditorialRevision，保存不会触发公开发布。原理论功能开关继续约束读取/新建保存，回执停止可独立恢复。
+
 ## 2026-10-23 人物异名预览
 
 IndexTerm显式输出原来源entity_id。原AuthorityPreview增加variant_changes（before/after，含名称/语言/类别/依据/核验及显示）并参与preview_hash；UI复用原人物preview/command/receipts，329路径不变。无新权威存储，没有直接编辑QueryLexiconEntry。

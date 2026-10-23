@@ -2916,6 +2916,7 @@ class KnowledgeNodeAlias(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
         # ``is_verified`` explicitly, so they remain unverified here.
         if (
             self._state.adding
+            and not getattr(self, "_explicit_verification", False)
             and self.created_by_id
             and self.source_kind
             in {

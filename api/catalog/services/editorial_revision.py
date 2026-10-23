@@ -1208,9 +1208,12 @@ def _apply_knowledge_node_relations(target: KnowledgeNode, patch: dict[str, Any]
             if changed:
                 if values["is_verified"]:
                     values["source_kind"] = KnowledgeNodeAlias.SourceKind.EDITORIAL
-                alias, _created = KnowledgeNodeAlias.objects.update_or_create(
-                    node=target, normalized_alias=normalized, defaults={**values, "created_by": actor},
-                )
+                alias = previous or KnowledgeNodeAlias(node=target)
+                for key, value in {**values, "created_by": actor}.items():
+                    setattr(alias, key, value)
+                # An explicit draft decision outranks the legacy editor-created default.
+                alias._explicit_verification = "is_verified" in row
+                alias.save()
             else:
                 alias = previous
             retained.append(alias.pk)
