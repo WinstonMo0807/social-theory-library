@@ -5488,6 +5488,204 @@
                 }
             }
         },
+        "/api/catalog/admin/recycle/": {
+            "get": {
+                "operationId": "recovery_directory",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "upload",
+                                "work",
+                                "edition",
+                                "person",
+                                "scholar",
+                                "topic",
+                                "knowledge-node",
+                                "theory-school",
+                                "discipline",
+                                "subdiscipline",
+                                "reading-path",
+                                "timeline-event",
+                                "knowledge-relation",
+                                "evidence-curation",
+                                "scholar-relation",
+                                "recommendation-issue",
+                                "recommendation-item",
+                                "about-block",
+                                "publisher"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `upload` - upload\n* `work` - work\n* `edition` - edition\n* `person` - person\n* `scholar` - scholar\n* `topic` - topic\n* `knowledge-node` - knowledge-node\n* `theory-school` - theory-school\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `reading-path` - reading-path\n* `timeline-event` - timeline-event\n* `knowledge-relation` - knowledge-relation\n* `evidence-curation` - evidence-curation\n* `scholar-relation` - scholar-relation\n* `recommendation-issue` - recommendation-issue\n* `recommendation-item` - recommendation-item\n* `about-block` - about-block\n* `publisher` - publisher"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 200
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "since",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "state",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "deleted",
+                                "archived",
+                                "restored"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `deleted` - deleted\n* `archived` - archived\n* `restored` - restored"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecoveryDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_recycle_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecoveryConfirmInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecoveryConfirmInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecoveryConfirmInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecoveryResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recycle/{kind}/{object_id}/": {
+            "get": {
+                "operationId": "recovery_object_detail",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecoveryDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/scholar-relations/": {
             "get": {
                 "operationId": "catalog_admin_scholar_relations_list",
@@ -50092,6 +50290,382 @@
                     }
                 },
                 "required": [
+                    "title"
+                ]
+            },
+            "RecoveryConfirmInputKindEnum": {
+                "enum": [
+                    "upload",
+                    "work",
+                    "edition",
+                    "person",
+                    "scholar",
+                    "topic",
+                    "knowledge-node",
+                    "theory-school",
+                    "discipline",
+                    "subdiscipline",
+                    "reading-path",
+                    "timeline-event",
+                    "knowledge-relation",
+                    "evidence-curation",
+                    "scholar-relation",
+                    "recommendation-issue",
+                    "recommendation-item",
+                    "about-block",
+                    "publisher"
+                ],
+                "type": "string",
+                "description": "* `upload` - upload\n* `work` - work\n* `edition` - edition\n* `person` - person\n* `scholar` - scholar\n* `topic` - topic\n* `knowledge-node` - knowledge-node\n* `theory-school` - theory-school\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `reading-path` - reading-path\n* `timeline-event` - timeline-event\n* `knowledge-relation` - knowledge-relation\n* `evidence-curation` - evidence-curation\n* `scholar-relation` - scholar-relation\n* `recommendation-issue` - recommendation-issue\n* `recommendation-item` - recommendation-item\n* `about-block` - about-block\n* `publisher` - publisher"
+            },
+            "RecoveryConfirmInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/RecoveryConfirmInputKindEnum"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "expected_version",
+                    "kind",
+                    "object_id",
+                    "request_id"
+                ]
+            },
+            "RecoveryDependency": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "blocking": {
+                        "type": "boolean"
+                    },
+                    "destination": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "blocking",
+                    "destination",
+                    "detail",
+                    "kind",
+                    "label",
+                    "name",
+                    "object_id",
+                    "state"
+                ]
+            },
+            "RecoveryDetail": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "entry_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "record_state": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "destination": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "changed_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "operator": {
+                        "type": "string"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "dependencies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryDependency"
+                        }
+                    },
+                    "dependency_count": {
+                        "type": "integer"
+                    },
+                    "dependencies_limited": {
+                        "type": "boolean"
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryHistory"
+                        }
+                    },
+                    "blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "can_restore": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "blockers",
+                    "can_restore",
+                    "changed_at",
+                    "cover_url",
+                    "created_at",
+                    "dependencies",
+                    "dependencies_limited",
+                    "dependency_count",
+                    "destination",
+                    "entry_id",
+                    "history",
+                    "kind",
+                    "label",
+                    "notice",
+                    "object_id",
+                    "operator",
+                    "reason",
+                    "record_state",
+                    "title",
+                    "updated_at",
+                    "version"
+                ]
+            },
+            "RecoveryDirectory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryRow"
+                        }
+                    },
+                    "kinds": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryKind"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "count",
+                    "counts",
+                    "kinds",
+                    "notice",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "RecoveryHistory": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "actor": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "action",
+                    "actor",
+                    "at",
+                    "detail",
+                    "id"
+                ]
+            },
+            "RecoveryKind": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label"
+                ]
+            },
+            "RecoveryResult": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "restored": {
+                        "type": "boolean"
+                    },
+                    "public_restored": {
+                        "type": "boolean"
+                    },
+                    "destination": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "destination",
+                    "detail",
+                    "kind",
+                    "object_id",
+                    "public_restored",
+                    "request_id",
+                    "restored"
+                ]
+            },
+            "RecoveryRow": {
+                "type": "object",
+                "properties": {
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "changed_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "entry_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "record_state": {
+                        "type": "string"
+                    },
+                    "actor_name": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "destination": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "actor_name",
+                    "changed_at",
+                    "destination",
+                    "entry_id",
+                    "kind",
+                    "label",
+                    "object_id",
+                    "record_state",
                     "title"
                 ]
             },

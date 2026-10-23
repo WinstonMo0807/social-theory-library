@@ -1267,6 +1267,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recycle/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["recovery_directory"];
+        put?: never;
+        post: operations["catalog_admin_recycle_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recycle/{kind}/{object_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["recovery_object_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholar-relations/": {
         parameters: {
             query?: never;
@@ -13234,6 +13266,126 @@ export interface components {
             restore_revision_id?: string;
             autosave?: boolean;
         };
+        /**
+         * @description * `upload` - upload
+         *     * `work` - work
+         *     * `edition` - edition
+         *     * `person` - person
+         *     * `scholar` - scholar
+         *     * `topic` - topic
+         *     * `knowledge-node` - knowledge-node
+         *     * `theory-school` - theory-school
+         *     * `discipline` - discipline
+         *     * `subdiscipline` - subdiscipline
+         *     * `reading-path` - reading-path
+         *     * `timeline-event` - timeline-event
+         *     * `knowledge-relation` - knowledge-relation
+         *     * `evidence-curation` - evidence-curation
+         *     * `scholar-relation` - scholar-relation
+         *     * `recommendation-issue` - recommendation-issue
+         *     * `recommendation-item` - recommendation-item
+         *     * `about-block` - about-block
+         *     * `publisher` - publisher
+         * @enum {string}
+         */
+        RecoveryConfirmInputKindEnum: "upload" | "work" | "edition" | "person" | "scholar" | "topic" | "knowledge-node" | "theory-school" | "discipline" | "subdiscipline" | "reading-path" | "timeline-event" | "knowledge-relation" | "evidence-curation" | "scholar-relation" | "recommendation-issue" | "recommendation-item" | "about-block" | "publisher";
+        RecoveryConfirmInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            object_id: string;
+            kind: components["schemas"]["RecoveryConfirmInputKindEnum"];
+            expected_version: string;
+            confirmed: boolean;
+        };
+        RecoveryDependency: {
+            kind: string;
+            /** Format: uuid */
+            object_id: string;
+            name: string;
+            label: string;
+            state: string;
+            blocking: boolean;
+            destination: string;
+            detail: string;
+        };
+        RecoveryDetail: {
+            kind: string;
+            /** Format: uuid */
+            object_id: string;
+            /** Format: uuid */
+            entry_id: string | null;
+            title: string;
+            label: string;
+            record_state: string;
+            version: string;
+            destination: string;
+            cover_url: string;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /** Format: date-time */
+            changed_at: string;
+            operator: string;
+            reason: string;
+            dependencies: components["schemas"]["RecoveryDependency"][];
+            dependency_count: number;
+            dependencies_limited: boolean;
+            history: components["schemas"]["RecoveryHistory"][];
+            blockers: string[];
+            can_restore: boolean;
+            notice: string;
+        };
+        RecoveryDirectory: {
+            count: number;
+            page: number;
+            page_size: number;
+            counts: {
+                [key: string]: number;
+            };
+            results: components["schemas"]["RecoveryRow"][];
+            kinds: components["schemas"]["RecoveryKind"][];
+            notice: string;
+        };
+        RecoveryHistory: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            at: string;
+            action: string;
+            actor: string;
+            detail: string;
+        };
+        RecoveryKind: {
+            id: string;
+            label: string;
+        };
+        RecoveryResult: {
+            /** Format: uuid */
+            request_id: string;
+            kind: string;
+            /** Format: uuid */
+            object_id: string;
+            restored: boolean;
+            public_restored: boolean;
+            destination: string;
+            detail: string;
+        };
+        RecoveryRow: {
+            /** Format: uuid */
+            object_id: string;
+            kind: string;
+            title: string;
+            /** Format: date-time */
+            changed_at: string;
+            /** Format: uuid */
+            entry_id: string | null;
+            record_state: string;
+            actor_name: string;
+            label: string;
+            destination: string;
+        };
         RegisterRequest: {
             /** Format: email */
             email: string;
@@ -18346,6 +18498,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueSuggestionDismissed"];
+                };
+            };
+        };
+    };
+    recovery_directory: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `` -
+                 *     * `upload` - upload
+                 *     * `work` - work
+                 *     * `edition` - edition
+                 *     * `person` - person
+                 *     * `scholar` - scholar
+                 *     * `topic` - topic
+                 *     * `knowledge-node` - knowledge-node
+                 *     * `theory-school` - theory-school
+                 *     * `discipline` - discipline
+                 *     * `subdiscipline` - subdiscipline
+                 *     * `reading-path` - reading-path
+                 *     * `timeline-event` - timeline-event
+                 *     * `knowledge-relation` - knowledge-relation
+                 *     * `evidence-curation` - evidence-curation
+                 *     * `scholar-relation` - scholar-relation
+                 *     * `recommendation-issue` - recommendation-issue
+                 *     * `recommendation-item` - recommendation-item
+                 *     * `about-block` - about-block
+                 *     * `publisher` - publisher
+                 */
+                kind?: "" | "upload" | "work" | "edition" | "person" | "scholar" | "topic" | "knowledge-node" | "theory-school" | "discipline" | "subdiscipline" | "reading-path" | "timeline-event" | "knowledge-relation" | "evidence-curation" | "scholar-relation" | "recommendation-issue" | "recommendation-item" | "about-block" | "publisher";
+                page?: number;
+                search?: string;
+                since?: string;
+                /**
+                 * @description * `` -
+                 *     * `deleted` - deleted
+                 *     * `archived` - archived
+                 *     * `restored` - restored
+                 */
+                state?: "" | "deleted" | "archived" | "restored";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryDirectory"];
+                };
+            };
+        };
+    };
+    catalog_admin_recycle_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoveryConfirmInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecoveryConfirmInputRequest"];
+                "multipart/form-data": components["schemas"]["RecoveryConfirmInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryResult"];
+                };
+            };
+        };
+    };
+    recovery_object_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                object_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryDetail"];
                 };
             };
         };

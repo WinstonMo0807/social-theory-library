@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M28回收与恢复
+
+原294契约保留，新纳入原admin/recycle GET/POST与新增kind/object_id详情，共296。恢复POST必须owner、对象版本、固定请求UUID和明确confirmed，拒绝旧仅传id的恢复载荷。新删除控件另向原lifecycle传Idempotency-Key以查回原结果。目录20条/页，详情返回有限管理依赖与30条历史摘要。
+
 ## 2026-10-23 M27存储备份与恢复准备
 
 原291条全部保留，新增distribution/storage GET、commands POST、backups/{backup_id} GET，共294。状态聚合、独立校验/演练记录、默认关闭的计划、固定请求回执、账户绑定与计划版本核对；详情/写入限原RUN_BACKUP。缓存候选未扫描时返回null，不伪造零候选。前端使用生成类型。

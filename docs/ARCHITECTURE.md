@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M28回收与恢复
+
+统一读取原RecycleEntry、生命周期归档状态和AuditEvent；不新增身份/文件表。旧lifecycle与新页面共享restore_archived_object；原restore_object补发布关联保护与一致锁顺序。强类型恢复命令及新删除请求回执沿原审计保存，保留对象UUID，不重新公开或重启任务。
+
 ## 2026-10-23 M27存储备份与恢复准备
 
 原BackupJob/归档生成/数据库命令继续复用，新增distribution0003仅声明BackupVerification与BackupSchedule。原Celery beat按明确启用的计划分派，worker再核对权限；校验流式只读，与备份生成、隔离数据库导入分别保存。恢复报告采用签名文件投影，无在线生产恢复接口。没有修改账户模型、文件存储职责或另建备份库。

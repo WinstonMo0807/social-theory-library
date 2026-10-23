@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
+import json
+from uuid import UUID
 
 from django.db import transaction
 from django.db.models.deletion import ProtectedError, RestrictedError
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from accounts.models import User
+from .editorial_read import AdminPrivateResponseMixin
 
 from common.capabilities import Capability, has_capability
 from common.permissions import IsLibraryStaff
+from common.recycle import RECYCLE_MODELS
 from ingestion.models import AuditEvent
 
 from .models import (
@@ -106,6 +113,9 @@ def _name(obj, field: str) -> str:
 def _dependency_rows(obj) -> list[dict]:
     rows: list[dict] = []
     for relation in obj._meta.related_objects:
+        # Lifecycle previews show catalog structure, never per-reader data counts.
+        if relation.related_model._meta.label_lower not in RECYCLE_MODELS | {"catalog.asset", "catalog.contribution", "catalog.publicationrevision", "catalog.editorialrevision"}:
+            continue
         accessor = relation.get_accessor_name()
         if not accessor:
             continue
@@ -191,7 +201,7 @@ def _draft_public_withdrawal(*, request, kind: str, obj, config: LifecycleConfig
     )
 
 
-class AdminEntityLifecycleView(APIView):
+class AdminEntityLifecycleView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
 
     def _object(self, kind, pk):
@@ -211,6 +221,27 @@ class AdminEntityLifecycleView(APIView):
 
     @transaction.atomic
     def post(self, request, kind, pk):
+        actor = User.objects.select_for_update().filter(pk=request.user.pk, is_active=True).first()
+        if not actor or actor.token_version != request.user.token_version:
+            raise PermissionDenied("账户会话已经变化，请重新登录后操作。")
+        request.user = actor
+        delete_key, delete_fingerprint = "", ""
+        if request.data.get("action") == "delete" and request.headers.get("Idempotency-Key"):
+            if not has_capability(actor, Capability.EDIT_METADATA):
+                raise PermissionDenied("当前账户没有移入回收站的权限。")
+            try:
+                delete_key = str(UUID(request.headers["Idempotency-Key"]))
+            except (ValueError, TypeError):
+                raise ValidationError("删除请求编号无效。")
+            from .services.query_lexicon.mutations import acquire_entity_lock
+            acquire_entity_lock("lifecycle_delete", delete_key)
+            delete_fingerprint = sha256(json.dumps({"kind":kind,"id":str(pk),"reason":request.data.get("reason",""),
+                "confirmed":request.data.get("confirmed"),"confirmation":request.data.get("confirmation","")},sort_keys=True).encode()).hexdigest()
+            receipt = AuditEvent.objects.filter(action="lifecycle_delete_confirmed",request_id=delete_key).first()
+            if receipt:
+                if receipt.actor_id != actor.pk or receipt.after.get("fingerprint") != delete_fingerprint:
+                    return Response({"detail":"该请求编号对应不同的删除操作。"},status=409)
+                return Response(receipt.after["result"])
         config, obj = self._object(kind, pk)
         if config is None:
             return Response({"detail": "不支持的实体类型。"}, status=404)
@@ -240,6 +271,10 @@ class AdminEntityLifecycleView(APIView):
                 return Response({"detail": "请通过此内容的发布控制进行下架。"}, status=400)
             if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):
                 return Response({"detail": "只有管理员可以下线或恢复公开实体。"}, status=403)
+            if action == "restore":
+                from .services.recycle import restore_archived_object
+                obj = restore_archived_object(kind, obj, actor=request.user)
+                return Response(lifecycle_snapshot(kind, obj, config))
             if (
                 action == "archive"
                 and snapshot["is_public"]
@@ -307,7 +342,14 @@ class AdminEntityLifecycleView(APIView):
                     status=400,
                 )
             from .services.recycle import recycle_object
-            entry = recycle_object(obj, actor=request.user, kind=kind, name=snapshot["name"])
-            return Response({"deleted": True, "recoverable": True, "recycle_id": str(entry.pk)})
+            reason = request.data.get("reason", "")
+            if not isinstance(reason, str) or len(reason) > 500:
+                return Response({"reason": ["操作原因须为500字以内的文字。"]}, status=400)
+            entry = recycle_object(obj, actor=request.user, kind=kind, name=snapshot["name"], reason=reason)
+            result = {"deleted": True, "recoverable": True, "recycle_id": str(entry.pk)}
+            if delete_key:
+                AuditEvent.objects.create(actor=actor,action="lifecycle_delete_confirmed",object_type=obj._meta.label_lower,
+                    object_id=str(obj.pk),request_id=delete_key,after={"fingerprint":delete_fingerprint,"result":result})
+            return Response(result)
 
         return Response({"action": ["请选择 archive、restore 或 delete。"]}, status=400)

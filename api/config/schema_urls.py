@@ -12,6 +12,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
+    "admin-recycle", "admin-recycle-detail",
     "local-services", "local-service-check",
     "path-save-receipt", "path-editor-validation",
     "timeline-save-receipt", "timeline-similar",

@@ -16,7 +16,7 @@ def require_editor(actor):
 
 
 @transaction.atomic
-def recycle_object(obj, *, actor, kind, name):
+def recycle_object(obj, *, actor, kind, name, reason=""):
     require_editor(actor)
     label = obj._meta.label_lower
     if label not in RECYCLE_MODELS:
@@ -33,6 +33,8 @@ def recycle_object(obj, *, actor, kind, name):
         raise ValidationError("此人物仍作为馆藏作者或译者使用。请先合并或替换这些关联；删除学者展示资料不需要删除人物身份。")
 
     before = {field: str(getattr(obj, field) or "") for field in ("status", "state", "editorial_status", "review_status", "authority_status", "workflow_state", "error_code", "error_message", "active_revision_id", "scheduled_revision_id", "visible") if hasattr(obj, field)}
+    before["_recycle_reason"] = str(reason).strip()[:500]
+    before["_recycled_at"] = timezone.now().isoformat()
     if label == "catalog.recommendationissueitem":
         from catalog.models import RecommendationIssue
         parent_issue = RecommendationIssue.all_objects.select_for_update().get(pk=obj.issue_id)
@@ -115,11 +117,26 @@ def recycle_object(obj, *, actor, kind, name):
 @transaction.atomic
 def restore_object(entry_id, *, actor):
     require_editor(actor)
-    entry = RecycleEntry.objects.select_for_update().get(pk=entry_id)
+    entry = RecycleEntry.objects.get(pk=entry_id)
+    if entry.model_label not in RECYCLE_MODELS:
+        raise ValidationError("该对象不支持回收恢复。")
     model = apps.get_model(entry.model_label)
     obj = model.all_objects.select_for_update().get(pk=entry.object_id)
+    # Same lock order as deletion: original object, then its ledger row.
+    entry = RecycleEntry.objects.select_for_update().get(pk=entry_id)
     if entry.restored_at:
         return obj
+    if entry.kind == "theory-school":
+        raise ValidationError("旧理论流派须先完成规范映射，不能通过回收站恢复。")
+    if isinstance(obj, Person) and obj.authority_status == "merged":
+        raise ValidationError("请从人物归并历史处理已合并身份。")
+    if entry.kind == "topic" and (obj.curation or {}).get("topic_merge"):
+        raise ValidationError("请从主题归并记录处理已合并身份。")
+    if entry.model_label == "catalog.recommendationissueitem":
+        if obj.issue.active_revision_id or obj.issue.scheduled_revision_id:
+            raise ValidationError("所属策划仍公开或有排期，请先处理公开引用，避免恢复材料直接重新公开。")
+        if RecycleEntry.objects.filter(model_label="catalog.recommendationissue", object_id=obj.issue_id, restored_at__isnull=True).exists():
+            raise ValidationError("请先恢复所属策划。")
     parent = getattr(obj, "work_id", None) if isinstance(obj, Edition) else getattr(obj, "person_id", None) if isinstance(obj, ScholarProfile) else None
     if parent and RecycleEntry.objects.filter(object_id=parent, restored_at__isnull=True).exists():
         raise ValidationError("请先恢复所属作品或人物，再恢复本条记录。")
@@ -141,4 +158,34 @@ def restore_object(entry_id, *, actor):
     if fields:
         obj.save(update_fields=[*fields, "updated_at"])
     AuditEvent.objects.create(actor=actor, action="record.restore", object_type=entry.model_label, object_id=str(obj.pk), after={"public_restored": False})
+    return obj
+
+
+@transaction.atomic
+def restore_archived_object(kind, obj, *, actor):
+    """The lifecycle route and recovery workspace share draft-only restoration."""
+    from catalog.lifecycle_views import LIFECYCLE_MODELS, CANONICAL_OBJECT_TYPES
+    from catalog.services.canonical_mutations import record_admin_canonical_change
+    from catalog.services.knowledge_nodes import record_node_version
+    if not has_capability(actor, Capability.PUBLISH_AUTHORITY):
+        raise PermissionDenied("恢复归档条目需要发布管理权限。")
+    config = LIFECYCLE_MODELS.get(kind)
+    if not config or not config.status_field or kind == "theory-school":
+        raise ValidationError("此对象不能通过通用归档恢复。")
+    obj = config.model.objects.select_for_update().get(pk=obj.pk)
+    if kind == "topic" and (obj.curation or {}).get("topic_merge"):
+        raise ValidationError("已归并主题须从原归并记录处理。")
+    if getattr(obj, config.status_field) != config.archived_value:
+        raise ValidationError("归档状态已变化，请重新读取对象。")
+    before = {"status": getattr(obj, config.status_field)}
+    setattr(obj, config.status_field, config.draft_value)
+    fields = [config.status_field]
+    if hasattr(obj, "published_at"):
+        obj.published_at = None
+        fields.append("published_at")
+    obj.save(update_fields=[*fields, "updated_at"])
+    if kind == "knowledge-node":
+        record_node_version(obj, actor, "管理员恢复节点为草稿")
+    AuditEvent.objects.create(actor=actor, action="entity_restore", object_type=obj._meta.label, object_id=str(obj.pk), before=before, after={"status": config.draft_value})
+    record_admin_canonical_change(object_type=CANONICAL_OBJECT_TYPES[kind], target=obj, change_kind="update", changed_fields=fields, actor=actor)
     return obj
