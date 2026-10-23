@@ -1,5 +1,21 @@
 /** Generated from DRF/OpenAPI. Do not edit by hand. */
 export interface paths {
+    "/api/auth/activation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_activation_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login/": {
         parameters: {
             query?: never;
@@ -58,6 +74,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["auth_register_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/users/{user_id}/invitation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_users_invitation_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5636,9 +5668,42 @@ export interface components {
          * @description * `create` - create
          *     * `update` - update
          *     * `password` - password
+         *     * `invite` - invite
+         *     * `revoke_invite` - revoke_invite
          * @enum {string}
          */
-        AccountManagementOperationEnum: "create" | "update" | "password";
+        AccountManagementOperationEnum: "create" | "update" | "password" | "invite" | "revoke_invite";
+        /**
+         * @description * `inspect` - inspect
+         *     * `activate` - activate
+         * @enum {string}
+         */
+        ActivationInputActionEnum: "inspect" | "activate";
+        ActivationInputRequest: {
+            action: components["schemas"]["ActivationInputActionEnum"];
+            token: string;
+            password?: string;
+            confirmed?: boolean;
+        };
+        ActivationOutput: {
+            state: components["schemas"]["ActivationOutputStateEnum"];
+            detail: string;
+            username?: string;
+            /** Format: email */
+            email?: string;
+            display_name?: string;
+            role_label?: string;
+            /** Format: date-time */
+            expires_at?: string;
+        };
+        /**
+         * @description * `ready` - ready
+         *     * `activated` - activated
+         *     * `expired` - expired
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        ActivationOutputStateEnum: "ready" | "activated" | "expired" | "unavailable";
         /**
          * @description * `none` - none
          *     * `checkpoint` - checkpoint
@@ -9038,6 +9103,16 @@ export interface components {
             confirmed: boolean;
             next_url: string;
         };
+        InvitationOutput: {
+            actor_id: string;
+            user_id: number;
+            state: string;
+            token: string;
+            /** Format: date-time */
+            expires_at: string | null;
+            can_renew: boolean;
+            notice: string;
+        };
         InvitePage: {
             page: number;
             count: number;
@@ -10166,6 +10241,7 @@ export interface components {
         };
         ManagementCommandRequest: {
             operation: components["schemas"]["AccountManagementOperationEnum"];
+            invite?: boolean;
             user_id?: number;
             expected_version?: string;
             username?: string;
@@ -10199,6 +10275,7 @@ export interface components {
         };
         ManagementInputRequest: {
             operation: components["schemas"]["AccountManagementOperationEnum"];
+            invite?: boolean;
             user_id?: number;
             expected_version?: string;
             username?: string;
@@ -10215,6 +10292,7 @@ export interface components {
             retained: components["schemas"]["CapabilityOutput"][];
             gained: components["schemas"]["CapabilityOutput"][];
             lost: components["schemas"]["CapabilityOutput"][];
+            activation_capabilities: components["schemas"]["CapabilityOutput"][];
             public_access: string;
             private_access: string;
             sessions_revoked: boolean;
@@ -18013,6 +18091,9 @@ export interface components {
             can_edit: boolean;
             can_change_role: boolean;
             capabilities: string[];
+            activation_state: string;
+            can_renew_invitation: boolean;
+            can_revoke_invitation: boolean;
             notice: string;
         };
         /**
@@ -18453,6 +18534,31 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    auth_activation_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivationInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ActivationInputRequest"];
+                "multipart/form-data": components["schemas"]["ActivationInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivationOutput"];
+                };
+            };
+        };
+    };
     auth_login_retrieve: {
         parameters: {
             query?: never;
@@ -18572,6 +18678,27 @@ export interface operations {
             };
         };
     };
+    auth_users_invitation_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationOutput"];
+                };
+            };
+        };
+    };
     auth_users_command_create: {
         parameters: {
             query?: never;
@@ -18619,8 +18746,9 @@ export interface operations {
                  * @description * `` -
                  *     * `active` - active
                  *     * `inactive` - inactive
+                 *     * `pending_activation` - pending_activation
                  */
-                state?: "" | "active" | "inactive";
+                state?: "" | "active" | "inactive" | "pending_activation";
                 user_id?: number;
             };
             header?: never;
@@ -18751,8 +18879,9 @@ export interface operations {
                  * @description * `` -
                  *     * `active` - active
                  *     * `inactive` - inactive
+                 *     * `pending_activation` - pending_activation
                  */
-                state?: "" | "active" | "inactive";
+                state?: "" | "active" | "inactive" | "pending_activation";
                 user_id?: number;
             };
             header?: never;

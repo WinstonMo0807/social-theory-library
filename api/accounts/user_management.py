@@ -51,7 +51,8 @@ def check_actor(user):
         raise PermissionDenied("当前账户没有管理账户的权限。")
 
 
-def record(user, actor):
+def record(user, actor, invitation=None):
+    from . import account_activation
     owner = is_library_owner_identity(user)
     can_edit = (not owner and user.role != "admin") or user.pk == actor.pk or is_library_owner(actor)
     return {"id": user.pk, "username": user.username, "email": user.email,
@@ -60,6 +61,9 @@ def record(user, actor):
         "is_owner": owner, "date_joined": user.date_joined, "last_login": user.last_login,
         "version": version(user), "can_edit": can_edit, "can_change_role": is_library_owner(actor) and not owner and not user.is_superuser and user.pk != actor.pk,
         "capabilities": list(capability_snapshot(user).capabilities) if user.is_active else [],
+        "activation_state": account_activation.status(user, invitation),
+        "can_renew_invitation": can_edit and (user.role == "reader" or is_library_owner(actor)) and account_activation.can_renew(user, invitation),
+        "can_revoke_invitation": can_edit and account_activation.can_renew(user, invitation),
         "notice": "账户管理权限不授予阅读他人私人研究、笔记、密钥或资料导出的权限。"}
 
 
@@ -89,16 +93,20 @@ def authority(actor, target, role, active):
 def account_data(actor, data):
     check_actor(actor)
     if data["operation"] == "create":
-        from .serializers import RegisterSerializer
-        values = RegisterSerializer(data={name: data[name] for name in ("username", "email", "display_name", "password")})
+        values = registration_input(data)
         values.is_valid(raise_exception=True)
         if data["role"] != "reader" and not is_library_owner(actor):
             raise PermissionDenied("只有馆长可以为新账户分配管理角色。")
         target = User(**{key: value for key, value in values.validated_data.items() if key != "password"}, role=data["role"], is_active=data["is_active"])
-        try:
-            password_validation.validate_password(data["password"], target)
-        except DjangoValidationError as exc:
-            raise ValidationError({"password": exc.messages}) from exc
+        if data.get("invite"):
+            target.set_unusable_password()
+            if target.is_active:
+                raise ValidationError("待激活账户必须先由本人设置密码，不能同时启用。")
+        else:
+            try:
+                password_validation.validate_password(data["password"], target)
+            except DjangoValidationError as exc:
+                raise ValidationError({"password": exc.messages}) from exc
         return None, target
     original = User.objects.filter(pk=data["user_id"]).first()
     if original is None:
@@ -113,6 +121,14 @@ def account_data(actor, data):
             if name in data:
                 setattr(proposed, name, data[name])
     authority(actor, original, proposed.role, proposed.is_active)
+    if data["operation"] in {"invite", "revoke_invite"}:
+        from . import account_activation
+        if not account_activation.can_renew(original, account_activation.latest(original)):
+            raise ValidationError("只有尚未激活的邀请账户可重新生成或撤销邀请；已有账户请沿密码与状态管理。")
+        if data["operation"] == "invite" and original.role != "reader" and not is_library_owner(actor):
+            raise PermissionDenied("只有馆长可以重新发出带管理角色的邀请。")
+    if data["operation"] == "update" and not original.is_active and proposed.is_active and not original.has_usable_password():
+        raise ValidationError("此账户尚未设置密码，请由本人完成邀请激活，或先明确设置新密码再启用。")
     if data["operation"] == "password":
         try:
             password_validation.validate_password(data["password"], original)
@@ -121,18 +137,28 @@ def account_data(actor, data):
     return original, proposed
 
 
+def registration_input(data):
+    from .serializers import InvitationRegistrationSerializer, RegisterSerializer
+    serializer = InvitationRegistrationSerializer if data.get("invite") else RegisterSerializer
+    return serializer(data={name: data[name] for name in ("username", "email", "display_name", "password") if name in data})
+
+
 def preview(actor, data):
     original, proposed = account_data(actor, data)
     before = set(capability_snapshot(original).capabilities) if original and original.is_active else set()
     after = set(capability_snapshot(proposed).capabilities) if proposed.is_active else set()
     values = lambda keys: [{"id": key, "label": CAPABILITY_LABELS[key]} for key in sorted(keys)]
+    inviting = bool(data.get("invite") or data["operation"] == "invite")
+    activated = copy.copy(proposed)
+    activated.is_active = True
     return {"actor_id": str(actor.pk), "target": {"id": original.pk if original else None, "display_name": library_owner_display_name() if is_library_owner_identity(proposed) else proposed.display_name,
         "username": proposed.username, "email": proposed.email, "role": proposed.role,
         "role_label": ROLE_LABELS["owner" if is_library_owner_identity(proposed) else proposed.role], "is_active": proposed.is_active},
         "retained": values(before & after), "gained": values(after - before), "lost": values(before - after),
-        "public_access": PUBLIC_ACCESS, "private_access": PRIVATE_ACCESS if proposed.is_active else "停用后不能登录；原本人资料保留。",
-        "sessions_revoked": bool(original and (data["operation"] == "password" or (original.role, original.is_active) != (proposed.role, proposed.is_active))),
-        "notice": "只修改明确列出的账户资料，不读取私人内容，不发送邮件。角色/启用状态或密码变化后旧登录凭证失效。",
+        "activation_capabilities": values(capability_snapshot(activated).capabilities) if inviting else [],
+        "public_access": PUBLIC_ACCESS, "private_access": PRIVATE_ACCESS if proposed.is_active else "由本人设置密码并激活后，按所选角色登录；现有本人资料保留。" if inviting else "停用后不能登录；原本人资料保留。",
+        "sessions_revoked": bool(original and (data["operation"] in {"password", "invite", "revoke_invite"} or (original.role, original.is_active) != (proposed.role, proposed.is_active))),
+        "notice": ("生成24小时有效的邀请，由本人设置密码后启用选定角色。旧邀请同时失效；请自行将链接交给本人，系统不自动发送邮件。" if data.get("invite") or data["operation"] == "invite" else "撤销邀请，账户保持未启用；本人资料保留。" if data["operation"] == "revoke_invite" else "只修改明确列出的账户资料，不读取私人内容，不发送邮件。角色/启用状态或密码变化后旧登录凭证失效。"),
         "preview_hash": digest({"actor": actor.pk, "actor_version": version(actor), "data": data})}
 
 
@@ -197,8 +223,7 @@ def command(actor, data):
     original, proposed = account_data(current_actor, input_data)
     before = {key: getattr(original, key) for key in ("display_name", "role", "is_active")} if original else {}
     if original is None:
-        from .serializers import RegisterSerializer
-        values = RegisterSerializer(data={name: input_data[name] for name in ("username", "email", "display_name", "password")})
+        values = registration_input(input_data)
         values.is_valid(raise_exception=True)
         target = values.save()
         target.role, target.is_active = proposed.role, proposed.is_active
@@ -216,6 +241,11 @@ def command(actor, data):
         target.save(update_fields=["display_name", "role", "is_active", "password", "token_version"])
     after = {key: getattr(target, key) for key in ("display_name", "role", "is_active")}
     after.update(command_fingerprint=fingerprint, password_reset=data["operation"] == "password", sessions_revoked=rendered["sessions_revoked"])
+    if input_data.get("invite") or data["operation"] == "invite":
+        from .account_activation import issue_metadata
+        after.update(issue_metadata(target))
+    elif data["operation"] == "revoke_invite":
+        after["invited"] = True
     AuditEvent.objects.create(pk=identity, actor=current_actor, action="account_" + data["operation"], object_type="User", object_id=str(target.pk),
         before=before, after=after, request_id=str(identity))
     return {"actor_id": str(actor.pk), "request_id": str(identity), "user_id": target.pk, "exists": True,
@@ -223,12 +253,12 @@ def command(actor, data):
 
 
 def audit_rows():
-    return AuditEvent.objects.filter(object_type="User", action__in=["account_create", "account_update", "account_password", "admin_update_user", "admin_set_password"]).select_related("actor").order_by("-created_at", "-id")
+    return AuditEvent.objects.filter(object_type="User", action__in=["account_create", "account_update", "account_password", "account_invite", "account_revoke_invite", "account_activate", "admin_update_user", "admin_set_password"]).select_related("actor").order_by("-created_at", "-id")
 
 
 def audit_record(row):
     fields = ("display_name", "role", "is_active")
     return {"id": str(row.pk), "created_at": row.created_at, "actor": row.actor.display_name if row.actor else "原操作账户已删除",
-        "user_id": row.object_id, "action": {"account_create": "新建账户", "account_update": "更新账户", "account_password": "设置新密码", "admin_update_user": "更新账户", "admin_set_password": "设置新密码"}[row.action],
+        "user_id": row.object_id, "action": {"account_create": "新建待激活账户" if row.after.get("invited") else "新建账户", "account_update": "更新账户", "account_password": "设置新密码", "account_invite": "重新生成邀请", "account_revoke_invite": "撤销邀请", "account_activate": "本人激活账户", "admin_update_user": "更新账户", "admin_set_password": "设置新密码"}[row.action],
         "before": {key: row.before[key] for key in fields if key in row.before}, "after": {key: row.after[key] for key in fields if key in row.after},
         "sessions_revoked": row.after.get("sessions_revoked"), "password_reset": bool(row.after.get("password_reset"))}

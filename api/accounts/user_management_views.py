@@ -20,7 +20,8 @@ class StrictInput(serializers.Serializer):
 
 
 class ManagementInput(StrictInput):
-    operation = serializers.ChoiceField(choices=["create", "update", "password"])
+    operation = serializers.ChoiceField(choices=["create", "update", "password", "invite", "revoke_invite"])
+    invite = serializers.BooleanField(required=False)
     user_id = serializers.IntegerField(min_value=1, required=False)
     expected_version = serializers.CharField(min_length=64, max_length=64, required=False)
     username = serializers.CharField(max_length=20, required=False)
@@ -32,9 +33,10 @@ class ManagementInput(StrictInput):
 
     def validate(self, data):
         base = {"operation", "request_id", "confirmed", "preview_hash"}
-        required = {"create": {"username", "email", "display_name", "role", "is_active", "password"},
-            "update": {"user_id", "expected_version"}, "password": {"user_id", "expected_version", "password"}}[data["operation"]]
-        allowed = required | base | ({"display_name", "role", "is_active"} if data["operation"] == "update" else set())
+        required = {"create": {"username", "email", "display_name", "role", "is_active"} | (set() if data.get("invite") else {"password"}),
+            "update": {"user_id", "expected_version"}, "password": {"user_id", "expected_version", "password"},
+            "invite": {"user_id", "expected_version"}, "revoke_invite": {"user_id", "expected_version"}}[data["operation"]]
+        allowed = required | base | ({"display_name", "role", "is_active"} if data["operation"] == "update" else {"invite"} if data["operation"] == "create" else set())
         if required - set(data) or set(data) - allowed:
             raise serializers.ValidationError("字段与本次账户操作不匹配。")
         if data["operation"] == "update" and not set(data) & {"display_name", "role", "is_active"}:
@@ -63,6 +65,9 @@ class UserOutput(serializers.Serializer):
     can_edit = serializers.BooleanField()
     can_change_role = serializers.BooleanField()
     capabilities = serializers.ListField(child=serializers.CharField())
+    activation_state = serializers.CharField()
+    can_renew_invitation = serializers.BooleanField()
+    can_revoke_invitation = serializers.BooleanField()
     notice = serializers.CharField()
 
 
@@ -102,6 +107,7 @@ class ManagementPreview(serializers.Serializer):
     retained = CapabilityOutput(many=True)
     gained = CapabilityOutput(many=True)
     lost = CapabilityOutput(many=True)
+    activation_capabilities = CapabilityOutput(many=True)
     public_access = serializers.CharField()
     private_access = serializers.CharField()
     sessions_revoked = serializers.BooleanField()
@@ -123,7 +129,7 @@ class ManagementReceipt(serializers.Serializer):
 class ManagementQuery(serializers.Serializer):
     q = serializers.CharField(max_length=180, default="", allow_blank=True)
     role = serializers.ChoiceField(choices=["", "reader", "editor", "admin"], default="")
-    state = serializers.ChoiceField(choices=["", "active", "inactive"], default="")
+    state = serializers.ChoiceField(choices=["", "active", "inactive", "pending_activation"], default="")
     page = serializers.IntegerField(min_value=1, default=1)
     page_size = serializers.ChoiceField(choices=[10, 20, 50], default=10)
     user_id = serializers.IntegerField(min_value=1, required=False)
@@ -172,6 +178,7 @@ class ManagementBase(PrivateAccountResponses, APIView):
 class ManagementWorkspaceView(ManagementBase):
     @extend_schema(parameters=[ManagementQuery], responses=ManagementDirectory)
     def get(self, request):
+        from .account_activation import latest_for_accounts, with_invitation_action
         data = ManagementQuery(data=request.query_params)
         data.is_valid(raise_exception=True)
         options = data.validated_data
@@ -180,8 +187,12 @@ class ManagementWorkspaceView(ManagementBase):
             rows = rows.filter(Q(username__icontains=options["q"]) | Q(email__icontains=options["q"]) | Q(display_name__icontains=options["q"]))
         if options["role"]:
             rows = rows.filter(role__in=["editor", "reviewer"] if options["role"] == "editor" else [options["role"]])
-        if options["state"]:
-            rows = rows.filter(is_active=options["state"] == "active")
+        if options["state"] == "active":
+            rows = rows.filter(is_active=True)
+        elif options["state"]:
+            rows = with_invitation_action(rows).filter(is_active=False)
+            pending = Q(password__startswith="!", last_login__isnull=True, _invitation_action__in=["account_create", "account_invite"])
+            rows = rows.filter(pending) if options["state"] == "pending_activation" else rows.exclude(pending)
         count, page, size = rows.count(), options["page"], options["page_size"]
         if page > 1 and (page - 1) * size >= count:
             raise NotFound("此页已没有账户，请返回第一页。")
@@ -190,8 +201,14 @@ class ManagementWorkspaceView(ManagementBase):
             selected = User.objects.filter(pk=options["user_id"]).first()
             if selected is None:
                 raise NotFound("所选账户已不存在。")
-        return Response({"actor_id": str(request.user.pk), "results": [service.record(row, request.user) for row in rows[(page - 1) * size:page * size]],
-            "selected": service.record(selected, request.user) if selected else None, "count": count, "page": page, "page_size": size,
+        entries = list(rows[(page - 1) * size:page * size])
+        identities = {str(row.pk) for row in entries}
+        if selected:
+            identities.add(str(selected.pk))
+        # One newest invitation per account; do not load full audit histories.
+        invites = {event.object_id: event for event in latest_for_accounts(identities)}
+        return Response({"actor_id": str(request.user.pk), "results": [service.record(row, request.user, invites.get(str(row.pk))) for row in entries],
+            "selected": service.record(selected, request.user, invites.get(str(selected.pk))) if selected else None, "count": count, "page": page, "page_size": size,
             "total_pages": max(1, (count + size - 1) // size), "can_assign_roles": is_library_owner(request.user)})
 
 

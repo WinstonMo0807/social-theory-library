@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 账户邀请
+
+邀请沿原User与账户命令AuditEvent保存，不建平行身份或凭证表。24小时服务端签名链接绑定原事件和账户版本，发起者权限失效、账户变化、重新生成或撤销后旧链接不可激活。本人接受锁发起/目标User、采用原密码校验与token_version，AuditEvent回执保证重复接受不改密码。邀请审计随账户备份保留；不含原始令牌/密码、不等同邮箱验证、不发送外部消息。无迁移或实际账户操作。
+
 ## 2026-10-24 OCR任务服务绑定
 
 ocr_transfer沿ProcessingJob.stats保存target/configuration指纹，目标只来自原ocr_runtime配置。上下文局部绑定一次页请求，既有extract/provider调用不变；变更配置后不再发送。人工转移沿账户→Edition→ProcessingJob锁、原固定回执、after-commit派发，不新增库/队列/迁移。远程需MANAGE_AI与明确发送确认，心跳跟随所选服务；原执行编号无法写页和文件进度。

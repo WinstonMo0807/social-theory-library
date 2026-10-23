@@ -207,7 +207,7 @@ SPECTACULAR_SETTINGS = {
         "PersonAuthorityOperationEnum": ["create", "update", "decision"],
         "PersonIdentityDecisionEnum": ["independent", "needs_evidence"],
         "AuthorityNameTypeEnum": [("alias", "别名"), ("translation", "译名"), ("abbreviation", "简称"), ("historical", "历史名称"), ("transliteration", "音译")],
-        "AccountManagementOperationEnum": ["create", "update", "password"],
+        "AccountManagementOperationEnum": ["create", "update", "password", "invite", "revoke_invite"],
         "AssignableAccountRoleEnum": ["reader", "editor", "admin"],
         "EditorialAssistanceOperationEnum": ["outline", "guide", "comparison"],
         "ReaderGroupKindEnum": ["campus", "team"],

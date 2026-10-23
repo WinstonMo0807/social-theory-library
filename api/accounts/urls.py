@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.response import Response
 
 from .serializers import VersionedTokenRefreshSerializer
+from .activation_views import ActivationView, InvitationView
 from .cookies import enforce_cookie_csrf, expose_csrf_cookie, set_auth_cookies
 from .user_management_views import (ManagementWorkspaceView, ManagementRolesView, ManagementPreviewView,
     ManagementCommandView, ManagementReceiptView, ManagementHistoryView)
@@ -56,6 +57,7 @@ class ThrottledTokenRefreshView(TokenRefreshView):
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
+    path("activation/", ActivationView.as_view(), name="account-activation"),
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("token/refresh/", ThrottledTokenRefreshView.as_view(), name="token-refresh"),
@@ -68,6 +70,7 @@ urlpatterns = [
     path("users/command/", ManagementCommandView.as_view(), name="account-management-command"),
     path("users/receipt/", ManagementReceiptView.as_view(), name="account-management-receipt"),
     path("users/history/", ManagementHistoryView.as_view(), name="account-management-history"),
+    path("users/<int:user_id>/invitation/", InvitationView.as_view(), name="account-management-invitation"),
     path("users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path("password/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
     path("password/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),

@@ -28,6 +28,7 @@
 .status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
 .status[data-active=true]::before { background: var(--stl-accent-success); }
 .status[data-active=false]::before { background: var(--danger); }
+.status[data-pending=true]::before { background: var(--stl-accent-gold, #aa854d); }
 .pager { display: flex; gap: 12px; justify-content: flex-end; align-items: center; padding: 22px 0; font-size: 12px; }
 .pager span { margin-right: auto; color: var(--muted); }
 .detail { border: 1px solid var(--line); background: var(--surface); padding: 20px; align-self: start; }

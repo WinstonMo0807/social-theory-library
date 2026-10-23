@@ -74,7 +74,7 @@ VERIFIED_NAMES = {
     "edition-file-request", "edition-generate-reader", "edition-file-adopt", "edition-file-content", "edition-file-rights", "edition-file-prepare-public",
 }
 urlpatterns = [
-    path("api/auth/", include([pattern for pattern in account_patterns if pattern.name in {"login", "register", "password-reset-request", "password-reset-confirm", "account-management-workspace", "account-management-roles", "account-management-preview", "account-management-command", "account-management-receipt", "account-management-history"}])),
+    path("api/auth/", include([pattern for pattern in account_patterns if pattern.name in {"login", "register", "password-reset-request", "password-reset-confirm", "account-management-workspace", "account-management-roles", "account-management-preview", "account-management-command", "account-management-receipt", "account-management-history", "account-management-invitation", "account-activation"}])),
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
     path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name in {
         "asset-access", "asset-file", "admin-asset-preview", "backup-job-list", "reader-ocr-status",

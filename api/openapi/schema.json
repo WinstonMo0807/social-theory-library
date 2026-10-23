@@ -6,6 +6,49 @@
         "description": "Canonical catalog, editorial processes and permission-scoped reading APIs."
     },
     "paths": {
+        "/api/auth/activation/": {
+            "post": {
+                "operationId": "auth_activation_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActivationInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActivationInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActivationInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ActivationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/auth/login/": {
             "get": {
                 "operationId": "auth_login_retrieve",
@@ -199,6 +242,44 @@
                 }
             }
         },
+        "/api/auth/users/{user_id}/invitation/": {
+            "get": {
+                "operationId": "auth_users_invitation_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvitationOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/auth/users/command/": {
             "post": {
                 "operationId": "auth_users_command_create",
@@ -306,13 +387,14 @@
                             "enum": [
                                 "",
                                 "active",
-                                "inactive"
+                                "inactive",
+                                "pending_activation"
                             ],
                             "type": "string",
                             "default": "",
                             "minLength": 1
                         },
-                        "description": "* `` - \n* `active` - active\n* `inactive` - inactive"
+                        "description": "* `` - \n* `active` - active\n* `inactive` - inactive\n* `pending_activation` - pending_activation"
                     },
                     {
                         "in": "query",
@@ -568,13 +650,14 @@
                             "enum": [
                                 "",
                                 "active",
-                                "inactive"
+                                "inactive",
+                                "pending_activation"
                             ],
                             "type": "string",
                             "default": "",
                             "minLength": 1
                         },
-                        "description": "* `` - \n* `active` - active\n* `inactive` - inactive"
+                        "description": "* `` - \n* `active` - active\n* `inactive` - inactive\n* `pending_activation` - pending_activation"
                     },
                     {
                         "in": "query",
@@ -26549,10 +26632,89 @@
                 "enum": [
                     "create",
                     "update",
-                    "password"
+                    "password",
+                    "invite",
+                    "revoke_invite"
                 ],
                 "type": "string",
-                "description": "* `create` - create\n* `update` - update\n* `password` - password"
+                "description": "* `create` - create\n* `update` - update\n* `password` - password\n* `invite` - invite\n* `revoke_invite` - revoke_invite"
+            },
+            "ActivationInputActionEnum": {
+                "enum": [
+                    "inspect",
+                    "activate"
+                ],
+                "type": "string",
+                "description": "* `inspect` - inspect\n* `activate` - activate"
+            },
+            "ActivationInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/ActivationInputActionEnum"
+                    },
+                    "token": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 10,
+                        "maxLength": 128
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "action",
+                    "token"
+                ]
+            },
+            "ActivationOutput": {
+                "type": "object",
+                "properties": {
+                    "state": {
+                        "$ref": "#/components/schemas/ActivationOutputStateEnum"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "role_label": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "state"
+                ]
+            },
+            "ActivationOutputStateEnum": {
+                "enum": [
+                    "ready",
+                    "activated",
+                    "expired",
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `ready` - ready\n* `activated` - activated\n* `expired` - expired\n* `unavailable` - unavailable"
             },
             "ActivityKindEnum": {
                 "enum": [
@@ -37698,6 +37860,43 @@
                     "version"
                 ]
             },
+            "InvitationOutput": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "token": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "can_renew": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "can_renew",
+                    "expires_at",
+                    "notice",
+                    "state",
+                    "token",
+                    "user_id"
+                ]
+            },
             "InvitePage": {
                 "type": "object",
                 "properties": {
@@ -41437,6 +41636,9 @@
                     "operation": {
                         "$ref": "#/components/schemas/AccountManagementOperationEnum"
                     },
+                    "invite": {
+                        "type": "boolean"
+                    },
                     "user_id": {
                         "type": "integer",
                         "minimum": 1
@@ -41576,6 +41778,9 @@
                     "operation": {
                         "$ref": "#/components/schemas/AccountManagementOperationEnum"
                     },
+                    "invite": {
+                        "type": "boolean"
+                    },
                     "user_id": {
                         "type": "integer",
                         "minimum": 1
@@ -41644,6 +41849,12 @@
                             "$ref": "#/components/schemas/CapabilityOutput"
                         }
                     },
+                    "activation_capabilities": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CapabilityOutput"
+                        }
+                    },
                     "public_access": {
                         "type": "string"
                     },
@@ -41661,6 +41872,7 @@
                     }
                 },
                 "required": [
+                    "activation_capabilities",
                     "actor_id",
                     "gained",
                     "lost",
@@ -67782,13 +67994,25 @@
                             "type": "string"
                         }
                     },
+                    "activation_state": {
+                        "type": "string"
+                    },
+                    "can_renew_invitation": {
+                        "type": "boolean"
+                    },
+                    "can_revoke_invitation": {
+                        "type": "boolean"
+                    },
                     "notice": {
                         "type": "string"
                     }
                 },
                 "required": [
+                    "activation_state",
                     "can_change_role",
                     "can_edit",
+                    "can_renew_invitation",
+                    "can_revoke_invitation",
                     "capabilities",
                     "date_joined",
                     "display_name",

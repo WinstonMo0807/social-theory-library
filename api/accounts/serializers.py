@@ -245,6 +245,14 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("邮箱或用户名已被使用，请检查后重试。") from exc
 
 
+class InvitationRegistrationSerializer(RegisterSerializer):
+    """The same account identity checks, without an administrator-chosen password."""
+    password = None
+
+    def create(self, validated_data):
+        return super().create({**validated_data, "password": None})
+
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.CharField(max_length=254)
     password = serializers.CharField(write_only=True, trim_whitespace=False)
