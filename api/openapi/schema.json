@@ -7240,6 +7240,120 @@
                 }
             }
         },
+        "/api/catalog/admin/recommendation-issues/{issue_id}/assistant/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_recommendation_issues_assistant_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EditorialAssistanceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_recommendation_issues_assistant_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditorialAssistanceStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditorialAssistanceStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditorialAssistanceStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EditorialAssistanceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/recommendation-issues/{issue_id}/history/": {
             "get": {
                 "operationId": "catalog_admin_recommendation_issues_history_retrieve",
@@ -33146,6 +33260,67 @@
                     "page",
                     "results",
                     "total_pages"
+                ]
+            },
+            "EditorialAssistanceReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "issue_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "operation": {
+                        "$ref": "#/components/schemas/EditorialAssistanceReceiptOperationEnum"
+                    },
+                    "task": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/EditorialAssistance"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "issue_id",
+                    "operation",
+                    "owner_id",
+                    "request_id",
+                    "state",
+                    "task"
+                ]
+            },
+            "EditorialAssistanceReceiptOperationEnum": {
+                "enum": [
+                    "request",
+                    "adopt",
+                    "dismiss",
+                    "retry",
+                    "cancel",
+                    "stop"
+                ],
+                "type": "string",
+                "description": "* `request` - request\n* `adopt` - adopt\n* `dismiss` - dismiss\n* `retry` - retry\n* `cancel` - cancel\n* `stop` - stop"
+            },
+            "EditorialAssistanceStopRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
                 ]
             },
             "EditorialDirectoryFacets": {

@@ -169,12 +169,18 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     const lifetime=active.current;action.current=true;setBusy("assistant");
     try {
       const result=await request<T>(url,{method:"POST",body});
-      if(refresh){const next=await request<IssueDraft>(endpoint);if(!lifetime?.signal.aborted)accept(next);}
+      if(refresh){try{const next=await request<IssueDraft>(endpoint);if(!lifetime?.signal.aborted)accept(next);}catch(reason){throw new Error("助手操作已提交，但文章最新状态读取失败，请查回原操作后继续。",{cause:reason});}}
       return result;
     } finally {if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   }
+  async function refreshAfterAssistance() {
+    if(action.current||compositionActive.current||dirty||pending||conflict||recovery||sessionInvalid)throw new Error("当前文章还有输入或状态待核对，请先保留并核对，再查回助手操作。");
+    const lifetime=active.current;action.current=true;setBusy("assistant-refresh");
+    try{const next=await request<IssueDraft>(endpoint);if(lifetime?.signal.aborted)throw new DOMException("Session changed","AbortError");accept(next);}
+    finally{if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
+  }
   return {draft,saved,dirty,busy,composing,setComposing,message,initialError,conflict,pending,recovery,autosave,storageError,sessionInvalid,
-    disabled:Boolean(busy||pending||recovery||sessionInvalid),update,save,lookup,command,recheck,recoverLocal,restoreHistory,request,auxiliary,discardChanges,
+    disabled:Boolean(busy||pending||recovery||sessionInvalid),update,save,lookup,command,recheck,recoverLocal,restoreHistory,request,auxiliary,refreshAfterAssistance,discardChanges,
     setAutosave,retryLoad:()=>setAttempt(value=>value+1),discardRecovery:()=>{setRecovery(null);try{sessionStorage.removeItem(key);}catch{setStorageError(true);}},
     useRemote:accept,keepLocal:(remote:IssueDraft)=>{setSaved(remote);setDraft(value=>value?{...value,edit_version:remote.edit_version}:value);setConflict(false);setPending(null);setAutoBlocked(true);setManualRequired(true);},
   };

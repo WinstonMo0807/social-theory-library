@@ -2,6 +2,7 @@
 
 import { createRequestKey } from "../../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
+import { PrivateOwnerVerificationError } from "@/lib/api/private-owner";
 import { ApiRequestError } from "@/lib/api";
 import type { EditorialAssistance } from "@/lib/api/curation-workspace.client";
 import { editorialAssistancePath } from "@/lib/api/curation-workspace.client";
@@ -12,17 +13,33 @@ import styles from "./issue-selection.module.css";
 
 type Task=EditorialAssistance;
 type Pending={path:string;body:string;refresh:boolean};
+type Receipt={owner_id:string;issue_id:string;request_id:string;state:"applied"|"cancelled";operation:"request"|"adopt"|"dismiss"|"retry"|"cancel"|"stop";task:Task|null};
 const names={outline:"结构提纲",guide:"内容修改",comparison:"比较视角"};
-export function IssueAssistanceReview({issueId,version,selection,blocks,operation,onOperation,onRelated,disabled,dirty,request,auxiliary,onPending,onDirty}:{issueId:string;version:string;selection:IssueSelection;blocks:IssueBlock[];operation:Task["operation"];onOperation:(operation:Task["operation"])=>void;onRelated:()=>void;disabled:boolean;dirty:boolean;request:<T>(url:string,init?:RequestInit)=>Promise<T>;auxiliary:<T>(url:string,body:string,refresh?:boolean)=>Promise<T>;onPending:(value:boolean)=>void;onDirty:(value:boolean)=>void}) {
+export function IssueAssistanceReview({owner,onApplied,issueId,version,selection,blocks,operation,onOperation,onRelated,disabled,dirty,request,auxiliary,onPending,onDirty}: {owner:string;onApplied:()=>Promise<void>;issueId:string;version:string;selection:IssueSelection;blocks:IssueBlock[];operation:Task["operation"];onOperation:(operation:Task["operation"])=>void;onRelated:()=>void;disabled:boolean;dirty:boolean;request:<T>(url:string,init?:RequestInit)=>Promise<T>;auxiliary:<T>(url:string,body:string,refresh?:boolean)=>Promise<T>;onPending:(value:boolean)=>void;onDirty:(value:boolean)=>void}) {
   const [task,setTask]=useState<Task|null>(null),[error,setError]=useState(""),[message,setMessage]=useState("");
   const [history,setHistory]=useState<Task[]>([]),[historyPage,setHistoryPage]=useState(1),[pages,setPages]=useState(1),[showHistory,setShowHistory]=useState(false),[attempt,setAttempt]=useState(0);
   const [pending,setPending]=useState<Pending|null>(null),[busy,setBusy]=useState(false),[edits,setEdits]=useState<Record<string,string>>({});
   const lifetime=useRef<AbortController|null>(null),inFlight=useRef(false),generation=useRef(0);
-  const endpoint=editorialAssistancePath(issueId);
+  const endpoint=editorialAssistancePath(issueId),storageKey=`stl-assistance-command:${owner}:${issueId}`;
+  const [recovery,setRecovery]=useState(""),[ready,setReady]=useState(false);
   const taskId=task?.id,taskRunning=Boolean(taskPollDelay(task||{}));
-  useUnsavedForm({pending,edits},{pending:null,edits:{}});
+  useUnsavedForm({pending,recovery,edits},{pending:null,recovery:"",edits:{}});
   useEffect(()=>{onDirty(Boolean(Object.keys(edits).length));return()=>onDirty(false);},[edits,onDirty]);
-  useEffect(()=>{const controller=new AbortController();lifetime.current=controller;return()=>controller.abort();},[]);
+  useEffect(()=>{const controller=new AbortController();lifetime.current=controller;queueMicrotask(()=>{if(controller.signal.aborted)return;try{const saved=sessionStorage.getItem(storageKey)||"";if(saved&&!/^[0-9a-f-]{36}$/i.test(saved))throw Error("原操作编号格式异常，请保留本页并核对助手任务历史。");setRecovery(saved);onPending(Boolean(saved));setReady(true);}catch(reason){setError(reason instanceof Error?reason.message:"浏览器不能保留请求编号，请保留当前页面。");}});return()=>controller.abort();},[storageKey,onPending]);
+  function clearRecovery(){try{sessionStorage.removeItem(storageKey);}catch{setError("原结果已收到，但浏览器不能清除恢复标记。请保留此页并稍后查回。");return false;}setRecovery("");setPending(null);onPending(false);return true;}
+  async function lookup(cancel=false){
+    if(!ready||!recovery||inFlight.current)return;inFlight.current=true;setBusy(true);setError("");
+    try{
+      const value=await request<Receipt>(`${endpoint}commands/${recovery}/`,cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{});
+      if(lifetime.current?.signal.aborted)return;
+      if(value.owner_id!==owner||value.issue_id!==issueId||value.request_id!==recovery||!["applied","cancelled"].includes(value.state))throw Error("原操作回执与当前页面不一致，请重新核对。");
+      if(value.state==="applied"&&value.operation==="adopt")await onApplied();
+      if(lifetime.current?.signal.aborted)return;
+      if(value.task){setTask(value.task);setEdits(previous=>Object.fromEntries(Object.entries(previous).filter(([id])=>!value.task!.adopted_ids.includes(id)&&!value.task!.dismissed_ids.includes(id))));}
+      if(!clearRecovery())return;setAttempt(n=>n+1);setMessage(value.state==="cancelled"?"已停止未执行的原操作；已运行任务和已采用文字没有撤销。":"已查回原操作，任务和文章按现有结果继续。");
+    }catch(reason){if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"原操作暂时无法查回，请保留原编号后重试。");}
+    finally{inFlight.current=false;if(!lifetime.current?.signal.aborted)setBusy(false);}
+  }
   useEffect(()=>{
     const controller=new AbortController();
     void request<{results:Task[];total_pages:number}>(`${endpoint}?page=${historyPage}`,{signal:controller.signal}).then(value=>{if(!controller.signal.aborted){setHistory(value.results);setPages(value.total_pages);}}).catch(reason=>{if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:"历史读取失败。");});
@@ -42,11 +59,13 @@ export function IssueAssistanceReview({issueId,version,selection,blocks,operatio
   // Status changes restart the foreground observation budget; candidates never start a task implicitly.
   },[issueId,taskId,taskRunning,attempt,request]);
   const selectedReady=selection.references.length>0&&selection.materials?.length===selection.references.length&&selection.materials.every(row=>row.available&&row.public_eligible);
-  const locked=disabled||dirty||busy||Boolean(pending);
+  const locked=!ready||disabled||dirty||busy||Boolean(pending)||Boolean(recovery);
   async function send(command:Pending){
-    if(inFlight.current)return;inFlight.current=true;generation.current+=1;setBusy(true);setPending(command);onPending(true);setError("");setMessage("");
-    try{const result=await auxiliary<Task>(command.path,command.body,command.refresh);if(lifetime.current?.signal.aborted)return;setTask(result);setPending(null);onPending(false);setEdits(previous=>Object.fromEntries(Object.entries(previous).filter(([id])=>!result.adopted_ids.includes(id)&&!result.dismissed_ids.includes(id))));setAttempt(value=>value+1);setMessage(command.refresh?"已追加到文章草稿，原有人工段落保留。":"操作已保存。");}
-    catch(reason){if(lifetime.current?.signal.aborted)return;const definite=reason instanceof ApiRequestError&&reason.status>0&&reason.status<500;if(definite){setPending(null);onPending(false);}setError(definite?(reason as Error).message:"暂时无法确认操作结果。请重试同一请求，或读取任务历史核对；已选材料保持原样。");}
+    if(!ready||inFlight.current)return;
+    try{const id=String(JSON.parse(command.body).request_id||"");if(!id||recovery&&recovery!==id)throw Error("请先查回原操作。");sessionStorage.setItem(storageKey,id);setRecovery(id);}catch(reason){setError(reason instanceof Error?reason.message:"无法保留原请求编号，请保留当前页面。");return;}
+    inFlight.current=true;generation.current+=1;setBusy(true);setPending(command);onPending(true);setError("");setMessage("");
+    try{const result=await auxiliary<Task>(command.path,command.body,command.refresh);if(lifetime.current?.signal.aborted)return;setTask(result);if(!clearRecovery())return;setEdits(previous=>Object.fromEntries(Object.entries(previous).filter(([id])=>!result.adopted_ids.includes(id)&&!result.dismissed_ids.includes(id))));setAttempt(value=>value+1);setMessage(command.refresh?"已追加到文章草稿，原有人工段落保留。":"操作已保存。");}
+    catch(reason){if(lifetime.current?.signal.aborted)return;const definite=reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,409].includes(reason.status);if(definite&&!clearRecovery())return;setError(definite?(reason as Error).message:"暂时无法确认操作结果。请重试同一请求，或读取任务历史核对；已选材料保持原样。");}
     finally{inFlight.current=false;if(!lifetime.current?.signal.aborted)setBusy(false);}
   }
   function start(){if(locked||!selectedReady||!selection.question.trim()||Object.keys(edits).length)return;void send({path:endpoint,refresh:false,body:JSON.stringify({request_id:createRequestKey(),edit_version:version,operation,question:selection.question,references:selection.references})});}
@@ -59,12 +78,12 @@ export function IssueAssistanceReview({issueId,version,selection,blocks,operatio
   const numbering=[0,0,0];
   const labels=task?.suggestions.map(row=>{if(row.kind!=="heading")return "导读";const level=row.level||1;numbering[level-1]+=1;numbering.fill(0,level);return `${numbering.slice(0,level).join(".")} · ${level}级提纲`;})||[];
   return <aside className={styles.assistant} aria-label="智能助手建议"><header><h2>智能助手建议</h2><button type="button" onClick={()=>setShowHistory(value=>!value)}>历史记录</button></header>
-    <nav aria-label="生成建议类型">{Object.entries(names).map(([key,label])=><button type="button" key={key} aria-pressed={operation===key} disabled={busy||Boolean(pending)} onClick={()=>onOperation(key as Task["operation"])}>{label}</button>)}<button type="button" onClick={onRelated}>概念关联</button></nav>
+    <nav aria-label="生成建议类型">{Object.entries(names).map(([key,label])=><button type="button" key={key} aria-pressed={operation===key} disabled={!ready||busy||Boolean(recovery)} onClick={()=>onOperation(key as Task["operation"])}>{label}</button>)}<button type="button" onClick={onRelated}>概念关联</button></nav>
     <p>依据已选公开材料生成待审阅文字。采用只追加草稿，原文和人工段落保持原样。</p><button type="button" className={styles.gold} disabled={locked||!selectedReady||!selection.question.trim()||Boolean(taskPollDelay(task||{}))||Boolean(Object.keys(edits).length)} onClick={start}>生成{names[operation]}</button>
     {dirty?<p>请先保存当前选材与问题，再生成或采用建议。</p>:!selectedReady?<p>请选择并保存至少一项当前可公开的材料。</p>:null}
     {error?<p role="alert" className={styles.warning}>{error}</p>:null}{message?<p role="status">{message}</p>:null}
-    {pending?<p>这次操作结果待核对。<button type="button" disabled={busy||disabled||dirty} onClick={()=>void send(pending)}>重试同一请求</button></p>:null}
-    {showHistory?<section aria-label="助手任务历史"><h3>任务历史</h3>{history.map(row=><button type="button" key={row.id} disabled={busy||Boolean(pending)} onClick={()=>{if(Object.keys(edits).length&&!window.confirm("尚有未采用的审阅修改，切换任务会放弃这些修改。是否继续？"))return;generation.current+=1;setTask(row);setEdits({});}}>{names[row.operation]} · {new Date(row.created_at).toLocaleString("zh-CN")} · {row.created_by}</button>)}{!history.length?<p>尚无助手任务。</p>:null}<nav><button type="button" disabled={historyPage===1} onClick={()=>setHistoryPage(n=>n-1)}>上一页</button><span>{historyPage} / {pages}</span><button type="button" disabled={historyPage>=pages} onClick={()=>setHistoryPage(n=>n+1)}>下一页</button></nav></section>:null}
+    {recovery?<section className={styles.warning} role="status"><p>上次操作尚未确认，原编号已按账户保留。先查回结果，再继续生成或采用。</p><button type="button" disabled={busy} onClick={()=>void lookup()}>查回原操作</button>{pending?<button type="button" disabled={busy||disabled||dirty} onClick={()=>void send(pending)}>重试同一请求</button>:null}<button type="button" disabled={busy} onClick={()=>void lookup(true)}>停止未执行请求</button></section>:null}
+    {showHistory?<section aria-label="助手任务历史"><h3>任务历史</h3>{history.map(row=><button type="button" key={row.id} disabled={!ready||busy||Boolean(recovery)} onClick={()=>{if(Object.keys(edits).length&&!window.confirm("尚有未采用的审阅修改，切换任务会放弃这些修改。是否继续？"))return;generation.current+=1;setTask(row);setEdits({});}}>{names[row.operation]} · {new Date(row.created_at).toLocaleString("zh-CN")} · {row.created_by}</button>)}{!history.length?<p>尚无助手任务。</p>:null}<nav><button type="button" disabled={historyPage===1} onClick={()=>setHistoryPage(n=>n-1)}>上一页</button><span>{historyPage} / {pages}</span><button type="button" disabled={historyPage>=pages} onClick={()=>setHistoryPage(n=>n+1)}>下一页</button></nav></section>:null}
     {task?<section aria-label="当前助手任务"><header><h3>{names[task.operation]}</h3><button type="button" disabled={busy} onClick={()=>void refresh()}>读取进度</button></header><p>{task.question}</p>
       {taskPollDelay(task)?<><p role="status">{task.status==="pending"?"任务已排队":"正在生成候选…"}</p><progress max={100} value={task.progress}/><button type="button" disabled={locked} onClick={()=>act("cancel")}>取消当前任务</button></>:null}
       {task.status==="failed"?<div className={styles.warning}><h3>{task.stage==="partial"?"任务部分完成":"智能助手暂不可用"}</h3><p>{task.error_message} 已选材料仍可用于人工编辑。{task.suggestions.length?` 已保留 ${task.suggestions.length} 条完整候选，可逐项审阅；重试将重新生成尚未采用的候选。`:""}</p><button type="button" disabled={locked||stale||!task.source_available||Boolean(task.adopted_ids.length)||Boolean(Object.keys(edits).length)} onClick={()=>act("retry")}>重试任务</button>{task.stage==="partial"?<button type="button" disabled={locked} onClick={()=>act("cancel")}>取消任务并保留完整候选</button>:null}</div>:null}

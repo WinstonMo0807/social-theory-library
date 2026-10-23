@@ -1,4 +1,6 @@
 from django.core.paginator import Paginator
+from django.db import transaction
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
@@ -10,7 +12,7 @@ from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import RecommendationIssue
 from catalog.services import editorial_assistance as service
 from common.permissions import CanEditMetadata
-from ingestion.models import ProcessingJob
+from ingestion.models import AuditEvent, ProcessingJob
 
 
 class EditorialAssistanceInput(serializers.Serializer):
@@ -105,3 +107,42 @@ class EditorialAssistanceDetailView(EditorialErrorMixin, AdminPrivateResponseMix
         get_object_or_404(ProcessingJob, pk=job_id, job_type=service.JOB_TYPE, stats__issue_id=str(issue_id))
         EditorialAssistanceCommand(data=request.data).is_valid(raise_exception=True)
         return Response(service.assistance_payload(service.assistance_action(job_id, request.data, request.user), request.user))
+
+
+class EditorialAssistanceReceiptSerializer(serializers.Serializer):
+    owner_id = serializers.CharField()
+    issue_id = serializers.UUIDField()
+    request_id = serializers.UUIDField()
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
+    operation = serializers.ChoiceField(choices=["request", "adopt", "dismiss", "retry", "cancel", "stop"])
+    task = EditorialAssistanceSerializer(allow_null=True)
+
+
+class EditorialAssistanceStopSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+
+class EditorialAssistanceReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanEditMetadata]
+
+    @extend_schema(responses=EditorialAssistanceReceiptSerializer)
+    def get(self, request, issue_id, request_id):
+        value = service.command_receipt(issue_id, request_id, request.user)
+        if value is None:
+            raise Http404("尚未查到原操作，请稍后查回，或停止未执行的请求。")
+        return Response(value)
+
+    @extend_schema(request=EditorialAssistanceStopSerializer, responses=EditorialAssistanceReceiptSerializer)
+    @transaction.atomic
+    def post(self, request, issue_id, request_id):
+        from catalog.services.curation_projects import lock_issue
+        from rest_framework.exceptions import ValidationError
+        if request.data != {"action": "cancel_pending"}:
+            raise ValidationError("此处仅接受停止未执行的原请求。")
+        issue = lock_issue(issue_id, request.user, allow_archived=True)
+        value = service.command_receipt(issue.pk, request_id, request.user)
+        if value is None:
+            AuditEvent.objects.create(actor=request.user, action="editorial.assistance.stop", request_id=str(request_id),
+                object_type="RecommendationIssue", object_id=str(issue.pk), after={"issue_id":str(issue.pk)})
+            value = service.command_receipt(issue.pk, request_id, request.user)
+        return Response(value)

@@ -72,9 +72,19 @@ function IssueEditorSession({ issueId, fullPreview }: { issueId: string; fullPre
   const [pane,setPane]=useState("preview"),[mobile,setMobile]=useState("edit"),[history,setHistory]=useState(false),[suggestions,setSuggestions]=useState(false);
   const [publicationReview,setPublicationReview]=useState(fullPreview);
   const [materials,setMaterials]=useState(()=>params.get("tab")==="selection"),[assistantPending,setAssistantPending]=useState(false),[assistantReviewDirty,setAssistantReviewDirty]=useState(false);
+  const [assistantRecoveryReady,setAssistantRecoveryReady]=useState(false);
+  useEffect(()=>{
+    let active=true;
+    queueMicrotask(()=>{if(!active)return;try{
+      if(user&&hasAdminCapability(user,"can_edit_metadata")&&sessionStorage.getItem(`stl-assistance-command:${user.id}:${issueId}`)){setAssistantPending(true);setMaterials(true);setPublicationReview(false);}
+    }catch{/* The assistant itself explains unavailable recovery storage before new commands. */}
+    setAssistantRecoveryReady(true);});
+    return()=>{active=false;};
+  },[user,issueId]);
   const loaded=Boolean(draft);
   useEffect(()=>{if(!loaded||!selectedBlock)return;const frame=requestAnimationFrame(()=>document.getElementById(`editor-block-${selectedBlock}`)?.scrollIntoView({block:"nearest"}));return()=>cancelAnimationFrame(frame);},[loaded,selectedBlock]);
   const canEdit=hasAdminCapability(user,"can_edit_metadata")&&!draft?.project_archived;
+  if(!assistantRecoveryReady)return <p role="status">正在核对原助手操作…</p>;
   if (!draft) return <section className="admin-panel" aria-busy={!initialError}><p role={initialError ? "alert" : "status"}>{initialError || "正在读取本期草稿…"}</p>{initialError ? <button type="button" className="button secondary" onClick={editor.retryLoad}>重试读取</button> : null}<p><Link href="/admin/recommendations">返回推荐与随机</Link></p></section>;
   const previewDraft: RecommendationIssue = { ...draft, curator: { name: draft.public_byline, role: draft.public_byline ? draft.article_metadata?.curator_role || "" : "", affiliation: draft.public_byline ? draft.article_metadata?.curator_affiliation || "" : "", portrait_url: draft.public_byline ? draft.curator?.portrait_url || "" : "" } };
 
@@ -104,7 +114,7 @@ function IssueEditorSession({ issueId, fullPreview }: { issueId: string; fullPre
     {editor.pending&&!busy?<section className={styles.warning}><p>这次保存结果尚未确认。请先查回；重试会沿用原保存编号与原内容。</p><button type="button" onClick={()=>void editor.lookup()}>查回保存结果</button><button type="button" onClick={()=>void editor.save(false,true)}>重试原保存</button></section>:null}
     {conflict?<DraftConflict endpoint={`/catalog/admin/recommendation-issues/${issueId}/`} local={draft} loadRemote={()=>editor.request<IssueDraft>(`/catalog/admin/recommendation-issues/${issueId}/`)} onUseRemote={editor.useRemote} onKeepLocal={editor.keepLocal}/>:null}
     {draft.body_source_problems?.length?<section className={styles.warning} aria-label="待处理来源"><strong>{draft.body_source_problems.length} 个来源尚不满足公开条件</strong>{draft.body_source_problems.map((problem,index)=><p key={problem.block_id || index}>{problem.detail}<button type="button" onClick={()=>focusBlock(problem.block_id || "")}>定位区块</button></p>)}</section>:null}
-    {materials&&canEdit?<IssueSelectionWorkbench draft={draft} owner={String(user!.id)} dirty={dirty} disabled={editor.disabled||conflict} pending={assistantPending} request={editor.request} auxiliary={editor.auxiliary} onChange={update} onClose={()=>{leaveMaterials();}} onPending={setAssistantPending} onReviewDirty={setAssistantReviewDirty}/>:<><nav className={styles.mobileTabs} aria-label="编辑器视图">{[["edit","编辑"],["preview","预览"],["structure","结构"]].map(([id,label])=><button type="button" key={id} aria-pressed={mobile===id} onClick={()=>{setMobile(id);if(id!=="edit")setPane(id);}}>{label}</button>)}</nav>
+    {materials&&hasAdminCapability(user,"can_edit_metadata")?<IssueSelectionWorkbench draft={draft} owner={String(user!.id)} dirty={dirty} disabled={editor.disabled||conflict||!canEdit} pending={assistantPending} request={editor.request} auxiliary={editor.auxiliary} onApplied={editor.refreshAfterAssistance} onChange={update} onClose={()=>{leaveMaterials();}} onPending={setAssistantPending} onReviewDirty={setAssistantReviewDirty}/>:<><nav className={styles.mobileTabs} aria-label="编辑器视图">{[["edit","编辑"],["preview","预览"],["structure","结构"]].map(([id,label])=><button type="button" key={id} aria-pressed={mobile===id} onClick={()=>{setMobile(id);if(id!=="edit")setPane(id);}}>{label}</button>)}</nav>
     <div className={styles.workspace} data-mobile={mobile}><section className={styles.editPane} aria-label="编辑文章"><nav className={styles.editorTabs} aria-label="文章设置">{[["body","文章正文"],["identity","文章信息"],["cover","主图"],["items","相关材料"],["schedule","展示与发布"]].map(([id,label])=><button type="button" key={id} aria-pressed={active===id} onClick={()=>setActive(id)}>{label}</button>)}</nav>
     <fieldset disabled={editor.disabled || !canEdit}>
       {active==="body"?<><section className={styles.articleInfo}><h2>文章信息</h2>{field("title","标题")}<label>导语<textarea rows={4} maxLength={3000} value={draft.introduction} onChange={event=>update({introduction:event.target.value})}/></label></section><ArticleBodyFields disabled={editor.disabled || !canEdit} onComposition={editor.setComposing} issueId={issueId} blocks={draft.body_blocks} selected={selectedBlock} onSelect={setSelectedBlock} protectedHeadings={draft.items.map(item=>item.section_id || "").filter(Boolean)} onChange={body_blocks=>update({body_blocks})}/></>:null}

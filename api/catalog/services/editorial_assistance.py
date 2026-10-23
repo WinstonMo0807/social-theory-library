@@ -21,6 +21,29 @@ from ingestion.models import AuditEvent, ProcessingJob
 
 OPERATIONS = ("outline", "guide", "comparison")
 JOB_TYPE = ProcessingJob.JobType.EDITORIAL_ASSISTANCE
+COMMAND_ACTIONS = {"request", "retry", "cancel", "adopt", "dismiss"}
+
+
+def command_receipt(issue_id, request_id, actor):
+    """Find only this actor's original operation in this article's task ledger."""
+    events = AuditEvent.objects.filter(actor=actor, request_id=str(request_id),
+        action__in=[f"editorial.assistance.{name}" for name in COMMAND_ACTIONS]).order_by("-created_at", "pk")
+    for event in events.iterator(chunk_size=20):
+        job = ProcessingJob.objects.filter(pk=event.object_id, job_type=JOB_TYPE, stats__issue_id=str(issue_id)).first()
+        if job:
+            return {"owner_id": str(actor.pk), "issue_id": str(issue_id), "request_id": str(request_id),
+                    "state": "applied", "operation": event.action.rsplit(".", 1)[-1], "task": assistance_payload(job, actor)}
+    if AuditEvent.objects.filter(actor=actor, request_id=str(request_id), action="editorial.assistance.stop",
+                                 object_type="RecommendationIssue", object_id=str(issue_id)).exists():
+        return {"owner_id": str(actor.pk), "issue_id": str(issue_id), "request_id": str(request_id),
+                "state": "cancelled", "operation": "stop", "task": None}
+    return None
+
+
+def _ensure_not_stopped(issue_id, request_id, actor):
+    if AuditEvent.objects.filter(actor=actor, request_id=str(request_id), action="editorial.assistance.stop",
+                                 object_type="RecommendationIssue", object_id=str(issue_id)).exists():
+        raise ledger.EditConflict("原未执行的助手操作已停止，请核对当前状态后重新操作。")
 
 
 def _authorize(actor):
@@ -56,6 +79,7 @@ def request_assistance(issue_id, data, actor):
         if previous.stats.get("issue_id") != str(issue.pk) or previous.stats.get("fingerprint") != fingerprint:
             raise ledger.EditConflict("这个请求编号已用于另一组策划输入。")
         return previous
+    _ensure_not_stopped(issue.pk, request_id, actor)
     ledger._check_version("recommendation_issue", issue.pk, data.get("edit_version"))
     operation = data.get("operation")
     if operation not in OPERATIONS:
@@ -228,6 +252,7 @@ def assistance_action(job_id, data, actor):
             if receipt.after.get("fingerprint") != fingerprint:
                 raise ledger.EditConflict("这个操作编号已用于另一组输入。")
             return job
+        _ensure_not_stopped(issue.pk, request_id, actor)
     if action in {"retry", "cancel"}:
         if "task_token" in data and data["task_token"] != job.task_id:
             raise ledger.EditConflict("任务轮次已经变化，请读取最新状态。")

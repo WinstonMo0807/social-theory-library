@@ -22,7 +22,7 @@ from .discovery_views import (DiscoverySearchView, DiscoverySearchDetailView, Di
 from .curation_queue_views import CurationDraftQueueView
 from .today_work_views import AdminSearchView, TodayWorkView, WorkNoticesView
 from .editorial_workbench_views import IssueHistoryView, IssueSourcesView, IssueSuggestionsView, IssuePresenceView
-from .editorial_assistance_views import EditorialAssistanceDetailView, EditorialAssistanceListView
+from .editorial_assistance_views import EditorialAssistanceDetailView, EditorialAssistanceListView, EditorialAssistanceReceiptView
 from .shared_curation_views import (CurationSourcesView, AdminEvidenceCurationView, PublishEvidenceCurationView,
     PublicEvidenceCurationView, AdminScholarRelationListView, AdminScholarRelationDetailView,
     PublishScholarRelationView, PublicScholarRelationListView, ArchiveScholarRelationView)
@@ -282,6 +282,7 @@ urlpatterns = [
     path("admin/work-notices/", WorkNoticesView.as_view(), name="admin-work-notices"),
     path("admin/curation-drafts/", CurationDraftQueueView.as_view(), name="admin-curation-drafts"),
     path("admin/recommendation-issues/<uuid:issue_id>/assistant/", EditorialAssistanceListView.as_view(), name="editorial-assistance-list"),
+    path("admin/recommendation-issues/<uuid:issue_id>/assistant/commands/<uuid:request_id>/", EditorialAssistanceReceiptView.as_view(), name="editorial-assistance-receipt"),
     path("admin/recommendation-issues/<uuid:issue_id>/assistant/<uuid:job_id>/", EditorialAssistanceDetailView.as_view(), name="editorial-assistance-detail"),
     path("admin/bibliographic-candidates/", BibliographicCandidatesView.as_view(), name="admin-bibliographic-candidates"),
     path("recommendation-issues/", PublicIssueListView.as_view(), name="recommendation-issue-list"),

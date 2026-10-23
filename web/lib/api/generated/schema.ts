@@ -1619,6 +1619,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/assistant/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_assistant_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_assistant_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recommendation-issues/{issue_id}/history/": {
         parameters: {
             query?: never;
@@ -7735,6 +7751,29 @@ export interface components {
             page: number;
             total_pages: number;
             results: components["schemas"]["EditorialAssistance"][];
+        };
+        EditorialAssistanceReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            operation: components["schemas"]["EditorialAssistanceReceiptOperationEnum"];
+            task: components["schemas"]["EditorialAssistance"] | null;
+        };
+        /**
+         * @description * `request` - request
+         *     * `adopt` - adopt
+         *     * `dismiss` - dismiss
+         *     * `retry` - retry
+         *     * `cancel` - cancel
+         *     * `stop` - stop
+         * @enum {string}
+         */
+        EditorialAssistanceReceiptOperationEnum: "request" | "adopt" | "dismiss" | "retry" | "cancel" | "stop";
+        EditorialAssistanceStopRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
         EditorialDirectoryFacets: {
             curators: string[];
@@ -21964,6 +22003,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EditorialAssistance"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_assistant_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditorialAssistanceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_assistant_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditorialAssistanceStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EditorialAssistanceStopRequest"];
+                "multipart/form-data": components["schemas"]["EditorialAssistanceStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditorialAssistanceReceipt"];
                 };
             };
         };
