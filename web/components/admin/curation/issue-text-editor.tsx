@@ -72,14 +72,14 @@ function renderText(root:HTMLElement,value:TextValue) {
   root.replaceChildren(fragment);
 }
 
-export function IssueTextEditor({block,label,disabled=false,onChange,onComposition}:{block:IssueBlock;label:string;disabled?:boolean;onChange:(patch:Partial<IssueBlock>)=>void;onComposition?:(value:boolean)=>void}) {
+export function IssueTextEditor({block,label,disabled=false,onChange,onComposition,maxLength}:{block:IssueBlock;label:string;disabled?:boolean;onChange:(patch:Partial<IssueBlock>)=>void;onComposition?:(value:boolean)=>void;maxLength?:number}) {
   const id=useId(),area=useRef<HTMLDivElement>(null),selection=useRef<Selection>({start:0,end:0}),composing=useRef(false);
   const undo=useRef<Step[]>([]),redo=useRef<Step[]>([]),last=useRef<TextValue|null>(null),restoreSelection=useRef(false);
   const [message,setMessage]=useState(""),[linkOpen,setLinkOpen]=useState(false),[href,setHref]=useState(""),[pressed,setPressed]=useState({strong:false,em:false});
   const [historySize,setHistorySize]=useState({undo:0,redo:0});
   const [redraw,setRedraw]=useState(0),painted=useRef(-1);
   const prose=!["heading","image","link"].includes(block.type)&&!(block.type==="analysis"&&block.style==="heading");
-  const limit=["paragraph","heading","quote","link","image"].includes(block.type)?30000:6000;
+  const limit=maxLength??(["paragraph","heading","quote","link","image"].includes(block.type)?30000:6000);
   useLayoutEffect(()=>{
     const root=area.current;if(!root||composing.current)return;
     const expected=textValue(block),current=inspect(root),changed=painted.current!==redraw||signature(expected)!==signature(current.value)||Boolean(root.querySelector("ul,ol")&&expected.text_style==="paragraph");

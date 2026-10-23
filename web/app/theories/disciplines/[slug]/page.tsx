@@ -1,3 +1,4 @@
+import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DisciplinePublicView } from "@/components/public/discipline-public-view";
@@ -25,5 +26,5 @@ export default async function TheoryDisciplinePage({
   const payload = await loadTheoryDisciplinePage(slug, activeType);
   if (!payload) notFound();
 
-  return <DisciplinePublicView payload={payload} activeType={activeType} slug={slug} footer={<SiteFooter />} />;
+  return <DisciplinePublicView payload={payload} activeType={activeType} slug={slug} footer={<><PublishedPlacements type="discipline" id={payload.discipline.id}/><SiteFooter /></>} />;
 }

@@ -368,6 +368,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/content-placements/pages/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_content_placements_pages_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/content-placements/sources/": {
         parameters: {
             query?: never;
@@ -6270,14 +6286,6 @@ export interface components {
             dimensions: string[];
             cells: components["schemas"]["ComparisonCellInputRequest"][];
         };
-        /**
-         * @description * `work` - work
-         *     * `edition` - edition
-         *     * `node` - node
-         *     * `span` - span
-         * @enum {string}
-         */
-        ContentReferenceTypeEnum: "work" | "edition" | "node" | "span";
         CoverMediaSelectionRequest: {
             /** Format: uuid */
             media_id: string;
@@ -6781,6 +6789,14 @@ export interface components {
             request_id: string;
             token: string;
         };
+        /**
+         * @description * `authors` - authors
+         *     * `year` - year
+         *     * `type` - type
+         *     * `tags` - tags
+         * @enum {string}
+         */
+        DisplayFieldsEnum: "authors" | "year" | "type" | "tags";
         /**
          * @description * `publish` - publish
          *     * `apply_draft` - apply_draft
@@ -11393,6 +11409,15 @@ export interface components {
             /** Format: uuid */
             revision_id?: string;
             confirmed_only?: boolean;
+            groups?: components["schemas"]["PlacementGroupRequest"][];
+        };
+        PlacementGroup: {
+            area: string;
+            name: string;
+        };
+        PlacementGroupRequest: {
+            area: string;
+            name: string;
         };
         PlacementHistoryItem: {
             /** Format: uuid */
@@ -11420,6 +11445,21 @@ export interface components {
             previous: string | null;
             results: components["schemas"]["PlacementHistoryItem"][];
         };
+        PlacementPageChoice: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            title: string;
+            status: string;
+            public_url: string;
+            edit_url: string;
+        };
+        PlacementPageDirectory: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["PlacementPageChoice"][];
+        };
         PlacementRead: {
             schema_version: number;
             page_type: string;
@@ -11429,6 +11469,7 @@ export interface components {
             revision_id: string | null;
             configured: boolean;
             items: components["schemas"]["PlacementResultItem"][];
+            groups: components["schemas"]["PlacementGroup"][];
             withdrawn: boolean;
             expected_revision?: string;
             is_current_revision?: boolean;
@@ -11443,12 +11484,15 @@ export interface components {
             }[];
             state?: string;
             can_publish?: boolean;
+            can_withdraw?: boolean;
             can_publish_confirmed?: boolean;
             confirmed_publication_blockers?: {
                 [key: string]: unknown;
             }[];
             impact?: string;
             title?: string;
+            public_url?: string;
+            edit_url?: string;
             replayed?: boolean;
             /** Format: uuid */
             applied_revision_id?: string;
@@ -11488,6 +11532,11 @@ export interface components {
             concept_usage?: {
                 [key: string]: unknown;
             } | null;
+            internal_goal?: string;
+            display_fields?: components["schemas"]["DisplayFieldsEnum"][];
+            reason_format?: {
+                [key: string]: unknown;
+            } | null;
         };
         PlacementResultItem: {
             /** Format: uuid */
@@ -11502,10 +11551,15 @@ export interface components {
             concept_usage?: {
                 [key: string]: unknown;
             } | null;
+            internal_goal?: string;
+            display_fields?: components["schemas"]["DisplayFieldsEnum"][];
+            reason_format?: {
+                [key: string]: unknown;
+            } | null;
             source: components["schemas"]["PlacementSource"] | null;
         };
         PlacementSource: {
-            type: components["schemas"]["ContentReferenceTypeEnum"];
+            type: components["schemas"]["PlacementSourceKindEnum"];
             /** Format: uuid */
             id: string;
             title: string;
@@ -11537,11 +11591,28 @@ export interface components {
             authors?: {
                 [key: string]: unknown;
             }[];
+            document_type?: string;
+            language?: string;
+            page_count?: number | null;
+            publisher?: string;
+            tags?: string[];
+            href?: string;
+            summary?: string;
         };
         PlacementSourceChoice: {
             target: components["schemas"]["PlacementTarget"];
             source: components["schemas"]["PlacementSource"];
         };
+        /**
+         * @description * `work` - work
+         *     * `edition` - edition
+         *     * `node` - node
+         *     * `span` - span
+         *     * `scholar` - scholar
+         *     * `issue` - issue
+         * @enum {string}
+         */
+        PlacementSourceKindEnum: "work" | "edition" | "node" | "span" | "scholar" | "issue";
         PlacementSourcesPage: {
             count: number;
             next: string | null;
@@ -11549,7 +11620,7 @@ export interface components {
             results: components["schemas"]["PlacementSourceChoice"][];
         };
         PlacementTarget: {
-            type: components["schemas"]["ContentReferenceTypeEnum"];
+            type: components["schemas"]["PlacementSourceKindEnum"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -11558,7 +11629,7 @@ export interface components {
             document_revision_id?: string;
         };
         PlacementTargetRequest: {
-            type: components["schemas"]["ContentReferenceTypeEnum"];
+            type: components["schemas"]["PlacementSourceKindEnum"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -16784,9 +16855,78 @@ export interface operations {
             };
         };
     };
+    catalog_admin_content_placements_pages_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `scholar` - scholar
+                 *     * `node` - node
+                 *     * `topic` - topic
+                 *     * `discipline` - discipline
+                 *     * `subdiscipline` - subdiscipline
+                 *     * `reading_path` - reading_path
+                 *     * `issue` - issue
+                 *     * `timeline_event` - timeline_event
+                 */
+                type?: "scholar" | "node" | "topic" | "discipline" | "subdiscipline" | "reading_path" | "issue" | "timeline_event";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementPageDirectory"];
+                };
+            };
+        };
+    };
     catalog_admin_content_placements_sources_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description * `book` - 图书
+                 *     * `journal_article` - 期刊论文
+                 *     * `journal_issue` - 整期期刊
+                 *     * `thesis` - 学位论文
+                 *     * `report` - 研究报告
+                 */
+                document_type?: "book" | "journal_article" | "journal_issue" | "thesis" | "report";
+                edition_id?: string;
+                language?: string;
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `yes` - yes
+                 *     * `no` - no
+                 */
+                readable?: "yes" | "no";
+                /**
+                 * @description * `relevance` - relevance
+                 *     * `title` - title
+                 *     * `newest` - newest
+                 *     * `oldest` - oldest
+                 */
+                sort?: "relevance" | "title" | "newest" | "oldest";
+                topic?: string;
+                /**
+                 * @description * `work` - work
+                 *     * `edition` - edition
+                 *     * `node` - node
+                 *     * `span` - span
+                 *     * `scholar` - scholar
+                 *     * `issue` - issue
+                 */
+                type?: "work" | "edition" | "node" | "span" | "scholar" | "issue";
+                work_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

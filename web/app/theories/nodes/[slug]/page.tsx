@@ -1,3 +1,4 @@
+import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { KnowledgeNodePublicView } from "@/components/public/knowledge-node-public-view";
@@ -20,5 +21,5 @@ export default async function KnowledgeNodePage({ params, searchParams }: { para
 
   return <KnowledgeNodePublicView key={`${node.id}:${node.public_detail?.revision_id || ""}`} node={node}
     timeline={timeline.results} allPaths={paths.results} slug={slug} publicDesign initialCompare={Array.isArray(query.compare) ? query.compare[0] : query.compare}
-    footer={<SiteFooter />} />;
+    footer={<><PublishedPlacements type="node" id={node.id}/><SiteFooter /></>} />;
 }

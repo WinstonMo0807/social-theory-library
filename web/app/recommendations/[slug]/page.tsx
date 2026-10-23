@@ -1,3 +1,4 @@
+import { PublishedPlacements } from "@/components/public/published-placements";
 import { RecommendationIssueView } from "@/components/public/recommendation-issue-view";
 import { SiteFooter } from "@/components/site-footer";
 import { loadRecommendationIssue } from "@/lib/api/recommendation-issues.server";
@@ -8,5 +9,5 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { slug } = await params;
   const issue = await loadRecommendationIssue(slug).catch(error => { if (error instanceof ServerApiError && error.status === 404) notFound(); throw error; });
   const query = await searchParams;
-  return <><RecommendationIssueView key={`${issue.public_revision_id}:${query.exhibit || ""}`} issue={issue} selectedExhibit={query.exhibit} /><SiteFooter /></>;
+  return <><RecommendationIssueView key={`${issue.public_revision_id}:${query.exhibit || ""}`} issue={issue} selectedExhibit={query.exhibit} /><PublishedPlacements type="issue" id={issue.id}/><SiteFooter /></>;
 }

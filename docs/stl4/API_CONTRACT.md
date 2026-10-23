@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M31/M32内容编排
+
+保留298，新增admin/content-placements/pages GET，共299。原sources增加准确版本筛选/作者/文献类型/主题/语言/可读性/排序和scholar/issue类型；24条分页。原save可传groups，item新增display_fields/internal_goal/reason_format；internal_goal从匿名投影移除，富文本限制沿原规范。来源类型、组结构、can_withdraw及公开/编辑URL同步契约。没有新增存储、任务或迁移。
+
 ## 2026-10-23 M29首页编排源码接入
 
 保留296条，新增admin/site-content/sources GET（已公开来源20条分页）及commands/{request_id} GET/POST（本人回执/停止未执行请求），共298。原site-content PUT/publish POST必需X-Editor-Owner、固定Idempotency-Key；发布confirm=true。草稿/公开home增加home_layout，null沿用公开推荐、空数组为明确空栏目。home_preview按真实发布来源重算，不含私人记录。通用修订入口排除site_content，网站历史仅本模块30条摘要。

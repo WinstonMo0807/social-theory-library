@@ -1,7 +1,7 @@
 """Protected editing, exact-revision preview, and public placement reads."""
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, IntegerField, Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
@@ -12,14 +12,14 @@ from rest_framework.views import APIView
 
 from catalog.editorial_issue_views import EditorialErrorMixin
 from catalog.editorial_read import AdminPrivateResponseMixin
-from catalog.models import Edition, KnowledgeNode
+from catalog.models import Edition, KnowledgeNode, DocumentType, Contribution, WorkTopicRelation
 from catalog.services import content_placements as service
 from catalog.services import shared_curation
 from common.permissions import CanEditMetadata, IsKnowledgeEditor
 
 
 class PlacementTargetSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=["work", "edition", "node", "span"])
+    type = serializers.ChoiceField(choices=["work", "edition", "node", "span", "scholar", "issue"])
     id = serializers.UUIDField()
     edition_id = serializers.UUIDField(required=False)
     document_revision_id = serializers.UUIDField(required=False)
@@ -35,6 +35,14 @@ class PlacementSerializer(serializers.Serializer):
     local_text = serializers.CharField(max_length=6000, allow_blank=True, required=False)
     reading_target = serializers.DictField(required=False, allow_null=True)
     concept_usage = serializers.DictField(required=False, allow_null=True)
+    internal_goal = serializers.CharField(max_length=1000, allow_blank=True, required=False)
+    display_fields = serializers.ListField(child=serializers.ChoiceField(choices=["authors", "year", "type", "tags"]), max_length=4, required=False)
+    reason_format = serializers.DictField(required=False, allow_null=True)
+
+
+class PlacementGroupSerializer(serializers.Serializer):
+    area = serializers.CharField(max_length=80)
+    name = serializers.CharField(max_length=240, allow_blank=True)
 
 
 class PlacementCommandSerializer(serializers.Serializer):
@@ -50,6 +58,7 @@ class PlacementCommandSerializer(serializers.Serializer):
     patch = serializers.DictField(required=False)
     revision_id = serializers.UUIDField(required=False)
     confirmed_only = serializers.BooleanField(required=False)
+    groups = PlacementGroupSerializer(many=True, max_length=100, required=False)
 
 
 class PlacementReaderTargetSerializer(serializers.Serializer):
@@ -64,7 +73,7 @@ class PlacementUsageAuthorSerializer(serializers.Serializer):
 
 
 class PlacementSourceSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=["work", "edition", "node", "span"])
+    type = serializers.ChoiceField(choices=["work", "edition", "node", "span", "scholar", "issue"])
     id = serializers.UUIDField()
     title = serializers.CharField(allow_blank=True)
     public_eligible = serializers.BooleanField()
@@ -89,6 +98,13 @@ class PlacementSourceSerializer(serializers.Serializer):
     image_url = serializers.CharField(required=False, allow_blank=True)
     publication_year = serializers.IntegerField(required=False, allow_null=True)
     authors = serializers.ListField(child=serializers.DictField(), required=False)
+    document_type = serializers.CharField(required=False, allow_blank=True)
+    language = serializers.CharField(required=False, allow_blank=True)
+    page_count = serializers.IntegerField(required=False, allow_null=True)
+    publisher = serializers.CharField(required=False, allow_blank=True)
+    tags = serializers.ListField(child=serializers.CharField(), required=False)
+    href = serializers.CharField(required=False, allow_blank=True)
+    summary = serializers.CharField(required=False, allow_blank=True)
 
 
 class PlacementResultItemSerializer(PlacementSerializer):
@@ -161,6 +177,7 @@ class PlacementReadSerializer(serializers.Serializer):
     revision_id = serializers.UUIDField(allow_null=True)
     configured = serializers.BooleanField()
     items = PlacementResultItemSerializer(many=True)
+    groups = PlacementGroupSerializer(many=True)
     withdrawn = serializers.BooleanField()
     expected_revision = serializers.CharField(required=False)
     is_current_revision = serializers.BooleanField(required=False)
@@ -170,10 +187,13 @@ class PlacementReadSerializer(serializers.Serializer):
     publication_blockers = serializers.ListField(child=serializers.DictField(), required=False)
     state = serializers.CharField(required=False)
     can_publish = serializers.BooleanField(required=False)
+    can_withdraw = serializers.BooleanField(required=False)
     can_publish_confirmed = serializers.BooleanField(required=False)
     confirmed_publication_blockers = serializers.ListField(child=serializers.DictField(), required=False)
     impact = serializers.CharField(required=False)
     title = serializers.CharField(required=False)
+    public_url = serializers.CharField(required=False)
+    edit_url = serializers.CharField(required=False)
     replayed = serializers.BooleanField(required=False)
     applied_revision_id = serializers.UUIDField(required=False)
     public_detail = PublicConceptDetailSerializer(required=False)
@@ -191,23 +211,64 @@ def _page(request, rows, serialize):
             "results": [serialize(row) for row in page.object_list]}
 
 
+class PlacementSourceQuerySerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["work", "edition", "node", "span", "scholar", "issue"], default="edition")
+    q = serializers.CharField(max_length=500, allow_blank=True, required=False)
+    work_id = serializers.UUIDField(required=False)
+    edition_id = serializers.UUIDField(required=False)
+    document_type = serializers.ChoiceField(choices=DocumentType.choices, required=False)
+    topic = serializers.CharField(max_length=240, allow_blank=True, required=False)
+    language = serializers.CharField(max_length=32, allow_blank=True, required=False)
+    readable = serializers.ChoiceField(choices=["yes", "no"], required=False)
+    sort = serializers.ChoiceField(choices=["relevance", "title", "newest", "oldest"], default="relevance")
+    page = serializers.IntegerField(min_value=1, default=1)
+
+
+def placement_source_rows(params):
+    """Search canonical catalog records; choose an exact edition before adding."""
+    from catalog.services.publication_eligibility import public_editions, current_retrieval_source_q
+    rows = Edition.objects.select_related("work", "active_catalog_revision", "active_catalog_revision__reader_asset")
+    query = params.get("q", "").strip()
+    if query:
+        authors = Contribution.objects.filter(edition_id=OuterRef("pk"), approved=True).filter(
+            Q(person__preferred_name__icontains=query) | Q(person__original_name__icontains=query))
+        rows = rows.annotate(matches_author=Exists(authors)).filter(
+            Q(work__title__icontains=query) | Q(work__original_title__icontains=query) | Q(isbn__icontains=query) | Q(doi__icontains=query) | Q(matches_author=True))
+    for parameter, field in (("work_id", "work_id"), ("edition_id", "id"), ("document_type", "work__document_type"), ("language", "work__language")):
+        if params.get(parameter):
+            rows = rows.filter(**{field: params[parameter]})
+    if params.get("topic"):
+        topics = WorkTopicRelation.objects.filter(work_id=OuterRef("work_id"), review_status="approved", topic__name__icontains=params["topic"])
+        rows = rows.annotate(matches_topic=Exists(topics)).filter(matches_topic=True)
+    if params.get("readable"):
+        readable = public_editions().filter(current_retrieval_source_q(asset_prefix="active_catalog_revision__reader_asset", access_statuses=("public", "inherit")))
+        rows = rows.annotate(is_readable=Exists(readable.filter(pk=OuterRef("pk")))).filter(is_readable=params["readable"] == "yes")
+    order = params.get("sort", "relevance")
+    if order == "relevance" and query:
+        rows = rows.annotate(match_rank=Case(When(work__title__iexact=query, then=Value(0)), When(work__title__istartswith=query, then=Value(1)), default=Value(2), output_field=IntegerField()))
+        return rows.order_by("match_rank", "work__title", "publication_year", "pk")
+    return rows.order_by(*({"newest": ["-publication_year", "work__title"], "oldest": ["publication_year", "work__title"]}.get(order, ["work__title", "publication_year"])), "pk")
+
+
 class PlacementSourcesView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsKnowledgeEditor | CanEditMetadata]
 
-    @extend_schema(responses=PlacementSourcesPageSerializer)
+    @extend_schema(parameters=[PlacementSourceQuerySerializer], responses=PlacementSourcesPageSerializer)
     def get(self, request):
-        kind = request.query_params.get("type", "edition")
-        query = request.query_params.get("q", "").strip()[:500]
+        incoming = PlacementSourceQuerySerializer(data=request.query_params)
+        incoming.is_valid(raise_exception=True)
+        params = incoming.validated_data
+        kind = params["type"]
+        query = params.get("q", "").strip()
+        if kind in {"scholar", "issue"}:
+            from catalog.site_layout import source_rows
+            return Response(_page(request, source_rows(kind, query), lambda row: dict(zip(("target", "source"), service._source({"type": kind, "id": str(row.pk)})))))
         if kind in {"work", "edition"}:
-            rows = Edition.objects.select_related("work", "active_catalog_revision")
-            if query:
-                rows = rows.filter(Q(work__title__icontains=query) | Q(isbn__icontains=query) | Q(doi__icontains=query))
-            if request.query_params.get("work_id"):
-                rows = rows.filter(work_id=shared_curation.identifier(request.query_params["work_id"]))
+            rows = placement_source_rows(params)
             def serialize(row):
                 reference, source = service._source({"type": kind, "id": str(row.work_id if kind == "work" else row.pk), "edition_id": str(row.pk)})
                 return {"target": reference, "source": source}
-            return Response(_page(request, rows.order_by("work__title", "publication_year", "pk"), serialize))
+            return Response(_page(request, rows, serialize))
         if kind == "node":
             rows = KnowledgeNode.objects.all()
             if query:

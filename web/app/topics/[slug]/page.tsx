@@ -1,3 +1,4 @@
+import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TopicPublicView } from "@/components/public/topic-public-view";
@@ -13,5 +14,5 @@ export default async function TopicDetailPage({ params, searchParams }: { params
   let topic;
   try { topic = await loadTopic(slug, "overview", filters); } catch { return <><TopicLoadError slug={slug} /><SiteFooter /></>; }
   if (!topic) notFound();
-  return <TopicPublicView topic={topic} params={filters} footer={<SiteFooter />} />;
+  return <TopicPublicView topic={topic} params={filters} footer={<><PublishedPlacements type="topic" id={topic.id}/><SiteFooter /></>} />;
 }

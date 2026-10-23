@@ -5,6 +5,7 @@ AuditEvent is the durable request receipt. Removing a placement never deletes it
 source. Saved sources retain their exact edition/document identities.
 """
 from copy import deepcopy
+from collections import Counter
 from hashlib import sha256
 import json
 from uuid import NAMESPACE_URL, uuid4, uuid5
@@ -105,7 +106,8 @@ def _index(value, size):
 def _edition_details(edition, source, *, span=None):
     """Readonly labels/media from this exact activated edition, never draft media."""
     if not source.get("public_eligible"):
-        return {"authors": [], "publication_year": None, "publisher": "", "image_url": ""}
+        return {"authors": [], "publication_year": edition.publication_year, "publisher": edition.publisher,
+                "image_url": "", "document_type": edition.work.document_type, "language": edition.work.language, "tags": []}
     from catalog.services.contribution_projection import contribution_projection, edition_author_projection
     snapshot = edition.active_catalog_revision.snapshot or {}
     work, data = snapshot.get("work") or {}, snapshot.get("edition") or {}
@@ -115,7 +117,11 @@ def _edition_details(edition, source, *, span=None):
     image = f"/api/catalog/works/{edition.work_id}/cover/?edition_id={edition.pk}" if work.get("cover") or media else ""
     if image and media.get("primary_rendition_id"):
         image += f"&rendition={media['primary_rendition_id']}"
+    from catalog.services.publication_eligibility import public_taxonomy_snapshot
+    taxonomy = public_taxonomy_snapshot(snapshot)
     return {"authors": authors, "publication_year": data.get("publication_year"),
+            "document_type": work.get("document_type", ""), "language": work.get("language", ""),
+            "tags": [row.get("name", "") for row in (taxonomy.get("knowledge") or {}).get("topics", []) if row.get("name")],
             "publisher": data.get("publisher") or "", "image_url": image}
 
 
@@ -125,6 +131,20 @@ def _source(target, *, public=False):
     if not isinstance(kind, str):
         raise ValidationError({"target": "引用类型必须是文字标识。"})
     key = shared_curation.identifier(target.get("id"))
+    if kind in {"scholar", "issue"}:
+        from catalog.site_layout import source_card
+        rows = ScholarProfile.objects.select_related("person") if kind == "scholar" else RecommendationIssue.objects.all()
+        row = get_object_or_404(rows, pk=key)
+        try:
+            card = source_card({"type": kind, "id": str(key)})
+            source = {"type": kind, "id": str(key), "title": card["title"], "summary": card["description"],
+                      "href": card["href"], "image_url": card["image_url"], "public_eligible": True}
+        except Http404:
+            if public:
+                raise
+            source = {"type": kind, "id": str(key), "title": _title(row), "public_eligible": False}
+        source["edit_url"] = PAGES[kind][2] + str(key)
+        return {"type": kind, "id": str(key)}, source
     if kind in {"work", "edition"}:
         edition_id = target.get("edition_id") if kind == "work" else key
         rows = public_editions() if public else Edition.objects.select_related("work", "active_catalog_revision")
@@ -144,7 +164,7 @@ def _source(target, *, public=False):
                   "edition_id": str(edition.pk), "title": title, "edition_label": label,
                   "public_eligible": eligible,
                   "reader_url": f"/reader/{reader.pk}?revision={document_id}" if readable else "",
-                  "asset_id": str(reader.pk) if readable else "", "document_revision_id": document_id,
+                  "asset_id": str(reader.pk) if readable else "", "document_revision_id": document_id, "page_count": reader.page_count if readable else None,
                   "work_url": f"/works/{edition.public_slug}" if eligible and edition.public_slug else "",
                   "edit_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}"}
         source.update(_edition_details(edition, source))
@@ -170,7 +190,7 @@ def _source(target, *, public=False):
         source["reader_target"] = {"asset_id": source["asset_id"], "document_revision_id": source["document_revision_id"], "pdf_page": source["page_start"]}
         source.update(type=kind, title=source["work_title"], edit_url=f"/admin/library/works/{source['work_id']}?edition={source['edition_id']}")
         return reference, source
-    raise ValidationError({"target": "请选择已有作品、出版版本、知识节点或原文。"})
+    raise ValidationError({"target": "请选择已有作品、出版版本、知识节点、学者、策划或原文。"})
 
 
 def _landing(value, reference, *, public=False):
@@ -235,7 +255,7 @@ def _normalize(items, *, existing=None, page_type=None):
     result, seen = [], set()
     prior = {row["id"]: row for row in existing or []}
     for item in items:
-        if not isinstance(item, dict) or set(item) - {"id", "area", "group", "position", "target", "reason", "local_text", "reading_target", "concept_usage"}:
+        if not isinstance(item, dict) or set(item) - {"id", "area", "group", "position", "target", "reason", "local_text", "reading_target", "concept_usage", "internal_goal", "display_fields", "reason_format"}:
             raise ValidationError("只能编辑本页引用、位置与文案，不能通过编排修改馆藏或原文。")
         key = str(shared_curation.identifier(item["id"])) if item.get("id") else str(uuid4())
         if key in seen:
@@ -258,12 +278,33 @@ def _normalize(items, *, existing=None, page_type=None):
                        "position": sum(row["area"] == area and row["group"] == group for row in result),
                        "target": reference, "reason": ledger._text(item.get("reason", ""), 6000),
                        "local_text": ledger._text(item.get("local_text", ""), 6000)})
+        fields = item.get("display_fields", ["authors", "year", "type", "tags"])
+        if not isinstance(fields, list) or len(fields) > 4 or any(not isinstance(field, str) or field not in {"authors", "year", "type", "tags"} for field in fields) or len(set(fields)) != len(fields):
+            raise ValidationError({"display_fields": "展示字段限作者、年份、类型和主题标签。"})
+        result[-1].update(display_fields=fields, internal_goal=ledger._text(item.get("internal_goal", ""), 1000))
+        if item.get("reason_format") is not None:
+            from catalog.services.editorial_blocks import normalize_text_format
+            formatting = item["reason_format"]
+            if not isinstance(formatting, dict) or set(formatting) - {"text_style", "text_marks"}:
+                raise ValidationError({"reason_format": "本页文案只接受固定文字格式。"})
+            formatted = normalize_text_format({**formatting, "text": item.get("reason", "")}, {"type": "paragraph", "text": result[-1]["reason"]})
+            result[-1]["reason_format"] = {key: formatted[key] for key in ("text_style", "text_marks") if key in formatted}
         if item.get("reading_target") is not None:
             landing = item["reading_target"]
             result[-1]["reading_target"] = deepcopy(landing) if key in prior and landing == prior[key].get("reading_target") else _landing(landing, reference)
         if item.get("concept_usage") is not None:
             usage = item["concept_usage"]
             result[-1]["concept_usage"] = deepcopy(usage) if key in prior and usage == prior[key].get("concept_usage") else _concept_usage(usage, reference, page_type)
+    # Existing duplicate evidence uses may be intentional. Do not introduce
+    # additional copies of the same work/edition into the same group.
+    edition_ids = {row["target"]["id"] for row in [*result, *(existing or [])] if row["target"]["type"] == "edition"}
+    works = {str(key): str(value) for key, value in Edition.objects.filter(pk__in=edition_ids).values_list("pk", "work_id")} if edition_ids else {}
+    def identities(rows):
+        return Counter((row.get("area", "main"), row.get("group", ""), works.get(row["target"]["id"], row["target"]["id"]))
+                       for row in rows if row["target"]["type"] in {"work", "edition"})
+    prior_counts = identities(existing or [])
+    if any(count > max(1, prior_counts[key]) for key, count in identities(result).items()):
+        raise ValidationError({"items": "同一分组不能重复加入同一作品的多个版本，请修改已有条目或移到其他分组。"})
     return result
 
 
@@ -286,7 +327,7 @@ def _resolved_items(items, *, public=False):
             if item.get("reading_target"):
                 landing = _landing(item["reading_target"], reference, public=public)
                 source["reader_target"] = landing
-                source["reader_url"] = f"/reader/{landing['asset_id']}?page={landing['pdf_page']}"
+                source["reader_url"] = f"/reader/{landing['asset_id']}?page={landing['pdf_page']}&revision={landing['document_revision_id']}"
                 if not public:
                     try:
                         _landing(landing, reference, public=True)
@@ -297,6 +338,8 @@ def _resolved_items(items, *, public=False):
             elif not source["public_eligible"]:
                 problems.append({"item_id": item["id"], "code": "source_not_public", "detail": "该来源尚未公开或已撤回。", "edit_url": source.get("edit_url", "")})
             row = {**item, "source": source}
+            if public:
+                row.pop("internal_goal", None)
             if public and usage:
                 # Editorial opinions and alternative translations never become public by publication.
                 row["concept_usage"] = {key: value for key, value in usage.items()
@@ -326,7 +369,8 @@ def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
     items, problems = _resolved_items(data.get("items", []), public=public)
     result = {"schema_version": 1, "page_type": page_type, "page_id": str(parent.pk),
               "revision_id": str(selected.pk) if selected else None,
-              "configured": bool(selected), "items": items, "withdrawn": data.get("withdrawn", False)}
+              "configured": bool(selected), "items": items, "groups": _groups(data.get("groups"), data.get("items", [])),
+              "withdrawn": data.get("withdrawn", False)}
     if public and page_type == "node":
         result["public_detail"] = public_concept_detail(result, data.get("items", []))
     if not public:
@@ -340,12 +384,13 @@ def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
             may_publish = True
         except PermissionDenied:
             may_publish = False
-        result.update(title=_title(parent), expected_revision=version(latest),
+        result.update(title=_title(parent), public_url=public_url(page_type, parent), edit_url=PAGES[page_type][2] + str(parent.pk), expected_revision=version(latest),
                       is_current_revision=bool(selected and latest and selected.pk == latest.pk),
                       published_revision_id=str(published.pk) if published else None,
                       has_unpublished_changes=bool(latest and latest.status == "draft"),
                       source_problems=problems, publication_blockers=blockers,
                       can_publish=may_publish and not blockers and bool(selected and latest and selected.pk == latest.pk and latest.status == "draft"),
+                      can_withdraw=may_publish and bool(published) and not data.get("withdrawn", False),
                       state="saved_unpublished" if latest and latest.status == "draft" else "withdrawn" if data.get("withdrawn") else "published" if published else "empty",
                       impact="本页文案和位置只影响此页面；修改题名、作者或原文须进入来源编辑。")
         excluded = {row["id"] for row in data.get("items", []) if row.get("concept_usage")
@@ -355,6 +400,34 @@ def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
             can_publish_confirmed=may_publish and not confirmed_blockers and bool(items)
                 and any(row["id"] not in excluded for row in items)
                 and bool(selected and latest and selected.pk == latest.pk and latest.status == "draft"))
+    return result
+
+
+def public_url(page_type, parent):
+    paths = {"scholar": "/scholars/", "node": "/theories/nodes/", "topic": "/topics/",
+             "discipline": "/theories/disciplines/", "subdiscipline": "/subdisciplines/",
+             "reading_path": "/theories/reading-paths/", "issue": "/recommendations/", "timeline_event": "/theories/events/"}
+    return paths[page_type] + str(parent.pk if page_type == "timeline_event" else parent.slug) if page_type in paths else "/"
+
+
+def _groups(value, items):
+    """Keep empty groups and their order in the same revision as the item list."""
+    if value is None:
+        value = []
+    if not isinstance(value, list) or len(value) > 100:
+        raise ValidationError({"groups": "最多保留100个分组。"})
+    result, seen = [], set()
+    for row in value:
+        if not isinstance(row, dict) or set(row) != {"area", "name"}:
+            raise ValidationError({"groups": "分组只接受展示区域和名称。"})
+        area, name = ledger._text(row["area"], 80), ledger._text(row["name"], 240)
+        if not area or (area, name) in seen:
+            raise ValidationError({"groups": "分组区域不能为空，同一区域的名称不能重复。"})
+        seen.add((area, name)); result.append({"area": area, "name": name})
+    for row in items:
+        key = (row.get("area", "main"), row.get("group", ""))
+        if key not in seen:
+            seen.add(key); result.append({"area": key[0], "name": key[1]})
     return result
 
 
@@ -417,7 +490,7 @@ def command(page_type, page_id, data, actor):
     if action not in ACTIONS:
         raise ValidationError({"action": "未知编排操作。"})
     allowed = {"action", "request_id", "expected_revision"} | {
-        "save": {"items"}, "add": {"item", "position"}, "move": {"item_id", "position", "area", "group"},
+        "save": {"items", "groups"}, "add": {"item", "position"}, "move": {"item_id", "position", "area", "group"},
         "update": {"item_id", "patch"}, "remove": {"item_id"}, "undo": set(),
         "restore": {"revision_id"}, "publish": {"confirmed_only"}, "withdraw": set(),
     }[action]
@@ -441,9 +514,11 @@ def command(page_type, page_id, data, actor):
     if data.get("expected_revision") != version(latest):
         raise ledger.EditConflict("页面已有新修改；请保留当前输入，读取最新编排后核对差异。")
     items = deepcopy(latest.materialized_preview.get("items", [])) if latest else []
+    groups = deepcopy(latest.materialized_preview.get("groups")) if latest else None
     existing = deepcopy(items)
     if action == "save":
         items = data.get("items")
+        groups = data.get("groups", groups)
     elif action == "add":
         item = _normalize([data.get("item")], page_type=page_type)[0]
         items.append(item)
@@ -459,7 +534,7 @@ def command(page_type, page_id, data, actor):
             items.remove(item)
         else:
             patch = data.get("patch")
-            if not isinstance(patch, dict) or set(patch) - {"reason", "local_text", "reading_target", "concept_usage"}:
+            if not isinstance(patch, dict) or set(patch) - {"reason", "local_text", "reading_target", "concept_usage", "internal_goal", "display_fields", "reason_format"}:
                 raise ValidationError({"patch": "此操作只能修改本页推荐理由、文案、阅读落点与有出处的概念用法。"})
             item.update(patch)
     elif action in {"undo", "restore"}:
@@ -473,6 +548,7 @@ def command(page_type, page_id, data, actor):
         if previous is None and latest is None:
             raise ValidationError("没有可以撤销的修改。")
         items = deepcopy(previous.materialized_preview.get("items", [])) if previous else []
+        groups = deepcopy(previous.materialized_preview.get("groups")) if previous else None
         existing = deepcopy(items)
     if action == "publish":
         if latest is None or latest.status != "draft":
@@ -498,6 +574,7 @@ def command(page_type, page_id, data, actor):
         payload = {"schema_version": 1, "page_type": page_type, "page_id": str(parent.pk),
                    "title": _title(parent), "edit_url": PAGES[page_type][2] + str(parent.pk),
                    "items": [] if action == "withdraw" else _normalize(items, existing=existing, page_type=page_type), "withdrawn": action == "withdraw"}
+        payload["groups"] = [] if action == "withdraw" else _groups(groups, payload["items"])
         if action == "undo":
             payload["undo_next_revision"] = previous.base_revision if previous else None
         revision = ledger._save_revision(KIND, key, payload, actor)

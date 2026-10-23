@@ -1561,9 +1561,190 @@
                 }
             }
         },
+        "/api/catalog/admin/content-placements/pages/": {
+            "get": {
+                "operationId": "catalog_admin_content_placements_pages_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 240
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "schema": {
+                            "enum": [
+                                "scholar",
+                                "node",
+                                "topic",
+                                "discipline",
+                                "subdiscipline",
+                                "reading_path",
+                                "issue",
+                                "timeline_event"
+                            ],
+                            "type": "string",
+                            "default": "issue",
+                            "minLength": 1
+                        },
+                        "description": "* `scholar` - scholar\n* `node` - node\n* `topic` - topic\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `reading_path` - reading_path\n* `issue` - issue\n* `timeline_event` - timeline_event"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlacementPageDirectory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/content-placements/sources/": {
             "get": {
                 "operationId": "catalog_admin_content_placements_sources_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "document_type",
+                        "schema": {
+                            "enum": [
+                                "book",
+                                "journal_article",
+                                "journal_issue",
+                                "thesis",
+                                "report"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告"
+                    },
+                    {
+                        "in": "query",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "language",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 32
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 500
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "readable",
+                        "schema": {
+                            "enum": [
+                                "yes",
+                                "no"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `yes` - yes\n* `no` - no"
+                    },
+                    {
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "enum": [
+                                "relevance",
+                                "title",
+                                "newest",
+                                "oldest"
+                            ],
+                            "type": "string",
+                            "default": "relevance",
+                            "minLength": 1
+                        },
+                        "description": "* `relevance` - relevance\n* `title` - title\n* `newest` - newest\n* `oldest` - oldest"
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 240
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "schema": {
+                            "enum": [
+                                "work",
+                                "edition",
+                                "node",
+                                "span",
+                                "scholar",
+                                "issue"
+                            ],
+                            "type": "string",
+                            "default": "edition",
+                            "minLength": 1
+                        },
+                        "description": "* `work` - work\n* `edition` - edition\n* `node` - node\n* `span` - span\n* `scholar` - scholar\n* `issue` - issue"
+                    },
+                    {
+                        "in": "query",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
                 "tags": [
                     "catalog"
                 ],
@@ -27208,16 +27389,6 @@
                     "expected_revision"
                 ]
             },
-            "ContentReferenceTypeEnum": {
-                "enum": [
-                    "work",
-                    "edition",
-                    "node",
-                    "span"
-                ],
-                "type": "string",
-                "description": "* `work` - work\n* `edition` - edition\n* `node` - node\n* `span` - span"
-            },
             "CoverMediaSelectionRequest": {
                 "type": "object",
                 "properties": {
@@ -28882,6 +29053,16 @@
                     "request_id",
                     "token"
                 ]
+            },
+            "DisplayFieldsEnum": {
+                "enum": [
+                    "authors",
+                    "year",
+                    "type",
+                    "tags"
+                ],
+                "type": "string",
+                "description": "* `authors` - authors\n* `year` - year\n* `type` - type\n* `tags` - tags"
             },
             "DocumentRevisionApplyModeEnum": {
                 "enum": [
@@ -44176,12 +44357,53 @@
                     },
                     "confirmed_only": {
                         "type": "boolean"
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PlacementGroupRequest"
+                        }
                     }
                 },
                 "required": [
                     "action",
                     "expected_revision",
                     "request_id"
+                ]
+            },
+            "PlacementGroup": {
+                "type": "object",
+                "properties": {
+                    "area": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    }
+                },
+                "required": [
+                    "area",
+                    "name"
+                ]
+            },
+            "PlacementGroupRequest": {
+                "type": "object",
+                "properties": {
+                    "area": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 240
+                    }
+                },
+                "required": [
+                    "area",
+                    "name"
                 ]
             },
             "PlacementHistoryItem": {
@@ -44264,6 +44486,66 @@
                     "results"
                 ]
             },
+            "PlacementPageChoice": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "public_url": {
+                        "type": "string"
+                    },
+                    "edit_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "edit_url",
+                    "id",
+                    "public_url",
+                    "status",
+                    "title",
+                    "type"
+                ]
+            },
+            "PlacementPageDirectory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PlacementPageChoice"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
+                ]
+            },
             "PlacementRead": {
                 "type": "object",
                 "properties": {
@@ -44289,6 +44571,12 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/PlacementResultItem"
+                        }
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PlacementGroup"
                         }
                     },
                     "withdrawn": {
@@ -44328,6 +44616,9 @@
                     "can_publish": {
                         "type": "boolean"
                     },
+                    "can_withdraw": {
+                        "type": "boolean"
+                    },
                     "can_publish_confirmed": {
                         "type": "boolean"
                     },
@@ -44344,6 +44635,12 @@
                     "title": {
                         "type": "string"
                     },
+                    "public_url": {
+                        "type": "string"
+                    },
+                    "edit_url": {
+                        "type": "string"
+                    },
                     "replayed": {
                         "type": "boolean"
                     },
@@ -44357,6 +44654,7 @@
                 },
                 "required": [
                     "configured",
+                    "groups",
                     "items",
                     "page_id",
                     "page_type",
@@ -44466,6 +44764,22 @@
                         "type": "object",
                         "additionalProperties": {},
                         "nullable": true
+                    },
+                    "internal_goal": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "display_fields": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DisplayFieldsEnum"
+                        },
+                        "maxItems": 4
+                    },
+                    "reason_format": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -44515,6 +44829,22 @@
                         "additionalProperties": {},
                         "nullable": true
                     },
+                    "internal_goal": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "display_fields": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DisplayFieldsEnum"
+                        },
+                        "maxItems": 4
+                    },
+                    "reason_format": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
+                    },
                     "source": {
                         "allOf": [
                             {
@@ -44534,7 +44864,7 @@
                 "type": "object",
                 "properties": {
                     "type": {
-                        "$ref": "#/components/schemas/ContentReferenceTypeEnum"
+                        "$ref": "#/components/schemas/PlacementSourceKindEnum"
                     },
                     "id": {
                         "type": "string",
@@ -44625,6 +44955,31 @@
                             "type": "object",
                             "additionalProperties": {}
                         }
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "page_count": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "summary": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -44648,6 +45003,18 @@
                     "source",
                     "target"
                 ]
+            },
+            "PlacementSourceKindEnum": {
+                "enum": [
+                    "work",
+                    "edition",
+                    "node",
+                    "span",
+                    "scholar",
+                    "issue"
+                ],
+                "type": "string",
+                "description": "* `work` - work\n* `edition` - edition\n* `node` - node\n* `span` - span\n* `scholar` - scholar\n* `issue` - issue"
             },
             "PlacementSourcesPage": {
                 "type": "object",
@@ -44681,7 +45048,7 @@
                 "type": "object",
                 "properties": {
                     "type": {
-                        "$ref": "#/components/schemas/ContentReferenceTypeEnum"
+                        "$ref": "#/components/schemas/PlacementSourceKindEnum"
                     },
                     "id": {
                         "type": "string",
@@ -44705,7 +45072,7 @@
                 "type": "object",
                 "properties": {
                     "type": {
-                        "$ref": "#/components/schemas/ContentReferenceTypeEnum"
+                        "$ref": "#/components/schemas/PlacementSourceKindEnum"
                     },
                     "id": {
                         "type": "string",

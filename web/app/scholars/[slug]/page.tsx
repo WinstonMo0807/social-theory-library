@@ -1,3 +1,4 @@
+import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ScholarPublicView } from "@/components/public/scholar-public-view";
@@ -15,5 +16,5 @@ export default async function ScholarDetailPage({ params, searchParams }: { para
   let data;
   try { data = await loadPublicScholar(slug, "overview", query); } catch { return <><ScholarLoadError slug={slug} /><SiteFooter /></>; }
   if (!data) notFound();
-  return <ScholarPublicView data={data} params={query} footer={<SiteFooter />} />;
+  return <ScholarPublicView data={data} params={query} footer={<><PublishedPlacements type="scholar" id={data.id}/><SiteFooter /></>} />;
 }

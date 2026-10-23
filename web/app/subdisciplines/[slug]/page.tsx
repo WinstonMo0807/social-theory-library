@@ -1,3 +1,4 @@
+import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SubdisciplinePublicView } from "@/components/public/subdiscipline-public-view";
@@ -37,5 +38,5 @@ export default async function SubdisciplinePage({ params, searchParams }: {
   }
   if (!item) notFound();
 
-  return <SubdisciplinePublicView item={item} footer={<SiteFooter />} />;
+  return <SubdisciplinePublicView item={item} footer={<><PublishedPlacements type="subdiscipline" id={item.id}/><SiteFooter /></>} />;
 }
