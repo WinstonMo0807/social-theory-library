@@ -27,9 +27,16 @@ const navigationGroups = [
   ] },
   { label: "系统", entries: [
     { href: "/admin/users", title: "账户与权限", Icon: Users, paths: ["/admin/users"], children: [] },
-    { href: "/admin/processing/status", title: "运行维护", Icon: ChartNoAxesCombined, paths: ["/admin/status", "/admin/system-health", "/admin/storage", "/admin/backups", "/admin/analytics", "/admin/recycle", "/admin/settings", "/admin/distribution", "/admin/query-lexicon", "/admin/semantic-index", "/admin/support"], children: [["/admin/processing/status", "运行检查"], ["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "审计与统计"], ["/admin/settings", "模型与服务"], ["/admin/distribution", "分发设置"], ["/admin/recycle", "回收站"], ["/admin/support/feedback", "反馈处理"], ["/admin/support/parallel-calibrations", "公共校准"]] },
+    { href: "/admin/processing/status", title: "运行维护", Icon: ChartNoAxesCombined, paths: ["/admin/processing/status", "/admin/processing/health", "/admin/processing/settings", "/admin/status", "/admin/system-health", "/admin/storage", "/admin/backups", "/admin/analytics", "/admin/recycle", "/admin/settings", "/admin/distribution", "/admin/query-lexicon", "/admin/semantic-index", "/admin/support"], children: [["/admin/processing/status", "运行检查"], ["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "审计与统计"], ["/admin/settings", "模型与服务"], ["/admin/distribution", "分发设置"], ["/admin/recycle", "回收站"], ["/admin/support/feedback", "反馈处理"], ["/admin/support/parallel-calibrations", "公共校准"]] },
   ] },
 ] as const;
+
+// A nested system page belongs to its most specific navigation group.
+function navigationHref(pathname: string) {
+  return navigationGroups.flatMap(group => group.entries.flatMap(entry => entry.paths.map(path => ({ path, href: entry.href }))))
+    .filter(({ path }) => pathname === path || path !== "/admin" && pathname.startsWith(`${path}/`))
+    .sort((a, b) => b.path.length - a.path.length)[0]?.href;
+}
 
 const routeCapabilities: Record<string, string[]> = {
   "/admin/visual-review": ["can_manage_users"],
@@ -210,7 +217,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
         <nav aria-label="管理工作区">
           {navigationGroups.map(group => <section className="stl4-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.entries.map(entry => {
-            const active = entry.paths.some(path => pathname === path || path !== "/admin" && pathname.startsWith(`${path}/`));
+            const active = navigationHref(pathname) === entry.href;
             const allowed = canViewRoute(entry.href);
             return <div className="admin-nav-section" key={entry.href}>
               {allowed ? <Link className={`admin-nav-primary ${active ? "active" : ""}`} aria-current={active ? "page" : undefined} href={entry.href} prefetch={false} onClick={closeNavigation}><entry.Icon size={17} /><span>{entry.title}</span>{active && entry.children.length ? <ChevronDown size={13} /> : null}</Link> : <span className="stl4-nav-locked" aria-disabled="true"><entry.Icon size={17} /><span>{entry.title}</span><LockKeyhole size={12} /></span>}
@@ -243,7 +250,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </header> : null}
         <div className="admin-content" key={String(user.id)}>{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{returnToToday ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回今日工作</Link> : null}{returnToSearch ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回搜索结果</Link> : null}{canViewRoute(pathname) ? children : <section className="stl4-admin-denied" role="alert"><LockKeyhole size={28} /><h1>当前账户没有此项管理权限</h1><p>你可以返回今日工作，继续处理有权访问的条目。</p><Link href="/admin">返回今日工作</Link><Link href="/feedback?category=usage">申请权限</Link></section>}</div>
       </div>
-      <nav className="stl4-admin-mobile-nav" aria-label="移动端管理导航" inert={compactNavigation && open}>{navigationGroups[0].entries.map(entry => canViewRoute(entry.href) ? <Link href={entry.href} key={entry.href} prefetch={false} aria-current={entry.paths.some(path => pathname === path || path !== "/admin" && pathname.startsWith(`${path}/`)) ? "page" : undefined}><entry.Icon size={19} /><span>{entry.title}</span></Link> : <span key={entry.href} aria-disabled="true"><LockKeyhole size={17} /><span>{entry.title}</span></span>)}<button type="button" onClick={() => setOpen(true)} aria-controls="admin-navigation" aria-expanded={open}><MoreHorizontal size={20} /><span>更多</span></button></nav>
+      <nav className="stl4-admin-mobile-nav" aria-label="移动端管理导航" inert={compactNavigation && open}>{navigationGroups[0].entries.map(entry => canViewRoute(entry.href) ? <Link href={entry.href} key={entry.href} prefetch={false} aria-current={navigationHref(pathname) === entry.href ? "page" : undefined}><entry.Icon size={19} /><span>{entry.title}</span></Link> : <span key={entry.href} aria-disabled="true"><LockKeyhole size={17} /><span>{entry.title}</span></span>)}<button type="button" onClick={() => setOpen(true)} aria-controls="admin-navigation" aria-expanded={open}><MoreHorizontal size={20} /><span>更多</span></button></nav>
     </div>
     </AdminSessionContext.Provider>
   );

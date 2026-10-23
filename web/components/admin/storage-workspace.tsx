@@ -7,7 +7,7 @@ import { ChevronRight, CircleAlert, Database, Download, FileCheck2, HardDrive, H
 import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
-import { withPrivateOwner } from "@/lib/api/private-owner";
+import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
 import type { components } from "@/lib/api/generated/schema";
 import styles from "./storage-workspace.module.css";
 
@@ -33,6 +33,18 @@ const tone = (status:string) => status==="completed"||status==="available"?"read
 const active = (status:string) => status==="queued"||status==="running";
 const poll = (value:Snapshot) => value.backups.results.some(row=>active(row.status))||value.verifications.some(row=>active(row.status)&&!row.stalled)?5000:null;
 
+// Only non-secret command fields are retained, under the verified account's key.
+function storedCommand(raw:string):Command {
+  const value:unknown=JSON.parse(raw);
+  if(!value||typeof value!=="object"||Array.isArray(value))throw Error("备份请求记录损坏，请保留本页并核对备份记录后再处理。");
+  const row=value as Record<string,unknown>;
+  const strings=["operation","request_id","retry_from_id","backup_id","expected_checksum","verification_id","scope","expected_version"];
+  if(Object.entries(row).some(([key,item])=>strings.includes(key)?typeof item!=="string"||item.length>1000:["include_originals","enabled"].includes(key)?typeof item!=="boolean":key==="interval_hours"?typeof item!=="number"||!Number.isFinite(item):key==="first_run_at"?item!==null&&typeof item!=="string":true)
+    ||typeof row.request_id!=="string"||! /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(row.request_id)
+    ||!["create_backup","verify_archive","restore_plan","close_stalled_verification","save_schedule"].includes(String(row.operation)))throw Error("备份请求记录不完整，请先核对已有备份与计划，避免重复发起。");
+  return row as Command;
+}
+
 function download(value:unknown,name:string) {
   const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:"application/json;charset=utf-8"}));
   const anchor=document.createElement("a");anchor.href=url;anchor.download=name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -51,17 +63,23 @@ function Workspace({owner}:{owner:string}) {
   const [plan,setPlan]=useState<Plan|null>(null),[unresolved,setUnresolved]=useState<Command|null>(null);
   const [schedule,setSchedule]=useState<Schedule|null>(null);
   const [showLocations,setShowLocations]=useState(false),[showProtection,setShowProtection]=useState(false);
+  const [ready,setReady]=useState(false), recoveryKey=`stl-storage-command:${owner}`;
   const query=`${base}?page=${page}&status=${tab==="failed"?"failed":status}`;
   const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Snapshot>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
   const resource=usePersistentWorkspace<Snapshot>(query,owner,poll,load);
   const lifecycle=useRef<AbortController|null>(null),busy=useRef(false),pending=useRef<Command|null>(null);
-  useEffect(()=>{const controller=new AbortController();lifecycle.current=controller;return()=>controller.abort();},[]);
-  const data=resource.data, primary=data?.locations[0], disabled=resource.pending||!!unresolved;
+  useEffect(()=>{const controller=new AbortController();lifecycle.current=controller;
+    queueMicrotask(()=>{if(controller.signal.aborted)return;try{const raw=sessionStorage.getItem(recoveryKey);pending.current=raw?storedCommand(raw):null;setUnresolved(pending.current);setReady(true);}catch(reason){setMessage(reason instanceof Error?reason.message:"浏览器不能读取原请求，请保留本页并核对备份记录。");}});
+    return()=>controller.abort();},[recoveryKey]);
+  const data=resource.data, primary=data?.locations[0], disabled=!ready||!data||resource.pending||!!unresolved;
+
+  function clearCommand(){sessionStorage.removeItem(recoveryKey);pending.current=null;setUnresolved(null);}
 
   async function command(intent:Intent, retry=false) {
-    if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted||pending.current&&!retry)return;
+    if(!ready||!data||busy.current||!lifecycle.current||lifecycle.current.signal.aborted||pending.current&&!retry)return;
     const controller=lifecycle.current;
     const values=pending.current||{...intent,request_id:createRequestKey()};
+    try{sessionStorage.setItem(recoveryKey,JSON.stringify(values));}catch{setMessage("浏览器不能保存原请求，尚未提交。请保留当前页面并恢复浏览器存储后重试。");return;}
     pending.current=values;busy.current=true;setMessage("");setUnresolved(values);
     let reply:Reply|undefined;
     try {
@@ -72,14 +90,15 @@ function Workspace({owner}:{owner:string}) {
         return snapshot;
       });
       if(controller.signal.aborted||!result||!reply)return;
-      pending.current=null;setUnresolved(null);
+      if(reply.request_id!==values.request_id||reply.operation!==values.operation)throw Error("回执与原请求不一致，请按原编号继续核对。");
+      clearCommand();
       if(reply.restore_plan){setPlan(reply.restore_plan);setTab("rehearsals");setMessage("演练准备清单已生成，尚未执行恢复。");}
       else if(reply.schedule_saved){setSchedule(null);setMessage("备份计划已保存。实际执行结果将进入备份记录。");}
       else if(reply.backup){setShowCreate(false);setSelected(reply.backup.id);setMessage("备份请求已登记；生成结果以任务记录为准。");}
       else{setMessage(values.operation==="close_stalled_verification"?"超时记录已关闭，归档保留。可另行发起校验。":"校验请求已登记，不会解压或覆盖现有文件。");}
     } catch(reason) {
       if(controller.signal.aborted)return;
-      if(reason instanceof ApiRequestError&&reason.status>=400&&reason.status<500){pending.current=null;setUnresolved(null);}
+      if(reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,401,403,404,409,410,422].includes(reason.status)){try{clearCommand();}catch{setMessage("操作被拒绝，但原请求记录暂不能清除，请保留本页并恢复浏览器存储。");return;}}
       setMessage(reason instanceof Error?reason.message:"操作暂未确认，请使用原请求查回。");
     } finally {if(!controller.signal.aborted)busy.current=false;}
   }
@@ -94,7 +113,7 @@ function Workspace({owner}:{owner:string}) {
     <header className={styles.title}><div><h1>存储、备份与恢复准备</h1><p>管理原件、衍生文件和备份，知道恢复是否经过验证。</p></div><div className={styles.actions}><small>上次更新：{date(data?.checked_at)}</small><button onClick={()=>resource.reload()} disabled={resource.pending||resource.loading}><RefreshCw size={15}/>刷新</button><button className={styles.primary} onClick={()=>setShowCreate(true)} disabled={!data?.permissions.can_backup||disabled}><Database size={15}/>发起备份</button></div></header>
     {resource.error?<div className={styles.alert} role="alert"><CircleAlert size={18}/><p>{resource.error}</p><button onClick={()=>resource.reload()}>重新读取</button></div>:null}
     {message?<p className={styles.message} role="status">{message}</p>:null}
-    {unresolved&&!resource.pending?<div className={styles.notice}><CircleAlert size={18}/><p>上次操作尚未确认。保留原请求编号，避免重复发起任务。</p><button onClick={()=>void command(unresolved,true)}>查回原请求</button></div>:null}
+    {unresolved&&!resource.pending?<div className={styles.notice}><CircleAlert size={18}/><p>上次操作尚未确认。已保留原请求编号和操作范围；继续时核对同一请求，尚未收到的请求会按原范围提交。</p><button disabled={!ready||!data} onClick={()=>void command(unresolved,true)}>按原编号核对并继续</button></div>:null}
     {resource.loading?<div className={styles.empty} role="status"><HardDrive size={28}/><p>正在读取存储用量与备份记录</p></div>:null}
     {data?<>
       {data.locations.some(row=>row.status!=="available")?<div className={styles.alert}><CircleAlert size={19}/><div><strong>{data.locations.some(row=>row.status==="low_space")?"部分存储空间不足":"部分存储暂不可读取"}</strong><p>{data.locations.filter(row=>row.status!=="available").map(row=>`${row.label}：${row.status==="low_space"?`可用 ${bytes(row.free_bytes)}`:"目录或访问权限待核对"}`).join("；")}</p></div><button onClick={()=>setShowLocations(true)}>查看存储详情</button></div>:null}

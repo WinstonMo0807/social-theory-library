@@ -9,6 +9,7 @@ import { useAdminSession } from "@/lib/admin-session";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { WorkFilePdf } from "@/components/admin/library/work-file-preview";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { Dialog } from "@/components/ui/dialog";
 import { formatUploadBytes } from "@/lib/upload-metrics";
 import { useIntakeCommand, type IntakeChoice } from "./use-intake-command";
@@ -29,18 +30,20 @@ function IntakePdf({owner,itemId,path}:{owner:string;itemId:string;path:string})
 export function IntakeConfirmation({itemId}:{itemId:string}){const user=useAdminSession(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<IntakeBody key={`${user.id}:${itemId}:${epoch}`} owner={String(user.id)} itemId={itemId}/>:<p>正在核对编目账户…</p>;}
 function IntakeBody({owner,itemId}:{owner:string;itemId:string}){
   const router=useRouter(),[query,setQuery]=useState(""),[search,setSearch]=useState(""),[page,setPage]=useState(1),[work,setWork]=useState(""),[tab,setTab]=useState("all"),[mobile,setMobile]=useState("file"),[draft,setDraft]=useState<IntakeChoice|null>(null),[picked,setPicked]=useState<Candidate|null>(null),[message,setMessage]=useState(""),[confirming,setConfirming]=useState(false);
+  const [savedChoice,setSavedChoice]=useState<IntakeChoice|null>(null);
   const command=useIntakeCommand(owner,itemId),params=new URLSearchParams({q:search,page:String(page),...(work?{work}: {})});
   const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<State>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),[owner]);
   const workspace=usePersistentWorkspace<State>(`/ingestion/items/${itemId}/confirmation/?${params}`,owner,value=>value.busy?3000:null,load),data=workspace.data;
   const initial=data?.draft??{mode:"new_work" as const,edition_id:null,candidate_version:"",document_type:text(data?.item.review_data?.document_type||data?.item.recognized_metadata.document_type)||"book",title:text(data?.item.review_data?.title||data?.item.recognized_metadata.title),note:""};
   const choice=draft??initial,selected=picked??data?.candidates.find(row=>row.id===choice.edition_id)??null;
+  useUnsavedForm({choice,pending:Boolean(command.recovery)}, {choice:savedChoice??initial,pending:false});
   const locked=!data||!command.ready||command.busy||Boolean(command.recovery)||data.confirmed;
   const incoming=data?.item.recognized_metadata||{},rows=data?.candidates.filter(row=>tab==="all"||tab==="duplicate"?tab==="all"||row.exact_duplicate:normalize(row.title)===normalize(choice.title))||[];
   function edit(patch:Partial<IntakeChoice>){setDraft({...choice,...patch});setMessage("");}
   function select(row:Candidate){setPicked(row);edit({edition_id:row.id,candidate_version:row.version,mode:row.exact_duplicate?"use_edition":choice.mode==="new_work"?"new_version":choice.mode});}
   function navigate(path:string){if(/^\/admin\/(cataloging\/[0-9a-f-]+|library\/works\/[0-9a-f-]+(?:\?edition=[0-9a-f-]+)?(?:#bibliography)?)$/i.test(path))router.push(path);}
-  async function run(action:"save"|"defer"|"confirm"){if(!data)return;const result=await command.send({action,expected_version:data.version,choice,confirm:action==="confirm"});if(result){setConfirming(false);workspace.reload();setMessage(action==="confirm"?"身份决定已保存，后续处理沿原队列继续。":action==="defer"?"处理选择已保存，可稍后继续。":"草稿已保存，尚未确认正式关联。");if(action==="confirm"&&result.next_url)navigate(result.next_url);if(action==="defer")router.push(`/admin/uploads?batch=${data.batch_id}`);}}
-  async function recover(cancel=false){const result=await command.lookup(cancel);if(result){setConfirming(false);workspace.reload();setMessage(result.state==="cancelled"?"原请求已停止，当前输入保留。":"已查回原操作结果。");if(result.next_url)navigate(result.next_url);}}
+  async function run(action:"save"|"defer"|"confirm"){if(!data)return;const result=await command.send({action,expected_version:data.version,choice,confirm:action==="confirm"});if(result){setSavedChoice(choice);setConfirming(false);workspace.reload();setMessage(action==="confirm"?"身份决定已保存，后续处理沿原队列继续。":action==="defer"?"处理选择已保存，可稍后继续。":"草稿已保存，尚未确认正式关联。");if(action==="confirm"&&result.next_url)navigate(result.next_url);if(action==="defer")router.push(`/admin/uploads?batch=${data.batch_id}`);}}
+  async function recover(cancel=false){const result=await command.lookup(cancel);if(result){if(result.state!=="cancelled"){setDraft(null);setSavedChoice(null);}setConfirming(false);workspace.reload();setMessage(result.state==="cancelled"?"原请求已停止，当前输入保留。":"已查回原操作结果。");if(result.next_url)navigate(result.next_url);}}
   const diff=selected?[["书名",text(incoming.title),selected.title],["作者",text(incoming.authors),selected.authors.join("、")],["出版年",text(incoming.publication_year),text(selected.year)],["出版社",text(incoming.publisher),selected.publisher],["语言",text(incoming.language),selected.language],["ISBN",text(incoming.isbn),selected.isbn],["DOI",text(incoming.doi),selected.doi]]:[];
   const actions=<><button disabled={locked} onClick={()=>void run("save")}>保存草稿</button><button disabled={locked} onClick={()=>void run("defer")}>延期处理</button><button className={styles.primary} disabled={locked||data?.busy||(choice.mode!=="new_work"&&!selected)} onClick={()=>setConfirming(true)}>确认并进入下一步 <ArrowRight size={15}/></button></>;
   return <main className={styles.page}><nav className={styles.breadcrumb}><Link href="/admin/uploads">收件与编目</Link><span>›</span><span>收件确认与重复材料匹配</span></nav><header className={styles.heading}><div><h1>收件确认与重复材料匹配</h1><p>确认这是哪部作品、哪个版本，以及是否和已有材料重复。</p></div><div className={styles.actions}>{actions}{data?<Link href={`/admin/uploads?batch=${data.batch_id}`}>返回批次</Link>:null}</div></header>

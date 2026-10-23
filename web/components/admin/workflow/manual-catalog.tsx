@@ -10,6 +10,7 @@ import { useAdminSession } from "@/lib/admin-session";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { safeAdminHref } from "@/lib/admin-route-context";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { Dialog } from "@/components/ui/dialog";
 import { useCatalogCommand } from "./use-intake-command";
 import styles from "./manual-catalog.module.css";
@@ -41,6 +42,8 @@ function ManualBody({owner}:{owner:string}){
   const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Workspace>(path,{signal,headers:{"X-Editor-Owner":owner},cache:"no-store"},getServerSessionCredential(),false),[owner]);
   const workspace=usePersistentWorkspace<Workspace>(`/catalog/admin/manual-catalog/?${new URLSearchParams({q:search,page:String(page),...(sessionParam?{session:sessionParam}:{})})}`,owner,undefined,load);
   const current=saved??workspace.data?.saved??null,form=draft??current?.form??empty,edition=selection?.editions.find(row=>row.id===editionId),kind=form.work.document_type;
+  useUnsavedForm({form,selection:current?null:[mode,editionId],pending:Boolean(command.recovery)},
+    {form:current?.form??empty,selection:current?null:["new_work",""],pending:false});
   const locked=!command.ready||command.busy||Boolean(command.recovery)||Boolean(sessionParam&&!current)||Boolean(current&&!current.editable);
   const shared=Boolean(selection&&mode!=="new_work"&&!current),source=current?`/admin/library/works/${current.work_id}?edition=${current.edition_id}`:edition&&selection?`/admin/library/works/${selection.id}?edition=${edition.id}`:"";
   function editWork(key:keyof Form["work"],value:string){setDraft({...form,work:{...form.work,[key]:value}});setNotice("");}

@@ -53,6 +53,7 @@ function Workspace({ workId, ownerId }: { workId: string; ownerId: string }) {
   const change = (values: Record<string, string | number | null>) => router.push(adminListHref(pathname, search.toString(), values));
   const state = resource.data?.work.id === workId ? resource.data : null;
   const edition = state?.editions.find(value => value.id === state.selected_edition_id), current = state?.current_reader_file;
+  const backHref = safeAdminHref(search.get("return_to"), "/admin/library?view=editions");
   const workbench = safeAdminHref(state?.edition?.workbench_url || "", "");
   const canEdit = Boolean(state?.capabilities.can_edit), canPublish = Boolean(state?.capabilities.can_publish);
   const returnTo = `${pathname}${search.size ? `?${search}` : ""}`;
@@ -81,7 +82,7 @@ function Workspace({ workId, ownerId }: { workId: string; ownerId: string }) {
     return <div className={styles.rowActions}>{file.preview_url ? <button onClick={() => setModal({ kind: "preview", file })}>预览</button> : null}<button disabled={!file.download_url || Boolean(busy)} onClick={() => void action(`download:${file.id}`, () => downloadWorkFile(ownerId, file.download_url, file.filename || "馆藏文件"))}><Download size={13} />下载</button>{file.generate_reader_url && canEdit ? <button disabled={Boolean(busy)} onClick={() => void action(`generate:${file.id}`, () => generate(file))}>{busy === `generate:${file.id}` ? "正在提交…" : "生成阅读副本"}</button> : null}{file.public_preparation.can_prepare ? <button onClick={() => setModal({ kind: "prepare_public", file })}>准备公开阅读文件</button> : null}{file.can_adopt ? <button onClick={() => setModal({ kind: "adopt", file })}>采用为阅读文件</button> : null}</div>;
   }
   return <main className={styles.workspace}>
-    <Link className={styles.back} href="/admin/library/works?view=editions"><ArrowLeft size={14} />返回版本与文件</Link>
+    <Link className={styles.back} href={backHref}><ArrowLeft size={14} />{backHref.startsWith("/admin/publication") ? "返回发布检查" : backHref === "/admin/library?view=editions" ? "返回版本与文件" : "返回上一工作页"}</Link>
     <header className={styles.heading}><div><p className={styles.eyebrow}>馆藏管理 / 版本与文件</p><h1>版本与文件管理</h1><p>管理同一作品的出版版本、阅读文件与引用影响。</p></div><div className={styles.toolbar}><button disabled={!state} onClick={resource.reload}><RefreshCw size={14} />刷新</button><button className={styles.primary} disabled={!canEdit} onClick={() => setModal({ kind: "edition" })}><Plus size={16} />新增出版版本</button></div></header>
     {resource.error ? <p role="alert" className={styles.error}>{resource.error}<button onClick={resource.reload}>重新读取</button></p> : null}{message ? <p role="status" className={styles.notice}>{message}</p> : null}
     {!state ? <p className={styles.empty} role="status">{resource.loading ? "正在读取作品、出版版本及文件记录…" : resource.error ? "当前作品暂不可读取。" : "未取得当前作品记录。"}</p> : <>
