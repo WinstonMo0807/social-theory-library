@@ -27,7 +27,7 @@ const navigationGroups = [
   ] },
   { label: "系统", entries: [
     { href: "/admin/users", title: "账户与权限", Icon: Users, paths: ["/admin/users"], children: [] },
-    { href: "/admin/processing/status", title: "运行维护", Icon: ChartNoAxesCombined, paths: ["/admin/status", "/admin/system-health", "/admin/storage", "/admin/backups", "/admin/analytics", "/admin/recycle", "/admin/settings", "/admin/distribution", "/admin/query-lexicon", "/admin/semantic-index", "/admin/support"], children: [["/admin/processing/status", "运行检查"], ["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "审计与统计"], ["/admin/settings", "运行设置"], ["/admin/distribution", "分发设置"], ["/admin/recycle", "回收站"], ["/admin/support/feedback", "反馈处理"], ["/admin/support/parallel-calibrations", "公共校准"]] },
+    { href: "/admin/processing/status", title: "运行维护", Icon: ChartNoAxesCombined, paths: ["/admin/status", "/admin/system-health", "/admin/storage", "/admin/backups", "/admin/analytics", "/admin/recycle", "/admin/settings", "/admin/distribution", "/admin/query-lexicon", "/admin/semantic-index", "/admin/support"], children: [["/admin/processing/status", "运行检查"], ["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "审计与统计"], ["/admin/settings", "模型与服务"], ["/admin/distribution", "分发设置"], ["/admin/recycle", "回收站"], ["/admin/support/feedback", "反馈处理"], ["/admin/support/parallel-calibrations", "公共校准"]] },
   ] },
 ] as const;
 
@@ -50,7 +50,7 @@ const routeCapabilities: Record<string, string[]> = {
   "/admin/storage": ["can_configure_providers"],
   "/admin/backups": ["can_run_backup"],
   "/admin/settings#backups": ["can_run_backup"],
-  "/admin/settings": ["can_manage_ai", "can_manage_search_runtime"],
+  "/admin/settings": ["can_view_system_status"],
 };
 
 // Keep the route-level list explicit even though the server remains the

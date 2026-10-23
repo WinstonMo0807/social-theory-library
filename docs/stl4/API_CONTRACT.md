@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M26本地模型与服务
+
+原289条全部保留，新增local-services GET及local-services/check POST，共291。返回真实配置/保存观察/任务聚合；POST固定UUID、配置版本与owner，User锁内核对权限，复用原HealthCheckRun；前端使用生成类型。读取不触发模型或Provider检查。
+
 ## 2026-10-23 M24公共阅读路径
 
 M24原287全部保留，新增reading-paths/commands/{request_id}及reading-paths/validate，共289。材料增learning_goal/dependencies，公开关系仅含两端可见项；dependencies_valid不是完整发布合格证明。写入owner/If-Match/固定请求，与原发布草稿同步。

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 M26本地模型与服务
+
+M26投影原HealthCheckRun/ProcessingJob/OCR/Discovery/AI Runtime/Provider，无新服务库或迁移。GET不执行探测；显式检查按原权限复用既有检查器，只保存限定字段。新Discovery维护选项允许读取503未就绪状态，不改变原索引/推理失败边界。旧settings片段仍指向原配置页面。
+
 ## 2026-10-23 M24公共阅读路径
 
 M24 catalog0077仅扩原ReadingPathItem学习目标及有类型依赖JSON，原阶段归一化/发布快照负责写读，不建新图库/规划库。学习顺序用有界DFS（最多600材料）定位循环，理论相关仅说明联系。新增只读编排验证和原保存回执，未调用Provider或运行检索测评。

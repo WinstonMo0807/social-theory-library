@@ -738,6 +738,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/local-services/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_local_services_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/local-services/check/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_local_services_check_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/media/": {
         parameters: {
             query?: never;
@@ -8513,6 +8545,71 @@ export interface components {
             active_count: number;
             trash_count: number;
         };
+        LocalService: {
+            id: string;
+            group: string;
+            name: string;
+            scope: string;
+            configured: boolean;
+            enabled: boolean;
+            configuration_version: string;
+            details: components["schemas"]["ServiceDetail"][];
+            config_url: string;
+            status: string;
+            status_label: string;
+            observation: components["schemas"]["LocalServiceObservation"] | null;
+            can_check: boolean;
+            can_configure: boolean;
+            check_notice: string;
+        };
+        LocalServiceCheckInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            service_id: string;
+            configuration_version: string;
+        };
+        LocalServiceGroup: {
+            id: string;
+            label: string;
+            subtitle: string;
+            affected_features: string[];
+            status: string;
+            status_label: string;
+            services: components["schemas"]["LocalService"][];
+            tasks: {
+                [key: string]: number;
+            } | null;
+            task_notice: string;
+        };
+        LocalServiceObservation: {
+            /** Format: uuid */
+            id: string;
+            service_id: string;
+            status: string;
+            /** Format: date-time */
+            checked_at: string;
+            /** Format: date-time */
+            completed_at: string | null;
+            latency_ms: number | null;
+            detail: string;
+            identity: {
+                [key: string]: unknown;
+            };
+            configuration_version: string;
+        };
+        LocalServicesSnapshot: {
+            /** Format: date-time */
+            generated_at: string;
+            /** Format: date-time */
+            last_checked_at: string | null;
+            observation_lifetime_seconds: number;
+            groups: components["schemas"]["LocalServiceGroup"][];
+            history: components["schemas"]["LocalServiceObservation"][];
+            summary: {
+                [key: string]: number;
+            };
+            notice: string;
+        };
         LoginOutput: {
             user: components["schemas"]["User"];
             session: components["schemas"]["SessionEnum"];
@@ -13495,6 +13592,10 @@ export interface components {
             reference_id?: string;
             order?: string[];
         };
+        ServiceDetail: {
+            label: string;
+            value: string;
+        };
         /**
          * @description * `cookie` - cookie
          *     * `token` - token
@@ -16927,6 +17028,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KnowledgeHistoryReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_local_services_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalServicesSnapshot"];
+                };
+            };
+        };
+    };
+    catalog_admin_local_services_check_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocalServiceCheckInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LocalServiceCheckInputRequest"];
+                "multipart/form-data": components["schemas"]["LocalServiceCheckInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalServiceObservation"];
                 };
             };
         };

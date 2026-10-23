@@ -15,7 +15,8 @@ class DiscoveryInferenceError(RuntimeError):
 
 
 def _call(path: str, payload: dict | None = None, *, timeout_seconds: int | None = None,
-          max_response_bytes: int = 2_000_000, transport: httpx.BaseTransport | None = None) -> dict:
+          max_response_bytes: int = 2_000_000, transport: httpx.BaseTransport | None = None,
+          allow_unready_health: bool = False) -> dict:
     base = str(getattr(settings, "DISCOVERY_INFERENCE_URL", "http://discovery-inference:8091")).rstrip("/")
     allowed = str(getattr(settings, "DISCOVERY_INFERENCE_ALLOWED_HOSTS", "discovery-inference,127.0.0.1,localhost")).split(",")
     parsed = urlsplit(base)
@@ -37,6 +38,13 @@ def _call(path: str, payload: dict | None = None, *, timeout_seconds: int | None
                 import json
                 result = json.loads(body)
                 if response.status_code != 200:
+                    # Only the maintenance screen may read an unready service's
+                    # bounded health document. Indexing/inference remain fail-closed.
+                    if (allow_unready_health and path == "/health" and payload is None
+                            and response.status_code == 503 and isinstance(result, dict)
+                            and result.get("manifest_ready") is False
+                            and isinstance(result.get("models"), dict)):
+                        return result
                     detail = result.get("detail", {}) if isinstance(result, dict) else {}
                     code = detail.get("code", "service_unavailable") if isinstance(detail, dict) else "invalid_request"
                     safe_codes = {"model_missing", "artifact_mismatch", "input_too_long", "inference_busy", "inference_timeout",
@@ -60,8 +68,9 @@ def _identity(result: dict, expected: str = "") -> None:
         raise DiscoveryInferenceError("artifact_mismatch", "查询模型与索引模型不一致。")
 
 
-def inference_health() -> dict:
-    return _call("/health", timeout_seconds=5, max_response_bytes=32_000)
+def inference_health(*, allow_unready: bool = False) -> dict:
+    return _call("/health", timeout_seconds=5, max_response_bytes=32_000,
+                 allow_unready_health=allow_unready)
 
 
 def normalize_texts(texts: list[str]) -> dict:

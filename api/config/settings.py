@@ -272,6 +272,7 @@ REST_FRAMEWORK = {
         "semantic_search_anon": os.getenv("SEMANTIC_SEARCH_ANON_RATE", os.getenv("SEMANTIC_SEARCH_RATE", "30/min")),
         "semantic_search_user": os.getenv("SEMANTIC_SEARCH_USER_RATE", "120/min"),
         "library_qa": os.getenv("LIBRARY_QA_RATE", "30/hour"),
+        "local_service_check": os.getenv("LOCAL_SERVICE_CHECK_RATE", "30/min"),
         "public_usage_event": os.getenv("PUBLIC_USAGE_EVENT_RATE", "120/min"),
         "capability_worker": os.getenv("CAPABILITY_REMOTE_WORKER_RATE", "600/hour"),
     },

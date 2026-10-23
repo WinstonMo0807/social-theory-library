@@ -3271,6 +3271,82 @@
                 }
             }
         },
+        "/api/catalog/admin/local-services/": {
+            "get": {
+                "operationId": "catalog_admin_local_services_retrieve",
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LocalServicesSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/local-services/check/": {
+            "post": {
+                "operationId": "catalog_admin_local_services_check_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LocalServiceCheckInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LocalServiceCheckInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LocalServiceCheckInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LocalServiceObservation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/media/": {
             "get": {
                 "operationId": "catalog_admin_media_list",
@@ -34533,6 +34609,255 @@
                     "trash_count"
                 ]
             },
+            "LocalService": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "type": "string"
+                    },
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "configuration_version": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ServiceDetail"
+                        }
+                    },
+                    "config_url": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "status_label": {
+                        "type": "string"
+                    },
+                    "observation": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LocalServiceObservation"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "can_check": {
+                        "type": "boolean"
+                    },
+                    "can_configure": {
+                        "type": "boolean"
+                    },
+                    "check_notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "can_check",
+                    "can_configure",
+                    "check_notice",
+                    "config_url",
+                    "configuration_version",
+                    "configured",
+                    "details",
+                    "enabled",
+                    "group",
+                    "id",
+                    "name",
+                    "observation",
+                    "scope",
+                    "status",
+                    "status_label"
+                ]
+            },
+            "LocalServiceCheckInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "service_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 96,
+                        "pattern": "^[a-z][a-z0-9_-]{0,95}$"
+                    },
+                    "configuration_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    }
+                },
+                "required": [
+                    "configuration_version",
+                    "request_id",
+                    "service_id"
+                ]
+            },
+            "LocalServiceGroup": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "subtitle": {
+                        "type": "string"
+                    },
+                    "affected_features": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "status_label": {
+                        "type": "string"
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LocalService"
+                        }
+                    },
+                    "tasks": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        },
+                        "nullable": true
+                    },
+                    "task_notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "affected_features",
+                    "id",
+                    "label",
+                    "services",
+                    "status",
+                    "status_label",
+                    "subtitle",
+                    "task_notice",
+                    "tasks"
+                ]
+            },
+            "LocalServiceObservation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "service_id": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "latency_ms": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "identity": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "configuration_version": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "checked_at",
+                    "completed_at",
+                    "configuration_version",
+                    "detail",
+                    "id",
+                    "identity",
+                    "latency_ms",
+                    "service_id",
+                    "status"
+                ]
+            },
+            "LocalServicesSnapshot": {
+                "type": "object",
+                "properties": {
+                    "generated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "last_checked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "observation_lifetime_seconds": {
+                        "type": "integer"
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LocalServiceGroup"
+                        }
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LocalServiceObservation"
+                        }
+                    },
+                    "summary": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "generated_at",
+                    "groups",
+                    "history",
+                    "last_checked_at",
+                    "notice",
+                    "observation_lifetime_seconds",
+                    "summary"
+                ]
+            },
             "LoginOutput": {
                 "type": "object",
                 "properties": {
@@ -50849,6 +51174,21 @@
                 "required": [
                     "action",
                     "expected_revision"
+                ]
+            },
+            "ServiceDetail": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "label",
+                    "value"
                 ]
             },
             "SessionEnum": {

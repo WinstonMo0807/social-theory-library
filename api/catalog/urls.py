@@ -1,3 +1,4 @@
+from catalog.local_service_views import LocalServicesView, LocalServiceCheckView
 from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
@@ -235,6 +236,8 @@ from .theory_system_views import (
 )
 
 urlpatterns = [
+    path("admin/local-services/", LocalServicesView.as_view(), name="local-services"),
+    path("admin/local-services/check/", LocalServiceCheckView.as_view(), name="local-service-check"),
     path("theory-system/directory/", TheoryDirectoryView.as_view(), name="theory-system-directory"),
     path("admin/discovery-index/", DiscoveryIndexView.as_view(), name="admin-discovery-index"),
     path("admin/evidence-curation/sources/", CurationSourcesView.as_view(), name="admin-curation-sources"),
