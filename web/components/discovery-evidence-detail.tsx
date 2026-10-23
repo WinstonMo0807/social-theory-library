@@ -6,7 +6,7 @@ import { normalizePublicResourceUrl } from "@/lib/api";
 import type { DiscoveryContext, DiscoveryPassage } from "@/lib/api/discovery.types";
 import { passageReference } from "@/lib/api/research.client";
 import { citationText, previewSharedCitation } from "@/lib/api/shared-citation.client";
-import { CollectionLink } from "./collection-link";
+import Link from "next/link";
 import { SaveWorkButton } from "./save-work-button";
 import { SharedCitationButton } from "./shared-citation-overlay";
 import styles from "@/app/explore/opinions/viewpoint-search.module.css";
@@ -73,7 +73,7 @@ export function EvidenceSummary({ item, returnTo, onContext }: { item: Discovery
     <EvidenceQuote item={item} />
     <section><h3>原文核对</h3><dl><div><dt>定位方式</dt><dd>{item.locator_precision === "exact" ? "原文定位" : "按页定位"}</dd></div><div><dt>观点归属</dt><dd>{item.attribution?.label || "待人工核对"}</dd></div></dl><p>{item.attribution?.notice || "文中出现某个观点，不等于该观点由本书作者提出。请结合上下文核对。"}</p>{/ocr/i.test(item.source_kind) ? <p>文字由 OCR 识别，请与原始扫描画面核对。</p> : null}</section>
     {item.match_basis?.length ? <section><h3>匹配依据</h3><div className={styles.evidenceTags}>{item.match_basis.map((text, index) => <span key={`${text}-${index}`}>{text}</span>)}</div></section> : null}
-    <div className={styles.summaryActions}>{href ? <CollectionLink className="button" href={href}><BookOpen size={16} />阅读原文</CollectionLink> : <p>阅读定位暂不可用，请刷新结果。</p>}
+    <div className={styles.summaryActions}>{href ? <Link className="button" href={href}><BookOpen size={16} />阅读原文</Link> : <p>阅读定位暂不可用，请刷新结果。</p>}
       <div><button type="button" onClick={() => void copy()} disabled={copying}><Copy size={14} />{copying ? "核对来源" : "复制引文"}</button><SharedCitationButton reference={passageReference(item)} selectedText={item.excerpt}>引用</SharedCitationButton><SaveWorkButton workId={item.work.id} compact /></div>
       {onContext ? <button type="button" onClick={onContext}>查看上下文 <ChevronRight size={14} /></button> : null}
     </div>
@@ -100,7 +100,7 @@ export function EvidenceContextBody({ item, context, returnTo, onOpenCandidate }
     {blocks.map((block, index) => <section key={`${context.result_id}-${index}`} tabIndex={-1} data-discovery-context-block className={["hit", "match"].includes(block.role) ? styles.contextMatch : styles.contextBlock}><small>{["hit", "match"].includes(block.role) ? "命中原文" : block.role === "before" ? "前段" : block.role === "after" ? "后段" : "相邻原文"} · PDF 第 {block.pdf_page} 页</small><p>{block.text}</p></section>)}
     </div><aside><section><h3>作者自述或转引角色</h3><strong>{source.attribution?.label || "待人工核对"}</strong><p>{source.attribution?.notice || "请核对上下文中的作者自述、转引和评论关系。"}</p></section>
     <section><h3>本段信息</h3><dl><div><dt>出处位置</dt><dd>{source.printed_page ? `印刷页 ${source.printed_page} · ` : ""}PDF 第 {source.pdf_page} 页</dd></div>{source.section_title ? <div><dt>所属章节</dt><dd>{source.section_title}</dd></div> : null}<div><dt>版本信息</dt><dd>{[source.bibliography?.publication_year, source.bibliography?.publisher, source.bibliography?.version_label].filter(Boolean).join(" · ") || "待补充"}</dd></div></dl></section>
-    <div className={styles.contextActions}>{reader ? <CollectionLink href={reader} className="button"><BookOpen size={16} />打开阅读器</CollectionLink> : null}<SharedCitationButton className="button secondary" reference={passageReference(source)} selectedText={source.excerpt}>加入当前研究</SharedCitationButton><button type="button" className="button secondary" onClick={() => setSameBook(value => !value)} aria-expanded={sameBook}>查看同书更多段落{typeof context.same_work_count === "number" ? `（${context.same_work_count}）` : ""}<ChevronRight size={14} /></button></div>
+    <div className={styles.contextActions}>{reader ? <Link href={reader} className="button"><BookOpen size={16} />打开阅读器</Link> : null}<SharedCitationButton className="button secondary" reference={passageReference(source)} selectedText={source.excerpt}>加入当前研究</SharedCitationButton><button type="button" className="button secondary" onClick={() => setSameBook(value => !value)} aria-expanded={sameBook}>查看同书更多段落{typeof context.same_work_count === "number" ? `（${context.same_work_count}）` : ""}<ChevronRight size={14} /></button></div>
     {sameBook ? <section className={styles.sameBook}><h3>本次检索的同书材料</h3>{context.same_work_results?.length ? context.same_work_results.map(row => <button type="button" key={row.id} disabled={row.id === source.id} onClick={() => onOpenCandidate(row)}><span>PDF 第 {row.pdf_page} 页{row.id === source.id ? " · 当前" : ""}</span><p>{row.excerpt}</p></button>) : <p>本次检索没有其他可展示的同书材料。</p>}{(context.same_work_count || 0) > (context.same_work_results?.length || 0) ? <p>这里显示前 {context.same_work_results?.length || 0} 条，可返回结果继续读取。</p> : null}</section> : null}
     </aside></div>;
 }

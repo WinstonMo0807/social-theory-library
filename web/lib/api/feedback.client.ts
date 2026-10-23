@@ -26,6 +26,19 @@ export function safeFeedbackPath(value: string): string {
   } catch { return ""; }
 }
 
+/** Accept an address-bar copy only at the input boundary; retain the public-path filter. */
+export function feedbackPathFromInput(value: string, origin: string): string {
+  const input = value.trim();
+  if (input.startsWith("/")) return safeFeedbackPath(input);
+  if (input.length > 2048 || /[\\\u0000-\u0020\u007f]/.test(input)) return "";
+  try {
+    const url = new URL(input);
+    if (!/^https?:$/.test(url.protocol) || url.origin !== origin || url.username || url.password) return "";
+    const tail = input.replace(/^https?:\/\/[^/?#]+/i, "");
+    return safeFeedbackPath(tail.startsWith("/") ? tail : `/${tail}`);
+  } catch { return ""; }
+}
+
 export async function submitPublicFeedback(input: FeedbackInput, signal: AbortSignal): Promise<FeedbackReceipt> {
   const session = new AbortController(), unsubscribe = subscribeToSessionChanges(() => session.abort());
   try {

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Bell, CircleAlert, FileText, RefreshCw } from "lucide-react";
 import { normalizePublicResourceUrl } from "@/lib/api";
-import { safeFeedbackPath } from "@/lib/api/feedback.client";
+import { safeFeedbackPath, feedbackPathFromInput } from "@/lib/api/feedback.client";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { sourceDate, sourceFollowsPath, sourceStatusLabel, type PublicSourceStatus, type SourceFollowsPage } from "@/lib/api/source-follows.client";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
@@ -12,10 +14,17 @@ import { SourceFollowControl, useSourceFollowCommands } from "./source-follow-co
 import styles from "./source-status.module.css";
 
 export function SupportSourceStatus({ source }: { source: string }) {
+  const router = useRouter(), [inputError, setInputError] = useState("");
   const path = safeFeedbackPath(source), current = usePublicSource(path);
   return <section className={styles.status} aria-label="核对公开来源"><h2>来源信息</h2>
     <p>本页面显示当前内容的来源与公开状态，帮助你判断可用性。</p>
-    <form action="/help/source" method="get"><label>站内原文、书目、学者或主题页面路径<input name="source" defaultValue={path} maxLength={400} placeholder="/reader/文件标识?page=88" /></label><button type="submit">读取来源信息</button></form>
+    <form onSubmit={event => {
+      event.preventDefault();
+      const next = feedbackPathFromInput(String(new FormData(event.currentTarget).get("source") || ""), window.location.origin);
+      if (!next) { setInputError("请粘贴本站公开页面地址或路径，不支持账户资料、后台或外部链接。"); return; }
+      setInputError(""); router.push(`/help/source?${new URLSearchParams({ source: next })}`);
+    }}><label>站内原文、书目、学者或主题页面地址<input name="source" key={path} defaultValue={path} maxLength={2048} placeholder="粘贴页面地址，或 /reader/文件标识?page=88" /></label><button type="submit">读取来源信息</button></form>
+    {inputError ? <p role="alert">{inputError}</p> : null}
     {source && !path ? <p role="alert">请输入站内公开页面路径。不会读取账户资料或外部链接。</p> : null}
     {current.loading ? <p role="status">正在核对公开来源…</p> : null}
     {current.error ? <div role="alert"><p>当前无法读取来源状态。未据此判断来源已经失效。</p><p>{current.error}</p><button onClick={current.reload}><RefreshCw size={15} />重新读取</button></div> : null}

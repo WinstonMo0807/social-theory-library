@@ -181,6 +181,7 @@ export function useReaderSelection({ page, pagePayloads, requestPagePayload, set
     try {
       const payload = await apiRequest<{ text: string; html: string }>("/catalog/clean-copy/", {
         method: "POST",
+        signal: AbortSignal.timeout(30000),
         body: JSON.stringify({ text: selected }),
       });
       if ("ClipboardItem" in window && navigator.clipboard.write) {

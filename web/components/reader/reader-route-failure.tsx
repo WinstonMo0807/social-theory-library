@@ -18,6 +18,6 @@ export function ReaderRouteFailure({ failure, returnPath, siteConfig }: { failur
     {failure.retryable ? <button className="button" type="button" disabled={retrying} onClick={() => startRetry(async () => { await bootstrapSession(); router.refresh(); })}>{retrying ? "正在重新读取…" : "重试阅读请求"}</button> : null}
     {failure.canSignIn ? <Link className="button secondary" href={`/login?next=${encodeURIComponent(returnPath)}`}>登录并返回原阅读位置</Link> : null}
     <Link className="button secondary" href="/account?section=notes">查看我的笔记</Link>
-    <Link className="button secondary" href="/explore">返回馆藏检索</Link>
+    <Link className="button secondary" href="/explore/original">返回馆藏检索</Link>
   </section></>;
 }

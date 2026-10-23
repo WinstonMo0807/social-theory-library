@@ -384,7 +384,7 @@ export function DiscoveryPassageCard({ item, index, onContext }: { item: Discove
     <div className={styles.locator}><span>PDF 第 {item.pdf_page} 页</span>{item.printed_page && item.printed_page !== String(item.pdf_page) ? <span>印刷页 {item.printed_page}</span> : null}<span>{item.locator_precision === "exact" ? "原文定位" : "按页定位"}</span></div>
     {isOcr ? <p className={styles.help}>文字来自 OCR 识别，可回到扫描画面核对。</p> : null}
     {item.match_basis?.length ? <p className={styles.reason}>{item.match_basis.join(" · ")}</p> : null}
-    <footer><details><summary>来源与版本</summary><dl><div><dt>正文修订</dt><dd>{item.document_revision_id || "未提供"}</dd></div><div><dt>源文件</dt><dd>{item.asset_id}</dd></div></dl></details><div className={styles.actions}><button className="button secondary" type="button" onClick={onContext}>查看上下文</button>{reader ? <CollectionLink className="button secondary" href={reader}>阅读原文 <ArrowRight size={14} /></CollectionLink> : <span>阅读定位暂不可用</span>}</div></footer>
+    <footer><details><summary>来源与版本</summary><dl><div><dt>正文修订</dt><dd>{item.document_revision_id || "未提供"}</dd></div><div><dt>源文件</dt><dd>{item.asset_id}</dd></div></dl></details><div className={styles.actions}><button className="button secondary" type="button" onClick={onContext}>查看上下文</button>{reader ? <Link className="button secondary" href={reader}>阅读原文 <ArrowRight size={14} /></Link> : <span>阅读定位暂不可用</span>}</div></footer>
   </article>;
 }
 

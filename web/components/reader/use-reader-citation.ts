@@ -26,13 +26,13 @@ export function useReaderCitation({ editionId, page, setCopyStatus, setCopyStatu
     const request = new AbortController();
     apiRequest<CitationBundle>(
       `/catalog/editions/${editionId}/citations/?pdf_page=${page}`,
-      { signal: request.signal },
+      { signal: AbortSignal.any([request.signal, AbortSignal.timeout(30000)]) },
     )
       .then((payload) => {
         if (!request.signal.aborted) setResult({ key, data: payload, error: "" });
       })
       .catch((reason: unknown) => {
-        if (!request.signal.aborted) setResult({ key, data: null, error: reason instanceof Error ? reason.message : "引用读取失败。" });
+        if (!request.signal.aborted) setResult({ key, data: null, error: reason instanceof DOMException && reason.name === "TimeoutError" ? "引用读取超时，请重新读取；当前原文和选文保留。" : reason instanceof Error ? reason.message : "引用读取失败。" });
       });
     return () => {
       request.abort();

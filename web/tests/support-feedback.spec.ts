@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { safeFeedbackPath, type FeedbackInput } from "../lib/api/feedback.client";
+import { safeFeedbackPath, feedbackPathFromInput, type FeedbackInput } from "../lib/api/feedback.client";
 
 // Synthetic cases only. Run against a local app at unified acceptance, never production.
 const receiptId = "70000000-0000-4000-8000-000000000001";
@@ -23,6 +23,13 @@ async function setup(page: Page) {
   return state;
 }
 const feedback = (page: Page) => page.locator(".stl4-feedback-form");
+test("address-bar feedback input retains only a same-origin public path", () => {
+  const origin = "http://192.168.1.20:3000";
+  expect(feedbackPathFromInput(`${origin}/reader/abc?page=12&token=private#selection`, origin)).toBe("/reader/abc?page=12");
+  for (const value of ["https://other.invalid/help", `${origin}/account/notes`, `${origin}/admin`, `${origin}/works/%2e%2e/help`, "http://user:password@192.168.1.20:3000/help", "javascript:alert(1)", "//other.invalid/help"]) {
+    expect(feedbackPathFromInput(value, origin)).toBe("");
+  }
+});
 async function fillFeedback(page: Page, text = "合成测试问题：该页面的页码说明需要核对。") {
   await feedback(page).getByRole("textbox", { name: "问题描述" }).fill(text);
   await feedback(page).getByRole("checkbox").check();
