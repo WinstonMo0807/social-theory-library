@@ -6,6 +6,7 @@ from catalog.models import Asset, Edition
 from catalog.services.document_outline import _source_current
 from catalog.services.editorial_issues import EditConflict
 from ingestion.models import AuditEvent, ProcessingJob
+from .processing_identity import concept_review_url
 
 
 def followup_state(job):
@@ -26,6 +27,7 @@ def followup_state(job):
     if not isinstance(counts, dict):
         counts = {}
     return {"enabled": enabled, "state": state,
+            "result_url": concept_review_url(job),
             "retry_url": f"/admin/processing?task_id={stats['concept_retry_job_id']}&task_source=processing_job" if stats.get("concept_retry_job_id") else "",
             "can_configure": state == "waiting" and job.status in {"pending", "running", "paused", "failed"},
             "counts": {key: value for key in ("created", "updated", "new_node_tasks", "protected_nodes")

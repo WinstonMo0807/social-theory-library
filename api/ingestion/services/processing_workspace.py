@@ -1,6 +1,6 @@
 """Presentation facts only; processing remains in its existing task services."""
 from .processing_commands import task_actions, task_version
-from .processing_identity import processing_edition
+from .processing_identity import concept_review_url, processing_edition
 from .processing_recovery import recovery_state
 from .processing_retry import failed_ocr_pages
 from .processing_followup import followup_state
@@ -57,5 +57,5 @@ def workspace_task(job, row, actor, *, retry_status=""):
             "result_urls": {"ocr": f"/admin/library/assets/{ocr['source_asset_id'] if ocr and row['status'] == 'failed' and ocr.get('source_asset_id') else asset.pk}/ocr" if asset else "",
                             "outline": f"/admin/library/assets/{asset.pk}/outline" if asset else "",
                             "files": files_url,
-                            "concepts": "/admin/theories/relations" if stats.get("operation") == "concept_alignment" else "",
+                            "concepts": concept_review_url(job) if stats.get("operation") == "concept_alignment" else "",
                             "index": "/admin/processing/semantic-index" if row["job_type"] in {"discovery_index", "semantic_index"} else ""}}

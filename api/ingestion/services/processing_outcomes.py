@@ -1,5 +1,6 @@
 """Visible partial results without changing the original worker lifecycle."""
 from django.db.models import Case, CharField, F, Q, Value, When
+from .processing_identity import concept_review_url
 
 
 # Only known stage warnings become user-facing issues; no raw provider errors,
@@ -32,7 +33,7 @@ def outcome_issues(job, *, files_url, workbench_url):
         return []
     stats = job.stats or {}
     alignment = (stats.get("concept_alignment") or {}).get("state")
-    links = {"relations": "/admin/theories/relations", "files": files_url, "workbench": workbench_url}
+    links = {"relations": concept_review_url(job), "files": files_url, "workbench": workbench_url}
     issues = []
     for key, label, message, destination in STAGES:
         present = isinstance(stats.get(key), str) and bool(stats[key])

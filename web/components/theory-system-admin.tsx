@@ -933,13 +933,14 @@ const knowledgeRelationOptions = [
 export function TheoryRelationsAdmin() {
   const account = useEditorAccountKey();
   const search = useSearchParams();
-  return <TheoryRelationsEditor key={`${account}:${search.get("relation") || "list"}:${search.get("node") || "all"}`} requestedId={search.get("relation") || ""} />;
+  return <TheoryRelationsEditor key={`${account}:${search.get("relation") || "list"}:${search.get("node") || "all"}:${search.get("review_work") || "all"}:${search.get("review_file") || "all"}`} requestedId={search.get("relation") || ""} />;
 }
 
 function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
   const opened = useRef(false);
   const apiRequest = useEditorRequest();
   const location = useEditorListLocation();
+  const sourceWork=location.search.get("review_work")||"",sourceFile=location.search.get("review_file")||"",sourceTask=location.search.get("processing_task")||"";
   const taskPage = adminPageNumber(location.search.get("review_page"));
   const relationPage = adminPageNumber(location.search.get("relations_page"));
   const [editConflict, setEditConflict] = useState(false);
@@ -970,9 +971,11 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
     const params = new URLSearchParams();
     params.set("page", String(taskPage));
     if (taskStatus) params.set("status", taskStatus);
+    if (sourceWork) params.set("work",sourceWork);
+    if (sourceFile) params.set("file",sourceFile);
     if (taskFilter.trim()) params.set("q", taskFilter.trim());
     return params.toString();
-  }, [taskStatus, taskFilter, taskPage]);
+  }, [taskStatus, taskFilter, taskPage, sourceWork, sourceFile]);
   const tasks = useAdminData<Page<ReviewTask>>(`/catalog/admin/theory-system/review-tasks/?${taskParams}`);
   const nodes = useAdminData<Page<KnowledgeNode>>("/catalog/admin/theory-system/nodes/");
   const disciplines = useAdminData<Page<Discipline>>("/catalog/admin/disciplines/");
@@ -1166,8 +1169,9 @@ function TheoryRelationsEditor({ requestedId }: { requestedId: string }) {
   const relationDisciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || entityLabels[id] || "已选择学科";
   return (
     <AdminFrame eyebrow="知识与关联" title="理论关系" description="先核对系统建议，或在下方手工编辑理论之间的关系。保存修改后，确认发布才会更新读者页面。">
-      <details className="theory-suggestion-section" open={Boolean(taskFilter || location.search.get("review_page") || location.search.get("review_status"))}>
+      <details className="theory-suggestion-section" open={Boolean(sourceWork || sourceFile || taskFilter || location.search.get("review_page") || location.search.get("review_status"))}>
       <summary>系统建议{tasks.data ? `（当前筛选共 ${tasks.data.count} 条）` : ""}</summary>
+      {sourceWork||sourceFile?<div className="theory-review-source" role="status"><span>已限定原处理材料的候选与证据{tasks.data?.results[0]?.work_title?` · ${tasks.data.results[0].work_title}`:""}。审核状态与搜索继续在此范围内筛选。</span>{sourceTask?<Link href={`/admin/processing?task_id=${encodeURIComponent(sourceTask)}&task_source=processing_job`}>返回处理任务</Link>:null}<button type="button" onClick={()=>location.update({review_work:null,review_file:null,processing_task:null,review_page:1})}>查看全部材料</button></div>:null}
       <div className="theory-review-layout">
         <section className="admin-panel theory-review-list">
           <nav className="theory-review-tabs">

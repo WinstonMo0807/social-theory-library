@@ -82,6 +82,7 @@ class ProcessingFollowupSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
     state = serializers.ChoiceField(choices=["waiting", "running", "completed", "skipped", "disabled", "failed", "unrecorded"])
     can_configure = serializers.BooleanField()
+    result_url = serializers.CharField(allow_blank=True)
     retry_url = serializers.CharField(allow_blank=True)
     retry_status = serializers.CharField(allow_blank=True)
     counts = serializers.DictField(child=serializers.IntegerField())

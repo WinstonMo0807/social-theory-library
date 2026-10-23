@@ -13351,6 +13351,7 @@ export interface components {
             enabled: boolean;
             state: components["schemas"]["ProcessingFollowupStateEnum"];
             can_configure: boolean;
+            result_url: string;
             retry_url: string;
             retry_status: string;
             counts: {

@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 概念结果来源范围
+
+GET catalog/admin/theory-system/review-tasks/增加work/file UUID查询条件，两者同时传入时AND过滤；非法编号400，空结果不扩大范围。ProcessingFollowup增加result_url；概念结果链接统一携带review_work/review_file/review_status=all/processing_task，界面明确当前来源范围、清除范围和返回原任务。原编辑/审核/发布权限保持原边界，无新增端点或迁移，333路径。
+
 ## 2026-10-24 M09概念对齐独立重试
 
 原ProcessingCommand新增retry_followup，仅对正文succeeded、概念failed且尚无接续记录的OCR任务开放，要求当前VIEW_SYSTEM_STATUS/RETRY_JOBS与固定请求、任务版本。回执result.job_id/next_url指向接续任务。子任务沿text_extraction+operation=concept_alignment，retry/cancel/recover复用原控制，拒绝page_indexes；原OCR执行状态保留。followup新增retry_url/retry_status，结果URL增加concepts，数量只读实际生成结果。后续阶段运行时详情持续读取，结束后停止轮询。source_sha256/document_revision_id/ocr_job_id锁定原来源；正文变化返回409。333路径，无新增迁移。

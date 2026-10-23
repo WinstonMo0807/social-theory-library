@@ -51522,6 +51522,9 @@
                     "can_configure": {
                         "type": "boolean"
                     },
+                    "result_url": {
+                        "type": "string"
+                    },
                     "retry_url": {
                         "type": "string"
                     },
@@ -51539,6 +51542,7 @@
                     "can_configure",
                     "counts",
                     "enabled",
+                    "result_url",
                     "retry_status",
                     "retry_url",
                     "state"

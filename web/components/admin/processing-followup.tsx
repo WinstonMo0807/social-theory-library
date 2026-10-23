@@ -25,6 +25,6 @@ export function ProcessingFollowup({ value, disabled, onSave }: { value: Followu
     {value.state === "completed" ? <dl className={styles.facts}>{Object.entries(value.counts).map(([key, count]) => <div key={key}><dt>{counts[key] || key}</dt><dd>{count}</dd></div>)}</dl> : null}
     {value.state === "failed" ? <p className={styles.notice}>已保存的识别结果保留。请前往关系核对查看已有候选与原文证据。可通过“只重试概念对齐”单独处理此阶段，识别文字继续保留。</p> : null}
     {value.retry_url ? <p><Link href={safeAdminHref(value.retry_url)}>查看接续概念任务 →</Link>{value.retry_status ? <span> · {retryLabels[value.retry_status] || "状态待核对"}</span> : null}</p> : null}
-    {value.state === "completed" || value.state === "failed" ? <Link href="/admin/theories/relations">查看关系与原文证据 →</Link> : null}
+    {value.result_url && (value.state === "completed" || value.state === "failed") ? <Link href={safeAdminHref(value.result_url)}>查看关系与原文证据 →</Link> : null}
   </section>;
 }

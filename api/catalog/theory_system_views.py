@@ -16,7 +16,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from .public_response_serializers import ReaderFocusSerializer
 
 from common.capabilities import Capability, has_capability
@@ -1101,6 +1101,7 @@ class AdminEvidenceDetailView(
         return {**super().get_serializer_context(), "include_unpublished_items": True}
 
 
+@extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("work", type=UUID), OpenApiParameter("file", type=UUID)]))
 class AdminTheoryReviewTaskListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = TheoryReviewTaskSerializer
@@ -1110,6 +1111,14 @@ class AdminTheoryReviewTaskListView(AdminPrivateResponseMixin, TheorySystemFeatu
             "work", "file", "candidate_node", "assigned_to"
         )
         params = self.request.query_params
+        for field in ("work", "file"):
+            value = params.get(field, "").strip()
+            if value:
+                try:
+                    identifier = UUID(value)
+                except ValueError as exc:
+                    raise APIValidationError({field: "材料来源编号无效，请从原处理任务重新打开。"}) from exc
+                queryset = queryset.filter(**{field: identifier})
         for field in ("task_type", "status", "assigned_to", "candidate_node"):
             value = params.get(field, "").strip()
             if value:

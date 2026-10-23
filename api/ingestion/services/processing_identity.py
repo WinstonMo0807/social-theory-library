@@ -48,6 +48,13 @@ def draft_title_work_ids(query):
     ).order_by().values_list("target_id", flat=True)
 
 
+def concept_review_url(job):
+    if not job.asset_id:
+        return ""
+    return (f"/admin/theories/relations?review_work={job.asset.edition.work_id}&review_file={job.asset_id}"
+            f"&review_status=all&processing_task={job.pk}")
+
+
 def processing_identity(job, titles=None):
     if getattr(job, "job_type", "") == "editorial_assistance":
         issue_id = _issue_id(job)

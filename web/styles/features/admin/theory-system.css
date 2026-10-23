@@ -217,3 +217,5 @@
   .work-theory-association-list > article { border-right: 0; }
   .work-theory-evidence-list > div { grid-template-columns: 1fr; }
 }
+
+.theory-review-source{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface);font-size:13px;line-height:1.7}.theory-review-source>span{flex:1 1 300px;min-width:0;overflow-wrap:anywhere}.theory-review-source>a,.theory-review-source>button{flex:none;color:var(--ink);text-underline-offset:4px}.theory-review-source>button{border:1px solid var(--line);background:var(--paper);padding:5px 10px;border-radius:3px;font:inherit;cursor:pointer}
