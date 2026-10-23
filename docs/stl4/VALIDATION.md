@@ -1,5 +1,11 @@
 # 验收记录
 
+## 2026-10-24 M09结果导出静态记录
+
+`.venv/Scripts/python.exe tmp/stl4-processing-export-static-20261024.py`及契约脚本：4ad753→37d365退出0，3 AST、主动阻止数据库连接的OpenAPI0错误10旧警告、333路径类型生成与PostCSS。`tsc --noEmit --incremental false` c3f867→b82f81退出0；processing-workspace/processing-result-export ESLint 4e49e5退出0；新增用例AST与git diff --check bbcf12退出0。
+
+test_stl4_processing_exports_20261024.py仅写入，覆盖仅导成功页、任务修订归属、版本变化409、账户绑定和no-store，未执行。实际下载、64MiB边界、并发写入、PDF交互/窄屏、历史暂存文件均待统一验收。
+
 ## 2026-10-24 规则分类静态检查
 
 `.venv/Scripts/python.exe tmp/stl4-term-rules-static-20261024.py` 9d88d9退出0：3 AST、主动禁止DB、32条SQLite/PostgreSQL查询编译、OpenAPI0错误10旧警告；同输出记录契约生成与两CSS解析0。TypeScript noEmit 1d0a7a→69e826退出0；index-maintenance/knowledge-aliases-dialog ESLint 0ef0a8退出0。

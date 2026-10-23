@@ -3153,6 +3153,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingestion/processing-workspace/results/{task_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ingestion_processing_workspace_results_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingestion/processing-workspace/sources/{edition_id}/": {
         parameters: {
             query?: never;
@@ -13374,6 +13390,26 @@ export interface components {
             action: string;
             next_url: string;
             result: unknown;
+        };
+        ProcessingResultManifest: {
+            owner_id: string;
+            /** Format: uuid */
+            task_id: string;
+            kind: components["schemas"]["ProcessingCreationTypeEnum"];
+            /** Format: uuid */
+            asset_id: string | null;
+            /** Format: uuid */
+            revision_id: string | null;
+            title: string;
+            task_status: string;
+            count: number;
+            total_recorded: number;
+            page_count: number;
+            version: string;
+            /** Format: date-time */
+            checked_at: string;
+            notice: string;
+            formats: string[];
         };
         ProcessingSource: {
             /** Format: uuid */
@@ -25030,6 +25066,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProcessingReceipt"];
+                };
+            };
+        };
+    };
+    ingestion_processing_workspace_results_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `` -
+                 *     * `txt` - txt
+                 *     * `jsonl` - jsonl
+                 */
+                download?: "" | "txt" | "jsonl";
+                expected_version?: string;
+                page_from?: number;
+                page_to?: number;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessingResultManifest"];
+                    "text/plain": string;
+                    "application/x-ndjson": string;
                 };
             };
         };

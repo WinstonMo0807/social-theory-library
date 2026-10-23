@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-24 任务成功结果导出
+
+新增GET processing-workspace/results/{task_id}/。默认返回ProcessingResultManifest；page_from/page_to按PDF页序限制范围；download=txt/jsonl必须携带预览返回的expected_version。X-Editor-Owner与VIEW_SYSTEM_STATUS严格匹配；403/404/409及空结果/超量返回明确错误。二进制响应不缓存，JSONL清单不携带账户编号。333路径。
+
 ## 2026-10-24 查询词规则筛选
 
 原index-maintenance/terms/增加具名IndexTermsQuery：term_group为空/canonical/aliases/variants，availability为空/public/admin/inactive；q/来源类别/页码统一验证。响应增加rule_counts与can_edit_authority，30项分页和全库覆盖分母保持。复用原people/workspace及theory-system/nodes选择已有来源，332路径不变。

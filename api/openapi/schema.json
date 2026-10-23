@@ -14783,6 +14783,100 @@
                 }
             }
         },
+        "/api/ingestion/processing-workspace/results/{task_id}/": {
+            "get": {
+                "operationId": "ingestion_processing_workspace_results_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "download",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "txt",
+                                "jsonl"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `txt` - txt\n* `jsonl` - jsonl"
+                    },
+                    {
+                        "in": "query",
+                        "name": "expected_version",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[a-f0-9]{64}$"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_from",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 20000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_to",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 20000,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "task_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessingResultManifest"
+                                }
+                            },
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            },
+                            "application/x-ndjson": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/ingestion/processing-workspace/sources/{edition_id}/": {
             "get": {
                 "operationId": "ingestion_processing_workspace_sources_retrieve",
@@ -51586,6 +51680,78 @@
                     "result",
                     "source",
                     "state"
+                ]
+            },
+            "ProcessingResultManifest": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "task_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ProcessingCreationTypeEnum"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "task_status": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_recorded": {
+                        "type": "integer"
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "formats": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "checked_at",
+                    "count",
+                    "formats",
+                    "kind",
+                    "notice",
+                    "owner_id",
+                    "page_count",
+                    "revision_id",
+                    "task_id",
+                    "task_status",
+                    "title",
+                    "total_recorded",
+                    "version"
                 ]
             },
             "ProcessingSource": {
