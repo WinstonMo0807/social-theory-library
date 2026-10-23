@@ -3454,6 +3454,180 @@
                 }
             }
         },
+        "/api/catalog/admin/library/works/{work_id}/edits/": {
+            "post": {
+                "operationId": "catalog_admin_library_works_edits_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkspaceEditsRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkspaceEditsRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkspaceEditsRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/library/works/{work_id}/edits/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_library_works_edits_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkspaceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_library_works_edits_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "work_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkspaceCancelRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkspaceCancelRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkspaceCancelRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkspaceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/local-services/": {
             "get": {
                 "operationId": "catalog_admin_local_services_retrieve",
@@ -28214,6 +28388,19 @@
                     "dimensions",
                     "expected_revision"
                 ]
+            },
+            "ConfirmSectionsEnum": {
+                "enum": [
+                    "work",
+                    "bibliography",
+                    "contributors",
+                    "classification",
+                    "knowledge",
+                    "reader",
+                    "curation"
+                ],
+                "type": "string",
+                "description": "* `work` - work\n* `bibliography` - bibliography\n* `contributors` - contributors\n* `classification` - classification\n* `knowledge` - knowledge\n* `reader` - reader\n* `curation` - curation"
             },
             "CoverMediaSelectionRequest": {
                 "type": "object",
@@ -62188,6 +62375,107 @@
                         "type": "string"
                     }
                 }
+            },
+            "WorkspaceCancelRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "action",
+                    "edition_id"
+                ]
+            },
+            "WorkspaceEditsRequest": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "item_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "edit_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "sections": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "confirm_sections": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ConfirmSectionsEnum"
+                        }
+                    },
+                    "suggestions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "maxItems": 40
+                    }
+                },
+                "required": [
+                    "edit_version",
+                    "edition_id",
+                    "request_id",
+                    "sections"
+                ]
+            },
+            "WorkspaceReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "owner_id",
+                    "request_id",
+                    "saved_at",
+                    "state",
+                    "work_id"
+                ]
             }
         },
         "securitySchemes": {

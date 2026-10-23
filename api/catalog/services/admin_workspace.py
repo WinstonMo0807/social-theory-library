@@ -1036,7 +1036,7 @@ def build_admin_workspace(
             "version_label": edition.version_label,
             "updated_at": edition.updated_at, "work_updated_at": work.updated_at,
             "available_editions": [{"id": str(row.pk), "version_label": row.version_label,
-                                    "publication_year": row.publication_year, "is_primary": row.is_primary}
+                                    "publication_year": row.publication_year, "is_primary": row.is_primary, "publisher": row.publisher, "state": row.state}
                                    for row in work.editions.order_by("-is_primary", "-publication_year", "id")],
             "item_id": str(item.id) if item else None,
             "work_id": str(work.id),

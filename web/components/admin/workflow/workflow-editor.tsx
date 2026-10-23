@@ -9,13 +9,13 @@ import { ContributionScopeEditor } from "./contribution-scope-editor";
 import { fillContributor } from "./contributor-state";
 import { usePathname, useSearchParams } from "next/navigation";
 import { safeAdminHref, withAdminReturn } from "@/lib/admin-route-context";
-import { WORKFLOW_GROUPS, fileDraftFromWorkspace, fileKindLabel, pdfValidationPresentation, fileProcessingStatusLabel, fileTextProfileLabel, fileDuplicateLabel } from "./file-presentation";
+import { fileDraftFromWorkspace, fileKindLabel, pdfValidationPresentation, fileProcessingStatusLabel, fileTextProfileLabel, fileDuplicateLabel } from "./file-presentation";
 import { publicationDescription, publicationPresentation, type CatalogPublication } from "@/lib/api/admin-collections";
 
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Eye, FileCheck2, LoaderCircle, RefreshCw, Save, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActionButton, ActionLink, AsyncStatus, type ActionState } from "@/components/action-feedback";
-import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
 import { createRequestKey } from "@/lib/request-key";
 import {
   CanonicalField,
@@ -64,7 +64,10 @@ import {
   type WorkflowPayload,
   type WorkflowStep,
 } from "./workflow-types";
-import { WorkflowStepRail } from "./workflow-step-rail";
+import { useAdminSession } from "@/lib/admin-session";
+import { withPrivateOwner, PrivateOwnerVerificationError } from "@/lib/api/private-owner";
+import { CatalogEditDiff } from "./catalog-edit-diff";
+import atlas from "./catalog-editor.module.css";
 import { WorkflowLivePreview } from "./workflow-live-preview";
 import { BibliographicCandidatePanel } from "./bibliographic-candidate-panel";
 import { FieldAssistantControl, ASSISTED_WORK_FIELDS, ASSISTED_BIBLIOGRAPHY_FIELDS, FILL_FIELD_LABELS, type AssistantFieldName, type AssistedFieldFill } from "./field-assistant-control";
@@ -140,10 +143,9 @@ function normalizeIssue(value: unknown, fallbackStep?: WorkflowStepKey): Workflo
 function normalizeWorkflow(value: unknown): WorkflowEvaluation {
   const row = asRecord(value);
   const backendCurrent = isWorkflowStepKey(row.current_step) ? row.current_step : "file";
-  const current = backendCurrent === "knowledge" ? "curation" : backendCurrent;
+  const current = backendCurrent;
   const rawSteps = asArray(row.steps);
   const supplied = new Map<WorkflowStepKey, WorkflowStep>();
-  let legacyKnowledgeStep: WorkflowStep | null = null;
   rawSteps.forEach((entry) => {
     const step = asRecord(entry);
     if (!isWorkflowStepKey(step.key)) return;
@@ -157,34 +159,18 @@ function normalizeWorkflow(value: unknown): WorkflowEvaluation {
       summary: step.summary as WorkflowStep["summary"],
       next_action: asString(step.next_action) || asString(asRecord(step.next_action).label) || null,
     };
-    if (stepKey === "knowledge") legacyKnowledgeStep = normalizedStep;
-    else supplied.set(stepKey, normalizedStep);
+    supplied.set(stepKey, normalizedStep);
   });
-  const absorbedKnowledgeStep = legacyKnowledgeStep as WorkflowStep | null;
-  if (absorbedKnowledgeStep) {
-    const curation = supplied.get("curation") ?? blankStep("curation", current);
-    supplied.set("curation", {
-      ...curation,
-      status: backendCurrent === "knowledge" ? absorbedKnowledgeStep.status : curation.status,
-      issues: [
-        ...absorbedKnowledgeStep.issues.map((issue) => ({ ...issue, step: "curation" as const })),
-        ...curation.issues,
-      ],
-      summary: curation.summary ?? absorbedKnowledgeStep.summary,
-      next_action: curation.next_action ?? absorbedKnowledgeStep.next_action,
-    });
-  }
   return {
     overall_status: asString(row.overall_status, "working"),
     current_step: current,
     suggested_next_step: isWorkflowStepKey(row.suggested_next_step)
-      ? row.suggested_next_step === "knowledge" ? "curation" : row.suggested_next_step
+      ? row.suggested_next_step
       : null,
     steps: WORKBENCH_STEP_KEYS.map((key) => supplied.get(key) ?? blankStep(key, current)),
     unresolved_count: asNumber(row.unresolved_count),
     warnings_count: asNumber(row.warnings_count),
     blockers_count: asNumber(row.blockers_count),
-    absorbed_legacy_knowledge_status: absorbedKnowledgeStep?.status,
   };
 }
 
@@ -594,11 +580,27 @@ function WorkflowSectionBody(props: BodyProps) {
   if (props.step === "contributors") return <ContributorsBody {...props} />;
   if (props.step === "classification") return <ClassificationBody {...props} />;
   if (props.step === "reader") return <ReaderBody {...props} />;
-  if (props.step === "curation") return <><KnowledgeFields {...props} /><footer className="workflow-section-actions"><ActionButton className="button" disabled={!props.canEdit || Boolean(props.busy)} onClick={() => void props.confirmKnowledge()}>确认理论与主题</ActionButton></footer><WorkCurationEditor editionId={asString(props.context.edition_id)} beforeAction={props.beforeFieldAction} contextKey={props.assistantContextKey} workId={asString(props.context.work_id)} value={props.draft} canManage={props.canEdit && props.permissions.can_manage_curation !== false} canManageRecommendations={props.canEdit && props.permissions.can_publish === true} onConfirm={props.curationConfirm} onSkip={props.curationSkip} onRefresh={props.refresh} onMessage={props.message} suggestions={props.research.suggestions} onInspect={(candidate) => props.research.onInspect([candidate], "知识策展候选与依据")} /></>;
+  if (props.step === "knowledge") return <KnowledgeFields {...props} />;
+  if (props.step === "curation") return <><WorkCurationEditor editionId={asString(props.context.edition_id)} beforeAction={props.beforeFieldAction} contextKey={props.assistantContextKey} workId={asString(props.context.work_id)} value={props.draft} canManage={props.canEdit && props.permissions.can_manage_curation !== false} canManageRecommendations={props.canEdit && props.permissions.can_publish === true} onConfirm={props.curationConfirm} onSkip={props.curationSkip} onRefresh={props.refresh} onMessage={props.message} suggestions={props.research.suggestions} onInspect={(candidate) => props.research.onInspect([candidate], "知识策展候选与依据")} /></>;
   return <PublicationBody {...props} />;
 }
 
-export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditionId }: { mode: EditorMode; itemId?: string; workId?: string; editionId?: string }) {
+type EditorProps={mode:EditorMode;itemId?:string;workId?:string;editionId?:string};
+export function WorkflowEditor(props:EditorProps){
+  const user=useAdminSession(),[epoch,setEpoch]=useState(0);
+  useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
+  return user?<OwnedWorkflowEditor key={`${user.id}:${props.mode}:${props.workId}:${props.itemId}:${props.editionId}:${epoch}`} {...props} owner={String(user.id)}/>:<p role="status">正在核对编目账户…</p>;
+}
+function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEditionId, owner }: EditorProps & {owner:string}) {
+  const lifetime=useRef<AbortController|null>(null);
+  useEffect(()=>{const controller=new AbortController();lifetime.current=controller;return()=>controller.abort();},[]);
+  const ownerRequest=useMemo(()=>async function request<T>(path:string, options:RequestInit={},credential?:string|null):Promise<T>{
+    if(!lifetime.current)throw Error("编辑会话尚未就绪。");
+    const signal=options.signal?AbortSignal.any([lifetime.current.signal,options.signal]):lifetime.current.signal;
+    const headers=new Headers(options.headers);headers.set("X-Editor-Owner",owner);
+    return withPrivateOwner(owner,()=>apiRequest<T>(path,{...options,signal,headers,cache:"no-store"},credential,false),signal);
+  },[owner]);
+
   const routeParams = useSearchParams();
   const routePathname = usePathname();
   const endpoint = mode === "intake"
@@ -607,7 +609,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   const [payload, setPayload] = useState<WorkflowPayload | null>(null);
   const [drafts, setDrafts] = useState<WorkflowDrafts | null>(null);
   const [dirty, setDirty] = useState<DirtyFields>({});
-  const [active, setActive] = useState<WorkflowStepKey>("file");
+  const [active, setActive] = useState<WorkflowStepKey>(mode === "maintenance" ? "work" : "file");
   const [validation, setValidation] = useState<Partial<Record<WorkflowStepKey, ValidationIssue[]>>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
@@ -618,6 +620,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   const [publishConfirmation, setPublishConfirmation] = useState<"next" | "stay" | null>(null);
   const [publicationPreview, setPublicationPreview] = useState<PublicationPreparation | null>(null);
   const [pendingExitHref, setPendingExitHref] = useState("");
+  const [diffRemote,setDiffRemote]=useState<{raw:unknown;drafts:WorkflowDrafts}|null>(null);
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const draftsRef = useRef<WorkflowDrafts | null>(null);
   const dirtyRef = useRef<DirtyFields>({});
@@ -625,6 +628,11 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   const refreshRequiredRef = useRef(false);
   const fileRequestKeys = useRef(new Map<string, string>());
   const saveRequest = useRef<{ fingerprint: string; id: string } | null>(null);
+  const recoveryKey=`stl-workspace-save:${owner}:${mode}:${itemId||workId}:${requestedEditionId||"primary"}`;
+  const [saveRecovery,setSaveRecovery]=useState(""),[recoveryReady,setRecoveryReady]=useState(false),pendingRecovery=useRef("");
+  const recoveryTarget=useRef<{work_id:string;edition_id:string}|null>(null);
+  useEffect(()=>{queueMicrotask(()=>{if(lifetime.current?.signal.aborted)return;try{const stored=sessionStorage.getItem(recoveryKey);if(stored){const row=JSON.parse(stored);if(typeof row.request_id!=="string"||typeof row.work_id!=="string"||typeof row.edition_id!=="string")throw Error("恢复记录不完整");pendingRecovery.current=row.request_id;recoveryTarget.current=row;}setSaveRecovery(pendingRecovery.current);setRecoveryReady(true);}catch{setMessage("浏览器暂不能读取原保存请求，请保留页面并恢复会话存储。");}});},[recoveryKey]);
+  const clearSaveRecovery=useCallback(()=>{sessionStorage.removeItem(recoveryKey);pendingRecovery.current="";recoveryTarget.current=null;setSaveRecovery("");saveRequest.current=null;},[recoveryKey]);
   const pendingFills = useRef<Record<string, AssistedFieldFill>>({});
   const [pendingFillFields, setPendingFillFields] = useState<string[]>([]);
   const beforeFills = useRef<Record<string, unknown>>({});
@@ -650,6 +658,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   } : {};
   const assistantContextKey = drafts ? JSON.stringify([assistantFormContext, payload?.editorial_revision?.id]) : "";
   const beginOperation = useCallback((key: string) => {
+    if(pendingRecovery.current && key!=="recover-save" && key!=="refresh"){setMessage("上次保存结果尚未确认，请先查回或停止原请求。");return false;}
     if (refreshRequiredRef.current && key !== "refresh") {
       setMessage("修改已保存，但当前页面未刷新。请点击顶部刷新后继续。");
       return false;
@@ -665,8 +674,8 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     setBusy("");
   }, []);
 
-  useEffect(() => { draftsRef.current = drafts; }, [drafts]);
-  useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
+  useEffect(() => { draftsRef.current = drafts; }, [drafts, ownerRequest]);
+  useEffect(() => { dirtyRef.current = dirty; }, [dirty, ownerRequest]);
   useEffect(() => {
     const receive = (event: Event) => {
       const detail = (event as CustomEvent<{ step?: unknown; suggestions?: unknown }>).detail;
@@ -680,7 +689,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     };
     window.addEventListener("workflow-research-suggestions", receive);
     return () => window.removeEventListener("workflow-research-suggestions", receive);
-  }, []);
+  }, [ownerRequest]);
 
   const applyRemote = useCallback((raw: unknown, preserveDirty: boolean) => {
     setPublicationPreview(null);
@@ -693,14 +702,14 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     setDrafts((current) => preserveDirty && current ? mergeRemoteDrafts(current, remoteDrafts, dirtyRef.current) : remoteDrafts);
     setActive((current) => {
       if (typeof window !== "undefined" && window.location.hash) return stepFromHash(window.location.hash, current);
-      return wasLoaded ? current : nextPayload.workflow.current_step;
+      return wasLoaded ? current : mode === "maintenance" ? "work" : nextPayload.workflow.current_step;
     });
   }, [itemId, mode, workId]);
 
   const refresh = useCallback(async (preserveDirty = true) => {
     if (!token || (mode === "intake" ? !itemId : !workId)) return false;
     try {
-      const result = await apiRequest(scopedEndpoint, {}, token);
+      const result = await ownerRequest(scopedEndpoint, {}, token);
       applyRemote(result, preserveDirty);
       refreshRequiredRef.current = false;
       setRequiresRefresh(false);
@@ -711,7 +720,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     } finally {
       setLoading(false);
     }
-  }, [applyRemote, itemId, mode, scopedEndpoint, token, workId]);
+  }, [applyRemote, itemId, mode, scopedEndpoint, token, workId, ownerRequest]);
 
   useEffect(() => {
     if (!asRecord(payload?.data.file).processing || busy || currentDirtyCount || active === "publication" || requiresRefresh) return;
@@ -722,7 +731,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       if (!canceled && !operationRef.current && !dirtyFieldCount(dirtyRef.current)) await refresh(true);
     }, 5000);
     return () => { canceled = true; window.clearTimeout(timer); };
-  }, [payload, active, busy, currentDirtyCount, requiresRefresh, refresh]);
+  }, [payload, active, busy, currentDirtyCount, requiresRefresh, refresh, ownerRequest]);
 
   const refreshAfterMutation = useCallback(async () => {
     const key = "refresh-after-change";
@@ -736,16 +745,47 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     }
   }, [beginOperation, finishOperation, refresh]);
 
+  const inspectDiff = useCallback(async()=>{
+    if(operationRef.current)return;
+    const key="compare";if(!beginOperation(key))return;
+    try{const raw=await ownerRequest(scopedEndpoint,{},token);const next=normalizePayload(raw,mode,itemId,workId);setDiffRemote({raw,drafts:draftsFromPayload(next)});}
+    catch(reason){setMessage(reason instanceof Error?reason.message:"暂不能核对差异，输入保留。");}
+    finally{finishOperation(key);}
+  },[beginOperation,finishOperation,ownerRequest,scopedEndpoint,token,mode,itemId,workId]);
+  function applyDiff(choices:Record<string,boolean>,takeRemote:boolean){
+    if(!diffRemote||!draftsRef.current||pendingRecovery.current)return;
+    const nextDirty:DirtyFields=takeRemote?{}:Object.fromEntries(Object.entries(dirtyRef.current).map(([step,fields])=>[step,(fields||[]).filter(field=>choices[`${step}:${field}`]!==false)]));
+    const merged=mergeRemoteDrafts(draftsRef.current,diffRemote.drafts,nextDirty);
+    applyRemote(diffRemote.raw,false);dirtyRef.current=nextDirty;draftsRef.current=merged;setDrafts(merged);setDirty(nextDirty);
+    pendingFills.current={};beforeFills.current={};setPendingFillFields([]);saveRequest.current=null;setDiffRemote(null);setMessage("已核对最新内容；保留的修改尚未保存。请核对后保存。");
+  }
+
+  const recoverSave=useCallback(async(cancel=false)=>{
+    if(!payload||!pendingRecovery.current)return;
+    const key="recover-save";if(!beginOperation(key))return;
+    try{
+      const id=pendingRecovery.current,target=recoveryTarget.current;if(!target)throw Error("原保存对象不明确，请保留本页输入。");
+      const result=await ownerRequest<{owner_id:string;request_id:string;work_id:string;edition_id:string;state:string}>(`/catalog/admin/library/works/${target.work_id}/edits/commands/${id}/`,cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending",edition_id:target.edition_id})}:{},token);
+      if(result.owner_id!==owner||result.request_id!==id||result.work_id!==target.work_id||result.edition_id!==target.edition_id||!["applied","cancelled"].includes(result.state))throw Error("原请求回执不匹配。");
+      clearSaveRecovery();
+      if(result.state==="applied"&&target.edition_id!==payload.context.edition_id){setMessage("原请求已保存在原出版版本；当前主版本已变化，请在右侧版本列表查看。");}
+      else if(result.state==="applied"){const raw=await ownerRequest(scopedEndpoint,{},token);setDiffRemote({raw,drafts:draftsFromPayload(normalizePayload(raw,mode,itemId,workId))});setMessage("原保存已完成，请核对最新内容，避免重复采用候选。");}
+      else setMessage("未执行的原请求已停止，当前输入仍保留。");
+    }catch(reason){setMessage(reason instanceof Error?reason.message:"暂不能查回原保存结果。");}
+    finally{finishOperation(key);}
+  },[payload,beginOperation,finishOperation,ownerRequest,owner,token,clearSaveRecovery,scopedEndpoint,mode,itemId,workId]);
+
   const manualRefresh = useCallback(async () => {
     const key = "refresh";
     if (!beginOperation(key)) return;
     setMessage("");
     try {
-      if (await refresh(true)) setMessage("已按服务器最新状态刷新，未保存字段仍保留。");
-    } finally {
+      if(dirtyFieldCount(dirtyRef.current)){const raw=await ownerRequest(scopedEndpoint,{},token);setDiffRemote({raw,drafts:draftsFromPayload(normalizePayload(raw,mode,itemId,workId))});}
+      else if (await refresh(true)) setMessage("已按服务器最新状态刷新。");
+    } catch(reason){setMessage(reason instanceof Error?reason.message:"暂不能读取最新内容，输入仍保留。");} finally {
       finishOperation(key);
     }
-  }, [beginOperation, finishOperation, refresh]);
+  }, [beginOperation, finishOperation, refresh, ownerRequest, scopedEndpoint, token, mode, itemId, workId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -753,13 +793,13 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       void refresh(false);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [refresh]);
+  }, [refresh, ownerRequest]);
 
   useEffect(() => {
     const onHashChange = () => setActive((current) => stepFromHash(window.location.hash, current));
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  }, [ownerRequest]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -769,7 +809,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     };
     window.addEventListener("beforeunload", beforeUnload);
     return () => window.removeEventListener("beforeunload", beforeUnload);
-  }, []);
+  }, [ownerRequest]);
 
   const goToStep = useCallback((step: WorkflowStepKey, focusField?: string) => {
     setActive(step);
@@ -871,7 +911,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       return false;
     }
     const explicitStep = asString(candidate.step);
-    const metadataStep: WorkflowStepKey = ["version_label", "publication_date", "publication_year", "publisher", "publication_place", "isbn10", "isbn13", "series", "extent", "responsibility_statement", "journal_title", "volume", "issue", "page_range", "doi", "degree_institution", "degree_type", "report_institution"].includes(field)
+    const metadataStep: WorkflowStepKey = ["version_label", "publication_date", "publication_year", "publisher", "publication_place", "isbn10", "isbn13", "series", "series_number", "container_title", "extent", "responsibility_statement", "journal_title", "volume", "issue", "page_range", "doi", "degree_institution", "degree_type", "report_institution"].includes(field)
       ? "bibliography"
       : ["title", "subtitle", "original_title", "uniform_title", "language", "original_language", "first_publication_date", "abstract", "document_type"].includes(field)
         ? "work"
@@ -925,7 +965,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   }, [goToStep]);
 
   const saveEdits = useCallback(async (confirmStep?: WorkflowStepKey, leaveHref = "") => {
-    if (!payload || !draftsRef.current || !token) return false;
+    if (!payload?.context.work_id || !payload.context.edition_id || !draftsRef.current || !token) return false;
     const step = confirmStep;
     const documentType = asString(draftsRef.current.work.document_type, asString(payload.context.document_type, "book"));
     const issues = step ? validateWorkflowSection(step, draftsRef.current[step], documentType) : [];
@@ -949,7 +989,8 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
         confirm_sections: step ? [step] : [], suggestions: Object.values(pendingFills.current) };
       const fingerprint = JSON.stringify(body);
       if (saveRequest.current?.fingerprint !== fingerprint) saveRequest.current = { fingerprint, id: createRequestKey() };
-      const result = await apiRequest(`/catalog/admin/library/works/${payload.context.work_id}/edits/`, {
+      recoveryTarget.current={work_id:payload.context.work_id,edition_id:payload.context.edition_id};sessionStorage.setItem(recoveryKey,JSON.stringify({...recoveryTarget.current,request_id:saveRequest.current.id}));pendingRecovery.current=saveRequest.current.id;setSaveRecovery(saveRequest.current.id);
+      const result = await ownerRequest(`/catalog/admin/library/works/${payload.context.work_id}/edits/`, {
         method: "POST", body: JSON.stringify({ ...body, request_id: saveRequest.current.id }),
       }, token);
       const nextPayload = normalizePayload(result, mode, itemId, workId);
@@ -958,7 +999,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       pendingFills.current = {};
       setPendingFillFields([]);
       beforeFills.current = {};
-      saveRequest.current = null;
+      clearSaveRecovery();
       applyRemote(result, false);
       const backendStep = nextPayload.workflow.steps.find((entry) => entry.key === step);
       const blockers = backendStep?.issues.filter((issue) => issue.severity === "blocker") ?? [];
@@ -972,12 +1013,13 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       if (leaveHref) window.location.assign(leaveHref);
       return true;
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "保存未确认成功，输入仍保留。可重试同一次保存；系统不会重复处理。");
+      if(reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400,401,403,404,409].includes(reason.status))clearSaveRecovery();
+      setMessage(reason instanceof Error ? reason.message : "保存未确认成功，输入仍保留，请先查回原请求。");
       return false;
     } finally {
       finishOperation(operationKey);
     }
-  }, [applyRemote, beginOperation, finishOperation, focusFirstIssue, goToStep, itemId, mode, payload, token, workId]);
+  }, [applyRemote, beginOperation, finishOperation, focusFirstIssue, goToStep, itemId, mode, payload, token, workId, ownerRequest, recoveryKey, clearSaveRecovery]);
 
   const saveStep = useCallback(async (step: WorkflowStepKey, confirm: boolean) => { await saveEdits(confirm ? step : undefined); }, [saveEdits]);
   const saveAllDirty = useCallback((leaveHref = "") => saveEdits(undefined, leaveHref), [saveEdits]);
@@ -1009,14 +1051,14 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     const operationKey = "preflight";
     if (!beginOperation(operationKey)) return;
     try {
-      const result = await apiRequest(scopedEndpoint, {}, token);
+      const result = await ownerRequest(scopedEndpoint, {}, token);
       const nextPayload = normalizePayload(result, mode, itemId, workId);
       if (dirtyFieldCount(dirtyRef.current)) {
         setMessage("检查期间又有未保存修改，请先保存草稿。");
         return;
       }
       applyRemote(result, false);
-      const prepared = await apiRequest<PublicationPreparation>(`/catalog/admin/editions/${asString(nextPayload.context.edition_id)}/publication/prepare/`, {}, token);
+      const prepared = await ownerRequest<PublicationPreparation>(`/catalog/admin/editions/${asString(nextPayload.context.edition_id)}/publication/prepare/`, {}, token);
       setPublicationPreview(prepared);
       const blockerCount = prepared.blocking.length;
       const warningCount = prepared.warnings.length;
@@ -1028,7 +1070,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     } finally {
       finishOperation(operationKey);
     }
-  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, mode, payload, scopedEndpoint, token, workId]);
+  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, mode, payload, scopedEndpoint, token, workId, ownerRequest]);
 
   const publishEditorialRevision = useCallback(async () => {
     const revision = payload?.editorial_revision;
@@ -1049,7 +1091,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  }, [saveAllDirty]);
+  }, [saveAllDirty, ownerRequest]);
 
   useEffect(() => {
     if (!payload) return;
@@ -1057,7 +1099,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     return () => {
       window.dispatchEvent(new CustomEvent("admin-workflow-context", { detail: { active: false } }));
     };
-  }, [currentDirtyCount, payload]);
+  }, [currentDirtyCount, payload, ownerRequest]);
 
   const fileAction = useCallback(async (action: "retry" | "resume" | "replace" | "supplement", file?: File) => {
     if (!token || !payload) return;
@@ -1081,20 +1123,20 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
         if (data.current_reader_asset_id) body.append("expected_reader_asset_id",asString(data.current_reader_asset_id));
         options.body=body;
       }
-      await apiRequest(url, options, token);
+      await ownerRequest(url, options, token);
       setMessage(isUpload ? "文件请求已保存，正在核对处理结果；旧公开版本和历史文件保留。这不表示新文件已公开。" : "已请求恢复原文件任务，请核对后续处理状态。");
       await refresh(true);
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "文件操作失败。");
     } finally { finishOperation(operationKey); }
-  }, [beginOperation, finishOperation, payload, refresh, token]);
+  }, [beginOperation, finishOperation, payload, refresh, token, ownerRequest]);
 
   const skipCuration = useCallback(async () => {
     if (!token || !draftsRef.current) return;
     const operationKey = "skip-curation";
     if (!beginOperation(operationKey)) return;
     try {
-      const result = await apiRequest(`${endpoint}sections/curation/${maintenanceQuery}`, { method: "PATCH", body: JSON.stringify({ data: { ...draftsRef.current.curation, skipped: true }, skip: true, confirm_section: true }) }, token);
+      const result = await ownerRequest(`${endpoint}sections/curation/${maintenanceQuery}`, { method: "PATCH", body: JSON.stringify({ data: { ...draftsRef.current.curation, skipped: true }, skip: true, confirm_section: true }) }, token);
       setDirty((current) => ({ ...current, curation: [] }));
       dirtyRef.current = { ...dirtyRef.current, curation: [] };
       const nextPayload = normalizePayload(result, mode, itemId, workId);
@@ -1108,7 +1150,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "暂不策展操作失败。");
     } finally { finishOperation(operationKey); }
-  }, [applyRemote, beginOperation, endpoint, finishOperation, goToStep, itemId, maintenanceQuery, mode, token, workId]);
+  }, [applyRemote, beginOperation, endpoint, finishOperation, goToStep, itemId, maintenanceQuery, mode, token, workId, ownerRequest]);
 
   const goToIssue = useCallback((issue: WorkflowIssue) => {
     let step = issue.step;
@@ -1158,7 +1200,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       const publishEndpoint = mode === "intake"
         ? `/ingestion/items/${encodeURIComponent(asString(payload.context.item_id ?? itemId))}/publish/`
         : `/catalog/admin/library/works/${encodeURIComponent(asString(payload.context.work_id ?? workId))}/publication/${maintenanceQuery}`;
-      const result = asRecord(await apiRequest(publishEndpoint, { method: "POST", body: JSON.stringify({ confirm_warnings: confirmWarnings, prepared_fingerprint: publicationPreview.fingerprint, after_publish: intent, ...(maintenanceEditionId ? { edition_id: maintenanceEditionId } : {}) }) }, token));
+      const result = asRecord(await ownerRequest(publishEndpoint, { method: "POST", body: JSON.stringify({ confirm_warnings: confirmWarnings, prepared_fingerprint: publicationPreview.fingerprint, after_publish: intent, ...(maintenanceEditionId ? { edition_id: maintenanceEditionId } : {}) }) }, token));
       setPublishConfirmation(null);
       const nextTarget = asRecord(result.next_target);
       if (intent === "next") {
@@ -1184,7 +1226,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "发布失败。");
     } finally { finishOperation(operationKey); }
-  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, publicationPreview, routeParams, runPublicationPreflight, token, workId]);
+  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, publicationPreview, routeParams, runPublicationPreflight, token, workId, ownerRequest]);
 
   const performWithdraw = useCallback(async () => {
     if (!payload || !token || !window.confirm("确认下架当前版本吗？文件、审核记录和历史版本会继续保留。")) return;
@@ -1192,14 +1234,14 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     if (!beginOperation(operationKey)) return;
     try {
       if (mode === "intake") {
-        await apiRequest(
+        await ownerRequest(
           `/ingestion/items/${encodeURIComponent(asString(payload.context.item_id ?? itemId))}/withdraw/`,
           { method: "POST", body: JSON.stringify({ reason: "管理员在 2.8 馆藏工作流中下架" }) },
           token,
         );
         await refresh(true);
       } else {
-        const result = await apiRequest(
+        const result = await ownerRequest(
           `/catalog/admin/library/works/${encodeURIComponent(asString(payload.context.work_id ?? workId))}/publication/${maintenanceQuery}`,
           { method: "POST", body: JSON.stringify({ action: "withdraw", reason: "管理员在 2.8 馆藏工作流中下架", ...(maintenanceEditionId ? { edition_id: maintenanceEditionId } : {}) }) },
           token,
@@ -1213,7 +1255,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     } finally {
       finishOperation(operationKey);
     }
-  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, refresh, token, workId]);
+  }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, refresh, token, workId, ownerRequest]);
 
   const decideCandidate = useCallback(async (candidate: WorkflowCandidate, action: string) => {
     if (["apply_to_draft", "apply_draft", "use_value"].includes(action)) {
@@ -1261,7 +1303,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       const body = descriptor
         ? buildCandidateActionBody(descriptor, editedValue, legacyBody)
         : legacyBody;
-      await apiRequest(decisionUrl, { method: descriptor?.method || "POST", body: JSON.stringify(body) }, token);
+      await ownerRequest(decisionUrl, { method: descriptor?.method || "POST", body: JSON.stringify(body) }, token);
       setResearchSuggestions((current) => {
         const next = { ...current };
         for (const stepKey of WORKFLOW_STEP_KEYS) {
@@ -1279,7 +1321,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
       setMessage(reason instanceof Error ? reason.message : "候选决定失败。");
       return false;
     } finally { finishOperation(operationKey); }
-  }, [applyCandidateToDraft, beginOperation, finishOperation, refresh, token]);
+  }, [applyCandidateToDraft, beginOperation, finishOperation, refresh, token, ownerRequest]);
 
   const verifyCandidate = useCallback(async (candidate: WorkflowCandidate) => {
     if (!token) return;
@@ -1288,7 +1330,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     const operationKey = `candidate-verify-${candidate.id}`;
     if (!beginOperation(operationKey)) return;
     try {
-      const result = asRecord(await apiRequest(verifyUrl, {
+      const result = asRecord(await ownerRequest(verifyUrl, {
         method: asString(descriptor.method, "POST"),
         body: JSON.stringify({ ...asRecord(candidate.verify_payload), ...asRecord(descriptor.payload) }),
       }, token));
@@ -1301,7 +1343,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
     } finally {
       finishOperation(operationKey);
     }
-  }, [beginOperation, finishOperation, refresh, token]);
+  }, [beginOperation, finishOperation, refresh, token, ownerRequest]);
 
   const exit = useCallback((href: string) => {
     if (dirtyFieldCount(dirtyRef.current)) {
@@ -1344,7 +1386,7 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   const documentType = asString(drafts.work.document_type, asString(payload.context.document_type, "book"));
   const presentations = sectionPresentations(payload.workflow.steps, active);
   const returnHref = safeAdminHref(routeParams.get("return_to"), asString(payload.queue.return_href ?? payload.context.return_href, mode === "intake" ? "/admin/review" : "/admin/library"));
-  const canEdit = payload.permissions.can_edit !== false && !requiresRefresh;
+  const canEdit = payload.permissions.can_edit !== false && !requiresRefresh && recoveryReady && !saveRecovery;
   const publication = payload.publication ?? asRecord(payload.data.publication);
   const savedAt = asString(payload.editing?.saved_at ?? payload.context.updated_at);
   const source = ({manual:"手工编目",upload:"文件上传",existing:"馆藏维护",import:"导入书目"} as Record<string,string>)[asString(payload.context.source_type)] || "已有馆藏";
@@ -1356,11 +1398,34 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
   return (
     <ResearchSuggestionCapabilityContext.Provider value={canRunResearch}>
     <ResearchWorkspaceContext.Provider value={researchWorkspace}>
-    <div className="workflow-editor workflow-v307-editor" data-workflow-mode={payload.mode}>
-      <WorkflowStepRail title={asString(payload.context.title)} filename={asString(payload.context.filename)} steps={payload.workflow.steps} active={active} unresolvedCount={payload.workflow.unresolved_count} dirtyCount={currentDirtyCount} returnHref={returnHref} onStep={goToStep} onExit={exit} />
+    <div className={`workflow-editor workflow-v307-editor ${atlas.atlas}`} data-workflow-mode={payload.mode}>
+
       <main className="workflow-editor-main">
-        <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>馆藏工作页</h1><strong className="workflow-v307-book-title">{asString(drafts.work.title, "未命名馆藏")}</strong><span>{payload.workflow.blockers_count ? `还需确认 ${payload.workflow.blockers_count} 项` : "没有阻断性问题"} · {currentDirtyCount ? `${currentDirtyCount} 项未保存` : "草稿已保存"}</span></div><div><ActionButton state={busy === "refresh" ? "pending" : "idle"} pendingLabel="正在刷新" onClick={() => void manualRefresh()} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</ActionButton><ActionButton state={busy === "save-draft" || busy === `save-${active}` ? "pending" : "idle"} pendingLabel="正在保存" onClick={() => void saveAllDirty()} disabled={Boolean(busy) || !canEdit || !currentDirtyCount}><Save size={14} />保存书目修改</ActionButton><ActionButton onClick={inspectPdf}><Eye size={14} />PDF</ActionButton>{canEdit && (itemId || editionId) ? <RecycleControl kind={mode === "intake" && itemId ? "upload" : "edition"} id={mode === "intake" && itemId ? itemId : editionId!} name={asString(payload.context.title) || "当前记录"} disabled={Boolean(busy)} onDeleted={() => { window.location.assign(returnHref); }} /> : null}{payload.context.page_preview_url && !currentDirtyCount ? <ActionLink className="workflow-header-preview" href={withAdminReturn(asString(payload.context.page_preview_url), previewReturnHref)} target="_blank">打开完整前台预览</ActionLink> : null}{payload.context.public_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开页面</ActionLink> : null}</div></header>
-        <section className="workflow-v306-identity" aria-label="当前作品与出版版本">
+        <header className="workflow-editor-header"><div><p>{payload.mode === "intake" ? "上架工作" : "馆藏维护"}</p><h1>馆藏目录与材料编辑</h1><strong className="workflow-v307-book-title">统一整理作品、版本、贡献者和关联知识。</strong><span>{payload.workflow.blockers_count ? `还需确认 ${payload.workflow.blockers_count} 项` : "没有阻断性问题"} · {currentDirtyCount ? `${currentDirtyCount} 项未保存` : "草稿已保存"}</span></div><div><ActionButton state={busy === "refresh" ? "pending" : "idle"} pendingLabel="正在刷新" onClick={() => void manualRefresh()} disabled={Boolean(busy)}><RefreshCw size={14} />刷新</ActionButton><ActionButton state={busy === "save-draft" || busy === `save-${active}` ? "pending" : "idle"} pendingLabel="正在保存" onClick={() => void saveAllDirty()} disabled={Boolean(busy) || !canEdit || !currentDirtyCount}><Save size={14} />保存书目修改</ActionButton><ActionButton disabled={Boolean(busy)} onClick={()=>void inspectDiff()}>查看差异</ActionButton><ActionButton onClick={openPreview}><Eye size={14} />预览公开页</ActionButton>{canEdit && (itemId || editionId) ? <RecycleControl kind={mode === "intake" && itemId ? "upload" : "edition"} id={mode === "intake" && itemId ? itemId : editionId!} name={asString(payload.context.title) || "当前记录"} disabled={Boolean(busy)} onDeleted={() => { window.location.assign(returnHref); }} /> : null}{payload.context.page_preview_url && !currentDirtyCount ? <ActionLink className="workflow-header-preview" href={withAdminReturn(asString(payload.context.page_preview_url), previewReturnHref)} target="_blank">打开完整前台预览</ActionLink> : null}{payload.context.public_url ? <ActionLink className="workflow-header-preview" href={asString(payload.context.public_url)} target="_blank">公开页面</ActionLink> : null}</div></header>
+        <nav className={atlas.tabs} aria-label="馆藏编辑栏目">{([["work","基本信息"],["contributors","贡献者"],["bibliography","出版与版本"],["classification","分类与主题"],["knowledge","关联知识"],["file","文件"],["reader","目录"],["curation","策划"],["publication","变更与发布记录"]] as [WorkflowStepKey,string][]).map(([key,label])=><button key={key} type="button" aria-current={active===key?"page":undefined} onClick={()=>goToStep(key)}>{label}{key==="file"&&asArray(asRecord(payload.data.file).assets).length?`（${asArray(asRecord(payload.data.file).assets).length}）`:""}</button>)}</nav>
+        <div className={atlas.columns}><div className={atlas.editing}>
+
+        {busy && !message ? <AsyncStatus state="pending" message="正在执行馆藏工作操作……" className="workflow-editor-message" /> : null}
+        <details><summary>馆藏状态与待确认事项</summary><CatalogHealth value={payload.health} /></details>
+        {message ? <AsyncStatus state={workflowMessageState(message)} message={message} className="workflow-editor-message" assertive={workflowMessageState(message) === "error"} /> : null}
+        {saveRecovery?<section className="workflow-editor-message" role="status"><p>上次保存结果尚未确认，已填写内容仍保留。请先查回原请求。</p><button disabled={Boolean(busy)} onClick={()=>void recoverSave()}>查回原保存</button><button disabled={Boolean(busy)} onClick={()=>void recoverSave(true)}>停止未执行请求</button></section>:null}
+        {requiresRefresh && !busy ? <p role="alert">修改已保存，但当前页面未刷新。请点击顶部刷新后继续；不必重复新建或采用。</p> : null}
+        {editionId ? <div className="workflow-section-actions"><ActionButton disabled={Boolean(busy)} onClick={() => exit(withAdminReturn(`/admin/publication/${editionId}?object=edition`, previewReturnHref))}>进入发布前检查</ActionButton></div> : null}
+        {active === "publication" && editionId ? <PublicationHistory editionId={editionId} token={token} canPublish={Boolean(payload.permissions.can_publish)} onChanged={async () => { await refresh(true); }} /> : null}
+        {payload.editorial_revision?.status === "draft" ? <section className="workflow-editorial-revision"><div><strong>已发布作品的编辑草稿</strong><p>当前有 {payload.editorial_revision.changed_fields.length} 项已保存修改。表单和预览显示草稿，读者仍使用已发布版本。</p></div><ActionButton className="button" state={busy === "publish-editorial-revision" ? "pending" : "idle"} pendingLabel="正在发布草稿" disabled={Boolean(busy) || payload.editorial_revision.has_conflict} onClick={() => void publishEditorialRevision()}><Check size={14} />确认发布更新</ActionButton></section> : null}
+        {editionId ? <PublicationRetryControl key={editionId} editionId={editionId} token={token} disabled={Boolean(busy)} refreshKey={JSON.stringify(payload.context)} onCompleted={async () => { await refresh(true); }} /> : null}
+        <div className="workflow-sections">{payload.workflow.steps.filter(step => (active === "work" ? ["work", "contributors", "bibliography"] : [active]).includes(step.key)).map((step) => {
+          const presentation = presentations[step.key];
+          const expanded = active === "work" || presentation === "current";
+          const localErrors = validation[step.key] ?? [];
+          const sectionDirty = Boolean(dirty[step.key]?.length);
+          const sectionCanEdit = canEdit && !busy;
+          return <section className={`workflow-section presentation-${presentation} status-${step.status}`} id={`workflow-section-${step.key}`} key={step.key} data-step={step.key}><button className="workflow-section-heading" type="button" aria-expanded={expanded} onClick={() => goToStep(step.key)}><span>{step.status === "complete" || step.status === "skipped" ? <Check size={15} /> : expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</span><div><small>{statusLabel(step.status)}</small><h2>{({work:"作品身份",contributors:"贡献者",bibliography:"出版信息",knowledge:"关联知识",curation:"策划"} as Record<string,string>)[step.key] || step.label}</h2>{presentation === "summary" ? <p>{typeof step.summary === "string" ? step.summary : summaryFor(step.key, drafts[step.key])}</p> : presentation === "preview" ? <p>{step.next_action || "可直接进入编辑，也可稍后处理。"}</p> : null}</div><b>{step.issues.length ? `${step.issues.length} 项` : ""}</b></button>{expanded ? <div className="workflow-section-content">{step.key !== "publication" ? <div className="workflow-backend-issues">{step.issues.map((issue) => <QualityIssue key={issue.code || issue.message} message={sectionDirty ? `上次保存检查：${issue.message} 本次修改尚未保存。` : issue.message} tone={sectionDirty ? "info" : issue.severity === "blocker" ? "blocker" : issue.severity === "info" ? "info" : "warning"} onActivate={() => goToIssue(issue)} />)}</div> : null}<WorkflowSectionBody step={step.key} draft={drafts[step.key]} documentType={documentType} candidates={allCandidates} canEdit={sectionCanEdit} context={payload.context} permissions={payload.permissions} errors={localErrors} update={update} inspectField={inspectField} inspectPdf={inspectPdf} fileAction={fileAction} curationConfirm={() => saveStep("curation", true)} curationSkip={() => skipCuration()} refresh={() => refresh(true)} message={setMessage} goToIssue={goToIssue} saveDraft={() => void saveAllDirty()} beforeFieldAction={async () => { if (currentDirtyCount) { setMessage("请先点击保存本页填写，再执行这项单独操作。不会自动保存整页。"); return false; } return true; }} knowledgeDraft={drafts.knowledge} confirmKnowledge={() => saveStep("knowledge", true)} assistantContextKey={assistantContextKey} assistantFormContext={assistantFormContext} fillSuggestion={fillSuggestion} pendingFillFields={pendingFillFields} undoFill={undoFill} preview={openPreview} preflight={() => void runPublicationPreflight()} preparation={currentDirtyCount ? null : publicationPreview} publish={(intent) => void performPublish(intent, false)} withdraw={() => void performWithdraw()} publishing={busy === "publish"} busy={busy} research={{ mode, itemId, workId, token, suggestions: allCandidates, onInspect: inspectSuggestions, onUpdated: refreshAfterMutation, onMessage: setMessage }} />{step.key !== "publication" && step.key !== "curation" && step.key !== "file" ? <footer className="workflow-section-actions"><ActionButton className="button" state={busy === `save-${step.key}` ? "pending" : "idle"} pendingLabel="正在确认" disabled={Boolean(busy) || !sectionCanEdit} onClick={() => void saveStep(step.key, true)}><FileCheck2 size={14} />确认本节内容</ActionButton></footer> : null}</div> : null}</section>;
+        })}</div>
+        {editionId && ["work", "bibliography"].includes(active) ? <BibliographicCandidatePanel editionId={editionId} token={token} formContext={assistantFormContext} disabled={!canEdit || Boolean(busy)} onFill={fillSuggestion} onUndo={undoFill} pendingFields={pendingFillFields} /> : null}
+      </div>
+      {inspector ? <WorkflowInspector selection={inspector} token={token} onClose={() => setInspector(null)} onDecision={decideCandidate} onVerify={verifyCandidate} /> : <aside className="workflow-v306-preview" id="workflow-current-preview" aria-label="当前版本预览与建议">
+        <section className="workflow-v306-identity" aria-label="当前作品与出版版本"><h2>版本与状态</h2>
           <label>当前出版版本<select value={editionId} aria-label="当前出版版本" onChange={(event) => exit(withAdminReturn(`/admin/library/works/${encodeURIComponent(asString(payload.context.work_id))}?edition=${encodeURIComponent(event.target.value)}#${active}`,returnHref))}>
             {asArray(payload.context.available_editions).map(asRecord).map((edition) => <option key={asString(edition.id)} value={asString(edition.id)}>{asString(edition.version_label) || "未命名版本"} · {asString(edition.publication_year) || "年份待补"}{edition.is_primary ? " · 主版本" : " · 非主版本"}</option>)}
           </select></label>
@@ -1368,28 +1433,10 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
           <p>{currentDirtyCount ? "还有修改未保存" : "已保存的草稿"} · {savedAt && !Number.isNaN(Date.parse(savedAt)) ? new Date(savedAt).toLocaleString("zh-CN", {hour12:false}) : "保存时间待读取"}<br />{payload.editing?.has_unpublished_changes ? "存在未发布修改；读者继续使用旧公开版本。" : "保存与正式公开分别记录。"}</p>
           <button type="button" onClick={() => { setPreviewExpanded(true); document.getElementById("workflow-current-preview")?.scrollIntoView({block:"start"}); }}>查看预览与当前建议</button>
           {editionId ? <PrimaryEditionControl key={editionId} editionId={editionId} credential={token} canPublish={payload.permissions.can_publish === true} disabled={currentDirtyCount > 0 || Boolean(busy)} returnTo={previewReturnHref} onChanged={() => refresh(true)} /> : null}
+          <div className={atlas.versions}><h3>其他出版版本</h3>{asArray(payload.context.available_editions).map(asRecord).filter(row=>asString(row.id)!==editionId).map(row=><button key={asString(row.id)} onClick={()=>exit(withAdminReturn(`/admin/library/works/${asString(payload.context.work_id)}?edition=${asString(row.id)}#work`,returnHref))}><strong>{asString(row.publication_year)||"年份待补"} · {asString(row.version_label)||"版本说明待补"}</strong><small>{asString(row.publisher)} · {row.state==="published"?"已公开":row.state==="withdrawn"?"已撤回":"尚未公开"}{row.is_primary?" · 主版本":""}</small></button>)}</div>
         </section>
-        {busy && !message ? <AsyncStatus state="pending" message="正在执行馆藏工作操作……" className="workflow-editor-message" /> : null}
-        <CatalogHealth value={payload.health} />
-        {message ? <AsyncStatus state={workflowMessageState(message)} message={message} className="workflow-editor-message" assertive={workflowMessageState(message) === "error"} /> : null}
-        {requiresRefresh && !busy ? <p role="alert">修改已保存，但当前页面未刷新。请点击顶部刷新后继续；不必重复新建或采用。</p> : null}
-        {editionId ? <div className="workflow-section-actions"><ActionButton disabled={Boolean(busy)} onClick={() => exit(withAdminReturn(`/admin/publication/${editionId}?object=edition`, previewReturnHref))}>进入发布前检查</ActionButton></div> : null}
-        {active === "publication" && editionId ? <PublicationHistory editionId={editionId} token={token} canPublish={Boolean(payload.permissions.can_publish)} onChanged={async () => { await refresh(true); }} /> : null}
-        {payload.editorial_revision?.status === "draft" ? <section className="workflow-editorial-revision"><div><strong>已发布作品的编辑草稿</strong><p>当前有 {payload.editorial_revision.changed_fields.length} 项已保存修改。表单和预览显示草稿，读者仍使用已发布版本。</p></div><ActionButton className="button" state={busy === "publish-editorial-revision" ? "pending" : "idle"} pendingLabel="正在发布草稿" disabled={Boolean(busy) || payload.editorial_revision.has_conflict} onClick={() => void publishEditorialRevision()}><Check size={14} />确认发布更新</ActionButton></section> : null}
-        {editionId ? <PublicationRetryControl key={editionId} editionId={editionId} token={token} disabled={Boolean(busy)} refreshKey={JSON.stringify(payload.context)} onCompleted={async () => { await refresh(true); }} /> : null}
-        <div className="workflow-sections">{payload.workflow.steps.filter(step => (WORKFLOW_GROUPS.find(group => group.steps.some(key => key === active))?.steps as readonly string[] | undefined)?.includes(step.key)).map((step) => {
-          const presentation = presentations[step.key];
-          const expanded = presentation === "current";
-          const localErrors = validation[step.key] ?? [];
-          const sectionDirty = Boolean(dirty[step.key]?.length);
-          const sectionCanEdit = canEdit && !busy;
-          return <section className={`workflow-section presentation-${presentation} status-${step.status}`} id={`workflow-section-${step.key}`} key={step.key} data-step={step.key}><button className="workflow-section-heading" type="button" aria-expanded={expanded} onClick={() => goToStep(step.key)}><span>{step.status === "complete" || step.status === "skipped" ? <Check size={15} /> : expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</span><div><small>{statusLabel(step.status)}</small><h2>{step.label}</h2>{presentation === "summary" ? <p>{typeof step.summary === "string" ? step.summary : summaryFor(step.key, drafts[step.key])}</p> : presentation === "preview" ? <p>{step.next_action || "可直接进入编辑，也可稍后处理。"}</p> : null}</div><b>{step.issues.length ? `${step.issues.length} 项` : ""}</b></button>{expanded ? <div className="workflow-section-content">{step.key !== "publication" ? <div className="workflow-backend-issues">{step.issues.map((issue) => <QualityIssue key={issue.code || issue.message} message={sectionDirty ? `上次保存检查：${issue.message} 本次修改尚未保存。` : issue.message} tone={sectionDirty ? "info" : issue.severity === "blocker" ? "blocker" : issue.severity === "info" ? "info" : "warning"} onActivate={() => goToIssue(issue)} />)}</div> : null}<WorkflowSectionBody step={step.key} draft={drafts[step.key]} documentType={documentType} candidates={allCandidates} canEdit={sectionCanEdit} context={payload.context} permissions={payload.permissions} errors={localErrors} update={update} inspectField={inspectField} inspectPdf={inspectPdf} fileAction={fileAction} curationConfirm={() => saveStep("curation", true)} curationSkip={() => skipCuration()} refresh={() => refresh(true)} message={setMessage} goToIssue={goToIssue} saveDraft={() => void saveAllDirty()} beforeFieldAction={async () => { if (currentDirtyCount) { setMessage("请先点击保存本页填写，再执行这项单独操作。不会自动保存整页。"); return false; } return true; }} knowledgeDraft={drafts.knowledge} confirmKnowledge={() => saveStep("knowledge", true)} assistantContextKey={assistantContextKey} assistantFormContext={assistantFormContext} fillSuggestion={fillSuggestion} pendingFillFields={pendingFillFields} undoFill={undoFill} preview={openPreview} preflight={() => void runPublicationPreflight()} preparation={currentDirtyCount ? null : publicationPreview} publish={(intent) => void performPublish(intent, false)} withdraw={() => void performWithdraw()} publishing={busy === "publish"} busy={busy} research={{ mode, itemId, workId, token, suggestions: allCandidates, onInspect: inspectSuggestions, onUpdated: refreshAfterMutation, onMessage: setMessage }} />{step.key !== "publication" && step.key !== "curation" && step.key !== "file" ? <footer className="workflow-section-actions"><ActionButton className="button" state={busy === `save-${step.key}` ? "pending" : "idle"} pendingLabel="正在确认" disabled={Boolean(busy) || !sectionCanEdit} onClick={() => void saveStep(step.key, true)}><FileCheck2 size={14} />确认本节内容</ActionButton></footer> : null}</div> : null}</section>;
-        })}</div>
-        {editionId && ["work", "bibliography"].includes(active) ? <BibliographicCandidatePanel editionId={editionId} token={token} formContext={assistantFormContext} disabled={!canEdit || Boolean(busy)} onFill={fillSuggestion} onUndo={undoFill} pendingFields={pendingFillFields} /> : null}
-      </main>
-      {inspector ? <WorkflowInspector selection={inspector} token={token} onClose={() => setInspector(null)} onDecision={decideCandidate} onVerify={verifyCandidate} /> : <aside className="workflow-v306-preview" id="workflow-current-preview" aria-label="当前版本预览与建议">
-        <h2>实时预览</h2><p>这里显示当前输入。点击题名、封面或作者可回到对应编辑区。</p>
-        <WorkflowLivePreview drafts={drafts} context={payload.context} token={token} savedAt={savedAt} dirty={currentDirtyCount > 0} returnHref={previewReturnHref} onLocate={goToStep} />
+        <div className={atlas.previewCard}><h2>公开页预览</h2><p>这里显示当前输入。点击题名、封面或作者可回到对应编辑区。</p>
+        <WorkflowLivePreview owner={owner} drafts={drafts} context={payload.context} token={token} savedAt={savedAt} dirty={currentDirtyCount > 0} returnHref={previewReturnHref} onLocate={goToStep} />
         <h3>发布前需要做什么</h3><p>{publicationDescription(publication as CatalogPublication)}</p>
         {currentDirtyCount ? <p>先保存本页修改，再检查能否发布。以下提醒依据上次保存的内容。</p> : null}
         {requiredActions.length ? <p>发布前需要处理 {requiredActions.length} 项，点击可回到对应字段。</p> : null}
@@ -1400,7 +1447,10 @@ export function WorkflowEditor({ mode, itemId, workId, editionId: requestedEditi
           {currentDirtyCount ? <p>请先保存草稿，再在新标签页核对完整预览。</p> : previewUrl ? <a href={withAdminReturn(previewUrl,previewReturnHref)} target="_blank" rel="noreferrer">在新标签页打开已保存草稿</a> : null}
         </details>
         {publication.public_url ? <a href={asString(publication.public_url)} target="_blank" rel="noreferrer">核对实际公开页面</a> : <p>这个版本还没有可供读者访问的页面。</p>}
-      </aside>}
+      </div></aside>}
+      </div></main>
+      <div className={atlas.mobileSave}><button disabled={Boolean(busy)} onClick={()=>void inspectDiff()}>查看差异</button><button disabled={Boolean(busy)||!canEdit||!currentDirtyCount} onClick={()=>void saveAllDirty()}>保存</button></div>
+      {diffRemote?<CatalogEditDiff local={drafts} remote={diffRemote.drafts} dirty={dirty} onClose={()=>setDiffRemote(null)} onApply={applyDiff}/>:null}
       {pendingExitHref ? <div className="workflow-modal-backdrop"><div className="workflow-publication-confirmation workflow-unsaved-exit" role="dialog" aria-modal="true" aria-labelledby="workflow-unsaved-exit-title"><AlertTriangle size={21} /><div><h2 id="workflow-unsaved-exit-title">当前工作有未保存修改</h2><p>可以先把所有修改保存为草稿后退出，也可以放弃本次未保存内容。继续编辑会留在当前作品。</p></div><footer><ActionButton className="button" state={busy === "save-draft" ? "pending" : "idle"} pendingLabel="正在保存草稿" disabled={Boolean(busy)} onClick={() => void saveAllDirty(pendingExitHref)}><Save size={14} />保存草稿并退出</ActionButton><ActionButton className="button secondary" disabled={Boolean(busy)} onClick={discardAndExit}>不保存并退出</ActionButton><ActionButton className="button secondary" disabled={Boolean(busy)} onClick={() => setPendingExitHref("")}>继续编辑</ActionButton></footer></div></div> : null}
       {publishConfirmation ? <div className="workflow-modal-backdrop"><div className="workflow-publication-confirmation" role="dialog" aria-modal="true" aria-labelledby="workflow-publish-confirm-title"><AlertTriangle size={21} /><div><h2 id="workflow-publish-confirm-title">确认带警告发布</h2><p>警告不会阻止发布。正文识别、页码和智能检索会继续处理，原始 PDF 会保留。</p></div><footer><ActionButton className="button secondary" disabled={Boolean(busy)} onClick={() => setPublishConfirmation(null)}>取消</ActionButton><ActionButton className="button" state={busy === "publish" ? "pending" : "idle"} pendingLabel="正在发布" disabled={Boolean(busy)} onClick={() => void performPublish(publishConfirmation, true)}>确认发布</ActionButton></footer></div></div> : null}
       {busy === "skip-curation" ? <span className="sr-only" aria-live="polite">正在保存暂不策展决定</span> : null}

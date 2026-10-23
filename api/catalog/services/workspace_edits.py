@@ -9,6 +9,7 @@ import hashlib
 import json
 
 from django.core.serializers.json import DjangoJSONEncoder
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
 
@@ -20,6 +21,8 @@ from catalog.services.work_editor import (
     save_editorial_workflow_section, save_workflow_section,
 )
 from ingestion.models import AuditEvent
+from common.capabilities import Capability, has_capability
+from rest_framework.exceptions import PermissionDenied
 
 
 ASSISTED_FIELDS = {
@@ -80,6 +83,12 @@ def _save_section(edition, step, values, *, actor, confirm):
 
 @transaction.atomic
 def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, sections, confirmations, suggestions, actor):
+    current = get_user_model().objects.select_for_update().filter(pk=actor.pk, is_active=True).first()
+    if not current or current.token_version != actor.token_version or not has_capability(current, Capability.EDIT_METADATA):
+        raise PermissionDenied("当前会话不能继续保存书目，请重新登录后核对。")
+    if ({"knowledge", "curation"} & set(sections)) and not has_capability(current, Capability.EDIT_DRAFT_AUTHORITY):
+        raise PermissionDenied("当前账户不能修改关联知识。")
+    actor = current
     # Existing enrichment mutations lock a research run before the Edition.
     # Respect that order, including requests containing several suggestions.
     from catalog.models import EnrichmentCandidate, ResearchRun
@@ -94,10 +103,14 @@ def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, s
     edition.work = Work.objects.select_for_update().get(pk=work_id)
     fingerprint = _digest([expected_version, sections, sorted(confirmations), suggestions])
     receipt = AuditEvent.objects.filter(
-        action="workspace.edits.saved", object_type="edition", object_id=str(edition.pk),
+        action="workspace.edits.saved", object_type="edition",
         request_id=request_id, actor=actor,
     ).first()
     if receipt:
+        if receipt.object_id != str(edition.pk) or receipt.after.get("work_id") != str(work_id):
+            raise WorkflowEditConflict("此请求编号已用于其他作品或版本。")
+        if receipt.after.get("cancelled"):
+            raise WorkflowEditConflict("原保存请求已停止，请核对当前内容后重新保存。")
         if receipt.after.get("request_fingerprint") != fingerprint:
             raise WorkflowEditConflict("这次保存编号已用于另一组修改，请刷新后重试。")
         return edition, receipt, True

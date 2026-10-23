@@ -1,14 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiBlob, apiRequest } from "@/lib/api";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { WorkDetailView } from "@/components/work-detail-view";
 import type { Work } from "@/lib/data";
 import type { WorkflowStepKey } from "./workflow-state";
 import { asArray, asRecord, asString, type WorkflowDrafts, type WorkflowContext } from "./workflow-types";
 
-export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, returnHref, onLocate }: {
+export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, returnHref, onLocate, owner }: {
   drafts: WorkflowDrafts; context: WorkflowContext; token: string | null; savedAt: string; dirty: boolean;
-  returnHref: string; onLocate: (step: WorkflowStepKey) => void;
+  returnHref: string; onLocate: (step: WorkflowStepKey) => void; owner:string;
 }) {
   const [cover, setCover] = useState("");
   const [coverError, setCoverError] = useState("");
@@ -18,11 +19,11 @@ export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, re
     let active = true, objectUrl = "";
     const controller = new AbortController();
     const reset = window.setTimeout(() => { setCover(""); setCoverError(""); }, 0);
-    void apiRequest<{ image_url: string }>(`/catalog/admin/editions/${editionId}/cover/`, { signal: controller.signal }, token)
-      .then(async result => { if (!result.image_url) return; const blob = await apiBlob(result.image_url, token); objectUrl = URL.createObjectURL(blob); if (active) setCover(objectUrl); else URL.revokeObjectURL(objectUrl); })
+    void withPrivateOwner(owner,()=>apiRequest<{ image_url: string }>(`/catalog/admin/editions/${editionId}/cover/`, { signal: controller.signal, headers:{"X-Editor-Owner":owner},cache:"no-store" }, token,false),controller.signal)
+      .then(async result => { if (!result.image_url || !active) return; const blob = await withPrivateOwner(owner,()=>apiBlob(result.image_url, token,false),controller.signal); if(!active)return; objectUrl = URL.createObjectURL(blob); setCover(objectUrl); })
       .catch(() => { if (active) setCoverError("封面暂时无法读取，请刷新重试。"); });
     return () => { active = false; window.clearTimeout(reset); controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [editionId, token, savedAt]);
+  }, [editionId, token, savedAt, owner]);
   const authorRows = asArray(drafts.contributors.items).map(asRecord).filter(row => row.role === "author" && asRecord(row.scope).kind !== "chapter");
   const title = asString(drafts.work.title, "未填写题名");
   const assets = asArray(drafts.file.assets).map(asRecord);
@@ -50,6 +51,7 @@ export function WorkflowLivePreview({ drafts, context, token, savedAt, dirty, re
       publication_place_verbatim: asString(drafts.bibliography.publication_place),
       journal_title: asString(drafts.bibliography.journal_title), volume: asString(drafts.bibliography.volume), issue: asString(drafts.bibliography.issue),
       page_range: asString(drafts.bibliography.page_range), isbn: asString(drafts.bibliography.isbn), isbn10: asString(drafts.bibliography.isbn10),
+      container_title:asString(drafts.bibliography.container_title),series:asString(drafts.bibliography.series),series_number:asString(drafts.bibliography.series_number),
       isbn13: asString(drafts.bibliography.isbn13), doi: asString(drafts.bibliography.doi), extent: asString(drafts.bibliography.extent),
       language: asString(drafts.work.language), availability: "metadata", readable_asset: null, journal_contents: [],
       contributors: asArray(drafts.contributors.items).map(asRecord).map((row, order) => ({

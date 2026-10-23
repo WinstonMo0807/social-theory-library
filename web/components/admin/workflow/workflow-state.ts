@@ -10,10 +10,8 @@ export const WORKFLOW_STEP_KEYS = [
   "publication",
 ] as const;
 
-// `knowledge` remains a valid backend compatibility key while its legacy
-// TheorySchool editor is retired. The Workbench presents those decisions in
-// the curation surface and keeps the old hash as a migration alias.
-export const WORKBENCH_STEP_KEYS = WORKFLOW_STEP_KEYS.filter((key) => key !== "knowledge");
+// Knowledge relationships and editorial placement are separate saved sections.
+export const WORKBENCH_STEP_KEYS = WORKFLOW_STEP_KEYS;
 
 export type WorkflowStepKey = (typeof WORKFLOW_STEP_KEYS)[number];
 export type WorkflowStepStatus =
@@ -57,24 +55,22 @@ export function isWorkflowStepKey(value: unknown): value is WorkflowStepKey {
 
 export function stepFromHash(hash: string, fallback: WorkflowStepKey): WorkflowStepKey {
   const normalized = hash.replace(/^#/, "").trim();
-  if (normalized === "knowledge") return "curation";
-  return isWorkflowStepKey(normalized) ? normalized : fallback === "knowledge" ? "curation" : fallback;
+  return isWorkflowStepKey(normalized) ? normalized : fallback;
 }
 
 export function workflowHashUrl(url: string, step: WorkflowStepKey): string {
   const parsed = new URL(url, "http://workflow.local");
-  return `${parsed.pathname}${parsed.search}#${step === "knowledge" ? "curation" : step}`;
+  return `${parsed.pathname}${parsed.search}#${step}`;
 }
 
 export function sectionPresentations(
   steps: readonly WorkflowStepLike[],
   active: WorkflowStepKey,
 ): Record<WorkflowStepKey, WorkflowSectionPresentation> {
-  const visibleActive = active === "knowledge" ? "curation" : active;
+  const visibleActive = active;
   const activeIndex = WORKBENCH_STEP_KEYS.indexOf(visibleActive);
   const statusByKey = new Map(steps.map((step) => [step.key, step.status]));
   return Object.fromEntries(WORKFLOW_STEP_KEYS.map((key) => {
-    if (key === "knowledge") return [key, "collapsed"];
     const visibleIndex = WORKBENCH_STEP_KEYS.indexOf(key);
     if (key === visibleActive) return [key, "current"];
     if (visibleIndex === activeIndex + 1) return [key, "preview"];
@@ -90,7 +86,7 @@ export function nextWorkflowStep(
   active: WorkflowStepKey,
   steps: readonly WorkflowStepLike[] = [],
 ): WorkflowStepKey | null {
-  const visibleActive = active === "knowledge" ? "curation" : active;
+  const visibleActive = active;
   const start = WORKBENCH_STEP_KEYS.indexOf(visibleActive) + 1;
   const statusByKey = new Map(steps.map((step) => [step.key, step.status]));
   for (let index = start; index < WORKBENCH_STEP_KEYS.length; index += 1) {

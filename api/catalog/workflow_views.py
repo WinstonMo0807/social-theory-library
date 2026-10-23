@@ -7,6 +7,7 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiTypes
 
 from .editorial_read import AdminPrivateResponseMixin
 
@@ -242,6 +243,7 @@ class WorkspaceEditsSerializer(serializers.Serializer):
 class WorkWorkspaceEditsView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanEditMetadata]
 
+    @extend_schema(request=WorkspaceEditsSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request, work_id):
         from catalog.field_assistant_views import FieldAssistantDecisionSerializer
         from catalog.services.field_assistant import FieldAssistantError

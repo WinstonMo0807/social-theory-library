@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 材料编辑回执
+
+保留305，纳入原works/{work_id}/edits/和新增edits/commands/{request_id}/，共307。原保存CAS和候选来源记录继续使用；保存/停止共用账户锁与请求身份，GET只回当前操作者原请求。
+
 ## 2026-10-23 M04手工书目
 
 保留303，manual-catalog GET/POST与commands/{request_id} GET/POST新增2，总305。严格owner/权限/版本/请求；新建作品、新版、直接使用原版分开。DocumentType扩展章节/其他，公开版本新增论文集名/丛书号且只取激活快照，0078未执行。

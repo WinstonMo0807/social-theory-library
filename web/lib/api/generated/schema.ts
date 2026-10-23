@@ -754,6 +754,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/library/works/{work_id}/edits/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_library_works_edits_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/library/works/{work_id}/edits/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_library_works_edits_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_library_works_edits_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/local-services/": {
         parameters: {
             query?: never;
@@ -6450,6 +6482,17 @@ export interface components {
             dimensions: string[];
             cells: components["schemas"]["ComparisonCellInputRequest"][];
         };
+        /**
+         * @description * `work` - work
+         *     * `bibliography` - bibliography
+         *     * `contributors` - contributors
+         *     * `classification` - classification
+         *     * `knowledge` - knowledge
+         *     * `reader` - reader
+         *     * `curation` - curation
+         * @enum {string}
+         */
+        ConfirmSectionsEnum: "work" | "bibliography" | "contributors" | "classification" | "knowledge" | "reader" | "curation";
         CoverMediaSelectionRequest: {
             /** Format: uuid */
             media_id: string;
@@ -16591,6 +16634,41 @@ export interface components {
             translation_of?: string | null;
             abstract?: string;
         };
+        WorkspaceCancelRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+            /** Format: uuid */
+            edition_id: string;
+        };
+        WorkspaceEditsRequest: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            item_id?: string | null;
+            edit_version: string;
+            /** Format: uuid */
+            request_id: string;
+            sections: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            confirm_sections?: components["schemas"]["ConfirmSectionsEnum"][];
+            suggestions?: {
+                [key: string]: unknown;
+            }[];
+        };
+        WorkspaceReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            /** Format: date-time */
+            saved_at: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -18295,6 +18373,85 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KnowledgeHistoryReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_library_works_edits_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceEditsRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkspaceEditsRequest"];
+                "multipart/form-data": components["schemas"]["WorkspaceEditsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    catalog_admin_library_works_edits_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+                work_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_library_works_edits_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+                work_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceCancelRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkspaceCancelRequest"];
+                "multipart/form-data": components["schemas"]["WorkspaceCancelRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceReceipt"];
                 };
             };
         };

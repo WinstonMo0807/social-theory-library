@@ -222,6 +222,8 @@ class ManualCatalogView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView)
                     person = get_object_or_404(Person.objects.select_for_update().exclude(authority_status__in=["merged", "archived", "rejected"]), pk=row["person_id"])
                     if person.preferred_name != row["name"]: raise EditConflict("责任者名称已变化，请重新选择馆内人物。")
                 elif row["create_new"]:
+                    if not has_capability(actor, Capability.CREATE_AUTHORITY):
+                        raise PermissionDenied("当前账户不能新建人物草稿，请选择已有馆内人物。")
                     person = Person.objects.create(preferred_name=row["name"], authority_status="draft", authority_note="新建书目时明确建立；身份尚待核对")
                 else: raise ValidationError("请为每位责任者选择馆内人物，或明确选择新建人物草稿。")
                 contributors.append({"person_id": person.pk, "role": row["role"], "order": index})
