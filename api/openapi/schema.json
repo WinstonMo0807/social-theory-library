@@ -2408,6 +2408,234 @@
                 }
             }
         },
+        "/api/catalog/admin/editions/{edition_id}/media-workspace/": {
+            "get": {
+                "operationId": "catalog_admin_editions_media_workspace_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "history_page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "slot",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "cover",
+                                "recommendation"
+                            ]
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MediaWorkspace"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_editions_media_workspace_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MediaWorkspaceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/editions/{edition_id}/media-workspace/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_editions_media_workspace_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MediaWorkspaceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_editions_media_workspace_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MediaWorkspaceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/editions/{edition_id}/media/cover/": {
             "post": {
                 "operationId": "catalog_admin_editions_media_cover_create",
@@ -39643,6 +39871,98 @@
                     }
                 }
             },
+            "MediaRevisionMetadata": {
+                "type": "object",
+                "properties": {
+                    "alt_text": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "source_label": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "source_url": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 1000
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "rights": {
+                        "type": "string",
+                        "maxLength": 4000
+                    },
+                    "license": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "credit": {
+                        "type": "string",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "alt_text",
+                    "credit",
+                    "license",
+                    "rights",
+                    "source_label",
+                    "source_url"
+                ]
+            },
+            "MediaRevisionMetadataRequest": {
+                "type": "object",
+                "properties": {
+                    "alt_text": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "source_label": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "source_url": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 1000
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "rights": {
+                        "type": "string",
+                        "maxLength": 4000
+                    },
+                    "license": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "credit": {
+                        "type": "string",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "alt_text",
+                    "credit",
+                    "license",
+                    "rights",
+                    "source_label",
+                    "source_url"
+                ]
+            },
             "MediaSourceTypeEnum": {
                 "enum": [
                     "upload",
@@ -39652,6 +39972,84 @@
                 ],
                 "type": "string",
                 "description": "* `upload` - 人工上传\n* `pdf` - 文献页面\n* `external` - 外部资料\n* `generated` - 生成图片"
+            },
+            "MediaTransform": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "y": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "width": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "height": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "rotation": {
+                        "$ref": "#/components/schemas/RotationEnum"
+                    }
+                },
+                "required": [
+                    "height",
+                    "rotation",
+                    "width",
+                    "x",
+                    "y"
+                ]
+            },
+            "MediaTransformRequest": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "y": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "width": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "height": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "rotation": {
+                        "$ref": "#/components/schemas/RotationEnum"
+                    }
+                },
+                "required": [
+                    "height",
+                    "rotation",
+                    "width",
+                    "x",
+                    "y"
+                ]
             },
             "MediaUploadRequest": {
                 "type": "object",
@@ -39715,6 +40113,261 @@
                 },
                 "required": [
                     "image"
+                ]
+            },
+            "MediaWorkspace": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slot": {
+                        "$ref": "#/components/schemas/SlotEnum"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "has_unpublished_changes": {
+                        "type": "boolean"
+                    },
+                    "cover": {},
+                    "current": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MediaWorkspaceRevision"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "history": {
+                        "$ref": "#/components/schemas/MediaWorkspaceHistory"
+                    },
+                    "publication": {
+                        "$ref": "#/components/schemas/MediaWorkspacePublication"
+                    }
+                },
+                "required": [
+                    "cover",
+                    "current",
+                    "edition_id",
+                    "has_unpublished_changes",
+                    "history",
+                    "publication",
+                    "slot",
+                    "title",
+                    "version",
+                    "work_id"
+                ]
+            },
+            "MediaWorkspaceCancelRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "MediaWorkspaceCommandActionEnum": {
+                "enum": [
+                    "save",
+                    "restore",
+                    "clear",
+                    "pdf_page"
+                ],
+                "type": "string",
+                "description": "* `save` - save\n* `restore` - restore\n* `clear` - clear\n* `pdf_page` - pdf_page"
+            },
+            "MediaWorkspaceCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/MediaWorkspaceCommandActionEnum"
+                    },
+                    "slot": {
+                        "$ref": "#/components/schemas/SlotEnum"
+                    },
+                    "media_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "rendition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "transform": {
+                        "$ref": "#/components/schemas/MediaTransformRequest"
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/MediaRevisionMetadataRequest"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "request_id",
+                    "slot"
+                ]
+            },
+            "MediaWorkspaceHistory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaWorkspaceRevision"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "results"
+                ]
+            },
+            "MediaWorkspacePublication": {
+                "type": "object",
+                "properties": {
+                    "state": {
+                        "type": "string"
+                    },
+                    "revision": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "primary_rendition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "primary_rendition_id",
+                    "revision",
+                    "state"
+                ]
+            },
+            "MediaWorkspaceReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slot": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/SlotEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "media": {
+                        "$ref": "#/components/schemas/MediaAsset"
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "slot",
+                    "state"
+                ]
+            },
+            "MediaWorkspaceRevision": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "width": {
+                        "type": "integer"
+                    },
+                    "height": {
+                        "type": "integer"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "media": {
+                        "$ref": "#/components/schemas/MediaAsset"
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/MediaRevisionMetadata"
+                    },
+                    "transform": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MediaTransform"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "height",
+                    "id",
+                    "media",
+                    "metadata",
+                    "transform",
+                    "url",
+                    "width"
                 ]
             },
             "MemoryContextInputRequest": {
@@ -40897,6 +41550,11 @@
                 },
                 "required": [
                     "ids"
+                ]
+            },
+            "NullEnum": {
+                "enum": [
+                    null
                 ]
             },
             "OCRCommandActionEnum": {
@@ -54118,6 +54776,16 @@
                     "public_access"
                 ]
             },
+            "RotationEnum": {
+                "enum": [
+                    0,
+                    90,
+                    180,
+                    270
+                ],
+                "type": "integer",
+                "description": "* `0` - 0\n* `90` - 90\n* `180` - 180\n* `270` - 270"
+            },
             "SaveIssueListCommandRequest": {
                 "type": "object",
                 "properties": {
@@ -56749,6 +57417,14 @@
                 "required": [
                     "action"
                 ]
+            },
+            "SlotEnum": {
+                "enum": [
+                    "cover",
+                    "recommendation"
+                ],
+                "type": "string",
+                "description": "* `cover` - cover\n* `recommendation` - recommendation"
             },
             "SourceCommandOutput": {
                 "type": "object",

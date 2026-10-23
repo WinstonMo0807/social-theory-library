@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-23 媒体修订
+
+M08沿原MediaAsset/MediaRendition及EditorialRevision，裁切与出处作为不可变衍生图快照；原图及其他对象引用不变。PDF页只准备候选，选择仍走现有书目发布边界；固定操作回执沿AuditEvent，不新增媒体库或文件表。
+
 ## 2026-10-23 材料保存恢复
 
 WorkflowEditor仍使用原WorkspaceEdits与字段决定。AuditEvent既有保存回执扩展可查询/停止，账户锁串行化同一操作者原请求，作品版本CAS保持。浏览器不缓存字段正文，封面/父请求按owner核对。

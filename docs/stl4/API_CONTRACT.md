@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 媒体工作区
+
+保留312路径，新增media-workspace读写与commands查回/停止，共314。请求与响应纳入具名序列化器；原图私有文件入口不进入公开契约。原media/cover服务保持兼容，无迁移。
+
 ## 2026-10-23 字段助手
 
 保留307，原field-assistant lookup/adopt/reject/create/duplicates五路径纳入312契约。请求身份核对及私人响应沿AdminPrivateResponseMixin，写入核对活跃用户token/编辑能力；新建authority额外CREATE_AUTHORITY。

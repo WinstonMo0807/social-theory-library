@@ -30,6 +30,7 @@ from .editorial_issue_views import (PublicIssueListView, PublicIssueDetailView, 
     AdminSiteContentView, AdminSitePublishView, AdminIssuePreviewView, AdminSitePreviewView,
     PublicEditorialMediaView, IssueItemCoverView, AdminIssueItemCoverView)
 from .cover_views import EditionCoverView
+from .media_workspace_views import MediaWorkspaceView, MediaWorkspaceReceiptView, MediaSourceFileView
 from .edition_file_views import EditionFileView
 from .edition_file_workspace_views import (WorkFilesView, NewWorkEditionView, EditionFileAdoptionView,
                                           EditionFileContentView, EditionFileImpactCSVView,
@@ -280,6 +281,9 @@ urlpatterns = [
     path("admin/site-content/publish/", AdminSitePublishView.as_view(), name="admin-site-content-publish"),
     path("editorial-media/<uuid:rendition_id>/", PublicEditorialMediaView.as_view(), name="editorial-media-file"),
     path("admin/editions/<uuid:edition_id>/cover/", EditionCoverView.as_view(), name="admin-edition-cover"),
+    path("admin/editions/<uuid:edition_id>/media-workspace/", MediaWorkspaceView.as_view(), name="media-workspace"),
+    path("admin/editions/<uuid:edition_id>/media-workspace/commands/<uuid:request_id>/", MediaWorkspaceReceiptView.as_view(), name="media-workspace-receipt"),
+    path("admin/media/<uuid:media_id>/source/", MediaSourceFileView.as_view(), name="media-source-file"),
     path("admin/editions/<uuid:edition_id>/files/", EditionFileView.as_view(), name="edition-file-submit"),
     path("admin/works/<uuid:work_id>/files/", WorkFilesView.as_view(), name="work-files"),
     path("admin/works/<uuid:work_id>/editions/", NewWorkEditionView.as_view(), name="work-edition-create"),

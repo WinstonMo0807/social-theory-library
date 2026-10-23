@@ -560,6 +560,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/editions/{edition_id}/media-workspace/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_media_workspace_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_editions_media_workspace_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/editions/{edition_id}/media-workspace/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_editions_media_workspace_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_editions_media_workspace_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/editions/{edition_id}/media/cover/": {
         parameters: {
             query?: never;
@@ -9835,6 +9867,22 @@ export interface components {
             /** @default cover */
             kind: components["schemas"]["MediaRenditionRequestKindEnum"];
         };
+        MediaRevisionMetadata: {
+            alt_text: string;
+            source_label: string;
+            source_url: string;
+            rights: string;
+            license: string;
+            credit: string;
+        };
+        MediaRevisionMetadataRequest: {
+            alt_text: string;
+            source_label: string;
+            source_url: string;
+            rights: string;
+            license: string;
+            credit: string;
+        };
         /**
          * @description * `upload` - 人工上传
          *     * `pdf` - 文献页面
@@ -9843,6 +9891,28 @@ export interface components {
          * @enum {string}
          */
         MediaSourceTypeEnum: "upload" | "pdf" | "external" | "generated";
+        MediaTransform: {
+            /** Format: double */
+            x: number;
+            /** Format: double */
+            y: number;
+            /** Format: double */
+            width: number;
+            /** Format: double */
+            height: number;
+            rotation: components["schemas"]["RotationEnum"];
+        };
+        MediaTransformRequest: {
+            /** Format: double */
+            x: number;
+            /** Format: double */
+            y: number;
+            /** Format: double */
+            width: number;
+            /** Format: double */
+            height: number;
+            rotation: components["schemas"]["RotationEnum"];
+        };
         MediaUploadRequest: {
             /** Format: date-time */
             expected_updated_at?: string;
@@ -9859,6 +9929,80 @@ export interface components {
             focal_y?: number;
             /** Format: binary */
             image: string;
+        };
+        MediaWorkspace: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            work_id: string;
+            title: string;
+            slot: components["schemas"]["SlotEnum"];
+            version: string;
+            has_unpublished_changes: boolean;
+            cover: unknown;
+            current: components["schemas"]["MediaWorkspaceRevision"] | null;
+            history: components["schemas"]["MediaWorkspaceHistory"];
+            publication: components["schemas"]["MediaWorkspacePublication"];
+        };
+        MediaWorkspaceCancelRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
+        /**
+         * @description * `save` - save
+         *     * `restore` - restore
+         *     * `clear` - clear
+         *     * `pdf_page` - pdf_page
+         * @enum {string}
+         */
+        MediaWorkspaceCommandActionEnum: "save" | "restore" | "clear" | "pdf_page";
+        MediaWorkspaceCommandRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            action: components["schemas"]["MediaWorkspaceCommandActionEnum"];
+            slot: components["schemas"]["SlotEnum"];
+            /** Format: uuid */
+            media_id?: string;
+            /** Format: uuid */
+            rendition_id?: string;
+            page?: number;
+            transform?: components["schemas"]["MediaTransformRequest"];
+            metadata?: components["schemas"]["MediaRevisionMetadataRequest"];
+        };
+        MediaWorkspaceHistory: {
+            count: number;
+            page: number;
+            pages: number;
+            results: components["schemas"]["MediaWorkspaceRevision"][];
+        };
+        MediaWorkspacePublication: {
+            state: string;
+            revision: number | null;
+            /** Format: uuid */
+            primary_rendition_id: string | null;
+        };
+        MediaWorkspaceReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            next_url: string;
+            /** Format: uuid */
+            edition_id: string;
+            slot: (components["schemas"]["SlotEnum"] | components["schemas"]["NullEnum"]) | null;
+            media?: components["schemas"]["MediaAsset"];
+        };
+        MediaWorkspaceRevision: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            width: number;
+            height: number;
+            url: string;
+            media: components["schemas"]["MediaAsset"];
+            metadata: components["schemas"]["MediaRevisionMetadata"];
+            transform: components["schemas"]["MediaTransform"] | null;
         };
         MemoryContextInputRequest: {
             kind: components["schemas"]["ResearchMemoryContextKindEnum"];
@@ -10177,6 +10321,8 @@ export interface components {
         NoticeReadInputRequest: {
             ids: string[];
         };
+        /** @enum {unknown} */
+        NullEnum: null;
         /**
          * @description * `save` - save
          *     * `prepare` - prepare
@@ -14310,6 +14456,14 @@ export interface components {
             private_access: string;
             assignable: boolean;
         };
+        /**
+         * @description * `0` - 0
+         *     * `90` - 90
+         *     * `180` - 180
+         *     * `270` - 270
+         * @enum {integer}
+         */
+        RotationEnum: 0 | 90 | 180 | 270;
         SaveIssueListCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -15040,6 +15194,12 @@ export interface components {
         SiteStopRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
+        /**
+         * @description * `cover` - cover
+         *     * `recommendation` - recommendation
+         * @enum {string}
+         */
+        SlotEnum: "cover" | "recommendation";
         SourceCommandOutput: {
             owner_id: string;
             record: components["schemas"]["SourceFollowOutput"] | null;
@@ -18008,6 +18168,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkFileUploadOutput"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_media_workspace_retrieve: {
+        parameters: {
+            query?: {
+                history_page?: number;
+                slot?: "cover" | "recommendation";
+            };
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaWorkspace"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_media_workspace_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaWorkspaceCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MediaWorkspaceCommandRequest"];
+                "multipart/form-data": components["schemas"]["MediaWorkspaceCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaWorkspaceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_media_workspace_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaWorkspaceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_editions_media_workspace_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                edition_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaWorkspaceCancelRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MediaWorkspaceCancelRequest"];
+                "multipart/form-data": components["schemas"]["MediaWorkspaceCancelRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaWorkspaceReceipt"];
                 };
             };
         };

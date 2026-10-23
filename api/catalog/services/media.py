@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
 import json
+import math
 import warnings
 
 from django.core.files.base import ContentFile
@@ -107,12 +108,31 @@ def update_media_metadata(media_id, *, actor, metadata, expected_updated_at=None
     return row
 
 
+def normalize_media_transform(value):
+    """Coordinates are fractions of the EXIF-oriented, then clockwise-rotated image."""
+    if not isinstance(value, dict) or set(value) != {"x", "y", "width", "height", "rotation"}:
+        raise MediaValidationError("请提供完整的裁切范围与旋转角度。")
+    if any(isinstance(v, bool) or not isinstance(v, (float, int)) or not math.isfinite(v) for v in value.values()):
+        raise MediaValidationError("裁切参数必须是有限数值。")
+    x, y, width, height = (float(value[key]) for key in ("x", "y", "width", "height"))
+    if value["rotation"] not in (0, 90, 180, 270) or min(x, y) < 0 or min(width, height) <= 0 or x + width > 1.000001 or y + height > 1.000001:
+        raise MediaValidationError("裁切范围须在图片内，旋转角度须为直角。")
+    return {"x": x, "y": y, "width": min(width, 1 - x), "height": min(height, 1 - y), "rotation": int(value["rotation"])}
+
+
 @transaction.atomic
-def build_rendition(media_id, *, width=640, kind="cover"):
+def build_rendition(media_id, *, width=640, kind="cover", transform=None, metadata_override=None):
     if width not in RENDITION_WIDTHS or kind not in RENDITION_KINDS:
         raise MediaValidationError("不支持的衍生图尺寸或用途。")
     media = MediaAsset.objects.select_for_update().get(pk=media_id)
     metadata = {name: getattr(media, name) for name in PUBLIC_METADATA_FIELDS}
+    if metadata_override is not None:
+        if set(metadata_override) - set(PUBLIC_METADATA_FIELDS) or any(not isinstance(v, str) for v in metadata_override.values()):
+            raise MediaValidationError("图片修订只能保存公开出处与替代文字。")
+        metadata.update(metadata_override)
+    if transform is not None:
+        transform = normalize_media_transform(transform)
+        metadata["_transform"] = transform
     metadata_key = sha256(json.dumps(metadata, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     group = sha256(f"webp-v2:{kind}:{media.focal_x}:{media.focal_y}:{metadata_key}".encode()).hexdigest()
     key = sha256(f"{group}:{width}".encode()).hexdigest()
@@ -124,7 +144,14 @@ def build_rendition(media_id, *, width=640, kind="cover"):
         return existing
     with media.file.open("rb") as source, Image.open(source) as image:
         image = ImageOps.exif_transpose(image).convert("RGBA" if image.mode in {"RGBA", "LA", "P"} else "RGB")
-        if kind in {"portrait", "hero"}:
+        if transform is not None:
+            image = image.rotate(-transform["rotation"], expand=True)
+            left, top = round(transform["x"] * image.width), round(transform["y"] * image.height)
+            right, bottom = round((transform["x"] + transform["width"]) * image.width), round((transform["y"] + transform["height"]) * image.height)
+            if right <= left or bottom <= top:
+                raise MediaValidationError("裁切范围小于一个像素，请放大选区。")
+            image = image.crop((left, top, right, bottom))
+        if transform is None and kind in {"portrait", "hero"}:
             ratio = 4 / 5 if kind == "portrait" else 16 / 9
             target_width = max(1, min(width, image.width, int(image.height * ratio)))
             image = ImageOps.fit(image, (target_width, max(1, round(target_width / ratio))), Image.Resampling.LANCZOS,

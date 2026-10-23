@@ -10,6 +10,7 @@ import type { components } from "@/lib/api/generated/schema";
 import { scholarPortraitEndpoint, selectScholarPortrait, type ScholarPortraitState } from "@/lib/api/scholar-media";
 import { knowledgeImageEndpoint, selectKnowledgeImage, type KnowledgeImageState, type KnowledgeImageType } from "@/lib/api/knowledge-media";
 import styles from "./media-library.module.css";
+import { MediaWorkspace } from "./media-workspace";
 
 type Media = components["schemas"]["MediaAsset"];
 type Rendition = components["schemas"]["MediaRendition"];
@@ -103,6 +104,12 @@ function MediaEditor({ media, onSaved, destination }: { media: Media; onSaved: (
 }
 
 export function MediaLibrary() {
+  const params = useSearchParams(), edition = params.get("edition"), slot = params.get("slot") || "cover";
+  if (edition && !params.get("scholar") && !params.get("object_id") && !params.get("object_type") && (slot === "cover" || slot === "recommendation")) return <MediaWorkspace editionId={edition} slot={slot}/>;
+  return <LegacyMediaLibrary/>;
+}
+
+function LegacyMediaLibrary() {
   const params = useSearchParams();
   const editionId = params.get("edition");
   const scholarId = params.get("scholar");
