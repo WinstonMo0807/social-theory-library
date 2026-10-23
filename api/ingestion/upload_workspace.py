@@ -26,6 +26,10 @@ from ingestion.serializers import UploadBatchCreateSerializer, UploadBatchSerial
 MAX_BATCH_FILES = 50
 
 
+def batch_upload_limit(batch):
+    return min(settings.MAX_UPLOAD_BYTES, 200 * 1024 * 1024) if batch.source == "stl4-upload" else settings.MAX_UPLOAD_BYTES
+
+
 def owned_batches(actor):
     return UploadBatch.objects.filter(created_by=actor).order_by("-created_at", "-pk")
 
@@ -176,7 +180,7 @@ class UploadWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVie
                         raise EditConflict("追加文件沿用原批次处理方式，请重新读取原批次。")
                 batch.expected_count = count; batch.save(update_fields=["expected_count", "updated_at"])
             else:
-                batch = UploadBatch.objects.create(created_by=actor, **policy)
+                batch = UploadBatch.objects.create(created_by=actor, source="stl4-upload", **policy)
         event = AuditEvent.objects.create(actor=actor, action="upload_workspace.command", object_type="UploadBatch",
             object_id=str(batch.pk), request_id=request_id, after={"batch_id": str(batch.pk), "fingerprint": fingerprint, "operation": data["action"]})
         return Response(receipt_payload(event))

@@ -281,6 +281,9 @@ def create_r2_upload(
 
     with transaction.atomic():
         batch = _owned_batch(batch_id, user, lock=True)
+        from ingestion.upload_workspace import batch_upload_limit
+        if file_size > batch_upload_limit(batch):
+            raise R2StagingError("PDF超过此批次单文件上限。")
         existing = batch.items.filter(processing_token=client_token).first()
         if existing:
             if existing.staging_backend != UploadItem.StagingBackend.R2:

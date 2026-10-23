@@ -1,4 +1,5 @@
 from django.urls import path
+from .intake_confirmation import IntakeConfirmationView, IntakeReceiptView
 from .upload_workspace import UploadWorkspaceView, UploadBatchReceiptView
 from .ocr_workspace_views import OCRWorkspaceView
 
@@ -44,6 +45,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path("items/<uuid:item_id>/confirmation/", IntakeConfirmationView.as_view(), name="intake-confirmation"),
+    path("items/<uuid:item_id>/confirmation/commands/<uuid:request_id>/", IntakeReceiptView.as_view(), name="intake-confirmation-receipt"),
     path("upload-workspace/", UploadWorkspaceView.as_view(), name="upload-workspace"),
     path("upload-workspace/commands/<uuid:request_id>/", UploadBatchReceiptView.as_view(), name="upload-workspace-receipt"),
     path("ocr-workspace/<uuid:asset_id>/", OCRWorkspaceView.as_view(), name="ocr-workspace"),

@@ -12118,6 +12118,241 @@
                 }
             }
         },
+        "/api/ingestion/items/{item_id}/confirmation/": {
+            "get": {
+                "operationId": "ingestion_items_confirmation_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "item_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 160
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "work",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IntakeWorkspace"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "ingestion_items_confirmation_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "item_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IntakeCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IntakeCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IntakeCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IntakeReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/ingestion/items/{item_id}/confirmation/commands/{request_id}/": {
+            "get": {
+                "operationId": "ingestion_items_confirmation_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "item_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IntakeReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "ingestion_items_confirmation_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "item_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IntakeReceiptCancelRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IntakeReceiptCancelRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IntakeReceiptCancelRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IntakeReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/ingestion/ocr-workspace/{asset_id}/": {
             "get": {
                 "operationId": "ingestion_ocr_workspace_retrieve",
@@ -33070,6 +33305,220 @@
                     "results",
                     "summary",
                     "warnings"
+                ]
+            },
+            "IntakeChoice": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "$ref": "#/components/schemas/IntakeChoiceModeEnum"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "candidate_version": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "document_type",
+                    "mode",
+                    "title"
+                ]
+            },
+            "IntakeChoiceModeEnum": {
+                "enum": [
+                    "use_edition",
+                    "new_version",
+                    "new_work"
+                ],
+                "type": "string",
+                "description": "* `use_edition` - use_edition\n* `new_version` - new_version\n* `new_work` - new_work"
+            },
+            "IntakeChoiceRequest": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "$ref": "#/components/schemas/IntakeChoiceModeEnum"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "candidate_version": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "document_type",
+                    "mode",
+                    "title"
+                ]
+            },
+            "IntakeCommandActionEnum": {
+                "enum": [
+                    "save",
+                    "defer",
+                    "confirm"
+                ],
+                "type": "string",
+                "description": "* `save` - save\n* `defer` - defer\n* `confirm` - confirm"
+            },
+            "IntakeCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/IntakeCommandActionEnum"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "choice": {
+                        "$ref": "#/components/schemas/IntakeChoiceRequest"
+                    },
+                    "confirm": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "action",
+                    "choice",
+                    "expected_version",
+                    "request_id"
+                ]
+            },
+            "IntakeReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "state"
+                ]
+            },
+            "IntakeReceiptCancelRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "IntakeWorkspace": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "item": {
+                        "$ref": "#/components/schemas/UploadWorkspaceItem"
+                    },
+                    "batch_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "preview_url": {
+                        "type": "string"
+                    },
+                    "draft": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/IntakeChoice"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "candidates": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "busy": {
+                        "type": "boolean"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "batch_id",
+                    "busy",
+                    "candidates",
+                    "confirmed",
+                    "count",
+                    "draft",
+                    "item",
+                    "next_url",
+                    "owner_id",
+                    "page",
+                    "pages",
+                    "preview_url",
+                    "version"
                 ]
             },
             "InvitePage": {

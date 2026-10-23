@@ -2657,6 +2657,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingestion/items/{item_id}/confirmation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ingestion_items_confirmation_retrieve"];
+        put?: never;
+        post: operations["ingestion_items_confirmation_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingestion/items/{item_id}/confirmation/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ingestion_items_confirmation_commands_retrieve"];
+        put?: never;
+        post: operations["ingestion_items_confirmation_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingestion/ocr-workspace/{asset_id}/": {
         parameters: {
             query?: never;
@@ -7962,6 +7994,75 @@ export interface components {
             results: unknown[];
             jobs: unknown[];
             warnings: unknown[];
+        };
+        IntakeChoice: {
+            mode: components["schemas"]["IntakeChoiceModeEnum"];
+            /** Format: uuid */
+            edition_id?: string | null;
+            candidate_version?: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            title: string;
+            /** @default  */
+            note: string;
+        };
+        /**
+         * @description * `use_edition` - use_edition
+         *     * `new_version` - new_version
+         *     * `new_work` - new_work
+         * @enum {string}
+         */
+        IntakeChoiceModeEnum: "use_edition" | "new_version" | "new_work";
+        IntakeChoiceRequest: {
+            mode: components["schemas"]["IntakeChoiceModeEnum"];
+            /** Format: uuid */
+            edition_id?: string | null;
+            candidate_version?: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            title: string;
+            /** @default  */
+            note: string;
+        };
+        /**
+         * @description * `save` - save
+         *     * `defer` - defer
+         *     * `confirm` - confirm
+         * @enum {string}
+         */
+        IntakeCommandActionEnum: "save" | "defer" | "confirm";
+        IntakeCommandRequest: {
+            action: components["schemas"]["IntakeCommandActionEnum"];
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            choice: components["schemas"]["IntakeChoiceRequest"];
+            /** @default false */
+            confirm: boolean;
+        };
+        IntakeReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            next_url: string;
+        };
+        IntakeReceiptCancelRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
+        IntakeWorkspace: {
+            owner_id: string;
+            version: string;
+            item: components["schemas"]["UploadWorkspaceItem"];
+            /** Format: uuid */
+            batch_id: string;
+            preview_url: string;
+            draft: components["schemas"]["IntakeChoice"] | null;
+            candidates: unknown[];
+            count: number;
+            page: number;
+            pages: number;
+            busy: boolean;
+            confirmed: boolean;
+            next_url: string;
         };
         InvitePage: {
             page: number;
@@ -22036,6 +22137,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageCommandOutput"];
+                };
+            };
+        };
+    };
+    ingestion_items_confirmation_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                q?: string;
+                work?: string;
+            };
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeWorkspace"];
+                };
+            };
+        };
+    };
+    ingestion_items_confirmation_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntakeCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IntakeCommandRequest"];
+                "multipart/form-data": components["schemas"]["IntakeCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeReceipt"];
+                };
+            };
+        };
+    };
+    ingestion_items_confirmation_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeReceipt"];
+                };
+            };
+        };
+    };
+    ingestion_items_confirmation_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntakeReceiptCancelRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IntakeReceiptCancelRequest"];
+                "multipart/form-data": components["schemas"]["IntakeReceiptCancelRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeReceipt"];
                 };
             };
         };

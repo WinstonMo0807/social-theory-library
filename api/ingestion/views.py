@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from .upload_workspace import batch_upload_limit
 from hashlib import sha256
 import json
 import logging
@@ -724,7 +725,7 @@ class BatchItemUploadView(APIView):
         signature = uploaded.read(5)
         uploaded.seek(0)
         rejection_reason = ""
-        if uploaded.size > settings.MAX_UPLOAD_BYTES:
+        if uploaded.size > batch_upload_limit(batch):
             rejection_reason = "文件超过单文件上限。"
         elif Path(original_name).suffix.casefold() != ".pdf" or signature != b"%PDF-":
             rejection_reason = "扩展名或文件内容不是 PDF。"
@@ -884,6 +885,9 @@ class BatchItemChunkUploadView(APIView):
                     "max_chunk_size": settings.MAX_UPLOAD_CHUNK_BYTES,
                 }
             )
+
+        if total_size > batch_upload_limit(batch):
+            return Response({"detail": "文件超过此批次单文件上限。"}, status=400)
 
         chunk_directory = _upload_chunk_directory(batch.id, client_token)
         manifest_path = chunk_directory / "manifest.json"

@@ -543,7 +543,8 @@ def _copy_asset(item: UploadItem, edition: Edition, kind: str, filename: str) ->
             with item.file.open("rb") as source:
                 existing.file.save(f"{existing.pk}/{filename}", File(source), save=True)
         return existing
-    is_replacement = bool(item.replacement_of_asset_id)
+    intake_supplement = (item.preflight_summary or {}).get("intake_identity", {}).get("mode") == "use_edition"
+    is_replacement = bool(item.replacement_of_asset_id) or intake_supplement
     if staged:
         version = staged["version"]
     elif is_replacement:
@@ -949,8 +950,10 @@ def run_pipeline(item_id: str) -> UploadItem:
                 ).exclude(pk=item.asset_id).select_related("edition__work").first()
                 item.preflight_summary = {
                     **({"file_workspace": workspace_file(item)} if staged_file(item) else {}),
+                    **({"intake_identity": item.preflight_summary["intake_identity"]}
+                       if (item.preflight_summary or {}).get("intake_identity") else {}),
                     **({"catalog_reconciliation": item.preflight_summary["catalog_reconciliation"]}
-                       if item.batch.source in {"edition-supplement", "edition-replace"}
+                       if (item.batch.source in {"edition-supplement", "edition-replace"} or (item.preflight_summary or {}).get("intake_identity"))
                        and (item.preflight_summary or {}).get("catalog_reconciliation") else {}),
                     "filename": item.source_filename,
                     "size_bytes": item.byte_size,
@@ -969,6 +972,18 @@ def run_pipeline(item_id: str) -> UploadItem:
                 if duplicate and not item.asset_id:
                     raise DuplicateDocument(duplicate)
 
+        if (item.preflight_summary or {}).get("intake_identity", {}).get("mode") == "use_edition" and not staged_file(item):
+            # Confirmed intake uses the same staged-file lifecycle as the file
+            # workspace. Existing reader files and metadata stay authoritative.
+            edition = Edition.objects.select_related("work").get(pk=item.edition_id)
+            original = _copy_asset(item, edition, Asset.Kind.ORIGINAL, item.source_filename)
+            item.asset = original
+            item.preflight_summary = {**item.preflight_summary, "file_workspace": {
+                "staged": True, "action": "supplement", "generate_reader": True, "extension": "pdf",
+                "original_asset_id": str(original.pk), "original_sha256": item.sha256,
+                "original_size": item.byte_size, "version": original.version, "converted": True,
+                "expected_reader_asset_id": None}}
+            item.save(update_fields=["asset", "preflight_summary", "updated_at"])
         if staged_file(item):
             return _run_staged_file_pipeline(item, source_path)
 
@@ -977,6 +992,7 @@ def run_pipeline(item_id: str) -> UploadItem:
             item.edition_id
             and item.recognized_metadata
             and item.metadata_candidates.exists()
+            and not (item.preflight_summary or {}).get("intake_identity", {}).get("setup_pending")
         )
         with processing_attempt(
             item,
@@ -992,7 +1008,23 @@ def run_pipeline(item_id: str) -> UploadItem:
                 _persist_candidates(item, candidates, selected)
                 item.recognized_metadata = selected
                 item.save(update_fields=["recognized_metadata", "updated_at"])
+                if item.batch.source == "stl4-upload" and not item.edition_id:
+                    # Recognition produces candidates. Only an explicit intake
+                    # decision may create/reuse a Work and publication Edition.
+                    title = str(selected.get("title") or "").strip()
+                    if title:
+                        persist_resolution_candidates(item, target_type="work", source_name=title)
+                    item.status, item.stage_progress = UploadItem.Status.NEEDS_REVIEW, 25
+                    item.save(update_fields=["status", "stage_progress", "updated_at"])
+                    transition_upload_item(item, UploadItem.WorkflowState.NEEDS_REVIEW,
+                        actor=item.batch.created_by, reason="等待确认作品、出版版本与文件归属", force=True)
+                    attempt.output_summary = {"candidate_count": len(candidates), "awaiting_intake_confirmation": True}
+                    attempt.save(update_fields=["output_summary", "updated_at"])
+                    return item
                 edition = _create_or_update_catalog(item, selected, candidates, first_text)
+                if (item.preflight_summary or {}).get("intake_identity", {}).get("setup_pending"):
+                    item.preflight_summary["intake_identity"]["setup_pending"] = False
+                    item.save(update_fields=["preflight_summary", "updated_at"])
                 attempt.output_summary = {
                     "candidate_count": len(candidates),
                     "provider_warnings": provider_warnings,
@@ -1089,11 +1121,26 @@ def run_pipeline(item_id: str) -> UploadItem:
                 "ocr_strategy": item.batch.ocr_strategy,
                 "language": selected.get("language", ""),
             }
-            item.save(update_fields=["preflight_summary", "updated_at"])
             ocr_reason_counts: dict[str, int] = {}
             for page in pages:
                 for reason in page.ocr_reasons:
                     ocr_reason_counts[reason] = ocr_reason_counts.get(reason, 0) + 1
+            if item.batch.ocr_strategy == UploadBatch.OcrStrategy.FORCE:
+                ocr_decision = "forced"
+            elif item.batch.ocr_strategy == UploadBatch.OcrStrategy.SKIP and detected_needs_ocr:
+                ocr_decision = "skipped"
+            elif needs_ocr:
+                ocr_decision = "required"
+            else:
+                ocr_decision = "not_required"
+            item.preflight_summary.update(
+                {
+                    "ocr_reason_counts": ocr_reason_counts,
+                    "ocr_decision": ocr_decision,
+                    "ocr_detection_version": "per-page-v1",
+                }
+            )
+            item.save(update_fields=["preflight_summary", "updated_at"])
             if needs_ocr:
                 method = "pending_ocr"
             elif (

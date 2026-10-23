@@ -1,5 +1,9 @@
 # STL 4.0 当前接口契约
 
+## 2026-10-23 M03收件身份
+
+保留301，新增items/{item_id}/confirmation GET/POST和commands/{request_id} GET/POST，共303。owner、EDIT_METADATA、目标版本、固定请求、原文权限与未发布状态；不增加迁移。
+
 ## 2026-10-23 M02上传批次
 
 保留299，新增upload-workspace GET/POST及commands/{request_id} GET/POST，共301。owner+UPLOAD权限、版本+固定请求编号。批次策略沿原模型，50文件位；transport由服务端配置返回。批次items仅上传所需摘要；原布尔/对象响应类型补明确声明。无新迁移。

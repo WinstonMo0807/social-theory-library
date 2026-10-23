@@ -238,7 +238,7 @@ function fileFingerprint(file: File) {
   return `${file.name}:${file.size}:${file.lastModified}`;
 }
 
-type ResumeSession = {batchId:string;token:string;updatedAt:number;chunkSize:number};
+type ResumeSession = {requestId?:string;batchId:string;token:string;updatedAt:number;chunkSize:number};
 // Persist only an owner-scoped content digest and opaque resume identifiers.
 // The previous unscoped store is deliberately not imported into any account.
 function loadResumeSessions(owner:string):Record<string,ResumeSession> {
@@ -251,6 +251,10 @@ function loadResumeSessions(owner:string):Record<string,ResumeSession> {
 function persistResume(owner:string,fingerprint:string|undefined,session:Omit<ResumeSession,"updatedAt">|null) {
   if(!fingerprint)return;
   try{const sessions=loadResumeSessions(owner);if(session)sessions[fingerprint]={...session,updatedAt:Date.now()};else delete sessions[fingerprint];localStorage.setItem(`${RESUME_STORAGE_KEY}:${owner}`,JSON.stringify(sessions));}catch{/* Upload remains resumable in this page if browser storage is unavailable. */}
+}
+function reconcileReservation(owner:string,requestId:string,batchId:string|null){
+  const sessions=loadResumeSessions(owner);
+  for(const [fingerprint,session] of Object.entries(sessions))if(session.requestId===requestId){if(batchId)persistResume(owner,fingerprint,{batchId,token:session.token,chunkSize:session.chunkSize});else persistResume(owner,fingerprint,null);}
 }
 async function contentFingerprint(owner:string,file:File) {
   if(!globalThis.crypto?.subtle)return undefined;
@@ -510,7 +514,7 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
   }
   function saveResumeSession(item:QueuedFile,session:Omit<ResumeSession,"updatedAt">|null){persistResume(owner,item.fingerprint,session);}
   async function renameBatch(){if(!workspace.data?.batch)return;const result=await reservation.send({action:"rename",batch_id:workspace.data.batch.id,expected_version:workspace.data.version,label:batchLabel});if(result){setBatchLabel(result.label);workspace.reload();}}
-  async function recoverReservation(cancel=false){const receipt=await reservation.lookup(cancel);if(receipt?.batch){const batch=receipt.batch;setFiles(rows=>rows.map(row=>{if(!reservedTokens.current.includes(row.token))return row;saveResumeSession(row,{batchId:batch.id,token:row.token,chunkSize:row.chunkSize});return {...row,resumeBatchId:batch.id};}));setActiveBatchId(batch.id);workspace.reload();}if(receipt)reservedTokens.current=[];}
+  async function recoverReservation(cancel=false){const receipt=await reservation.lookup(cancel);if(receipt)reconcileReservation(owner,receipt.request_id,receipt.state==="applied"?receipt.batch?.id||null:null);if(receipt?.batch){const batch=receipt.batch;setFiles(rows=>rows.map(row=>{if(!reservedTokens.current.includes(row.token))return row;saveResumeSession(row,{batchId:batch.id,token:row.token,chunkSize:row.chunkSize});return {...row,resumeBatchId:batch.id};}));setActiveBatchId(batch.id);workspace.reload();}if(receipt)reservedTokens.current=[];}
 
   function updateFile(token: string, patch: Partial<QueuedFile>) {
     setFiles((current) => current.map(
@@ -551,6 +555,7 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
     setStagingError("");
     try {
       await r2MultipartUploadManager.abort(sessionId,owner);
+      for(const item of files.filter(row=>row.sessionId===sessionId)){saveResumeSession(item,null);updateFile(item.token,{token:uploadToken(),sessionId:undefined,resumeBatchId:undefined,status:"waiting",message:"原上传已取消。再次上传将申请新的文件位。",progress:0,uploadedBytes:0});}
       await refreshStagingSessions();
     } catch (reason) {
       setStagingError(reason instanceof Error ? reason.message : "取消上传失败。");
@@ -592,7 +597,7 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
       const shouldUseChunkUpload = (item: QueuedFile) => item.file.size >= 5;
       const freshItems = waiting.filter((item) => !item.sessionId&&!item.resumeBatchId);
       reservedTokens.current=freshItems.map(item=>item.token);
-      const freshBatch = freshItems.length ? await reservation.send({action:"reserve",...(workspace.data.batch?{batch_id:workspace.data.batch.id,expected_version:workspace.data.version}:{}),policy:{expected_count:freshItems.length,label:batchLabel.trim(),access_policy:accessPolicy,ocr_strategy:ocrStrategy,duplicate_policy:duplicatePolicy,external_enrichment_enabled:externalEnrichmentEnabled,ai_suggestions_enabled:aiSuggestionsEnabled}}) : null;
+      const freshBatch = freshItems.length ? await reservation.send({action:"reserve",...(workspace.data.batch?{batch_id:workspace.data.batch.id,expected_version:workspace.data.version}:{}),policy:{expected_count:freshItems.length,label:batchLabel.trim(),access_policy:accessPolicy,ocr_strategy:ocrStrategy,duplicate_policy:duplicatePolicy,external_enrichment_enabled:externalEnrichmentEnabled,ai_suggestions_enabled:aiSuggestionsEnabled}},(requestId,batchId)=>{for(const item of freshItems)saveResumeSession(item,{requestId:batchId?undefined:requestId,batchId:batchId||"",token:item.token,chunkSize:item.chunkSize});}) : null;
       if(freshItems.length&&!freshBatch)throw Error("批次尚未确认，请先查回原请求。");
       if(freshBatch){for(const item of freshItems){saveResumeSession(item,{batchId:freshBatch.id,token:item.token,chunkSize:item.chunkSize});updateFile(item.token,{resumeBatchId:freshBatch.id});}setActiveBatchId(freshBatch.id);reservedTokens.current=[];}
       const resumedSession = stagingSessions.find(
