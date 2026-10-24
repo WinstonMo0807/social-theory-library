@@ -112,7 +112,7 @@ from .knowledge_views import (
     TheoryTimelineListView,
 )
 from .lifecycle_views import AdminEntityLifecycleView
-from .recycle_views import AdminRecycleView, AdminRecycleDetailView, AdminRecycleRelatedView
+from .recycle_views import AdminRecycleView, AdminRecycleDetailView, AdminRecycleRelatedView, AdminRecoveryReceiptView
 from .topic_merge_views import AdminTopicMergePreviewView, AdminTopicMergeView
 from .knowledge_publication_views import AdminKnowledgePublicationStatusView, AdminKnowledgePublicationRetryView
 from .editorial_revision_views import (
@@ -718,6 +718,7 @@ urlpatterns = [
     path("recommendations/", RecommendationListView.as_view(), name="recommendation-list"),
     path("admin/disciplines/", AdminDisciplineListView.as_view(), name="admin-discipline-list"),
     path("admin/recycle/", AdminRecycleView.as_view(), name="admin-recycle"),
+    path("admin/recycle/receipts/<uuid:request_id>/", AdminRecoveryReceiptView.as_view(), name="admin-recovery-receipt"),
     path("admin/recycle/<str:kind>/<uuid:object_id>/", AdminRecycleDetailView.as_view(), name="admin-recycle-detail"),
     path("admin/recycle/<str:kind>/<uuid:object_id>/related/", AdminRecycleRelatedView.as_view(), name="admin-recycle-related"),
     path("admin/disciplines/<uuid:pk>/", AdminDisciplineDetailView.as_view(), name="admin-discipline-detail"),

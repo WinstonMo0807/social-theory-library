@@ -10530,6 +10530,102 @@
                 }
             }
         },
+        "/api/catalog/admin/recycle/receipts/{request_id}/": {
+            "get": {
+                "operationId": "recovery_receipt",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecoveryReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "recovery_cancel_pending",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecoveryCancelInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecoveryCancelInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecoveryCancelInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecoveryReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/scholar-links/{kind}/commands/{request_id}/": {
             "get": {
                 "operationId": "catalog_admin_scholar_links_commands_retrieve",
@@ -69607,6 +69703,17 @@
                     "action"
                 ]
             },
+            "RecoveryCancelInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
             "RecoveryConfirmInputKindEnum": {
                 "enum": [
                     "upload",
@@ -69960,6 +70067,40 @@
                 "required": [
                     "id",
                     "label"
+                ]
+            },
+            "RecoveryReceipt": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "result": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RecoveryResult"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "request_id",
+                    "result",
+                    "state"
                 ]
             },
             "RecoveryRelatedPage": {

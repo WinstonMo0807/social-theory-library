@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import CharField, F, OuterRef, Subquery, UUIDField, Value, Q
 from django.db.models.functions import Cast, Coalesce, Replace
 from django.db.models.fields.json import KeyTextTransform
-from rest_framework.exceptions import APIException, NotFound, PermissionDenied
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from accounts.models import User
 from common.capabilities import Capability, has_capability
@@ -247,22 +247,68 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
         "notice":"恢复原对象和保留的关联，保持未发布；不自动恢复其他已删除对象，不覆盖同名内容，不重启任务。"+(" 此人物的旧公开学者页将一并撤下，档案内容和历史修订保留，需另行审核发布。" if public_children else "")}
 
 
-@transaction.atomic
-def confirm_restore(request, values):
+def locked_recovery_actor(request):
     if request.headers.get("X-Editor-Owner")!=str(request.user.pk):
         raise PermissionDenied("请重新读取当前管理账户。")
     actor=User.objects.select_for_update().filter(pk=request.user.pk,is_active=True).first()
     if not actor or actor.token_version!=request.user.token_version:
         raise PermissionDenied("账户会话已经变化。")
     require_editor(actor)
+    return actor
+
+
+def command_event(actor, identifier):
+    events=list(AuditEvent.objects.filter(action__in=["recovery.confirmed","recovery.cancelled"],request_id=str(identifier))[:2])
+    if len(events)>1:
+        raise RecoveryConflict("原请求有多条恢复回执，请保留编号并核对变更历史。")
+    event=events[0] if events else None
+    if event and event.actor_id!=actor.pk:
+        raise RecoveryConflict("此请求编号不属于当前账户的恢复操作。")
+    return event
+
+
+def command_result(event, actor):
+    after=event.after if isinstance(event.after,dict) else {}
+    result=after.get("result")
+    fields=("request_id","kind","object_id","restored","public_restored","destination","detail")
+    if (not isinstance(result,dict) or any(key not in result for key in fields) or result["restored"] is not True
+            or result["public_restored"] is not False or result["request_id"]!=event.request_id
+            or result["kind"] not in LIFECYCLE_MODELS or not str(result["destination"]).startswith("/admin/")):
+        raise RecoveryConflict("原恢复已登记，但回执不完整。请保留编号并核对原对象历史。")
+    if result["kind"] in {"recommendation-issue","recommendation-item"}:
+        object_and_entry(result["kind"],result["object_id"],actor=actor)
+    return {key:result[key] for key in fields}
+
+
+@transaction.atomic
+def recovery_receipt(request, identifier, *, cancel=False):
+    actor=locked_recovery_actor(request)
+    acquire_entity_lock("recovery_command",identifier)
+    if cancel and request.data!={"action":"cancel_pending"}:
+        raise ValidationError("只接受取消尚未执行的原请求。")
+    event=command_event(actor,identifier)
+    if not event:
+        if not cancel:
+            raise NotFound("尚未查到已登记的恢复结果，请求仍可能在途。查询不会重新提交；请稍后查回或取消未执行请求。")
+        event=AuditEvent.objects.create(actor=actor,action="recovery.cancelled",object_type="RecoveryCommand",object_id="",request_id=str(identifier),after={})
+    applied=event.action=="recovery.confirmed"
+    return {"request_id":str(identifier),"actor_id":str(actor.pk),"state":"applied" if applied else "cancelled",
+        "created_at":event.created_at,"result":command_result(event,actor) if applied else None}
+
+
+@transaction.atomic
+def confirm_restore(request, values):
+    actor=locked_recovery_actor(request)
     identifier=values["request_id"]
     acquire_entity_lock("recovery_command",identifier)
-    receipt=AuditEvent.objects.filter(action="recovery.confirmed",request_id=str(identifier)).first()
+    receipt=command_event(actor,identifier)
     fingerprint=sha256(json.dumps(values,cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
     if receipt:
-        if receipt.actor_id!=actor.pk or receipt.after.get("fingerprint")!=fingerprint:
+        if receipt.action=="recovery.cancelled":
+            raise RecoveryConflict("原恢复请求已取消，迟到的操作不会执行。请重新读取对象后再决定。")
+        if not isinstance(receipt.after,dict) or receipt.after.get("fingerprint")!=fingerprint:
             raise RecoveryConflict("该请求编号对应其他恢复操作。")
-        return receipt.after["result"]
+        return command_result(receipt,actor)
     locked=object_and_entry(values["kind"],values["object_id"],lock=True,actor=actor)
     preview=detail(values["kind"],values["object_id"],actor,locked=locked,check_files=True)
     if preview["version"]!=values["expected_version"]:

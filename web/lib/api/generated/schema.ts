@@ -2259,6 +2259,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recycle/receipts/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["recovery_receipt"];
+        put?: never;
+        post: operations["recovery_cancel_pending"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholar-links/{kind}/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -18017,6 +18033,9 @@ export interface components {
         RecommendationRefreshStopRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
+        RecoveryCancelInputRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
         /**
          * @description * `upload` - upload
          *     * `work` - work
@@ -18126,6 +18145,15 @@ export interface components {
         RecoveryOperator: {
             id: string;
             label: string;
+        };
+        RecoveryReceipt: {
+            /** Format: uuid */
+            request_id: string;
+            actor_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            /** Format: date-time */
+            created_at: string;
+            result: components["schemas"]["RecoveryResult"] | null;
         };
         RecoveryRelatedPage: {
             category: string;
@@ -26825,6 +26853,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecoveryRelatedPage"];
+                };
+            };
+        };
+    };
+    recovery_receipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryReceipt"];
+                };
+            };
+        };
+    };
+    recovery_cancel_pending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoveryCancelInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecoveryCancelInputRequest"];
+                "multipart/form-data": components["schemas"]["RecoveryCancelInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryReceipt"];
                 };
             };
         };

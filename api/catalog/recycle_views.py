@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from common.permissions import IsLibraryStaff
 from .editorial_read import AdminPrivateResponseMixin
-from .recycle_workspace import LABELS, directory, detail, confirm_restore
+from .recycle_workspace import LABELS, directory, detail, confirm_restore, recovery_receipt
 from .services.recycle import require_editor
 from .recycle_related import related_page
 
@@ -197,6 +197,30 @@ class AdminRecycleView(AdminPrivateResponseMixin, APIView):
     def post(self, request):
         values=RecoveryConfirmInput(data=request.data);values.is_valid(raise_exception=True)
         return Response(confirm_restore(request,values.validated_data))
+
+
+class RecoveryReceipt(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    actor_id = serializers.CharField()
+    state = serializers.ChoiceField(choices=["applied","cancelled"])
+    created_at = serializers.DateTimeField()
+    result = RecoveryResult(allow_null=True)
+
+
+class RecoveryCancelInput(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+
+class AdminRecoveryReceiptView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [IsLibraryStaff]
+
+    @extend_schema(operation_id="recovery_receipt",responses=RecoveryReceipt)
+    def get(self, request, request_id):
+        return Response(recovery_receipt(request,request_id))
+
+    @extend_schema(operation_id="recovery_cancel_pending",request=RecoveryCancelInput,responses=RecoveryReceipt)
+    def post(self, request, request_id):
+        return Response(recovery_receipt(request,request_id,cancel=True))
 
 
 class AdminRecycleDetailView(AdminPrivateResponseMixin, APIView):

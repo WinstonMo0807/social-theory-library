@@ -4,10 +4,10 @@ import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArchiveRestore, BookOpen, Check, ChevronRight, CircleAlert, History, RefreshCw, Search, X } from "lucide-react";
-import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import { useAdminSession, hasAdminCapability } from "@/lib/admin-session";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
-import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { Dialog } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -18,6 +18,7 @@ type Directory=components["schemas"]["RecoveryDirectory"];
 type Detail=components["schemas"]["RecoveryDetail"];
 type RelatedPage=components["schemas"]["RecoveryRelatedPage"];
 type Result=components["schemas"]["RecoveryResult"];
+type Receipt=components["schemas"]["RecoveryReceipt"];
 type Request=components["schemas"]["RecoveryConfirmInputRequest"];
 type Target={kind:string;object_id:string};
 const base="/catalog/admin/recycle/";
@@ -72,7 +73,7 @@ function Workspace({owner}:{owner:string}){
 function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onLock,onChanged}:{owner:string;target:Target;initialCommand:Request|null;preserve:(value:Request|null)=>void;onSelect:(value:Target)=>void;onClose:()=>void;onLock:(value:boolean)=>void;onChanged:()=>void}){
   const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Detail>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
   const resource=usePersistentWorkspace<Detail>(`${base}${target.kind}/${target.object_id}/`,owner,undefined,load);
-  const [comparison,setComparison]=useState(false);
+  const [comparison,setComparison]=useState(false),[cancelOpen,setCancelOpen]=useState(false);
   const [tab,setTab]=useState("basic"),[preview,setPreview]=useState<Detail|null>(null),[message,setMessage]=useState(""),[unknown,setUnknown]=useState<Request|null>(initialCommand),[submitting,setSubmitting]=useState(false),[checking,setChecking]=useState(false);
   const lifecycle=useRef<AbortController|null>(null),pending=useRef<Request|null>(initialCommand),busy=useRef(false);
   useEffect(()=>{const controller=new AbortController();lifecycle.current=controller;return()=>controller.abort();},[]);
@@ -93,9 +94,9 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
     finally{if(!controller.signal.aborted){busy.current=false;setChecking(false);onLock(false);}}
   }
   async function restore(){
-    if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted||(!preview?.can_restore&&!pending.current))return;
+    if(busy.current||pending.current||!lifecycle.current||lifecycle.current.signal.aborted||!preview?.can_restore)return;
     const controller=lifecycle.current;
-    const values=pending.current||{request_id:createRequestKey(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true,...(preview!.names.count?{keep_separate:true}:{})};
+    const values:Request={request_id:createRequestKey(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true,...(preview!.names.count?{keep_separate:true}:{})};
     try{preserve(values);}catch{setMessage("浏览器不能保存原恢复请求，尚未提交。请保留本页并恢复浏览器存储后再继续。");return;}
     pending.current=values;setUnknown(values);busy.current=true;setSubmitting(true);onLock(true);setMessage("");
     try{
@@ -108,8 +109,28 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
       if(controller.signal.aborted)return;
       setPreview(null);
       setMessage(reason instanceof Error?reason.message:"恢复暂未确认，请查回原请求。");
-      if(reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,401,403,404,409,410,422].includes(reason.status)){try{preserve(null);pending.current=null;setUnknown(null);setPreview(null);onLock(false);}catch{setMessage("恢复被拒绝，但原请求暂不能清除，请保留本页并恢复浏览器存储。");}}
+
     }finally{if(!controller.signal.aborted){busy.current=false;setSubmitting(false);}}
+  }
+  async function readReceipt(cancel=false){
+    const values=pending.current,controller=lifecycle.current;
+    if(!values||busy.current||!controller||controller.signal.aborted)return;
+    busy.current=true;setSubmitting(true);setMessage("");
+    try{
+      const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
+      const receipt=await withPrivateOwner(owner,()=>apiRequest<Receipt>(`${base}receipts/${values.request_id}/`,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner},...(cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{})},getServerSessionCredential()),signal);
+      if(controller.signal.aborted)return;
+      if(receipt.request_id!==values.request_id||receipt.actor_id!==owner)throw Error("回执与当前账户或请求不一致，请保留原编号继续核对。");
+      if(receipt.state==="applied"){
+        const result=receipt.result;
+        if(!result||result.request_id!==values.request_id||result.kind!==values.kind||result.object_id!==values.object_id||!result.restored||result.public_restored)throw Error("恢复回执与原对象不一致，请保留编号并核对历史。");
+        preserve(null);setMessage(`${cancel?"原恢复已经完成，取消不会撤销它。":""}${result.detail}`);
+      }else if(receipt.state==="cancelled"){
+        preserve(null);setMessage("已阻止此编号尚未执行的恢复。迟到请求不会执行；原对象状态以最新详情为准。");
+      }else throw Error("回执状态尚不能确认，请保留原编号。");
+      pending.current=null;setUnknown(null);setPreview(null);setCancelOpen(false);onLock(false);resource.reload();onChanged();
+    }catch(reason){if(!controller.signal.aborted)setMessage(reason instanceof Error?reason.message:"尚未查到可确认的回执，请保留原请求。");}
+    finally{if(!controller.signal.aborted){busy.current=false;setSubmitting(false);}}
   }
   const disabled=submitting||checking||!!unknown;
   return <aside className={styles.detail} aria-label="对象详情" aria-busy={resource.loading||submitting||checking}>
@@ -117,7 +138,8 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
     {resource.error?<div className={styles.error} role="alert">{resource.error}<button onClick={()=>resource.reload()}>重新读取</button></div>:null}
     {resource.loading?<div className={styles.empty} role="status">正在读取对象与关联…</div>:null}
     {message?<p className={styles.message} role="status">{message}</p>:null}
-    {unknown&&!submitting?<div className={styles.notice}><CircleAlert size={17}/><div><strong>原请求尚未确认</strong><p>按原编号继续核对；未收到的请求会按原版本提交，已执行的请求只返回原记录。</p><button onClick={()=>void restore()}>按原编号核对并继续</button></div></div>:null}
+    {unknown?<div className={styles.notice}><CircleAlert size={17}/><div><strong>原请求尚未确认</strong><p>查回只读取已登记结果，不再次提交恢复。查不到时，请求仍可能在途；可以取消尚未执行的原请求。</p><small>请求编号 {unknown.request_id}</small><div className={styles.relatedTools}><button disabled={submitting} onClick={()=>void readReceipt()}>{submitting?"正在处理原请求…":"查回原恢复结果"}</button><button disabled={submitting} onClick={()=>setCancelOpen(true)}>取消未执行请求</button></div></div></div>:null}
+    <ConfirmDialog open={cancelOpen} title="取消尚未执行的恢复" description="服务端会先查回原结果。若恢复已完成，将返回原回执；若尚未执行，将阻止此编号之后到达的恢复请求。" details={["取消不会撤销已经完成的恢复，也不会删除原对象。",...(message?[message]:[])]} confirmLabel={submitting?"正在核对…":"取消未执行请求"} pending={submitting} onCancel={()=>{if(!submitting)setCancelOpen(false);}} onConfirm={()=>void readReceipt(true)}/>
     {data?<><header className={styles.objectHeader}>{data.cover_url?<img src={data.cover_url} alt={`${data.title}封面`}/>:<div className={styles.detailIcon}><BookOpen size={34}/><span>{data.label}</span></div>}<div><h2>{data.title}</h2><p>{data.label}</p><span className={styles.state} data-state={data.record_state}>{labels[data.record_state]}</span><p>{date(data.changed_at)} · {data.operator}</p><button className={styles.primary} disabled={!data.can_restore||disabled} onClick={()=>void previewRestore()}>{checking?"正在核对关联与文件…":"预览恢复影响"}</button></div></header><div className={styles.notice}><CircleAlert size={17}/><p>{data.notice}</p></div>
       {data.names.count?<div className={styles.notice}><CircleAlert size={17}/><div><strong>另有 {data.names.count} 个同名对象</strong><p>同名可能是不同版本或身份。请先比较，恢复时保留各自内容与原身份。</p><button onClick={()=>setComparison(true)}>比较同名对象</button></div></div>:null}
       <nav className={styles.tabs} aria-label="对象详情栏目">{[["basic","基本信息"],["dependencies",`关联依赖（${data.dependency_count}）`],["history",`变更历史（${data.history_count}）`]].map(([key,label])=><button key={key} aria-current={tab===key?"page":undefined} onClick={()=>setTab(key)}>{label}</button>)}</nav>
