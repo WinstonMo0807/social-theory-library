@@ -17,6 +17,7 @@ from .outline_views import (AdminDocumentOutlineView, PublicDocumentOutlineView,
 from .content_placement_urls import urlpatterns as content_placement_urlpatterns
 from .site_commands import SiteReceiptView, SiteSourcesView
 from .field_assistant_commands import AssistantCommandView, AssistantReceiptView
+from .curation_decision_views import CurationDecisionView, CurationDecisionReceiptView
 from .manual_catalog_candidates import ManualCatalogCandidatesView
 from .supporting_material_views import SupportingMaterialsView, SupportingReceiptView
 from .discovery_index_views import DiscoveryIndexView
@@ -252,6 +253,8 @@ urlpatterns = [
     path("admin/visual-review/", VisualReviewView.as_view(), name="admin-visual-review"),
     path("admin/visual-review/commands/<uuid:request_id>/", VisualReviewReceiptView.as_view(), name="admin-visual-review-receipt"),
     path("admin/editions/<uuid:edition_id>/field-decisions/", AssistantCommandView.as_view(), name="field-assistant-command"),
+    path("admin/curation/<str:target_type>/<uuid:target_id>/field-decisions/", CurationDecisionView.as_view(), name="curation-field-decision"),
+    path("admin/curation/<str:target_type>/<uuid:target_id>/field-decisions/commands/<uuid:request_id>/", CurationDecisionReceiptView.as_view(), name="curation-field-decision-receipt"),
     path("admin/editions/<uuid:edition_id>/field-decisions/commands/<uuid:request_id>/", AssistantReceiptView.as_view(), name="field-assistant-command-receipt"),
     path("admin/visual-review/references/<int:page>/", VisualReviewReferenceView.as_view(), name="admin-visual-review-reference"),
     path("admin/local-services/", LocalServicesView.as_view(), name="local-services"),

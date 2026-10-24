@@ -22,6 +22,7 @@ from catalog.services.authority_suggestions import authority_suggestions
 from catalog.services.field_enrichment import FieldEnrichmentRequest, FieldEnrichmentService
 from catalog.services.field_enrichment.policies import FIELD_POLICIES
 from catalog.services.field_enrichment.targets import get_target, target_context
+from catalog.services.curation_decisions import decision_version
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ def _identity(row, *, local=False):
     conflicts = _strings(row.get("conflicts"))
     summary = _text(row.get("description")) or ("馆内已有正式记录，请核对是否为同一对象。" if local else "资料中的名称与当前字段相符，请核对身份。")
     return {
-        "key": f"{_key(label)}:{row.get('birth_year') or ''}:{row.get('death_year') or ''}", "label": label, "secondary": original,
+        "key": f"identity:{row.get('id') or _key(label)}:{row.get('source_url') or ''}:{row.get('birth_year') or ''}:{row.get('death_year') or ''}", "label": label, "secondary": original,
         "summary": summary, "statusLabel": "存在冲突" if conflicts else "需要确认",
         "conflicts": conflicts,
         "evidence": [{"category": "馆内已有记录" if local else "权威资料", "summary": summary, "url": _text(row.get("source_url"))}],
@@ -82,15 +83,17 @@ def _formal_identity_rows(kind, query):
     if not query:
         return []
     if kind == "person":
-        return [{"label": row.preferred_name, "original_name": row.original_name,
+        return [{"id": str(row.pk), "label": row.preferred_name, "original_name": row.original_name,
+                 "source_url": f"/scholars/{row.scholar_profile.slug}",
                  "aliases": list(row.name_variants.filter(is_verified=True).values_list("name", flat=True)),
                  "birth_year": row.birth_year, "death_year": row.death_year}
                 for row in Person.objects.filter(
                     Q(preferred_name__icontains=query) | Q(original_name__icontains=query),
                     authority_status="verified", scholar_profile__editorial_status="published",
-                )[:12]]
+                ).select_related("scholar_profile")[:12]]
     if kind in {"concept", "theory_tradition"}:
-        return [{"label": row.canonical_name_zh, "canonical_name_en": row.canonical_name_en,
+        return [{"id": str(row.pk), "label": row.canonical_name_zh, "canonical_name_en": row.canonical_name_en,
+                 "source_url": f"/theories/nodes/{row.slug}",
                  "description": row.summary,
                  "aliases": list(row.aliases.values_list("alias", flat=True))}
                 for row in KnowledgeNode.objects.filter(
@@ -100,7 +103,7 @@ def _formal_identity_rows(kind, query):
     model = {"topic": Topic, "discipline": Discipline, "subdiscipline": Subdiscipline}.get(kind)
     if model is None:
         return []
-    return [{"label": row.name, "foreign_name": getattr(row, "foreign_name", ""),
+    return [{"id": str(row.pk), "label": row.name, "foreign_name": getattr(row, "foreign_name", ""),
              "description": getattr(row, "description", "")}
             for row in model.objects.filter(name__icontains=query, editorial_status="published")[:12]]
 
@@ -110,7 +113,8 @@ def _enrichment(row):
         return None
     evidence = [{"category": SOURCE_LABELS.get(item.source_class, "其他外部资料"),
                  "summary": item.supporting_text or item.source_title or "请核对资料中的字段值。",
-                 "url": item.canonical_url}
+                 "url": item.canonical_url or item.source_url,
+                 "locator": {**dict(item.locator or {}), "url": item.canonical_url or item.source_url}}
                 for item in row.evidence_records.all() if item.is_current]
     conflicts = _strings(row.conflicts)
     label = _value_label(row.proposed_value) or {
@@ -120,7 +124,7 @@ def _enrichment(row):
     }.get(row.field_name, "字段建议")
     distinct_sources = len({item["url"] for item in evidence if item["url"]})
     return {
-        "key": _key(label) if _value_label(row.proposed_value) else f"{row.field_name}:{row.pk}",
+        "key": f"enrichment:{row.pk}",
         "label": label, "secondary": "", "summary": "多项资料支持同一个字段值。" if distinct_sources > 1 else "请核对依据后决定是否采用。",
         "statusLabel": "存在冲突" if conflicts else "建议采用" if distinct_sources > 1 and row.identity_status == "confirmed" else "需要确认",
         "conflicts": conflicts, "evidence": evidence[:8],
@@ -167,7 +171,8 @@ def _work_claim_field(target, field_name, *, context, actor):
             "key": str(candidate["id"]), "label": candidate["label"], "secondary": "",
             "summary": "来自当前作品原文，请核对语境后采用。",
             "statusLabel": "存在冲突" if conflicts else "需要确认", "conflicts": conflicts,
-            "evidence": [{"category": "来自本书", "summary": entry.get("supporting_text", ""), "url": entry.get("url", "")}
+            "evidence": [{"category": "来自本书", "summary": entry.get("supporting_text", ""), "url": entry.get("url", ""),
+                          "locator": {**entry.get("locator", {}), **entry.get("source", {})}}
                          for entry in candidate.get("evidence", [])],
             "claim": {"id": str(candidate["id"]), "kind": candidate["curated_kind"], "decision_url": candidate["decision_url"]},
         })
@@ -183,6 +188,7 @@ def lookup_curation_field(*, object_type, object_id=None, field_name="identity",
     if authority_type and authority_type not in AUTHORITY_TYPES:
         raise ValueError("不支持的馆内对象类型。")
     target = get_target(object_type, object_id) if object_id else None
+    version = decision_version(object_type, target, field_name) if target is not None else ""
     query = " ".join(str(query or "").split())[:240]
     # Only public editorial input enters external lookup, never arbitrary
     # client keys, private notes, credentials or confirmation flags.
@@ -193,14 +199,14 @@ def lookup_curation_field(*, object_type, object_id=None, field_name="identity",
             raise ValueError("请先保存作品，再查找观点建议。")
         # Reuse the existing bounded, evidence-backed claim selector. Do not
         # cache reviewer decisions or introduce another interpretation pipeline.
-        return _work_claim_field(target, field_name, context=context, actor=actor)
+        return {**_work_claim_field(target, field_name, context=context, actor=actor), "decision_version": version}
     digest = hashlib.sha256(json.dumps([object_type, str(object_id or ""), field_name, query, authority_type, current_value, context, str(getattr(target, "updated_at", "")), allow_external], sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
-    cache_key = f"curation-field-assistant:v306:{digest}"
+    cache_key = f"curation-field-assistant:v4-source-identity:{digest}"
     cached = cache.get(cache_key)
     if cached is not None:
         identifiers = [row["enrichment"]["id"] for row in [*cached["results"], *cached.get("more_results", [])] if row.get("enrichment")]
         if not identifiers or EnrichmentCandidate.objects.filter(pk__in=identifiers, status="pending").count() == len(set(identifiers)):
-            return cached
+            return {**cached, "decision_version": version}
         cache.delete(cache_key)
     rows = []
     notices = []
@@ -251,4 +257,4 @@ def lookup_curation_field(*, object_type, object_id=None, field_name="identity",
     # Local reads must notice evidence produced by a concurrent explicit lookup.
     if allow_external:
         cache.set(cache_key, response, timeout=60)
-    return response
+    return {**response, "decision_version": version}

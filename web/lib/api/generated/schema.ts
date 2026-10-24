@@ -624,6 +624,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/curation/{target_type}/{target_id}/field-decisions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_curation_field_decisions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/curation/{target_type}/{target_id}/field-decisions/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_curation_field_decisions_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_curation_field_decisions_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/discovery-index/": {
         parameters: {
             query?: never;
@@ -7374,6 +7406,49 @@ export interface components {
             editorial_revision_id: string | null;
             workbench_url: string;
             canonical_write_deferred: boolean;
+        };
+        /**
+         * @description * `accept` - accept
+         *     * `accept_with_edit` - accept_with_edit
+         *     * `reject` - reject
+         * @enum {string}
+         */
+        CurationDecisionInputActionEnum: "accept" | "accept_with_edit" | "reject";
+        CurationDecisionInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            expected_version: string;
+            field_name: string;
+            source_type: components["schemas"]["CurationDecisionInputSourceTypeEnum"];
+            /** Format: uuid */
+            source_id: string;
+            action: components["schemas"]["CurationDecisionInputActionEnum"];
+            /** @default  */
+            proposition: string;
+            /** @default  */
+            reason: string;
+        };
+        /**
+         * @description * `enrichment` - enrichment
+         *     * `claim` - claim
+         * @enum {string}
+         */
+        CurationDecisionInputSourceTypeEnum: "enrichment" | "claim";
+        CurationDecisionReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            target_type: string;
+            /** Format: uuid */
+            target_id: string;
+            field_name: string;
+            source_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            action: string;
+            next_url: string;
+            result: {
+                [key: string]: unknown;
+            };
         };
         CurationDraft: {
             id: string;
@@ -20296,6 +20371,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectPeople"];
+                };
+            };
+        };
+    };
+    catalog_admin_curation_field_decisions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                target_id: string;
+                target_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CurationDecisionInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CurationDecisionInputRequest"];
+                "multipart/form-data": components["schemas"]["CurationDecisionInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurationDecisionReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_curation_field_decisions_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+                target_id: string;
+                target_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurationDecisionReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_curation_field_decisions_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+                target_id: string;
+                target_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantStopInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssistantStopInputRequest"];
+                "multipart/form-data": components["schemas"]["AssistantStopInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurationDecisionReceipt"];
                 };
             };
         };

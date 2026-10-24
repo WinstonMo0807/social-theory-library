@@ -159,7 +159,7 @@ def high_value_claim_candidates(
             + attribution_bonus * 0.10
             + min(len(rows), 3) / 3 * 0.05
         )
-        envelope = evidence_span_envelope(representative.primary_evidence).as_dict()
+        envelope = evidence_span_envelope(representative.primary_evidence, public_metadata=False).as_dict()
         kind = _candidate_kind(representative)
         reasons = [
             f"命题重要性 {round(representative.importance_score * 100)}%",
@@ -190,6 +190,7 @@ def high_value_claim_candidates(
                     "supporting_text": envelope["text"],
                     "url": envelope["reader_url"],
                     "locator": envelope["locator"],
+                    "source": {**envelope["source"], "title": envelope["source"]["work_title"]},
                     "quality": envelope["quality"],
                     "provenance": envelope["provenance"],
                 }

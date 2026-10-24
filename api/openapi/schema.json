@@ -2658,6 +2658,203 @@
                 }
             }
         },
+        "/api/catalog/admin/curation/{target_type}/{target_id}/field-decisions/": {
+            "post": {
+                "operationId": "catalog_admin_curation_field_decisions_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "target_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "target_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CurationDecisionInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CurationDecisionInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CurationDecisionInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CurationDecisionReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/curation/{target_type}/{target_id}/field-decisions/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_curation_field_decisions_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "target_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "target_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CurationDecisionReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_curation_field_decisions_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "target_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "target_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantStopInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantStopInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantStopInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CurationDecisionReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/discovery-index/": {
             "get": {
                 "operationId": "catalog_admin_discovery_index_retrieve",
@@ -32471,6 +32668,120 @@
                     "media_id",
                     "saved",
                     "workbench_url"
+                ]
+            },
+            "CurationDecisionInputActionEnum": {
+                "enum": [
+                    "accept",
+                    "accept_with_edit",
+                    "reject"
+                ],
+                "type": "string",
+                "description": "* `accept` - accept\n* `accept_with_edit` - accept_with_edit\n* `reject` - reject"
+            },
+            "CurationDecisionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "field_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                    },
+                    "source_type": {
+                        "$ref": "#/components/schemas/CurationDecisionInputSourceTypeEnum"
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/CurationDecisionInputActionEnum"
+                    },
+                    "proposition": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 30000
+                    },
+                    "reason": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 4000
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "field_name",
+                    "request_id",
+                    "source_id",
+                    "source_type"
+                ]
+            },
+            "CurationDecisionInputSourceTypeEnum": {
+                "enum": [
+                    "enrichment",
+                    "claim"
+                ],
+                "type": "string",
+                "description": "* `enrichment` - enrichment\n* `claim` - claim"
+            },
+            "CurationDecisionReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_type": {
+                        "type": "string"
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "field_name": {
+                        "type": "string"
+                    },
+                    "source_id": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "result": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "action",
+                    "field_name",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "result",
+                    "source_id",
+                    "state",
+                    "target_id",
+                    "target_type"
                 ]
             },
             "CurationDraft": {
