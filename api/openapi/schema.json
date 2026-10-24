@@ -13010,6 +13010,54 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-system/reading-paths/preview/": {
+            "post": {
+                "operationId": "catalog_admin_theory_system_reading_paths_preview_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathPreviewInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathPreviewInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PathPreviewInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicReadingPath"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-system/reading-paths/validate/": {
             "post": {
                 "operationId": "catalog_admin_theory_system_reading_paths_validate_create",
@@ -57090,6 +57138,25 @@
                     "role"
                 ]
             },
+            "PathCreditInputRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    },
+                    "role": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    }
+                },
+                "required": [
+                    "name",
+                    "role"
+                ]
+            },
             "PathDependencyInput": {
                 "type": "object",
                 "properties": {
@@ -57421,6 +57488,123 @@
                     "owner_id",
                     "previous",
                     "results"
+                ]
+            },
+            "PathPreviewInputRequest": {
+                "type": "object",
+                "properties": {
+                    "path_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "stage_groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathStageGroupInputRequest"
+                        }
+                    },
+                    "estimated_weeks": {
+                        "type": "integer",
+                        "maximum": 520,
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "prerequisite": {
+                        "type": "string",
+                        "maxLength": 10000
+                    },
+                    "learning_questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2000
+                        },
+                        "maxItems": 40
+                    },
+                    "related_debate_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 40
+                    },
+                    "curator_note": {
+                        "type": "string",
+                        "maxLength": 20000
+                    },
+                    "credits": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PathCreditInputRequest"
+                        }
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 40
+                    },
+                    "edit_version": {
+                        "type": "string",
+                        "maxLength": 128
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 240,
+                                "pattern": "^[-a-zA-Z0-9_]+$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "introduction": {
+                        "type": "string",
+                        "maxLength": 50000
+                    },
+                    "learning_goal": {
+                        "type": "string",
+                        "maxLength": 10000
+                    },
+                    "audience": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "difficulty": {
+                        "$ref": "#/components/schemas/ReadingDifficultyEnum"
+                    },
+                    "estimated_reading": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "primary_discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "audience",
+                    "difficulty",
+                    "estimated_reading",
+                    "introduction",
+                    "learning_goal",
+                    "primary_discipline",
+                    "slug",
+                    "stage_groups",
+                    "title"
                 ]
             },
             "PathProgressOutput": {

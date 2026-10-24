@@ -7,7 +7,7 @@ from catalog.journal_candidate_views import JournalContentsCandidatesView
 from catalog.local_service_views import LocalServicesView, LocalServiceCheckView
 from catalog.media_legacy_views import LegacyImageHistoryView, LegacyImageFileView
 from catalog.issue_creation_views import IssueCreateView, IssueCreateReceiptView, IssueProposalPreviewView
-from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
+from catalog.path_editor_views import PathSaveReceiptView, PathValidationView, PathPreviewView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
 from catalog.topic_association_views import TopicAssociationChoicesView
@@ -829,6 +829,7 @@ urlpatterns = [
     ),
     path("admin/theory-system/reading-paths/commands/<uuid:request_id>/", PathSaveReceiptView.as_view(), name="path-save-receipt"),
     path("admin/theory-system/reading-paths/validate/", PathValidationView.as_view(), name="path-editor-validation"),
+    path("admin/theory-system/reading-paths/preview/", PathPreviewView.as_view(), name="path-editor-preview"),
     path(
         "admin/theory-system/reading-paths/",
         AdminReadingPathListView.as_view(),

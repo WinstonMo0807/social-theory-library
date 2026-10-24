@@ -2688,6 +2688,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/reading-paths/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_theory_system_reading_paths_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/theory-system/reading-paths/validate/": {
         parameters: {
             query?: never;
@@ -14350,6 +14366,10 @@ export interface components {
             name: string;
             role: string;
         };
+        PathCreditInputRequest: {
+            name: string;
+            role: string;
+        };
         PathDependencyInput: {
             /** Format: uuid */
             item_id: string;
@@ -14454,6 +14474,28 @@ export interface components {
             /** Format: uri */
             previous: string | null;
             results: components["schemas"]["PathRecordOutput"][];
+        };
+        PathPreviewInputRequest: {
+            /** Format: uuid */
+            path_id?: string | null;
+            stage_groups: components["schemas"]["PathStageGroupInputRequest"][];
+            estimated_weeks?: number | null;
+            prerequisite?: string;
+            learning_questions?: string[];
+            related_debate_ids?: string[];
+            curator_note?: string;
+            credits?: components["schemas"]["PathCreditInputRequest"][];
+            topics?: string[];
+            edit_version?: string;
+            title: string;
+            slug: string;
+            introduction: string;
+            learning_goal: string;
+            audience: string;
+            difficulty: components["schemas"]["ReadingDifficultyEnum"];
+            estimated_reading: string;
+            /** Format: uuid */
+            primary_discipline: string | null;
         };
         PathProgressOutput: {
             status: components["schemas"]["PathReadingProgressEnum"];
@@ -27674,6 +27716,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PathSaveReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PathPreviewInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PathPreviewInputRequest"];
+                "multipart/form-data": components["schemas"]["PathPreviewInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicReadingPath"];
                 };
             };
         };

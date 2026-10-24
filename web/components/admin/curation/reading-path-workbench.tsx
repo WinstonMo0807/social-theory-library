@@ -13,6 +13,9 @@ import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { EmptyState, PageHeader, StatusBadge } from "@/components/admin-ui";
 import { EntityPicker, RepeatableField } from "../forms/workflow-fields";
+import { movePathMaterial, movePathStage } from "./path-stage-order";
+import { PathMaterialCards, PathStageIndex, type PathDrag } from "./path-material-cards";
+import { useReadingPathPreview } from "./use-reading-path-preview";
 import pathStyles from "../knowledge/path-editor.module.css";
 import { PathDependencyEditor, PathDependencyValidation } from "./reading-path-dependencies";
 import { emptyLearning, emptyMaterial, learningFields, materialFields, strings, PathLearningEditor, PathMaterialEditor, type PathLearningFields, type PathMaterialFields } from "./reading-path-fields";
@@ -272,6 +275,8 @@ function ReadingPathEditor({owner}:{owner:string}) {
   const [primaryDisciplineName, setPrimaryDisciplineName] = useState("");
   const [activeStage, setActiveStage] = useState(0);
   const [activeItem, setActiveItem] = useState(0);
+  const dragRef = useRef<PathDrag>(null);
+  const composing = useRef(false);
   const [stages, setStages] = useState<StageDraft[]>([emptyStage(0)]);
   const previewStage = stages[Math.min(activeStage, stages.length - 1)];
   function selectPreview({ stageId, itemId }: PreviewSelection) {
@@ -289,6 +294,13 @@ function ReadingPathEditor({owner}:{owner:string}) {
     typeof update === "function" ? update({ stages: current }) : update
   ).stages));
   const [imageRevision, setImageRevision] = useState(0);
+  const { status: _previewStatus, sort_order: _previewSort, ...previewFields } = draft;
+  const pathPreview = useReadingPathPreview(owner, JSON.stringify({
+    ...previewFields, primary_discipline: draft.primary_discipline || null,
+    path_id: editing?.id || null, edit_version: editing?.edit_version || "",
+    stage_groups: pathStageGroups(stages).map(group => ({ ...group, name: group.name.trim() || "未命名阶段",
+      items: group.items.filter(item => item.work || item.node) })),
+  }), `${editing?.updated_at}:${imageRevision}`);
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [message, setMessage] = useState("");
   const [messageState, setMessageState] = useState<ActionState>("idle");
@@ -346,6 +358,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
       setMessage("已打开当前阅读路径。");
       setMessageState("success");
       setOpenedPath(requestedPath);
+      setActiveStage(0); setActiveItem(0);
     }).catch((error) => {
       if (!active) return;
       setMessage(error instanceof Error ? error.message : "阅读路径读取失败。");
@@ -361,6 +374,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
     if (!saved && dirty && !window.confirm("阅读路径还有未保存的安排。放弃填写并切换吗？")) return;
     prefills.clear();
     setEditing(path ?? null);
+    setActiveStage(0); setActiveItem(0); dragRef.current = null;
     setDraft(editablePath(path));
     setStages(path ? pathStages(path) : [emptyStage(0)]);
     setSavedContent(pathFormValue(editablePath(path), path ? pathStages(path) : [emptyStage(0)]));
@@ -380,10 +394,28 @@ function ReadingPathEditor({owner}:{owner:string}) {
     } : stage));
   }
 
+  function arrange(next: StageDraft[]) {
+    const selectedStage = stages[Math.min(activeStage, stages.length - 1)];
+    const selectedItem = selectedStage?.items[Math.min(activeItem, selectedStage.items.length - 1)];
+    const itemStage = selectedItem ? next.findIndex(stage => stage.items.some(item => item.key === selectedItem.key)) : -1;
+    const stageIndex = itemStage >= 0 ? itemStage : Math.max(0, next.findIndex(stage => stage.key === selectedStage?.key));
+    setStages(next); setActiveStage(stageIndex);
+    setActiveItem(Math.max(0, next[stageIndex]?.items.findIndex(item => item.key === selectedItem?.key) ?? 0));
+  }
+  function moveItem(itemKey: string, stageKey: string, beforeKey?: string) { arrange(movePathMaterial(stages, itemKey, stageKey, beforeKey)); }
+  function removeItems(itemKeys: string[], stageKey?: string) {
+    const removed = stages.flatMap(stage => stage.items).filter(item => itemKeys.includes(item.key));
+    const ids = new Set(removed.map(item => item.id));
+    const affected = stages.flatMap(stage => stage.items).filter(item => !ids.has(item.id)).reduce((count, item) => count + item.dependencies.filter(relation => ids.has(relation.item_id)).length, 0);
+    if (!window.confirm(`${stageKey ? "移除这个阶段及其中" : "移除"}${removed.length} 项材料？${affected ? `同时从当前草稿中移除指向它们的 ${affected} 条关系。` : ""}原馆藏、读者进度与笔记不会删除；保存发布前不影响公开路线。`)) return;
+    arrange(stages.filter(stage => stage.key !== stageKey).map(stage => ({ ...stage, items: stage.items.filter(item => !itemKeys.includes(item.key)).map(item => ({ ...item, dependencies: item.dependencies.filter(relation => !ids.has(relation.item_id)) })) })));
+  }
+
   const itemCount = useMemo(() => stages.reduce((count, stage) => count + stage.items.length, 0), [stages]);
 
   async function save(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
+    if ((event?.nativeEvent as Event & { isComposing?: boolean })?.isComposing || composing.current) return false;
     const token = getServerSessionCredential();
     if (!token || !canEdit || (!editing && !canCreate)) return false;
     if (!draftOnly && draft.status === "published" && editing?.status !== "published" && !window.confirm("保存并公开这条阅读路径？确认后读者就能看到它。")) return false;
@@ -478,7 +510,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
 
   return (
     <div className={`admin-page reading-path-v280-page ${pathStyles.workspace}`}>
-      <PageHeader eyebrow="内容管理" title="公共阅读路径编排" description="把文献安排成几个阅读阶段，再选择顺序、填写推荐理由。保存后可预览并发布。" actions={<button className="button" type="button" onClick={() => start()}><Plus size={14} />新建路径</button>} />
+      <PageHeader eyebrow="内容管理" title="公共阅读路径编排" description="把文献安排成几个阅读阶段，再选择顺序、填写推荐理由。编辑时可预览，保存后单独确认发布。" actions={<button className="button" type="button" onClick={() => start()}><Plus size={14} />新建路径</button>} />
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
       <div className="reading-path-v280-layout">
         <details className={pathStyles.directory}><summary>查找与切换阅读路径</summary><aside className="admin-panel reading-path-v280-list">
@@ -488,7 +520,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
           {!loading && !paths.length ? <EmptyState compact title="尚无阅读路径" description="建立路径后，也可以从文献的编辑页面加入阅读内容。" /> : null}
           <AdminListPages data={collection} paging={paging} loading={loading} filters={{ q: query }} />
         </aside></details>
-        {command.recovery?<div role="status"><p>原保存结果尚未确认，请先查回。</p><button type="button" onClick={()=>void recoverSave()}>查回原请求</button>{command.canRetry?<button type="submit" form="reading-path-editor-form">重试原保存</button>:null}<button type="button" onClick={()=>void recoverSave(true)}>停止未完成请求</button></div>:null}{command.error?<p role="alert">{command.error}</p>:null}<KnowledgeVisualEditor objectType="reading_path" objectId={editing?.id} previewStageId={previewStage?.id || previewStage?.key || ""} onPreviewSelect={selectPreview} savedRecord={editing} onPublished={() => {void loadPaths();setEditConflict(true);setMessage("发布操作已提交，请打开最新阅读路径后继续编辑。");}} draft={{...draft, stages}} dirty={dirty||Boolean(command.recovery)} refreshKey={`${editing?.updated_at}:${imageRevision}`}>{requestedPath && openedPath !== requestedPath ? <p role="status">正在读取指定阅读路径，载入后即可编辑。</p> : null}<form id="reading-path-editor-form" className="admin-panel reading-path-v280-editor" onSubmit={(event) => void save(event, true)} aria-busy={Boolean(requestedPath && openedPath !== requestedPath)}>
+        {command.recovery?<div role="status"><p>原保存结果尚未确认，请先查回。</p><button type="button" onClick={()=>void recoverSave()}>查回原请求</button>{command.canRetry?<button type="submit" form="reading-path-editor-form">重试原保存</button>:null}<button type="button" onClick={()=>void recoverSave(true)}>停止未完成请求</button></div>:null}{command.error?<p role="alert">{command.error}</p>:null}<KnowledgeVisualEditor readingPathPreview={pathPreview} objectType="reading_path" objectId={editing?.id} previewStageId={previewStage?.id || previewStage?.key || ""} onPreviewSelect={selectPreview} savedRecord={editing} onPublished={() => {void loadPaths();setEditConflict(true);setMessage("发布操作已提交，请打开最新阅读路径后继续编辑。");}} draft={{...draft, stages}} dirty={dirty||Boolean(command.recovery)} refreshKey={`${editing?.updated_at}:${imageRevision}`}>{requestedPath && openedPath !== requestedPath ? <p role="status">正在读取指定阅读路径，载入后即可编辑。</p> : null}<form onCompositionStart={()=>{composing.current=true;}} onCompositionEnd={()=>{composing.current=false;}} id="reading-path-editor-form" className="admin-panel reading-path-v280-editor" onSubmit={(event) => void save(event, true)} aria-busy={Boolean(requestedPath && openedPath !== requestedPath)}>
           <p>保存这条路径的说明、全部阶段、书目顺序和推荐理由，不跳转。已公开路径的修改需另行发布。</p>
           <EditorialPrefillNotice state={prefills} />
           <fieldset disabled={!canEdit||(!editing&&!canCreate)||!command.ready||Boolean(command.recovery)||Boolean(requestedPath && openedPath !== requestedPath)} style={{ display: "contents" }}>
@@ -516,18 +548,20 @@ function ReadingPathEditor({owner}:{owner:string}) {
                 const name = asString(row.stage_name, "建议阅读");
                 const item = { ...emptyItem(), work, node, work_name: work ? label : "", node_name: node ? label : "", recommendation_reason: asString(row.recommendation_reason), is_required: row.is_required === true };
                 const found = current.stages.findIndex((stage) => stage.name === name);
-                return { stages: found < 0 ? [...current.stages, { ...emptyLearning, estimated_reading: "", key: key("stage"), name, description: asString(row.stage_description), items: [item] }] : current.stages.map((stage, index) => index === found ? { ...stage, items: [...stage.items.filter((entry) => entry.work || entry.node), item] } : stage) };
+                return { stages: found < 0 ? [...current.stages, { ...emptyLearning, estimated_reading: "", id: createRequestKey(), key: key("stage"), name, description: asString(row.stage_description), items: [item] }] : current.stages.map((stage, index) => index === found ? { ...stage, items: [...stage.items.filter((entry) => entry.work || entry.node), item] } : stage) };
               });
             }} /></div>
-            <header><div><h3>阶段与项目</h3><p>先排阶段，再在每个阶段内排作品。空阶段可以保留。</p></div><button type="button" onClick={() => {setActiveStage(stages.length);setActiveItem(0);setStages((current) => [...current, emptyStage(current.length)]);}}><Plus size={13} />添加阶段</button></header>
-            <nav className="structured-row-index" aria-label="阅读阶段">{stages.map((stage,index)=><button key={stage.key} type="button" aria-current={index===Math.min(activeStage,stages.length-1)?"true":undefined} onClick={()=>{setActiveStage(index);setActiveItem(0);}}>{index+1} · {stage.name}</button>)}</nav>
+            <header><div><h3>阶段与项目</h3><p>按学习顺序安排阶段与材料。预览会核对当前选择，保存后仍需单独发布。</p></div><button type="button" disabled={stages.length >= 60} onClick={() => {setActiveStage(stages.length);setActiveItem(0);setStages((current) => [...current, emptyStage(current.length)]);}}><Plus size={13} />添加阶段</button></header>
+            <PathStageIndex stages={stages} active={Math.min(activeStage, stages.length - 1)} onSelect={index => { setActiveStage(index); setActiveItem(0); }} onMoveStage={(key, before) => arrange(movePathStage(stages, key, before))} onMoveItem={moveItem} dragRef={dragRef}/>
             {stages.map((stage, stageIndex) => <article className="reading-path-v280-stage" key={stage.key} data-editor-stage-id={stage.id || stage.key} hidden={stageIndex!==Math.min(activeStage,stages.length-1)}>
-              <header><span>{stageIndex + 1}</span><input aria-label={`第 ${stageIndex + 1} 阶段名称`} value={stage.name} onChange={(event) => patchStage(stageIndex, { name: event.target.value })} /><div><button type="button" aria-label="上移阶段" disabled={stageIndex === 0} onClick={() => setStages((current) => move(current, stageIndex, stageIndex - 1))}><ArrowUp size={12} /></button><button type="button" aria-label="下移阶段" disabled={stageIndex === stages.length - 1} onClick={() => setStages((current) => move(current, stageIndex, stageIndex + 1))}><ArrowDown size={12} /></button><button type="button" aria-label="删除阶段" onClick={() => setStages((current) => current.filter((_row, index) => index !== stageIndex))}><Trash2 size={12} /></button></div></header>
+              <header><span>{stageIndex + 1}</span><input aria-label={`第 ${stageIndex + 1} 阶段名称`} value={stage.name} onChange={(event) => patchStage(stageIndex, { name: event.target.value })} /><div><button type="button" aria-label="上移阶段" disabled={stageIndex === 0} onClick={() => arrange(move(stages, stageIndex, stageIndex - 1))}><ArrowUp size={12} /></button><button type="button" aria-label="下移阶段" disabled={stageIndex === stages.length - 1} onClick={() => arrange(move(stages, stageIndex, stageIndex + 1))}><ArrowDown size={12} /></button><button type="button" aria-label="删除阶段" onClick={() => removeItems(stage.items.map(item => item.key), stage.key)}><Trash2 size={12} /></button></div></header>
               <textarea aria-label={`${stage.name}阶段说明`} rows={2} value={stage.description} onChange={(event) => patchStage(stageIndex, { description: event.target.value })} />
               <label><span>阶段建议用时</span><input value={stage.estimated_reading} maxLength={120} onChange={event => patchStage(stageIndex, { estimated_reading: event.target.value })} placeholder="例如：1–2 周，可留空" /></label>
               <details><summary>本阶段学习问题与相关争论</summary><PathLearningEditor label={stage.name} value={stage} onChange={patch => patchStage(stageIndex, patch)} /></details>
-              <nav className="structured-row-index" aria-label="本阶段阅读项目">{stage.items.map((item,index)=><button key={item.key} type="button" data-preview-item-id={item.id||item.key} aria-current={index===Math.min(activeItem,stage.items.length-1)?"true":undefined} onClick={()=>setActiveItem(index)}>{index+1} · {item.work_name || item.node_name || "新项目"}</button>)}</nav><div className="reading-path-v280-items">{stage.items.map((item, itemIndex) => <section key={item.key} data-editor-item-id={item.id || item.key} hidden={itemIndex!==Math.min(activeItem,stage.items.length-1)}>
-                <header><strong>项目 {itemIndex + 1}</strong><div><button type="button" aria-label="上移项目" disabled={itemIndex === 0} onClick={() => patchStage(stageIndex, { items: move(stage.items, itemIndex, itemIndex - 1) })}><ArrowUp size={12} /></button><button type="button" aria-label="下移项目" disabled={itemIndex === stage.items.length - 1} onClick={() => patchStage(stageIndex, { items: move(stage.items, itemIndex, itemIndex + 1) })}><ArrowDown size={12} /></button><button type="button" aria-label="移除项目" onClick={() => patchStage(stageIndex, { items: stage.items.filter((_row, index) => index !== itemIndex) })}><Trash2 size={12} /></button></div></header>
+              <PathMaterialCards stage={stage} selected={Math.min(activeItem, stage.items.length - 1)} data={pathPreview.data} onSelect={setActiveItem} onMove={moveItem} dragRef={dragRef}/>
+              <div className="reading-path-v280-items">{stage.items.map((item, itemIndex) => <section key={item.key} data-editor-item-id={item.id || item.key} hidden={itemIndex!==Math.min(activeItem,stage.items.length-1)}>
+                <header><strong>项目 {itemIndex + 1}</strong><div><button type="button" aria-label="上移项目" disabled={itemIndex === 0} onClick={() => moveItem(item.key, stage.key, stage.items[itemIndex - 1]?.key)}><ArrowUp size={12} /></button><button type="button" aria-label="下移项目" disabled={itemIndex === stage.items.length - 1} onClick={() => moveItem(item.key, stage.key, stage.items[itemIndex + 2]?.key)}><ArrowDown size={12} /></button><button type="button" aria-label="移除项目" onClick={() => removeItems([item.key])}><Trash2 size={12} /></button></div></header>
+                <div className="inline-fields"><label><span>移到阶段</span><select value={stage.key} onChange={event => moveItem(item.key, event.target.value)}>{stages.map(row => <option key={row.key} value={row.key}>{row.name || "未命名阶段"}</option>)}</select></label><label><span>本阶段位置</span><select value={itemIndex} onChange={event => { const position = Number(event.target.value), others = stage.items.filter(row => row.key !== item.key); moveItem(item.key, stage.key, others[position]?.key); }}>{stage.items.map((row, index) => <option key={row.key} value={index}>第 {index + 1} 项</option>)}</select></label></div>
                 <div className="inline-fields reading-path-v292-entity-fields"><EntityPicker label="馆藏作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={item.work ? [{ id: item.work, name: item.work_name || "已选择馆藏作品" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { ...(selected?.id === item.work ? {} : emptyMaterial), work: selected?.id ?? null, work_name: selected?.name ?? "", node: null, node_name: "" }); }} /><EntityPicker label="理论或概念" endpoint="/catalog/admin/theory-system/nodes/" queryParam="q" nameField="canonical_name_zh" values={item.node ? [{ id: item.node, name: item.node_name || "已选择理论或概念" }] : []} onChange={(next) => { const selected = next.at(-1); patchItem(stageIndex, itemIndex, { ...emptyMaterial, material_kind: "node", node: selected?.id ?? null, node_name: selected?.name ?? "", work: null, work_name: "" }); }} /></div>
                 <PathMaterialEditor key={`${item.key}:${item.work || item.node || "empty"}`} work={item.work} value={item} onChange={patch => patchItem(stageIndex, itemIndex, patch)} />
                 <label><span>这份材料的阅读目标</span><textarea rows={2} maxLength={2000} value={item.learning_goal} onChange={event=>patchItem(stageIndex,itemIndex,{learning_goal:event.target.value})}/></label>
@@ -538,10 +572,10 @@ function ReadingPathEditor({owner}:{owner:string}) {
                 <label><span>编辑备注（仅后台）</span><textarea rows={2} value={item.editorial_note} onChange={(event) => patchItem(stageIndex, itemIndex, { editorial_note: event.target.value })} /></label>
                 <label className="workflow-checkbox"><input type="checkbox" checked={item.is_required} onChange={(event) => patchItem(stageIndex, itemIndex, { is_required: event.target.checked })} /><span>设为必读</span></label>
               </section>)}</div>
-              <button className="button secondary" type="button" onClick={() => {setActiveItem(stage.items.length);patchStage(stageIndex, { items: [...stage.items, emptyItem()] });}}><Plus size={12} />在本阶段添加阅读内容</button>
+              <button className="button secondary" type="button" disabled={itemCount >= 600} onClick={() => {setActiveItem(stage.items.length);patchStage(stageIndex, { items: [...stage.items, emptyItem()] });}}><Plus size={12} />在本阶段添加阅读内容</button>
             </article>)}
           </section>
-          <div data-editor-section="dependencies"><PathDependencyValidation owner={owner} pathId={editing?.id} groups={pathStageGroups(stages)} materials={stages.flatMap(stage=>stage.items)} onSelect={id=>{const index=stages.findIndex(stage=>stage.items.some(item=>item.id===id));if(index>=0){setActiveStage(index);setActiveItem(stages[index].items.findIndex(item=>item.id===id));}}}/></div>
+          <div data-editor-section="dependencies"><PathDependencyValidation preview={pathPreview.data} owner={owner} pathId={editing?.id} groups={pathStageGroups(stages)} materials={stages.flatMap(stage=>stage.items)} onSelect={id=>{const index=stages.findIndex(stage=>stage.items.some(item=>item.id===id));if(index>=0){setActiveStage(index);setActiveItem(stages[index].items.findIndex(item=>item.id===id));}}}/></div>
           <footer><ActionButton className="button" type="submit" state={pendingAction === "save-reading-path" ? "pending" : "idle"} pendingLabel="正在保存路径" disabled={Boolean(pendingAction) && pendingAction !== "save-reading-path"}><Save size={14} />{"保存阅读路径草稿"}</ActionButton></footer>
           <EditorialConflictHelp visible={editConflict} href={`/admin/theories/reading-paths?path=${editing?.id}`} />
           </fieldset>

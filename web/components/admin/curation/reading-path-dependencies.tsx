@@ -1,11 +1,13 @@
 "use client";
 
+import { PathDependencyGraph } from "./path-dependency-graph";
+import type { PublicReadingPath } from "@/lib/api/reading-paths.types";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 
 export type PathDependency = { item_id:string; kind:"learning_order"|"theory_related"; reason:string };
-export type DependencyMaterial = { id?:string; key:string; work_name:string; node_name:string; status:string };
+export type DependencyMaterial = { id?:string; key:string; work_name:string; node_name:string; status:string; dependencies?:PathDependency[] };
 export function PathDependencyEditor({ itemId, value, materials, onChange }: { itemId?:string; value:PathDependency[]; materials:DependencyMaterial[]; onChange:(value:PathDependency[])=>void }) {
   const [target,setTarget]=useState(""),[kind,setKind]=useState<PathDependency["kind"]>("learning_order");
   const available=materials.filter(row=>row.id&&row.id!==itemId&&row.status==="active");
@@ -17,7 +19,7 @@ export function PathDependencyEditor({ itemId, value, materials, onChange }: { i
 }
 
 type Report = {material_count:number;active_count:number;relation_counts:Record<string,number>;dependencies_valid:boolean;problems:{code:string;item_ids:string[];detail:string}[];notice:string};
-export function PathDependencyValidation({ owner,pathId,groups,materials,onSelect }: {owner:string;pathId?:string;groups:object[];materials:DependencyMaterial[];onSelect:(id:string)=>void}) {
+export function PathDependencyValidation({ owner,pathId,groups,materials,onSelect,preview }: {preview?:PublicReadingPath|null;owner:string;pathId?:string;groups:object[];materials:DependencyMaterial[];onSelect:(id:string)=>void}) {
   const [result,setResult]=useState<{key:string;data:Report}|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState("");
   const life=useRef<AbortController|null>(null),body=JSON.stringify({path_id:pathId||null,stage_groups:groups});
   useEffect(()=>{const request=new AbortController();life.current=request;return()=>request.abort();},[owner]);
@@ -30,6 +32,7 @@ export function PathDependencyValidation({ owner,pathId,groups,materials,onSelec
   }
   const label=(id:string)=>materials.find(row=>row.id===id)?.work_name||materials.find(row=>row.id===id)?.node_name||"原材料";
   return <section aria-label="先修关系验证"><header><h3>先修关系验证</h3><button type="button" disabled={busy} onClick={()=>void inspect()}>{busy?"正在核对…":"核对本次编排"}</button></header>
+    <PathDependencyGraph materials={materials} data={preview} conflicts={current?.problems.flatMap(problem=>problem.item_ids)||[]} onEdit={onSelect}/>
     {!current?<p>{result?"编排已变化，请重新核对先修关系。":"保存前可核对材料身份、先修循环和阅读顺序。"}</p>:<><p>{current.dependencies_valid?"本次先修关系没有发现循环或顺序冲突。":"编排中还有需要处理的关系。"}</p><p>共 {current.material_count} 项材料 · 学习顺序 {current.relation_counts.learning_order} 条 · 理论相关 {current.relation_counts.theory_related} 条</p><ul>{current.problems.map((problem,index)=><li key={index}><strong>{problem.detail}</strong><div>{problem.item_ids.map((id,i)=><span key={`${id}:${i}`}>{i?" → ":""}<button type="button" data-path-navigation="true" data-preview-item-id={id} onClick={()=>onSelect(id)}>{label(id)}</button></span>)}</div></li>)}</ul><p>{current.notice}</p></>}{error?<p role="alert">{error}</p>:null}
   </section>;
 }

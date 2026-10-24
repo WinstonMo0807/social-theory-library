@@ -94,6 +94,8 @@ def normalize_reading_path_stage_groups(
 ) -> list[dict[str, Any]]:
     if not isinstance(groups, list) or len(groups) > 60:
         raise ReadingPathStructureError("stage_groups 必须是最多60个阶段的列表。")
+    if sum(len(group.get("items", [])) for group in groups if isinstance(group, dict) and isinstance(group.get("items", []), list)) > 600:
+        raise ReadingPathStructureError("一条阅读路径最多600项材料。")
     existing_stages = {str(row.pk): row for row in path.stages.all()}
     existing_stage_ids = set(existing_stages)
     used_stage_ids: set[str] = set()

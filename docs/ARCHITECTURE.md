@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 M24编排与预览
+
+M24未保存预览沿原公开阅读路径投影，只读核对完整当前草稿与准确edit_version。只在界面内保留阶段/材料移动与删除关系输入，保存/发布仍走原路径命令和EditorialRevision；没有新数据库表或读者数据同步。
+
 ## 2026-10-24 原时间线双对象归并
 
 原EditorialRevision及content_placements执行事件/页面编排的原子归并与回退，新增受保护的TimelineMergeRecord和merged_into，0088仅声明未执行。保留原身份与历史引用，旧公开链接经保留事件资格解析；回退拒绝后续编辑冲突。原账户权限/回执复用，未连接数据库、运行测试或执行真实归并；几何/并发/公开操作仍待验收。最终重置清单须包含新引用依赖预演，不在开发时清理。详见docs/stl4/TIMELINE_EDITOR_20261023.md。

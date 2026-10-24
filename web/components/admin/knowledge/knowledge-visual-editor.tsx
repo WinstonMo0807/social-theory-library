@@ -17,6 +17,7 @@ import { ScholarEditorFrame, scholarEditorSection, scholarEditorSections } from 
 import { projectScholar, scholarPreviewBody } from "./scholar-preview";
 import { projectTopic, topicPreviewBody } from "./topic-preview";
 import type { TopicCurationFields } from "./topic-fields";
+import type { PathPreviewState } from "../curation/use-reading-path-preview";
 import { projectReadingPath } from "@/components/admin/curation/reading-path-preview";
 import { FixedPageEditor, type PreviewSelection } from "@/components/admin/curation/fixed-page-editor";
 import { MaterialAssistantProvider, MaterialAssistantEntry } from "../workflow/material-assistant";
@@ -31,7 +32,7 @@ import { AsyncStatus } from "@/components/action-feedback";
 import { EvidenceCurationEditor } from "@/components/admin/curation/evidence-curation-editor";
 import type { EvidenceCurationType } from "@/lib/api/evidence-curation.types";
 
-type Props = {onRelationGuardChange?: (value: NodeRelationGuard) => void; portrait?: ReactNode; objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; previewStageId?: string; onPreviewSelect?: (selection: PreviewSelection) => void};
+type Props = {readingPathPreview?: PathPreviewState; onRelationGuardChange?: (value: NodeRelationGuard) => void; portrait?: ReactNode; objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; previewStageId?: string; onPreviewSelect?: (selection: PreviewSelection) => void};
 type FieldProps = {children?: ReactNode; label?: string; className?: string; type?: string; role?: string; disabled?: boolean; style?: {display?: string}; "data-editor-section"?: string};
 const sectionLabels: Record<string, string> = {dependencies:"先修关系",stages:"阶段编排",identity:"基本信息", biography:"传记与机构", questions:"研究问题", scholars:"相关学者", articles:"策划文章", history:"形成与发展", dimensions:"研究维度", methods:"研究方法 / 工具", concepts:"关键概念", timeline:"生平与事件", "concept-map":"概念图", network:"学术关系", content:"内容与说明", relations:"人物与馆藏关联", works:"代表作品", paths:"阅读路径", passages:"原文策展", media:"图片", learning:"学习问题与争论", curation:"策划说明与署名", versions:"版本记录", sources:"资料来源与路径", publication:"保存与发布"};
 function textOf(node: ReactNode): string { if (typeof node === "string") return node; if (!isValidElement<FieldProps>(node)) return ""; return node.props.label || Children.toArray(node.props.children).map(textOf).join(" "); }
@@ -79,7 +80,7 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
 }
 
 /** Public components project local fields and server-verified, unsaved selections. */
-export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, previewStageId, onPreviewSelect, portrait, onRelationGuardChange}: Props) {
+export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, previewStageId, onPreviewSelect, portrait, onRelationGuardChange, readingPathPreview}: Props) {
   const assistantRoot=useRef<HTMLDivElement|null>(null);
   const composing=useRef(false);
   const [ime,setIme]=useState(false);
@@ -91,6 +92,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
   const [previewRetry, setPreviewRetry] = useState(0);
   const previewQuery = "";
+  const hasPathPreview = Boolean(readingPathPreview);
   const previewBody = objectType === "scholar" ? scholarPreviewBody(draft as Row) : objectType === "topic" ? topicPreviewBody(draft as TopicCurationFields) : "";
   const previewKey = JSON.stringify([objectType, objectId, refreshKey, previewQuery, previewBody, previewRetry, owner, savedVersion]);
   const payload = resolved?.key === previewKey ? resolved.payload : null;
@@ -103,7 +105,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const [localImage, setLocalImage] = useState("");
   useEffect(()=>{let active=true;const url=mediaFile?URL.createObjectURL(mediaFile):"";queueMicrotask(()=>{if(active)setLocalImage(url);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[mediaFile]);
   useEffect(() => {
-    if (!objectId || !owner) return;
+    if (!objectId || !owner || objectType === "reading_path" && hasPathPreview) return;
     const controller = new AbortController(),signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
     const params=new URLSearchParams(previewQuery);if(savedVersion)params.set("edit_version",savedVersion);
     const unsubscribe=subscribeToSessionChanges(()=>{controller.abort();setResolved(null);setFailure({key:previewKey,message:"账户已变化，请重新打开当前对象。"});});
@@ -112,7 +114,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
       .then(value => { if(value.object_type!==objectType||value.object_id!==objectId||savedVersion&&value.edit_version!==savedVersion)throw Error("预览与保存版本不一致，请重新核对。");if (!controller.signal.aborted) { setResolved({ key: previewKey, payload: value }); setFailure(null); } })
       .catch(reason => { if (!controller.signal.aborted) setFailure({ key: previewKey, message: reason instanceof Error ? reason.message : "预览读取失败" }); });
     return () => {controller.abort();unsubscribe();};
-  }, [objectType, objectId, previewQuery, previewBody, previewKey,owner,savedVersion]);
+  }, [objectType, objectId, previewQuery, previewBody, previewKey,owner,savedVersion,hasPathPreview]);
   const childList = Children.toArray(children);
   const form = childList.find(node => isValidElement(node) && node.type === "form") as ReactElement<{children:ReactNode}> | undefined;
   const rail = childList.filter(node => node !== form);
@@ -139,7 +141,7 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
     setEvidenceDirty(false); setActive(id);
     const url = new URL(window.location.href); url.searchParams.set("section",id); window.history.replaceState(null,"",url.pathname+url.search);
   }
-  function withAssistant(content:ReactNode){return <MaterialAssistantProvider dirty={dirty} disabled={disabled||publicationLocked} save={()=>{assistantRoot.current?.querySelector<HTMLFormElement>("form")?.requestSubmit();}} preview={error?<p role="alert">{error}</p>:objectId&&!payload?<p>正在核对页面资料…</p>:<div inert><PreviewSurface payload={previewPayload} pageId="overview"/></div>}><div ref={assistantRoot} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}><MaterialAssistantEntry autoOpen={searchParams.get("assistant")==="fields"}/>{content}</div></MaterialAssistantProvider>;}
+  function withAssistant(content:ReactNode){return <MaterialAssistantProvider dirty={dirty} disabled={disabled||publicationLocked} save={()=>{assistantRoot.current?.querySelector<HTMLFormElement>("form")?.requestSubmit();}} preview={readingPathPreview ? readingPathPreview.error ? <p role="alert">{readingPathPreview.error}</p> : readingPathPreview.data ? <div inert><PreviewSurface payload={{...previewPayload,perspective:{...previewPayload.perspective,data:readingPathPreview.data}}} pageId="overview"/></div> : <p>正在核对当前路径材料…</p> : error?<p role="alert">{error}</p>:objectId&&!payload?<p>正在核对页面资料…</p>:<div inert><PreviewSurface payload={previewPayload} pageId="overview"/></div>}><div ref={assistantRoot} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}><MaterialAssistantEntry autoOpen={searchParams.get("assistant")==="fields"}/>{content}</div></MaterialAssistantProvider>;}
   const evidenceEditor = evidenceType ? <div className="knowledge-visual-editor" inert={publicationLocked}>{objectId ? <EvidenceCurationEditor key={`${evidenceType}:${objectId}`} objectType={evidenceType} objectId={objectId} sections={sections} onSectionChange={changeSection} onDirtyChange={setEvidenceDirty} /> : <><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} onClick={() => changeSection(section.id)}>{section.label}</button>)}</nav><p className="admin-panel">请先保存当前对象，再选择馆内原文。当前基本信息输入仍然保留。</p></>}</div> : null;
   if (objectType === "scholar" && form) {
     const publish = objectId && savedRecord ? <KnowledgePublishControl embedded objectType={objectType} objectId={objectId} savedRecord={savedRecord} dirty={dirty || evidenceDirty} onPublished={onPublished} onLockChange={setPublicationLocked} reviewHref={`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",edit_version:savedVersion,return_to:`${pathname}?${searchParams}`})}`} /> : null;
@@ -153,8 +155,11 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   }
   if (objectType === "reading_path" && form) {
     const publish = objectId && savedRecord ? <KnowledgePublishControl embedded objectType={objectType} objectId={objectId} savedRecord={savedRecord} dirty={dirty} onPublished={onPublished} onLockChange={setPublicationLocked} reviewHref={`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",edit_version:savedVersion,return_to:`${pathname}?${searchParams}`})}`} /> : null;
-    const rendered = error ? <p role="alert">{error}。当前输入仍然保留。<button type="button" onClick={()=>setPreviewRetry(value=>value+1)}>重新核对</button></p> : objectId && !payload ? <p role="status">正在读取原路径及所选材料…</p> : <div onClickCapture={event=>{if((event.target as Element).closest("a"))event.preventDefault();}}><PreviewSurface payload={previewPayload} pageId="overview"/></div>;
-    return withAssistant(<KnowledgePublicationContext value={{locked:publicationLocked,requestReview:()=>setActive("publication"),requestHistory:()=>setActive("versions")}}><PathEditorFrame form={form} groups={groups} active={selected} changeSection={changeSection} dirty={dirty} disabled={disabled} locked={publicationLocked} saved={savedRecord} data={error||objectId&&!payload?null:live as unknown as PublicReadingPath} preview={rendered} publication={publish} rail={rail} stageId={previewStageId} onSelect={onPreviewSelect}/></KnowledgePublicationContext>);
+    const pathError = readingPathPreview?.error || error;
+    const pathData = readingPathPreview ? readingPathPreview.data : live as unknown as PublicReadingPath;
+    const pathPayload = { ...previewPayload, perspective: { ...previewPayload.perspective, data: pathData || live } };
+    const rendered = pathError ? <p role="alert">{pathError}。当前输入仍然保留。<button type="button" onClick={()=>readingPathPreview ? readingPathPreview.retry() : setPreviewRetry(value=>value+1)}>重新核对</button></p> : (readingPathPreview ? readingPathPreview.loading : objectId && !payload) ? <p role="status">正在读取原路径及所选材料…</p> : <div onClickCapture={event=>{if((event.target as Element).closest("a"))event.preventDefault();}}><PreviewSurface payload={pathPayload} pageId="overview"/></div>;
+    return withAssistant(<KnowledgePublicationContext value={{locked:publicationLocked,requestReview:()=>setActive("publication"),requestHistory:()=>setActive("versions")}}><PathEditorFrame composing={ime} previewStatus={readingPathPreview} form={form} groups={groups} active={selected} changeSection={changeSection} dirty={dirty} disabled={disabled} locked={publicationLocked} saved={savedRecord} data={pathError ? null : pathData} preview={rendered} publication={publish} rail={rail} stageId={previewStageId} onSelect={onPreviewSelect}/></KnowledgePublicationContext>);
   }
   if (objectType === "topic" && form) {
     const publish = objectId && savedRecord ? <KnowledgePublishControl embedded objectType={objectType} objectId={objectId} savedRecord={savedRecord} dirty={dirty || evidenceDirty} onPublished={onPublished} onLockChange={setPublicationLocked} reviewHref={`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",edit_version:savedVersion,return_to:`${pathname}?${searchParams}`})}`} /> : null;
