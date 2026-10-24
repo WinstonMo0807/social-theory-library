@@ -1,3 +1,4 @@
+from catalog.site_publication_review import SiteReviewView
 from catalog.recommendation_command_views import RecommendationRefreshReceiptView
 from catalog.visual_review_views import VisualReviewView, VisualReviewReceiptView, VisualReviewReferenceView
 from catalog.journal_candidate_views import JournalContentsCandidatesView
@@ -315,6 +316,7 @@ urlpatterns = [
     path("admin/recommendation-issues/<uuid:issue_id>/items/<uuid:item_id>/link/", AdminIssueLinkView.as_view(), name="admin-recommendation-issue-link"),
     path("admin/recommendation-issues/<uuid:issue_id>/items/<uuid:item_id>/cover/", AdminIssueItemCoverView.as_view(), name="admin-recommendation-issue-item-cover"),
     path("admin/site-content/", AdminSiteContentView.as_view(), name="admin-site-content"),
+    path("admin/site-content/review/", SiteReviewView.as_view(), name="admin-site-review"),
     path("admin/site-content/sources/", SiteSourcesView.as_view(), name="admin-site-sources"),
     path("admin/site-content/commands/<uuid:request_id>/", SiteReceiptView.as_view(), name="admin-site-receipt"),
     path("admin/site-content/preview/", AdminSitePreviewView.as_view(), name="admin-site-content-preview"),

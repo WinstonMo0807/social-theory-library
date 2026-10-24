@@ -66,6 +66,11 @@ def execute(request, *, publishing=False):
         return {**service.site_payload(), "receipt": receipt(previous), "replayed": True}
     if publishing and request.data.get("confirm") is not True:
         raise ValidationError("请明确确认后发布网站内容。")
+    if publishing and request.data.get("expected_fingerprint"):
+        from catalog.site_publication_review import review
+        checked = review(request.data.get("edit_version"))
+        if checked["fingerprint"] != request.data["expected_fingerprint"]:
+            raise service.EditConflict("网站内容或所引来源已变化，请重新读取发布检查再确认。")
     payload = service.publish_site(request.data.get("edit_version"), actor) if publishing else service.save_site(request.data, actor)
     row = AuditEvent.objects.create(pk=key, actor=actor, action=ACTION, object_type="site_content", object_id=payload["site_id"],
         after={"operation": operation, "fingerprint": fingerprint, "saved_version": payload["edit_version"]})

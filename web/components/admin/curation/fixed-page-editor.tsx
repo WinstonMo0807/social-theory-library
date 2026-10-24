@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /** An isolated viewport keeps public media queries and typography identical to the page. */
-export function PreviewViewport({ children }: { children: ReactNode }) {
+export function PreviewViewport({ children, locateFields = true }: { children: ReactNode; locateFields?: boolean }) {
   const [width, setWidth] = useState(1120);
   const [fitWidth, setFitWidth] = useState(true);
   const [availableWidth, setAvailableWidth] = useState(0);
@@ -61,7 +61,7 @@ export function PreviewViewport({ children }: { children: ReactNode }) {
       <button type="button" aria-pressed={width === 1120} onClick={() => setWidth(1120)}>桌面 · 1120</button>
       <button type="button" aria-pressed={width === 390} onClick={() => setWidth(390)}>移动 · 390</button>
       <button type="button" aria-pressed={!fitWidth} onClick={() => setFitWidth(value => !value)}>{fitWidth ? "放大至实际大小" : "适应预览栏"}</button>
-      <span>{Math.round(scale * 100)}% · 点击页面内容定位字段</span>
+      <span>{Math.round(scale * 100)}% · {locateFields ? "点击页面内容定位字段" : "已保存页面预览"}</span>
     </div>
     <div ref={canvasRef} className="fixed-preview-canvas">
       <div className="fixed-preview-stage" style={{ width: width * scale, height: height * scale }}>

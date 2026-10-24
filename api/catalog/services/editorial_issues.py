@@ -555,6 +555,10 @@ def publish_site(expected, actor):
     if not revision or revision.status != "draft":
         raise ValidationError("没有待发布的网站草稿。")
     payload = revision.materialized_preview
+    from catalog.site_publication_review import checks
+    blocked = [row["detail"] for row in checks(payload) if row["severity"] == "blocking"]
+    if blocked:
+        raise ValidationError({"publication": blocked})
     from catalog.site_layout import present
     present(payload.get("home_layout", {}), publishing=True)
     config = deepcopy(payload["config"])

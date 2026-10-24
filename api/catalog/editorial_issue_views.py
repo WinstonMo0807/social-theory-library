@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import OpenApiParameter, PolymorphicProxySerializer, extend_schema
 
 from catalog.editorial_read import AdminPrivateResponseMixin
-from catalog.editorial_issue_serializers import IssuePublicationReviewSerializer
+from catalog.editorial_issue_serializers import IssuePublicationReviewSerializer, SitePublishSerializer
 from catalog.models import EditorialRevision, RecommendationIssue, RecommendationIssueItem, MediaRendition, SiteSetting
 from catalog.services import editorial_issues as service
 from common.permissions import CanAccessBackOffice, CanEditMetadata, CanPublishAuthority, IsLibraryAdmin
@@ -232,7 +232,7 @@ class AdminSiteContentView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
 
 class AdminSitePublishView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryAdmin]
-    @extend_schema(request=EditorialPublishSerializer, responses=SiteContentSerializer)
+    @extend_schema(request=SitePublishSerializer, responses=SiteContentSerializer)
     def post(self, request):
         from catalog.site_commands import execute
         return Response(execute(request, publishing=True))

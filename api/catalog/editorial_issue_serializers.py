@@ -306,3 +306,7 @@ class SavedIssueListSerializer(serializers.Serializer):
 class SaveIssueListCommandSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     public_revision_id = serializers.UUIDField()
+
+
+class SitePublishSerializer(EditorialPublishSerializer):
+    expected_fingerprint = serializers.CharField(max_length=64, required=False)

@@ -2291,6 +2291,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/site-content/review/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_site_content_review_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/site-content/sources/": {
         parameters: {
             query?: never;
@@ -17548,6 +17564,10 @@ export interface components {
             published_at: string | null;
             published_by: string;
         };
+        SitePublishRequest: {
+            edit_version: string;
+            expected_fingerprint?: string;
+        };
         SiteReceipt: {
             /** Format: uuid */
             request_id: string;
@@ -17572,6 +17592,31 @@ export interface components {
             saved_version: string;
             /** Format: date-time */
             created_at: string;
+        };
+        SiteReview: {
+            edit_version: string;
+            fingerprint: string;
+            /** Format: date-time */
+            checked_at: string;
+            snapshot: components["schemas"]["SiteContent"];
+            checks: components["schemas"]["SiteReviewCheck"][];
+            changes: components["schemas"]["SiteReviewChange"][];
+            can_publish: boolean;
+        };
+        SiteReviewChange: {
+            field: string;
+            label: string;
+            before_display: string;
+            after_display: string;
+            change: string;
+        };
+        SiteReviewCheck: {
+            code: string;
+            severity: string;
+            title: string;
+            detail: string;
+            section: string;
+            slot_id: string;
         };
         SiteStopRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
@@ -24747,9 +24792,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EditorialPublishRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["EditorialPublishRequest"];
-                "multipart/form-data": components["schemas"]["EditorialPublishRequest"];
+                "application/json": components["schemas"]["SitePublishRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SitePublishRequest"];
+                "multipart/form-data": components["schemas"]["SitePublishRequest"];
             };
         };
         responses: {
@@ -24759,6 +24804,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SiteContent"];
+                };
+            };
+        };
+    };
+    catalog_admin_site_content_review_retrieve: {
+        parameters: {
+            query: {
+                edit_version: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteReview"];
                 };
             };
         };

@@ -10898,17 +10898,17 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/EditorialPublishRequest"
+                                "$ref": "#/components/schemas/SitePublishRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/EditorialPublishRequest"
+                                "$ref": "#/components/schemas/SitePublishRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/EditorialPublishRequest"
+                                "$ref": "#/components/schemas/SitePublishRequest"
                             }
                         }
                     },
@@ -10928,6 +10928,44 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/SiteContent"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/site-content/review/": {
+            "get": {
+                "operationId": "catalog_admin_site_content_review_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "edit_version",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SiteReview"
                                 }
                             }
                         },
@@ -66875,6 +66913,23 @@
                     "state"
                 ]
             },
+            "SitePublishRequest": {
+                "type": "object",
+                "properties": {
+                    "edit_version": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "expected_fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    }
+                },
+                "required": [
+                    "edit_version"
+                ]
+            },
             "SiteReceipt": {
                 "type": "object",
                 "properties": {
@@ -66941,6 +66996,106 @@
                     "created_at",
                     "request_id",
                     "saved_version"
+                ]
+            },
+            "SiteReview": {
+                "type": "object",
+                "properties": {
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "checked_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "snapshot": {
+                        "$ref": "#/components/schemas/SiteContent"
+                    },
+                    "checks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SiteReviewCheck"
+                        }
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SiteReviewChange"
+                        }
+                    },
+                    "can_publish": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "can_publish",
+                    "changes",
+                    "checked_at",
+                    "checks",
+                    "edit_version",
+                    "fingerprint",
+                    "snapshot"
+                ]
+            },
+            "SiteReviewChange": {
+                "type": "object",
+                "properties": {
+                    "field": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "before_display": {
+                        "type": "string"
+                    },
+                    "after_display": {
+                        "type": "string"
+                    },
+                    "change": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "after_display",
+                    "before_display",
+                    "change",
+                    "field",
+                    "label"
+                ]
+            },
+            "SiteReviewCheck": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "severity": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "section": {
+                        "type": "string"
+                    },
+                    "slot_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "detail",
+                    "section",
+                    "severity",
+                    "slot_id",
+                    "title"
                 ]
             },
             "SiteStopRequest": {
