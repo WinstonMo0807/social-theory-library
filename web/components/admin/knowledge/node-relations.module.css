@@ -1,4 +1,8 @@
 .workspace { color:var(--ink); }
+.relatedEntries button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:12px 8px;color:var(--muted);font:inherit;cursor:pointer}
+.relatedEntries button[aria-current=page]{border-bottom-color:var(--ink);color:var(--ink);font-weight:600}
+.relatedEntries button:focus-visible{outline:2px solid var(--annotation);outline-offset:2px}
+.relatedEntries button{flex-shrink:0}
 .workspace>header p { color:var(--muted); margin:8px 0 0; }
 .columns { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(290px,1fr); gap:20px; align-items:start; }
 .directory,.detail { min-width:0; }
@@ -30,3 +34,5 @@
 @media(max-width:760px) { .scholarPortrait { width:76px; height:88px; }.scholarHero>p { flex-basis:100%; }.relatedEntries { gap:14px; font-size:12px; } }
 
 .detail :global(.scholar-relations-workspace) { display:block; }.detail :global(.fixed-editor-panel) { border:0; padding:0; width:100%; min-width:0; }.detail :global(.fixed-editor-fields) { padding:0; }
+
+@media(max-width:760px){.relatedEntries{flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding-bottom:2px}}

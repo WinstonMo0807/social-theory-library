@@ -10806,6 +10806,54 @@
                 }
             }
         },
+        "/api/catalog/admin/scholars/{scholar_id}/concept-usages/": {
+            "get": {
+                "operationId": "catalog_admin_scholars_concept_usages_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "scholar_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ScholarUsagePage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/scholars/{scholar_id}/knowledge-relations/": {
             "get": {
                 "operationId": "catalog_admin_scholars_knowledge_relations_retrieve",
@@ -69759,6 +69807,74 @@
                     "saved_version",
                     "scholar_id",
                     "state"
+                ]
+            },
+            "ScholarUsageGroup": {
+                "type": "object",
+                "properties": {
+                    "node_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node_name": {
+                        "type": "string"
+                    },
+                    "node_type": {
+                        "type": "string"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision_status": {
+                        "type": "string"
+                    },
+                    "edit_url": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PlacementResultItem"
+                        }
+                    }
+                },
+                "required": [
+                    "edit_url",
+                    "items",
+                    "node_id",
+                    "node_name",
+                    "node_type",
+                    "revision_id",
+                    "revision_status"
+                ]
+            },
+            "ScholarUsagePage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ScholarUsageGroup"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
                 ]
             },
             "ScholarWork": {

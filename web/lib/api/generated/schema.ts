@@ -2307,6 +2307,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/scholars/{scholar_id}/concept-usages/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholars_concept_usages_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholars/{scholar_id}/knowledge-relations/": {
         parameters: {
             query?: never;
@@ -18207,6 +18223,23 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        ScholarUsageGroup: {
+            /** Format: uuid */
+            node_id: string;
+            node_name: string;
+            node_type: string;
+            /** Format: uuid */
+            revision_id: string;
+            revision_status: string;
+            edit_url: string;
+            items: components["schemas"]["PlacementResultItem"][];
+        };
+        ScholarUsagePage: {
+            count: number;
+            next: number | null;
+            previous: number | null;
+            results: components["schemas"]["ScholarUsageGroup"][];
+        };
         ScholarWork: {
             /** Format: uuid */
             id: string;
@@ -25981,6 +26014,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarRelationReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholars_concept_usages_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                scholar_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarUsagePage"];
                 };
             };
         };
