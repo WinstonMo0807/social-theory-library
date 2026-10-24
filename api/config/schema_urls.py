@@ -12,6 +12,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
+    "admin-recycle-related",
     "scholar-relation-receipt",
     "scholar-link-list", "scholar-link-receipt",
     "node-save-receipt",

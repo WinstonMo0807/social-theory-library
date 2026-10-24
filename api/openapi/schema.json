@@ -10441,6 +10441,95 @@
                 }
             }
         },
+        "/api/catalog/admin/recycle/{kind}/{object_id}/related/": {
+            "get": {
+                "operationId": "recovery_object_related",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "as_of",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "category",
+                        "schema": {
+                            "enum": [
+                                "dependencies",
+                                "history",
+                                "names"
+                            ],
+                            "type": "string",
+                            "default": "dependencies",
+                            "minLength": 1
+                        },
+                        "description": "* `dependencies` - dependencies\n* `history` - history\n* `names` - names"
+                    },
+                    {
+                        "in": "path",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "relation",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 120
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecoveryRelatedPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/scholar-links/{kind}/commands/{request_id}/": {
             "get": {
                 "operationId": "catalog_admin_scholar_links_commands_retrieve",
@@ -69564,6 +69653,9 @@
                     },
                     "confirmed": {
                         "type": "boolean"
+                    },
+                    "keep_separate": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
@@ -69685,6 +69777,12 @@
                             "$ref": "#/components/schemas/RecoveryHistory"
                         }
                     },
+                    "history_count": {
+                        "type": "integer"
+                    },
+                    "names": {
+                        "$ref": "#/components/schemas/RecoveryNames"
+                    },
                     "blockers": {
                         "type": "array",
                         "items": {
@@ -69713,8 +69811,10 @@
                     "destination",
                     "entry_id",
                     "history",
+                    "history_count",
                     "kind",
                     "label",
+                    "names",
                     "notice",
                     "object_id",
                     "operator",
@@ -69825,6 +69925,28 @@
                     "label"
                 ]
             },
+            "RecoveryNames": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryDependency"
+                        }
+                    },
+                    "limited": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "count",
+                    "limited",
+                    "results"
+                ]
+            },
             "RecoveryOperator": {
                 "type": "object",
                 "properties": {
@@ -69836,6 +69958,89 @@
                     }
                 },
                 "required": [
+                    "id",
+                    "label"
+                ]
+            },
+            "RecoveryRelatedPage": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string"
+                    },
+                    "relation": {
+                        "type": "string"
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryRelationGroup"
+                        }
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "as_of": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "dependencies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryDependency"
+                        }
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryHistory"
+                        }
+                    },
+                    "names": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryDependency"
+                        }
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "as_of",
+                    "category",
+                    "count",
+                    "dependencies",
+                    "groups",
+                    "history",
+                    "names",
+                    "notice",
+                    "page",
+                    "relation",
+                    "total_pages"
+                ]
+            },
+            "RecoveryRelationGroup": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "count",
                     "id",
                     "label"
                 ]

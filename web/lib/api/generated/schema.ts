@@ -2243,6 +2243,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recycle/{kind}/{object_id}/related/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["recovery_object_related"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholar-links/{kind}/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -18032,6 +18048,7 @@ export interface components {
             kind: components["schemas"]["RecoveryConfirmInputKindEnum"];
             expected_version: string;
             confirmed: boolean;
+            keep_separate?: boolean;
         };
         RecoveryDependency: {
             kind: string;
@@ -18068,6 +18085,8 @@ export interface components {
             dependency_count: number;
             dependencies_limited: boolean;
             history: components["schemas"]["RecoveryHistory"][];
+            history_count: number;
+            names: components["schemas"]["RecoveryNames"];
             blockers: string[];
             can_restore: boolean;
             notice: string;
@@ -18099,9 +18118,33 @@ export interface components {
             id: string;
             label: string;
         };
+        RecoveryNames: {
+            count: number;
+            results: components["schemas"]["RecoveryDependency"][];
+            limited: boolean;
+        };
         RecoveryOperator: {
             id: string;
             label: string;
+        };
+        RecoveryRelatedPage: {
+            category: string;
+            relation: string;
+            groups: components["schemas"]["RecoveryRelationGroup"][];
+            count: number;
+            page: number;
+            total_pages: number;
+            /** Format: date-time */
+            as_of: string;
+            dependencies: components["schemas"]["RecoveryDependency"][];
+            history: components["schemas"]["RecoveryHistory"][];
+            names: components["schemas"]["RecoveryDependency"][];
+            notice: string;
+        };
+        RecoveryRelationGroup: {
+            id: string;
+            label: string;
+            count: number;
         };
         RecoveryResult: {
             /** Format: uuid */
@@ -26750,6 +26793,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecoveryDetail"];
+                };
+            };
+        };
+    };
+    recovery_object_related: {
+        parameters: {
+            query?: {
+                as_of?: string;
+                /**
+                 * @description * `dependencies` - dependencies
+                 *     * `history` - history
+                 *     * `names` - names
+                 */
+                category?: "dependencies" | "history" | "names";
+                page?: number;
+                relation?: string;
+            };
+            header?: never;
+            path: {
+                kind: string;
+                object_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryRelatedPage"];
                 };
             };
         };

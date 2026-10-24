@@ -154,39 +154,13 @@ def object_and_entry(kind, identifier, *, lock=False, actor=None):
 
 
 def dependency_rows(obj, actor=None):
-    """Only catalog objects; never traverse reader notes, lists or usage records."""
-    rows, total = [], 0
-    model_kinds={value.model._meta.label_lower:key for key,value in LIFECYCLE_MODELS.items()}
-    for relation in obj._meta.related_objects:
-        label=relation.related_model._meta.label_lower
-        if label not in model_kinds or not relation.get_accessor_name():
-            continue
-        from .services.curation_projects import filter_related_objects
-        query=filter_related_objects(relation.related_model.all_objects.filter(**{relation.field.name:obj}),actor).order_by("pk")
-        count=query.count();total+=count
-        room=min(10,50-len(rows))
-        if room<=0:
-            continue
-        for other in query[:room]:
-            key=model_kinds[label];config=LIFECYCLE_MODELS[key]
-            deleted=RecycleEntry.objects.filter(model_label=label,object_id=other.pk,restored_at__isnull=True).exists()
-            rows.append({"kind":key,"object_id":str(other.pk),"name":_name(other,config.name_field),"label":LABELS[key],
-                "state":"deleted" if deleted else "retained","blocking":False,"destination":DESTINATIONS[key],
-                "detail":"需单独恢复；不会随本对象恢复。" if deleted else "原关联保留，不改变该对象的发布状态。"})
-    # Forward parents determine whether a restored row can return to its list.
-    for field in obj._meta.fields:
-        if not field.is_relation or not field.related_model or field.related_model._meta.label_lower not in model_kinds:
-            continue
-        identifier=getattr(obj,field.attname)
-        if not identifier:
-            continue
-        deleted=RecycleEntry.objects.filter(model_label=field.related_model._meta.label_lower,object_id=identifier,restored_at__isnull=True).first()
-        if deleted:
-            total+=1
-            key=model_kinds[field.related_model._meta.label_lower]
-            blocking=(obj._meta.label_lower,field.name) in {("catalog.edition","work"),("catalog.scholarprofile","person"),("catalog.recommendationissueitem","issue")}
-            rows.append({"kind":key,"object_id":str(identifier),"name":deleted.name,"label":LABELS[key],"state":"deleted",
-                "blocking":blocking,"destination":DESTINATIONS[key],"detail":"必须先恢复所属对象。" if blocking else "关联对象仍在回收站，需单独处理。"})
+    """Bounded summary; the related endpoint pages the same visible querysets."""
+    from .recycle_related import relation_queries, row_payload
+    rows,total=[],0
+    for _,_,kind,query,blocking in relation_queries(obj,actor):
+        total+=query.count()
+        room=min(10,max(0,50-len(rows)))
+        rows.extend(row_payload(kind,other,blocking=blocking) for other in query[:room])
     return rows,total
 
 
@@ -230,8 +204,11 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
     deleted=bool(entry and entry.restored_at is None)
     archived=bool(obj and config.status_field and getattr(obj,config.status_field)==config.archived_value)
     state="deleted" if deleted else "archived" if archived else "restored"
+    from .recycle_related import destination, name_summary, history_query, history_payload
     deps,total=dependency_rows(obj,actor) if obj else ([],0)
+    names=name_summary(kind,obj,actor)
     blockers=[row["detail"] for row in deps if row["blocking"]]
+    if names["limited"]:blockers.append("同名对象超过500个，本次未完成身份比较，请先沿原管理入口整理同名记录。")
     if obj is None:
         blockers.append("原数据库对象缺失，不能从回收标记重建。请核对备份与历史。")
     if kind=="theory-school":
@@ -252,21 +229,20 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
     blockers.extend(storage["blockers"])
     required=Capability.EDIT_METADATA if deleted else Capability.PUBLISH_AUTHORITY
     can_restore=bool(obj and (deleted or archived) and not blockers and has_capability(actor,required))
-    label=config.model._meta.label_lower
-    history=AuditEvent.objects.filter(object_id=str(identifier),object_type__in=[label,config.model._meta.label,kind,CANONICAL_OBJECT_TYPES.get(kind,kind)]).select_related("actor").order_by("-created_at","-id")[:30]
-    changes=[{"id":str(event.pk),"at":event.created_at,"action":event.action,
-        "actor":event.actor.display_name if event.actor else "系统或未记录", "detail":{"record.recycle":"移入回收站，文件和原关联保留。","record.restore":"恢复到管理列表，未自动公开。","entity_archive":"已归档或撤下公开展示。","entity_restore":"恢复为草稿。","recovery.confirmed":"按预览确认恢复，保留原身份。"}.get(event.action,"原对象变更记录，详情沿原编辑历史查看。")} for event in history]
+    history=history_query(kind,identifier)
+    history_count=history.count()
+    changes=[history_payload(event) for event in history[:4]]
     title=_name(obj,config.name_field) if obj else entry.name
     before=entry.before if entry and isinstance(entry.before,dict) else {}
     version=sha256(json.dumps({"kind":kind,"id":identifier,"object_updated":obj.updated_at if obj else None,
         "entry_updated":entry.updated_at if entry else None,"state":state,"dependencies":deps,"total":total,"blockers":blockers,
-        "files":storage["checks"],"public_children":public_children},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
+        "files":storage["checks"],"public_children":public_children,"names":names["fingerprint"]},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
     return {"kind":kind,"object_id":str(identifier),"entry_id":str(entry.pk) if entry else None,"title":title,"label":LABELS[kind],
-        "record_state":state,"version":version,"destination":DESTINATIONS[kind],"cover_url":cover_url(obj,kind),
+        "record_state":state,"version":version,"destination":destination(kind,obj) if obj else DESTINATIONS[kind],"cover_url":cover_url(obj,kind),
         "created_at":obj.created_at if obj else None,"updated_at":obj.updated_at if obj else None,
         "changed_at":entry.updated_at if entry and not archived else obj.updated_at,"operator":entry.deleted_by.display_name if deleted and entry.deleted_by else "详见变更历史",
         "reason":str(before.get("_recycle_reason") or "原记录未保存操作原因"),"dependencies":deps,"dependency_count":total,
-        "dependencies_limited":total>len(deps),"history":changes,"blockers":blockers,"can_restore":can_restore,
+        "dependencies_limited":total>len(deps),"history":changes,"history_count":history_count,"names":{key:names[key] for key in ("count","results","limited")},"blockers":blockers,"can_restore":can_restore,
         "storage":{"state":storage["state"],"checked_at":storage["checked_at"],"total":storage["total"]},
         "notice":"恢复原对象和保留的关联，保持未发布；不自动恢复其他已删除对象，不覆盖同名内容，不重启任务。"+(" 此人物的旧公开学者页将一并撤下，档案内容和历史修订保留，需另行审核发布。" if public_children else "")}
 
@@ -293,6 +269,8 @@ def confirm_restore(request, values):
         raise RecoveryConflict()
     if not preview["can_restore"]:
         raise RecoveryConflict("；".join(preview["blockers"]) or "当前账户或对象状态不允许恢复。")
+    if preview["names"]["count"] and values.get("keep_separate") is not True:
+        raise RecoveryConflict("存在同名对象，请先比较并明确选择保留独立对象后恢复。不会自动覆盖或合并。")
     _,obj,entry=locked
     if preview["record_state"]=="deleted":
         restore_object(entry.pk,actor=actor)

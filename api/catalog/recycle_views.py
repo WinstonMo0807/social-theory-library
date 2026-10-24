@@ -6,9 +6,17 @@ from common.permissions import IsLibraryStaff
 from .editorial_read import AdminPrivateResponseMixin
 from .recycle_workspace import LABELS, directory, detail, confirm_restore
 from .services.recycle import require_editor
+from .recycle_related import related_page
 
 
-class RecoveryQuery(serializers.Serializer):
+class StrictRecoveryQuery(serializers.Serializer):
+    def to_internal_value(self, data):
+        if set(data)-set(self.fields) or hasattr(data,"getlist") and any(len(data.getlist(key))!=1 for key in data):
+            raise serializers.ValidationError("查询参数重复或不受支持，请重新读取。")
+        return super().to_internal_value(data)
+
+
+class RecoveryQuery(StrictRecoveryQuery):
     search = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
     kind = serializers.ChoiceField(choices=["", *LABELS], default="")
     state = serializers.ChoiceField(choices=["", "deleted", "archived", "restored"], default="")
@@ -80,8 +88,44 @@ class RecoveryStorage(serializers.Serializer):
     total = serializers.IntegerField(allow_null=True)
 
 
-class RecoveryDetailQuery(serializers.Serializer):
+class RecoveryDetailQuery(StrictRecoveryQuery):
     check_files = serializers.BooleanField(default=False)
+
+
+class RecoveryNames(serializers.Serializer):
+    count = serializers.IntegerField()
+    results = RecoveryDependency(many=True)
+    limited = serializers.BooleanField()
+
+
+class RecoveryRelatedQuery(StrictRecoveryQuery):
+    category = serializers.ChoiceField(choices=["dependencies","history","names"], default="dependencies")
+    relation = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    page = serializers.IntegerField(min_value=1, max_value=100000, default=1)
+    as_of = serializers.DateTimeField(required=False)
+
+    def validate(self, values):
+        if values["category"]!="dependencies" and values["relation"]:
+            raise serializers.ValidationError("此栏目不支持关联类型筛选。")
+        return values
+
+
+class RecoveryRelationGroup(RecoveryKind):
+    count = serializers.IntegerField()
+
+
+class RecoveryRelatedPage(serializers.Serializer):
+    category = serializers.CharField()
+    relation = serializers.CharField(allow_blank=True)
+    groups = RecoveryRelationGroup(many=True)
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+    as_of = serializers.DateTimeField()
+    dependencies = RecoveryDependency(many=True)
+    history = RecoveryHistory(many=True)
+    names = RecoveryDependency(many=True)
+    notice = serializers.CharField()
 
 
 class RecoveryDetail(serializers.Serializer):
@@ -103,6 +147,8 @@ class RecoveryDetail(serializers.Serializer):
     dependency_count = serializers.IntegerField()
     dependencies_limited = serializers.BooleanField()
     history = RecoveryHistory(many=True)
+    history_count = serializers.IntegerField()
+    names = RecoveryNames()
     blockers = serializers.ListField(child=serializers.CharField())
     can_restore = serializers.BooleanField()
     notice = serializers.CharField()
@@ -115,6 +161,7 @@ class RecoveryConfirmInput(serializers.Serializer):
     kind = serializers.ChoiceField(choices=list(LABELS))
     expected_version = serializers.RegexField(r"^[a-f0-9]{64}$")
     confirmed = serializers.BooleanField()
+    keep_separate = serializers.BooleanField(required=False)
 
     def to_internal_value(self, data):
         if not isinstance(data, dict) or set(data)-set(self.fields):
@@ -160,3 +207,13 @@ class AdminRecycleDetailView(AdminPrivateResponseMixin, APIView):
         require_editor(request.user)
         query=RecoveryDetailQuery(data=request.query_params);query.is_valid(raise_exception=True)
         return Response(detail(kind,object_id,request.user,**query.validated_data))
+
+
+class AdminRecycleRelatedView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [IsLibraryStaff]
+
+    @extend_schema(operation_id="recovery_object_related",parameters=[RecoveryRelatedQuery],responses=RecoveryRelatedPage)
+    def get(self, request, kind, object_id):
+        require_editor(request.user)
+        query=RecoveryRelatedQuery(data=request.query_params);query.is_valid(raise_exception=True)
+        return Response(related_page(kind,object_id,request.user,**query.validated_data))

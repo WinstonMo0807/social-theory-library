@@ -16,6 +16,7 @@ import styles from "./recovery-workspace.module.css";
 
 type Directory=components["schemas"]["RecoveryDirectory"];
 type Detail=components["schemas"]["RecoveryDetail"];
+type RelatedPage=components["schemas"]["RecoveryRelatedPage"];
 type Result=components["schemas"]["RecoveryResult"];
 type Request=components["schemas"]["RecoveryConfirmInputRequest"];
 type Target={kind:string;object_id:string};
@@ -24,7 +25,7 @@ const requestKey=(owner:string)=>`stl-recovery-command:${owner}`;
 function savedRestore(raw:string):Request{
   const value=JSON.parse(raw) as Request;
   const uuid=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-  if(!value||typeof value!=="object"||Object.keys(value).sort().join()!=="confirmed,expected_version,kind,object_id,request_id"||!uuid.test(value.request_id)||!uuid.test(value.object_id)||! /^[a-f0-9]{64}$/.test(value.expected_version)||typeof value.kind!=="string"||value.confirmed!==true)throw Error("原恢复请求记录不完整，请保留本页并核对对象变更历史。");
+  if(!value||typeof value!=="object"||!["confirmed,expected_version,kind,object_id,request_id","confirmed,expected_version,keep_separate,kind,object_id,request_id"].includes(Object.keys(value).sort().join())||("keep_separate" in value&&typeof value.keep_separate!=="boolean")||!uuid.test(value.request_id)||!uuid.test(value.object_id)||! /^[a-f0-9]{64}$/.test(value.expected_version)||typeof value.kind!=="string"||value.confirmed!==true)throw Error("原恢复请求记录不完整，请保留本页并核对对象变更历史。");
   return value;
 }
 const labels:Record<string,string>={deleted:"已删除",archived:"已归档",restored:"已恢复",retained:"关联保留"};
@@ -71,6 +72,7 @@ function Workspace({owner}:{owner:string}){
 function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onLock,onChanged}:{owner:string;target:Target;initialCommand:Request|null;preserve:(value:Request|null)=>void;onSelect:(value:Target)=>void;onClose:()=>void;onLock:(value:boolean)=>void;onChanged:()=>void}){
   const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Detail>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
   const resource=usePersistentWorkspace<Detail>(`${base}${target.kind}/${target.object_id}/`,owner,undefined,load);
+  const [comparison,setComparison]=useState(false);
   const [tab,setTab]=useState("basic"),[preview,setPreview]=useState<Detail|null>(null),[message,setMessage]=useState(""),[unknown,setUnknown]=useState<Request|null>(initialCommand),[submitting,setSubmitting]=useState(false),[checking,setChecking]=useState(false);
   const lifecycle=useRef<AbortController|null>(null),pending=useRef<Request|null>(initialCommand),busy=useRef(false);
   useEffect(()=>{const controller=new AbortController();lifecycle.current=controller;return()=>controller.abort();},[]);
@@ -93,7 +95,7 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
   async function restore(){
     if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted||(!preview?.can_restore&&!pending.current))return;
     const controller=lifecycle.current;
-    const values=pending.current||{request_id:createRequestKey(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true};
+    const values=pending.current||{request_id:createRequestKey(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true,...(preview!.names.count?{keep_separate:true}:{})};
     try{preserve(values);}catch{setMessage("浏览器不能保存原恢复请求，尚未提交。请保留本页并恢复浏览器存储后再继续。");return;}
     pending.current=values;setUnknown(values);busy.current=true;setSubmitting(true);onLock(true);setMessage("");
     try{
@@ -117,20 +119,46 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
     {message?<p className={styles.message} role="status">{message}</p>:null}
     {unknown&&!submitting?<div className={styles.notice}><CircleAlert size={17}/><div><strong>原请求尚未确认</strong><p>按原编号继续核对；未收到的请求会按原版本提交，已执行的请求只返回原记录。</p><button onClick={()=>void restore()}>按原编号核对并继续</button></div></div>:null}
     {data?<><header className={styles.objectHeader}>{data.cover_url?<img src={data.cover_url} alt={`${data.title}封面`}/>:<div className={styles.detailIcon}><BookOpen size={34}/><span>{data.label}</span></div>}<div><h2>{data.title}</h2><p>{data.label}</p><span className={styles.state} data-state={data.record_state}>{labels[data.record_state]}</span><p>{date(data.changed_at)} · {data.operator}</p><button className={styles.primary} disabled={!data.can_restore||disabled} onClick={()=>void previewRestore()}>{checking?"正在核对关联与文件…":"预览恢复影响"}</button></div></header><div className={styles.notice}><CircleAlert size={17}/><p>{data.notice}</p></div>
-      <nav className={styles.tabs} aria-label="对象详情栏目">{[["basic","基本信息"],["dependencies",`关联依赖（${data.dependency_count}）`],["history",`变更历史（${data.history.length}）`]].map(([key,label])=><button key={key} aria-current={tab===key?"page":undefined} onClick={()=>setTab(key)}>{label}</button>)}</nav>
+      {data.names.count?<div className={styles.notice}><CircleAlert size={17}/><div><strong>另有 {data.names.count} 个同名对象</strong><p>同名可能是不同版本或身份。请先比较，恢复时保留各自内容与原身份。</p><button onClick={()=>setComparison(true)}>比较同名对象</button></div></div>:null}
+      <nav className={styles.tabs} aria-label="对象详情栏目">{[["basic","基本信息"],["dependencies",`关联依赖（${data.dependency_count}）`],["history",`变更历史（${data.history_count}）`]].map(([key,label])=><button key={key} aria-current={tab===key?"page":undefined} onClick={()=>setTab(key)}>{label}</button>)}</nav>
       {data.blockers.length?<div className={styles.blockers}><CircleAlert size={18}/><div><strong>恢复前需要处理</strong><ul>{data.blockers.map(value=><li key={value}>{value}</li>)}</ul></div></div>:null}
-      {tab==="basic"?<><dl className={styles.information}>{[["对象类型",data.label],["原位置",data.destination],["创建时间",date(data.created_at)],["最后修改",date(data.updated_at)],["操作时间",date(data.changed_at)],["操作人",data.operator],["操作原因",data.reason]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{label==="原位置"?<Link href={value}>前往原管理列表 <ChevronRight size={12}/></Link>:value}</dd></div>)}</dl><h3>关联依赖</h3><Dependencies data={data} disabled={disabled} onSelect={onSelect}/><h3>最近变更</h3><Changes rows={data.history.slice(0,4)}/></>:tab==="dependencies"?<Dependencies data={data} disabled={disabled} onSelect={onSelect}/>:<><p className={styles.hint}>显示最近30条原对象审计摘要，不含私人内容或原始操作载荷。</p><Changes rows={data.history}/></>}
+      {tab==="basic"?<><dl className={styles.information}>{[["对象类型",data.label],["原位置",data.destination],["创建时间",date(data.created_at)],["最后修改",date(data.updated_at)],["操作时间",date(data.changed_at)],["操作人",data.operator],["操作原因",data.reason]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{label==="原位置"?<Link href={value}>前往原编辑入口 <ChevronRight size={12}/></Link>:value}</dd></div>)}</dl><h3>关联依赖</h3><Dependencies data={data} disabled={disabled} onSelect={onSelect}/><button onClick={()=>setTab("dependencies")}>分页查看关联对象</button><h3>最近变更</h3><Changes rows={data.history}/><button onClick={()=>setTab("history")}>查看全部变更记录（{data.history_count}）</button></>:<RelatedRecords key={`${tab}:${data.version}`} owner={owner} target={target} category={tab as RelatedCategory} disabled={disabled} onSelect={onSelect}/>}
       <Link className={styles.originalLink} href={data.destination}>查看原管理入口 <ChevronRight size={14}/></Link>
-      <ConfirmDialog open={!!preview} title="确认恢复对象" description={preview?.notice||""} details={preview?[preview.title,`关联摘要：${preview.dependency_count} 项；其他已删除对象需单独恢复。`,...(preview.storage.state==="checked"?[`已核对 ${preview.storage.total} 份登记文件的存在与大小，不含内容完整性校验。`]:[]),...preview.blockers,...(message?[message]:[])]:[]} confirmLabel={submitting?"正在恢复…":"确认恢复（保持未发布）"} pending={submitting} onCancel={()=>{if(!unknown)setPreview(null);}} onConfirm={()=>void restore()}/>
+      <Dialog open={comparison} className={styles.compareDialog} aria-labelledby="recovery-comparison-title" onRequestClose={()=>setComparison(false)}>
+        <header className={styles.relatedTools}><h2 id="recovery-comparison-title">同名对象比较</h2><button onClick={()=>setComparison(false)}><X size={15}/>关闭比较</button></header>
+        <p className={styles.hint}>正在恢复：{data.title}。以下是当前未回收、未归档的同名管理对象。</p>
+        {comparison?<RelatedRecords owner={owner} target={target} category="names" disabled={disabled} onSelect={onSelect}/>:null}
+      </Dialog>
+      <ConfirmDialog open={!!preview} title="确认恢复对象" description={preview?.notice||""} details={preview?[preview.title,`关联摘要：${preview.dependency_count} 项；其他已删除对象需单独恢复。`,...(preview.names.count?[`另有 ${preview.names.count} 个同名对象。确认将保留独立身份，不改名、不覆盖、不合并。`,...preview.names.results.map(row=>`${row.label}：${row.name} · ${row.detail}`),...(preview.names.count>preview.names.results.length?["其余同名对象请先关闭确认，进入同名比较分页查看。"]:[])]:[]),...(preview.storage.state==="checked"?[`已核对 ${preview.storage.total} 份登记文件的存在与大小，不含内容完整性校验。`]:[]),...preview.blockers,...(message?[message]:[])]:[]} confirmLabel={submitting?"正在恢复…":preview?.names.count?"保留独立对象并恢复":"确认恢复（保持未发布）"} pending={submitting} onCancel={()=>{if(!unknown)setPreview(null);}} onConfirm={()=>void restore()}/>
     </>:null}
   </aside>;
 }
 
 function Dependencies({data,disabled,onSelect}:{data:Detail;disabled:boolean;onSelect:(value:Target)=>void}){
-  return <><p className={styles.hint}>只列管理内容的对象关系，不展示读者笔记、私人书单或使用记录。</p>{data.dependencies.length?<div className={styles.dependencies}>{data.dependencies.map((row,index)=><div key={`${row.kind}:${row.object_id}:${index}`}><BookOpen size={16}/><div><strong>{row.name}</strong><small>{row.label} · {row.detail}</small></div><span className={styles.state} data-state={row.state}>{row.blocking?"需先恢复":labels[row.state]}</span>{row.state==="deleted"?<button disabled={disabled} onClick={()=>onSelect(row)}>查看</button>:<Link href={row.destination}>查看 <ChevronRight size={12}/></Link>}</div>)}</div>:<div className={styles.empty}><p>当前未列出可展示的管理对象关联。</p></div>}{data.dependencies_limited?<p className={styles.hint}>当前展示有界关联摘要。完整关系需回原管理入口核对。</p>:null}</>;
+  return <><p className={styles.hint}>只列管理内容的对象关系，不展示读者笔记、私人书单或使用记录。</p>{data.dependencies.length?<div className={styles.dependencies}>{data.dependencies.map((row,index)=><div key={`${row.kind}:${row.object_id}:${index}`}><BookOpen size={16}/><div><strong>{row.name}</strong><small>{row.label} · {row.detail}</small></div><span className={styles.state} data-state={row.state}>{row.blocking?"需先恢复":labels[row.state]}</span>{row.state==="deleted"?<button disabled={disabled} onClick={()=>onSelect(row)}>查看</button>:<Link href={row.destination}>查看 <ChevronRight size={12}/></Link>}</div>)}</div>:<div className={styles.empty}><p>当前未列出可展示的管理对象关联。</p></div>}{data.dependencies_limited?<p className={styles.hint}>这里是关联摘要，请切换到关联依赖栏目分页查看。</p>:null}</>;
 }
 
 function Changes({rows}:{rows:Detail["history"]}){
   if(!rows.length)return <div className={styles.empty}><History size={20}/><p>尚无可展示的原对象变更记录。</p></div>;
   return <div className={styles.tableScroll}><table><thead><tr><th>时间</th><th>操作人</th><th>说明</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td>{date(row.at)}</td><td>{row.actor}</td><td>{row.detail}</td></tr>)}</tbody></table></div>;
+}
+
+type RelatedCategory="dependencies"|"history"|"names";
+function RelatedRecords({owner,target,category,disabled,onSelect}:{owner:string;target:Target;category:RelatedCategory;disabled:boolean;onSelect:(value:Target)=>void}){
+  const [page,setPage]=useState(1),[relation,setRelation]=useState(""),[asOf,setAsOf]=useState("");
+  const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<RelatedPage>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
+  const query=new URLSearchParams({category,page:String(page),relation});
+  if(asOf)query.set("as_of",asOf);
+  const resource=usePersistentWorkspace<RelatedPage>(`${base}${target.kind}/${target.object_id}/related/?${query}`,owner,undefined,load),data=resource.data;
+  function refresh(){setPage(1);setAsOf("");resource.reload();}
+  function move(next:number){if(!data)return;setAsOf(data.as_of);setRelation(data.relation);setPage(next);}
+  return <section className={styles.related} aria-label={category==="history"?"完整变更记录":category==="names"?"同名对象比较":"关联对象分页"}>
+    <div className={styles.relatedTools}>{category==="dependencies"&&data?.groups.length?<label>关联类型<select value={relation||data.relation} onChange={event=>{setRelation(event.target.value);setPage(1);setAsOf("");}}>{data.groups.map(group=><option key={group.id} value={group.id}>{group.label}（{group.count}）</option>)}</select></label>:null}<button onClick={refresh}><RefreshCw size={13}/>读取最新</button></div>
+    {resource.error?<div className={styles.error} role="alert">{resource.error}<button onClick={refresh}>返回第一页重新读取</button></div>:null}
+    {resource.loading?<p className={styles.hint} role="status">正在读取记录…</p>:null}
+    {data?<><p className={styles.hint}>{data.notice}</p>{category==="history"?<Changes rows={data.history}/>:<div className={styles.dependencies}>{(category==="names"?data.names:data.dependencies).map((row,index)=><div key={`${row.kind}:${row.object_id}:${index}`}><BookOpen size={16}/><div><strong>{row.name}</strong><small>{row.label} · {row.detail}</small><small>标识 {row.object_id.slice(0,8)}</small></div><span className={styles.state} data-state={row.state}>{row.blocking?"需先恢复":labels[row.state]}</span>{row.state==="deleted"||row.state==="archived"?<button disabled={disabled} onClick={()=>onSelect(row)}>查看</button>:<Link href={row.destination} target="_blank" rel="noopener noreferrer" aria-label={`新窗口查看${row.name}`}>查看 <ChevronRight size={12}/></Link>}</div>)}</div>}
+    {!data.count&&category!=="history"?<div className={styles.empty}>此范围没有可展示的对象。</div>:null}
+    <div className={styles.pagination}><span>共 {data.count} 条 · 每页 20 条</span><button disabled={data.page<=1} onClick={()=>move(data.page-1)}>上一页</button><span>{data.page} / {data.total_pages}</span><button disabled={data.page>=data.total_pages} onClick={()=>move(data.page+1)}>下一页</button></div>
+    <p className={styles.hint}>{category==="history"?`记录创建上限 ${date(data.as_of)}；读取最新可查看之后的变更。`:"关联和同名对象按当前状态显示；其他管理员修改后，页数可能变化。恢复前会重新核对。"}</p></>:null}
+  </section>;
 }
