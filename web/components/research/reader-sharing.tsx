@@ -46,10 +46,10 @@ function Records({ owner, reviewer }: { owner: string; reviewer: boolean }) {
 }
 
 export function ReaderSharedContent({ id }: { id: string }) {
-  return <SharingAccount next={`/account/sharing/${id}`}>{(owner, capabilities) => <PrivateContent id={id} owner={owner} reviewer={capabilities.includes("can_review_candidate")} />}</SharingAccount>;
+  return <SharingAccount next={`/account/sharing/${id}`}>{(owner, capabilities) => <PrivateContent id={id} owner={owner} reviewer={capabilities.includes("can_review_candidate")} editor={capabilities.includes("can_edit_metadata") && capabilities.includes("access_back_office")} />}</SharingAccount>;
 }
 
-function PrivateContent({ id, owner, reviewer }: { id: string; owner: string; reviewer: boolean }) {
+function PrivateContent({ id, owner, reviewer, editor }: { id: string; owner: string; reviewer: boolean; editor: boolean }) {
   const action = useSharingAction(owner), [manual, setManual] = useState("");
   const load = useCallback((path: string, signal: AbortSignal) => sharingRequest<ShareDetail>(owner, path, { signal }), [owner]);
   const resource = usePersistentWorkspace<ShareDetail>(`/reading/shares/${id}/`, owner, undefined, load);
@@ -66,6 +66,7 @@ function PrivateContent({ id, owner, reviewer }: { id: string; owner: string; re
   return <><div className={styles.viewerHeader}><Link href="/account/sharing">返回分享记录</Link><span className={styles.muted}>只展示本次确认的摘要范围</span></div>
     {resource.error ? <div className={styles.empty} role="alert"><p>{resource.error}</p><button onClick={resource.reload}>重新核对内容</button><p>分享者可在分享记录中撤回失效记录，并重新选择内容。</p></div> : !data ? <p role="status">正在核对分享权限与原内容…</p> : <><header className={styles.heading}><h1>{data.content.source.title}</h1><small>有效至 {date(data.share.expires_at)}</small></header><SharedSummary value={data.content} showTitle={false} />
       <div className={styles.actions}>{data.share.is_owner && data.share.destination === "public" ? <button disabled={action.busy} onClick={copy}>复制公开摘要链接</button> : null}{reviewer && data.share.destination === "proposal" ? <><span>策划状态：{states[data.share.review_state]}</span>{(["considering", "declined"] as const).map(state => <button key={state} disabled={action.busy || data.share.review_state === state} onClick={() => void action.run(signal => sharingRequest<ShareBrief>(owner, `/reading/shares/${id}/`, { method: "POST", signal, body: JSON.stringify({ action: "review", expected_revision: data.share.revision, state }) }), () => { resource.reload(); action.setMessage("提案状态已保存；该操作不会发布原研究或书单。"); })}>{states[state]}</button>)}</> : null}</div>
+      {reviewer && editor && data.share.destination === "proposal" ? <p className={styles.feedback}><Link href={`/admin/recommendations?view=legacy&proposal=${id}`}>接手提案并核对文章草稿</Link><br />只将明确选择的公开书目带入草稿；问题、私人笔记和附言继续在此评阅。</p> : null}
     </>}
     {action.message ? <p className={styles.feedback} role="status">{action.message}</p> : null}{manual ? <label className={styles.manual}>手动复制链接<textarea readOnly value={manual} onFocus={event => event.currentTarget.select()} /></label> : null}
   </>;

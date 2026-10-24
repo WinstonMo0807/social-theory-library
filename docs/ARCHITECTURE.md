@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 策划提案接手
+
+ReaderShare授权和原文章新建命令通过reader_proposals服务衔接。提案授权中明确选择的公开版本成为原RecommendationIssue.items，私人正文/笔记/问题/摘录/附言不复制。原AuditEvent只记录授权UUID、文章UUID和条目数，授权行锁串行化跨编辑接手；原新建回执负责重试/停止。无新数据库模型、并行内容库或发布入口。
+
 ## 2026-10-24 私有账户头像
 
 AccountAvatar以User为唯一身份，独立加密派生图避免把私人头像加入公开MediaAsset。复用原图片检查/私人加密/User锁/AuditEvent，写入仅本人，读取限本人或MANAGE_USERS；只返回受保护PNG。原reading/export包含本人派生图，读取管理列表仅注解修订号，不整批加载图片。accounts0004声明未执行；账户备份/重置保留需要同时包含头像及账户命令回执。

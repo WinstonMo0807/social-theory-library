@@ -21,14 +21,51 @@ from ingestion.models import AuditEvent
 ACTION = "recommendation_issue.create_command"
 
 
+class IssueProposalInputSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    expected_revision = serializers.IntegerField(min_value=1)
+    preview_hash = serializers.RegexField(r"^[0-9a-f]{64}$")
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict) or set(data) != set(self.fields):
+            raise serializers.ValidationError("提案接手只接受提案身份、版本和本次范围。")
+        return super().to_internal_value(data)
+
+
+class IssueProposalMaterialSerializer(serializers.Serializer):
+    work_id = serializers.UUIDField()
+    edition_id = serializers.UUIDField()
+    catalog_revision_id = serializers.UUIDField()
+    title = serializers.CharField()
+    authors = serializers.ListField(child=serializers.CharField())
+    version_note = serializers.CharField(allow_blank=True)
+    href = serializers.CharField()
+
+
+class IssueProposalPreviewSerializer(serializers.Serializer):
+    owner_id = serializers.CharField()
+    proposal_id = serializers.UUIDField()
+    expected_revision = serializers.IntegerField()
+    preview_hash = serializers.CharField()
+    review_state = serializers.ChoiceField(choices=["submitted", "considering", "declined"])
+    expires_at = serializers.DateTimeField()
+    materials = IssueProposalMaterialSerializer(many=True)
+    selected_material_count = serializers.IntegerField()
+    excluded = serializers.ListField(child=serializers.CharField())
+    already_created = serializers.BooleanField()
+    issue_id = serializers.UUIDField(allow_null=True)
+    next_url = serializers.CharField(allow_blank=True)
+
+
 class IssueCreateCommandSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     title = serializers.CharField(max_length=600)
     kind = serializers.ChoiceField(choices=["article", "research", "exhibition"])
+    proposal = IssueProposalInputSerializer(required=False)
 
     def validate(self, value):
-        if set(self.initial_data) != set(self.fields):
-            raise serializers.ValidationError("新建文章只接受标题、类型和原请求编号。")
+        if set(self.initial_data) - set(self.fields):
+            raise serializers.ValidationError("新建文章只接受标题、类型、原请求编号和可选提案范围。")
         return value
 
 
@@ -73,10 +110,23 @@ class IssueCreateView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
             if not row.after.get("cancelled") and row.after.get("signature") != signature:
                 raise EditConflict("原请求编号已用于另一篇文章，请先查回创建结果。")
             return Response(receipt(row, actor))
-        issue = create_issue({"title": data["title"], "article_metadata": {"kind": data["kind"]}}, actor)
-        row = AuditEvent.objects.create(actor=actor, action=ACTION, object_type="RecommendationIssue", object_id=str(issue.pk),
-            request_id=str(data["request_id"]), after={"signature": signature, "issue_id": str(issue.pk)})
+        if data.get("proposal"):
+            from catalog.services.reader_proposals import create_from_proposal
+            issue_id = create_from_proposal(actor, data)
+        else:
+            issue_id = str(create_issue({"title": data["title"], "article_metadata": {"kind": data["kind"]}}, actor).pk)
+        row = AuditEvent.objects.create(actor=actor, action=ACTION, object_type="RecommendationIssue", object_id=issue_id,
+            request_id=str(data["request_id"]), after={"signature": signature, "issue_id": issue_id})
         return Response(receipt(row, actor), status=201)
+
+
+class IssueProposalPreviewView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanEditMetadata]
+
+    @extend_schema(responses=IssueProposalPreviewSerializer)
+    def get(self, request, proposal_id):
+        from catalog.services.reader_proposals import preview
+        return Response(preview(actor_for(request), proposal_id))
 
 
 class IssueCreateReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):

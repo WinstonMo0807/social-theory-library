@@ -5,7 +5,7 @@ from catalog.visual_review_views import VisualReviewView, VisualReviewReceiptVie
 from catalog.journal_candidate_views import JournalContentsCandidatesView
 from catalog.local_service_views import LocalServicesView, LocalServiceCheckView
 from catalog.media_legacy_views import LegacyImageHistoryView, LegacyImageFileView
-from catalog.issue_creation_views import IssueCreateView, IssueCreateReceiptView
+from catalog.issue_creation_views import IssueCreateView, IssueCreateReceiptView, IssueProposalPreviewView
 from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
@@ -306,6 +306,7 @@ urlpatterns = [
     path("recommendation-issues/<slug:slug>/items/<uuid:item_id>/cover/", IssueItemCoverView.as_view(), name="recommendation-issue-item-cover"),
     path("admin/recommendation-issues/", AdminIssueListView.as_view(), name="admin-recommendation-issue-list"),
     path("admin/recommendation-issues/create/", IssueCreateView.as_view(), name="admin-issue-create"),
+    path("admin/recommendation-issues/proposals/<uuid:proposal_id>/", IssueProposalPreviewView.as_view(), name="admin-issue-proposal-preview"),
     path("admin/recommendation-issues/create/commands/<uuid:request_id>/", IssueCreateReceiptView.as_view(), name="admin-issue-create-receipt"),
     path("admin/recommendation-issues/<uuid:issue_id>/", AdminIssueDetailView.as_view(), name="admin-recommendation-issue-detail"),
     path("admin/recommendation-issues/<uuid:issue_id>/preview/", AdminIssuePreviewView.as_view(), name="admin-recommendation-issue-preview"),

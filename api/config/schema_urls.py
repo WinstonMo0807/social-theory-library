@@ -18,7 +18,7 @@ VERIFIED_NAMES = {
     "index-knowledge-terms-command", "index-knowledge-terms-receipt", "index-knowledge-terms-source",
     "media-workspace", "media-workspace-receipt", "media-legacy-history",
     "admin-recommendation-refresh", "admin-recommendation-refresh-receipt",
-    "admin-issue-create", "admin-issue-create-receipt",
+    "admin-issue-create", "admin-issue-create-receipt", "admin-issue-proposal-preview",
     "media-library-workspace", "media-library-receipt",
     "object-media-workspace", "object-media-workspace-receipt",
     "workspace-save-receipt", "admin-work-workspace-edits", "journal-contents-candidates",

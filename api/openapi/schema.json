@@ -9643,6 +9643,45 @@
                 }
             }
         },
+        "/api/catalog/admin/recommendation-issues/proposals/{proposal_id}/": {
+            "get": {
+                "operationId": "catalog_admin_recommendation_issues_proposals_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "proposal_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssueProposalPreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/recommendations/{placement}/refresh/": {
             "post": {
                 "operationId": "catalog_admin_recommendations_refresh_create",
@@ -40861,6 +40900,9 @@
                     },
                     "kind": {
                         "$ref": "#/components/schemas/IssueCreationKindEnum"
+                    },
+                    "proposal": {
+                        "$ref": "#/components/schemas/IssueProposalInputRequest"
                     }
                 },
                 "required": [
@@ -41269,6 +41311,135 @@
                     {
                         "$ref": "#/components/schemas/IssuePublicationReview"
                     }
+                ]
+            },
+            "IssueProposalInputRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "preview_hash": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[0-9a-f]{64}$"
+                    }
+                },
+                "required": [
+                    "expected_revision",
+                    "id",
+                    "preview_hash"
+                ]
+            },
+            "IssueProposalMaterial": {
+                "type": "object",
+                "properties": {
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "catalog_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "version_note": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authors",
+                    "catalog_revision_id",
+                    "edition_id",
+                    "href",
+                    "title",
+                    "version_note",
+                    "work_id"
+                ]
+            },
+            "IssueProposalPreview": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "proposal_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_revision": {
+                        "type": "integer"
+                    },
+                    "preview_hash": {
+                        "type": "string"
+                    },
+                    "review_state": {
+                        "$ref": "#/components/schemas/ReaderShareReviewStateEnum"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueProposalMaterial"
+                        }
+                    },
+                    "selected_material_count": {
+                        "type": "integer"
+                    },
+                    "excluded": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "already_created": {
+                        "type": "boolean"
+                    },
+                    "issue_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "next_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "already_created",
+                    "excluded",
+                    "expected_revision",
+                    "expires_at",
+                    "issue_id",
+                    "materials",
+                    "next_url",
+                    "owner_id",
+                    "preview_hash",
+                    "proposal_id",
+                    "review_state",
+                    "selected_material_count"
                 ]
             },
             "IssuePublicationCheck": {

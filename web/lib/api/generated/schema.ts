@@ -2051,6 +2051,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendation-issues/proposals/{proposal_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_proposals_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recommendations/{placement}/refresh/": {
         parameters: {
             query?: never;
@@ -9754,6 +9770,7 @@ export interface components {
             request_id: string;
             title: string;
             kind: components["schemas"]["IssueCreationKindEnum"];
+            proposal?: components["schemas"]["IssueProposalInputRequest"];
         };
         IssueCreateReceipt: {
             owner_id: string;
@@ -9883,6 +9900,41 @@ export interface components {
             mode: components["schemas"]["IssuePresenceCommandModeEnum"];
         };
         IssuePreviewResponse: components["schemas"]["RecommendationIssue"] | components["schemas"]["IssuePublicationReview"];
+        IssueProposalInputRequest: {
+            /** Format: uuid */
+            id: string;
+            expected_revision: number;
+            preview_hash: string;
+        };
+        IssueProposalMaterial: {
+            /** Format: uuid */
+            work_id: string;
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            catalog_revision_id: string;
+            title: string;
+            authors: string[];
+            version_note: string;
+            href: string;
+        };
+        IssueProposalPreview: {
+            owner_id: string;
+            /** Format: uuid */
+            proposal_id: string;
+            expected_revision: number;
+            preview_hash: string;
+            review_state: components["schemas"]["ReaderShareReviewStateEnum"];
+            /** Format: date-time */
+            expires_at: string;
+            materials: components["schemas"]["IssueProposalMaterial"][];
+            selected_material_count: number;
+            excluded: string[];
+            already_created: boolean;
+            /** Format: uuid */
+            issue_id: string | null;
+            next_url: string;
+        };
         IssuePublicationCheck: {
             code: string;
             severity: components["schemas"]["IssuePublicationCheckSeverityEnum"];
@@ -24317,6 +24369,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueCreateReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_proposals_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueProposalPreview"];
                 };
             };
         };
