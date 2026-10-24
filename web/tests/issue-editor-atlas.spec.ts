@@ -183,3 +183,31 @@ test("IME composition pauses autosave and commits one completed input",async({pa
   await page.clock.fastForward(15000);expect(state.writes).toHaveLength(0);await expect(page.getByRole("button",{name:"保存",exact:true})).toBeDisabled();
   await guide.evaluate((root:HTMLElement)=>root.dispatchEvent(new CompositionEvent("compositionend",{bubbles:true,data:"中文"})));await page.clock.fastForward(10050);await expect.poll(()=>state.writes.length).toBe(1);expect((state.writes[0].body_blocks as Array<{text:string}>)[0].text).toBe("正在输入中文");
 });
+
+// Deferred 2026-10-24 input safeguards; defined only, not run during development.
+for (const field of ["标题", "导语"] as const) test(`${field} composition also pauses autosave and structural navigation`,async({page})=>{
+  await page.clock.install();const state=await setup(page);const input=page.getByRole("textbox",{name:field,exact:true});
+  await input.evaluate((root:HTMLInputElement|HTMLTextAreaElement)=>{
+    root.focus();root.dispatchEvent(new CompositionEvent("compositionstart",{bubbles:true}));
+    const prototype=root instanceof HTMLInputElement?HTMLInputElement.prototype:HTMLTextAreaElement.prototype;
+    Object.getOwnPropertyDescriptor(prototype,"value")!.set!.call(root,"中文输入尚未确认");
+    root.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertCompositionText",data:"中文",isComposing:true}));
+  });
+  await page.clock.fastForward(15000);expect(state.writes).toHaveLength(0);
+  await expect(page.getByRole("button",{name:"保存",exact:true})).toBeDisabled();
+  await expect(page.getByRole("button",{name:"插入内容块",exact:true})).toBeDisabled();
+  await input.evaluate(root=>root.dispatchEvent(new CompositionEvent("compositionend",{bubbles:true,data:"中文"})));
+  await page.clock.fastForward(10050);await expect.poll(()=>state.writes.length).toBe(1);
+  expect(state.writes[0][field==="标题"?"title":"introduction"]).toBe("中文输入尚未确认");
+});
+test("touch-style selection changes format the exact selection without mouseup",async({page})=>{
+  await page.setViewportSize({width:390,height:844});await setup(page);
+  await page.getByRole("button",{name:/导读 人工正文/}).click();const guide=page.getByRole("textbox",{name:"内容",exact:true});
+  await guide.evaluate(root=>{root.focus();const range=document.createRange();range.setStart(root.firstChild!,0);range.setEnd(root.firstChild!,2);const selected=window.getSelection();selected?.removeAllRanges();selected?.addRange(range);document.dispatchEvent(new Event("selectionchange"));});
+  await page.getByRole("button",{name:"加粗所选文字"}).click();await expect(guide.locator("strong,b")).toHaveText("人工");
+});
+test("an internal block drop over prose never inserts the block identifier",async({page})=>{
+  await setup(page);await page.getByRole("button",{name:/导读 人工正文/}).click();const guide=page.getByRole("textbox",{name:"内容",exact:true});
+  await guide.evaluate((root,id)=>{const data=new DataTransfer();data.setData("application/x-stl-article-block",id);data.setData("text/plain",id);root.dispatchEvent(new DragEvent("drop",{bubbles:true,cancelable:true,dataTransfer:data}));},blockId);
+  await expect(guide).toHaveText("人工正文");
+});
