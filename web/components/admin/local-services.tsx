@@ -2,6 +2,7 @@
 
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, ChevronRight, CircleAlert, Clock3, FileText, Link2, Play, RefreshCw, SlidersHorizontal, Sparkles } from "lucide-react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -23,19 +24,20 @@ const tone = (state:string) => state === "available" ? "ready" : ["offline","not
 
 export function LocalServices() {
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
+  const selectedService=useSearchParams().get("service")||"";
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
   if(!hasAdminCapability(user,"can_view_system_status")) return <div className="admin-panel"><h1>本地模型与服务状态</h1><p>当前账户没有查看运行状态的权限。</p></div>;
-  return <LocalServicesWorkspace key={`${user?.id}:${epoch}`} owner={String(user?.id||"")} />;
+  return <LocalServicesWorkspace key={`${user?.id}:${epoch}:${selectedService}`} owner={String(user?.id||"")} initialService={selectedService} />;
 }
 
-function LocalServicesWorkspace({owner}:{owner:string}) {
+function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialService?:string}) {
   const load=useCallback((url:string,signal:AbortSignal)=>apiRequest<Snapshot>(url,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
   const resource=usePersistentWorkspace<Snapshot>(path,owner,undefined,load);
-  const [tab,setTab]=useState("overview"),[selected,setSelected]=useState(""),[checking,setChecking]=useState(""),[message,setMessage]=useState("");
+  const [tab,setTab]=useState(initialService?"services":"overview"),[selected,setSelected]=useState(initialService),[checking,setChecking]=useState(""),[message,setMessage]=useState("");
   const lifecycle=useRef<AbortController|null>(null),busy=useRef(false),stop=useRef(false),receipts=useRef(new Map<string,string>());
   useEffect(()=>{const controller=new AbortController();lifecycle.current=controller;return()=>controller.abort();},[]);
   const data=resource.data, services=data?.groups.flatMap(group=>group.services)||[];
-  const current=services.find(service=>service.id===selected)||services[0];
+  const current=selected?services.find(service=>service.id===selected):services[0];
   const group=data?.groups.find(value=>value.id===current?.group);
   const select=(service:Service)=>{setSelected(service.id);setTab("services");};
 
@@ -72,6 +74,7 @@ function LocalServicesWorkspace({owner}:{owner:string}) {
     <nav className={styles.tabs} aria-label="服务维护栏目">{tabs.map(item=><button key={item.id} aria-current={tab===item.id?"page":undefined} onClick={()=>setTab(item.id)}>{item.label}</button>)}</nav>
     {resource.error?<div className={styles.error} role="alert"><CircleAlert size={18}/><p>{resource.error}</p><button onClick={()=>resource.reload()}>重新读取</button></div>:null}
     {message?<p className={styles.message} role="status">{message}</p>:null}
+    {data&&selected&&!current?<p className={styles.message} role="alert">原链接中的服务已不在当前配置中。请从服务列表重新选择，未自动改为检查其他服务。</p>:null}
     {resource.loading?<div className={styles.empty} role="status"><RefreshCw size={22}/><p>正在读取服务配置与已有检查记录</p></div>:null}
     {data?<>
       <section className={styles.metrics} aria-label="服务与任务概况">{[["services","配置服务"],["available","可使用"],["limited","受限"],["unavailable","不可用"],["waiting","等待任务"],["failed_24h","失败任务（近 24 小时）"]].map(([key,label])=><div key={key} data-tone={key==="available"?"ready":key==="limited"?"limited":key==="failed_24h"?"failed":undefined}><strong>{data.summary[key]??"—"}</strong><span>{label}</span></div>)}</section>

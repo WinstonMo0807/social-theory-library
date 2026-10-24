@@ -92,7 +92,8 @@ def service_definitions():
     for key, group, label in (("discovery-embedding", "embedding", "Discovery 文本嵌入"), ("discovery-reranker", "rerank", "Discovery 重排")):
         add(key, group, label, "本地推理服务", bool(discovery["url"]), discovery["enabled"], discovery,
             [("服务地址", _origin(discovery["url"])), ("检查范围", "读取模型清单与已有加载记录，不运行推理"),
-             ("实际模型与版本", "以最近检查返回的模型身份为准")], Capability.MANAGE_SEARCH_RUNTIME, "/admin/processing/semantic-index")
+             ("实际模型与版本", "以最近检查返回的模型身份为准"),
+             ("配置方式", "随现有服务部署维护，本页不切换模型")], Capability.MANAGE_SEARCH_RUNTIME, "")
 
     active = set(document.get("active", {}).values())
     for profile in document.get("profiles", []):
@@ -167,7 +168,7 @@ def services_snapshot(actor):
                 observation["status"] if 0 <= (now - run.started_at).total_seconds() <= LIFETIME else "stale")
         row.update(status=state, status_label=STATUS_LABELS[state], observation=observation,
             can_check=bool(definition["checkable"] and row["enabled"] and row["configured"] and has_capability(actor, definition["permission"])),
-            can_configure=admin_configuration if row["id"] in {"ocr", "remote-ocr"} else has_capability(actor, definition["permission"]),
+            can_configure=bool(row["config_url"]) and (admin_configuration if row["id"] in {"ocr", "remote-ocr"} else has_capability(actor, definition["permission"])),
             check_notice="尚无这项服务的独立检查器。" if not definition["checkable"] else "检查不会调用生成或检索。")
         rows.append(row)
     groups = []
