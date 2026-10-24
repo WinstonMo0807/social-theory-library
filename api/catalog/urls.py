@@ -64,6 +64,7 @@ from .media_views import MediaListView, MediaDetailView, MediaRenditionView, Med
 from .scholar_media_views import ScholarPortraitSelectionView, PublicPersonPortraitView
 from .knowledge_media_views import KnowledgeImageSelectionView, PublicKnowledgeImageView
 from .scholar_relation_commands import ScholarRelationReceiptView
+from .scholar_links import ScholarLinkView, ScholarLinkReceiptView
 from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView, WorkRecommendationMediaSelectionView, PublicRecommendationMetadataView, RecommendationImageMetadataView
 from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
 from .knowledge_history_views import KnowledgeHistoryView
@@ -289,6 +290,8 @@ urlpatterns = [
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/publish/", PublishEvidenceCurationView.as_view(), name="admin-evidence-curation-publish"),
     path("evidence-curation/<str:object_type>/<uuid:object_id>/", PublicEvidenceCurationView.as_view(), name="public-evidence-curation"),
     path("admin/scholar-relations/", AdminScholarRelationListView.as_view(), name="admin-scholar-relation-list"),
+    path("admin/scholars/<uuid:scholar_id>/links/<str:kind>/", ScholarLinkView.as_view(), name="scholar-link-list"),
+    path("admin/scholar-links/<str:kind>/commands/<uuid:request_id>/", ScholarLinkReceiptView.as_view(), name="scholar-link-receipt"),
     path("admin/scholar-relations/commands/<uuid:request_id>/", ScholarRelationReceiptView.as_view(), name="scholar-relation-receipt"),
     path("admin/scholar-relations/<uuid:pk>/", AdminScholarRelationDetailView.as_view(), name="admin-scholar-relation-detail"),
     path("admin/scholar-relations/<uuid:pk>/publish/", PublishScholarRelationView.as_view(), name="admin-scholar-relation-publish"),

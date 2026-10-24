@@ -115,3 +115,15 @@
 .timelineDialog :global(.timeline-current-preview) { min-width:0; }
 .timelineDialog :global(.timeline-focused-editor) { grid-template-columns:minmax(0,1.2fr) minmax(240px,.8fr); }
 @media(max-width:760px) { .timelineDialog :global(.timeline-focused-editor) { display:block; }.timelineDialog :global(.timeline-current-preview) { margin-top:20px; } }
+
+.linkDialog { width:min(680px,calc(100vw - 32px)); }
+.linkForm { display:grid; gap:18px; overflow-wrap:anywhere; }
+.linkForm fieldset { display:grid; gap:16px; border:0; padding:0; margin:0; min-width:0; }
+.linkForm label { display:grid; gap:7px; }
+.linkForm .linkCheckbox { display:flex; align-items:center; gap:9px; }
+.linkForm .linkCheckbox input { width:18px; height:18px; flex:none; }
+.linkForm footer { display:flex; flex-wrap:wrap; gap:10px; border-top:1px solid var(--line); padding-top:16px; }
+.linkForm :is(input,textarea,select):focus-visible { outline:2px solid var(--annotation); outline-offset:2px; }
+.linkForm button:disabled { opacity:.5; cursor:not-allowed; }
+.materialLinks { margin:16px 0; padding:12px 0; border-block:1px solid var(--line); }
+.materialLinks summary { cursor:pointer; color:var(--muted); }

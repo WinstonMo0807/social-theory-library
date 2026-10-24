@@ -2211,6 +2211,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/scholar-links/{kind}/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholar_links_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_scholar_links_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholar-relations/": {
         parameters: {
             query?: never;
@@ -2285,6 +2301,22 @@ export interface paths {
         get: operations["catalog_admin_scholar_relations_commands_retrieve"];
         put?: never;
         post: operations["catalog_admin_scholar_relations_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/scholars/{scholar_id}/links/{kind}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholars_links_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_scholars_links_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6372,6 +6404,39 @@ export interface components {
             summary: components["schemas"]["AdminIssueSummary"];
             upcoming: components["schemas"]["RecommendationIssue"][];
         };
+        AdminScholarLink: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            person_id: string;
+            kind: components["schemas"]["AdminScholarLinkKindEnum"];
+            /** Format: uuid */
+            target_id: string;
+            target_name: string;
+            target_type: string;
+            target_href: string;
+            target_published: boolean;
+            relation_label: string;
+            source: string;
+            status: string;
+            confirmed: boolean;
+            featured: boolean;
+            sort_order: number;
+            reviewed_by: number | null;
+            /** Format: date-time */
+            reviewed_at: string | null;
+            /** Format: date-time */
+            updated_at: string;
+            edit_version: string;
+            save_receipt?: components["schemas"]["ScholarRelationReceipt"];
+            save_replayed?: boolean;
+        };
+        /**
+         * @description * `node` - node
+         *     * `topic` - topic
+         * @enum {string}
+         */
+        AdminScholarLinkKindEnum: "node" | "topic";
         AdminTheoryTimelineEvent: {
             /** Format: uuid */
             readonly id: string;
@@ -17338,6 +17403,31 @@ export interface components {
             name: string;
             href: string;
         };
+        /**
+         * @description * `save` - save
+         *     * `confirm` - confirm
+         *     * `withdraw` - withdraw
+         * @enum {string}
+         */
+        ScholarLinkInputActionEnum: "save" | "confirm" | "withdraw";
+        ScholarLinkInputRequest: {
+            action: components["schemas"]["ScholarLinkInputActionEnum"];
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            target_id?: string;
+            edit_version?: string;
+            relation_label?: string;
+            source?: string;
+            featured?: boolean;
+            sort_order?: number;
+        };
+        ScholarLinkPage: {
+            count: number;
+            next: number | null;
+            previous: number | null;
+            results: components["schemas"]["AdminScholarLink"][];
+        };
         ScholarPerson: {
             /** Format: uuid */
             id: string;
@@ -25018,6 +25108,56 @@ export interface operations {
             };
         };
     };
+    catalog_admin_scholar_links_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelationReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_links_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelationReceipt"];
+                };
+            };
+        };
+    };
     catalog_admin_scholar_relations_list: {
         parameters: {
             query?: never;
@@ -25208,6 +25348,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarRelationReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholars_links_retrieve: {
+        parameters: {
+            query?: {
+                id?: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                kind: string;
+                scholar_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarLinkPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholars_links_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                scholar_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScholarLinkInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ScholarLinkInputRequest"];
+                "multipart/form-data": components["schemas"]["ScholarLinkInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminScholarLink"];
                 };
             };
         };

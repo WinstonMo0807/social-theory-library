@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-24 原人物知识关联的确认入口
+
+学者编辑页沿原PersonNodeRelation/PersonTopicRelation保存待核对及明确确认/撤回。原规范行无并行草稿表，公开行修改必须明确确认；不允许普通保存隐式改公开内容。原AuditEvent保存前后关系元数据，原ScholarCommandMixin固定请求回执防重。对已公开父对象使用原KnowledgePublicationEvent/DomainChangeEvent持久更新投影；无新增迁移。
+
+
 ## 2026-10-24 原账户恢复凭据的邮箱链接
 
 RecoveryCode新增purpose/account_fingerprint，旧行默认password_code；验证与重置链接分别受原User行锁、一次性摘要及账户状态约束。accounts0005仅声明未执行。认证邮件复用原Celery默认队列和邮件后端，任务参数加密、120秒过期，原worker必须加载accounts.tasks并共享私人加密键；正文与token不进入日志/审计。console/file后端不能用于认证邮件。人工找回复用PublicFeedback使用咨询，不查询用户、不自动绑定用户ID；管理员原反馈处理和用户管理权限边界不变。
