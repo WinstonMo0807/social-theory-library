@@ -27,16 +27,22 @@ const target = (row: NotebookRecord): PrivacyTarget => ({ category: row.category
 
 export function ReaderNotebook({ assetId, initialKind = "all" }: { assetId?: string; initialKind?: string }) {
   const { state, retry } = useSessionBootstrap();
-  const next = `/account/notes${assetId ? `/${assetId}` : ""}`;
+  const search = useSearchParams();
+  const context = new URLSearchParams();
+  for (const key of ["booklist", "work", "project", "record"]) {
+    const value = search?.get(key); if (value && /^[\da-f-]{36}$/i.test(value)) context.set(key, value);
+  }
+  if (["annotations", "bookmarks"].includes(search?.get("category") || "")) context.set("category", search!.get("category")!);
+  const next = `/account/notes${assetId ? `/${assetId}` : ""}${context.size ? `?${context}` : ""}`;
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(next)}`); }, [state.status, next]);
   if (state.status === "forbidden" || state.status === "temporary_error") return <main className={styles.page}><h1>阅读记录暂时无法读取</h1><p role="alert">{state.message}</p><button onClick={retry}>重新核对登录</button></main>;
   if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><p role="status">正在核对登录状态…</p></main>;
-  return <Notebook key={`${state.user.id}:${assetId || "all"}`} owner={String(state.user.id)} assetId={assetId} initialKind={initialKind} />;
+  return <Notebook key={`${state.user.id}:${assetId || "all"}:${context.get("booklist") || ""}:${context.get("work") || ""}:${context.get("project") || ""}`} owner={String(state.user.id)} assetId={assetId} initialKind={initialKind} />;
 }
 
 function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: string; initialKind: string }) {
   const search = useSearchParams();
-  const [filters, setFilters] = useState({ q: "", kind: ["all", "note", "excerpt", "bookmark"].includes(search?.get("kind") || "") ? search!.get("kind")! : initialKind, order: "newest", work: "", project: /^[\da-f-]{36}$/i.test(search?.get("project") || "") ? search!.get("project")! : "", start: "", end: "" });
+  const [filters, setFilters] = useState({ q: "", kind: ["all", "note", "excerpt", "bookmark"].includes(search?.get("kind") || "") ? search!.get("kind")! : initialKind, order: "newest", booklist: /^[\da-f-]{36}$/i.test(search?.get("booklist") || "") ? search!.get("booklist")! : "", work: /^[\da-f-]{36}$/i.test(search?.get("work") || "") ? search!.get("work")! : "", project: /^[\da-f-]{36}$/i.test(search?.get("project") || "") ? search!.get("project")! : "", start: "", end: "" });
   const [page, setPage] = useState(1), [selected, setSelected] = useState<string[]>([]);
   const [focus, setFocus] = useState<{ category: "annotations" | "bookmarks"; id: string } | null>(() => {
     const id = search?.get("record"), category = search?.get("category");
@@ -71,8 +77,9 @@ function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: st
     <nav className={styles.crumb} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/account">读者中心</Link><span>›</span><span>笔记、摘录与书签</span></nav>
     <header className={styles.heading}><div><h1>笔记、摘录与书签</h1><p>查找自己的阅读痕迹，并能准确回到当时材料。</p></div><small><LockKeyhole size={15} />仅本人可见</small></header>
     <ResearchCenterNav active="notes" />
+    {filters.booklist ? <div className={styles.notice}><p>当前范围：这份书单现有作品下的本人记录。移除作品不删除笔记。</p><Link href={`/account/collections/${filters.booklist}?tab=notes`}>返回书单 →</Link><button onClick={() => change("booklist", "")}>查看全部笔记</button></div> : null}
     <div className={styles.workspace}>
-      <aside className={styles.filters} aria-label="筛选阅读记录"><div className={styles.sectionTitle}><strong>筛选条件</strong><button onClick={() => { setFilters({ q: "", kind: "all", order: "newest", work: "", project: "", start: "", end: "" }); setPage(1); setSelected([]); }}>清空</button></div>
+      <aside className={styles.filters} aria-label="筛选阅读记录"><div className={styles.sectionTitle}><strong>筛选条件</strong><button onClick={() => { setFilters({ q: "", kind: "all", order: "newest", booklist: "", work: "", project: "", start: "", end: "" }); setPage(1); setSelected([]); }}>清空</button></div>
         <form onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); change("q", String(new FormData(event.currentTarget).get("q") || "")); }} className={styles.search}><input key={filters.q} name="q" defaultValue={filters.q} maxLength={180} placeholder="书名、作者、笔记内容…" aria-label="搜索自己的阅读记录" /><button aria-label="搜索"><Search size={16} /></button></form>
         {assetId ? <p>当前限定此文件。<Link href="/account/notes">全部记录</Link></p> : null}
         <ChoicePicker owner={owner} kind="works" label="按作品" value={filters.work} onChange={value => change("work", value)} />

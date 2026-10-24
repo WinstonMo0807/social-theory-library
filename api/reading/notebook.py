@@ -87,8 +87,14 @@ def linked_targets(user, project_id):
 def branches(user, options):
     result = {}
     links = linked_targets(user, options["project"]) if options.get("project") else None
+    list_works = None
+    if options.get("booklist"):
+        from . import booklists
+        list_works = booklists.owned(user, options["booklist"]).items.filter(removed_at__isnull=True).values("work_id")
     for category in MODELS:
         rows = collection(user, category)
+        if list_works is not None:
+            rows = rows.filter(asset__edition__work_id__in=list_works)
         kind = options.get("kind", "all")
         if (kind == "bookmark" and category == "annotations") or (kind not in {"all", "bookmark"} and category == "bookmarks"):
             continue

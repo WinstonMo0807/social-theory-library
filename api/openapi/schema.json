@@ -21491,6 +21491,90 @@
                 }
             }
         },
+        "/api/reading/lists/{id}/related/": {
+            "get": {
+                "operationId": "reading_lists_related_retrieve",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "expected_version",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 reading list 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "section",
+                        "schema": {
+                            "enum": [
+                                "plans",
+                                "notes",
+                                "topics",
+                                "scholars"
+                            ],
+                            "type": "string",
+                            "default": "topics",
+                            "minLength": 1
+                        },
+                        "description": "* `plans` - plans\n* `notes` - notes\n* `topics` - topics\n* `scholars` - scholars"
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListRelatedOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/lists/{id}/undo-citation/": {
             "post": {
                 "operationId": "reading_lists_undo_citation_create",
@@ -21937,6 +22021,14 @@
                     },
                     {
                         "in": "query",
+                        "name": "booklist",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "end",
                         "schema": {
                             "type": "string",
@@ -22358,6 +22450,14 @@
                     {
                         "in": "query",
                         "name": "asset",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "booklist",
                         "schema": {
                             "type": "string",
                             "format": "uuid"
@@ -43969,6 +44069,35 @@
                     "work_id"
                 ]
             },
+            "ListLinkedPlan": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "href",
+                    "id",
+                    "status",
+                    "title",
+                    "updated_at"
+                ]
+            },
             "ListPlanInputRequest": {
                 "type": "object",
                 "properties": {
@@ -44180,6 +44309,48 @@
                     "work_id"
                 ]
             },
+            "ListPublicLink": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "source_count": {
+                        "type": "integer"
+                    },
+                    "portrait_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "portrait_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "description",
+                    "href",
+                    "id",
+                    "portrait_media",
+                    "portrait_url",
+                    "source_count",
+                    "title"
+                ]
+            },
             "ListReceipt": {
                 "type": "object",
                 "properties": {
@@ -44191,6 +44362,84 @@
                 "required": [
                     "request_id"
                 ]
+            },
+            "ListRelatedOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "list_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "section": {
+                        "$ref": "#/components/schemas/ListRelatedOutputSectionEnum"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "plans": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListLinkedPlan"
+                        }
+                    },
+                    "notes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NotebookRecord"
+                        }
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListPublicLink"
+                        }
+                    },
+                    "scholars": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListPublicLink"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "list_id",
+                    "notes",
+                    "notice",
+                    "owner_id",
+                    "page",
+                    "plans",
+                    "scholars",
+                    "section",
+                    "topics",
+                    "total_pages",
+                    "version"
+                ]
+            },
+            "ListRelatedOutputSectionEnum": {
+                "enum": [
+                    "plans",
+                    "notes",
+                    "topics",
+                    "scholars"
+                ],
+                "type": "string",
+                "description": "* `plans` - plans\n* `notes` - notes\n* `topics` - topics\n* `scholars` - scholars"
             },
             "ListResult": {
                 "type": "object",

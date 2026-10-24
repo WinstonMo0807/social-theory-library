@@ -4472,6 +4472,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/lists/{id}/related/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_lists_related_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/lists/{id}/undo-citation/": {
         parameters: {
             query?: never;
@@ -10721,6 +10737,15 @@ export interface components {
             progress_ratio: number | null;
             reader_url: string | null;
         };
+        ListLinkedPlan: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            status: string;
+            href: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
         ListPlanInputRequest: {
             expected_version: string;
             item_ids?: string[];
@@ -10775,10 +10800,43 @@ export interface components {
             /** Format: uuid */
             catalog_revision_id: string | null;
         };
+        ListPublicLink: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            href: string;
+            description: string;
+            source_count: number;
+            portrait_url: string | null;
+            portrait_media: components["schemas"]["PublicCoverMedia"] | null;
+        };
         ListReceipt: {
             /** Format: uuid */
             request_id: string;
         };
+        ListRelatedOutput: {
+            owner_id: string;
+            /** Format: uuid */
+            list_id: string;
+            version: string;
+            section: components["schemas"]["ListRelatedOutputSectionEnum"];
+            page: number;
+            count: number;
+            total_pages: number;
+            notice: string;
+            plans: components["schemas"]["ListLinkedPlan"][];
+            notes: components["schemas"]["NotebookRecord"][];
+            topics: components["schemas"]["ListPublicLink"][];
+            scholars: components["schemas"]["ListPublicLink"][];
+        };
+        /**
+         * @description * `plans` - plans
+         *     * `notes` - notes
+         *     * `topics` - topics
+         *     * `scholars` - scholars
+         * @enum {string}
+         */
+        ListRelatedOutputSectionEnum: "plans" | "notes" | "topics" | "scholars";
         ListResult: {
             owner_id: string;
             /** Format: uuid */
@@ -29768,6 +29826,40 @@ export interface operations {
             };
         };
     };
+    reading_lists_related_retrieve: {
+        parameters: {
+            query: {
+                expected_version: string;
+                page?: number;
+                /**
+                 * @description * `plans` - plans
+                 *     * `notes` - notes
+                 *     * `topics` - topics
+                 *     * `scholars` - scholars
+                 */
+                section?: "plans" | "notes" | "topics" | "scholars";
+            };
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path: {
+                /** @description 标识此 reading list 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListRelatedOutput"];
+                };
+            };
+        };
+    };
     reading_lists_undo_citation_create: {
         parameters: {
             query?: never;
@@ -29957,6 +30049,7 @@ export interface operations {
         parameters: {
             query?: {
                 asset?: string;
+                booklist?: string;
                 end?: string;
                 /**
                  * @description * `all` - all
@@ -30143,6 +30236,7 @@ export interface operations {
         parameters: {
             query?: {
                 asset?: string;
+                booklist?: string;
                 end?: string;
                 /**
                  * @description * `all` - all

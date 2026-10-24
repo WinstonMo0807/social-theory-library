@@ -18,6 +18,7 @@ class NotebookQuery(serializers.Serializer):
     work = serializers.UUIDField(required=False)
     asset = serializers.UUIDField(required=False)
     project = serializers.UUIDField(required=False)
+    booklist = serializers.UUIDField(required=False)
     start = serializers.DateField(required=False)
     end = serializers.DateField(required=False)
 

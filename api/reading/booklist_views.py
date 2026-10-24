@@ -60,6 +60,47 @@ class ListWorkspace(serializers.Serializer):
     trash_count = serializers.IntegerField()
 
 
+class ListRelatedQuery(serializers.Serializer):
+    expected_version = serializers.CharField(max_length=100)
+    section = serializers.ChoiceField(choices=["plans", "notes", "topics", "scholars"], default="topics")
+    page = serializers.IntegerField(min_value=1, max_value=10000, default=1)
+
+
+class ListLinkedPlan(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    status = serializers.CharField()
+    href = serializers.CharField()
+    updated_at = serializers.DateTimeField()
+
+
+class ListPublicLink(serializers.Serializer):
+    from catalog.media_views import PublicCoverMediaSerializer
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    href = serializers.CharField()
+    description = serializers.CharField(allow_blank=True)
+    source_count = serializers.IntegerField()
+    portrait_url = serializers.CharField(allow_null=True)
+    portrait_media = PublicCoverMediaSerializer(allow_null=True)
+
+
+class ListRelatedOutput(serializers.Serializer):
+    from .notebook_views import NotebookRecord
+    owner_id = serializers.CharField()
+    list_id = serializers.UUIDField()
+    version = serializers.CharField()
+    section = serializers.ChoiceField(choices=["plans", "notes", "topics", "scholars"])
+    page = serializers.IntegerField()
+    count = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+    notice = serializers.CharField()
+    plans = ListLinkedPlan(many=True)
+    notes = NotebookRecord(many=True)
+    topics = ListPublicLink(many=True)
+    scholars = ListPublicLink(many=True)
+
+
 class ListCommand(serializers.Serializer):
     list_id = serializers.UUIDField()
     request_id = serializers.UUIDField()
@@ -214,6 +255,15 @@ class BooklistActions:
     def list_owner(self, request):
         if request.headers.get("X-Reader-Owner") != str(request.user.pk):
             raise PermissionDenied("请重新核对当前书单所属账户。")
+
+    @extend_schema(parameters=[OWNER, ListRelatedQuery], responses=ListRelatedOutput)
+    @action(detail=True, methods=["get"])
+    def related(self, request, pk=None):
+        from .booklist_related import related
+        self.list_owner(request)
+        query = ListRelatedQuery(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        return Response(related(request, pk, query.validated_data))
 
     @extend_schema(parameters=[OWNER, OpenApiParameter("request_id", str, required=True)], responses=CitationListOutput)
     @action(detail=True, methods=["get"], url_path="citation")
