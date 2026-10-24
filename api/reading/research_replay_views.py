@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from . import research_replay, research_replay_tree
+from . import research_replay, research_replay_tree, research_replay_history
 
 
 def owner(request):
@@ -31,6 +31,7 @@ class ReplayOutput(serializers.Serializer):
     turn = serializers.DictField(required=False)
     scope = serializers.DictField(required=False)
     materials = serializers.ListField(child=serializers.DictField(), required=False)
+    evidence = serializers.ListField(child=serializers.DictField(), required=False)
     added_ids = serializers.ListField(child=serializers.CharField(), required=False)
     unchanged_ids = serializers.ListField(child=serializers.CharField(), required=False)
     removed = serializers.ListField(child=serializers.DictField(), required=False)
@@ -38,6 +39,7 @@ class ReplayOutput(serializers.Serializer):
     scope_changed = serializers.BooleanField(required=False)
     previous_scope = serializers.DictField(allow_null=True, required=False)
     notes = serializers.CharField(allow_blank=True, required=False)
+    tags = serializers.ListField(child=serializers.CharField(), required=False)
     snapshot_notes = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     snapshot_title = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     unavailable_count = serializers.IntegerField(required=False)
@@ -49,11 +51,57 @@ class ReplayEdit(serializers.Serializer):
     expected_revision = serializers.IntegerField(min_value=1)
     title = serializers.CharField(max_length=240, required=False)
     notes = serializers.CharField(max_length=20000, allow_blank=True, trim_whitespace=False, required=False)
+    tags = serializers.ListField(child=serializers.CharField(max_length=40), max_length=12, required=False)
+    restore_id = serializers.UUIDField(required=False)
+
+    def validate_tags(self, values):
+        from unicodedata import normalize
+        result = [normalize("NFKC", value).strip() for value in values]
+        if any(not value or len(value) > 40 for value in result) or len({value.casefold() for value in result}) != len(result):
+            raise serializers.ValidationError("主题标签不可为空或重复，每项最多40字。")
+        return result
 
     def validate(self, values):
-        if not {"title", "notes"}.intersection(values):
-            raise serializers.ValidationError("请提供要保存的轮次名称或回放笔记。")
+        if set(self.initial_data) - set(self.fields):
+            raise serializers.ValidationError("回放编辑含有不支持的字段。")
+        fields = {"title", "notes", "tags"}.intersection(values)
+        if values.get("restore_id") and fields:
+            raise serializers.ValidationError("历史恢复和新的文字编辑需分别确认。")
+        if not fields and not values.get("restore_id"):
+            raise serializers.ValidationError("请提供要保存的轮次名称、主题标签或回放笔记。")
         return values
+
+
+class ReplayHistoryQuery(serializers.Serializer):
+    turn_id = serializers.UUIDField()
+    page = serializers.IntegerField(min_value=1, default=1)
+    revision_id = serializers.UUIDField(required=False)
+
+
+class ReplayHistoryEntry(serializers.Serializer):
+    id = serializers.UUIDField()
+    revision = serializers.IntegerField()
+    kind = serializers.ChoiceField(choices=["baseline", "edit", "restore"])
+    recorded_at = serializers.DateTimeField()
+    source_updated_at = serializers.DateTimeField(allow_null=True)
+    title = serializers.CharField(allow_blank=True)
+    tags = serializers.ListField(child=serializers.CharField())
+    note_length = serializers.IntegerField()
+    restored_from = serializers.UUIDField(allow_null=True)
+    notes = serializers.CharField(allow_blank=True, required=False)
+
+
+class ReplayHistoryOutput(serializers.Serializer):
+    owner_id = serializers.CharField()
+    project_id = serializers.UUIDField()
+    turn_id = serializers.UUIDField()
+    current_revision = serializers.IntegerField()
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+    results = ReplayHistoryEntry(many=True)
+    selected = ReplayHistoryEntry(allow_null=True)
+    notice = serializers.CharField()
 
 
 class ReplayFork(serializers.Serializer):
@@ -107,6 +155,14 @@ class ReplayTreeOutput(serializers.Serializer):
 
 
 class ReplayActions:
+    @extend_schema(parameters=[ReplayHistoryQuery], responses=ReplayHistoryOutput)
+    @action(detail=True, methods=["get"], url_path="replay-history")
+    def replay_history(self, request, pk=None):
+        owner(request)
+        query = ReplayHistoryQuery(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        return Response(research_replay_history.history(request.user, pk, **query.validated_data))
+
     @extend_schema(parameters=[ReplayTreeQuery], responses=ReplayTreeOutput)
     @action(detail=True, methods=["get"], url_path="replay-tree")
     def replay_tree(self, request, pk=None):

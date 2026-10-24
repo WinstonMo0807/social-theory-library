@@ -5527,6 +5527,23 @@ export interface paths {
         patch: operations["reading_research_projects_replay_partial_update"];
         trace?: never;
     };
+    "/api/reading/research-projects/{id}/replay-history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        get: operations["reading_research_projects_replay_history_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/research-projects/{id}/replay-tree/": {
         parameters: {
             query?: never;
@@ -13245,6 +13262,9 @@ export interface components {
             expected_revision?: number;
             title?: string;
             notes?: string;
+            tags?: string[];
+            /** Format: uuid */
+            restore_id?: string;
         };
         PatchedResearchPreferenceInputRequest: {
             research_personalization?: boolean;
@@ -16864,6 +16884,43 @@ export interface components {
             request_id: string;
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
+        ReplayHistoryEntry: {
+            /** Format: uuid */
+            id: string;
+            revision: number;
+            kind: components["schemas"]["ReplayHistoryEntryKindEnum"];
+            /** Format: date-time */
+            recorded_at: string;
+            /** Format: date-time */
+            source_updated_at: string | null;
+            title: string;
+            tags: string[];
+            note_length: number;
+            /** Format: uuid */
+            restored_from: string | null;
+            notes?: string;
+        };
+        /**
+         * @description * `baseline` - baseline
+         *     * `edit` - edit
+         *     * `restore` - restore
+         * @enum {string}
+         */
+        ReplayHistoryEntryKindEnum: "baseline" | "edit" | "restore";
+        ReplayHistoryOutput: {
+            owner_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /** Format: uuid */
+            turn_id: string;
+            current_revision: number;
+            count: number;
+            page: number;
+            total_pages: number;
+            results: components["schemas"]["ReplayHistoryEntry"][];
+            selected: components["schemas"]["ReplayHistoryEntry"] | null;
+            notice: string;
+        };
         ReplayOutput: {
             owner_id: string;
             project?: {
@@ -16889,6 +16946,9 @@ export interface components {
             materials?: {
                 [key: string]: unknown;
             }[];
+            evidence?: {
+                [key: string]: unknown;
+            }[];
             added_ids?: string[];
             unchanged_ids?: string[];
             removed?: {
@@ -16902,6 +16962,7 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             notes?: string;
+            tags?: string[];
             snapshot_notes?: string | null;
             snapshot_title?: string | null;
             unavailable_count?: number;
@@ -32359,6 +32420,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReplayOutput"];
+                };
+            };
+        };
+    };
+    reading_research_projects_replay_history_retrieve: {
+        parameters: {
+            query: {
+                page?: number;
+                revision_id?: string;
+                turn_id: string;
+            };
+            header?: never;
+            path: {
+                /** @description 标识此 research project 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayHistoryOutput"];
                 };
             };
         };

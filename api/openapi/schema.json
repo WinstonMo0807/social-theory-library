@@ -26596,6 +26596,73 @@
                 }
             }
         },
+        "/api/reading/research-projects/{id}/replay-history/": {
+            "get": {
+                "operationId": "reading_research_projects_replay_history_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 research project 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "revision_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "turn_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReplayHistoryOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/research-projects/{id}/replay-tree/": {
             "get": {
                 "operationId": "reading_research_projects_replay_tree_retrieve",
@@ -52434,6 +52501,19 @@
                     "notes": {
                         "type": "string",
                         "maxLength": 20000
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                        },
+                        "maxItems": 12
+                    },
+                    "restore_id": {
+                        "type": "string",
+                        "format": "uuid"
                     }
                 }
             },
@@ -64535,6 +64615,127 @@
                     "request_id"
                 ]
             },
+            "ReplayHistoryEntry": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ReplayHistoryEntryKindEnum"
+                    },
+                    "recorded_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "source_updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "note_length": {
+                        "type": "integer"
+                    },
+                    "restored_from": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "note_length",
+                    "recorded_at",
+                    "restored_from",
+                    "revision",
+                    "source_updated_at",
+                    "tags",
+                    "title"
+                ]
+            },
+            "ReplayHistoryEntryKindEnum": {
+                "enum": [
+                    "baseline",
+                    "edit",
+                    "restore"
+                ],
+                "type": "string",
+                "description": "* `baseline` - baseline\n* `edit` - edit\n* `restore` - restore"
+            },
+            "ReplayHistoryOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "project_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "turn_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "current_revision": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReplayHistoryEntry"
+                        }
+                    },
+                    "selected": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ReplayHistoryEntry"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "count",
+                    "current_revision",
+                    "notice",
+                    "owner_id",
+                    "page",
+                    "project_id",
+                    "results",
+                    "selected",
+                    "total_pages",
+                    "turn_id"
+                ]
+            },
             "ReplayOutput": {
                 "type": "object",
                 "properties": {
@@ -64588,6 +64789,13 @@
                             "additionalProperties": {}
                         }
                     },
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
                     "added_ids": {
                         "type": "array",
                         "items": {
@@ -64622,6 +64830,12 @@
                     },
                     "notes": {
                         "type": "string"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     },
                     "snapshot_notes": {
                         "type": "string",

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 研究回放文字历史
+
+ResearchReplayRevision依附原ResearchTurn并随其级联删除，仅存加密的回放名称/笔记/标签，按原轮次revision唯一。历史分页读取及恢复均经原研究所有者过滤；恢复是新保存，不覆盖原检索输入。原研究/读者中心隐私导出纳入历史，研究整体25MiB边界及版本复核；不进入公开馆藏、模型记忆或提案分享范围。reading0027未执行；回退须保留历史表及识别该表的兼容级联逻辑。
+
 ## 2026-10-24 策划提案接手
 
 ReaderShare授权和原文章新建命令通过reader_proposals服务衔接。提案授权中明确选择的公开版本成为原RecommendationIssue.items，私人正文/笔记/问题/摘录/附言不复制。原AuditEvent只记录授权UUID、文章UUID和条目数，授权行锁串行化跨编辑接手；原新建回执负责重试/停止。无新数据库模型、并行内容库或发布入口。

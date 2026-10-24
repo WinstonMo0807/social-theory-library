@@ -60,6 +60,18 @@ class ResearchTurn(UUIDTimeStampedModel):
         constraints = [models.UniqueConstraint(fields=["project", "request_id"], name="research_turn_request_unique")]
 
 
+class ResearchReplayRevision(UUIDTimeStampedModel):
+    """Encrypted manual replay text; ownership and erasure follow its original turn."""
+    turn = models.ForeignKey(ResearchTurn, on_delete=models.CASCADE, related_name="replay_revisions")
+    revision = models.PositiveIntegerField()
+    kind = models.CharField(max_length=12, choices=[("baseline", "Before edit"), ("edit", "Edit"), ("restore", "Restore")])
+    data_ciphertext = models.BinaryField(default=bytes)
+
+    class Meta:
+        ordering = ["-revision"]
+        constraints = [models.UniqueConstraint(fields=["turn", "revision"], name="research_replay_revision_unique")]
+
+
 class CitationAudit(PrivateResearchRecord):
     purpose = models.CharField(max_length=20, default="manuscript", choices=[("manuscript", "Manuscript"), ("private_source", "Private source")])
     file_size_bytes = models.PositiveIntegerField(default=0)

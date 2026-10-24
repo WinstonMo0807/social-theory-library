@@ -271,7 +271,8 @@ def _export_item(user, category, row):
         return annotation_export(user, row)
     result = research.serialize_record(row, user)
     if category == "research":
-        result["turns"] = [research.serialize_record(turn, user) for turn in row.turns.all()]
+        from .research_replay_history import export_turns
+        result["turns"] = export_turns(row, user)
     return result
 
 

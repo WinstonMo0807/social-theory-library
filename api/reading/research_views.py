@@ -118,9 +118,10 @@ class PrivateRecordViewSet(PrivateResponses, viewsets.GenericViewSet):
     @action(detail=True, methods=["get"])
     def export(self, request, pk=None):
         record = self.get_object()
-        data = research.serialize_record(record, request.user)
+        from .research_replay_history import export_turn, export_turns
+        data = export_turn(record, request.user) if self.model is ResearchTurn else research.serialize_record(record, request.user)
         if self.model is ResearchProject:
-            data["turns"] = [research.serialize_record(turn, request.user) for turn in record.turns.all()]
+            data["turns"] = export_turns(record, request.user)
         response = Response({"schema_version": 1, **data})
         response["Content-Disposition"] = f'attachment; filename="research-{record.id}.json"'
         return response

@@ -5,8 +5,8 @@ import json
 from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
-from . import privacy, research
-from .models import ResearchImportReceipt, ResearchProject, ResearchTurn
+from . import privacy, research, research_replay_history
+from .models import ResearchImportReceipt, ResearchProject, ResearchTurn, ResearchReplayRevision
 
 STOPPED_FORK = "cancelled:replay_fork"
 
@@ -23,7 +23,7 @@ def inputs(turn):
     return {"title": data.get("replay_title") or data.get("question") or "未命名轮次",
         "question": data.get("question", ""), "scope": data.get("scope", {}),
         "selections": data.get("selected_refs", []), "notes": data.get("replay_note", ""),
-        "project_snapshot": data.get("project_snapshot"), "mode": data.get("mode", "search")}
+        "tags": data.get("replay_tags", []), "project_snapshot": data.get("project_snapshot"), "mode": data.get("mode", "search")}
 
 
 def descriptor(turn):
@@ -48,12 +48,12 @@ def timeline(user, project_id, page):
         "current_turn_id": payload.get("last_turn_id"), "results": [descriptor(row) for row in rows[start:start + 20]]}
 
 
-def references(turn):
+def references(turn, key="selected_refs"):
     seen, result = set(), []
-    for ref in inputs(turn)["selections"]:
-        key = research.reference_identity(ref)
-        if key not in seen:
-            seen.add(key)
+    for ref in research.unpack(turn).get(key, []):
+        identity = research.reference_identity(ref)
+        if identity not in seen:
+            seen.add(identity)
             result.append(ref)
     return result
 
@@ -66,16 +66,19 @@ def detail(user, project_id, turn_id, compare_id=None):
     current, previous = references(turn), references(compared) if compared else []
     before, after = {research.reference_identity(ref) for ref in previous}, {research.reference_identity(ref) for ref in current}
     resolved = [research.resolve_reference(ref, user) for ref in current]
+    previous_results = {research.reference_identity(ref) for ref in references(compared, "result_refs")} if compared else set()
+    new_evidence = [research.resolve_reference(ref, user) for ref in references(turn, "result_refs")
+        if research.reference_identity(ref) not in previous_results | after]
     removed = [research.resolve_reference(ref, user) for ref in previous if research.reference_identity(ref) not in after]
     snapshot = data["project_snapshot"]
     # Snapshot selections are locators, never cached source paragraphs or model authorization.
     return {"owner_id": str(user.pk), "project_id": str(project.pk), "project_revision": project.revision,
-        "turn": descriptor(turn), "scope": data["scope"], "materials": resolved,
+        "turn": descriptor(turn), "scope": data["scope"], "materials": resolved, "evidence": new_evidence,
         "added_ids": sorted(after - before), "unchanged_ids": sorted(after & before), "removed": removed,
         "compared": descriptor(compared) if compared else None,
         "scope_changed": compared is not None and data["scope"] != inputs(compared)["scope"],
         "previous_scope": inputs(compared)["scope"] if compared else None,
-        "notes": data["notes"], "snapshot_notes": snapshot.get("notes", "") if snapshot else None,
+        "notes": data["notes"], "tags": data["tags"], "snapshot_notes": snapshot.get("notes", "") if snapshot else None,
         "snapshot_title": snapshot.get("title", "") if snapshot else None,
         "unavailable_count": sum(ref.get("source_status") != "available" for ref in resolved),
         "notice": "材料与范围来自本轮开始时实际保存的输入；来源在查看时重新核对。当前选材的后来变化不会补写为过去的历史。"}
@@ -83,23 +86,30 @@ def detail(user, project_id, turn_id, compare_id=None):
 
 @transaction.atomic
 def edit_turn(user, project_id, turn_id, data):
-    privacy.lock_owner(user)
+    privacy.command_owner(user)
     project = research.owned(ResearchProject, user, project_id, lock=True)
     turn = turn_for(user, project, turn_id)
     turn = research.owned(ResearchTurn, user, turn.pk, lock=True)
     payload = research.unpack(turn)
-    if turn.revision != data["expected_revision"] and all(
-            payload.get("replay_title" if key == "title" else "replay_note", "") == data[key]
-            for key in ("title", "notes") if key in data):
+    previous = research_replay_history.values(payload)
+    if data.get("restore_id"):
+        snapshot = ResearchReplayRevision.objects.filter(pk=data["restore_id"], turn=turn).first()
+        if snapshot is None:
+            raise NotFound("这条回放文字历史不属于当前轮次，或已删除。")
+        saved = research.unpack(snapshot)
+        changed = {key: saved[key] for key in ("title", "notes", "tags")}
+    else:
+        changed = {key: data[key] for key in ("title", "notes", "tags") if key in data}
+    if all(previous[key] == value for key, value in changed.items()):
         return detail(user, project.pk, turn.pk)
     research.expect(turn, data["expected_revision"])
     if turn.status in research.ACTIVE:
         raise research.ResearchConflict("本轮仍在处理中，完成或取消后再编辑回放笔记。")
-    if "title" in data:
-        payload["replay_title"] = data["title"]
-    if "notes" in data:
-        payload["replay_note"] = data["notes"]
+    research_replay_history.save_snapshot(turn, payload, "baseline")
+    for key, value in changed.items():
+        payload[{"title": "replay_title", "notes": "replay_note", "tags": "replay_tags"}[key]] = value
     research.save_data(turn, payload)
+    research_replay_history.save_snapshot(turn, payload, "restore" if data.get("restore_id") else "edit", data.get("restore_id"))
     return detail(user, project.pk, turn.pk)
 
 
@@ -118,14 +128,14 @@ def fork_receipt(user, request_id):
 
 @transaction.atomic
 def stop_fork(user, request_id):
-    privacy.lock_owner(user)
+    privacy.command_owner(user)
     ResearchImportReceipt.objects.get_or_create(user=user, request_id=request_id, defaults={"fingerprint": STOPPED_FORK})
     return fork_receipt(user, request_id)
 
 
 @transaction.atomic
 def fork_project(user, project_id, turn_id, data):
-    privacy.lock_owner(user)
+    privacy.command_owner(user)
     fingerprint = hashlib.sha256(json.dumps({"operation": "replay_fork", "project_id": str(project_id), "turn_id": str(turn_id), **data}, sort_keys=True, default=str).encode()).hexdigest()
     previous = ResearchImportReceipt.objects.filter(user=user, request_id=data["request_id"]).first()
     if previous:
@@ -137,10 +147,11 @@ def fork_project(user, project_id, turn_id, data):
     project = research.owned(ResearchProject, user, project_id, lock=True)
     research.expect(project, data["expected_project_revision"])
     turn = turn_for(user, project, turn_id)
+    turn = research.owned(ResearchTurn, user, turn.pk, lock=True)
     research.expect(turn, data["expected_revision"])
-    all_refs = {research.reference_identity(ref): ref for ref in references(turn)}
+    all_refs = {research.reference_identity(ref): ref for ref in [*references(turn), *references(turn, "result_refs")]}
     ids = data["reference_ids"]
-    if not ids or len(set(ids)) != len(ids) or any(key not in all_refs for key in ids):
+    if not ids or len(ids) > 400 or len(set(ids)) != len(ids) or any(key not in all_refs for key in ids):
         raise ValidationError("请选择本轮实际保存的1至400项材料，不能混入其他轮次。")
     refs = [research.compact_reference(research.resolve_reference(all_refs[key], user, strict=True)) for key in ids]
     if ResearchProject.objects.filter(user=user, request_id=data["request_id"]).exists():
