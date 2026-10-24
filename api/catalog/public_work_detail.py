@@ -1,10 +1,8 @@
 """Public detail reads one selected, activated Edition throughout the response."""
-from urllib.parse import urlencode
 from uuid import UUID
 
 from django.db.models import Q
 from django.http import Http404
-from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -95,31 +93,13 @@ class PublicWorkDetailSerializer(WorkDetailSerializer):
     def get_relations(self, obj):
         return public_work_relations(obj, self._public_edition(obj), context=self.context)
 
-    def _image_url(self, obj, route, *, rendition=None):
-        query = {"edition_id": str(self._public_edition(obj).pk)}
-        if rendition:
-            query["rendition"] = str(rendition)
-        return f"{reverse(route, kwargs={'work_id': obj.pk})}?{urlencode(query)}"
-
-    def _media(self, obj, *, recommendation=False):
-        values = self._public_snapshot(obj).get("work") or {}
-        key = "recommendation_media" if recommendation and values.get("recommendation_image") else "cover_media"
-        media = values.get(key)
-        if not media:
-            return None
-        route = "public-work-recommendation-image" if recommendation else "public-work-cover"
-        return {**media, "renditions": [
-            {**row, "url": self._image_url(obj, route, rendition=row["id"])}
-            for row in media.get("renditions", []) if row.get("id")
-        ]}
-
     @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_cover_media(self, obj):
-        return self._media(obj)
+        return self._public_image_media(obj)
 
     @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_recommendation_media(self, obj):
-        return self._media(obj, recommendation=True)
+        return self._public_image_media(obj, recommendation=True)
 
     def get_cover(self, obj) -> str:
         values = self._public_snapshot(obj).get("work") or {}

@@ -697,11 +697,30 @@ class WorkCardSerializer(serializers.ModelSerializer):
     def _public_snapshot(self, obj):
         return self._public_catalog(obj)[1]
 
+    def _image_url(self, obj, route, *, rendition=None):
+        from urllib.parse import urlencode
+        edition = self._public_edition(obj)
+        query = {"edition_id": str(edition.pk)} if edition else {}
+        if rendition:
+            query["rendition"] = str(rendition)
+        path = reverse(route, kwargs={"work_id": obj.pk})
+        return f"{path}?{urlencode(query)}" if query else path
+
+    def _public_image_media(self, obj, *, recommendation=False):
+        values = self._public_snapshot(obj).get("work") or {}
+        key = "recommendation_media" if recommendation and values.get("recommendation_image") else "cover_media"
+        media = values.get(key)
+        if not media:
+            return None
+        route = "public-work-recommendation-image" if recommendation else "public-work-cover"
+        return {**media, "renditions": [{**row, "url": self._image_url(obj, route, rendition=row["id"])}
+                                      for row in media.get("renditions", []) if row.get("id")]}
+
     def get_cover(self, obj) -> str:
         snapshot = self._public_snapshot(obj)
         media = (snapshot.get("work") or {}).get("cover_media") if snapshot else None
         if media:
-            return reverse("public-work-cover", kwargs={"work_id": obj.id}) + f"?rendition={media['primary_rendition_id']}"
+            return self._image_url(obj, "public-work-cover", rendition=media["primary_rendition_id"])
         cover_name = (
             (snapshot.get("work") or {}).get("cover")
             if snapshot
@@ -713,16 +732,16 @@ class WorkCardSerializer(serializers.ModelSerializer):
         # browser-facing resources on that same origin instead of leaking the
         # API container hostname or a development default such as
         # ``http://localhost:8000`` into server-rendered HTML.
-        return reverse("public-work-cover", kwargs={"work_id": obj.id})
+        return self._image_url(obj, "public-work-cover")
 
     @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_cover_media(self, obj):
-        return (self._public_snapshot(obj).get("work") or {}).get("cover_media")
+        return self._public_image_media(obj)
 
     def get_recommendation_image(self, obj) -> str:
         media = self.get_recommendation_media(obj)
         if media:
-            return reverse("public-work-recommendation-image", kwargs={"work_id": obj.pk}) + f"?rendition={media['primary_rendition_id']}"
+            return self._image_url(obj, "public-work-recommendation-image", rendition=media["primary_rendition_id"])
         snapshot = self._public_snapshot(obj)
         if snapshot:
             work_values = snapshot.get("work") or {}
@@ -733,15 +752,11 @@ class WorkCardSerializer(serializers.ModelSerializer):
             available = bool(obj.recommendation_image or obj.cover)
         if not available:
             return ""
-        return reverse(
-            "public-work-recommendation-image",
-            kwargs={"work_id": obj.id},
-        )
+        return self._image_url(obj, "public-work-recommendation-image")
 
     @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_recommendation_media(self, obj):
-        values = self._public_snapshot(obj).get("work") or {}
-        return values.get("recommendation_media") if values.get("recommendation_image") else values.get("cover_media")
+        return self._public_image_media(obj, recommendation=True)
 
     @extend_schema_field(EditionCompactSerializer(allow_null=True))
     def get_edition(self, obj):
