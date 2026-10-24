@@ -293,21 +293,25 @@ def _attach_evidence(edges, request):
             edge["source_status"] = "available"
     from catalog.relation_source_anchor import public_anchor_rows, anchor_material
     people = [edge["entity_id"] for edge in edges if edge["model"] == "PersonNodeRelation"]
-    if not people:
-        return
-    links = {str(row.pk): row for row in PersonNodeRelation.objects.filter(pk__in=people)}
+    links = {(model.__name__, str(row.pk)): row for model, ids in ((PersonNodeRelation, people), (KnowledgeRelation, identifiers))
+             for row in model.objects.filter(pk__in=ids).only("pk", "evidence_span_id", "source_document_revision_id")}
     anchors = {str(span.pk): span for span in public_anchor_rows().filter(pk__in=[row.evidence_span_id for row in links.values() if row.evidence_span_id])}
     for edge in edges:
-        row = links.get(edge["entity_id"]) if edge["model"] == "PersonNodeRelation" else None
+        row = links.get((edge["model"], edge["entity_id"]))
         if row is None or not row.evidence_span_id:
             continue
         material = anchor_material(anchors.get(str(row.evidence_span_id)), row.source_document_revision_id, public=True, eligible=True)
         if material is None:
-            edge["source_status"] = "unverified"
+            if not edge["evidence"]:
+                edge["source_status"] = "unverified"
             continue
         edge["source_status"] = "available"
-        edge["evidence"] = [{"id": str(row.evidence_span_id), **{key: material[key] for key in (
-            "work_id", "edition_id", "asset_id", "document_revision_id", "title", "edition_label", "quote", "pdf_page", "printed_page_label", "reader_href")}}]
+        primary = {"id": str(row.evidence_span_id), **{key: material[key] for key in (
+            "work_id", "edition_id", "asset_id", "document_revision_id", "title", "edition_label", "quote", "pdf_page", "printed_page_label", "reader_href")}}
+        additional = [item for item in edge["evidence"] if any(item[key] != primary[key] for key in ("document_revision_id", "pdf_page", "quote"))]
+        sources = [primary, *additional]
+        edge["evidence_truncated"] = edge["evidence_truncated"] or len(sources) > 6
+        edge["evidence"] = sources[:6]
 
 
 def public_graph_edge(identifier):

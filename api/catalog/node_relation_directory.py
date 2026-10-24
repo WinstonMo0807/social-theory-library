@@ -94,6 +94,9 @@ def directory_queries(node_id, filters):
 class NodeRelationDirectoryView(AdminEditorialDraftReadMixin, generics.GenericAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeRelationSerializer
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "omit_relation_material": True}
     editorial_target_type = "knowledge_relation"
 
     @extend_schema(parameters=[NodeRelationFilters, OpenApiParameter("node_id", str, location=OpenApiParameter.PATH)], responses=NodeRelationPage)
@@ -115,7 +118,7 @@ class NodeRelationDirectoryView(AdminEditorialDraftReadMixin, generics.GenericAP
                 "source_kind": "知识条目", "target_kind": "知识条目", "relation_type": data["relation_type"],
                 "relation_label": data["relation_label"], "direction": data["direction"],
                 "description": data["description"], "evidence_source": data["evidence_source"],
-                "has_source_anchor": bool(data.get("evidence")),
+                "has_source_anchor": bool(data.get("source_anchor") or data.get("evidence")),
                 "status": data.get("public_status", data["status"]), "has_unpublished_changes": data["has_unpublished_changes"],
                 "remains_in_draft": str(node.pk) in {str(data["source_node"]), str(data["target_node"])},
             }

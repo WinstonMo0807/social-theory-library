@@ -541,6 +541,10 @@ class TheoryWorkGroupsSerializer(serializers.Serializer):
 
 
 class KnowledgeRelationSerializer(serializers.ModelSerializer):
+    from catalog.relation_source_anchor import RelationAnchorField
+    private_relation_source = False
+    source_anchor = RelationAnchorField(source="*", required=False, allow_null=True)
+    source_material = serializers.SerializerMethodField()
     source_name = serializers.CharField(source="source_node.canonical_name_zh", read_only=True)
     source_slug = serializers.CharField(source="source_node.slug", read_only=True)
     source_node_type = serializers.CharField(source="source_node.node_type", read_only=True)
@@ -567,6 +571,8 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
             "direction",
             "description",
             "evidence_source",
+            "source_anchor",
+            "source_material",
             "evidence",
             "confidence",
             "status",
@@ -580,6 +586,15 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
     def get_evidence(self, obj):
         rows = _public_evidence_queryset(self.context).filter(knowledge_relation=obj)[:40]
         return EvidenceSnippetSerializer(rows, many=True, context=self.context).data
+
+    from catalog.relation_source_anchor import RelationAnchorMaterial
+
+    @extend_schema_field(RelationAnchorMaterial(allow_null=True))
+    def get_source_material(self, obj):
+        from catalog.relation_source_anchor import anchor_material
+        if not obj.evidence_span_id or self.context.get("omit_relation_material"):
+            return None
+        return anchor_material(obj.evidence_span, obj.source_document_revision_id, public=not self.private_relation_source)
 
     def validate(self, attrs):
         source = attrs.get("source_node", getattr(self.instance, "source_node", None))
@@ -627,6 +642,7 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
         if (
             status_value == "published"
             and policy.requires_evidence
+            and not attrs.get("evidence_span", getattr(self.instance, "evidence_span", None))
             and not relation_has_evidence(self.instance, evidence_source)
         ):
             raise serializers.ValidationError(
@@ -1101,6 +1117,7 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
 
 
 class AdminKnowledgeRelationSerializer(KnowledgeRelationSerializer):
+    private_relation_source = True
     from catalog.scholar_relation_commands import ScholarRelationReceipt
     save_receipt = ScholarRelationReceipt(read_only=True)
     save_replayed = serializers.BooleanField(read_only=True)

@@ -6396,6 +6396,8 @@ export interface components {
             direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
             description?: string;
             evidence_source?: string;
+            source_anchor?: components["schemas"]["RelationAnchorInput"] | null;
+            readonly source_material: components["schemas"]["RelationAnchorMaterial"] | null;
             readonly evidence: components["schemas"]["EvidenceSnippet"][];
             /** Format: double */
             confidence?: number;
@@ -6418,6 +6420,7 @@ export interface components {
             direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
             description?: string;
             evidence_source?: string;
+            source_anchor?: components["schemas"]["RelationAnchorInputRequest"] | null;
             /** Format: double */
             confidence?: number;
             status?: components["schemas"]["KnowledgePublicationStatusEnum"];
@@ -10667,6 +10670,8 @@ export interface components {
             direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
             description?: string;
             evidence_source?: string;
+            source_anchor?: components["schemas"]["RelationAnchorInput"] | null;
+            readonly source_material: components["schemas"]["RelationAnchorMaterial"] | null;
             readonly evidence: components["schemas"]["EvidenceSnippet"][];
             /** Format: double */
             confidence?: number;
@@ -13378,6 +13383,7 @@ export interface components {
             direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
             description?: string;
             evidence_source?: string;
+            source_anchor?: components["schemas"]["RelationAnchorInputRequest"] | null;
             /** Format: double */
             confidence?: number;
             status?: components["schemas"]["KnowledgePublicationStatusEnum"];

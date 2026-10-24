@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-24 理论关系原文锚点
+
+原KnowledgeRelation接EvidenceSpan/DocumentRevision保护外键，0083仅声明。API用source_anchor原子传入引用身份，原EditorialRevision保存两项ID；source_material只读派生，公开端不暴露私人编号或失效原文。发布重新核对，图谱批量读取固定激活来源，原版本历史/合并冲突和回退范围指纹覆盖新字段。目录不加载原文。没有迁移执行或部署。
+
+
 ## 2026-10-24 关系的准确原文引用
 
 原PersonNodeRelation使用EvidenceSpan/DocumentRevision保护外键固定原文，不复制馆藏或允许提交引文正文。catalog0082仅声明。原ScholarCommandMixin保存摘要/审计包含引用身份，确认再核对匿名公开的当前原文件、文档、页码、校验值与原始Unicode偏移；公共图谱批量取回真实引文，失效不回退到其他版本。原合并复制与冲突检查保留引用ID，账户及私人研究权限不变。

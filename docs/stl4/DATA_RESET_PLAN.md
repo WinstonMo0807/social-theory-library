@@ -1,5 +1,10 @@
 # 账号保留型业务重置
 
+## 2026-10-24 理论关系原文保护外键
+
+catalog0083仅声明KnowledgeRelation对EvidenceSpan/DocumentRevision的成对保护引用。仍属原catalog业务范围，无账户或私人研究表变更；保留原精确清单、备份恢复及生产最终确认要求。本轮没有迁移、重置预演或清理。
+
+
 ## 2026-10-24 人物关系原文保护外键
 
 catalog0081/0082仅声明原PersonNodeRelation的关系方向和EvidenceSpan/DocumentRevision保护引用，无新账户表。三者均在原catalog业务清单；日常删除不能级联破坏原文，最终业务重置仍由原精确外键清单、备份恢复及用户最终确认约束。本轮只读model_tables及既有边界，没有执行迁移、预演或清理。

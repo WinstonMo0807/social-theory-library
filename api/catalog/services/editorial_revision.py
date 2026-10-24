@@ -57,7 +57,7 @@ class EditorialTargetPolicy:
 
 TARGET_POLICIES = {
     EditorialRevision.TargetType.KNOWLEDGE_RELATION: EditorialTargetPolicy(
-        KnowledgeRelation, frozenset({"source_node", "target_node", "relation_type", "direction", "description", "evidence_source", "confidence", "status"}),
+        KnowledgeRelation, frozenset({"source_node", "target_node", "relation_type", "direction", "description", "evidence_source", "evidence_span", "source_document_revision", "confidence", "status"}),
     ),
     EditorialRevision.TargetType.TIMELINE_EVENT: EditorialTargetPolicy(
         TheoryTimelineEvent, frozenset({"title", "description", "image", "event_type", "start_year", "end_year", "date_label", "date_precision", "orientation", "source", "evidence_asset", "evidence_page", "evidence_printed_label", "evidence_text", "confidence", "review_status", "display_order", "discipline", "theory_school", "subdiscipline", "scholar", "work", "subject_edition", "timeline_relations", "editorial_details", "start_date", "end_date"}),
@@ -1746,6 +1746,13 @@ def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=
             setattr(target, field_name, clean_value)
 
     next_status = getattr(target, "status", getattr(target, "editorial_status", getattr(target, "review_status", None)))
+    if isinstance(target, KnowledgeRelation) and next_status == "published":
+        from catalog.relation_source_anchor import ensure_relation_anchor_publication
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            ensure_relation_anchor_publication(target)
+        except DRFValidationError as error:
+            raise EditorialRevisionError(str(error.detail)) from error
     if isinstance(target, TheoryTimelineEvent) and next_status == "approved":
         from catalog.timeline_editor import ensure_timeline_publication
         from rest_framework.exceptions import ValidationError as DRFValidationError

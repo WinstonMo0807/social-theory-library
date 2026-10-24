@@ -25,6 +25,13 @@ class StagedRelationEditorMixin(AdminEditorialDraftReadMixin):
     public_status_value = "published"
     draft_status_value = "draft"
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # The directory only needs reference identity. Load original text on detail.
+        if self.request.method == "GET" and not self.kwargs.get("pk"):
+            context["omit_relation_material"] = True
+        return context
+
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)

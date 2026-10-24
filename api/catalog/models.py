@@ -3087,6 +3087,8 @@ class KnowledgeRelation(UUIDTimeStampedModel):
     direction = models.CharField(max_length=16, choices=Direction.choices, default=Direction.DIRECTED)
     description = models.TextField(blank=True)
     evidence_source = models.CharField(max_length=300, blank=True)
+    evidence_span = models.ForeignKey(EvidenceSpan, null=True, blank=True, on_delete=models.PROTECT, related_name="knowledge_relations")
+    source_document_revision = models.ForeignKey(DocumentRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="knowledge_relations")
     confidence = models.FloatField(default=0)
     status = models.CharField(
         max_length=20,
@@ -3123,6 +3125,11 @@ class KnowledgeRelation(UUIDTimeStampedModel):
             models.UniqueConstraint(
                 fields=["source_node", "target_node", "relation_type"],
                 name="unique_knowledge_relation",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(evidence_span__isnull=True, source_document_revision__isnull=True)
+                    | models.Q(evidence_span__isnull=False, source_document_revision__isnull=False),
+                name="knowledge_relation_source_pair",
             ),
         ]
 

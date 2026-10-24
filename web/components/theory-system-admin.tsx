@@ -1,6 +1,8 @@
 "use client";
 
 import { useScholarSave } from "./admin/knowledge/use-scholar-save";
+import { RelationSourcePicker } from "./admin/knowledge/relation-source-picker";
+import type { components } from "@/lib/api/generated/schema";
 import { TimelineSupplementalSources, TimelineSimilarCheck, emptyTimelineDetails, type TimelineEditorialDetails } from "./admin/knowledge/timeline-editor-details";
 import timelineStyles from "./admin/knowledge/timeline-editor.module.css";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
@@ -944,6 +946,8 @@ export type AdminKnowledgeRelation = {
   direction: string;
   description: string;
   evidence_source: string;
+  source_anchor: components["schemas"]["RelationAnchorInput"] | null;
+  source_material: components["schemas"]["RelationAnchorMaterial"] | null;
   confidence: number;
   status: string;
   updated_at: string;
@@ -953,9 +957,9 @@ export type AdminKnowledgeRelation = {
 
 type KnowledgeRelation = AdminKnowledgeRelation;
 // Manual input has no calibrated machine confidence. Keep existing values when editing.
-const emptyRelationDraft = { source_node: "", target_node: "", relation_type: "criticizes", direction: "directed", description: "", evidence_source: "", confidence: 0, status: "pending" };
+const emptyRelationDraft = { source_node: "", target_node: "", relation_type: "criticizes", direction: "directed", description: "", evidence_source: "", source_anchor: null as AdminKnowledgeRelation["source_anchor"], confidence: 0, status: "pending" };
 function relationToDraft(row: KnowledgeRelation) {
-  return { source_node: row.source_node, target_node: row.target_node, relation_type: row.relation_type, direction: row.direction, description: row.description, evidence_source: row.evidence_source, confidence: row.confidence, status: row.status };
+  return { source_node: row.source_node, target_node: row.target_node, relation_type: row.relation_type, direction: row.direction, description: row.description, evidence_source: row.evidence_source, source_anchor: row.source_anchor || null, confidence: row.confidence, status: row.status };
 }
 
 function RelationGraphPreview({relations,centerId,onSelect}:{relations:KnowledgeRelation[];centerId?:string;onSelect:(row:KnowledgeRelation)=>void}) {
@@ -1179,7 +1183,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
       await apiRequest(`/catalog/admin/theory-system/relations/${relation.id}/`, { method: "DELETE", headers: editorialHeaders(relation) }, token);
       if (editingRelation?.id === relation.id) {
         setEditingRelation(null);
-        setRelationDraft({ source_node: "", target_node: "", relation_type: "criticizes", direction: "directed", description: "", evidence_source: "", confidence: 1, status: "pending" });
+        setRelationDraft({ ...emptyRelationDraft, source_node: embedded?.nodeId || "" });
       }
       relations.refresh();
       setMessage("理论关系已删除。");
@@ -1193,19 +1197,11 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
   }
 
   function editRelation(relation: KnowledgeRelation) {
+    if (relation.id === editingRelation?.id) return;
     if (composing.current || command.recovery || knownSavedId || pendingAction || (relationDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一条关系吗？"))) return;
     if (!embedded && relation.id !== requestedId) { location.update({ relation: relation.id }); return; }
     setEditingRelation(relation);
-    setRelationDraft({
-      source_node: relation.source_node,
-      target_node: relation.target_node,
-      relation_type: relation.relation_type,
-      direction: relation.direction,
-      description: relation.description,
-      evidence_source: relation.evidence_source,
-      confidence: relation.confidence,
-      status: relation.status,
-    });
+    setRelationDraft(relationToDraft(relation));
     setMessage("");
     setMessageState("idle");
     setEditConflict(false);
@@ -1322,6 +1318,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
             <div className="relation-direction-preview"><p aria-live="polite">{relationNodeName(relationDraft.source_node)} {relationDraft.direction === "directed" ? "→" : "—"} {relationNodeName(relationDraft.target_node)}</p><button type="button" disabled={ime||!relationDraft.source_node||!relationDraft.target_node} onClick={()=>{if(composing.current)return;setRelationDraft(value=>({...value,source_node:value.target_node,target_node:value.source_node}));}}>交换来源与目标</button><small>方向、类型与说明共同保存。交换后的内容仍需确认发布。</small></div>
             <label><span>关系说明</span><textarea rows={3} value={relationDraft.description} onChange={(event) => setRelationDraft({ ...relationDraft, description: event.target.value })} /></label>
             <label><span>证据来源</span><textarea rows={3} value={relationDraft.evidence_source} onChange={(event) => setRelationDraft({ ...relationDraft, evidence_source: event.target.value })} placeholder="馆藏页码、参考文献或人工校订说明" /></label>
+            <RelationSourcePicker key={editingRelation?.id || "new"} owner={owner} value={relationDraft.source_anchor} saved={editingRelation?.source_anchor} material={editingRelation?.source_material} onChange={source_anchor => setRelationDraft(value => ({ ...value, source_anchor }))} />
             <div className="inline-fields"><label><span>保存后的安排</span><select value={relationDraft.status} onChange={(event) => setRelationDraft({ ...relationDraft, status: event.target.value })}><option value="draft">留作草稿</option><option value="pending">留待核对</option><option value="published" disabled={!canPublish && editingRelation?.status !== "published"}>准备公开</option><option value="rejected">不采用</option><option value="archived" disabled={!canPublish}>准备下线</option></select></label></div>
             <div className="theory-review-primary-actions"><ActionButton className="button" type="submit" state={pendingAction === (editingRelation ? `save-relation:${editingRelation.id}` : "create-relation") ? "pending" : "idle"} pendingLabel="正在保存修改" disabled={Boolean(pendingAction)||ime}><Save size={15} />保存关系</ActionButton>{editingRelation && !embedded ? <button type="button" onClick={() => { if (composing.current||command.recovery||knownSavedId)return; if (relationDirty && !window.confirm("放弃当前尚未保存的输入吗？")) return; location.update({ relation: null }); setEditingRelation(null); setRelationDraft(emptyRelationDraft); }}>新建另一条关系</button> : null}</div>
             </fieldset>
@@ -1336,7 +1333,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
               <button type="submit">搜索关系</button>
             </form>
             <ErrorNotice message={relations.error} retry={relations.refresh} />
-            <RelationGraphPreview relations={[...(relations.data?.results ?? []).filter(row=>row.id!==editingRelation?.id), ...(relationDraft.source_node && relationDraft.target_node ? [{...relationDraft,id:editingRelation?.id || "local-draft",source_name:relationNodeName(relationDraft.source_node),target_name:relationNodeName(relationDraft.target_node),relation_label:knowledgeRelationOptions.find(([value])=>value===relationDraft.relation_type)?.[1] || relationDraft.relation_type,updated_at:editingRelation?.updated_at || ""}] : [])]} centerId={relationDraft.source_node} onSelect={row=>{if(row.id!=="local-draft" && row.id!==editingRelation?.id)editRelation(row);}} />
+            <RelationGraphPreview relations={[...(relations.data?.results ?? []).filter(row=>row.id!==editingRelation?.id), ...(relationDraft.source_node && relationDraft.target_node ? [{...relationDraft,source_material:null,id:editingRelation?.id || "local-draft",source_name:relationNodeName(relationDraft.source_node),target_name:relationNodeName(relationDraft.target_node),relation_label:knowledgeRelationOptions.find(([value])=>value===relationDraft.relation_type)?.[1] || relationDraft.relation_type,updated_at:editingRelation?.updated_at || ""}] : [])]} centerId={relationDraft.source_node} onSelect={row=>{if(row.id!=="local-draft" && row.id!==editingRelation?.id)editRelation(row);}} />
             <h3>现有关系</h3>{relations.data?.results.map((relation) => <article className={editingRelation?.id === relation.id ? "selected" : ""} key={relation.id}><div><strong>{relation.source_name}</strong><span>{relation.relation_label}</span><strong>{relation.target_name}</strong></div><p>{relation.description || relation.evidence_source || "尚未填写说明"}</p>{relation.editorial_revision ? <p>有已保存的修改，尚未公开</p> : null}<footer><StatusBadge value={relation.public_status ?? relation.status} /><span><button type="button" onClick={() => editRelation(relation)}><Pencil size={13} />编辑</button><ActionButton type="button" state={pendingAction === `delete-relation:${relation.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-relation:${relation.id}`} onClick={() => void removeRelation(relation)}><Trash2 size={13} />删除</ActionButton></span></footer></article>)}{!relations.data?.results.length ? <p>尚未建立规范理论关系。</p> : null}
           </div>
         </div>

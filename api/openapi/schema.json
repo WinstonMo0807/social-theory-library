@@ -30433,6 +30433,23 @@
                         "type": "string",
                         "maxLength": 300
                     },
+                    "source_anchor": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorInput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "source_material": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorMaterial"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "evidence": {
                         "type": "array",
                         "items": {
@@ -30485,6 +30502,7 @@
                     "relation_type",
                     "save_receipt",
                     "save_replayed",
+                    "source_material",
                     "source_name",
                     "source_node",
                     "source_node_type",
@@ -30519,6 +30537,14 @@
                     "evidence_source": {
                         "type": "string",
                         "maxLength": 300
+                    },
+                    "source_anchor": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorInputRequest"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "confidence": {
                         "type": "number",
@@ -44436,6 +44462,23 @@
                         "type": "string",
                         "maxLength": 300
                     },
+                    "source_anchor": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorInput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "source_material": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorMaterial"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "evidence": {
                         "type": "array",
                         "items": {
@@ -44474,6 +44517,7 @@
                     "published_at",
                     "relation_label",
                     "relation_type",
+                    "source_material",
                     "source_name",
                     "source_node",
                     "source_node_type",
@@ -53382,6 +53426,14 @@
                     "evidence_source": {
                         "type": "string",
                         "maxLength": 300
+                    },
+                    "source_anchor": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorInputRequest"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "confidence": {
                         "type": "number",

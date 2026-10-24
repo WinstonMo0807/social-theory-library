@@ -25,7 +25,14 @@ def validate_relation_patch(target, patch):
         return
     if isinstance(target, KnowledgeRelation):
         from catalog.theory_serializers import KnowledgeRelationSerializer
-        serializer = KnowledgeRelationSerializer(target, data=patch, partial=True)
+        payload = dict(patch)
+        if {"evidence_span", "source_document_revision"} & payload.keys():
+            span_id = payload.pop("evidence_span", target.evidence_span_id)
+            revision_id = payload.pop("source_document_revision", target.source_document_revision_id)
+            if bool(span_id) != bool(revision_id):
+                raise EditorialRevisionError("原文编号和文档版本必须同时选择或移除。")
+            payload["source_anchor"] = {"span_id": span_id, "document_revision_id": revision_id} if span_id else None
+        serializer = KnowledgeRelationSerializer(target, data=payload, partial=True)
         if not serializer.is_valid():
             raise EditorialRevisionError(f"关系修改无效：{serializer.errors}")
         patch.update(_json_value(serializer.validated_data))

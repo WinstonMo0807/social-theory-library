@@ -128,6 +128,8 @@ def relation_snapshot(relation: KnowledgeRelation) -> dict:
         "direction": relation.direction,
         "description": relation.description,
         "evidence_source": relation.evidence_source,
+        "evidence_span_id": str(relation.evidence_span_id) if relation.evidence_span_id else None,
+        "source_document_revision_id": str(relation.source_document_revision_id) if relation.source_document_revision_id else None,
         "confidence": relation.confidence,
         "status": relation.status,
         "published_at": relation.published_at.isoformat() if relation.published_at else None,
@@ -226,6 +228,10 @@ def _publish_merged_work_metadata(work_ids, *, actor, operation_id):
 
 
 def _check_merged_relation_decisions(source, target, *, created):
+    if not created and isinstance(source, KnowledgeRelation):
+        fields = ("direction", "description", "evidence_source", "evidence_span_id", "source_document_revision_id", "status")
+        if any(getattr(source, name) != getattr(target, name) for name in fields):
+            raise ValueError("双方的关系方向、说明、出处、原文版本或状态不同，请先核对原关系，不能在合并时覆盖其中一项。")
     if not created and isinstance(source, PersonNodeRelation):
         fields = ("relation_type", "direction", "node_is_source", "relation_label", "source", "is_representative", "status", "evidence_span_id", "source_document_revision_id")
         if any(getattr(source, name) != getattr(target, name) for name in fields):
@@ -418,6 +424,8 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "direction": relation.direction,
                 "description": relation.description,
                 "evidence_source": relation.evidence_source,
+                "evidence_span_id": relation.evidence_span_id,
+                "source_document_revision_id": relation.source_document_revision_id,
                 "confidence": relation.confidence,
                 "status": relation.status,
                 "created_by_id": _user_id(actor),

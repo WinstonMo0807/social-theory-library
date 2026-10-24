@@ -3,6 +3,7 @@ from django.db.models import F
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema_field
 
 from catalog.services.shared_curation import sources
 from catalog.services.publication_eligibility import current_retrieval_source_q
@@ -33,6 +34,30 @@ class RelationAnchorMaterial(serializers.Serializer):
     printed_page_label = serializers.CharField(allow_blank=True)
     quote = serializers.CharField(allow_blank=True)
     reader_href = serializers.CharField(allow_blank=True)
+
+
+@extend_schema_field(RelationAnchorInput(allow_null=True))
+class RelationAnchorField(serializers.Field):
+    """One atomic reference at the API boundary, two protected original identities."""
+    def to_internal_value(self, data):
+        reference = RelationAnchorInput(allow_null=True).run_validation(data)
+        instance = getattr(self.parent, "instance", None)
+        if reference and instance and str(reference["span_id"]) == str(instance.evidence_span_id) and str(reference["document_revision_id"]) == str(instance.source_document_revision_id):
+            # An unchanged stale reference must not block saving edits or withdrawing.
+            # Actual publication always validates the locator and visibility again.
+            return {"evidence_span": instance.evidence_span, "source_document_revision": instance.source_document_revision}
+        span, revision = choose_anchor(reference)
+        return {"evidence_span": span, "source_document_revision": revision}
+
+    def to_representation(self, obj):
+        if not getattr(self.parent, "private_relation_source", False) or not obj.evidence_span_id:
+            return None
+        return {"span_id": str(obj.evidence_span_id), "document_revision_id": str(obj.source_document_revision_id)}
+
+
+def ensure_relation_anchor_publication(relation):
+    if relation.evidence_span_id and not anchor_material(relation.evidence_span, relation.source_document_revision_id, public=True):
+        raise ValidationError("所选原文已失效或不能公开。请核对准确版本，或明确移除此引用后重新保存；原草稿仍保留。")
 
 
 def public_anchor_rows():
