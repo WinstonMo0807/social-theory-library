@@ -140,21 +140,21 @@ def test_scholar_relation_shared_identity_keeps_public_draft_isolation(api_clien
     first, second, third = scholar("一"), scholar("二"), scholar("三")
     data = {"source_scholar": str(first.pk), "target_scholar": str(second.pk), "relation_type": "influence", "direction": "directed", "summary": "有出处的影响", "source": "馆藏第3页"}
     api_client.force_authenticate(admin_user)
-    created = api_client.post("/api/catalog/admin/scholar-relations/", data, format="json")
+    created = api_client.post("/api/catalog/admin/scholar-relations/", data, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert created.status_code == 201
     key = created.data["id"]
     publish_url = f"/api/catalog/admin/scholar-relations/{key}/publish/"
-    assert api_client.post(publish_url, {"edit_version": created.data["edit_version"]}, format="json").status_code == 200
+    assert api_client.post(publish_url, {"edit_version": created.data["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 200
     left = api_client.get(f"/api/catalog/scholar-relations/?scholar={first.pk}").data["results"][0]
     right = api_client.get(f"/api/catalog/scholar-relations/?scholar={second.pk}").data["results"][0]
     assert left["id"] == right["id"] == key
     assert left["source_slug"] == first.slug and right["target_slug"] == second.slug
-    changed = api_client.put(f"/api/catalog/admin/scholar-relations/{key}/", {**data, "target_scholar": str(third.pk), "edit_version": created.data["edit_version"]}, format="json")
+    changed = api_client.put(f"/api/catalog/admin/scholar-relations/{key}/", {**data, "target_scholar": str(third.pk), "edit_version": created.data["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert changed.status_code == 200
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={second.pk}").data["count"] == 1
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={third.pk}").data["count"] == 0
     assert api_client.get(f"/api/catalog/admin/scholar-relations/?scholar={third.pk}").data["count"] == 1
-    assert api_client.put(f"/api/catalog/admin/scholar-relations/{key}/", {**data, "edit_version": created.data["edit_version"]}, format="json").status_code == 409
+    assert api_client.put(f"/api/catalog/admin/scholar-relations/{key}/", {**data, "edit_version": created.data["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 409
     second.editorial_status = "draft"
     second.save(update_fields=["editorial_status"])
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={first.pk}").data["count"] == 0
@@ -193,16 +193,16 @@ def test_scholar_relation_archive_hides_both_ends_preserves_history_and_conflict
     public_revision = ScholarRelation.objects.get(pk=row["id"]).active_revision_id
     url = f"/api/catalog/admin/scholar-relations/{row['id']}/archive/"
     api_client.force_authenticate(reader_user)
-    assert api_client.post(url, {"edit_version": row["edit_version"]}, format="json").status_code == 403
+    assert api_client.post(url, {"edit_version": row["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 403
     api_client.force_authenticate(admin_user)
-    archived = api_client.post(url, {"edit_version": row["edit_version"]}, format="json")
+    archived = api_client.post(url, {"edit_version": row["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert archived.status_code == 200
     assert archived.data["status"] == "archived"
     assert archived.data["edit_version"] != row["edit_version"]
     for person in (first, second):
         assert api_client.get(f"/api/catalog/scholar-relations/?scholar={person.pk}").data["count"] == 0
     assert EditorialRevision.objects.get(pk=public_revision).status == "published"
-    assert api_client.post(url, {"edit_version": row["edit_version"]}, format="json").status_code == 409
+    assert api_client.post(url, {"edit_version": row["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 409
     assert AuditEvent.objects.filter(action="scholar_relation.archive", object_id=row["id"]).exists()
     service.publish_relation(row["id"], archived.data["edit_version"], admin_user)
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={second.pk}").data["count"] == 1

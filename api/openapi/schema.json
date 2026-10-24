@@ -10590,6 +10590,102 @@
                 }
             }
         },
+        "/api/catalog/admin/scholar-relations/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_scholar_relations_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ScholarRelationReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_scholar_relations_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ScholarRelationReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/scholars/{scholar_id}/portrait/": {
             "get": {
                 "operationId": "catalog_admin_scholars_portrait_retrieve",
@@ -66168,6 +66264,18 @@
             "ScholarRelation": {
                 "type": "object",
                 "properties": {
+                    "save_receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ScholarRelationReceipt"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "save_replayed": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
                     "id": {
                         "type": "string",
                         "format": "uuid",
@@ -66226,6 +66334,8 @@
                     "has_unpublished_changes",
                     "id",
                     "relation_type",
+                    "save_receipt",
+                    "save_replayed",
                     "source",
                     "source_name",
                     "source_scholar",
@@ -66263,6 +66373,86 @@
                     "next",
                     "previous",
                     "results"
+                ]
+            },
+            "ScholarRelationReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "relation_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_version": {
+                        "type": "string"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "relation_id",
+                    "request_id",
+                    "saved_version",
+                    "state"
+                ]
+            },
+            "ScholarRelationReceiptRequest": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "relation_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_version": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "relation_id",
+                    "request_id",
+                    "saved_version",
+                    "state"
                 ]
             },
             "ScholarRelationRelationTypeEnum": {

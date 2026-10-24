@@ -15,6 +15,7 @@ from catalog.models import EditorialRevision, ScholarRelation
 from catalog.services import shared_curation as service
 from catalog.services.scoped_search import public_scholar_queryset
 from common.permissions import IsKnowledgeEditor, CanPublishAuthority
+from catalog.scholar_relation_commands import ScholarRelationCommandMixin, ScholarRelationReceipt
 
 
 class CurationSourceSerializer(serializers.Serializer):
@@ -58,6 +59,8 @@ class EvidenceCurationSerializer(serializers.Serializer):
 
 
 class ScholarRelationSerializer(serializers.Serializer):
+    save_receipt = ScholarRelationReceipt(read_only=True, required=False)
+    save_replayed = serializers.BooleanField(read_only=True, required=False)
     id = serializers.UUIDField(read_only=True)
     source_scholar = serializers.UUIDField()
     target_scholar = serializers.UUIDField()
@@ -162,7 +165,7 @@ class PublicEvidenceCurationView(EditorialErrorMixin, APIView):
         return Response(service.curation_payload(object_type, object_id, public=True))
 
 
-class AdminScholarRelationListView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+class AdminScholarRelationListView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsKnowledgeEditor]
 
     @extend_schema(operation_id="catalog_admin_scholar_relations_list", responses=ScholarRelationPageSerializer)
@@ -180,10 +183,10 @@ class AdminScholarRelationListView(EditorialErrorMixin, AdminPrivateResponseMixi
 
     @extend_schema(request=ScholarRelationSerializer, responses={201: ScholarRelationSerializer})
     def post(self, request):
-        return Response(service.save_relation(None, request.data, request.user), status=201)
+        return self.relation_command(request, lambda: Response(service.save_relation(None, request.data, request.user), status=201), creating=True)
 
 
-class AdminScholarRelationDetailView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+class AdminScholarRelationDetailView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsKnowledgeEditor]
 
     @extend_schema(responses=ScholarRelationSerializer)
@@ -193,15 +196,16 @@ class AdminScholarRelationDetailView(EditorialErrorMixin, AdminPrivateResponseMi
 
     @extend_schema(request=ScholarRelationSerializer, responses=ScholarRelationSerializer)
     def put(self, request, pk):
-        return Response(service.save_relation(pk, request.data, request.user))
+        return self.relation_command(request, lambda: Response(service.save_relation(pk, request.data, request.user)))
 
 
-class PublishScholarRelationView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+class PublishScholarRelationView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [CanPublishAuthority]
+    relation_publish = True
 
     @extend_schema(request=EditorialPublishSerializer, responses=ScholarRelationSerializer)
     def post(self, request, pk):
-        return Response(service.publish_relation(pk, request.data.get("edit_version"), request.user))
+        return self.relation_command(request, lambda: Response(service.publish_relation(pk, request.data.get("edit_version"), request.user)))
 
 
 class PublicScholarRelationListView(APIView):
@@ -209,17 +213,18 @@ class PublicScholarRelationListView(APIView):
 
     @extend_schema(responses=ScholarRelationPageSerializer)
     def get(self, request):
-        public = public_scholar_queryset().values("pk")
-        rows = ScholarRelation.objects.filter(status="published", active_revision__status="published", source_scholar_id__in=public, target_scholar_id__in=public).select_related("active_revision")
+        from catalog.services.public_scholars import public_scholar_relations
+        rows = public_scholar_relations()
         if request.query_params.get("scholar"):
             key = service.identifier(request.query_params["scholar"])
             rows = rows.filter(Q(source_scholar_id=key) | Q(target_scholar_id=key))
         return Response(paged(request, rows.order_by("-updated_at", "pk"), lambda row: service.relation_payload(row, public=True)))
 
 
-class ArchiveScholarRelationView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+class ArchiveScholarRelationView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [CanPublishAuthority]
+    relation_publish = True
 
     @extend_schema(request=EditorialPublishSerializer, responses=ScholarRelationSerializer)
     def post(self, request, pk):
-        return Response(service.archive_relation(pk, request.data.get("edit_version"), request.user))
+        return self.relation_command(request, lambda: Response(service.archive_relation(pk, request.data.get("edit_version"), request.user)))

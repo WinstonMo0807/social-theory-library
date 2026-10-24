@@ -97,3 +97,15 @@
 .canonical ul,.canonical ol { list-style:none; padding:0; margin:0; }.canonical li { display:flex; align-items:start; justify-content:space-between; gap:15px; padding:14px 0; border-bottom:1px solid var(--line); }.canonical li>div { flex:1; min-width:0; }.canonical li>a { flex-shrink:0; font-size:12px; }.canonical li p { margin:5px 0; color:var(--muted); }
 .eventList time { width:75px; flex-shrink:0; color:var(--annotation); }.canonical button { border:1px solid var(--line); padding:8px; color:var(--ink); background:var(--surface); }
 @media(max-width:760px) { .canonical>header { align-items:start; }.eventList time { width:55px; }.canonical li { gap:10px; } }
+.relationDialog { width:min(1100px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; overscroll-behavior:contain; padding:24px; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--ink); }
+.relationDialog::backdrop { background:rgb(0 0 0 / .4); }
+.relationDialog>header { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px; }
+.relationDialog>header h2 { margin:0; font:600 22px var(--serif); }
+.relationDialog :global(.scholar-relations-workspace) { display:grid; grid-template-columns:minmax(0,1fr) minmax(240px,.8fr); gap:24px; }
+.relationDialog :global(.scholar-relation-index) { max-height:220px; overflow:auto; display:grid; gap:8px; margin-bottom:20px; }
+.relationDialog :global(.scholar-relation-index)>button { text-align:left; display:grid; gap:4px; }
+.relationDialog :global(.fixed-editor-fields) label { display:grid; gap:7px; margin:14px 0; }
+.relationDialog :global(.fixed-editor-fields) fieldset { padding:0; border:0; }
+.relationDialog :is(input,textarea,select) { width:100%; min-width:0; padding:8px; border:1px solid var(--line); color:var(--ink); background:var(--surface); font:inherit; }
+.relationDialog :is(button,a):focus-visible { outline:2px solid var(--annotation); outline-offset:3px; }
+@media(max-width:760px) { .relationDialog { padding:16px; }.relationDialog :global(.scholar-relations-workspace) { display:block; }.relationDialog :is(input,textarea,select) { font-size:16px; } }

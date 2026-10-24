@@ -174,7 +174,13 @@ def publish_curation(kind, key, expected, actor):
 def relation_payload(row, *, public=False):
     revision = row.active_revision if public else revisions._latest("scholar_relation", row.pk)
     data = deepcopy(revision.materialized_preview) if revision else {}
-    people = {str(person.pk): person for person in (public_scholar_queryset() if public else ScholarProfile.objects.select_related("person")).filter(pk__in=[data.get("source_scholar"), data.get("target_scholar")])}
+    if public:
+        from catalog.services.public_scholars import _base, _formal_profile
+        if not revision or revision.status != "published" or revision.target_type != "scholar_relation" or revision.target_id != row.pk or any(str(data.get(f"{side}_scholar")) != str(getattr(row, f"{side}_scholar_id")) for side in ("source", "target")):
+            return None
+        people = {str(profile.pk): _formal_profile(profile, profile.public_snapshot or {}) for profile in _base().filter(pk__in=[data.get("source_scholar"), data.get("target_scholar")])}
+    else:
+        people = {str(person.pk): person for person in ScholarProfile.objects.select_related("person").filter(pk__in=[data.get("source_scholar"), data.get("target_scholar")])}
     if public and len(people) != 2:
         return None
     data.update(id=str(row.pk), status=row.status, source_name=people.get(data.get("source_scholar")).person.preferred_name if people.get(data.get("source_scholar")) else "",

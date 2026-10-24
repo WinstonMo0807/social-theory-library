@@ -2275,6 +2275,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/scholar-relations/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholar_relations_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_scholar_relations_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholars/{scholar_id}/portrait/": {
         parameters: {
             query?: never;
@@ -17379,6 +17395,8 @@ export interface components {
             readonly knowledge_nodes: string;
         };
         ScholarRelation: {
+            readonly save_receipt: components["schemas"]["ScholarRelationReceipt"];
+            readonly save_replayed: boolean;
             /** Format: uuid */
             readonly id: string;
             /** Format: uuid */
@@ -17402,6 +17420,30 @@ export interface components {
             next: string | null;
             previous: string | null;
             results: components["schemas"]["ScholarRelation"][];
+        };
+        ScholarRelationReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            relation_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ScholarRelationReceiptRequest: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            relation_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
         };
         /**
          * @description * `teaching` - teaching
@@ -25118,6 +25160,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_relations_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelationReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholar_relations_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScholarRelationReceipt"];
                 };
             };
         };
