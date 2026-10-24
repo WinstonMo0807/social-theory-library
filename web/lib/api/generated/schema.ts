@@ -2892,6 +2892,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-timeline/editions/{edition_id}/participants/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_timeline_editions_participants_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/theory-timeline/similar/": {
         parameters: {
             query?: never;
@@ -6963,6 +6979,8 @@ export interface components {
         AdminTimelineEventRelation: {
             /** Format: uuid */
             readonly id: string;
+            participant_role?: components["schemas"]["ParticipantRoleEnum"] | components["schemas"]["BlankEnum"];
+            readonly participant_role_label: string;
             relation_type?: components["schemas"]["AdminTimelineEventRelationRelationTypeEnum"];
             /** Format: uuid */
             node?: string | null;
@@ -6990,6 +7008,7 @@ export interface components {
          */
         AdminTimelineEventRelationRelationTypeEnum: "subject" | "context" | "evidence";
         AdminTimelineEventRelationRequest: {
+            participant_role?: components["schemas"]["ParticipantRoleEnum"] | components["schemas"]["BlankEnum"];
             relation_type?: components["schemas"]["AdminTimelineEventRelationRelationTypeEnum"];
             /** Format: uuid */
             node?: string | null;
@@ -12617,6 +12636,7 @@ export interface components {
         NormalizedTimelineDetail: {
             /** Format: uuid */
             readonly id: string;
+            readonly participants: components["schemas"]["TimelineParticipant"][];
             title: string;
             description?: string;
             event_type: components["schemas"]["EventTypeEnum"];
@@ -12655,6 +12675,7 @@ export interface components {
         NormalizedTimelineEvent: {
             /** Format: uuid */
             readonly id: string;
+            readonly participants: components["schemas"]["TimelineParticipant"][];
             title: string;
             description?: string;
             event_type: components["schemas"]["EventTypeEnum"];
@@ -13849,6 +13870,16 @@ export interface components {
             code: string;
             message: string;
         };
+        /**
+         * @description * `subject` - 事件主体
+         *     * `author` - 作者
+         *     * `translator` - 译者
+         *     * `editor` - 编者
+         *     * `participant` - 参与者
+         *     * `other` - 其他角色
+         * @enum {string}
+         */
+        ParticipantRoleEnum: "subject" | "author" | "translator" | "editor" | "participant" | "other";
         PasswordResetConfirmRequest: {
             /** Format: email */
             email: string;
@@ -19809,6 +19840,22 @@ export interface components {
             max_year: number | null;
             undated_count: number;
         };
+        TimelineEditionParticipants: {
+            /** Format: uuid */
+            edition_id: string;
+            /** Format: uuid */
+            work_id: string;
+            work_title: string;
+            version_label: string;
+            count: number;
+            page: number;
+            total_pages: number;
+            pending_count: number;
+            publisher: string;
+            /** Format: uuid */
+            publisher_authority_id: string | null;
+            results: components["schemas"]["TimelineParticipant"][];
+        };
         TimelineEditorialRevision: {
             /** Format: uuid */
             id: string;
@@ -19889,6 +19936,35 @@ export interface components {
             name: string;
             slug: string;
         };
+        TimelineParticipant: {
+            key: string;
+            kind: components["schemas"]["TimelineParticipantKindEnum"];
+            /** Format: uuid */
+            person_id: string | null;
+            /** Format: uuid */
+            scholar_id: string | null;
+            /** Format: uuid */
+            publisher_authority_id?: string | null;
+            name: string;
+            role: string;
+            role_label: string;
+            href: string;
+            source: components["schemas"]["TimelineParticipantSourceEnum"];
+            /** Format: uuid */
+            edition_id: string | null;
+        };
+        /**
+         * @description * `person` - person
+         *     * `publisher` - publisher
+         * @enum {string}
+         */
+        TimelineParticipantKindEnum: "person" | "publisher";
+        /**
+         * @description * `event` - event
+         *     * `edition` - edition
+         * @enum {string}
+         */
+        TimelineParticipantSourceEnum: "event" | "edition";
         TimelineSaveReceipt: {
             actor_id: string;
             /** Format: uuid */
@@ -27995,6 +28071,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TimelineSaveReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_editions_participants_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                edition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineEditionParticipants"];
                 };
             };
         };

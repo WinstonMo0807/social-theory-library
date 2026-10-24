@@ -257,6 +257,7 @@ def _snapshot_ids(snapshot):
 
 
 def prepare_timeline_projections(events, context):
+    from catalog.timeline_participants import participant_identity_ids
     """Batch page-level catalog, author and topic joins; never scan the library."""
     prepared = context.setdefault("_timeline_prepared", set())
     events = [row for row in events if row.pk not in prepared]
@@ -292,6 +293,7 @@ def prepare_timeline_projections(events, context):
         raw = edition.active_catalog_revision.snapshot
         if isinstance(raw, dict):
             person_ids.update(_snapshot_ids(raw)[0])
+            person_ids.update(participant_identity_ids(raw))
     profiles = list(public_scholar_queryset().filter(person_id__in=person_ids))
     context.setdefault("_timeline_scholars", {}).update({row.person_id: row for row in profiles})
     node_topics = defaultdict(set)
@@ -429,8 +431,10 @@ def event_projection(event, context):
     borrowed_portrait = next((row for row in scholars.values() if row["portrait_url"]), None)
     image_url = event.image.url if event.image else (subject["cover_url"] if subject else "") or (borrowed_portrait or {}).get("portrait_url", "")
     image_media = None if event.image else subject.get("cover_media") if subject and subject["cover_url"] else (borrowed_portrait or {}).get("portrait_media")
+    from catalog.timeline_participants import event_participants
     result = {
         "relations": list({(row["type"], row["id"], row["relation_type"]): row for row in targets}.values()),
+        "participants": event_participants(event, editions.get(selected.pk) if selected and subject else None, context["_timeline_scholars"]),
         "subject_edition": subject,
         "subject_status": "available" if subject else "unavailable" if selected else "unspecified",
         "subject_work": {key: work[key] for key in ("id", "title", "detail_href")} if work else None,

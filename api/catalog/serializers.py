@@ -2495,6 +2495,7 @@ class AdminSubdisciplineSerializer(TaxonomyImageSerializerMixin, serializers.Mod
 
 
 class AdminTimelineEventRelationSerializer(serializers.ModelSerializer):
+    participant_role_label = serializers.CharField(source="get_participant_role_display", read_only=True)
     node_name = serializers.CharField(source="node.canonical_name_zh", read_only=True)
     discipline_name = serializers.CharField(source="discipline.name", read_only=True)
     scholar_name = serializers.CharField(source="scholar.person.preferred_name", read_only=True)
@@ -2504,6 +2505,8 @@ class AdminTimelineEventRelationSerializer(serializers.ModelSerializer):
         model = TimelineEventRelation
         fields = (
             "id",
+            "participant_role",
+            "participant_role_label",
             "relation_type",
             "node",
             "node_name",
@@ -2529,6 +2532,9 @@ class AdminTimelineEventRelationSerializer(serializers.ModelSerializer):
         ]
         if sum(bool(value) for value in targets) != 1:
             raise serializers.ValidationError("时间轴关联必须且只能选择一个对象。")
+        role = attrs.get("participant_role", getattr(instance, "participant_role", ""))
+        if role and not attrs.get("scholar", getattr(instance, "scholar", None)):
+            raise serializers.ValidationError({"participant_role": "人物角色只用于明确关联的学者档案。"})
         return attrs
 
 

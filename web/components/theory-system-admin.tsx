@@ -7,6 +7,7 @@ import { ScholarProseEditor as KnowledgeProseEditor } from "./admin/knowledge/sc
 import { nodeEditorialForSave, type NodeEditorialDetails, type NodeProseField } from "@/lib/api/node-editorial";
 import type { ScholarProse } from "@/lib/api/scholar-prose";
 import { TimelineSupplementalSources, TimelineSimilarCheck, emptyTimelineDetails, type TimelineEditorialDetails } from "./admin/knowledge/timeline-editor-details";
+import { TimelineParticipants } from "./admin/knowledge/timeline-participants";
 import timelineStyles from "./admin/knowledge/timeline-editor.module.css";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
@@ -1362,7 +1363,9 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
   );
 }
 
-type TimelineRelation = {
+export type TimelineRelation = {
+  participant_role?: string;
+  participant_role_label?: string;
   id?: string;
   relation_type: string;
   node: string | null;
@@ -1414,6 +1417,7 @@ export type AdminTimelineEvent = {
 type TimelineEvent = AdminTimelineEvent;
 
 type TimelineDraft = {
+  participants: TimelineRelation[];
   start_date: string;
   end_date: string;
   editorial_details: TimelineEditorialDetails;
@@ -1458,6 +1462,7 @@ const timelineTypes = [
 ] as const;
 
 const emptyTimelineDraft: TimelineDraft = {
+  participants: [],
   start_date:"",end_date:"",
   editorial_details: emptyTimelineDetails(),
   title: "",
@@ -1486,6 +1491,7 @@ const emptyTimelineDraft: TimelineDraft = {
 
 function timelineToDraft(event: TimelineEvent): TimelineDraft {
   return {
+    participants: event.relations.filter(row => row.scholar),
     start_date:event.start_date||"",end_date:event.end_date||"",
     editorial_details: { ...emptyTimelineDetails(), ...event.editorial_details },
     title: event.title,
@@ -1670,7 +1676,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
   const [editing, setEditing] = useState<TimelineEvent | null>(null);
   const initialDraft = useMemo(() => ({ ...emptyTimelineDraft, nodes: nodeId ? [nodeId] : [], scholar:scopeScholarId }), [nodeId,scopeScholarId]);
   const [draft, setSavedDraft] = useState<TimelineDraft>(initialDraft);
-  const setDraft=useCallback((next:SetStateAction<TimelineDraft>)=>setSavedDraft(previous=>{const value=typeof next === "function"?next(previous):next;return timelineConfirmationKey(previous)===timelineConfirmationKey(value)?value:{...value,editorial_details:{...value.editorial_details,confirmed:false}};}),[]);
+  const setDraft=useCallback((next:SetStateAction<TimelineDraft>)=>setSavedDraft(previous=>{const value=typeof next === "function"?next(previous):next;return timelineConfirmationKey(previous)===timelineConfirmationKey(value)?value:{...value,editorial_details:{...value.editorial_details,confirmed:false}};}),[setSavedDraft]);
   const timelineDirty = useUnsavedForm(draft, editing ? timelineToDraft(editing) : initialDraft);
   const disciplineFilter = location.search.get("discipline") || "";
   const typeFilter = location.search.get("event_type") || "";
@@ -1740,7 +1746,8 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
     const relations: TimelineRelation[] = [
       ...draft.nodes.map((node, index) => ({ relation_type: "subject", node, discipline: null, scholar: null, work: null, evidence: null, description: "", ...editing?.relations.find((row) => row.node === node), sort_order: index })),
       ...draft.disciplines.map((discipline, index) => ({ relation_type: "context", node: null, discipline, scholar: null, work: null, evidence: null, description: "", ...editing?.relations.find((row) => row.discipline === discipline), sort_order: draft.nodes.length + index })),
-      ...(editing?.relations.filter((row) => !row.node && !row.discipline) ?? []),
+      ...draft.participants.map((row,index)=>({...row,sort_order:draft.nodes.length+draft.disciplines.length+index})),
+      ...(editing?.relations.filter((row) => !row.node && !row.discipline && !row.scholar) ?? []),
     ];
     const payload = {
       editorial_details: draft.editorial_details,
@@ -1900,6 +1907,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
           <div className="inline-fields"><ResearchEntityPicker label="关联学者" endpoint="/catalog/admin/scholars/" entityType="person" step="maintenance_theory_timeline" field="scholar" values={onePickerValue(draft.scholar, timelineScholarName(draft.scholar))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, scholar: picked?.id ?? "" }); }} /><ResearchEntityPicker label="关联馆藏" endpoint="/catalog/admin/library/works/" entityType="work" step="maintenance_theory_timeline" field="work" values={onePickerValue(draft.work, timelineWorkName(draft.work))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft(current => ({ ...current, work: picked?.id ?? "", subject_edition: current.work === (picked?.id ?? "") ? current.subject_edition : "" })); }} /></div>
           <TimelineSubjectEdition key={`${editing?.id || "new"}:${draft.work}`} work={draft.work} value={draft.subject_edition} onChange={subject_edition => setDraft(current => ({ ...current, subject_edition }))} />
           <label><span>事件描述</span><textarea rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+          <TimelineParticipants owner={owner} editionId={draft.subject_edition} value={draft.participants} onChange={participants=>setDraft({...draft,participants})}/>
           <TimelineSimilarCheck owner={owner} input={{title:draft.title,event_type:draft.event_type,start_year:draft.start_year?Number(draft.start_year):null,work:draft.work||null,scholar:draft.scholar||null,exclude:editing?.id||null}} reason={draft.editorial_details.duplicate_reason} onReason={value=>setDraft({...draft,editorial_details:{...draft.editorial_details,duplicate_reason:value}})}/>
           </details></section><section id={`${panelId}-sources`} data-timeline-panel="sources" className={timelineStyles.column}><details open className={timelineStyles.group}><summary><h2>出处与证据</h2></summary>
           <label><span>主要出处</span><input maxLength={1000} value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })} placeholder="书目、论文或馆藏来源" /></label>

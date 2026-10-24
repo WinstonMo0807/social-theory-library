@@ -43,7 +43,7 @@ VERIFIED_NAMES = {
     "admin-recycle", "admin-recycle-detail",
     "local-services", "local-service-check",
     "path-save-receipt", "path-editor-validation",
-    "timeline-save-receipt", "timeline-similar",
+    "timeline-save-receipt", "timeline-similar", "timeline-edition-participants",
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
     "topic-organization", "topic-save-receipt", "topic-organization-preview", "topic-association-choices",
     "topic-list", "topic-detail", "admin-topic-list", "admin-topic-detail",

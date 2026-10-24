@@ -3291,12 +3291,21 @@ class EvidenceSnippet(UUIDTimeStampedModel):
 
 
 class TimelineEventRelation(UUIDTimeStampedModel):
+    class ParticipantRole(models.TextChoices):
+        SUBJECT = "subject", "事件主体"
+        AUTHOR = "author", "作者"
+        TRANSLATOR = "translator", "译者"
+        EDITOR = "editor", "编者"
+        PARTICIPANT = "participant", "参与者"
+        OTHER = "other", "其他角色"
+
     class RelationType(models.TextChoices):
         SUBJECT = "subject", "事件主体"
         CONTEXT = "context", "相关背景"
         EVIDENCE = "evidence", "馆藏证据"
 
     event = models.ForeignKey(TheoryTimelineEvent, on_delete=models.CASCADE, related_name="normalized_relations")
+    participant_role = models.CharField(max_length=20, choices=ParticipantRole.choices, blank=True, default="")
     relation_type = models.CharField(max_length=20, choices=RelationType.choices, default=RelationType.SUBJECT)
     node = models.ForeignKey(KnowledgeNode, null=True, blank=True, on_delete=models.CASCADE, related_name="timeline_links")
     discipline = models.ForeignKey(Discipline, null=True, blank=True, on_delete=models.CASCADE, related_name="timeline_links")

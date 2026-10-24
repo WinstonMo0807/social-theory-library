@@ -68,6 +68,7 @@ export function TimelineEventDetails({ event, actionPath = "/theories/timeline",
         </dl>
         <h3>事件介绍</h3>
         {event.description ? <div className={styles.description}><p>{event.description}</p></div> : <p className={styles.muted}>尚无公开的事件介绍。</p>}
+        {event.participants?.length ? <section className={styles.participantRoles} aria-label="事件人物与版本责任"><h3>人物与版本责任</h3><ul>{event.participants.map(person=><li key={person.key}><span>{person.role_label}</span>{person.href?<Link href={person.href}>{person.name}</Link>:<strong>{person.name}</strong>}<small>{person.source === "edition" ? "所选版本书目" : "事件确认关联"}</small></li>)}</ul></section>:null}
         <details className={styles.moreInfo}><summary>展开更多事件资料</summary>
           {event.scholars.length ? <><h3>相关学者</h3><div className={styles.people}>{event.scholars.map(person => <Link href={person.href} key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses}><img src={person.portrait_url} alt="" /></MediaPlacement> : null}<span>{person.name}</span></Link>)}</div></> : null}
           {event.topics.length ? <><h3>相关主题</h3><div className={styles.chips}>{event.topics.map(topic => <Link href={topic.href} key={topic.id}>{topic.name}</Link>)}</div></> : null}

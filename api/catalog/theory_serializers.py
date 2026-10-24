@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from catalog.timeline_participant_views import TimelineParticipantSerializer
 from rest_framework.exceptions import PermissionDenied
 
 from common.capabilities import Capability, has_capability
@@ -1650,6 +1651,7 @@ class TimelineProjectionListSerializer(TimelineEvidenceListSerializer):
 
 
 class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
+    participants = serializers.SerializerMethodField()
     relations = serializers.SerializerMethodField()
     reader_href = serializers.SerializerMethodField()
     origin_kind = serializers.SerializerMethodField()
@@ -1668,6 +1670,7 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
         list_serializer_class = TimelineProjectionListSerializer
         fields = (
             "id",
+            "participants",
             "title",
             "description",
             "event_type",
@@ -1698,6 +1701,10 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
     def _projection(self, obj):
         from catalog.services.timeline_publication import event_projection
         return event_projection(obj, self.context)
+
+    @extend_schema_field(TimelineParticipantSerializer(many=True))
+    def get_participants(self, obj):
+        return self._projection(obj)["participants"]
 
     @extend_schema_field(TheoryTimelineTargetSerializer(many=True))
     def get_relations(self, obj):

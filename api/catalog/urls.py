@@ -11,6 +11,7 @@ from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
 from catalog.topic_association_views import TopicAssociationChoicesView
+from catalog.timeline_participant_views import TimelineEditionParticipantsView
 from catalog.scholar_work_views import ScholarWorkSelectionView
 from django.urls import path
 from .home_views import HomeView
@@ -723,6 +724,7 @@ urlpatterns = [
     ),
     path("admin/theory-timeline/commands/<uuid:request_id>/", TimelineSaveReceiptView.as_view(), name="timeline-save-receipt"),
     path("admin/theory-timeline/similar/", TimelineSimilarView.as_view(), name="timeline-similar"),
+    path("admin/theory-timeline/editions/<uuid:edition_id>/participants/", TimelineEditionParticipantsView.as_view(), name="timeline-edition-participants"),
     path("admin/theory-timeline/", AdminTheoryTimelineListView.as_view(), name="admin-theory-timeline-list"),
     path("admin/theory-timeline/<uuid:pk>/", AdminTheoryTimelineDetailView.as_view(), name="admin-theory-timeline-detail"),
     path("admin/recommendations/", AdminRecommendationListView.as_view(), name="admin-recommendation-list"),

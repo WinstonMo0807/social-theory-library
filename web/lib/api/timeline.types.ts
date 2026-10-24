@@ -16,6 +16,7 @@ export type TimelineEvent = Omit<NormalizedTimelineEvent, "relations"> & {
   subject_work: { id: string; title: string; detail_href: string | null } | null;
   image_url: string;
   image_media?: components["schemas"]["PublicCoverMedia"] | null;
+  participants?: components["schemas"]["TimelineParticipant"][];
   scholars: TimelineAuthor[];
   topics: TimelineTopic[];
   source_status: "available" | "unavailable" | "citation_only" | "missing";

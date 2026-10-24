@@ -7,7 +7,7 @@ from django.forms.models import model_to_dict
 
 from catalog.models import KnowledgeRelation, TheoryTimelineEvent, TimelineEventRelation
 
-TIMELINE_RELATION_FIELDS = ("relation_type", "node", "discipline", "scholar", "work", "evidence", "description", "sort_order")
+TIMELINE_RELATION_FIELDS = ("relation_type", "node", "discipline", "scholar", "work", "evidence", "description", "sort_order", "participant_role")
 
 
 def timeline_relations_snapshot(target):

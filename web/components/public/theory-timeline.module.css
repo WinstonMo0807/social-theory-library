@@ -304,3 +304,4 @@
 @media (prefers-reduced-motion: reduce) {
   .axisDisclosure > summary svg { transition: none; }
 }
+.participantRoles { margin:20px 0; }.participantRoles h3 { font:600 16px var(--serif); }.participantRoles ul { list-style:none; padding:0; display:flex; flex-wrap:wrap; gap:10px; }.participantRoles li { display:flex; align-items:center; flex-wrap:wrap; gap:7px; padding:9px 12px; border:1px solid var(--line); background:var(--surface); font:13px var(--sans); }.participantRoles li>span,.participantRoles small { color:var(--muted); font-size:10px; }.participantRoles strong { font-weight:500; overflow-wrap:anywhere; }

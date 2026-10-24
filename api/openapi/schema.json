@@ -14227,6 +14227,52 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-timeline/editions/{edition_id}/participants/": {
+            "get": {
+                "operationId": "catalog_admin_theory_timeline_editions_participants_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "edition_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineEditionParticipants"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-timeline/similar/": {
             "post": {
                 "operationId": "catalog_admin_theory_timeline_similar_create",
@@ -32888,6 +32934,20 @@
                         "format": "uuid",
                         "readOnly": true
                     },
+                    "participant_role": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ParticipantRoleEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "participant_role_label": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "relation_type": {
                         "$ref": "#/components/schemas/AdminTimelineEventRelationRelationTypeEnum"
                     },
@@ -32947,6 +33007,7 @@
                     "discipline_name",
                     "id",
                     "node_name",
+                    "participant_role_label",
                     "scholar_name",
                     "work_title"
                 ]
@@ -32963,6 +33024,16 @@
             "AdminTimelineEventRelationRequest": {
                 "type": "object",
                 "properties": {
+                    "participant_role": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ParticipantRoleEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
                     "relation_type": {
                         "$ref": "#/components/schemas/AdminTimelineEventRelationRelationTypeEnum"
                     },
@@ -51671,6 +51742,13 @@
                         "format": "uuid",
                         "readOnly": true
                     },
+                    "participants": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineParticipant"
+                        },
+                        "readOnly": true
+                    },
                     "title": {
                         "type": "string",
                         "maxLength": 300
@@ -51840,6 +51918,7 @@
                     "knowledge_relation_count",
                     "knowledge_relations",
                     "origin_kind",
+                    "participants",
                     "reader_href",
                     "related_count",
                     "related_events",
@@ -51859,6 +51938,13 @@
                     "id": {
                         "type": "string",
                         "format": "uuid",
+                        "readOnly": true
+                    },
+                    "participants": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineParticipant"
+                        },
                         "readOnly": true
                     },
                     "title": {
@@ -52006,6 +52092,7 @@
                     "image_media",
                     "image_url",
                     "origin_kind",
+                    "participants",
                     "reader_href",
                     "relations",
                     "scholars",
@@ -55399,6 +55486,18 @@
                     "code",
                     "message"
                 ]
+            },
+            "ParticipantRoleEnum": {
+                "enum": [
+                    "subject",
+                    "author",
+                    "translator",
+                    "editor",
+                    "participant",
+                    "other"
+                ],
+                "type": "string",
+                "description": "* `subject` - 事件主体\n* `author` - 作者\n* `translator` - 译者\n* `editor` - 编者\n* `participant` - 参与者\n* `other` - 其他角色"
             },
             "PasswordResetConfirmRequest": {
                 "type": "object",
@@ -75614,6 +75713,64 @@
                     "undated_count"
                 ]
             },
+            "TimelineEditionParticipants": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_title": {
+                        "type": "string"
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "pending_count": {
+                        "type": "integer"
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "publisher_authority_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineParticipant"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "edition_id",
+                    "page",
+                    "pending_count",
+                    "publisher",
+                    "publisher_authority_id",
+                    "results",
+                    "total_pages",
+                    "version_label",
+                    "work_id",
+                    "work_title"
+                ]
+            },
             "TimelineEditorialRevision": {
                 "type": "object",
                 "properties": {
@@ -75887,6 +76044,80 @@
                     "name",
                     "slug"
                 ]
+            },
+            "TimelineParticipant": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/TimelineParticipantKindEnum"
+                    },
+                    "person_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "scholar_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "publisher_authority_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "role_label": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/TimelineParticipantSourceEnum"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "href",
+                    "key",
+                    "kind",
+                    "name",
+                    "person_id",
+                    "role",
+                    "role_label",
+                    "scholar_id",
+                    "source"
+                ]
+            },
+            "TimelineParticipantKindEnum": {
+                "enum": [
+                    "person",
+                    "publisher"
+                ],
+                "type": "string",
+                "description": "* `person` - person\n* `publisher` - publisher"
+            },
+            "TimelineParticipantSourceEnum": {
+                "enum": [
+                    "event",
+                    "edition"
+                ],
+                "type": "string",
+                "description": "* `event` - event\n* `edition` - edition"
             },
             "TimelineSaveReceipt": {
                 "type": "object",
