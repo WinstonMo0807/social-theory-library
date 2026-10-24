@@ -82,3 +82,22 @@ def test_preparing_legacy_image_does_not_select_or_publish_it(media_context,api_
     assert not EditorialRevision.objects.filter(target_type=kind,target_id=target.pk).exists()
     assert api_client.get(path).data["current"] is None
     assert file.read()==original;file.close()
+
+
+def test_saved_page_preview_is_versioned_private_and_read_only(media_context,api_client,admin_user):
+    from urllib.parse import urlsplit, parse_qs
+    kind,target,_,path,body=media_context
+    before=(EditorialRevision.objects.count(),MediaRendition.objects.count(),AuditEvent.objects.count())
+    response=api_client.get(path,{"include_preview":"true","expected_version":body["expected_version"]})
+    assert response.status_code==200,response.data
+    preview=response.data["page_preview"]
+    expected_type="scholar" if kind=="scholar_profile" else "concept"
+    url=urlsplit(preview["url"])
+    assert preview["owner_id"]==str(admin_user.pk) and preview["object_id"]==str(target.pk)
+    assert url.path==f"/admin/preview/knowledge/{expected_type}/{target.pk}"
+    assert parse_qs(url.query)=={"frame":["1"],"edit_version":[preview["version"]],"page":["overview"]}
+    assert len(preview["version"])==64
+    assert api_client.get(path,{"include_preview":"true","expected_version":"old"}).status_code==409
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(uuid4()))
+    assert api_client.get(path,{"include_preview":"true","expected_version":body["expected_version"]}).status_code==403
+    assert (EditorialRevision.objects.count(),MediaRendition.objects.count(),AuditEvent.objects.count())==before

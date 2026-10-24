@@ -1,5 +1,6 @@
 """M08 reuses the same immutable crop/history workspace for knowledge images."""
 import mimetypes
+from urllib.parse import urlencode
 from pathlib import Path
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -17,7 +18,7 @@ from rest_framework.views import APIView
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.editorial_issue_views import EditorialErrorMixin
 from catalog.media_workspace_views import (MediaWorkspaceCommandSerializer, MediaWorkspaceSerializer,
-    MediaWorkspaceCancelSerializer, MediaWorkspaceReceiptSerializer, rendition_payload)
+    MediaWorkspaceCancelSerializer, MediaWorkspaceReceiptSerializer, rendition_payload, preview_requested)
 from catalog.media_views import MediaAssetSerializer
 from catalog.models import EditorialRevision, MediaAsset, MediaRendition, ScholarProfile
 from catalog.services.editorial_issues import EditConflict
@@ -119,7 +120,7 @@ class ObjectMediaBase(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
 
 
 class ObjectMediaWorkspaceView(ObjectMediaBase):
-    @extend_schema(parameters=[OpenApiParameter("history_page", type=int)], responses=ObjectMediaWorkspaceSerializer)
+    @extend_schema(parameters=[OpenApiParameter("history_page", type=int), OpenApiParameter("include_preview", type=bool), OpenApiParameter("expected_version", type=str)], responses=ObjectMediaWorkspaceSerializer)
     def get(self, request, object_type, object_id):
         target = target_for(object_type, object_id)
         draft, canonical, selected, version = info(target, object_type)
@@ -131,9 +132,23 @@ class ObjectMediaWorkspaceView(ObjectMediaBase):
         number = serializers.IntegerField(min_value=1).run_validation(request.query_params.get("history_page", 1))
         page = paginator.get_page(number)
         status = target.editorial_status if object_type == "scholar_profile" else image_status(target)
+        page_preview = None
+        if preview_requested(request, version):
+            from catalog.editorial_read import current_editorial_version
+            from catalog.services.knowledge_studio import NODE_OBJECT_TYPES
+            preview_type = ("scholar" if object_type == "scholar_profile" else
+                next((key for key, value in NODE_OBJECT_TYPES.items() if value == target.node_type), None) if object_type == "knowledge_node" else object_type)
+            if not preview_type:
+                raise ValidationError("此对象没有对应的完整页面模板，请在原编辑器核对。")
+            saved_version = current_editorial_version(object_type, target.pk)
+            if not saved_version or info(target_for(object_type, object_id), object_type)[3] != version:
+                raise EditConflict("生成预览期间资料已变化，请重新读取后预览。")
+            page_preview = {"owner_id": str(request.user.pk), "object_type": preview_type, "object_id": str(target.pk),
+                "version": saved_version, "fingerprint": "",
+                "url": f"/admin/preview/knowledge/{preview_type}/{target.pk}?{urlencode({'frame': '1', 'edit_version': saved_version, 'page': 'overview'})}"}
         return Response({"target_type":object_type,"target_id":str(target.pk),"edition_id":None,"work_id":None,
             "editor_url":editor_url(object_type,target.pk), "title":target.person.preferred_name if kind=="portrait" else getattr(target,"name",getattr(target,"canonical_name_zh",getattr(target,"title",""))),
-            "slot":kind,"version":version,"has_unpublished_changes":selected!=canonical,
+            "slot":kind,"version":version,"page_preview":page_preview,"has_unpublished_changes":selected!=canonical,
             "current":rendition_payload(current) if current else None,
             "cover":{"image_url":f"/api/catalog/admin/media-objects/{object_type}/{target.pk}/legacy/" if selected.get("legacy_path") and not current else "",
                 "page_count":0,"asset_id":None,"state":"not_applicable","has_unpublished_cover":selected!=canonical,"results":[]},

@@ -10,7 +10,7 @@ import type { components } from "@/lib/api/generated/schema";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { useCatalogCommand } from "../workflow/use-intake-command";
 import { PrivateMediaImage } from "./media-crop";
-import { ownedRequest, useOwnedRead } from "./media-workspace";
+import { ownedRequest, useOwnedRead } from "./media-requests";
 import frame from "./media-workspace.module.css";
 import styles from "./media-library.module.css";
 

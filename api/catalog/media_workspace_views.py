@@ -1,6 +1,7 @@
 """M08 composes existing private media, PDF candidates and editorial revisions."""
 from hashlib import sha256
 import json
+from urllib.parse import urlencode
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.paginator import Paginator
@@ -12,7 +13,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -28,6 +29,7 @@ from catalog.services.media import (PUBLIC_METADATA_FIELDS, RENDITION_WIDTHS, WO
 from catalog.services.workspace_edits import workspace_edit_version
 from catalog.workspace_receipt_views import actor_for
 from common.permissions import CanAccessBackOffice, CanEditMetadata
+from common.capabilities import Capability, has_capability
 from ingestion.models import AuditEvent
 
 ACTION = "media.workspace.command"
@@ -119,6 +121,15 @@ class MediaWorkspacePublicationSerializer(serializers.Serializer):
     primary_rendition_id = serializers.UUIDField(allow_null=True)
 
 
+class MediaSavedPagePreviewSerializer(serializers.Serializer):
+    owner_id = serializers.CharField()
+    object_type = serializers.CharField()
+    object_id = serializers.UUIDField()
+    url = serializers.CharField()
+    version = serializers.CharField()
+    fingerprint = serializers.CharField(allow_blank=True)
+
+
 class MediaWorkspaceSerializer(serializers.Serializer):
     edition_id = serializers.UUIDField()
     work_id = serializers.UUIDField()
@@ -130,6 +141,18 @@ class MediaWorkspaceSerializer(serializers.Serializer):
     current = MediaWorkspaceRevisionSerializer(allow_null=True)
     history = MediaWorkspaceHistorySerializer()
     publication = MediaWorkspacePublicationSerializer()
+    page_preview = MediaSavedPagePreviewSerializer(allow_null=True, required=False)
+
+
+def preview_requested(request, version):
+    if not serializers.BooleanField().run_validation(request.query_params.get("include_preview", False)):
+        return False
+    actor = actor_for(request)
+    if not has_capability(actor, Capability.VIEW_EVIDENCE):
+        raise PermissionDenied("完整页面预览需要查看证据权限，当前媒体编辑仍保留。")
+    if request.query_params.getlist("expected_version") != [version]:
+        raise EditConflict("图片或对象已有新的修改，请先读取最新资料；当前裁切仍保留。")
+    return True
 
 
 def selected_rendition(edition, slot):
@@ -181,7 +204,7 @@ class MediaWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
     def get_permissions(self):
         return [CanEditMetadata()] if self.request.method == "POST" else [CanAccessBackOffice()]
 
-    @extend_schema(parameters=[OpenApiParameter("slot", enum=list(WORK_IMAGE_SLOTS)), OpenApiParameter("history_page", type=int)], responses=MediaWorkspaceSerializer)
+    @extend_schema(parameters=[OpenApiParameter("slot", enum=list(WORK_IMAGE_SLOTS)), OpenApiParameter("history_page", type=int), OpenApiParameter("include_preview", type=bool), OpenApiParameter("expected_version", type=str)], responses=MediaWorkspaceSerializer)
     def get(self, request, edition_id):
         edition = get_object_or_404(Edition.objects.select_related("work", "active_catalog_revision"), pk=edition_id)
         slot = serializers.ChoiceField(choices=list(WORK_IMAGE_SLOTS)).run_validation(request.query_params.get("slot", "cover"))
@@ -194,8 +217,25 @@ class MediaWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
         published_media = (publication.snapshot.get("work", {}).get(WORK_IMAGE_SLOTS[slot]["snapshot"]) or {}) if publication else {}
         draft = EditorialRevision.objects.filter(target_type="work", target_id=edition.work_id, status="draft").order_by("-revision").first()
         config = WORK_IMAGE_SLOTS[slot]
+        version = version_for(edition, cover)
+        page_preview = None
+        if preview_requested(request, version):
+            from catalog.services.publication_desk import version as publication_version
+            from catalog.services.publication_commands import PublicationCommandError, prepare_revision
+            saved_version = publication_version(edition)
+            try:
+                fingerprint = prepare_revision(edition)["fingerprint"]
+            except PublicationCommandError as error:
+                raise EditConflict(str(error)) from error
+            fresh = Edition.objects.select_related("work", "active_catalog_revision").get(pk=edition.pk)
+            fresh_cover, _, _ = cover_state(fresh, request)
+            if publication_version(fresh) != saved_version or version_for(fresh, fresh_cover) != version:
+                raise EditConflict("生成页面预览期间资料发生变化，请重新读取后预览。")
+            page_preview = {"owner_id": str(request.user.pk), "object_type": "work", "object_id": str(edition.pk),
+                "version": saved_version, "fingerprint": fingerprint,
+                "url": f"/admin/preview/works/{edition.pk}?{urlencode({'frame': '1', 'version': saved_version, 'fingerprint': fingerprint})}"}
         return Response({"edition_id": str(edition.pk), "work_id": str(edition.work_id), "title": edition.work.title,
-            "slot": slot, "version": version_for(edition, cover), "cover": cover,
+            "slot": slot, "version": version, "cover": cover, "page_preview": page_preview,
             "has_unpublished_changes": bool(draft and {config["field"], config["relation"]}.intersection(draft.patch)),
             "current": rendition_payload(current) if current else None,
             "publication": {"state": edition.state, "revision": publication.revision if publication else None,

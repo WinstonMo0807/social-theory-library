@@ -11216,6 +11216,15 @@ export interface components {
             license: string;
             credit: string;
         };
+        MediaSavedPagePreview: {
+            owner_id: string;
+            object_type: string;
+            /** Format: uuid */
+            object_id: string;
+            url: string;
+            version: string;
+            fingerprint: string;
+        };
         /**
          * @description * `upload` - 人工上传
          *     * `pdf` - 文献页面
@@ -11276,6 +11285,7 @@ export interface components {
             current: components["schemas"]["MediaWorkspaceRevision"] | null;
             history: components["schemas"]["MediaWorkspaceHistory"];
             publication: components["schemas"]["MediaWorkspacePublication"];
+            page_preview?: components["schemas"]["MediaSavedPagePreview"] | null;
         };
         MediaWorkspaceCancelRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
@@ -11869,6 +11879,7 @@ export interface components {
             current: components["schemas"]["MediaWorkspaceRevision"] | null;
             history: components["schemas"]["MediaWorkspaceHistory"];
             publication: components["schemas"]["MediaWorkspacePublication"];
+            page_preview?: components["schemas"]["MediaSavedPagePreview"] | null;
             target_type: components["schemas"]["TargetTypeEnum"];
             /** Format: uuid */
             target_id: string;
@@ -21078,7 +21089,9 @@ export interface operations {
     catalog_admin_editions_media_workspace_retrieve: {
         parameters: {
             query?: {
+                expected_version?: string;
                 history_page?: number;
+                include_preview?: boolean;
                 slot?: "cover" | "recommendation";
             };
             header?: never;
@@ -22534,7 +22547,9 @@ export interface operations {
     catalog_admin_media_objects_retrieve: {
         parameters: {
             query?: {
+                expected_version?: string;
                 history_page?: number;
+                include_preview?: boolean;
             };
             header?: never;
             path: {

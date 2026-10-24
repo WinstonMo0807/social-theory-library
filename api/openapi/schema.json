@@ -3709,9 +3709,23 @@
                     },
                     {
                         "in": "query",
+                        "name": "expected_version",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "history_page",
                         "schema": {
                             "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "include_preview",
+                        "schema": {
+                            "type": "boolean"
                         }
                     },
                     {
@@ -6673,9 +6687,23 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "expected_version",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "history_page",
                         "schema": {
                             "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "include_preview",
+                        "schema": {
+                            "type": "boolean"
                         }
                     },
                     {
@@ -45710,6 +45738,38 @@
                     "source_url"
                 ]
             },
+            "MediaSavedPagePreview": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "object_type": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "fingerprint",
+                    "object_id",
+                    "object_type",
+                    "owner_id",
+                    "url",
+                    "version"
+                ]
+            },
             "MediaSourceTypeEnum": {
                 "enum": [
                     "upload",
@@ -45899,6 +45959,14 @@
                     },
                     "publication": {
                         "$ref": "#/components/schemas/MediaWorkspacePublication"
+                    },
+                    "page_preview": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MediaSavedPagePreview"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -48048,6 +48116,14 @@
                     },
                     "publication": {
                         "$ref": "#/components/schemas/MediaWorkspacePublication"
+                    },
+                    "page_preview": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MediaSavedPagePreview"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "target_type": {
                         "$ref": "#/components/schemas/TargetTypeEnum"

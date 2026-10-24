@@ -4,3 +4,13 @@
 @media(prefers-reduced-motion:reduce){.workspace *{scroll-behavior:auto!important}}
 
 .previewDialog>canvas{display:block;max-width:210px;max-height:310px;object-fit:contain;margin:20px auto}.previewDialog>canvas[hidden]{display:none}
+.pageDialog { width: min(1440px,96vw); max-height: 92dvh; }
+.fullPagePreview { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px; }
+.fullPagePreview > header { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.fullPagePreview h3 { font: 20px var(--serif); margin: 0; }
+.fullPagePreview header div { display: flex; gap: 6px; }
+.fullPagePreview button[aria-pressed=true] { color: var(--annotation); border-color: var(--annotation); }
+.fullPagePreview > p { font-size: 12px; color: var(--muted); margin: 10px 0; }
+.pageFrameScroll { overflow: auto; max-width: 100%; padding: 8px; border: 1px solid var(--line); background: var(--paper); }
+.pageFrameScroll iframe { display: block; min-width: 0; height: 72dvh; min-height: 420px; max-width: none; margin: 0 auto; border: 0; background: var(--paper); }
+@media(max-width:820px) { .pageDialog { padding: 14px; } .fullPagePreview h3 { font-size: 17px; } .pageFrameScroll { padding: 0; } }

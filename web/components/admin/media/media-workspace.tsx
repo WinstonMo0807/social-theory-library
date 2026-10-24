@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { subscribeToSessionChanges } from "@/lib/api";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
-import { withPrivateOwner } from "@/lib/api/private-owner";
+import { ownedRequest, useOwnedRead } from "./media-requests";
+import { SavedMediaPagePreview } from "./media-page-preview";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import type { components } from "@/lib/api/generated/schema";
 import { useCatalogCommand } from "../workflow/use-intake-command";
@@ -27,15 +28,6 @@ const emptyMetadata:Metadata={alt_text:"",source_label:"",source_url:"",rights:"
 const tabs=[{id:"current",label:"封面图（当前）"},{id:"pdf",label:"PDF 选页"},{id:"upload",label:"上传或来源"},{id:"reuse",label:"复用媒体"}] as const;
 function metadataFor(media:Media):Metadata{return Object.fromEntries(Object.keys(emptyMetadata).map(key=>[key,media[key as keyof Metadata]||""])) as Metadata;}
 
-export async function ownedRequest<T>(owner:string,url:string,options:RequestInit={}){
-  const signal=options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(60000)]):AbortSignal.timeout(60000);
-  return withPrivateOwner(owner,()=>apiRequest<T>(url,{...options,signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),signal);
-}
-export function useOwnedRead<T>(owner:string,url:string){
-  const [attempt,setAttempt]=useState(0),[result,setResult]=useState<{key:string;data:T|null;error:string}|null>(null);const key=`${owner}:${url}:${attempt}`;
-  useEffect(()=>{if(!url)return;const controller=new AbortController();void ownedRequest<T>(owner,url,{signal:controller.signal}).then(data=>{if(!controller.signal.aborted)setResult({key,data,error:""});}).catch(error=>{if(!controller.signal.aborted)setResult({key,data:null,error:error instanceof Error?error.message:"资料读取失败。"});});return()=>controller.abort();},[key,owner,url]);
-  return {data:result?.key===key?result.data:null,error:result?.key===key?result.error:"",retry:()=>setAttempt(n=>n+1)};
-}
 
 export function MediaWorkspace({editionId,slot}:{editionId:string;slot:Slot}){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
@@ -122,6 +114,6 @@ function WorkspaceEditor({owner,initial,path,canEdit}:{owner:string;initial:Work
     </div>
     <footer className={styles.mobileSave}><button type="button" onClick={openPreview}>预览页面</button><button type="button" className={styles.primary} disabled={saveDisabled} onClick={()=>void save()}>保存媒体修订</button></footer>
     <ConfirmDialog open={stopping} title="核对并停止原媒体操作？" description="若已保存，返回原结果；尚未执行的请求将停止。已经选用的图片和原文件保持不变。" details={command.error?[command.error]:[]} confirmLabel="核对并停止" pending={command.busy} onCancel={()=>setStopping(false)} onConfirm={()=>command.lookup(true).then(accept)}/>
-    <dialog ref={preview} className={styles.previewDialog} onClose={()=>setPreviewOpen(false)}><header><h2>媒体预览</h2><button type="button" onClick={()=>preview.current?.close()} aria-label="关闭预览">×</button></header><canvas ref={previewCanvas} role="img" aria-label={metadata.alt_text||"当前裁切预览"} hidden={!selected||clear||!uses.length||!imageReady}/>{previewOpen?<><h3>{initial.title}</h3>{!selected||clear||!uses.length?<p>暂不使用图片，展示材料默认样式。</p>:<p>{metadata.alt_text}</p>}<p className={styles.note}>{metadata.source_label}{metadata.credit?` · ${metadata.credit}`:""}</p><p className={styles.note}>{`本次用途：${uses.map(use=>({detail:"书页",list:"列表",mobile:"移动端",share:"社交分享"})[use]).join("、")||"暂不使用"}。`}此处展示本次图片和说明。完整材料页面使用已保存的草稿。</p><Link href={workbench} target="_blank">打开编辑页核对完整预览</Link><button type="button" onClick={()=>{preview.current?.close();workspaceRoot.current?.querySelector(`.${styles.crop}`)?.scrollIntoView({block:"center"});}}>返回裁切</button></>:null}</dialog>
+    <dialog ref={preview} className={`${styles.previewDialog} ${styles.pageDialog}`} onClose={()=>setPreviewOpen(false)}><header><h2>媒体预览</h2><button type="button" onClick={()=>preview.current?.close()} aria-label="关闭预览">×</button></header><canvas ref={previewCanvas} role="img" aria-label={metadata.alt_text||"当前裁切预览"} hidden={!selected||clear||!uses.length||!imageReady}/>{previewOpen?<><h3>{initial.title}</h3>{!selected||clear||!uses.length?<p>暂不使用图片，展示材料默认样式。</p>:<p>{metadata.alt_text}</p>}<p className={styles.note}>{metadata.source_label}{metadata.credit?` · ${metadata.credit}`:""}</p><p className={styles.note}>{`本次用途：${uses.map(use=>({detail:"书页",list:"列表",mobile:"移动端",share:"社交分享"})[use]).join("、")||"暂不使用"}。`}此处展示本次图片和说明。完整材料页面使用已保存的草稿。</p><p className={styles.note}>{dirty?"上方是尚未保存的裁切与用途；下方完整页面显示已保存内容，保存后重新打开可核对新版本。":"下方完整页面按当前保存版本读取。"}</p><SavedMediaPagePreview owner={owner} path={path} slot={initial.slot} version={baseVersion} objectId={initial.target_id||initial.edition_id||""} objectType={initial.target_type||"work"}/><Link href={workbench} target="_blank">打开原编辑页</Link><button type="button" onClick={()=>{preview.current?.close();workspaceRoot.current?.querySelector(`.${styles.crop}`)?.scrollIntoView({block:"center"});}}>返回裁切</button></>:null}</dialog>
   </div>;
 }
