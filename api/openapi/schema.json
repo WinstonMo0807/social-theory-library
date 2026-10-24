@@ -2398,6 +2398,66 @@
                 }
             }
         },
+        "/api/catalog/admin/content-placements/uses/{source_type}/{source_id}/": {
+            "get": {
+                "operationId": "catalog_admin_content_placements_uses_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "source_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "source_type",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "node",
+                                "scholar"
+                            ]
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlacementUsePage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/curation-drafts/": {
             "get": {
                 "operationId": "catalog_admin_curation_drafts_retrieve",
@@ -58752,6 +58812,106 @@
                 "required": [
                     "id",
                     "name"
+                ]
+            },
+            "PlacementUseItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "area": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "area",
+                    "group",
+                    "id"
+                ]
+            },
+            "PlacementUsePage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PlacementUseRow"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
+                ]
+            },
+            "PlacementUseRow": {
+                "type": "object",
+                "properties": {
+                    "page_type": {
+                        "type": "string"
+                    },
+                    "page_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page_label": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    },
+                    "is_latest": {
+                        "type": "boolean"
+                    },
+                    "is_published": {
+                        "type": "boolean"
+                    },
+                    "edit_url": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PlacementUseItem"
+                        }
+                    }
+                },
+                "required": [
+                    "edit_url",
+                    "is_latest",
+                    "is_published",
+                    "items",
+                    "page_id",
+                    "page_label",
+                    "page_type",
+                    "revision",
+                    "revision_id",
+                    "title"
                 ]
             },
             "PlanCommandInputActionEnum": {

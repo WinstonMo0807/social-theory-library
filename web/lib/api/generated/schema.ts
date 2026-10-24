@@ -576,6 +576,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/content-placements/uses/{source_type}/{source_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_content_placements_uses_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/curation-drafts/": {
         parameters: {
             query?: never;
@@ -14932,6 +14948,32 @@ export interface components {
             id: string;
             name: string;
         };
+        PlacementUseItem: {
+            /** Format: uuid */
+            id: string;
+            area: string;
+            group: string;
+        };
+        PlacementUsePage: {
+            count: number;
+            next: number | null;
+            previous: number | null;
+            results: components["schemas"]["PlacementUseRow"][];
+        };
+        PlacementUseRow: {
+            page_type: string;
+            /** Format: uuid */
+            page_id: string;
+            page_label: string;
+            title: string;
+            /** Format: uuid */
+            revision_id: string;
+            revision: number;
+            is_latest: boolean;
+            is_published: boolean;
+            edit_url: string;
+            items: components["schemas"]["PlacementUseItem"][];
+        };
         /**
          * @description * `cancel` - cancel
          *     * `retry` - retry
@@ -22040,6 +22082,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlacementSourcesPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_content_placements_uses_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                source_id: string;
+                source_type: "node" | "scholar";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementUsePage"];
                 };
             };
         };

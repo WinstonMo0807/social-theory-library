@@ -7,8 +7,8 @@ import type { PlacementCommand, PlacementState, PlacementPage } from "@/lib/api/
 import styles from "./concept-editor.module.css";
 
 type HistoryPage = { count: number; next: string | null; previous: string | null; results: { id: string; revision: number; status: string; created_at: string; published_at: string | null; item_count: number; withdrawn: boolean }[] };
-export function PlacementHistory({ nodeId, owner, current, locked, act, pageType = "node" }: { pageType?: PlacementPage; nodeId: string; owner: string; current: PlacementState; locked: boolean; act: (body: Omit<PlacementCommand, "request_id">) => Promise<void> }) {
-  const [page, setPage] = useState(1), [selected, setSelected] = useState("");
+export function PlacementHistory({ nodeId, owner, current, locked, act, pageType = "node", initialRevisionId = "" }: { initialRevisionId?: string; pageType?: PlacementPage; nodeId: string; owner: string; current: PlacementState; locked: boolean; act: (body: Omit<PlacementCommand, "request_id">) => Promise<void> }) {
+  const [page, setPage] = useState(1), [selected, setSelected] = useState(initialRevisionId);
   const path = `/catalog/admin/content-placements/${pageType}/${nodeId}/`;
   const load = useCallback((url: string, signal: AbortSignal) => apiRequest<HistoryPage>(url, {signal,cache:"no-store",headers:{"X-Editor-Owner":owner}}, getServerSessionCredential()), [owner]);
   const loadVersion = useCallback((url: string, signal: AbortSignal) => apiRequest<PlacementState>(url, {signal,cache:"no-store",headers:{"X-Editor-Owner":owner}}, getServerSessionCredential()), [owner]);

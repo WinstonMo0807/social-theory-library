@@ -19,6 +19,7 @@ VERIFIED_NAMES = {
     "node-relation-directory",
     "scholar-knowledge-relation-directory",
     "scholar-concept-usages",
+    "content-placement-uses",
     "admin-knowledge-node-list", "admin-knowledge-node-detail", "admin-knowledge-node-versions",
     "admin-normalized-relation-list", "admin-normalized-relation-detail", "admin-normalized-relation-versions",
     "admin-visual-review", "admin-visual-review-receipt", "admin-visual-review-reference",
