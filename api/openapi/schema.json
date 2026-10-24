@@ -49,6 +49,92 @@
                 }
             }
         },
+        "/api/auth/email/request/": {
+            "post": {
+                "operationId": "auth_email_request_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailRequestInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailRequestInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailRequestInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MailRequestOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/email/verify/": {
+            "post": {
+                "operationId": "auth_email_verify_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailLinkInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailLinkInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailLinkInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MailLinkOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/auth/login/": {
             "get": {
                 "operationId": "auth_login_retrieve",
@@ -326,6 +412,49 @@
                 }
             }
         },
+        "/api/auth/password/link/": {
+            "post": {
+                "operationId": "auth_password_link_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailLinkInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailLinkInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MailLinkInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MailLinkOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/auth/password/request/": {
             "post": {
                 "operationId": "auth_password_request_create",
@@ -356,11 +485,64 @@
                     {}
                 ],
                 "responses": {
-                    "200": {
+                    "202": {
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/AuthNoticeOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/recovery/appeal/": {
+            "post": {
+                "operationId": "auth_recovery_appeal_create",
+                "tags": [
+                    "auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AccountRecoveryAppealInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AccountRecoveryAppealInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AccountRecoveryAppealInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicFeedbackReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicFeedbackReceipt"
                                 }
                             }
                         },
@@ -403,7 +585,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/User"
+                                    "$ref": "#/components/schemas/RegistrationOutput"
                                 }
                             }
                         },
@@ -29189,6 +29371,40 @@
                 "type": "string",
                 "description": "* `create` - create\n* `update` - update\n* `password` - password\n* `invite` - invite\n* `revoke_invite` - revoke_invite"
             },
+            "AccountRecoveryAppealInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "username": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 150
+                    },
+                    "contact": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1,
+                        "maxLength": 254
+                    },
+                    "note": {
+                        "type": "string",
+                        "minLength": 4,
+                        "maxLength": 300
+                    },
+                    "consent": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "consent",
+                    "contact",
+                    "note",
+                    "request_id"
+                ]
+            },
             "ActivationInputActionEnum": {
                 "enum": [
                     "inspect",
@@ -31159,10 +31375,14 @@
                     },
                     "recovery_minutes": {
                         "type": "integer"
+                    },
+                    "email_delivery_available": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
                     "csrf_ready",
+                    "email_delivery_available",
                     "password_login",
                     "recovery_minutes",
                     "recovery_mode",
@@ -45235,6 +45455,101 @@
                     "password"
                 ]
             },
+            "MailLinkInputActionEnum": {
+                "enum": [
+                    "inspect",
+                    "confirm"
+                ],
+                "type": "string",
+                "description": "* `inspect` - inspect\n* `confirm` - confirm"
+            },
+            "MailLinkInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/MailLinkInputActionEnum"
+                    },
+                    "token": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "password": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 10,
+                        "maxLength": 128
+                    }
+                },
+                "required": [
+                    "action",
+                    "token"
+                ]
+            },
+            "MailLinkOutput": {
+                "type": "object",
+                "properties": {
+                    "state": {
+                        "$ref": "#/components/schemas/MailLinkOutputStateEnum"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "state"
+                ]
+            },
+            "MailLinkOutputStateEnum": {
+                "enum": [
+                    "ready",
+                    "completed",
+                    "expired",
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `ready` - ready\n* `completed` - completed\n* `expired` - expired\n* `unavailable` - unavailable"
+            },
+            "MailRequestInputRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1,
+                        "maxLength": 254
+                    },
+                    "next": {
+                        "type": "string",
+                        "minLength": 1,
+                        "default": "/account",
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "email"
+                ]
+            },
+            "MailRequestOutput": {
+                "type": "object",
+                "properties": {
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail"
+                ]
+            },
             "ManagementCommandRequest": {
                 "type": "object",
                 "properties": {
@@ -51704,6 +52019,12 @@
                         "type": "string",
                         "format": "email",
                         "minLength": 1
+                    },
+                    "next": {
+                        "type": "string",
+                        "minLength": 1,
+                        "default": "/account",
+                        "maxLength": 2000
                     }
                 },
                 "required": [
@@ -64502,7 +64823,15 @@
                     "password": {
                         "type": "string",
                         "writeOnly": true,
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 128
+                    },
+                    "next": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1,
+                        "default": "/account",
+                        "maxLength": 2000
                     },
                     "username": {
                         "type": "string",
@@ -64515,6 +64844,85 @@
                     "display_name",
                     "email",
                     "password"
+                ]
+            },
+            "RegistrationOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true,
+                        "title": "邮箱"
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "title": "显示名称",
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/StoredAccountRoleEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "角色"
+                    },
+                    "locale": {
+                        "type": "string",
+                        "title": "界面语言",
+                        "maxLength": 16
+                    },
+                    "email_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "邮箱验证时间"
+                    },
+                    "reading_preferences": {},
+                    "is_library_owner": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "access_level": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true
+                    },
+                    "system_owner_label": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "verification_requested": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "access_level",
+                    "capabilities",
+                    "email",
+                    "email_verified_at",
+                    "id",
+                    "is_library_owner",
+                    "notice",
+                    "role",
+                    "system_owner_label",
+                    "verification_requested"
                 ]
             },
             "ReplayForkOutput": {
@@ -68923,6 +69331,16 @@
                     "verifications"
                 ]
             },
+            "StoredAccountRoleEnum": {
+                "enum": [
+                    "admin",
+                    "editor",
+                    "reviewer",
+                    "reader"
+                ],
+                "type": "string",
+                "description": "* `admin` - 管理员\n* `editor` - 编辑\n* `reviewer` - 审核者\n* `reader` - 读者"
+            },
             "StrengthEnum": {
                 "enum": [
                     "high",
@@ -73238,7 +73656,7 @@
                     "role": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/UserRoleEnum"
+                                "$ref": "#/components/schemas/StoredAccountRoleEnum"
                             }
                         ],
                         "readOnly": true,
@@ -73378,16 +73796,6 @@
                     "username",
                     "version"
                 ]
-            },
-            "UserRoleEnum": {
-                "enum": [
-                    "admin",
-                    "editor",
-                    "reviewer",
-                    "reader"
-                ],
-                "type": "string",
-                "description": "* `admin` - 管理员\n* `editor` - 编辑\n* `reviewer` - 审核者\n* `reader` - 读者"
             },
             "ViewModeEnum": {
                 "enum": [

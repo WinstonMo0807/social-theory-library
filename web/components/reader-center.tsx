@@ -646,6 +646,8 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
             <ProfileAvatarEditor owner={String(session.user!.id)} name={user.display_name} />
             <form className="profile-name-form" onSubmit={updateProfile}><label><span>显示名称</span><input value={profileName} onChange={(event) => setProfileName(event.target.value)} required /></label><ActionButton className="button secondary" type="submit" state={pendingAction === "update-profile" ? "pending" : "idle"} pendingLabel="正在保存" disabled={Boolean(pendingAction) && pendingAction !== "update-profile"}>保存名称</ActionButton></form>
             <DisplayPreferences />
+            <p>邮箱验证：{session.user?.email_verified_at ? "已验证" : "尚未验证"}。邮箱用于账户恢复，验证不会改变私人资料的访问范围。</p>
+            {!session.user?.email_verified_at ? <Link className="button secondary" href="/verify-email?next=%2Faccount%3Fsection%3Dsettings">验证邮箱</Link> : null}
             <Link className="button secondary" href="/reset-password">重置密码</Link>
             <Link className="button secondary" href="/account/settings/privacy"><Settings size={16} /> 隐私与资料</Link>
             <Link className="button secondary" href="/account/settings/privacy/export"><Download size={16} /> 按类别导出与删除资料</Link>

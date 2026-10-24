@@ -286,3 +286,22 @@
 .auth-external { border-top:1px solid var(--line); margin-top:25px;padding-top:12px; }.auth-external p { font:12px var(--serif);color:var(--muted);text-align:center; }.auth-external > div { display:grid;grid-template-columns:1fr 1fr;gap:12px; }.auth-external button { min-height:40px; border:1px solid var(--line);border-radius:3px;background:var(--surface);font:12px var(--sans);color:var(--muted);cursor:not-allowed; }
 @media(max-width:1000px) { .auth-atlas-page[data-mode=reset] .auth-atlas-columns { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); }.auth-recovery-benefits { display:none; } }
 @media(max-width:760px) { .auth-atlas-page[data-mode=reset] .auth-atlas-columns { grid-template-columns:1fr; }.auth-registration-benefits > img { display:none; }.auth-registration-benefits > div { padding:20px; } }
+
+/* Email links reuse the atlas account panel and retain mobile field spacing. */
+.auth-form > form > label { display:flex;flex-direction:column;gap:7px;margin-bottom:16px; }
+.auth-form > form > .auth-consent { flex-direction:row;align-items:flex-start; }
+.auth-form .password-input input { padding-right:44px; }
+.auth-form .auth-link-recheck { min-height:44px;display:block;margin:14px 0;text-decoration:underline;text-underline-offset:4px; }
+.auth-form-intro h2 { display:flex;align-items:center;gap:10px; }
+.auth-form p { overflow-wrap:anywhere; }
+@media(max-width:760px) { .auth-form input { font-size:16px; } }
+
+.auth-recovery-appeal { margin-top:26px;padding-top:22px;border-top:1px dashed var(--line); }
+.auth-recovery-appeal summary { cursor:pointer;font:600 18px/1.6 var(--serif); }
+.auth-recovery-appeal p { color:var(--muted);font-size:13px;line-height:1.8;overflow-wrap:anywhere; }
+.auth-recovery-appeal fieldset { margin:0;padding:0;border:0;min-width:0; }
+.auth-recovery-appeal fieldset > label { display:flex;flex-direction:column;gap:7px;margin-bottom:16px;font-size:14px; }
+.auth-recovery-appeal fieldset > .auth-consent { flex-direction:row;align-items:flex-start; }
+.auth-recovery-appeal textarea { width:100%;padding:10px;border:1px solid var(--line-dark);background:var(--surface);color:var(--ink);resize:vertical; }
+.auth-recovery-appeal fieldset:disabled { opacity:.75; }
+@media(max-width:760px) { .auth-recovery-appeal textarea { font-size:16px; } }

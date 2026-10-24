@@ -1,10 +1,5 @@
-import hashlib
-import secrets
-from datetime import timedelta
-
 from django.contrib.auth import authenticate, password_validation
-from django.contrib.auth.hashers import check_password, make_password
-from django.core.mail import send_mail
+from django.contrib.auth.hashers import check_password
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
@@ -208,7 +203,8 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     display_name = serializers.CharField(max_length=120)
-    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    password = serializers.CharField(write_only=True, trim_whitespace=False, max_length=128)
+    next = serializers.CharField(required=False, max_length=2000, default="/account", write_only=True)
     username = serializers.RegexField(r"^[A-Za-z0-9_\u4e00-\u9fff]{4,20}$", required=False, max_length=20)
 
     def validate_username(self, value):
@@ -315,29 +311,11 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
+    next = serializers.CharField(required=False, max_length=2000, default="/account")
 
     def save(self):
-        user = User.objects.filter(
-            email__iexact=normalize_email_identity(self.validated_data["email"]),
-            is_active=True,
-        ).first()
-        if user is None:
-            return
-
-        code = f"{secrets.randbelow(1_000_000):06d}"
-        RecoveryCode.objects.create(
-            user=user,
-            code_hash=make_password(code),
-            expires_at=timezone.now() + timedelta(minutes=20),
-            request_ip=self.context.get("request_ip"),
-        )
-        send_mail(
-            "社科书库密码重置验证码",
-            f"您的验证码是 {code}，20 分钟内有效。若非本人操作，请忽略。",
-            None,
-            [user.email],
-            fail_silently=False,
-        )
+        from .email_links import enqueue
+        enqueue(self.validated_data["email"], RecoveryCode.Purpose.PASSWORD_LINK, self.validated_data["next"])
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
@@ -359,6 +337,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({"code": "验证码无效或已过期。"})
 
         candidates = user.recovery_codes.select_for_update().filter(
+            purpose=RecoveryCode.Purpose.PASSWORD_CODE,
             used_at__isnull=True,
             expires_at__gt=timezone.now(),
         ).order_by("-created_at")[:5]

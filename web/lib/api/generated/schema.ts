@@ -16,6 +16,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/email/request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_email_request_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/email/verify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_email_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login/": {
         parameters: {
             query?: never;
@@ -80,6 +112,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/password/link/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_password_link_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/password/request/": {
         parameters: {
             query?: never;
@@ -90,6 +138,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["auth_password_request_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/recovery/appeal/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth_recovery_appeal_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6142,6 +6206,16 @@ export interface components {
          * @enum {string}
          */
         AccountManagementOperationEnum: "create" | "update" | "password" | "invite" | "revoke_invite";
+        AccountRecoveryAppealInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** @default  */
+            username: string;
+            /** Format: email */
+            contact: string;
+            note: string;
+            consent: boolean;
+        };
         /**
          * @description * `inspect` - inspect
          *     * `activate` - activate
@@ -6795,6 +6869,7 @@ export interface components {
             remember_days: number;
             recovery_mode: string;
             recovery_minutes: number;
+            email_delivery_available: boolean;
         };
         AuthNoticeOutput: {
             detail: string;
@@ -11038,6 +11113,41 @@ export interface components {
             /** @default true */
             remember_me: boolean;
         };
+        /**
+         * @description * `inspect` - inspect
+         *     * `confirm` - confirm
+         * @enum {string}
+         */
+        MailLinkInputActionEnum: "inspect" | "confirm";
+        MailLinkInputRequest: {
+            action: components["schemas"]["MailLinkInputActionEnum"];
+            token: string;
+            confirmed?: boolean;
+            password?: string;
+        };
+        MailLinkOutput: {
+            state: components["schemas"]["MailLinkOutputStateEnum"];
+            detail: string;
+            /** Format: date-time */
+            expires_at?: string;
+        };
+        /**
+         * @description * `ready` - ready
+         *     * `completed` - completed
+         *     * `expired` - expired
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        MailLinkOutputStateEnum: "ready" | "completed" | "expired" | "unavailable";
+        MailRequestInputRequest: {
+            /** Format: email */
+            email: string;
+            /** @default /account */
+            next: string;
+        };
+        MailRequestOutput: {
+            detail: string;
+        };
         ManagementCommandRequest: {
             operation: components["schemas"]["AccountManagementOperationEnum"];
             invite?: boolean;
@@ -13006,6 +13116,8 @@ export interface components {
         PasswordResetRequestRequest: {
             /** Format: email */
             email: string;
+            /** @default /account */
+            next: string;
         };
         PatchedAdminReadingPathRequest: {
             title?: string;
@@ -16855,7 +16967,35 @@ export interface components {
             email: string;
             display_name: string;
             password: string;
+            /** @default /account */
+            next: string;
             username?: string;
+        };
+        RegistrationOutput: {
+            readonly id: number;
+            /**
+             * 邮箱
+             * Format: email
+             */
+            readonly email: string;
+            /** 显示名称 */
+            display_name?: string;
+            /** 角色 */
+            readonly role: components["schemas"]["StoredAccountRoleEnum"];
+            /** 界面语言 */
+            locale?: string;
+            /**
+             * 邮箱验证时间
+             * Format: date-time
+             */
+            readonly email_verified_at: string | null;
+            reading_preferences?: unknown;
+            readonly is_library_owner: boolean;
+            readonly access_level: string;
+            readonly capabilities: string[];
+            readonly system_owner_label: string;
+            verification_requested: boolean;
+            notice: string;
         };
         ReplayForkOutput: {
             owner_id: string;
@@ -18115,6 +18255,14 @@ export interface components {
             cleanup: components["schemas"]["CleanupPreview"];
         };
         /**
+         * @description * `admin` - 管理员
+         *     * `editor` - 编辑
+         *     * `reviewer` - 审核者
+         *     * `reader` - 读者
+         * @enum {string}
+         */
+        StoredAccountRoleEnum: "admin" | "editor" | "reviewer" | "reader";
+        /**
          * @description * `high` - 高
          *     * `medium` - 中
          *     * `low` - 低
@@ -19345,7 +19493,7 @@ export interface components {
             /** 显示名称 */
             display_name?: string;
             /** 角色 */
-            readonly role: components["schemas"]["UserRoleEnum"];
+            readonly role: components["schemas"]["StoredAccountRoleEnum"];
             /** 界面语言 */
             locale?: string;
             /**
@@ -19383,14 +19531,6 @@ export interface components {
             avatar_revision: number | null;
             notice: string;
         };
-        /**
-         * @description * `admin` - 管理员
-         *     * `editor` - 编辑
-         *     * `reviewer` - 审核者
-         *     * `reader` - 读者
-         * @enum {string}
-         */
-        UserRoleEnum: "admin" | "editor" | "reviewer" | "reader";
         /**
          * @description * `graph` - graph
          *     * `list` - list
@@ -19869,6 +20009,56 @@ export interface operations {
             };
         };
     };
+    auth_email_request_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailRequestInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MailRequestInputRequest"];
+                "multipart/form-data": components["schemas"]["MailRequestInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailRequestOutput"];
+                };
+            };
+        };
+    };
+    auth_email_verify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailLinkInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MailLinkInputRequest"];
+                "multipart/form-data": components["schemas"]["MailLinkInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailLinkOutput"];
+                };
+            };
+        };
+    };
     auth_login_retrieve: {
         parameters: {
             query?: never;
@@ -20030,6 +20220,31 @@ export interface operations {
             };
         };
     };
+    auth_password_link_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailLinkInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MailLinkInputRequest"];
+                "multipart/form-data": components["schemas"]["MailLinkInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailLinkOutput"];
+                };
+            };
+        };
+    };
     auth_password_request_create: {
         parameters: {
             query?: never;
@@ -20045,12 +20260,45 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["AuthNoticeOutput"];
+                };
+            };
+        };
+    };
+    auth_recovery_appeal_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountRecoveryAppealInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AccountRecoveryAppealInputRequest"];
+                "multipart/form-data": components["schemas"]["AccountRecoveryAppealInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFeedbackReceipt"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFeedbackReceipt"];
                 };
             };
         };
@@ -20075,7 +20323,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["User"];
+                    "application/json": components["schemas"]["RegistrationOutput"];
                 };
             };
         };

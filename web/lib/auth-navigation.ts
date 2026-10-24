@@ -4,7 +4,7 @@ export function safeAuthDestination(value: string | null | undefined, fallback =
   try {
     const url = new URL(value, "https://stl.invalid");
     const path = decodeURIComponent(url.pathname);
-    if (url.origin !== "https://stl.invalid" || path.startsWith("//") || /[\\\u0000-\u0020]/.test(path) || /^\/(login|register|reset-password)(\/|$)/.test(path)) return fallback;
+    if (url.origin !== "https://stl.invalid" || path.startsWith("//") || /[\\\u0000-\u0020]/.test(path) || /^\/(login|register|reset-password|verify-email|activate)(\/|$)/.test(path)) return fallback;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch { return fallback; }
 }

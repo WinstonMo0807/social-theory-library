@@ -11,6 +11,7 @@ import {
 export type SessionUser = {
   id: number;
   email: string;
+  email_verified_at?: string | null;
   display_name: string;
   role: string;
   locale?: string;

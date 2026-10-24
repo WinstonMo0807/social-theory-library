@@ -214,6 +214,7 @@ SPECTACULAR_SETTINGS = {
         "PersonIdentityDecisionEnum": ["independent", "needs_evidence"],
         "AuthorityNameTypeEnum": [("alias", "别名"), ("translation", "译名"), ("abbreviation", "简称"), ("historical", "历史名称"), ("transliteration", "音译")],
         "AccountManagementOperationEnum": ["create", "update", "password", "invite", "revoke_invite"],
+        "StoredAccountRoleEnum": [("admin", "管理员"), ("editor", "编辑"), ("reviewer", "审核者"), ("reader", "读者")],
         "AssignableAccountRoleEnum": ["reader", "editor", "admin"],
         "EditorialAssistanceOperationEnum": ["outline", "guide", "comparison"],
         "ReaderGroupKindEnum": ["campus", "team"],
@@ -287,6 +288,7 @@ REST_FRAMEWORK = {
         "user": os.getenv("API_USER_RATE", "600/min"),
         "login": os.getenv("AUTH_LOGIN_RATE", "12/min"),
         "register": os.getenv("AUTH_REGISTER_RATE", "8/hour"),
+        "auth_link": os.getenv("AUTH_LINK_RATE", "30/hour"),
         "password_reset": os.getenv("AUTH_PASSWORD_RESET_RATE", "6/hour"),
         "profile_avatar": os.getenv("PROFILE_AVATAR_RATE", "30/hour"),
         "token_refresh": os.getenv("AUTH_TOKEN_REFRESH_RATE", "60/hour"),
@@ -395,6 +397,7 @@ DISCOVERY_EMBEDDING_DIMENSIONS = max(
     min(4096, int(os.getenv("DISCOVERY_EMBEDDING_DIMENSIONS", "384"))),
 )
 CELERY_TASK_ROUTES = {
+    "accounts.tasks.deliver_account_link": {"queue": "celery"},
     "catalog.tasks.run_discovery_search": {"queue": DISCOVERY_QUERY_TASK_QUEUE},
     "catalog.tasks.run_discovery_deep": {"queue": DISCOVERY_QUERY_TASK_QUEUE},
     "catalog.tasks.process_discovery_index_job": {"queue": DISCOVERY_INDEX_TASK_QUEUE},

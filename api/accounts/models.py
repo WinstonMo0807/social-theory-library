@@ -43,7 +43,14 @@ class AccountAvatar(models.Model):
 
 
 class RecoveryCode(UUIDTimeStampedModel):
+    class Purpose(models.TextChoices):
+        PASSWORD_CODE = "password_code", "旧密码验证码"
+        PASSWORD_LINK = "password_link", "密码恢复链接"
+        VERIFY_EMAIL = "verify_email", "验证邮箱"
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recovery_codes")
+    purpose = models.CharField(max_length=20, choices=Purpose.choices, default=Purpose.PASSWORD_CODE)
+    account_fingerprint = models.CharField(max_length=64, blank=True, default="")
     code_hash = models.CharField(max_length=255)
     expires_at = models.DateTimeField()
     used_at = models.DateTimeField(null=True, blank=True)

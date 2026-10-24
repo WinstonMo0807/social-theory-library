@@ -13,7 +13,8 @@ from common.permissions import CanManageUsers
 from common.capabilities import capability_snapshot
 
 from .cookies import clear_auth_cookies, enforce_cookie_csrf, expose_csrf_cookie, set_auth_cookies
-from .models import User
+from .models import User, RecoveryCode
+from . import email_links
 from .ownership import is_library_owner, is_library_owner_identity
 from .serializers import (
     AdminUserSerializer,
@@ -50,23 +51,39 @@ class LoginOutput(serializers.Serializer):
     refresh = serializers.CharField(required=False)
 
 
+class RegistrationOutput(UserSerializer):
+    verification_requested = serializers.BooleanField()
+    notice = serializers.CharField()
+
+    class Meta(UserSerializer.Meta):
+        fields = (*UserSerializer.Meta.fields, "verification_requested", "notice")
+
+
 class AuthEntryOutput(serializers.Serializer):
     csrf_ready = serializers.BooleanField()
     password_login = serializers.BooleanField()
     remember_days = serializers.IntegerField()
     recovery_mode = serializers.CharField()
     recovery_minutes = serializers.IntegerField()
+    email_delivery_available = serializers.BooleanField()
 
 
 class RegisterView(AuthEntryView):
     throttle_scope = "register"
 
-    @extend_schema(request=RegisterSerializer, responses={201: UserSerializer})
+    @extend_schema(request=RegisterSerializer, responses={201: RegistrationOutput})
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        requested = True
+        try:
+            email_links.enqueue(user.email, RecoveryCode.Purpose.VERIFY_EMAIL, serializer.validated_data.get("next"))
+        except email_links.MailUnavailable:
+            requested = False
+        return Response({**UserSerializer(user).data, "verification_requested": requested,
+            "notice": "账户已创建。验证邮件请求已受理，请在收到链接后24小时内确认。" if requested else
+            "账户已创建，但暂时无法受理验证邮件。你可以登录后重新申请邮箱验证。"}, status=status.HTTP_201_CREATED)
 
 
 class LoginView(AuthEntryView):
@@ -77,7 +94,7 @@ class LoginView(AuthEntryView):
         expose_csrf_cookie(request)
         return Response({"csrf_ready": True, "password_login": True,
             "remember_days": settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].days,
-            "recovery_mode": "email_code", "recovery_minutes": 20})
+            "recovery_mode": "email_link", "recovery_minutes": 1440, "email_delivery_available": email_links.mail_available()})
 
     @extend_schema(request=LoginSerializer, responses=LoginOutput)
     def post(self, request):
@@ -143,7 +160,7 @@ class CurrentCapabilitiesView(PrivateAccountResponses, APIView):
 class PasswordResetRequestView(AuthEntryView):
     throttle_scope = "password_reset"
 
-    @extend_schema(request=PasswordResetRequestSerializer, responses=AuthNoticeOutput)
+    @extend_schema(request=PasswordResetRequestSerializer, responses={202: AuthNoticeOutput})
     def post(self, request):
         serializer = PasswordResetRequestSerializer(
             data=request.data,
@@ -151,7 +168,7 @@ class PasswordResetRequestView(AuthEntryView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail": "如果邮箱存在，验证码已发送。"})
+        return Response({"detail": email_links.NOTICE}, status=202)
 
 
 class PasswordResetConfirmView(AuthEntryView):

@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.response import Response
 
 from .serializers import VersionedTokenRefreshSerializer
+from .email_link_views import AccountRecoveryAppealView, PasswordLinkView, EmailVerificationView, EmailVerificationRequestView
 from .activation_views import ActivationView, InvitationView
 from .avatar_views import AvatarView, AvatarImageView, AvatarReceiptView
 from .cookies import enforce_cookie_csrf, expose_csrf_cookie, set_auth_cookies
@@ -76,6 +77,10 @@ urlpatterns = [
     path("users/history/", ManagementHistoryView.as_view(), name="account-management-history"),
     path("users/<int:user_id>/invitation/", InvitationView.as_view(), name="account-management-invitation"),
     path("users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
+    path("recovery/appeal/", AccountRecoveryAppealView.as_view(), name="account-recovery-appeal"),
+    path("password/link/", PasswordLinkView.as_view(), name="password-link"),
+    path("email/request/", EmailVerificationRequestView.as_view(), name="email-verification-request"),
+    path("email/verify/", EmailVerificationView.as_view(), name="email-verification"),
     path("password/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
     path("password/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("users/<int:user_id>/set-password/", AdminSetPasswordView.as_view(), name="admin-set-password"),

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 原账户恢复凭据的邮箱链接
+
+RecoveryCode新增purpose/account_fingerprint，旧行默认password_code；验证与重置链接分别受原User行锁、一次性摘要及账户状态约束。accounts0005仅声明未执行。认证邮件复用原Celery默认队列和邮件后端，任务参数加密、120秒过期，原worker必须加载accounts.tasks并共享私人加密键；正文与token不进入日志/审计。console/file后端不能用于认证邮件。人工找回复用PublicFeedback使用咨询，不查询用户、不自动绑定用户ID；管理员原反馈处理和用户管理权限边界不变。
+
 ## 2026-10-24 研究回放文字历史
 
 ResearchReplayRevision依附原ResearchTurn并随其级联删除，仅存加密的回放名称/笔记/标签，按原轮次revision唯一。历史分页读取及恢复均经原研究所有者过滤；恢复是新保存，不覆盖原检索输入。原研究/读者中心隐私导出纳入历史，研究整体25MiB边界及版本复核；不进入公开馆藏、模型记忆或提案分享范围。reading0027未执行；回退须保留历史表及识别该表的兼容级联逻辑。
