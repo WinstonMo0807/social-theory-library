@@ -23,8 +23,9 @@ def destination(kind, obj):
     return DESTINATIONS[kind]
 
 
-def row_payload(kind, obj, *, blocking=False):
+def row_payload(kind, obj, *, blocking=False, actor=None):
     from .recycle_workspace import LABELS
+    if kind=="placement":return placement_payload(obj,actor)
     config = LIFECYCLE_MODELS[kind]
     deleted = RecycleEntry.objects.filter(model_label=obj._meta.label_lower,object_id=obj.pk,restored_at__isnull=True).exists()
     archived = config.status_field and getattr(obj,config.status_field)==config.archived_value
@@ -52,7 +53,56 @@ def relation_queries(obj, actor):
         blocking=(obj._meta.label_lower,field.name) in {("catalog.edition","work"),("catalog.scholarprofile","person"),("catalog.recommendationissueitem","issue")}
         role="（来源）" if field.name.startswith("source_") else "（目标）" if field.name.startswith("target_") else ""
         groups.append((f"parent:{field.name}",f"所属或关联{LABELS[kind]}{role}",kind,rows,blocking))
+    uses=placement_queries(obj,actor)
+    if uses is not None:groups.append(("placements","内容编排引用（最新与公开修订）","placement",uses,False))
     return sorted(groups,key=lambda row:(not row[0].startswith("parent:"),row[0]))
+
+
+def placement_queries(obj,actor):
+    """Reuse original placement revisions, including exact edition and evidence links."""
+    from django.db.models import F,Value,Q,CharField,Subquery
+    from django.db.models.functions import Cast,Replace
+    from .models import Edition,EvidenceSpan,Passage
+    from .placement_uses import HasPlacementReference,allowed_pages,placement_use_revisions
+    kinds={"catalog.work":"work","catalog.edition":"edition","catalog.knowledgenode":"node","catalog.scholarprofile":"scholar"}
+    kind=kinds.get(obj._meta.label_lower)
+    if not kind:return None
+    snapshot=F("materialized_preview")
+    matches=Q(HasPlacementReference(snapshot,Value(kind),Value(str(obj.pk))))
+    if kind in {"work","edition"}:
+        editions=Edition.all_objects.filter(work_id=obj.pk) if kind=="work" else Edition.all_objects.filter(pk=obj.pk)
+        def keys(rows):
+            return Subquery(rows.order_by().annotate(compact=Replace(Cast("pk",CharField()),Value("-"),Value(""))).values("compact"))
+        # Keep keys in indexed SQL subqueries; never load an unbounded evidence ID list.
+        matches|=Q(HasPlacementReference(snapshot,Value("edition"),keys(editions),many=True))
+        matches|=Q(HasPlacementReference(snapshot,Value("work"),keys(editions),reference_field="edition_id",many=True))
+        for source,model in (("span",EvidenceSpan),("passage",Passage)):
+            matches|=Q(HasPlacementReference(snapshot,Value(source),keys(model.objects.filter(page__asset__edition_id__in=editions.values("pk"))),many=True))
+    return placement_use_revisions(kind,obj.pk,allowed_pages(actor,include_recycled=True),matches=matches)
+
+
+def placement_payload(revision,actor):
+    from uuid import UUID
+    from .placement_uses import allowed_pages,PAGE_LABELS
+    from .services import content_placements as placements
+    from .recycle_workspace import RecoveryConflict
+    data=revision.materialized_preview if isinstance(revision.materialized_preview,dict) else {}
+    try:identifier=UUID(str(data.get("page_id")))
+    except (ValueError,TypeError,AttributeError):raise RecoveryConflict("编排引用身份不完整，请先在原编排记录核对。") from None
+    page_type=data.get("page_type");pages=allowed_pages(actor,include_recycled=True).get(page_type)
+    parent=pages.filter(pk=identifier).first() if pages is not None else None
+    if parent is None or revision.target_id!=placements.target_id(page_type,parent.pk):
+        raise RecoveryConflict("编排所属对象或访问权限已变化，请重新读取关联。")
+    kinds={"node":"knowledge-node","scholar":"scholar","topic":"topic","discipline":"discipline","subdiscipline":"subdiscipline",
+        "reading_path":"reading-path","issue":"recommendation-issue","timeline_event":"timeline-event"}
+    kind=kinds.get(page_type)
+    row=row_payload(kind,parent,actor=actor) if kind else {"kind":"site","object_id":str(parent.pk),"name":placements._title(parent),"label":PAGE_LABELS[page_type],"state":"retained","blocking":False}
+    row["destination"]=f"/admin/content/{page_type}/{parent.pk}?revision={revision.pk}"
+    states=[]
+    if revision.pk==revision.latest_id:states.append("最新修订")
+    if revision.pk==revision.published_id:states.append("已登记公开修订")
+    row["detail"]=f"内容编排第{revision.revision}版 · {'、'.join(states)}。引用保留，不随恢复重新发布；页面实际可见性仍按原发布条件。"
+    return row
 
 
 def names_query(kind,obj,actor):
@@ -116,8 +166,8 @@ def related_page(kind,identifier,actor,*,category="dependencies",relation="",pag
     except InvalidPage as error:raise ValidationError("此页已不存在，请返回第一页重新读取。") from error
     result={"category":category,"relation":chosen,"groups":groups,"count":paginator.count,"page":current.number,
         "total_pages":paginator.num_pages,"as_of":as_of,"dependencies":[],"history":[],"names":[],
-        "notice":"按关联类型查看全部管理对象外键；读者私人关系不在范围，JSON内容编排引用仍需沿原编排入口核对。" if category=="dependencies" else
+        "notice":"按类型分页查看已接入的管理对象外键及内容编排引用；不含读者私人资料。编排包括最新与登记公开修订，其他历史和未接入的内容结构仍需原编辑入口核对。" if category=="dependencies" else
             "显示原对象审计摘要，不含原始操作载荷、凭据或私人正文。" if category=="history" else
             "同名可能是不同作品、版本或身份。恢复保留原ID，不自动合并、覆盖或更改公开内容。"}
-    result[category]=[history_payload(row) if category=="history" else name_payload(kind,row) if category=="names" else row_payload(row_kind,row,blocking=blocking) for row in current.object_list]
+    result[category]=[history_payload(row) if category=="history" else name_payload(kind,row) if category=="names" else row_payload(row_kind,row,blocking=blocking,actor=actor) for row in current.object_list]
     return result

@@ -160,7 +160,7 @@ def dependency_rows(obj, actor=None):
     for _,_,kind,query,blocking in relation_queries(obj,actor):
         total+=query.count()
         room=min(10,max(0,50-len(rows)))
-        rows.extend(row_payload(kind,other,blocking=blocking) for other in query[:room])
+        rows.extend(row_payload(kind,other,blocking=blocking,actor=actor) for other in query[:room])
     return rows,total
 
 
