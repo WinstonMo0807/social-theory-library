@@ -71,10 +71,14 @@ class MediaEditorView(AdminPrivateResponseMixin, APIView):
 class MediaCollectionView(MediaEditorView):
     permission_classes = [CanAccessBackOffice]
 
-    @extend_schema(parameters=[OpenApiParameter("rendition_id", OpenApiTypes.UUID, description="仅返回此准确图片版本所属的素材，用于补充出处。")], responses=MediaCollectionSerializer)
+    @extend_schema(parameters=[OpenApiParameter("page", int), OpenApiParameter("q", str, description="按已保存的图片说明、来源或署名搜索。"), OpenApiParameter("rendition_id", OpenApiTypes.UUID, description="仅返回此准确图片版本所属的素材，用于补充出处。")], responses=MediaCollectionSerializer)
     def get(self, request):
         from django.core.paginator import Paginator, InvalidPage
+        from django.db.models import Q
         rows = MediaAsset.objects.prefetch_related("renditions").order_by("-created_at", "pk")
+        query = serializers.CharField(max_length=200, allow_blank=True).run_validation(request.query_params.get("q", ""))
+        if query:
+            rows = rows.filter(Q(alt_text__icontains=query) | Q(source_label__icontains=query) | Q(source_url__icontains=query) | Q(credit__icontains=query))
         if "rendition_id" in request.query_params:
             rendition_id = serializers.UUIDField().run_validation(request.query_params["rendition_id"])
             rows = rows.filter(renditions__pk=rendition_id)

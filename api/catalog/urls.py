@@ -37,6 +37,7 @@ from .editorial_issue_views import (PublicIssueListView, PublicIssueDetailView, 
     PublicEditorialMediaView, IssueItemCoverView, AdminIssueItemCoverView)
 from .cover_views import EditionCoverView
 from .media_workspace_views import MediaWorkspaceView, MediaWorkspaceReceiptView, MediaSourceFileView
+from .media_library_views import MediaLibraryWorkspaceView, MediaLibraryReceiptView
 from .object_media_workspace_views import ObjectMediaWorkspaceView, ObjectMediaReceiptView, ObjectMediaLegacyFileView
 from .edition_file_views import EditionFileView
 from .edition_file_workspace_views import (WorkFilesView, NewWorkEditionView, EditionFileAdoptionView,
@@ -354,6 +355,8 @@ urlpatterns = [
     path("admin/works/<uuid:work_id>/recommendation-image/metadata/", RecommendationImageMetadataView.as_view(), name="recommendation-image-metadata"),
     path("admin/media/", MediaListView.as_view(), name="media-list"),
     path("admin/media/collection/", MediaCollectionView.as_view(), name="media-collection"),
+    path("admin/media/<uuid:media_id>/workspace/", MediaLibraryWorkspaceView.as_view(), name="media-library-workspace"),
+    path("admin/media/<uuid:media_id>/workspace/commands/<uuid:request_id>/", MediaLibraryReceiptView.as_view(), name="media-library-receipt"),
     path("admin/media/<uuid:media_id>/", MediaDetailView.as_view(), name="media-detail"),
     path("admin/media/<uuid:media_id>/renditions/", MediaRenditionView.as_view(), name="media-rendition"),
     path("admin/media/renditions/<uuid:rendition_id>/file/", MediaRenditionFileView.as_view(), name="media-rendition-file"),

@@ -1506,6 +1506,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/media/{media_id}/workspace/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_media_workspace_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_media_workspace_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/media/{media_id}/workspace/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_media_workspace_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_media_workspace_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/media/collection/": {
         parameters: {
             query?: never;
@@ -10375,6 +10407,60 @@ export interface components {
                     [key: string]: unknown;
                 }[];
             };
+        };
+        LibraryMediaCommandRequest: {
+            /** Format: uuid */
+            request_id: string;
+            /** Format: date-time */
+            expected_updated_at: string;
+            metadata: components["schemas"]["LibraryMediaMetadataRequest"];
+        };
+        LibraryMediaHistory: {
+            count: number;
+            page: number;
+            pages: number;
+            results: components["schemas"]["LibraryMediaHistoryRow"][];
+        };
+        LibraryMediaHistoryRow: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            before: {
+                [key: string]: unknown;
+            };
+            after: {
+                [key: string]: unknown;
+            };
+        };
+        LibraryMediaMetadataRequest: {
+            alt_text: string;
+            source_label: string;
+            source_url: string;
+            rights: string;
+            license: string;
+            credit: string;
+            /** Format: double */
+            focal_x: number;
+            /** Format: double */
+            focal_y: number;
+        };
+        LibraryMediaReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            media_id: string;
+            next_url: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        LibraryMediaState: {
+            owner_id: string;
+            media: components["schemas"]["MediaAsset"];
+            references: unknown;
+            history: components["schemas"]["LibraryMediaHistory"];
         };
         /**
          * @description * `proposed` - 待审核
@@ -22624,9 +22710,112 @@ export interface operations {
             };
         };
     };
+    catalog_admin_media_workspace_retrieve: {
+        parameters: {
+            query?: {
+                history_page?: number;
+            };
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryMediaState"];
+                };
+            };
+        };
+    };
+    catalog_admin_media_workspace_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryMediaCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LibraryMediaCommandRequest"];
+                "multipart/form-data": components["schemas"]["LibraryMediaCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryMediaReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_media_workspace_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryMediaReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_media_workspace_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaWorkspaceCancelRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MediaWorkspaceCancelRequest"];
+                "multipart/form-data": components["schemas"]["MediaWorkspaceCancelRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryMediaReceipt"];
+                };
+            };
+        };
+    };
     catalog_admin_media_collection_retrieve: {
         parameters: {
             query?: {
+                page?: number;
+                /** @description 按已保存的图片说明、来源或署名搜索。 */
+                q?: string;
                 /** @description 仅返回此准确图片版本所属的素材，用于补充出处。 */
                 rendition_id?: string;
             };

@@ -7069,10 +7069,242 @@
                 }
             }
         },
+        "/api/catalog/admin/media/{media_id}/workspace/": {
+            "get": {
+                "operationId": "catalog_admin_media_workspace_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "history_page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "media_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LibraryMediaState"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_media_workspace_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "media_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LibraryMediaCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LibraryMediaCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LibraryMediaCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LibraryMediaReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/media/{media_id}/workspace/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_media_workspace_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "media_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LibraryMediaReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_media_workspace_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "media_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LibraryMediaReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/media/collection/": {
             "get": {
                 "operationId": "catalog_admin_media_collection_retrieve",
                 "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "按已保存的图片说明、来源或署名搜索。"
+                    },
                     {
                         "in": "query",
                         "name": "rendition_id",
@@ -42579,6 +42811,196 @@
                     "slug",
                     "subdisciplines",
                     "work_count"
+                ]
+            },
+            "LibraryMediaCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/LibraryMediaMetadataRequest"
+                    }
+                },
+                "required": [
+                    "expected_updated_at",
+                    "metadata",
+                    "request_id"
+                ]
+            },
+            "LibraryMediaHistory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LibraryMediaHistoryRow"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "results"
+                ]
+            },
+            "LibraryMediaHistoryRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "before": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "after": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "after",
+                    "before",
+                    "created_at",
+                    "id"
+                ]
+            },
+            "LibraryMediaMetadataRequest": {
+                "type": "object",
+                "properties": {
+                    "alt_text": {
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "source_label": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "source_url": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 1000
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "rights": {
+                        "type": "string",
+                        "maxLength": 4000
+                    },
+                    "license": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "credit": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "focal_x": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    },
+                    "focal_y": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 1,
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "alt_text",
+                    "credit",
+                    "focal_x",
+                    "focal_y",
+                    "license",
+                    "rights",
+                    "source_label",
+                    "source_url"
+                ]
+            },
+            "LibraryMediaReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "media_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "media_id",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "state",
+                    "updated_at"
+                ]
+            },
+            "LibraryMediaState": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "media": {
+                        "$ref": "#/components/schemas/MediaAsset"
+                    },
+                    "references": {},
+                    "history": {
+                        "$ref": "#/components/schemas/LibraryMediaHistory"
+                    }
+                },
+                "required": [
+                    "history",
+                    "media",
+                    "owner_id",
+                    "references"
                 ]
             },
             "LifecycleEnum": {
