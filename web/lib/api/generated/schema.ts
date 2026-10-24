@@ -4174,6 +4174,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/distribution/storage/verifications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["distribution_storage_verifications_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingestion/items/{item_id}/confirmation/": {
         parameters: {
             query?: never;
@@ -7845,6 +7861,8 @@ export interface components {
             count: number;
             page: number;
             page_size: number;
+            /** Format: date-time */
+            as_of: string;
             results: components["schemas"]["BackupOutput"][];
         };
         BackupScheduleOutput: {
@@ -21182,6 +21200,14 @@ export interface components {
             avatar_revision: number | null;
             notice: string;
         };
+        VerificationHistoryPage: {
+            count: number;
+            page: number;
+            total_pages: number;
+            /** Format: date-time */
+            as_of: string;
+            results: components["schemas"]["BackupVerificationOutput"][];
+        };
         /**
          * @description * `graph` - graph
          *     * `list` - list
@@ -30894,8 +30920,16 @@ export interface operations {
     distribution_storage_retrieve: {
         parameters: {
             query?: {
+                as_of?: string;
                 page?: number;
-                status?: string;
+                /**
+                 * @description * `` -
+                 *     * `queued` - queued
+                 *     * `running` - running
+                 *     * `completed` - completed
+                 *     * `failed` - failed
+                 */
+                status?: "" | "queued" | "running" | "completed" | "failed";
             };
             header?: never;
             path?: never;
@@ -31003,6 +31037,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageCommandReceipt"];
+                };
+            };
+        };
+    };
+    distribution_storage_verifications_retrieve: {
+        parameters: {
+            query?: {
+                as_of?: string;
+                backup_id?: string;
+                page?: number;
+                /**
+                 * @description * `` -
+                 *     * `queued` - queued
+                 *     * `running` - running
+                 *     * `completed` - completed
+                 *     * `failed` - failed
+                 */
+                status?: "" | "queued" | "running" | "completed" | "failed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationHistoryPage"];
                 };
             };
         };

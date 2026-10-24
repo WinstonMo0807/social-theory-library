@@ -9,6 +9,7 @@ import shutil
 
 from django.conf import settings
 from django.core import signing
+from django.core.paginator import Paginator, InvalidPage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Case, When, Value, CharField, Sum, Count, OuterRef, Subquery
@@ -131,12 +132,19 @@ def restore_reports(checksum=None):
     return sorted(reports, key=lambda row: row["checked_at"], reverse=True)[:50], skipped
 
 
-def storage_snapshot(actor, *, page=1, status=""):
-    rows = backup_rows()
+def storage_snapshot(actor, *, page=1, status="", as_of=None):
+    as_of = as_of or timezone.now()
+    if as_of > timezone.now():
+        raise ValidationError("不能查询未来的备份记录。")
+    rows = backup_rows().filter(created_at__lte=as_of)
     if status:
         rows = rows.filter(status=status)
-    count = rows.count()
-    page_rows = list(rows[(page-1)*20:page*20])
+    paginator = Paginator(rows, 20)
+    try:
+        page_rows = list(paginator.page(page).object_list)
+    except InvalidPage as error:
+        raise ValidationError("这一页记录已不存在，请返回第一页重新读取。") from error
+    count = paginator.count
     latest = {}
     newest = BackupVerification.objects.filter(backup_id=OuterRef("backup_id")).order_by("-created_at", "-id").values("pk")[:1]
     for record in BackupVerification.objects.filter(backup_id__in=[row.pk for row in page_rows], pk=Subquery(newest)):
@@ -161,7 +169,7 @@ def storage_snapshot(actor, *, page=1, status=""):
         "schedule": {"configured": any(row.enabled for row in schedules.values()),
             "detail": "定时计划通过原任务服务发起完整数据库归档，可选择包含原件；不提供未实现的增量或独立索引备份。任务服务状态与执行结果需分别核对。",
             "plans": [schedule_payload(scope, schedules.get(scope)) for scope in ("database", "originals")]},
-        "backups": {"count": count, "page": page, "page_size": 20, "results": [backup_payload(row, latest=latest.get(row.pk)) for row in page_rows]},
+        "backups": {"count": count, "page": page, "page_size": 20, "as_of": as_of, "results": [backup_payload(row, latest=latest.get(row.pk)) for row in page_rows]},
         "verifications": [verification_payload(row) for row in BackupVerification.objects.order_by("-created_at", "-id")[:30]],
         "rehearsals": rehearsals, "rehearsals_limited": reports_limited,
         "retention": [{"label": "原件与历史文件", "policy": "保留原件及已有历史版本", "detail": "不按缓存清理规则删除。"},

@@ -1,10 +1,13 @@
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from django.core.paginator import Paginator, InvalidPage
+from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from catalog.editorial_read import AdminPrivateResponseMixin
 from common.permissions import CanRunBackup, CanViewSystemStatus
-from .storage_workspace import storage_snapshot, storage_command, backup_detail
+from .storage_workspace import storage_snapshot, storage_command, backup_detail, verification_payload
+from .models import BackupVerification
 
 
 class StorageCommandInput(serializers.Serializer):
@@ -88,6 +91,7 @@ class BackupPage(serializers.Serializer):
     count = serializers.IntegerField()
     page = serializers.IntegerField()
     page_size = serializers.IntegerField()
+    as_of = serializers.DateTimeField()
     results = BackupOutput(many=True)
 
 
@@ -215,17 +219,65 @@ class StorageCancelInput(serializers.Serializer):
     action = serializers.ChoiceField(choices=["cancel_pending"])
 
 
+class StorageHistoryQuery(serializers.Serializer):
+    page = serializers.IntegerField(default=1, min_value=1, max_value=100000)
+    status = serializers.ChoiceField(choices=["", "queued", "running", "completed", "failed"], default="")
+    as_of = serializers.DateTimeField(required=False)
+
+    def to_internal_value(self, data):
+        if set(data) - set(self.fields) or any(len(data.getlist(key)) != 1 for key in data):
+            raise serializers.ValidationError("记录查询参数无效或重复。")
+        return super().to_internal_value(data)
+
+    def validate_as_of(self, value):
+        if value > timezone.now():
+            raise serializers.ValidationError("不能查询未来的记录。")
+        return value
+
+
+class VerificationHistoryQuery(StorageHistoryQuery):
+    backup_id = serializers.UUIDField(required=False)
+
+
+class VerificationHistoryPage(serializers.Serializer):
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+    as_of = serializers.DateTimeField()
+    results = BackupVerificationOutput(many=True)
+
+
 class StorageWorkspaceView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanViewSystemStatus]
 
-    @extend_schema(parameters=[OpenApiParameter("page", int), OpenApiParameter("status", str)], responses=StorageSnapshot)
+    @extend_schema(parameters=[StorageHistoryQuery], responses=StorageSnapshot)
     def get(self, request):
-        class Query(serializers.Serializer):
-            page = serializers.IntegerField(default=1, min_value=1, max_value=100000)
-            status = serializers.ChoiceField(choices=["", "queued", "running", "completed", "failed"], default="")
-        query = Query(data=request.query_params)
+        query = StorageHistoryQuery(data=request.query_params)
         query.is_valid(raise_exception=True)
         return Response(storage_snapshot(request.user, **query.validated_data))
+
+
+class VerificationHistoryView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanViewSystemStatus]
+
+    @extend_schema(parameters=[VerificationHistoryQuery], responses=VerificationHistoryPage)
+    def get(self, request):
+        query = VerificationHistoryQuery(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        values = query.validated_data
+        as_of = values.get("as_of") or timezone.now()
+        rows = BackupVerification.objects.filter(created_at__lte=as_of)
+        if values.get("backup_id"):
+            rows = rows.filter(backup_id=values["backup_id"])
+        if values.get("status"):
+            rows = rows.filter(status=values["status"])
+        paginator = Paginator(rows.order_by("-created_at", "-id"), 20)
+        try:
+            page = paginator.page(values["page"])
+        except InvalidPage as error:
+            raise serializers.ValidationError("这一页记录已不存在，请返回第一页重新读取。") from error
+        return Response(VerificationHistoryPage({"count": paginator.count, "page": page.number, "total_pages": paginator.num_pages,
+            "as_of": as_of, "results": [verification_payload(row) for row in page.object_list]}).data)
 
 
 class StorageCommandView(AdminPrivateResponseMixin, APIView):

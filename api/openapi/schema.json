@@ -19632,17 +19632,38 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "as_of",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "page",
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "maximum": 100000,
+                            "minimum": 1,
+                            "default": 1
                         }
                     },
                     {
                         "in": "query",
                         "name": "status",
                         "schema": {
-                            "type": "string"
-                        }
+                            "enum": [
+                                "",
+                                "queued",
+                                "running",
+                                "completed",
+                                "failed"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `queued` - queued\n* `running` - running\n* `completed` - completed\n* `failed` - failed"
                     }
                 ],
                 "tags": [
@@ -19845,6 +19866,79 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StorageCommandReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/distribution/storage/verifications/": {
+            "get": {
+                "operationId": "distribution_storage_verifications_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "as_of",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "backup_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "queued",
+                                "running",
+                                "completed",
+                                "failed"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `queued` - queued\n* `running` - running\n* `completed` - completed\n* `failed` - failed"
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VerificationHistoryPage"
                                 }
                             }
                         },
@@ -35881,6 +35975,10 @@
                     "page_size": {
                         "type": "integer"
                     },
+                    "as_of": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
                     "results": {
                         "type": "array",
                         "items": {
@@ -35889,6 +35987,7 @@
                     }
                 },
                 "required": [
+                    "as_of",
                     "count",
                     "page",
                     "page_size",
@@ -80558,6 +80657,37 @@
                     "role_label",
                     "username",
                     "version"
+                ]
+            },
+            "VerificationHistoryPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "as_of": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BackupVerificationOutput"
+                        }
+                    }
+                },
+                "required": [
+                    "as_of",
+                    "count",
+                    "page",
+                    "results",
+                    "total_pages"
                 ]
             },
             "ViewModeEnum": {
