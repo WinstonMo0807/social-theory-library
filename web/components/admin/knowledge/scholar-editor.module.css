@@ -109,3 +109,9 @@
 .relationDialog :is(input,textarea,select) { width:100%; min-width:0; padding:8px; border:1px solid var(--line); color:var(--ink); background:var(--surface); font:inherit; }
 .relationDialog :is(button,a):focus-visible { outline:2px solid var(--annotation); outline-offset:3px; }
 @media(max-width:760px) { .relationDialog { padding:16px; }.relationDialog :global(.scholar-relations-workspace) { display:block; }.relationDialog :is(input,textarea,select) { font-size:16px; } }
+.timelineDialog { width:min(1320px,calc(100vw - 32px)); }
+.timelineDialog :global(.admin-page) { padding:0; }
+.timelineDialog :global(.admin-panel) { background:var(--surface); }
+.timelineDialog :global(.timeline-current-preview) { min-width:0; }
+.timelineDialog :global(.timeline-focused-editor) { grid-template-columns:minmax(0,1.2fr) minmax(240px,.8fr); }
+@media(max-width:760px) { .timelineDialog :global(.timeline-focused-editor) { display:block; }.timelineDialog :global(.timeline-current-preview) { margin-top:20px; } }

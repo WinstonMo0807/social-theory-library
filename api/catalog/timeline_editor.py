@@ -1,11 +1,42 @@
 """M23 editorial evidence on the original event and revision identities."""
 from uuid import UUID
 
-from django.db.models import Q
+from django.db.models import BooleanField, Case, F, Func, IntegerField, OuterRef, Q, Subquery, Value, When
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Cast, NullIf
 from rest_framework.exceptions import ValidationError
 
-from catalog.models import Asset, TheoryTimelineEvent
+from catalog.models import Asset, EditorialRevision, TheoryTimelineEvent
 from catalog.services.timeline_evidence import validate_timeline_file
+
+
+class DraftScholarRelation(Func):
+    output_field = BooleanField()
+
+    def as_sql(self, compiler, connection, **extra_context):
+        snapshot, params = compiler.compile(self.source_expressions[0])
+        key, key_params = compiler.compile(self.source_expressions[1])
+        if connection.vendor == "postgresql":
+            rows = f"jsonb_array_elements(CASE WHEN jsonb_typeof({snapshot}->'timeline_relations') = 'array' THEN {snapshot}->'timeline_relations' ELSE '[]'::jsonb END) AS relation(value)"
+            subject = "relation.value->>'scholar'"
+        else:
+            rows = f"json_each(CASE WHEN json_type({snapshot}, '$.timeline_relations') = 'array' THEN json_extract({snapshot}, '$.timeline_relations') ELSE '[]' END) AS relation"
+            subject = "json_extract(CASE WHEN relation.type = 'object' THEN relation.value ELSE '{}' END, '$.scholar')"
+        return f"EXISTS (SELECT 1 FROM {rows} WHERE {subject} = {key})", [*params, *params, *key_params]
+
+
+def timeline_for_scholar(queryset, identifier):
+    """Include current public membership and the latest draft's own membership."""
+    try:
+        key = str(UUID(str(identifier)))
+    except (ValueError, TypeError, AttributeError):
+        raise ValidationError({"scholar": "请选择有效学者身份。"}) from None
+    draft = EditorialRevision.objects.filter(target_type="timeline_event", target_id=OuterRef("pk"), status="draft").order_by("-revision")
+    return queryset.alias(scholar_draft=Subquery(draft.values("materialized_preview")[:1])).alias(
+        draft_member=DraftScholarRelation(F("scholar_draft"), Value(key)),
+    ).filter(Q(scholar_id=key) | Q(normalized_relations__scholar_id=key) | Q(scholar_draft__scholar=key) | Q(draft_member=True)).annotate(
+        scholar_sort_year=Case(When(scholar_draft__isnull=False, then=Cast(NullIf(KeyTextTransform("start_year", "scholar_draft"), Value("null")), IntegerField())), default=F("start_year"), output_field=IntegerField()),
+    ).distinct()
 
 
 def validate_timeline_details(value, target=None):

@@ -11969,6 +11969,14 @@
                         }
                     },
                     {
+                        "in": "query",
+                        "name": "scholar",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "原学者身份；包括正式关联及当前草稿关联。"
+                    },
+                    {
                         "name": "search",
                         "required": false,
                         "in": "query",
@@ -12063,6 +12071,14 @@
                             "format": "uuid"
                         },
                         "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "scholar",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "核对事件仍属于该学者的正式或草稿关联。"
                     }
                 ],
                 "tags": [

@@ -605,6 +605,7 @@ class AdminSubdisciplineDetailView(
         )
 
 
+@extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("scholar", type=str, description="原学者身份；包括正式关联及当前草稿关联。")]))
 class AdminTheoryTimelineListView(TimelineCommandMixin, StagedRelationEditorMixin, generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
     editorial_target_type = "timeline_event"
@@ -659,12 +660,17 @@ class AdminTheoryTimelineListView(TimelineCommandMixin, StagedRelationEditorMixi
                 | Q(source__icontains=query)
                 | Q(normalized_relations__node__canonical_name_zh__icontains=query)
             )
+        if params.get("scholar"):
+            from catalog.timeline_editor import timeline_for_scholar
+            from django.db.models import F
+            return timeline_for_scholar(queryset, params["scholar"]).order_by(F("scholar_sort_year").asc(nulls_last=True), "display_order", "title", "pk")
         return queryset.distinct().order_by("start_year", "display_order", "title", "pk")
 
     def perform_create(self, serializer):
         return super().perform_create(serializer)
 
 
+@extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("scholar", type=str, description="核对事件仍属于该学者的正式或草稿关联。")]))
 class AdminTheoryTimelineDetailView(TimelineCommandMixin, StagedRelationEditorMixin, generics.RetrieveUpdateDestroyAPIView):
     editorial_target_type = "timeline_event"
     public_status_field = "review_status"
@@ -681,6 +687,13 @@ class AdminTheoryTimelineDetailView(TimelineCommandMixin, StagedRelationEditorMi
         "normalized_relations__scholar__person",
         "normalized_relations__work",
     )
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.query_params.get("scholar"):
+            from catalog.timeline_editor import timeline_for_scholar
+            return timeline_for_scholar(queryset, self.request.query_params["scholar"])
+        return queryset
 
     def destroy(self, request, *args, **kwargs):
         event = self.get_object()

@@ -36,7 +36,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { adminListHref, adminPageNumber } from "@/lib/admin-route-context";
 import { KnowledgeImagePanel } from "./admin/media/knowledge-image-panel";
 import type { FormEvent, ReactNode, SetStateAction } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
 import { CurationFieldAssistant } from "@/components/admin/curation/curation-field-assistant";
 import { asRecord, asString } from "@/components/admin/workflow/workflow-types";
@@ -1270,7 +1270,7 @@ type TimelineRelation = {
   sort_order: number;
 };
 
-type TimelineEvent = {
+export type AdminTimelineEvent = {
   start_date?: string|null;
   end_date?: string|null;
   editorial_details?: TimelineEditorialDetails;
@@ -1302,6 +1302,8 @@ type TimelineEvent = {
   editorial_revision?: EditorialRevisionSummary;
   public_status?: string;
 };
+
+type TimelineEvent = AdminTimelineEvent;
 
 type TimelineDraft = {
   start_date: string;
@@ -1516,20 +1518,30 @@ function timelineConfirmationKey(value:TimelineDraft) {
   return JSON.stringify({...content,sources:editorial_details.sources,time_note:editorial_details.time_note,conflict_note:editorial_details.conflict_note});
 }
 
-function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nodeId?: string }) {
+export type TimelineEditorGuard = {dirty:boolean;pending:boolean;composing:boolean};
+type ScholarTimelineContext = {scholarId:string;onSelect:(id:string)=>void;onGuardChange:(value:TimelineEditorGuard)=>void;onSaved:()=>void};
+export function ScholarTimelineEditor({scholarId,eventId,onGuardChange,onSaved}:{scholarId:string;eventId:string;onGuardChange:(value:TimelineEditorGuard)=>void;onSaved:()=>void}) {
+  const account=useEditorAccountKey(),[selected,setSelected]=useState(eventId);
+  return <TimelineEditor key={`${account}:${selected}`} requestedId={selected} embedded={{scholarId,onSelect:setSelected,onGuardChange,onSaved}}/>;
+}
+
+function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: string; nodeId?: string; embedded?:ScholarTimelineContext }) {
   const session=useAdminSession(), owner=String(session?.id||"");
   const command=useScholarSave(owner,"timeline");
+  const composing=useRef(false),[ime,setIme]=useState(false);
+  const scopeScholarId=embedded?.scholarId||"";
   const canEdit=hasAdminCapability(session,"can_edit_draft_authority");
   const canCreate=hasAdminCapability(session,"can_create_authority");
   const previewRef=useRef<HTMLElement>(null);
   const opened = useRef(false);
   const apiRequest = useEditorRequest();
-  const location = useEditorListLocation();
+  const routeLocation = useEditorListLocation();
+  const location=embedded?{...routeLocation,search:new URLSearchParams(),update:(updates:Record<string,string|number|null>)=>{if("event" in updates)embedded.onSelect(String(updates.event||""));}}:routeLocation;
   const page = adminPageNumber(location.search.get("page"));
   const [editConflict, setEditConflict] = useState(false);
   const canPublish = hasAdminCapability(useAdminSession(), "can_publish_authority");
   const [editing, setEditing] = useState<TimelineEvent | null>(null);
-  const initialDraft = useMemo(() => ({ ...emptyTimelineDraft, nodes: nodeId ? [nodeId] : [] }), [nodeId]);
+  const initialDraft = useMemo(() => ({ ...emptyTimelineDraft, nodes: nodeId ? [nodeId] : [], scholar:scopeScholarId }), [nodeId,scopeScholarId]);
   const [draft, setSavedDraft] = useState<TimelineDraft>(initialDraft);
   const setDraft=useCallback((next:SetStateAction<TimelineDraft>)=>setSavedDraft(previous=>{const value=typeof next === "function"?next(previous):next;return timelineConfirmationKey(previous)===timelineConfirmationKey(value)?value:{...value,editorial_details:{...value.editorial_details,confirmed:false}};}),[]);
   const timelineDirty = useUnsavedForm(draft, editing ? timelineToDraft(editing) : initialDraft);
@@ -1545,18 +1557,22 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const [message, setMessage] = useState("");
   const [messageState, setMessageState] = useState<ActionState>("idle");
   const { pendingAction, startAction, finishAction } = useActionGuard();
+  useUnsavedForm(Boolean(command.recovery)||Boolean(pendingAction),false);
+  const notifyGuard=useEffectEvent((value:TimelineEditorGuard)=>embedded?.onGuardChange(value));
+  useEffect(()=>{notifyGuard({dirty:timelineDirty,pending:Boolean(pendingAction)||Boolean(command.recovery),composing:ime});},[timelineDirty,pendingAction,command.recovery,ime]);
   const [entityLabels, setEntityLabels] = useState<Record<string, string>>({});
 
   const params = useMemo(() => {
     const search = new URLSearchParams();
     search.set("page", String(page));
     if (nodeId) search.set("node", nodeId);
+    if (scopeScholarId) search.set("scholar",scopeScholarId);
     if (disciplineFilter) search.set("discipline", disciplineFilter);
     if (typeFilter) search.set("event_type", typeFilter);
     if (statusFilter) search.set("review_status", statusFilter);
     if (appliedQuery.trim()) search.set("q", appliedQuery.trim());
     return search.toString();
-  }, [disciplineFilter, typeFilter, statusFilter, appliedQuery, page, nodeId]);
+  }, [disciplineFilter, typeFilter, statusFilter, appliedQuery, page, nodeId, scopeScholarId]);
   const selectedNode = useAdminData<KnowledgeNode>(nodeId ? `/catalog/admin/theory-system/nodes/${nodeId}/` : null);
   const events = useAdminData<Page<TimelineEvent>>(nodeId && !selectedNode.data ? null : `/catalog/admin/theory-timeline/?${params}`);
   const nodes = useAdminData<Page<KnowledgeNode>>("/catalog/admin/theory-system/nodes/");
@@ -1565,7 +1581,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const scholars = useAdminData<Page<ScholarCompact>>("/catalog/admin/scholars/");
   const relatedPreview=useAdminData<Page<import("@/lib/api/knowledge.types").NormalizedTimelineEvent>>(draft.scholar||nodeId?`/catalog/theory-system/timeline/?${new URLSearchParams(draft.scholar?{author:draft.scholar}:{node:nodeId})}`:null);
   const previewScholar=useAdminData<{preferred_name:string;portrait:string;birth_year:number|null;death_year:number|null;summary:string}>(draft.scholar?`/catalog/admin/scholars/${draft.scholar}/`:null);
-  const requested = useAdminData<TimelineEvent>(requestedId ? `/catalog/admin/theory-timeline/${requestedId}/` : null);
+  const requested = useAdminData<TimelineEvent>(requestedId ? `/catalog/admin/theory-timeline/${requestedId}/${embedded?`?scholar=${encodeURIComponent(embedded.scholarId)}`:""}` : null);
   const wrongNode = Boolean(nodeId && requested.data && !requested.data.relations.some((row) => row.node === nodeId));
   useEffect(() => {
     if (!requested.data || wrongNode || opened.current) return;
@@ -1575,7 +1591,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   }, [requested.data, wrongNode]);
 
   function start(event?: TimelineEvent) {
-    if (pendingAction || command.recovery || (timelineDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一个事件吗？"))) return;
+    if (composing.current || pendingAction || command.recovery || (timelineDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一个事件吗？"))) return;
     if ((event?.id || "") !== requestedId) { location.update({ event: event?.id ?? null }); return; }
     setEditing(event ?? null);
     setSavedDraft(event ? timelineToDraft(event) : { ...initialDraft });
@@ -1586,8 +1602,8 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   }
 
   async function saveEvent(event: FormEvent) {
-    event.preventDefault();
-    if (!canEdit || (!editing && !canCreate) || wrongNode || (nodeId && !selectedNode.data)) return;
+    event.preventDefault();event.stopPropagation();
+    if (composing.current || !canEdit || (!editing && !canCreate) || wrongNode || (nodeId && !selectedNode.data)) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = editing ? `save-timeline-event:${editing.id}` : "create-timeline-event";
@@ -1636,7 +1652,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
       setMessage(saved.editorial_revision ? "修改已保存，尚未公开。核对事件预览后，再确认发布。" : "事件已保存，尚未公开。选择准备公开并保存后，可确认发布。");
       setEditConflict(false);
       setMessageState("success");
-      events.refresh();
+      events.refresh();embedded?.onSaved();
     } catch (reason) {
       setEditConflict(isEditorialConflict(reason));
       setMessage(reason instanceof Error ? reason.message : "事件保存失败");
@@ -1648,7 +1664,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
 
   async function publishEvent() {
     const revision = editing?.editorial_revision;
-    if (!revision || command.recovery || timelineDirty || !canPublish || !window.confirm("确认发布此事件的已保存修改？公开时间线和关联页面会使用这些内容。")) return;
+    if (composing.current || !revision || command.recovery || timelineDirty || !canPublish || !window.confirm("确认发布此事件的已保存修改？公开时间线和关联页面会使用这些内容。")) return;
     if (!startAction("publish-timeline")) return;
     try {
       await apiRequest(revision.publish_url, { method: "POST", body: "{}" }, getServerSessionCredential());
@@ -1657,7 +1673,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
       setSavedDraft(timelineToDraft(saved));
       setMessage(saved.review_status === "approved" ? "事件修改已发布。相关搜索的后台更新可能尚未完成。" : "事件已下线，公开时间线不再展示。后台更新可能尚未完成。");
       setMessageState("success");
-      events.refresh();
+      events.refresh();embedded?.onSaved();
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "发布失败，可重试同一份已保存修改。");
       setMessageState("error");
@@ -1665,7 +1681,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   }
 
   async function removeEvent() {
-    if (!editing || command.recovery || !window.confirm(`删除“${editing.title}”吗？`)) return;
+    if (composing.current || !editing || command.recovery || timelineDirty || !window.confirm(`删除“${editing.title}”吗？`)) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = `delete-timeline-event:${editing.id}`;
@@ -1678,7 +1694,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
       setDraft({ ...initialDraft });
       setMessage("时间轴事件已删除。");
       setMessageState("success");
-      events.refresh();
+      events.refresh();embedded?.onSaved();
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "删除失败");
       setMessageState("error");
@@ -1688,6 +1704,7 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   }
 
   async function recoverSave(cancel=false) {
+    if(composing.current||pendingAction)return;
     try { const receipt=await command.lookup(cancel); if(!receipt)return;
     if(receipt.exists && receipt.timeline_id) { location.update({event:receipt.timeline_id}); if(receipt.timeline_id===requestedId) { const saved=await apiRequest<TimelineEvent>(`/catalog/admin/theory-timeline/${receipt.timeline_id}/`);setEditing(saved);setSavedDraft(timelineToDraft(saved)); } }
     setMessage(receipt.state==="cancelled"?"原请求已停止，当前输入保留，可重新保存。":receipt.exists?"已找回原保存。请核对已保存内容。":"原保存已完成，但事件后来已删除，不会重复创建。");setMessageState("success");events.refresh();
@@ -1700,16 +1717,16 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
   const timelineWorkName = (id: string) => works.data?.results.find((item) => item.id === id)?.title || entityLabels[id] || "已选择馆藏";
 
   return (
-    <AdminFrame eyebrow="理论管理 / 时间线" title="时间线事件编辑" description="填写事件标题、发生时间和说明，再注明来源。保存后，确认发布才会更新所关联理论的页面和公开时间线。" actions={<Link className="admin-outline-button" href={`/theories/timeline${selectedNode.data ? `?node=${encodeURIComponent(selectedNode.data.slug)}` : ""}`} target="_blank">查看当前公开时间线 <ExternalLink size={14} /></Link>}>
-      <nav aria-label="时间线返回位置"><Link href={safeAdminHref(location.search.get("returnTo"), nodeId ? `/admin/theories/${nodeId}` : "/admin/theories")}>返回{selectedNode.data?.canonical_name_zh || "理论管理"}</Link>{nodeId ? <> · <Link href="/admin/theories/timeline">查看全部理论事件</Link></> : null}</nav>
+    <div data-scholar-timeline={Boolean(embedded)} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}><AdminFrame eyebrow="理论管理 / 时间线" title="时间线事件编辑" description="填写事件标题、发生时间和说明，再注明来源。保存后，确认发布才会更新所关联理论的页面和公开时间线。" actions={<Link className="admin-outline-button" href={`/theories/timeline${selectedNode.data ? `?node=${encodeURIComponent(selectedNode.data.slug)}` : ""}`} target="_blank">查看当前公开时间线 <ExternalLink size={14} /></Link>}>
+      {!embedded?<nav aria-label="时间线返回位置"><Link href={safeAdminHref(location.search.get("returnTo"), nodeId ? `/admin/theories/${nodeId}` : "/admin/theories")}>返回{selectedNode.data?.canonical_name_zh || "理论管理"}</Link>{nodeId ? <> · <Link href="/admin/theories/timeline">查看全部理论事件</Link></> : null}</nav>:null}
       <ErrorNotice message={selectedNode.error} retry={selectedNode.refresh} />
       {nodeId && !selectedNode.data ? <p>尚未读取到所选理论。不会改为另一个理论，也不能在此新建事件。</p> : null}
       {wrongNode ? <p role="alert">这个事件不属于当前理论。请返回事件所属理论，或从全部理论事件中查看。</p> : null}
       <p>同一事件可以关联多个理论，修改会影响所有关联理论。关联学者或馆藏用于说明事件涉及谁、哪部作品，不会自动替代学者生平或主题发展内容。</p>
       <div className={timelineStyles.workspace}><div className="timeline-admin-grid">
-        <div className={timelineStyles.toolbar}><small>{timelineDirty?"有未保存修改":editing?"已保存内容":"尚未保存"}{editing?.editorial_revision?" · 待发布修改":""}</small><div><button className="admin-outline-button" type="button" onClick={()=>previewRef.current?.scrollIntoView({behavior:"smooth",block:"start"})}>预览</button><button className="admin-outline-button" type="submit" form="timeline-editor-form" disabled={!canEdit||Boolean(pendingAction)||!command.ready||Boolean(command.recovery)}>保存草稿</button><button className="button" type="button" disabled={!canPublish||timelineDirty||Boolean(pendingAction)||Boolean(command.recovery)||!editing?.editorial_revision} onClick={()=>void publishEvent()}>发布</button></div></div>
+        <div className={timelineStyles.toolbar}><small>{timelineDirty?"有未保存修改":editing?"已保存内容":"尚未保存"}{editing?.editorial_revision?" · 待发布修改":""}</small><div><button className="admin-outline-button" type="button" onClick={()=>previewRef.current?.scrollIntoView({behavior:"smooth",block:"start"})}>预览</button><button className="admin-outline-button" type="submit" form="timeline-editor-form" disabled={ime||!canEdit||Boolean(pendingAction)||!command.ready||Boolean(command.recovery)}>保存草稿</button><button className="button" type="button" disabled={ime||!canPublish||timelineDirty||Boolean(pendingAction)||Boolean(command.recovery)||!editing?.editorial_revision} onClick={()=>void publishEvent()}>发布</button></div></div>
         {command.recovery?<div role="status"><p>原保存结果尚未确认，请先核对这次请求。</p><button type="button" onClick={()=>void recoverSave()}>查回原请求</button>{command.canRetry?<button type="submit" form="timeline-editor-form">重试原保存</button>:null}<button type="button" onClick={()=>void recoverSave(true)}>停止未完成请求</button></div>:null}{command.error?<p role="alert">{command.error}</p>:null}
-        <details className={timelineStyles.directory}><summary>查找与切换事件 · {events.data?.count ?? "正在读取"}</summary>
+        <details hidden={Boolean(embedded)} className={timelineStyles.directory}><summary>查找与切换事件 · {events.data?.count ?? "正在读取"}</summary>
         <section className="admin-panel normalized-timeline-list">
           <form className="theory-admin-filters timeline" onSubmit={(event) => { event.preventDefault(); location.update({ q: query.trim(), page: 1 }); }}>
             <ResearchEntityPicker label="学科筛选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_timeline" field="filter_discipline" values={onePickerValue(disciplineFilter, timelineDisciplineName(disciplineFilter))} onChange={(next) => { const picked = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDisciplineFilter(picked?.id ?? ""); }} />
@@ -1766,10 +1783,11 @@ function TimelineEditor({ requestedId, nodeId = "" }: { requestedId: string; nod
           <ActionButton className="button" type="submit" state={pendingAction?.startsWith("save-timeline-event:") || pendingAction === "create-timeline-event" ? "pending" : "idle"} pendingLabel="正在保存事件" disabled={Boolean(pendingAction)}><Save size={15} />保存事件</ActionButton>
           </section></fieldset>
           <SavedDraftActions revision={editing?.editorial_revision} dirty={timelineDirty} busy={Boolean(pendingAction)} impact="请核对上方的事件预览与关联对象。确认发布后，公开时间线和关联页面会更新。" publish={() => void publishEvent()} />
-          <EditorialConflictHelp visible={editConflict} href={location.href({ event: editing?.id ?? null })} />
+          <EditorialConflictHelp visible={!embedded&&editConflict} href={location.href({ event: editing?.id ?? null })} />
+          {embedded&&editConflict&&editing&&!command.recovery?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>{if(window.confirm("放弃当前未保存输入并重新读取事件？"))void apiRequest<TimelineEvent>(`/catalog/admin/theory-timeline/${editing.id}/`).then(value=>{setEditing(value);setSavedDraft(timelineToDraft(value));setEditConflict(false);},reason=>setMessage(reason instanceof Error?reason.message:"重新读取失败，输入保留。"));}}>重新读取已保存事件</button>:null}
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
         </form><aside ref={previewRef} className="timeline-current-preview" tabIndex={-1}>{previewScholar.data?<div className={timelineStyles.scholar}>{previewScholar.data.portrait?<img src={normalizePublicResourceUrl(previewScholar.data.portrait)} alt=""/>:null}<div><h3>{previewScholar.data.preferred_name}</h3><p>{previewScholar.data.birth_year??"生年待核"} — {previewScholar.data.death_year??""}</p><p>{previewScholar.data.summary}</p></div></div>:null}<ErrorNotice message={previewScholar.error} retry={previewScholar.refresh}/><header><strong>当前事件 · 实时预览</strong><span>{timelineDirty ? "有未保存修改" : "已保存内容"}</span></header><TheoryTimelinePublicList detailLinks={false} events={[{id:editing?.id || "draft",start_date:draft.start_date||null,end_date:draft.end_date||null,title:draft.title,description:draft.description,event_type:draft.event_type,start_year:draft.start_year === "" ? null : Number(draft.start_year),end_year:draft.end_year === "" ? null : Number(draft.end_year),date_label:draft.date_label,date_precision:draft.date_precision,source:draft.source,evidence_page:Number(draft.evidence_page)||null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:null}]}/>{draft.scholar||nodeId?<><h3>已公开的相关事件</h3><ErrorNotice message={relatedPreview.error} retry={relatedPreview.refresh}/>{relatedPreview.loading?<p>正在读取关联时间线…</p>:<TheoryTimelinePublicList events={(relatedPreview.data?.results||[]).filter(row=>row.id!==editing?.id).slice(0,5)}/>}<Link href={`/theories/timeline?${new URLSearchParams(draft.scholar?{author:draft.scholar}:{node:nodeId})}`} target="_blank">查看完整时间线</Link></>:null}</aside></div>
       </div></div>
-    </AdminFrame>
+    </AdminFrame></div>
   );
 }

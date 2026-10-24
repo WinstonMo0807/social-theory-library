@@ -25841,6 +25841,8 @@ export interface operations {
                 ordering?: string;
                 /** @description 分页结果集中的页码。 */
                 page?: number;
+                /** @description 原学者身份；包括正式关联及当前草稿关联。 */
+                scholar?: string;
                 /** @description 搜索关键词。 */
                 search?: string;
             };
@@ -25887,7 +25889,10 @@ export interface operations {
     };
     catalog_admin_theory_timeline_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 核对事件仍属于该学者的正式或草稿关联。 */
+                scholar?: string;
+            };
             header?: never;
             path: {
                 id: string;
