@@ -26,6 +26,9 @@ def destination(kind, obj):
 def row_payload(kind, obj, *, blocking=False, actor=None, source=None):
     from .recycle_workspace import LABELS
     if kind=="placement":return placement_payload(obj,actor)
+    if kind=="issue-reference":
+        from .recycle_issue_references import issue_reference_payload
+        return issue_reference_payload(obj,actor)
     if kind=="link":
         from .recycle_links import row_payload as link_payload
         return link_payload(obj,source,actor)
@@ -60,6 +63,9 @@ def relation_queries(obj, actor):
     if uses is not None:groups.append(("placements","内容编排引用（最新与公开修订）","placement",uses,False))
     from .recycle_links import relation_queries as link_queries
     groups.extend(link_queries(obj,actor))
+    from .recycle_issue_references import issue_references
+    issues=issue_references(obj,actor)
+    if issues is not None:groups.append(("issue-references","策划正文与材料引用（最新、公开与排期修订）","issue-reference",issues,False))
     return sorted(groups,key=lambda row:(not row[0].startswith("parent:"),row[0]))
 
 
@@ -174,7 +180,7 @@ def related_page(kind,identifier,actor,*,category="dependencies",relation="",pag
     except InvalidPage as error:raise ValidationError("此页已不存在，请返回第一页重新读取。") from error
     result={"category":category,"relation":chosen,"groups":groups,"count":paginator.count,"page":current.number,
         "total_pages":paginator.num_pages,"as_of":as_of,"dependencies":[],"history":[],"names":[],
-        "notice":"按类型分页查看管理对象、保留的关系记录及内容编排引用；同一对象在不同关系中可能重复，不含读者私人资料。关系的待确认/撤回状态保持不变，编排包括最新与登记公开修订，其他正文结构仍需原编辑入口核对。" if category=="dependencies" else
+        "notice":"按类型分页查看管理对象、保留的关系、页面编排及策划正文引用；同一对象在不同关系或修订中可能重复，不含读者私人资料。关系的待确认/撤回状态保持不变；策划包含最新、登记公开与排期修订，普通文字链接及其他旧结构仍需原编辑入口核对。" if category=="dependencies" else
             "显示原对象审计摘要，不含原始操作载荷、凭据或私人正文。" if category=="history" else
             "同名可能是不同作品、版本或身份。恢复保留原ID，不自动合并、覆盖或更改公开内容。"}
     result[category]=[history_payload(row) if category=="history" else name_payload(kind,row,actor) if category=="names" else row_payload(row_kind,row,blocking=blocking,actor=actor,source=obj) for row in current.object_list]
