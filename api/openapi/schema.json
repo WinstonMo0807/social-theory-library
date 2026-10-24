@@ -6624,6 +6624,85 @@
                 }
             }
         },
+        "/api/catalog/admin/local-services/history/": {
+            "get": {
+                "operationId": "catalog_admin_local_services_history_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "as_of",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "service_id",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 96,
+                            "pattern": "^[a-z][a-z0-9_-]{0,95}$"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "untested",
+                                "stale",
+                                "changed",
+                                "available",
+                                "partial",
+                                "offline",
+                                "model_unloaded",
+                                "not_configured",
+                                "disabled",
+                                "quota_exhausted",
+                                "checking"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `untested` - untested\n* `stale` - stale\n* `changed` - changed\n* `available` - available\n* `partial` - partial\n* `offline` - offline\n* `model_unloaded` - model_unloaded\n* `not_configured` - not_configured\n* `disabled` - disabled\n* `quota_exhausted` - quota_exhausted\n* `checking` - checking"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LocalServiceHistoryPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/manual-catalog/": {
             "get": {
                 "operationId": "catalog_admin_manual_catalog_retrieve",
@@ -48954,6 +49033,37 @@
                     "subtitle",
                     "task_notice",
                     "tasks"
+                ]
+            },
+            "LocalServiceHistoryPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "as_of": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LocalServiceObservation"
+                        }
+                    }
+                },
+                "required": [
+                    "as_of",
+                    "count",
+                    "page",
+                    "results",
+                    "total_pages"
                 ]
             },
             "LocalServiceObservation": {

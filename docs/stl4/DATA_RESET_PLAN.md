@@ -1,5 +1,9 @@
 # 账号保留型业务重置
 
+## 2026-10-24 新引用与候选表的静态归类
+
+2b754f在禁止数据库连接下检查Django模型声明。TimelineEvidenceImage、TimelineMergeRecord、ReadingPathCandidate、EvidencePack均已纳入原business app动态清单，accounts模型及自动关联表全部由保留清单覆盖，未归入删除。没有执行真实预演或清理，没有取得新的生产批准；部署迁移后必须重新核对实际表/外键/触发器、账户指纹和备份恢复证据，旧计划不得直接沿用。
+
 ## 2026-10-24 学者关系准确来源
 
 ScholarRelation沿原修订保存准确原文与版本，catalog0085只声明两项PROTECT外键及成对约束，未执行。公开必须匹配正式快照、准确定位和匿名可读资格；已失效原引用允许保存核对意见与撤回，不允许再次公开。管理整类自问修正已知来源失效仍可点发布、公开空出处误称草稿两个细节；未运行使用验收。无账户模型变更，仍归原catalog业务数据与既定重置工具动态外键范围，不授权或执行任何清理。其他待办见CONCEPT_EDITOR_20261023与CURRENT_PROGRESS。

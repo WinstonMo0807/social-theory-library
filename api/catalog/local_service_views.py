@@ -1,11 +1,14 @@
 from drf_spectacular.utils import extend_schema
+from django.core.paginator import Paginator, InvalidPage
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.editorial_read import AdminPrivateResponseMixin
 from common.permissions import CanViewSystemStatus
-from catalog.local_services import check_service, services_snapshot
+from catalog.local_services import check_service, services_snapshot, PREFIX, STATUS_LABELS, observation_payload
+from catalog.models import HealthCheckRun
 
 
 class LocalServiceCheckInput(serializers.Serializer):
@@ -93,3 +96,44 @@ class LocalServiceCheckView(AdminPrivateResponseMixin, APIView):
         serializer = LocalServiceCheckInput(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(check_service(request, serializer.validated_data))
+
+
+class LocalServiceHistoryQuery(serializers.Serializer):
+    page = serializers.IntegerField(min_value=1, default=1)
+    service_id = serializers.RegexField(r"^[a-z][a-z0-9_-]{0,95}$", max_length=96, required=False)
+    status = serializers.ChoiceField(choices=list(STATUS_LABELS), required=False)
+    as_of = serializers.DateTimeField(required=False)
+
+
+class LocalServiceHistoryPage(serializers.Serializer):
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+    as_of = serializers.DateTimeField()
+    results = LocalServiceObservation(many=True)
+
+
+class LocalServiceHistoryView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanViewSystemStatus]
+
+    @extend_schema(parameters=[LocalServiceHistoryQuery], responses=LocalServiceHistoryPage)
+    def get(self, request):
+        if any(len(request.query_params.getlist(key)) != 1 for key in request.query_params) or set(request.query_params) - set(LocalServiceHistoryQuery().fields):
+            raise serializers.ValidationError("历史查询参数无效或重复。")
+        query = LocalServiceHistoryQuery(data=request.query_params); query.is_valid(raise_exception=True)
+        values = query.validated_data
+        as_of = values.get("as_of") or timezone.now()
+        if as_of > timezone.now():
+            raise serializers.ValidationError("不能读取未来的检查记录。")
+        rows = HealthCheckRun.objects.filter(probe_key__startswith=PREFIX, started_at__lte=as_of, created_at__lte=as_of)
+        if values.get("service_id"):
+            rows = rows.filter(probe_key=PREFIX + values["service_id"])
+        if values.get("status"):
+            rows = rows.filter(details__service_status=values["status"])
+        paginator = Paginator(rows.order_by("-started_at", "-id"), 24)
+        try:
+            page = paginator.page(values["page"])
+        except InvalidPage as error:
+            raise serializers.ValidationError("这一页记录已不存在，请返回第一页重新读取。") from error
+        return Response(LocalServiceHistoryPage({"count": paginator.count, "page": page.number, "total_pages": paginator.num_pages,
+            "as_of": as_of, "results": [observation_payload(row) for row in page.object_list]}).data)

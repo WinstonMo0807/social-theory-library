@@ -1474,6 +1474,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/local-services/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_local_services_history_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/manual-catalog/": {
         parameters: {
             query?: never;
@@ -11813,6 +11829,14 @@ export interface components {
                 [key: string]: number;
             } | null;
             task_notice: string;
+        };
+        LocalServiceHistoryPage: {
+            count: number;
+            page: number;
+            total_pages: number;
+            /** Format: date-time */
+            as_of: string;
+            results: components["schemas"]["LocalServiceObservation"][];
         };
         LocalServiceObservation: {
             /** Format: uuid */
@@ -24817,6 +24841,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LocalServiceObservation"];
+                };
+            };
+        };
+    };
+    catalog_admin_local_services_history_retrieve: {
+        parameters: {
+            query?: {
+                as_of?: string;
+                page?: number;
+                service_id?: string;
+                /**
+                 * @description * `untested` - untested
+                 *     * `stale` - stale
+                 *     * `changed` - changed
+                 *     * `available` - available
+                 *     * `partial` - partial
+                 *     * `offline` - offline
+                 *     * `model_unloaded` - model_unloaded
+                 *     * `not_configured` - not_configured
+                 *     * `disabled` - disabled
+                 *     * `quota_exhausted` - quota_exhausted
+                 *     * `checking` - checking
+                 */
+                status?: "untested" | "stale" | "changed" | "available" | "partial" | "offline" | "model_unloaded" | "not_configured" | "disabled" | "quota_exhausted" | "checking";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalServiceHistoryPage"];
                 };
             };
         };

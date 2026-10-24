@@ -1,5 +1,6 @@
 "use client";
 
+import { LocalServiceHistory } from "./local-service-history";
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -39,7 +40,7 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
   const data=resource.data, services=data?.groups.flatMap(group=>group.services)||[];
   const current=selected?services.find(service=>service.id===selected):services[0];
   const group=data?.groups.find(value=>value.id===current?.group);
-  const select=(service:Service)=>{setSelected(service.id);setTab("services");};
+  const select=(service?:Service)=>{if(service){setSelected(service.id);setTab("services");}};
 
   async function check(items:Service[]) {
     if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted)return;
@@ -82,16 +83,16 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
         <section className={styles.services}><header className={styles.sectionHeader}><div><h2>服务状态</h2><p>按能力查看真实配置及其最近检查记录。</p></div><div className={styles.actions}><button disabled={!!checking||resource.pending||!services.some(row=>row.can_check)} onClick={()=>void check(services)}><Play size={13}/>{checking?"检查进行中":"按权限检查全部服务"}</button>{checking?<button onClick={()=>{stop.current=true;setMessage("将在当前检查完成后停止后续检查。");}}>停止后续检查</button>:null}</div></header>
           <div className={styles.serviceTable}><div className={styles.tableHead}><span>能力</span><span>服务身份</span><span>状态</span><span>最近检查</span><span>任务积压</span><span>失败（24h）</span><span>受影响功能</span><span>操作</span></div>{data.groups.map(row=>{const Icon=icons[row.id as keyof typeof icons]||FileText;return <section className={styles.serviceRow} key={row.id}>
             <div className={styles.capability}><Icon size={21}/><div><strong>{row.label}</strong><small>{row.subtitle}</small></div></div>
-            <div className={styles.identities}>{row.services.slice(0,2).map(service=><button key={service.id} onClick={()=>select(service)}><span>{service.name}</span><small>{service.scope}</small></button>)}{row.services.length>2?<button onClick={()=>select(row.services[0])}>另有 {row.services.length-2} 项配置</button>:null}</div>
+            <div className={styles.identities}>{!row.services.length?<span>尚未配置此能力的服务</span>:null}{row.services.slice(0,2).map(service=><button key={service.id} onClick={()=>select(service)}><span>{service.name}</span><small>{service.scope}</small></button>)}{row.services.length>2?<button onClick={()=>select(row.services[0])}>另有 {row.services.length-2} 项配置</button>:null}</div>
             <span className={styles.status} data-tone={tone(row.status)}>{row.status_label}</span>
             <div className={styles.checkTime}>{date(row.services.map(service=>service.observation?.checked_at).filter((value):value is string=>!!value).sort().at(-1)||null)}</div>
             <span className={styles.queueCount} title={row.task_notice}>{row.tasks?.waiting??"—"}</span><span className={styles.failedCount} title={row.task_notice}>{row.tasks?.failed_24h??"—"}</span>
             <p className={styles.affected}>{row.affected_features.join("、")}</p>
-            <div className={styles.rowActions}><button disabled={!!checking||resource.pending||!row.services.some(service=>service.can_check)} onClick={()=>void check(row.services)}>检查</button><button aria-label={`查看${row.label}详情`} onClick={()=>select(row.services[0])}><ChevronRight size={16}/></button></div>
+            <div className={styles.rowActions}><button disabled={!!checking||resource.pending||!row.services.some(service=>service.can_check)} onClick={()=>void check(row.services)}>检查</button><button disabled={!row.services.length} aria-label={`查看${row.label}详情`} onClick={()=>select(row.services[0])}><ChevronRight size={16}/></button></div>
           </section>;})}</div>
         </section>
         <div className={styles.bottom}><ServiceHistory data={data} services={services} showAll={()=>setTab("history")} compact/>{current?<ServiceDetails service={current} compact checking={checking} pending={resource.pending} onCheck={service=>void check([service])}/>:null}</div>
-      </>:tab==="history"?<ServiceHistory data={data} services={services} showAll={()=>setTab("history")}/>:tab==="services"?<div className={styles.serviceDetail}><aside aria-label="能力与服务">{data.groups.map(row=><section key={row.id}><h2>{row.label}</h2>{row.services.map(service=><button key={service.id} aria-current={current?.id===service.id?"true":undefined} onClick={()=>setSelected(service.id)}><span>{service.name}</span><span className={styles.status} data-tone={tone(service.status)}>{service.status_label}</span></button>)}</section>)}</aside><div>{current?<ServiceDetails service={current} checking={checking} pending={resource.pending} onCheck={service=>void check([service])}/>:null}{group?<p className={styles.hint}>受影响功能：{group.affected_features.join("、")}。同一能力下的配置分别记录，不会用其他服务的成功结果替代。</p>:null}</div></div>:<div className={styles.configuration}>{data.groups.map(row=><section className={styles.panel} key={row.id}><header><h2>{row.label}</h2><span>{row.services.length} 项配置</span></header>{row.services.map(service=><div className={styles.configurationRow} key={service.id}><div><strong>{service.name}</strong><p>{service.scope} · {service.status_label}</p></div>{service.can_configure?<Link href={service.config_url}>打开原配置 <ChevronRight size={14}/></Link>:<span>仅查看</span>}</div>)}</section>)}</div>}
+      </>:tab==="history"?<LocalServiceHistory key={data.generated_at} owner={owner} services={services} asOf={data.generated_at}/>:tab==="services"?<div className={styles.serviceDetail}><aside aria-label="能力与服务">{data.groups.map(row=><section key={row.id}><h2>{row.label}</h2>{row.services.map(service=><button key={service.id} aria-current={current?.id===service.id?"true":undefined} onClick={()=>setSelected(service.id)}><span>{service.name}</span><span className={styles.status} data-tone={tone(service.status)}>{service.status_label}</span></button>)}</section>)}</aside><div>{current?<ServiceDetails service={current} checking={checking} pending={resource.pending} onCheck={service=>void check([service])}/>:null}{group?<p className={styles.hint}>受影响功能：{group.affected_features.join("、")}。同一能力下的配置分别记录，不会用其他服务的成功结果替代。</p>:null}</div></div>:<div className={styles.configuration}>{data.groups.map(row=><section className={styles.panel} key={row.id}><header><h2>{row.label}</h2><span>{row.services.length} 项配置</span></header>{row.services.map(service=><div className={styles.configurationRow} key={service.id}><div><strong>{service.name}</strong><p>{service.scope} · {service.status_label}</p></div>{service.can_configure?<Link href={service.config_url}>打开原配置 <ChevronRight size={14}/></Link>:<span>仅查看</span>}</div>)}</section>)}</div>}
       <aside className={styles.notice}><CircleAlert size={18}/><strong>重要说明</strong><p>{data.notice}</p><Link href="/admin/processing/health">查看运行维护 <ChevronRight size={14}/></Link></aside>
       <p className={styles.hint}>任务统计来自现有处理队列；不展示读者私人任务内容。未检查、未启用和过期记录均不计为可用。</p>
     </>:null}
@@ -101,7 +102,7 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
 function ServiceHistory({data,services,showAll,compact=false}:{data:Snapshot|null;services:Service[];showAll:()=>void;compact?:boolean}) {
     const history=(data?.history||[]).slice(0,compact?5:40);
     return <section className={styles.panel} aria-labelledby={compact?"recent-checks":"all-checks"}>
-      <header><h2 id={compact?"recent-checks":"all-checks"}>最近检查记录</h2>{compact?<button onClick={showAll}>查看全部 <ChevronRight size={14}/></button>:<span>保留最近 40 条显示</span>}</header>
+      <header><h2 id={compact?"recent-checks":"all-checks"}>最近检查记录</h2>{compact?<button onClick={showAll}>查看全部 <ChevronRight size={14}/></button>:<span>最近保存的检查记录</span>}</header>
       {!history.length?<div className={styles.empty}><Clock3 size={22}/><p>尚未保存服务检查记录</p><span>配置存在并不表示服务已经检查。</span></div>:<div className={styles.tableScroll}><table><thead><tr><th>时间</th><th>服务</th><th>检查结果</th><th>耗时</th>{!compact?<th>说明</th>:null}</tr></thead><tbody>{history.map(item=><tr key={item.id}><td><time dateTime={item.checked_at}>{date(item.checked_at)}</time></td><td>{services.find(row=>row.id===item.service_id)?.name||item.service_id}</td><td><span className={styles.status} data-tone={tone(item.status)}>{labels[item.status]||"待核对"}</span></td><td>{item.latency_ms===null?"—":`${(item.latency_ms/1000).toFixed(1)} s`}</td>{!compact?<td>{item.detail}</td>:null}</tr>)}</tbody></table></div>}
     </section>;
   }

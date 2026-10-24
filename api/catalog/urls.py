@@ -4,7 +4,7 @@ from catalog.site_history import SiteHistoryView, SiteRestoreView
 from catalog.recommendation_command_views import RecommendationRefreshReceiptView
 from catalog.visual_review_views import VisualReviewView, VisualReviewReceiptView, VisualReviewReferenceView
 from catalog.journal_candidate_views import JournalContentsCandidatesView
-from catalog.local_service_views import LocalServicesView, LocalServiceCheckView
+from catalog.local_service_views import LocalServicesView, LocalServiceCheckView, LocalServiceHistoryView
 from catalog.media_legacy_views import LegacyImageHistoryView, LegacyImageFileView
 from catalog.issue_creation_views import IssueCreateView, IssueCreateReceiptView, IssueProposalPreviewView
 from catalog.path_editor_views import PathSaveReceiptView, PathValidationView, PathPreviewView
@@ -278,6 +278,7 @@ urlpatterns = [
     path("admin/visual-review/references/<int:page>/", VisualReviewReferenceView.as_view(), name="admin-visual-review-reference"),
     path("admin/local-services/", LocalServicesView.as_view(), name="local-services"),
     path("admin/local-services/check/", LocalServiceCheckView.as_view(), name="local-service-check"),
+    path("admin/local-services/history/", LocalServiceHistoryView.as_view(), name="local-service-history"),
     path("theory-system/directory/", TheoryDirectoryView.as_view(), name="theory-system-directory"),
     path("admin/discovery-index/", DiscoveryIndexView.as_view(), name="admin-discovery-index"),
     path("admin/curation-projects/", CurationProjectView.as_view(), name="curation-projects"),

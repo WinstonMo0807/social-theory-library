@@ -34,7 +34,7 @@ GROUPS = (
 )
 STATUS_LABELS = {"untested": "未检查", "stale": "记录已过期", "changed": "配置已变化",
     "available": "可使用", "partial": "部分能力可用", "offline": "离线", "model_unloaded": "模型未加载",
-    "not_configured": "未配置", "disabled": "未启用", "quota_exhausted": "额度受限", "checking": "检查中"}
+    "not_configured": "未配置", "disabled": "未启用", "quota_exhausted": "访问受限", "checking": "检查中"}
 
 
 class ServiceCheckConflict(APIException):
@@ -222,7 +222,7 @@ def _check(definition):
     result = HEALTH_CHECKS.get(probe_key).runner()
     warnings = result.details.get("warnings", [])
     if any(isinstance(item, str) and "HTTP 429" in item for item in warnings):
-        return "quota_exhausted", "外部来源返回访问频率限制，请等待配额恢复后再检查。", {}
+        return "quota_exhausted", "外部来源返回访问频率限制；未提供可核实余额，请稍后重试或查看原来源限制。", {}
     if result.configured is False:
         return "not_configured", "服务当前配置不可用，请核对配置与允许的访问地址。", {}
     if result.reachable is False:
