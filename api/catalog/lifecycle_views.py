@@ -112,9 +112,17 @@ def _name(obj, field: str) -> str:
 
 def _dependency_rows(obj) -> list[dict]:
     rows: list[dict] = []
+    catalog_links = {
+        "catalog.personnoderelation": "人物与知识条目关系", "catalog.worknoderelation": "作品与知识条目关系",
+        "catalog.evidencesnippet": "原文证据片段", "catalog.timelineeventrelation": "时间线对象关联",
+        "catalog.readingpathitem": "阅读路径条目", "catalog.persontopicrelation": "人物与主题关系",
+        "catalog.personsubdisciplinerelation": "人物与子学科关系", "catalog.persondisciplinerelation": "人物与学科关系",
+        "catalog.knowledgerelation": "知识条目关系", "catalog.scholarrelation": "学者关系",
+    }
     for relation in obj._meta.related_objects:
         # Lifecycle previews show catalog structure, never per-reader data counts.
-        if relation.related_model._meta.label_lower not in RECYCLE_MODELS | {"catalog.asset", "catalog.contribution", "catalog.publicationrevision", "catalog.editorialrevision"}:
+        model_key = relation.related_model._meta.label_lower
+        if model_key not in RECYCLE_MODELS | set(catalog_links) | {"catalog.asset", "catalog.contribution", "catalog.publicationrevision", "catalog.editorialrevision"}:
             continue
         accessor = relation.get_accessor_name()
         if not accessor:
@@ -127,24 +135,35 @@ def _dependency_rows(obj) -> list[dict]:
             count = related.count() if hasattr(related, "count") else int(related is not None)
         if not count:
             continue
+        label = catalog_links.get(model_key, str(relation.related_model._meta.verbose_name_plural))
+        if model_key in {"catalog.knowledgerelation", "catalog.scholarrelation"}:
+            label += "（作为来源）" if relation.field.name.startswith("source_") else "（作为目标）" if relation.field.name.startswith("target_") else ""
         rows.append(
             {
-                "key": relation.related_model._meta.label_lower,
-                "label": str(relation.related_model._meta.verbose_name_plural),
+                "key": model_key, "accessor": accessor,
+                "label": label,
                 "count": count,
                 "delete_rule": getattr(relation.on_delete, "__name__", "unknown"),
             }
         )
 
     if isinstance(obj, ScholarProfile):
+        for accessor, label in (("node_relations", "人物与知识条目关系"), ("topic_relations", "人物与主题关系"),
+                                ("subdiscipline_relations", "人物与子学科关系"), ("discipline_relations", "人物与学科关系")):
+            related = getattr(obj.person, accessor)
+            count = related.count()
+            if count:
+                rows.append({"key": related.model._meta.label_lower, "accessor": f"person.{accessor}",
+                    "label": label, "count": count, "delete_rule": "INDIRECT"})
         contribution_count = obj.person.contributions.count()
         if contribution_count:
             rows.append(
                 {
                     "key": "catalog.contribution",
+                    "accessor": "person.contributions",
                     "label": "馆藏作者、编者、译者或研究对象关系",
                     "count": contribution_count,
-                    "delete_rule": "PROTECT",
+                    "delete_rule": "INDIRECT",
                 }
             )
     return sorted(rows, key=lambda row: (-row["count"], row["label"]))

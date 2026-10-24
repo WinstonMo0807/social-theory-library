@@ -10,6 +10,7 @@ import { KnowledgePublicationContext } from "./admin/knowledge/knowledge-publish
 
 type Dependency = {
   key: string;
+  accessor?: string;
   label: string;
   count: number;
   delete_rule: string;
@@ -131,7 +132,7 @@ export function EntityLifecycleActions({
       {snapshot ? (
         <div className="entity-impact-preview">
           <p><strong>{snapshot.dependency_count}</strong> 条关联记录会保留。{snapshot.guidance}</p>
-          {snapshot.dependencies.length ? <ul>{snapshot.dependencies.map((item) => <li key={item.key}><span>{item.label}</span><b>{item.count}</b><small>原记录保留</small></li>)}</ul> : <p>没有发现关联记录。</p>}
+          {snapshot.dependencies.length ? <ul>{snapshot.dependencies.map((item,index) => <li key={`${item.key}:${item.accessor||index}`}><span>{item.label}</span><b>{item.count}</b><small>原记录保留</small></li>)}</ul> : <p>没有发现关联记录。</p>}
         </div>
       ) : null}
       {message ? <p className="form-message" role="status">{message}</p> : null}
