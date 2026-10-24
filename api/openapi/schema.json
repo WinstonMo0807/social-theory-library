@@ -11748,6 +11748,111 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-system/nodes/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_nodes_list",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAdminKnowledgeNodeList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_system_nodes_create",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeNodeRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeNodeRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeNodeRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminKnowledgeNode"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-system/nodes/{node_id}/relations/": {
             "get": {
                 "operationId": "catalog_admin_theory_system_nodes_relations_retrieve",
@@ -11883,14 +11988,54 @@
                         "description": ""
                     }
                 }
-            },
-            "put": {
-                "operationId": "catalog_admin_theory_system_nodes_relations_update",
+            }
+        },
+        "/api/catalog/admin/theory-system/nodes/{id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_nodes_retrieve",
                 "description": "Opt-in only on protected Admin views, never public catalog views.",
                 "parameters": [
                     {
                         "in": "path",
-                        "name": "node_id",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminKnowledgeNode"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_theory_system_nodes_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
                         "schema": {
                             "type": "string",
                             "format": "uuid"
@@ -11903,19 +12048,19 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                                "$ref": "#/components/schemas/AdminKnowledgeNodeRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                                "$ref": "#/components/schemas/AdminKnowledgeNodeRequest"
                             }
                         },
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                                "$ref": "#/components/schemas/AdminKnowledgeNodeRequest"
                             }
                         }
                     },
@@ -11934,7 +12079,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                                    "$ref": "#/components/schemas/AdminKnowledgeNode"
                                 }
                             }
                         },
@@ -11943,12 +12088,12 @@
                 }
             },
             "patch": {
-                "operationId": "catalog_admin_theory_system_nodes_relations_partial_update",
+                "operationId": "catalog_admin_theory_system_nodes_partial_update",
                 "description": "Opt-in only on protected Admin views, never public catalog views.",
                 "parameters": [
                     {
                         "in": "path",
-                        "name": "node_id",
+                        "name": "id",
                         "schema": {
                             "type": "string",
                             "format": "uuid"
@@ -11961,19 +12106,19 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeNodeRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeNodeRequest"
                             }
                         },
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeNodeRequest"
                             }
                         }
                     }
@@ -11991,7 +12136,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                                    "$ref": "#/components/schemas/AdminKnowledgeNode"
                                 }
                             }
                         },
@@ -12000,12 +12145,12 @@
                 }
             },
             "delete": {
-                "operationId": "catalog_admin_theory_system_nodes_relations_destroy",
+                "operationId": "catalog_admin_theory_system_nodes_destroy",
                 "description": "Opt-in only on protected Admin views, never public catalog views.",
                 "parameters": [
                     {
                         "in": "path",
-                        "name": "node_id",
+                        "name": "id",
                         "schema": {
                             "type": "string",
                             "format": "uuid"
@@ -12027,6 +12172,72 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/nodes/{id}/versions/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_nodes_versions_list",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedKnowledgeNodeVersionList"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -12554,6 +12765,379 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/PathValidationResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/relations/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_relations_list",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "node",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "当前正式或草稿关联的节点编号。"
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAdminKnowledgeRelationList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_system_relations_create",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/relations/{id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_relations_retrieve",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "node",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "可选节点范围，包含正式及草稿端点。"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_theory_system_relations_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_theory_system_relations_partial_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "catalog_admin_theory_system_relations_destroy",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/relations/{id}/versions/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_relations_versions_list",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedKnowledgeRelationVersionList"
                                 }
                             }
                         },
@@ -30376,6 +30960,309 @@
                     "total"
                 ]
             },
+            "AdminKnowledgeNode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "save_receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/NodeSaveReceipt"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "save_replayed": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "editorial_details": {
+                        "$ref": "#/components/schemas/NodeEditorialDetails"
+                    },
+                    "edit_version": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "node_type": {
+                        "$ref": "#/components/schemas/KnowledgeNodeTypeEnum"
+                    },
+                    "canonical_name_zh": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "canonical_name_en": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "definition": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "basic_propositions": {},
+                    "theoretical_boundary": {
+                        "type": "string"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "period_label": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "parent": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "primary_discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "primary_discipline_data": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisciplineCompact"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "cover_asset": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeAlias"
+                        }
+                    },
+                    "discipline_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeDiscipline"
+                        }
+                    },
+                    "subdiscipline_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeSubdiscipline"
+                        }
+                    },
+                    "topic_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeTopic"
+                        }
+                    },
+                    "work_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "relation_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "created_by": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "reviewed_by": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "canonical_name_zh",
+                    "cover_media",
+                    "cover_url",
+                    "created_at",
+                    "created_by",
+                    "edit_version",
+                    "id",
+                    "node_type",
+                    "primary_discipline_data",
+                    "published_at",
+                    "relation_count",
+                    "reviewed_by",
+                    "save_receipt",
+                    "save_replayed",
+                    "slug",
+                    "updated_at",
+                    "work_count"
+                ]
+            },
+            "AdminKnowledgeNodeRequest": {
+                "type": "object",
+                "properties": {
+                    "editorial_details": {
+                        "$ref": "#/components/schemas/NodeEditorialDetailsRequest"
+                    },
+                    "node_type": {
+                        "$ref": "#/components/schemas/KnowledgeNodeTypeEnum"
+                    },
+                    "canonical_name_zh": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "canonical_name_en": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "definition": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "basic_propositions": {},
+                    "theoretical_boundary": {
+                        "type": "string"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "period_label": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "parent": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "primary_discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "cover_asset": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeAliasRequest"
+                        }
+                    },
+                    "discipline_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeDisciplineRequest"
+                        }
+                    },
+                    "subdiscipline_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeSubdisciplineRequest"
+                        }
+                    },
+                    "topic_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeTopicRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "canonical_name_zh",
+                    "node_type",
+                    "slug"
+                ]
+            },
             "AdminKnowledgeRelation": {
                 "type": "object",
                 "properties": {
@@ -43841,6 +44728,27 @@
                     "normalized_alias"
                 ]
             },
+            "KnowledgeNodeAliasRequest": {
+                "type": "object",
+                "properties": {
+                    "alias": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "language": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16
+                    },
+                    "alias_type": {
+                        "$ref": "#/components/schemas/AuthorityNameTypeEnum"
+                    }
+                },
+                "required": [
+                    "alias"
+                ]
+            },
             "KnowledgeNodeDetail": {
                 "type": "object",
                 "properties": {
@@ -43954,6 +44862,14 @@
                         "format": "date-time",
                         "readOnly": true
                     },
+                    "prose": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/NodeProse"
+                            }
+                        ],
+                        "readOnly": true
+                    },
                     "aliases": {
                         "type": "array",
                         "items": {
@@ -44044,6 +44960,7 @@
                     "node_type",
                     "parent",
                     "primary_discipline",
+                    "prose",
                     "related_disciplines",
                     "relation_count",
                     "representative_scholars",
@@ -44101,6 +45018,34 @@
                 ],
                 "type": "string",
                 "description": "* `primary` - 主要学科\n* `related` - 关联学科\n* `transferred` - 跨学科传播"
+            },
+            "KnowledgeNodeDisciplineRequest": {
+                "type": "object",
+                "properties": {
+                    "discipline_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/KnowledgeNodeDisciplineRelationTypeEnum"
+                    },
+                    "discipline_specific_summary": {
+                        "type": "string"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    }
+                },
+                "required": [
+                    "discipline_id"
+                ]
             },
             "KnowledgeNodeList": {
                 "type": "object",
@@ -44338,6 +45283,43 @@
                     "subdiscipline"
                 ]
             },
+            "KnowledgeNodeSubdisciplineRequest": {
+                "type": "object",
+                "properties": {
+                    "subdiscipline_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    },
+                    "relation_role": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    }
+                },
+                "required": [
+                    "subdiscipline_id"
+                ]
+            },
             "KnowledgeNodeTopic": {
                 "type": "object",
                 "properties": {
@@ -44381,6 +45363,40 @@
                     "topic"
                 ]
             },
+            "KnowledgeNodeTopicRequest": {
+                "type": "object",
+                "properties": {
+                    "topic_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "writeOnly": true
+                    },
+                    "relation_label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "source": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    }
+                },
+                "required": [
+                    "topic_id"
+                ]
+            },
             "KnowledgeNodeTypeEnum": {
                 "enum": [
                     "discipline",
@@ -44393,6 +45409,42 @@
                 ],
                 "type": "string",
                 "description": "* `discipline` - 学科\n* `theory_tradition` - 理论传统\n* `subdiscipline` - 子学科\n* `concept` - 核心概念\n* `debate` - 理论争论\n* `research_problem` - 研究问题\n* `topic` - 主题"
+            },
+            "KnowledgeNodeVersion": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "version_number": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "snapshot": {},
+                    "change_note": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "created_by_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "created_by_name",
+                    "id",
+                    "version_number"
+                ]
             },
             "KnowledgePublicationStatusEnum": {
                 "enum": [
@@ -44554,6 +45606,42 @@
                 ],
                 "type": "string",
                 "description": "* `inherited_from` - 继承\n* `revises` - 修正\n* `extends` - 扩展\n* `criticizes` - 批判\n* `responds_to` - 回应\n* `competes_with` - 竞争\n* `synthesizes` - 综合\n* `branches_from` - 分化\n* `borrows_concept_from` - 概念借用\n* `transferred_to` - 跨学科传播\n* `influenced_by` - 受到影响\n* `overlaps_with` - 部分重叠"
+            },
+            "KnowledgeRelationVersion": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "version_number": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "snapshot": {},
+                    "change_note": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "created_by_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "created_by_name",
+                    "id",
+                    "version_number"
+                ]
             },
             "KnowledgeSaveCommandRequest": {
                 "type": "object",
@@ -49606,6 +50694,110 @@
                     "workbench_url"
                 ]
             },
+            "NodeEditorialDetails": {
+                "type": "object",
+                "properties": {
+                    "internal_note": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "prose": {
+                        "$ref": "#/components/schemas/NodeProse"
+                    }
+                },
+                "required": [
+                    "internal_note",
+                    "prose"
+                ]
+            },
+            "NodeEditorialDetailsRequest": {
+                "type": "object",
+                "properties": {
+                    "internal_note": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "prose": {
+                        "$ref": "#/components/schemas/NodeProseRequest"
+                    }
+                },
+                "required": [
+                    "internal_note",
+                    "prose"
+                ]
+            },
+            "NodeProse": {
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "$ref": "#/components/schemas/NodeProseText"
+                    },
+                    "definition": {
+                        "$ref": "#/components/schemas/NodeProseText"
+                    },
+                    "theoretical_boundary": {
+                        "$ref": "#/components/schemas/NodeProseText"
+                    }
+                }
+            },
+            "NodeProseRequest": {
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "$ref": "#/components/schemas/NodeProseTextRequest"
+                    },
+                    "definition": {
+                        "$ref": "#/components/schemas/NodeProseTextRequest"
+                    },
+                    "theoretical_boundary": {
+                        "$ref": "#/components/schemas/NodeProseTextRequest"
+                    }
+                }
+            },
+            "NodeProseText": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string"
+                    },
+                    "text_style": {
+                        "$ref": "#/components/schemas/TextStyleEnum"
+                    },
+                    "text_marks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueTextMark"
+                        }
+                    }
+                },
+                "required": [
+                    "text",
+                    "text_marks",
+                    "text_style"
+                ]
+            },
+            "NodeProseTextRequest": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string"
+                    },
+                    "text_style": {
+                        "$ref": "#/components/schemas/TextStyleEnum"
+                    },
+                    "text_marks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IssueTextMarkRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "text",
+                    "text_marks",
+                    "text_style"
+                ]
+            },
             "NodeRelationPage": {
                 "type": "object",
                 "properties": {
@@ -49758,6 +50950,47 @@
                     },
                     "saved_version": {
                         "type": "string"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "node_id",
+                    "request_id",
+                    "saved_version",
+                    "state"
+                ]
+            },
+            "NodeSaveReceiptRequest": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_version": {
+                        "type": "string",
+                        "minLength": 1
                     },
                     "exists": {
                         "type": "boolean"
@@ -51362,6 +52595,68 @@
                 "type": "string",
                 "description": "* `front` - front\n* `body` - body\n* `appendix` - appendix\n* `other` - other\n* `blank` - blank"
             },
+            "PaginatedAdminKnowledgeNodeList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminKnowledgeNode"
+                        }
+                    }
+                }
+            },
+            "PaginatedAdminKnowledgeRelationList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                        }
+                    }
+                }
+            },
             "PaginatedAdminReadingPathList": {
                 "type": "object",
                 "required": [
@@ -51606,6 +52901,68 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/KnowledgeNodeList"
+                        }
+                    }
+                }
+            },
+            "PaginatedKnowledgeNodeVersionList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeVersion"
+                        }
+                    }
+                }
+            },
+            "PaginatedKnowledgeRelationVersionList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeRelationVersion"
                         }
                     }
                 }
@@ -53402,6 +54759,108 @@
                 "required": [
                     "email"
                 ]
+            },
+            "PatchedAdminKnowledgeNodeRequest": {
+                "type": "object",
+                "properties": {
+                    "editorial_details": {
+                        "$ref": "#/components/schemas/NodeEditorialDetailsRequest"
+                    },
+                    "node_type": {
+                        "$ref": "#/components/schemas/KnowledgeNodeTypeEnum"
+                    },
+                    "canonical_name_zh": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "canonical_name_en": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "slug": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 180,
+                        "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "definition": {
+                        "type": "string"
+                    },
+                    "core_questions": {},
+                    "basic_propositions": {},
+                    "theoretical_boundary": {
+                        "type": "string"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "period_label": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "parent": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "primary_discipline": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "cover_asset": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeAliasRequest"
+                        }
+                    },
+                    "discipline_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeDisciplineRequest"
+                        }
+                    },
+                    "subdiscipline_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeSubdisciplineRequest"
+                        }
+                    },
+                    "topic_links": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeTopicRequest"
+                        }
+                    }
+                }
             },
             "PatchedAdminKnowledgeRelationRequest": {
                 "type": "object",

@@ -21,12 +21,12 @@ export function IssueInline({block,from=0,to=block.text.length}:{block:IssueBloc
     return <Fragment key={start}>{text}</Fragment>;
   })}</>;
 }
-export function IssueProse({block}:{block:IssueBlock}) {
-  if(block.text_style==="quote") return <blockquote style={{whiteSpace:"pre-wrap"}}><IssueInline block={block}/></blockquote>;
+export function IssueProse({block,className}:{block:IssueBlock;className?:string}) {
+  if(block.text_style==="quote") return <blockquote className={className} style={{whiteSpace:"pre-wrap"}}><IssueInline block={block}/></blockquote>;
   if(block.text_style==="ordered" || block.text_style==="unordered") {
     const Tag=block.text_style==="ordered"?"ol":"ul",lines=[];let offset=0;
     for(const line of block.text.split("\n")){lines.push({line,from:offset});offset+=line.length+1;}
-    return <Tag>{lines.map(({line,from})=><li key={from}><IssueInline block={block} from={from} to={from+line.length}/></li>)}</Tag>;
+    return <Tag className={className}>{lines.map(({line,from})=><li key={from}><IssueInline block={block} from={from} to={from+line.length}/></li>)}</Tag>;
   }
-  return <p style={{whiteSpace:"pre-wrap"}}><IssueInline block={block}/></p>;
+  return <p className={className} style={{whiteSpace:"pre-wrap"}}><IssueInline block={block}/></p>;
 }

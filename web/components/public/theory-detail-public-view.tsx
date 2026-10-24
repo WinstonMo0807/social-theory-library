@@ -12,7 +12,15 @@ import { ResponsiveMediaImage } from "@/components/responsive-media-image";
 import { nodeTypeLabels, workRoleLabels } from "@/components/theory-system-ui";
 import type { KnowledgeNodeDetail, NormalizedReadingPath, NormalizedTimelineEvent, TheoryWorkCompact } from "@/lib/api/knowledge.types";
 import { TheoryRelations, TheoryUsageExplorer } from "./theory-detail-interactions";
+import { IssueProse } from "./issue-prose";
+import { scholarProseBlock } from "@/lib/api/scholar-prose";
+import type { NodeProseField } from "@/lib/api/node-editorial";
 import styles from "./theory-detail.module.css";
+
+function NodeProse({ node, field, fallback, empty = "", className }: { node: KnowledgeNodeDetail; field: NodeProseField; fallback?: NodeProseField; empty?: string; className?: string }) {
+  const selected = node[field] ? field : fallback || field;
+  return <IssueProse className={className} block={scholarProseBlock(node[selected] || empty, node.prose?.[selected])}/>;
+}
 
 type Props = {
   node: KnowledgeNodeDetail; timeline: NormalizedTimelineEvent[]; paths: NormalizedReadingPath[];
@@ -90,27 +98,27 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
           const matches = usages.filter(usage => usage.term.normalize("NFKC").trim().toLocaleLowerCase() === alias.alias.normalize("NFKC").trim().toLocaleLowerCase());
           return <tr key={alias.id}><th scope="row">{alias.alias}<small>{({ "zh-CN": "中文", "zh-TW": "繁体中文", zh: "中文", en: "英语", de: "德语", fr: "法语" } as Record<string, string>)[alias.language] || alias.language || "语言未注明"} · {({ alias: "别名", translation: "译名", abbreviation: "简称", historical: "历史名称", transliteration: "音译" } as Record<string, string>)[alias.alias_type] || "别名"}</small></th><td>{matches.length ? [...new Set(matches.map(usage => [usage.author?.name, usage.context].filter(Boolean).join(" · ")).filter(Boolean))].join("；") || "已关联用法尚未注明语境" : "未收录关联原文"}</td><td>{matches.map(usage => <Link key={usage.id} href={usage.source.reader_url} target="_blank" rel="noopener noreferrer">《{usage.source.work_title}》<ExternalLink size={11} /></Link>)}</td><td>{matches.length}</td></tr>;
         })}</tbody></table></div><p>这里的数量仅为本页已公开的确认用法，不代表全馆出现频次。别名登记不表示不同语境中的含义相同。</p></div></details> : null}
-        <p className={styles.heroDescription}>{node.definition || node.summary || "本条目的说明尚待编辑，已公开关系与馆藏可继续浏览。"}</p>
+        <NodeProse node={node} field="definition" fallback="summary" empty="本条目的说明尚待编辑，已公开关系与馆藏可继续浏览。" className={styles.heroDescription}/>
         <div className={styles.tags}>{disciplines.map(item => <Link href={`/theories/disciplines/${item.slug}`} key={item.id}>{item.name}</Link>)}{node.topic_links.map(row => <Link href={`/topics/${row.topic.slug}`} key={row.id}>{row.topic.name}</Link>)}</div>
       </div>
-      {tradition ? <aside className={styles.heroGuide}><h2>流派导读</h2><p>{node.summary || node.definition || "流派导读尚待编辑。"}</p>{node.period_label ? <small>形成时期 · {node.period_label}</small> : null}</aside> : null}
+      {tradition ? <aside className={styles.heroGuide}><h2>流派导读</h2><NodeProse node={node} field="summary" fallback="definition" empty="流派导读尚待编辑。"/>{node.period_label ? <small>形成时期 · {node.period_label}</small> : null}</aside> : null}
       <div className={styles.heroActions}>{!tradition ? <a className={styles.primary} href={section === "overview" ? "#usages" : `${base}#usages`}>比较两个用法<ArrowRight size={15} /></a> : null}{firstReader ? <Link className={styles.secondary} href={firstReader} target="_blank" rel="noopener noreferrer">查看原文<ExternalLink size={15} /></Link> : null}{actions}</div>
     </header>
     <nav className={styles.navigation} aria-label="条目内容">{nav.map(([id, name], index) => <Link key={`${id}-${index}`} href={section === "overview" ? `#${id}` : `${base}#${id}`} aria-current={(current === "overview" && index === 0) || current === id ? "location" : undefined}>{name}</Link>)}</nav>
-    {!tradition ? <div className={styles.mobileIntro}><div>{heroMedia}</div><p>{node.definition || node.summary || "本条目的说明尚待编辑，已公开关系与馆藏可继续浏览。"}</p></div> : null}
+    {!tradition ? <div className={styles.mobileIntro}><div>{heroMedia}</div><NodeProse node={node} field="definition" fallback="summary" empty="本条目的说明尚待编辑，已公开关系与馆藏可继续浏览。"/></div> : null}
 
     {tradition ? <div className={styles.traditionGrid}>
       {shown("scholars", "usages") ? <div className={styles.peopleArea}>{scholarSection}</div> : null}
-      {shown("guide") ? <section className={`${styles.section} ${styles.questionsArea}`} id="guide"><header className={styles.sectionHeading}><h2>核心观点与问题</h2></header><div className={styles.propositions}>{node.basic_propositions.map((proposition, index) => <p key={`${index}-${proposition}`}><BookOpen size={17} /><span>{proposition}</span></p>)}{node.core_questions.map((question, index) => <p key={`question-${index}`}><span className={styles.questionMark}>?</span><span>{question}</span></p>)}</div>{!node.basic_propositions.length && !node.core_questions.length ? <p className={styles.empty}>核心观点与问题尚待编辑。</p> : null}{node.theoretical_boundary ? <details className={styles.boundary}><summary>适用范围与理论边界<ChevronDown size={15} /></summary><p>{node.theoretical_boundary}</p></details> : null}</section> : null}
+      {shown("guide") ? <section className={`${styles.section} ${styles.questionsArea}`} id="guide"><header className={styles.sectionHeading}><h2>核心观点与问题</h2></header><div className={styles.propositions}>{node.basic_propositions.map((proposition, index) => <p key={`${index}-${proposition}`}><BookOpen size={17} /><span>{proposition}</span></p>)}{node.core_questions.map((question, index) => <p key={`question-${index}`}><span className={styles.questionMark}>?</span><span>{question}</span></p>)}</div>{!node.basic_propositions.length && !node.core_questions.length ? <p className={styles.empty}>核心观点与问题尚待编辑。</p> : null}{node.theoretical_boundary ? <details className={styles.boundary}><summary>适用范围与理论边界<ChevronDown size={15} /></summary><NodeProse node={node} field="theoretical_boundary"/></details> : null}</section> : null}
       {shown("debates") ? <div className={styles.debatesArea}><DebateSection node={node} /></div> : null}
       {shown("paths", "works") ? <div className={styles.pathsArea}>{pathSection}</div> : null}
       {shown("relations", "usages") ? <div className={styles.relationsArea}><TheoryRelations node={node} /></div> : null}
     </div> : <div className={styles.conceptLayout}>
       <div className={styles.mainColumn}>
-        {shown("guide") ? <section id="guide" className={`${styles.section} ${styles.guide}`}><header className={styles.sectionHeading}><h2>策划导读</h2></header><p>{node.summary || node.definition || "概念导读尚待编写。"}</p>
+        {shown("guide") ? <section id="guide" className={`${styles.section} ${styles.guide}`}><header className={styles.sectionHeading}><h2>策划导读</h2></header><NodeProse node={node} field="summary" fallback="definition" empty="概念导读尚待编写。"/>
           <dl className={styles.facts}>{node.canonical_name_en ? <div><dt>原文词</dt><dd>{node.canonical_name_en}</dd></div> : null}{node.period_label ? <div><dt>历史时期</dt><dd>{node.period_label}</dd></div> : null}{disciplines.length ? <div><dt>相关学科</dt><dd>{disciplines.map(item => item.name).join("、")}</dd></div> : null}{node.core_questions.length ? <div><dt>核心问题</dt><dd>{node.core_questions.map(question => <p key={question}>{question}</p>)}</dd></div> : null}</dl>
           {node.basic_propositions.length ? <details className={styles.boundary}><summary>基本命题<ChevronDown size={15} /></summary><ul>{node.basic_propositions.map(proposition => <li key={proposition}>{proposition}</li>)}</ul></details> : null}
-          {node.theoretical_boundary ? <details className={styles.boundary}><summary>适用范围与理论边界<ChevronDown size={15} /></summary><p>{node.theoretical_boundary}</p></details> : null}
+          {node.theoretical_boundary ? <details className={styles.boundary}><summary>适用范围与理论边界<ChevronDown size={15} /></summary><NodeProse node={node} field="theoretical_boundary"/></details> : null}
         </section> : null}
         {shown("usages") ? <TheoryUsageExplorer key={`${node.id}:${node.public_detail?.revision_id || ""}:${usages.map(usage => `${usage.id}:${usage.source.document_revision_id}`).join(",")}`} usages={usages} unavailableCount={node.public_detail?.unavailable_usage_count} initialCompare={initialCompare} /> : null}
         {shown("history") ? historySection : null}

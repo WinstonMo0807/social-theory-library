@@ -1,5 +1,10 @@
 # 账号保留型业务重置
 
+## 2026-10-24 节点内部编辑信息
+
+catalog0084仅声明KnowledgeNode.editorial_details，属原catalog业务模型及原历史快照，不涉及账户保留范围。未执行迁移或清理；仍以最终备份恢复核验及生产明确确认作为不可逆重置前提。
+
+
 ## 2026-10-24 理论关系原文保护外键
 
 catalog0083仅声明KnowledgeRelation对EvidenceSpan/DocumentRevision的成对保护引用。仍属原catalog业务范围，无账户或私人研究表变更；保留原精确清单、备份恢复及生产最终确认要求。本轮没有迁移、重置预演或清理。

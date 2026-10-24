@@ -759,6 +759,14 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
 
 
 class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
+    from catalog.node_editorial import NodeProse
+    prose = serializers.SerializerMethodField()
+
+    @extend_schema_field(NodeProse)
+    def get_prose(self, obj):
+        from catalog.node_editorial import public_node_prose
+        return public_node_prose(obj)
+
     aliases = serializers.SerializerMethodField()
     discipline_links = serializers.SerializerMethodField()
     subdiscipline_links = serializers.SerializerMethodField()
@@ -773,6 +781,7 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
 
     class Meta(KnowledgeNodeListSerializer.Meta):
         fields = KnowledgeNodeListSerializer.Meta.fields + (
+            "prose",
             "aliases",
             "discipline_links",
             "subdiscipline_links",
@@ -869,6 +878,8 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
 
 
 class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
+    from catalog.node_editorial import NodeEditorialField
+    editorial_details = NodeEditorialField(required=False)
     from catalog.node_editor_views import NodeSaveReceipt
     save_receipt = NodeSaveReceipt(read_only=True)
     save_replayed = serializers.BooleanField(read_only=True)
@@ -890,6 +901,7 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
         model = KnowledgeNode
         fields = (
             "id", "save_receipt", "save_replayed",
+            "editorial_details",
             "edit_version",
             "node_type",
             "canonical_name_zh",
@@ -931,18 +943,19 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
             "updated_at",
         )
 
-    def get_work_count(self, obj):
+    def get_work_count(self, obj) -> int:
         return obj.work_relations.values("work_id").distinct().count()
 
-    def get_relation_count(self, obj):
+    def get_relation_count(self, obj) -> int:
         return obj.outgoing_relations.count() + obj.incoming_relations.count()
 
-    def get_cover_url(self, obj):
+    def get_cover_url(self, obj) -> str:
         media = self.get_cover_media(obj)
         if media:
             return next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
         return _media_url(self.context.get("request"), obj.cover_asset)
 
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
     def get_cover_media(self, obj):
         from catalog.services.knowledge_media import image_media
         private = True

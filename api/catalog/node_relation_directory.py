@@ -92,6 +92,7 @@ def directory_queries(node_id, filters):
 
 
 class NodeRelationDirectoryView(AdminEditorialDraftReadMixin, generics.GenericAPIView):
+    http_method_names = ["get", "head", "options"]
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeRelationSerializer
 

@@ -703,6 +703,7 @@ class ReadingPathDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView):
 
 
 class AdminKnowledgeNodeListView(NodeCommandMixin, AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+    http_method_names = ["get", "post", "head", "options"]
     editorial_target_type = "knowledge_node"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeNodeSerializer
@@ -882,6 +883,8 @@ class AdminKnowledgeNodeVersionListView(AdminPrivateResponseMixin, TheorySystemF
     serializer_class = KnowledgeNodeVersionSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return KnowledgeNodeVersion.objects.none()
         return KnowledgeNodeVersion.objects.filter(node_id=self.kwargs["pk"]).select_related(
             "created_by"
         )
@@ -930,6 +933,7 @@ class AdminKnowledgeNodeMergeRollbackView(AdminPrivateResponseMixin, TheorySyste
 
 @extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("node", str, description="当前正式或草稿关联的节点编号。")]))
 class AdminKnowledgeRelationListView(KnowledgeRelationCommandMixin, StagedRelationEditorMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+    http_method_names = ["get", "post", "head", "options"]
     editorial_target_type = "knowledge_relation"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeRelationSerializer
@@ -990,6 +994,8 @@ class AdminKnowledgeRelationVersionListView(AdminPrivateResponseMixin, TheorySys
     serializer_class = KnowledgeRelationVersionSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return KnowledgeRelationVersion.objects.none()
         return KnowledgeRelationVersion.objects.filter(
             relation_id=self.kwargs["pk"]
         ).select_related("created_by")

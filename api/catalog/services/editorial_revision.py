@@ -139,6 +139,7 @@ TARGET_POLICIES = {
                 "core_questions",
                 "basic_propositions",
                 "theoretical_boundary",
+                "editorial_details",
                 "start_year",
                 "end_year",
                 "period_label",
@@ -860,6 +861,13 @@ def _validated_topic_relation_patch(field_name: str, value) -> list[dict[str, An
 
 
 def _validate_special_patch(target_type: str, target, patch: dict[str, Any]) -> None:
+    if isinstance(target, KnowledgeNode) and "editorial_details" in patch:
+        from catalog.node_editorial import normalize_node_editorial
+        from rest_framework.exceptions import ValidationError as APIValidationError
+        try:
+            patch["editorial_details"] = normalize_node_editorial(patch["editorial_details"])
+        except APIValidationError as error:
+            raise EditorialRevisionError(str(error.detail)) from error
     if isinstance(target, (KnowledgeRelation, TheoryTimelineEvent)):
         from catalog.services.relation_editorial import validate_relation_patch
         validate_relation_patch(target, patch)

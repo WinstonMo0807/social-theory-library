@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PathEditorFrame, pathEditorSection, pathEditorSections } from "./path-editor-frame";
 import type { PublicReadingPath } from "@/lib/api/reading-paths.types";
+import { nodeEditorialForSave, type NodeEditorialDetails } from "@/lib/api/node-editorial";
 import { TopicEditorFrame, topicEditorSection, topicEditorSections } from "./topic-editor-frame";
 import type { PublicTopicDetail } from "@/lib/api/topics.types";
 import { ScholarCanonicalSections } from "./scholar-canonical-sections";
@@ -73,7 +74,7 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
   if (type === "reading_path") return projectReadingPath(base, draft);
   if (type === "scholar") return projectScholar(base, draft);
   if (type === "topic") return projectTopic(base, draft);
-  if (["theory", "concept", "debate", "research_problem"].includes(type)) return {...defaults, ...draft, core_questions:lines(draft.core_questions), basic_propositions:lines(draft.basic_propositions), representative_scholars:base.representative_scholars || [], related_disciplines:(draft.related_disciplines as string[] || []).map(id=>reference(id,((base.related_disciplines || []) as Row[]).find(row=>row.id===id))), primary_discipline:reference(draft.primary_discipline,base.primary_discipline), work_groups:base.work_groups || {}, evidence:base.evidence || [], direct_relations:base.direct_relations || [], updated_at:base.updated_at || ""};
+  if (["theory", "concept", "debate", "research_problem"].includes(type)) return {...defaults, ...draft, prose:nodeEditorialForSave(draft.editorial_details as NodeEditorialDetails | undefined,{summary:String(draft.summary||""),definition:String(draft.definition||""),theoretical_boundary:String(draft.theoretical_boundary||"")}).prose, core_questions:lines(draft.core_questions), basic_propositions:lines(draft.basic_propositions), representative_scholars:base.representative_scholars || [], related_disciplines:(draft.related_disciplines as string[] || []).map(id=>reference(id,((base.related_disciplines || []) as Row[]).find(row=>row.id===id))), primary_discipline:reference(draft.primary_discipline,base.primary_discipline), work_groups:base.work_groups || {}, evidence:base.evidence || [], direct_relations:base.direct_relations || [], updated_at:base.updated_at || ""};
   return {...defaults, ...draft, discipline:reference(draft.discipline,base.discipline) || base.discipline || {name:"",slug:""}, theories:base.theories || [], works:base.works || [], disciplines:base.disciplines || [], core_questions:lines(draft.core_questions), research_directions:lines(draft.research_directions), methods:lines(draft.methods), representative_issues:lines(draft.representative_issues), research_questions:lines(draft.research_questions)};
 }
 

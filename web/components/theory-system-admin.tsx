@@ -3,6 +3,9 @@
 import { useScholarSave } from "./admin/knowledge/use-scholar-save";
 import { RelationSourcePicker } from "./admin/knowledge/relation-source-picker";
 import type { components } from "@/lib/api/generated/schema";
+import { ScholarProseEditor as KnowledgeProseEditor } from "./admin/knowledge/scholar-prose-editor";
+import { nodeEditorialForSave, type NodeEditorialDetails, type NodeProseField } from "@/lib/api/node-editorial";
+import type { ScholarProse } from "@/lib/api/scholar-prose";
 import { TimelineSupplementalSources, TimelineSimilarCheck, emptyTimelineDetails, type TimelineEditorialDetails } from "./admin/knowledge/timeline-editor-details";
 import timelineStyles from "./admin/knowledge/timeline-editor.module.css";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
@@ -147,6 +150,7 @@ type NodeTopicLink = {
 };
 
 type KnowledgeNode = {
+  editorial_details: NodeEditorialDetails;
   id: string;
   node_type: string;
   canonical_name_zh: string;
@@ -312,6 +316,7 @@ function ErrorNotice({ message, retry }: { message?: string; retry?: () => void 
 }
 
 type NodeDraft = {
+  editorial_details: NodeEditorialDetails;
   node_type: string;
   canonical_name_zh: string;
   canonical_name_en: string;
@@ -335,6 +340,7 @@ type NodeDraft = {
 };
 
 const emptyNodeDraft: NodeDraft = {
+  editorial_details: { internal_note: "", prose: {} },
   node_type: "theory_tradition",
   canonical_name_zh: "",
   canonical_name_en: "",
@@ -359,6 +365,7 @@ const emptyNodeDraft: NodeDraft = {
 
 function nodeToDraft(node: KnowledgeNode): NodeDraft {
   return {
+    editorial_details: nodeEditorialForSave(node.editorial_details, node),
     node_type: node.node_type,
     canonical_name_zh: node.canonical_name_zh,
     canonical_name_en: node.canonical_name_en,
@@ -420,6 +427,11 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   const [query, setQuery] = useState(theoryLocation.search.get("q") || "");
   const [editing, setEditing] = useState<KnowledgeNode | null>(null);
   const [draft, setDraft] = useState<NodeDraft>(emptyNodeDraft);
+  function changeNodeProse(field: NodeProseField, text: string, format: NonNullable<ScholarProse["biography"]>) {
+    setDraft(current => ({ ...current, [field]: text, editorial_details: { ...current.editorial_details,
+      prose: { ...current.editorial_details.prose, [field]: { text, text_style: format.text_style || "paragraph", text_marks: format.text_marks || [] } },
+    } }));
+  }
   const nodeDirty = useUnsavedForm(draft, editing ? nodeToDraft(editing) : emptyNodeDraft);
   const prefills = useEditorialPrefills(editing?.id || "new-theory", draft, setDraft);
   const [imageRevision, setImageRevision] = useState(0);
@@ -580,6 +592,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       core_questions: lines(draft.core_questions),
       basic_propositions: lines(draft.basic_propositions),
       theoretical_boundary: draft.theoretical_boundary,
+      editorial_details: nodeEditorialForSave(draft.editorial_details, draft),
       start_year: draft.start_year ? Number(draft.start_year) : null,
       end_year: draft.end_year ? Number(draft.end_year) : null,
       period_label: draft.period_label,
@@ -876,12 +889,13 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
             return prefills.fill(candidateId, (current) => ({ ...current, subdisciplines: [...new Set([...current.subdisciplines, id])] }));
           }} lookupLabel="获取分类建议" /></div>
           </details>
-          <label><span>简介</span><textarea rows={3} value={draft.summary} onChange={(event) => setDraft({ ...draft, summary: event.target.value })} /></label>
+          <KnowledgeProseEditor label="简介" value={draft.summary} format={draft.editorial_details.prose.summary} recommendedLength={300} maxLength={30000} disabled={!canEdit||!editing&&!canCreate||Boolean(pendingAction)||!command.ready||Boolean(command.recovery)||Boolean(knownSavedId)} onChange={(text,format)=>changeNodeProse("summary",text,format)}/>
+          <label><span>编辑说明（仅内部可见）</span><textarea rows={3} maxLength={500} value={draft.editorial_details.internal_note} onChange={event=>setDraft(current=>({...current,editorial_details:{...current.editorial_details,internal_note:event.target.value}}))}/><small>{draft.editorial_details.internal_note.length}/500 · 只供有编辑权限的管理员核对，不进入读者页面。</small></label>
           <details className="theory-editor-group"><summary>定义、问题、命题与发展时期</summary>
-          <label><span>完整定义</span><textarea rows={5} value={draft.definition} onChange={(event) => setDraft({ ...draft, definition: event.target.value })} /></label>
+          <KnowledgeProseEditor label="完整定义" value={draft.definition} format={draft.editorial_details.prose.definition} recommendedLength={1000} maxLength={30000} disabled={!canEdit||!editing&&!canCreate||Boolean(pendingAction)||!command.ready||Boolean(command.recovery)||Boolean(knownSavedId)} onChange={(text,format)=>changeNodeProse("definition",text,format)}/>
           <StringListEditor label="核心问题" itemLabel="问题" value={editorLines(draft.core_questions)} onChange={(value) => setDraft({ ...draft, core_questions: value.join("\n") })} addLabel="添加问题" />
           <StringListEditor label="基本命题" itemLabel="命题" value={editorLines(draft.basic_propositions)} onChange={(value) => setDraft({ ...draft, basic_propositions: value.join("\n") })} addLabel="添加命题" />
-          <label><span>理论边界</span><textarea rows={5} value={draft.theoretical_boundary} onChange={(event) => setDraft({ ...draft, theoretical_boundary: event.target.value })} placeholder="主要解释什么、解释范围、与相邻理论的区别" /></label>
+          <KnowledgeProseEditor label="理论边界" value={draft.theoretical_boundary} format={draft.editorial_details.prose.theoretical_boundary} recommendedLength={1000} maxLength={30000} disabled={!canEdit||!editing&&!canCreate||Boolean(pendingAction)||!command.ready||Boolean(command.recovery)||Boolean(knownSavedId)} onChange={(text,format)=>changeNodeProse("theoretical_boundary",text,format)}/>
           <div className="inline-fields three"><label><span>开始年份</span><input type="number" value={draft.start_year} onChange={(event) => setDraft({ ...draft, start_year: event.target.value })} /></label><label><span>结束年份</span><input type="number" value={draft.end_year} onChange={(event) => setDraft({ ...draft, end_year: event.target.value })} /></label><label><span>显示时期</span><input value={draft.period_label} onChange={(event) => setDraft({ ...draft, period_label: event.target.value })} /></label></div>
           </details>
           <div className="inline-fields"><label><span>审核状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="pending">提交审核</option><option value="published">发布</option><option value="rejected">拒绝</option><option value="archived">下线</option></select></label><label><span>显示顺序</span><input type="number" min={0} value={draft.sort_order} onChange={(event) => setDraft({ ...draft, sort_order: Number(event.target.value) })} /></label></div>

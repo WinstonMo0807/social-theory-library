@@ -142,6 +142,7 @@ export type TheoryConceptUsage = {
 };
 
 export type KnowledgeNodeDetail = KnowledgeNodeListItem & {
+  prose?: import("./node-editorial").NodeEditorialDetails["prose"];
   public_detail?: {configured: boolean; revision_id: string | null; usages: TheoryConceptUsage[]; unavailable_usage_count: number};
   evidenceCuration?: import("./evidence-curation.types").PublishedEvidenceCuration;
   aliases: { id: string; alias: string; language: string; alias_type: string; normalized_alias: string }[];

@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-24 节点内部说明与文字格式
+
+KnowledgeNode.editorial_details只保存内部编辑说明和绑定原正文的格式，catalog0084未执行。原正式表/EditorialRevision/版本历史和合并快照继续；公开detail仅输出经过绑定及安全校验的prose，内部说明不会跟随公开字段。复用既有文字编辑/渲染，无第二套正文或编辑库。原节点及关系六个管理路由补入契约；混合目录只读，列表GET/POST，详情写入仍有原权限与回执。
+
+
 ## 2026-10-24 理论关系原文锚点
 
 原KnowledgeRelation接EvidenceSpan/DocumentRevision保护外键，0083仅声明。API用source_anchor原子传入引用身份，原EditorialRevision保存两项ID；source_material只读派生，公开端不暴露私人编号或失效原文。发布重新核对，图谱批量读取固定激活来源，原版本历史/合并冲突和回退范围指纹覆盖新字段。目录不加载原文。没有迁移执行或部署。

@@ -2499,6 +2499,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/nodes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_theory_system_nodes_list"];
+        put?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        post: operations["catalog_admin_theory_system_nodes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/theory-system/nodes/{node_id}/relations/": {
         parameters: {
             query?: never;
@@ -2508,15 +2526,48 @@ export interface paths {
         };
         /** @description Opt-in only on protected Admin views, never public catalog views. */
         get: operations["catalog_admin_theory_system_nodes_relations_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/nodes/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         /** @description Opt-in only on protected Admin views, never public catalog views. */
-        put: operations["catalog_admin_theory_system_nodes_relations_update"];
+        get: operations["catalog_admin_theory_system_nodes_retrieve"];
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        put: operations["catalog_admin_theory_system_nodes_update"];
         post?: never;
         /** @description Opt-in only on protected Admin views, never public catalog views. */
-        delete: operations["catalog_admin_theory_system_nodes_relations_destroy"];
+        delete: operations["catalog_admin_theory_system_nodes_destroy"];
         options?: never;
         head?: never;
         /** @description Opt-in only on protected Admin views, never public catalog views. */
-        patch: operations["catalog_admin_theory_system_nodes_relations_partial_update"];
+        patch: operations["catalog_admin_theory_system_nodes_partial_update"];
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/nodes/{id}/versions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_nodes_versions_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/catalog/admin/theory-system/nodes/commands/{request_id}/": {
@@ -2599,6 +2650,60 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["catalog_admin_theory_system_reading_paths_validate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/relations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_theory_system_relations_list"];
+        put?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        post: operations["catalog_admin_theory_system_relations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/relations/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_theory_system_relations_retrieve"];
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        put: operations["catalog_admin_theory_system_relations_update"];
+        post?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        delete: operations["catalog_admin_theory_system_relations_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        patch: operations["catalog_admin_theory_system_relations_partial_update"];
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/relations/{id}/versions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_relations_versions_list"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6377,6 +6482,84 @@ export interface components {
             published: number;
             drafts: number;
             scheduled: number;
+        };
+        AdminKnowledgeNode: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly save_receipt: components["schemas"]["NodeSaveReceipt"];
+            readonly save_replayed: boolean;
+            editorial_details?: components["schemas"]["NodeEditorialDetails"];
+            readonly edit_version: string;
+            node_type: components["schemas"]["KnowledgeNodeTypeEnum"];
+            canonical_name_zh: string;
+            canonical_name_en?: string;
+            slug: string;
+            summary?: string;
+            definition?: string;
+            core_questions?: unknown;
+            basic_propositions?: unknown;
+            theoretical_boundary?: string;
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            period_label?: string;
+            /** Format: uuid */
+            parent?: string | null;
+            /** Format: uuid */
+            primary_discipline?: string | null;
+            readonly primary_discipline_data: components["schemas"]["DisciplineCompact"];
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+            /** Format: int64 */
+            sort_order?: number;
+            /** Format: uri */
+            cover_asset?: string | null;
+            readonly cover_url: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            aliases?: components["schemas"]["KnowledgeNodeAlias"][];
+            discipline_links?: components["schemas"]["KnowledgeNodeDiscipline"][];
+            subdiscipline_links?: components["schemas"]["KnowledgeNodeSubdiscipline"][];
+            topic_links?: components["schemas"]["KnowledgeNodeTopic"][];
+            readonly work_count: number;
+            readonly relation_count: number;
+            readonly created_by: number | null;
+            readonly reviewed_by: number | null;
+            /** Format: date-time */
+            readonly published_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        AdminKnowledgeNodeRequest: {
+            editorial_details?: components["schemas"]["NodeEditorialDetailsRequest"];
+            node_type: components["schemas"]["KnowledgeNodeTypeEnum"];
+            canonical_name_zh: string;
+            canonical_name_en?: string;
+            slug: string;
+            summary?: string;
+            definition?: string;
+            core_questions?: unknown;
+            basic_propositions?: unknown;
+            theoretical_boundary?: string;
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            period_label?: string;
+            /** Format: uuid */
+            parent?: string | null;
+            /** Format: uuid */
+            primary_discipline?: string | null;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+            /** Format: int64 */
+            sort_order?: number;
+            /** Format: binary */
+            cover_asset?: string;
+            aliases?: components["schemas"]["KnowledgeNodeAliasRequest"][];
+            discipline_links?: components["schemas"]["KnowledgeNodeDisciplineRequest"][];
+            subdiscipline_links?: components["schemas"]["KnowledgeNodeSubdisciplineRequest"][];
+            topic_links?: components["schemas"]["KnowledgeNodeTopicRequest"][];
         };
         AdminKnowledgeRelation: {
             /** Format: uuid */
@@ -10499,6 +10682,11 @@ export interface components {
             alias_type?: components["schemas"]["AuthorityNameTypeEnum"];
             readonly normalized_alias: string;
         };
+        KnowledgeNodeAliasRequest: {
+            alias: string;
+            language?: string;
+            alias_type?: components["schemas"]["AuthorityNameTypeEnum"];
+        };
         KnowledgeNodeDetail: {
             /** Format: uuid */
             readonly id: string;
@@ -10527,6 +10715,7 @@ export interface components {
             readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
             /** Format: date-time */
             readonly updated_at: string;
+            readonly prose: components["schemas"]["NodeProse"];
             readonly aliases: components["schemas"]["KnowledgeNodeAlias"][];
             readonly discipline_links: components["schemas"]["KnowledgeNodeDiscipline"][];
             readonly subdiscipline_links: components["schemas"]["KnowledgeNodeSubdiscipline"][];
@@ -10562,6 +10751,15 @@ export interface components {
          * @enum {string}
          */
         KnowledgeNodeDisciplineRelationTypeEnum: "primary" | "related" | "transferred";
+        KnowledgeNodeDisciplineRequest: {
+            /** Format: uuid */
+            discipline_id: string;
+            relation_type?: components["schemas"]["KnowledgeNodeDisciplineRelationTypeEnum"];
+            discipline_specific_summary?: string;
+            /** Format: int64 */
+            sort_order?: number;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+        };
         KnowledgeNodeList: {
             /** Format: uuid */
             readonly id: string;
@@ -10620,10 +10818,33 @@ export interface components {
             sort_order?: number;
             status?: components["schemas"]["KnowledgePublicationStatusEnum"];
         };
+        KnowledgeNodeSubdisciplineRequest: {
+            /** Format: uuid */
+            subdiscipline_id: string;
+            is_primary?: boolean;
+            relation_role?: string;
+            source?: string;
+            /** Format: double */
+            confidence?: number;
+            /** Format: int64 */
+            sort_order?: number;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+        };
         KnowledgeNodeTopic: {
             /** Format: uuid */
             readonly id: string;
             readonly topic: components["schemas"]["TheoryTaxonomyLink"];
+            relation_label?: string;
+            source?: string;
+            /** Format: double */
+            confidence?: number;
+            /** Format: int64 */
+            sort_order?: number;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+        };
+        KnowledgeNodeTopicRequest: {
+            /** Format: uuid */
+            topic_id: string;
             relation_label?: string;
             source?: string;
             /** Format: double */
@@ -10643,6 +10864,17 @@ export interface components {
          * @enum {string}
          */
         KnowledgeNodeTypeEnum: "discipline" | "theory_tradition" | "subdiscipline" | "concept" | "debate" | "research_problem" | "topic";
+        KnowledgeNodeVersion: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: int64 */
+            version_number: number;
+            snapshot?: unknown;
+            change_note?: string;
+            readonly created_by_name: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         /**
          * @description * `draft` - 草稿
          *     * `pending` - 待审核
@@ -10705,6 +10937,17 @@ export interface components {
          * @enum {string}
          */
         KnowledgeRelationTypeEnum: "inherited_from" | "revises" | "extends" | "criticizes" | "responds_to" | "competes_with" | "synthesizes" | "branches_from" | "borrows_concept_from" | "transferred_to" | "influenced_by" | "overlaps_with";
+        KnowledgeRelationVersion: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: int64 */
+            version_number: number;
+            snapshot?: unknown;
+            change_note?: string;
+            readonly created_by_name: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         KnowledgeSaveCommandRequest: {
             saved: boolean;
             /** Format: uuid */
@@ -12153,6 +12396,34 @@ export interface components {
             request_key: string;
             workbench_url: string;
         };
+        NodeEditorialDetails: {
+            internal_note: string;
+            prose: components["schemas"]["NodeProse"];
+        };
+        NodeEditorialDetailsRequest: {
+            internal_note: string;
+            prose: components["schemas"]["NodeProseRequest"];
+        };
+        NodeProse: {
+            summary?: components["schemas"]["NodeProseText"];
+            definition?: components["schemas"]["NodeProseText"];
+            theoretical_boundary?: components["schemas"]["NodeProseText"];
+        };
+        NodeProseRequest: {
+            summary?: components["schemas"]["NodeProseTextRequest"];
+            definition?: components["schemas"]["NodeProseTextRequest"];
+            theoretical_boundary?: components["schemas"]["NodeProseTextRequest"];
+        };
+        NodeProseText: {
+            text: string;
+            text_style: components["schemas"]["TextStyleEnum"];
+            text_marks: components["schemas"]["IssueTextMark"][];
+        };
+        NodeProseTextRequest: {
+            text: string;
+            text_style: components["schemas"]["TextStyleEnum"];
+            text_marks: components["schemas"]["IssueTextMarkRequest"][];
+        };
         NodeRelationPage: {
             count: number;
             next: number | null;
@@ -12191,6 +12462,18 @@ export interface components {
             label: string;
         };
         NodeSaveReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            node_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        NodeSaveReceiptRequest: {
             actor_id: string;
             /** Format: uuid */
             request_id: string;
@@ -12643,6 +12926,36 @@ export interface components {
          * @enum {string}
          */
         PageTypeEnum: "front" | "body" | "appendix" | "other" | "blank";
+        PaginatedAdminKnowledgeNodeList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AdminKnowledgeNode"][];
+        };
+        PaginatedAdminKnowledgeRelationList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AdminKnowledgeRelation"][];
+        };
         PaginatedAdminReadingPathList: {
             /** @example 123 */
             count: number;
@@ -12762,6 +13075,36 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["KnowledgeNodeList"][];
+        };
+        PaginatedKnowledgeNodeVersionList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["KnowledgeNodeVersion"][];
+        };
+        PaginatedKnowledgeRelationVersionList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["KnowledgeRelationVersion"][];
         };
         PaginatedMemoryListOutputList: {
             /** @example 123 */
@@ -13373,6 +13716,36 @@ export interface components {
             email: string;
             /** @default /account */
             next: string;
+        };
+        PatchedAdminKnowledgeNodeRequest: {
+            editorial_details?: components["schemas"]["NodeEditorialDetailsRequest"];
+            node_type?: components["schemas"]["KnowledgeNodeTypeEnum"];
+            canonical_name_zh?: string;
+            canonical_name_en?: string;
+            slug?: string;
+            summary?: string;
+            definition?: string;
+            core_questions?: unknown;
+            basic_propositions?: unknown;
+            theoretical_boundary?: string;
+            /** Format: int64 */
+            start_year?: number | null;
+            /** Format: int64 */
+            end_year?: number | null;
+            period_label?: string;
+            /** Format: uuid */
+            parent?: string | null;
+            /** Format: uuid */
+            primary_discipline?: string | null;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+            /** Format: int64 */
+            sort_order?: number;
+            /** Format: binary */
+            cover_asset?: string;
+            aliases?: components["schemas"]["KnowledgeNodeAliasRequest"][];
+            discipline_links?: components["schemas"]["KnowledgeNodeDisciplineRequest"][];
+            subdiscipline_links?: components["schemas"]["KnowledgeNodeSubdisciplineRequest"][];
+            topic_links?: components["schemas"]["KnowledgeNodeTopicRequest"][];
         };
         PatchedAdminKnowledgeRelationRequest: {
             /** Format: uuid */
@@ -26026,6 +26399,57 @@ export interface operations {
             };
         };
     };
+    catalog_admin_theory_system_nodes_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAdminKnowledgeNodeList"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AdminKnowledgeNodeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminKnowledgeNodeRequest"];
+                "application/json": components["schemas"]["AdminKnowledgeNodeRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminKnowledgeNode"];
+                };
+            };
+        };
+    };
     catalog_admin_theory_system_nodes_relations_retrieve: {
         parameters: {
             query?: {
@@ -26094,20 +26518,41 @@ export interface operations {
             };
         };
     };
-    catalog_admin_theory_system_nodes_relations_update: {
+    catalog_admin_theory_system_nodes_retrieve: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                node_id: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminKnowledgeNode"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AdminKnowledgeRelationRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["AdminKnowledgeRelationRequest"];
-                "multipart/form-data": components["schemas"]["AdminKnowledgeRelationRequest"];
+                "multipart/form-data": components["schemas"]["AdminKnowledgeNodeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminKnowledgeNodeRequest"];
+                "application/json": components["schemas"]["AdminKnowledgeNodeRequest"];
             };
         };
         responses: {
@@ -26116,17 +26561,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdminKnowledgeRelation"];
+                    "application/json": components["schemas"]["AdminKnowledgeNode"];
                 };
             };
         };
     };
-    catalog_admin_theory_system_nodes_relations_destroy: {
+    catalog_admin_theory_system_nodes_destroy: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                node_id: string;
+                id: string;
             };
             cookie?: never;
         };
@@ -26141,20 +26586,20 @@ export interface operations {
             };
         };
     };
-    catalog_admin_theory_system_nodes_relations_partial_update: {
+    catalog_admin_theory_system_nodes_partial_update: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                node_id: string;
+                id: string;
             };
             cookie?: never;
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
-                "multipart/form-data": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
+                "multipart/form-data": components["schemas"]["PatchedAdminKnowledgeNodeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminKnowledgeNodeRequest"];
+                "application/json": components["schemas"]["PatchedAdminKnowledgeNodeRequest"];
             };
         };
         responses: {
@@ -26163,7 +26608,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdminKnowledgeRelation"];
+                    "application/json": components["schemas"]["AdminKnowledgeNode"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_versions_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedKnowledgeNodeVersionList"];
                 };
             };
         };
@@ -26431,6 +26904,185 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PathValidationResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_relations_list: {
+        parameters: {
+            query?: {
+                /** @description 当前正式或草稿关联的节点编号。 */
+                node?: string;
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAdminKnowledgeRelationList"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_relations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminKnowledgeRelationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminKnowledgeRelationRequest"];
+                "multipart/form-data": components["schemas"]["AdminKnowledgeRelationRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminKnowledgeRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_relations_retrieve: {
+        parameters: {
+            query?: {
+                /** @description 可选节点范围，包含正式及草稿端点。 */
+                node?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminKnowledgeRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_relations_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminKnowledgeRelationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminKnowledgeRelationRequest"];
+                "multipart/form-data": components["schemas"]["AdminKnowledgeRelationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminKnowledgeRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_relations_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_admin_theory_system_relations_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
+                "multipart/form-data": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminKnowledgeRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_relations_versions_list: {
+        parameters: {
+            query?: {
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                /** @description 搜索关键词。 */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedKnowledgeRelationVersionList"];
                 };
             };
         };

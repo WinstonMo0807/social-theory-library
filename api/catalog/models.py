@@ -2789,6 +2789,7 @@ class KnowledgeNode(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     core_questions = models.JSONField(default=list, blank=True)
     basic_propositions = models.JSONField(default=list, blank=True)
     theoretical_boundary = models.TextField(blank=True)
+    editorial_details = models.JSONField(default=dict, blank=True)
     start_year = models.SmallIntegerField(null=True, blank=True, db_index=True)
     end_year = models.SmallIntegerField(null=True, blank=True)
     period_label = models.CharField(max_length=160, blank=True)

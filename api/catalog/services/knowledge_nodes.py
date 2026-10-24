@@ -50,6 +50,7 @@ def node_snapshot(node: KnowledgeNode) -> dict:
         "core_questions": node.core_questions,
         "basic_propositions": node.basic_propositions,
         "theoretical_boundary": node.theoretical_boundary,
+        "editorial_details": node.editorial_details,
         "start_year": node.start_year,
         "end_year": node.end_year,
         "period_label": node.period_label,
