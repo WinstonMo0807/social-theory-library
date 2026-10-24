@@ -26596,6 +26596,78 @@
                 }
             }
         },
+        "/api/reading/research-projects/{id}/replay-tree/": {
+            "get": {
+                "operationId": "reading_research_projects_replay_tree_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 research project 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "parent_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "view",
+                        "schema": {
+                            "enum": [
+                                "turns",
+                                "projects"
+                            ],
+                            "type": "string",
+                            "default": "turns",
+                            "minLength": 1
+                        },
+                        "description": "* `turns` - turns\n* `projects` - projects"
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReplayTreeOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/research-projects/{id}/selections/": {
             "post": {
                 "operationId": "reading_research_projects_selections_create",
@@ -26933,6 +27005,53 @@
                 "tags": [
                     "reading"
                 ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReplayForkOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "reading_research_projects_replay_fork_receipt_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReplayForkStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReplayForkStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReplayForkStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "security": [
                     {
                         "libraryCookie": []
@@ -64335,13 +64454,17 @@
                     },
                     "deleted": {
                         "type": "boolean"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
                     }
                 },
                 "required": [
                     "deleted",
                     "owner_id",
                     "project_id",
-                    "request_id"
+                    "request_id",
+                    "state"
                 ]
             },
             "ReplayForkRequest": {
@@ -64394,6 +64517,22 @@
                     "request_id",
                     "title",
                     "turn_id"
+                ]
+            },
+            "ReplayForkStopRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action",
+                    "request_id"
                 ]
             },
             "ReplayOutput": {
@@ -64501,6 +64640,55 @@
                 },
                 "required": [
                     "owner_id"
+                ]
+            },
+            "ReplayTreeOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "project_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "parent_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "parent": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
+                    },
+                    "origin_unavailable": {
+                        "type": "boolean"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "owner_id",
+                    "page",
+                    "project_id",
+                    "results",
+                    "total_pages"
                 ]
             },
             "ResearchAccountCountsOutput": {

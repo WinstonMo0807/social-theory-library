@@ -8,6 +8,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from . import privacy, research
 from .models import ResearchImportReceipt, ResearchProject, ResearchTurn
 
+STOPPED_FORK = "cancelled:replay_fork"
+
 
 def turn_for(user, project, pk):
     turn = research.owned(ResearchTurn, user, pk)
@@ -26,7 +28,8 @@ def inputs(turn):
 
 def descriptor(turn):
     data = inputs(turn)
-    return {"id": str(turn.pk), "parent_id": str(turn.parent_id) if turn.parent_id else None,
+    parent_id = str(turn.parent_id) if turn.parent_id and ResearchTurn.objects.filter(pk=turn.parent_id, project_id=turn.project_id).exists() else None
+    return {"id": str(turn.pk), "parent_id": parent_id,
         "revision": turn.revision, "title": data["title"], "question": data["question"], "status": turn.status,
         "created_at": turn.created_at, "updated_at": turn.updated_at,
         "material_count": len({research.reference_identity(ref) for ref in data["selections"]}),
@@ -58,7 +61,7 @@ def references(turn):
 def detail(user, project_id, turn_id, compare_id=None):
     project = research.owned(ResearchProject, user, project_id)
     turn = turn_for(user, project, turn_id)
-    compared = turn_for(user, project, compare_id) if compare_id else turn_for(user, project, turn.parent_id) if turn.parent_id else None
+    compared = turn_for(user, project, compare_id) if compare_id else project.turns.filter(pk=turn.parent_id).first() if turn.parent_id else None
     data = inputs(turn)
     current, previous = references(turn), references(compared) if compared else []
     before, after = {research.reference_identity(ref) for ref in previous}, {research.reference_identity(ref) for ref in current}
@@ -104,11 +107,20 @@ def fork_receipt(user, request_id):
     row = ResearchImportReceipt.objects.filter(user=user, request_id=request_id).first()
     if row is None:
         raise NotFound("尚未找到此账户的原创建回执。")
-    if row.project_id and not research.unpack(row.project).get("replay_origin"):
+    project = ResearchProject.objects.filter(pk=row.project_id, user=user).first() if row.project_id else None
+    if row.project_id and (project is None or not research.unpack(project).get("replay_origin")):
         raise NotFound("此回执不属于研究回放的创建操作。")
     # The caller learns only its own original project identity, never another owner's record.
     return {"owner_id": str(user.pk), "request_id": str(request_id), "project_id": str(row.project_id) if row.project_id else None,
-        "deleted": row.project_id is None}
+        "deleted": row.project_id is None and row.fingerprint != STOPPED_FORK,
+        "state": "cancelled" if row.fingerprint == STOPPED_FORK else "applied"}
+
+
+@transaction.atomic
+def stop_fork(user, request_id):
+    privacy.lock_owner(user)
+    ResearchImportReceipt.objects.get_or_create(user=user, request_id=request_id, defaults={"fingerprint": STOPPED_FORK})
+    return fork_receipt(user, request_id)
 
 
 @transaction.atomic
@@ -117,6 +129,8 @@ def fork_project(user, project_id, turn_id, data):
     fingerprint = hashlib.sha256(json.dumps({"operation": "replay_fork", "project_id": str(project_id), "turn_id": str(turn_id), **data}, sort_keys=True, default=str).encode()).hexdigest()
     previous = ResearchImportReceipt.objects.filter(user=user, request_id=data["request_id"]).first()
     if previous:
+        if previous.fingerprint == STOPPED_FORK:
+            return fork_receipt(user, data["request_id"])
         if previous.fingerprint != fingerprint:
             raise research.ResearchConflict("原创建请求已用于不同内容，请核对原结果。")
         return fork_receipt(user, data["request_id"])

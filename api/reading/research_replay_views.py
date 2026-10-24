@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from . import research_replay
+from . import research_replay, research_replay_tree
 
 
 def owner(request):
@@ -71,14 +71,53 @@ class ReplayReceiptQuery(serializers.Serializer):
     request_id = serializers.UUIDField()
 
 
+class ReplayForkStop(ReplayReceiptQuery):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+    def validate(self, data):
+        if set(self.initial_data) != set(self.fields):
+            raise serializers.ValidationError("仅接受停止原分支创建请求。")
+        return data
+
+
 class ReplayForkOutput(serializers.Serializer):
     owner_id = serializers.CharField()
     request_id = serializers.UUIDField()
     project_id = serializers.UUIDField(allow_null=True)
     deleted = serializers.BooleanField()
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
+
+
+class ReplayTreeQuery(serializers.Serializer):
+    page = serializers.IntegerField(min_value=1, default=1)
+    parent_id = serializers.UUIDField(required=False)
+    view = serializers.ChoiceField(choices=["turns", "projects"], default="turns")
+
+
+class ReplayTreeOutput(serializers.Serializer):
+    owner_id = serializers.CharField()
+    project_id = serializers.UUIDField()
+    parent_id = serializers.UUIDField(allow_null=True, required=False)
+    parent = serializers.DictField(allow_null=True, required=False)
+    origin_unavailable = serializers.BooleanField(required=False)
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+    results = serializers.ListField(child=serializers.DictField())
 
 
 class ReplayActions:
+    @extend_schema(parameters=[ReplayTreeQuery], responses=ReplayTreeOutput)
+    @action(detail=True, methods=["get"], url_path="replay-tree")
+    def replay_tree(self, request, pk=None):
+        owner(request)
+        query = ReplayTreeQuery(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        values = query.validated_data
+        if values["view"] == "projects":
+            return Response(research_replay_tree.project_links(request.user, pk, values["page"]))
+        return Response(research_replay_tree.turn_tree(request.user, pk, values.get("parent_id"), values["page"]))
+
     @extend_schema(methods=["GET"], parameters=[ReplayQuery], responses=ReplayOutput)
     @extend_schema(methods=["PATCH"], request=ReplayEdit, responses=ReplayOutput)
     @action(detail=True, methods=["get", "patch"], url_path="replay")
@@ -107,10 +146,15 @@ class ReplayActions:
         turn_id = values.pop("turn_id")
         return Response(research_replay.fork_project(request.user, pk, turn_id, values))
 
-    @extend_schema(parameters=[ReplayReceiptQuery], responses=ReplayForkOutput)
-    @action(detail=False, methods=["get"], url_path="replay-fork-receipt")
+    @extend_schema(methods=["GET"], parameters=[ReplayReceiptQuery], responses=ReplayForkOutput)
+    @extend_schema(methods=["POST"], request=ReplayForkStop, responses=ReplayForkOutput)
+    @action(detail=False, methods=["get", "post"], url_path="replay-fork-receipt")
     def replay_fork_receipt(self, request):
         owner(request)
+        if request.method == "POST":
+            data = ReplayForkStop(data=request.data)
+            data.is_valid(raise_exception=True)
+            return Response(research_replay.stop_fork(request.user, data.validated_data["request_id"]))
         data = ReplayReceiptQuery(data=request.query_params)
         data.is_valid(raise_exception=True)
         return Response(research_replay.fork_receipt(request.user, **data.validated_data))
