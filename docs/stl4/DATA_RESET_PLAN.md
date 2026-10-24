@@ -1,5 +1,9 @@
 # 账号保留型业务重置
 
+## 2026-10-24 StorageCleanupPlan静态归类
+
+ac0e0d仅检查Django声明：distribution_storagecleanupplan随原业务app动态清单归类，账户模型无改动。distribution0004尚未执行，没有实际数据库预演或清理。未来迁移后须重新核对实际表/外键/备份恢复证据及账号指纹，旧生产清理不可重复执行。
+
 ## 2026-10-24 新引用与候选表的静态归类
 
 2b754f在禁止数据库连接下检查Django模型声明。TimelineEvidenceImage、TimelineMergeRecord、ReadingPathCandidate、EvidencePack均已纳入原business app动态清单，accounts模型及自动关联表全部由保留清单覆盖，未归入删除。没有执行真实预演或清理，没有取得新的生产批准；部署迁移后必须重新核对实际表/外键/触发器、账户指纹和备份恢复证据，旧计划不得直接沿用。

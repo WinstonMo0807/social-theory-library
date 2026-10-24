@@ -13,6 +13,28 @@ from accounts.models import User
 from ingestion.models import AuditEvent
 
 
+def enqueue_storage_cleanup(identifier):
+    from .models import StorageCleanupPlan
+    try:
+        run_storage_cleanup.apply_async(args=[str(identifier)], ignore_result=True)
+    except Exception:
+        StorageCleanupPlan.objects.filter(pk=identifier, status="queued").update(status="failed",
+            error_message="清理队列暂不可用，尚未开始。请重新扫描后核对，不自动重复提交。", completed_at=timezone.now(), updated_at=timezone.now())
+
+
+@shared_task(ignore_result=True, soft_time_limit=3500, time_limit=3600)
+def run_storage_cleanup(identifier):
+    from .storage_cleanup import process_plan
+    from .models import StorageCleanupPlan
+    try:
+        process_plan(identifier)
+    except Exception:
+        StorageCleanupPlan.objects.filter(pk=identifier, status__in=["queued", "running"]).update(status="failed",
+            error_message="清理中断。已有逐项结果保留；未登记结果不能认定未删除，请重新扫描核对。任务不会自动重跑。",
+            completed_at=timezone.now(), updated_at=timezone.now())
+        raise
+
+
 def enqueue_authorized_backup(identifier):
     try:
         run_authorized_backup.apply_async(args=[str(identifier)], ignore_result=True)

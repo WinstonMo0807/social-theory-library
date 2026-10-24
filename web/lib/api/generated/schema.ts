@@ -4142,6 +4142,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/distribution/storage/cleanup/{cleanup_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["distribution_storage_cleanup_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/distribution/storage/commands/": {
         parameters: {
             query?: never;
@@ -8326,6 +8342,40 @@ export interface components {
             readonly units: unknown;
             readonly notice: string;
         };
+        CleanupItem: {
+            id: string;
+            label: string;
+            bytes: number;
+            /** Format: date-time */
+            modified_at: string;
+            outcome: string;
+            detail: string;
+        };
+        CleanupPlanOutput: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            status_label: string;
+            version: string;
+            /** Format: date-time */
+            created_at: string;
+            stale: boolean;
+            stalled: boolean;
+            execution_supported: boolean;
+            retention_days: number;
+            rows: components["schemas"]["CleanupItem"][];
+            selected: string[];
+            candidate_bytes: number;
+            candidate_count: number;
+            released_bytes: number;
+            deleted_count: number;
+            examined_count: number;
+            protected_count: number;
+            limited: boolean;
+            notice: string;
+            error_message: string;
+            scope: string;
+        };
         CleanupPreview: {
             status: string;
             can_execute: boolean;
@@ -8333,6 +8383,8 @@ export interface components {
             candidate_bytes: number | null;
             protected_count: number;
             detail: string;
+            /** Format: uuid */
+            latest_id: string | null;
         };
         /**
          * @description * `#B44C3D` - #B44C3D
@@ -19520,9 +19572,13 @@ export interface components {
          *     * `close_stalled_verification` - close_stalled_verification
          *     * `save_schedule` - save_schedule
          *     * `close_stalled_backup` - close_stalled_backup
+         *     * `save_retention` - save_retention
+         *     * `scan_cleanup` - scan_cleanup
+         *     * `queue_cleanup` - queue_cleanup
+         *     * `cancel_cleanup` - cancel_cleanup
          * @enum {string}
          */
-        StorageCommandInputOperationEnum: "create_backup" | "verify_archive" | "restore_plan" | "close_stalled_verification" | "save_schedule" | "close_stalled_backup";
+        StorageCommandInputOperationEnum: "create_backup" | "verify_archive" | "restore_plan" | "close_stalled_verification" | "save_schedule" | "close_stalled_backup" | "save_retention" | "scan_cleanup" | "queue_cleanup" | "cancel_cleanup";
         StorageCommandInputRequest: {
             operation: components["schemas"]["StorageCommandInputOperationEnum"];
             /** Format: uuid */
@@ -19541,6 +19597,11 @@ export interface components {
             /** Format: date-time */
             first_run_at?: string | null;
             expected_version?: string;
+            temporary_days?: number;
+            /** Format: uuid */
+            cleanup_id?: string;
+            cleanup_items?: string[];
+            confirmation?: string;
         };
         /**
          * @description * `database` - database
@@ -19556,6 +19617,9 @@ export interface components {
             verification?: components["schemas"]["BackupVerificationOutput"];
             restore_plan?: components["schemas"]["RestorePlan"];
             schedule_saved?: boolean;
+            retention_saved?: boolean;
+            /** Format: uuid */
+            cleanup_id?: string;
         };
         StorageCommandReceipt: {
             actor_id: string;
@@ -19585,6 +19649,11 @@ export interface components {
             writable: boolean;
             detail: string;
         };
+        StorageRetentionPolicy: {
+            temporary_days: number;
+            version: string;
+            detail: string;
+        };
         StorageSchedule: {
             configured: boolean;
             detail: string;
@@ -19607,6 +19676,7 @@ export interface components {
             rehearsals: components["schemas"]["RestoreReport"][];
             rehearsals_limited: boolean;
             retention: components["schemas"]["RetentionRule"][];
+            retention_policy: components["schemas"]["StorageRetentionPolicy"];
             cleanup: components["schemas"]["CleanupPreview"];
         };
         /**
@@ -30964,6 +31034,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BackupDetailOutput"];
+                };
+            };
+        };
+    };
+    distribution_storage_cleanup_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cleanup_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CleanupPlanOutput"];
                 };
             };
         };

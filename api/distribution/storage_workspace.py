@@ -133,6 +133,8 @@ def restore_reports(checksum=None):
 
 
 def storage_snapshot(actor, *, page=1, status="", as_of=None):
+    from .storage_cleanup import retention_policy
+    from .models import StorageCleanupPlan
     as_of = as_of or timezone.now()
     if as_of > timezone.now():
         raise ValidationError("不能查询未来的备份记录。")
@@ -157,7 +159,11 @@ def storage_snapshot(actor, *, page=1, status="", as_of=None):
     can_backup = has_capability(actor, Capability.RUN_BACKUP)
     schedules = {row.scope: row for row in BackupSchedule.objects.select_related("last_job").all()}
     rehearsals, reports_limited = restore_reports() if can_backup else ([], False)
-    return {"checked_at": timezone.now(), "permissions": {"can_backup": can_backup, "can_verify": can_backup, "can_prepare_restore": can_backup},
+    can_cleanup = can_backup and has_capability(actor, Capability.DESTRUCTIVE_MAINTENANCE)
+    cleanup_rows = StorageCleanupPlan.objects.filter(requested_by=actor).order_by("-created_at", "-id")
+    latest_cleanup = (cleanup_rows.filter(status__in=["queued", "running"]).values_list("pk", flat=True).first()
+        or cleanup_rows.values_list("pk", flat=True).first()) if can_cleanup else None
+    return {"checked_at": timezone.now(), "permissions": {"can_backup": can_backup, "can_verify": can_backup, "can_prepare_restore": can_backup, "can_cleanup": can_cleanup},
         "locations": [_location("library", "馆藏主目录", settings.MEDIA_ROOT),
             _location("originals", "原件目录", settings.NAS_ORIGINAL_ROOT), _location("public", "公开派生文件", settings.NAS_PUBLIC_ROOT),
             _location("backups", "本地备份目录", settings.NAS_BACKUP_ROOT)],
@@ -172,13 +178,15 @@ def storage_snapshot(actor, *, page=1, status="", as_of=None):
         "backups": {"count": count, "page": page, "page_size": 20, "as_of": as_of, "results": [backup_payload(row, latest=latest.get(row.pk)) for row in page_rows]},
         "verifications": [verification_payload(row) for row in BackupVerification.objects.order_by("-created_at", "-id")[:30]],
         "rehearsals": rehearsals, "rehearsals_limited": reports_limited,
+        "retention_policy": retention_policy(),
         "retention": [{"label": "原件与历史文件", "policy": "保留原件及已有历史版本", "detail": "不按缓存清理规则删除。"},
             {"label": "账户与私人资料", "policy": "账户身份保留；私人内容按本人设置", "detail": "维护页面不会变更读者的保存偏好或删除私人记录。"},
             {"label": "模型与活动索引", "policy": "保护当前在用版本", "detail": "重建不等于已获准删除旧版本，须单独核对依赖。"},
             {"label": "衍生文件与缓存", "policy": "先核对具体影响", "detail": "现有登记不足以证明文件可删时，保持保护。"}],
-        "cleanup": {"status": "not_scanned", "can_execute": False, "candidate_count": None, "candidate_bytes": None,
+        "cleanup": {"status": "not_scanned", "can_execute": can_cleanup, "candidate_count": None, "candidate_bytes": None,
+            "latest_id": str(latest_cleanup) if latest_cleanup else None,
             "protected_count": sum(row["count"] for row in files),
-            "detail": "原件、阅读派生文件、当前媒体与历史版本均受保护。尚无能证明可安全删除的缓存候选；不能把全部 OCR 或缩略图当作垃圾。"}}
+            "detail": "原件、阅读派生文件、媒体与历史版本受保护。只扫描已完成上传的专用导入临时目录，不将 OCR 成果、缩略图或未登记文件当作垃圾。"}}
 
 
 def backup_detail(identifier):
@@ -216,6 +224,9 @@ def storage_command(request, values):
 
 def _apply_storage_command(actor, values):
     operation, identifier = values["operation"], values["request_id"]
+    if operation in {"save_retention", "scan_cleanup", "queue_cleanup", "cancel_cleanup"}:
+        from .storage_cleanup import command
+        return {"request_id": str(identifier), "operation": operation, **command(actor, values)}
     if operation == "close_stalled_backup":
         fingerprint = sha256(json.dumps(values, cls=DjangoJSONEncoder, sort_keys=True).encode()).hexdigest()
         receipt = AuditEvent.objects.filter(action="storage_backup_closed", request_id=str(identifier)).first()

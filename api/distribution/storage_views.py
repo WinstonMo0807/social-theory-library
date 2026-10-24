@@ -11,7 +11,7 @@ from .models import BackupVerification
 
 
 class StorageCommandInput(serializers.Serializer):
-    operation = serializers.ChoiceField(choices=["create_backup", "verify_archive", "restore_plan", "close_stalled_verification", "save_schedule", "close_stalled_backup"])
+    operation = serializers.ChoiceField(choices=["create_backup", "verify_archive", "restore_plan", "close_stalled_verification", "save_schedule", "close_stalled_backup", "save_retention", "scan_cleanup", "queue_cleanup", "cancel_cleanup"])
     request_id = serializers.UUIDField()
     include_originals = serializers.BooleanField(required=False)
     retry_from_id = serializers.UUIDField(required=False)
@@ -23,6 +23,10 @@ class StorageCommandInput(serializers.Serializer):
     interval_hours = serializers.IntegerField(min_value=6, max_value=720, required=False)
     first_run_at = serializers.DateTimeField(required=False, allow_null=True)
     expected_version = serializers.CharField(max_length=100, required=False)
+    temporary_days = serializers.IntegerField(min_value=7, max_value=3650, required=False)
+    cleanup_id = serializers.UUIDField(required=False)
+    cleanup_items = serializers.ListField(child=serializers.RegexField(r"^[0-9a-f]{24}$"), min_length=1, max_length=100, required=False)
+    confirmation = serializers.CharField(max_length=100, required=False)
 
     def to_internal_value(self, data):
         if not isinstance(data, dict) or set(data) - set(self.fields):
@@ -30,6 +34,13 @@ class StorageCommandInput(serializers.Serializer):
         return super().to_internal_value(data)
 
     def validate(self, attrs):
+        extra = {"scan_cleanup": set(), "save_retention": {"temporary_days", "expected_version"},
+            "cancel_cleanup": {"cleanup_id", "expected_version"},
+            "queue_cleanup": {"cleanup_id", "expected_version", "cleanup_items", "confirmation"}}
+        if attrs["operation"] in extra:
+            if set(attrs) != {"operation", "request_id"} | extra[attrs["operation"]]:
+                raise serializers.ValidationError("字段与当前清理或保留规则操作不匹配。")
+            return attrs
         if attrs["operation"] == "close_stalled_backup":
             if set(attrs) != {"operation", "request_id", "backup_id", "expected_version"}:
                 raise serializers.ValidationError("关闭超时备份需明确原任务及当前版本。")
@@ -157,6 +168,13 @@ class CleanupPreview(serializers.Serializer):
     candidate_bytes = serializers.IntegerField(allow_null=True)
     protected_count = serializers.IntegerField()
     detail = serializers.CharField()
+    latest_id = serializers.UUIDField(allow_null=True)
+
+
+class StorageRetentionPolicy(serializers.Serializer):
+    temporary_days = serializers.IntegerField()
+    version = serializers.CharField()
+    detail = serializers.CharField()
 
 
 class StorageSnapshot(serializers.Serializer):
@@ -173,6 +191,7 @@ class StorageSnapshot(serializers.Serializer):
     rehearsals = RestoreReport(many=True)
     rehearsals_limited = serializers.BooleanField()
     retention = RetentionRule(many=True)
+    retention_policy = StorageRetentionPolicy()
     cleanup = CleanupPreview()
 
 
@@ -204,6 +223,8 @@ class StorageCommandOutput(serializers.Serializer):
     verification = BackupVerificationOutput(required=False)
     restore_plan = RestorePlan(required=False)
     schedule_saved = serializers.BooleanField(required=False)
+    retention_saved = serializers.BooleanField(required=False)
+    cleanup_id = serializers.UUIDField(required=False)
 
 
 class StorageCommandReceipt(serializers.Serializer):

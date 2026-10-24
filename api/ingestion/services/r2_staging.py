@@ -817,7 +817,7 @@ def verify_cleanup_original(item, asset):
             if parent.is_symlink():
                 raise R2CleanupBlocked("永久原件路径含链接，临时副本保留。")
         digest, count = sha256(), 0
-        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
         with os.fdopen(os.open(path, flags), "rb") as original:
             before = os.fstat(original.fileno())
             if not stat.S_ISREG(before.st_mode) or before.st_size != item.byte_size:

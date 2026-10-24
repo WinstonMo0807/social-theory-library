@@ -102,3 +102,20 @@ class BackupSchedule(UUIDTimeStampedModel):
     configured_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="backup_schedules")
     last_job = models.ForeignKey(BackupJob, null=True, blank=True, on_delete=models.SET_NULL, related_name="schedules")
     last_error = models.CharField(max_length=500, blank=True)
+
+
+class StorageCleanupPlan(UUIDTimeStampedModel):
+    """Bounded, explicit local transient-file cleanup over the existing task service."""
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="storage_cleanup_plans")
+    status = models.CharField(max_length=20, default="scanned", db_index=True,
+        choices=[("scanned", "等待确认"), ("queued", "等待"), ("running", "执行中"),
+            ("completed", "完成"), ("partial", "部分完成"), ("failed", "失败"), ("cancelled", "已停止")])
+    retention_days = models.PositiveIntegerField()
+    policy_version = models.CharField(max_length=100)
+    manifest = models.JSONField(default=list)
+    selected = models.JSONField(default=list)
+    outcomes = models.JSONField(default=dict)
+    scan_summary = models.JSONField(default=dict)
+    error_message = models.CharField(max_length=500, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)

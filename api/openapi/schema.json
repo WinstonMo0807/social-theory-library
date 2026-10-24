@@ -19730,6 +19730,45 @@
                 }
             }
         },
+        "/api/distribution/storage/cleanup/{cleanup_id}/": {
+            "get": {
+                "operationId": "distribution_storage_cleanup_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "cleanup_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CleanupPlanOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/distribution/storage/commands/": {
             "post": {
                 "operationId": "distribution_storage_commands_create",
@@ -37551,6 +37590,137 @@
                     "units"
                 ]
             },
+            "CleanupItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "bytes": {
+                        "type": "integer"
+                    },
+                    "modified_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "outcome": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "bytes",
+                    "detail",
+                    "id",
+                    "label",
+                    "modified_at",
+                    "outcome"
+                ]
+            },
+            "CleanupPlanOutput": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "status_label": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "stale": {
+                        "type": "boolean"
+                    },
+                    "stalled": {
+                        "type": "boolean"
+                    },
+                    "execution_supported": {
+                        "type": "boolean"
+                    },
+                    "retention_days": {
+                        "type": "integer"
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CleanupItem"
+                        }
+                    },
+                    "selected": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "candidate_bytes": {
+                        "type": "integer"
+                    },
+                    "candidate_count": {
+                        "type": "integer"
+                    },
+                    "released_bytes": {
+                        "type": "integer"
+                    },
+                    "deleted_count": {
+                        "type": "integer"
+                    },
+                    "examined_count": {
+                        "type": "integer"
+                    },
+                    "protected_count": {
+                        "type": "integer"
+                    },
+                    "limited": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string"
+                    },
+                    "error_message": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "candidate_bytes",
+                    "candidate_count",
+                    "created_at",
+                    "deleted_count",
+                    "error_message",
+                    "examined_count",
+                    "execution_supported",
+                    "id",
+                    "limited",
+                    "notice",
+                    "protected_count",
+                    "released_bytes",
+                    "retention_days",
+                    "rows",
+                    "scope",
+                    "selected",
+                    "stale",
+                    "stalled",
+                    "status",
+                    "status_label",
+                    "version"
+                ]
+            },
             "CleanupPreview": {
                 "type": "object",
                 "properties": {
@@ -37573,6 +37743,11 @@
                     },
                     "detail": {
                         "type": "string"
+                    },
+                    "latest_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -37580,6 +37755,7 @@
                     "candidate_bytes",
                     "candidate_count",
                     "detail",
+                    "latest_id",
                     "protected_count",
                     "status"
                 ]
@@ -74839,10 +75015,14 @@
                     "restore_plan",
                     "close_stalled_verification",
                     "save_schedule",
-                    "close_stalled_backup"
+                    "close_stalled_backup",
+                    "save_retention",
+                    "scan_cleanup",
+                    "queue_cleanup",
+                    "cancel_cleanup"
                 ],
                 "type": "string",
-                "description": "* `create_backup` - create_backup\n* `verify_archive` - verify_archive\n* `restore_plan` - restore_plan\n* `close_stalled_verification` - close_stalled_verification\n* `save_schedule` - save_schedule\n* `close_stalled_backup` - close_stalled_backup"
+                "description": "* `create_backup` - create_backup\n* `verify_archive` - verify_archive\n* `restore_plan` - restore_plan\n* `close_stalled_verification` - close_stalled_verification\n* `save_schedule` - save_schedule\n* `close_stalled_backup` - close_stalled_backup\n* `save_retention` - save_retention\n* `scan_cleanup` - scan_cleanup\n* `queue_cleanup` - queue_cleanup\n* `cancel_cleanup` - cancel_cleanup"
             },
             "StorageCommandInputRequest": {
                 "type": "object",
@@ -74894,6 +75074,30 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 100
+                    },
+                    "temporary_days": {
+                        "type": "integer",
+                        "maximum": 3650,
+                        "minimum": 7
+                    },
+                    "cleanup_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "cleanup_items": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[0-9a-f]{24}$"
+                        },
+                        "maxItems": 100,
+                        "minItems": 1
+                    },
+                    "confirmation": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
                     }
                 },
                 "required": [
@@ -74930,6 +75134,13 @@
                     },
                     "schedule_saved": {
                         "type": "boolean"
+                    },
+                    "retention_saved": {
+                        "type": "boolean"
+                    },
+                    "cleanup_id": {
+                        "type": "string",
+                        "format": "uuid"
                     }
                 },
                 "required": [
@@ -75046,6 +75257,25 @@
                     "writable"
                 ]
             },
+            "StorageRetentionPolicy": {
+                "type": "object",
+                "properties": {
+                    "temporary_days": {
+                        "type": "integer"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "temporary_days",
+                    "version"
+                ]
+            },
             "StorageSchedule": {
                 "type": "object",
                 "properties": {
@@ -75132,6 +75362,9 @@
                             "$ref": "#/components/schemas/RetentionRule"
                         }
                     },
+                    "retention_policy": {
+                        "$ref": "#/components/schemas/StorageRetentionPolicy"
+                    },
                     "cleanup": {
                         "$ref": "#/components/schemas/CleanupPreview"
                     }
@@ -75149,6 +75382,7 @@
                     "rehearsals",
                     "rehearsals_limited",
                     "retention",
+                    "retention_policy",
                     "schedule",
                     "verifications"
                 ]

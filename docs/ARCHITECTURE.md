@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 存储临时清理
+
+StorageCleanupPlan保存有上限的本地导入临时文件清单，distribution0004只声明未迁移。沿原Celery/storage_tasks逐项核对原件与文件身份，不碰馆藏/读者记录。保留天数沿私有SiteSetting与原维护回执；不新增索引、馆藏或运行队列。Windows可审清单，保护式删除须运行环境支持POSIX目录描述符。
+
 ## 2026-10-24 M24路线候选
 
 M24整条路线候选继续使用原ReadingPathCandidate/EvidencePack/IntelligenceFeedback。规则编排与主题关联选择有明确上限，无模型/新队列；主题拓展同时核对原批准关联与激活书目快照。采用通过原EditorialRevision只保存原路线草稿，旧通用候选入口不能另建。无新schema。
