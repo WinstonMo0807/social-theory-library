@@ -1698,6 +1698,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/ocr-runtime/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_ocr_runtime_retrieve"];
+        put: operations["catalog_admin_ocr_runtime_update"];
+        post: operations["catalog_admin_ocr_runtime_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Fence a late CAS save without undoing any configuration already saved. */
+        patch: operations["catalog_admin_ocr_runtime_partial_update"];
+        trace?: never;
+    };
     "/api/catalog/admin/outline-jobs/{job_id}/": {
         parameters: {
             query?: never;
@@ -13365,6 +13382,60 @@ export interface components {
             editor_url: string;
         };
         /**
+         * @description * `test_nas` - test_nas
+         *     * `test_remote` - test_remote
+         * @enum {string}
+         */
+        OcrProbeInputActionEnum: "test_nas" | "test_remote";
+        OcrProbeInputRequest: {
+            action: components["schemas"]["OcrProbeInputActionEnum"];
+            expected_version: string;
+        };
+        OcrProbeResult: {
+            target: components["schemas"]["ProcessingOCRTargetEnum"];
+            configured: boolean;
+            reachable: boolean;
+            functional?: boolean;
+            detail: string;
+        };
+        OcrRuntimeInputRequest: {
+            expected_version: string;
+            mode: components["schemas"]["OcrRuntimeModeEnum"];
+            remote_url: string;
+            remote_model: string;
+            /** @default false */
+            acknowledge_remote: boolean;
+        };
+        /**
+         * @description * `nas_preferred` - nas_preferred
+         *     * `nas_only` - nas_only
+         *     * `remote_only` - remote_only
+         * @enum {string}
+         */
+        OcrRuntimeModeEnum: "nas_preferred" | "nas_only" | "remote_only";
+        OcrRuntimeSnapshot: {
+            mode: components["schemas"]["OcrRuntimeModeEnum"];
+            remote_url: string;
+            remote_url_redacted: boolean;
+            remote_model: string;
+            nas_url: string;
+            nas_configured: boolean;
+            remote_key_configured: boolean;
+            remote_configured: boolean;
+            remote_fallback_available: boolean;
+            saved_configuration_version: string;
+            configuration_version: string;
+            effective_configuration: {
+                [key: string]: unknown;
+            };
+            restart_required: boolean;
+            /** Format: date-time */
+            last_success_at: string | null;
+            last_job: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
          * @description * `auto` - 自动检测
          *     * `force` - 强制 OCR
          *     * `skip` - 跳过 OCR
@@ -14449,6 +14520,9 @@ export interface components {
             body?: string;
             tags?: string[];
             label?: string;
+        };
+        PatchedOcrFenceInputRequest: {
+            expected_version?: string;
         };
         PatchedParallelTaskUpdateInputRequest: {
             /** Format: uuid */
@@ -25687,6 +25761,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MediaCollection"];
+                };
+            };
+        };
+    };
+    catalog_admin_ocr_runtime_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OcrRuntimeSnapshot"];
+                };
+            };
+        };
+    };
+    catalog_admin_ocr_runtime_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OcrRuntimeInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OcrRuntimeInputRequest"];
+                "multipart/form-data": components["schemas"]["OcrRuntimeInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OcrRuntimeSnapshot"];
+                };
+            };
+        };
+    };
+    catalog_admin_ocr_runtime_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OcrProbeInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OcrProbeInputRequest"];
+                "multipart/form-data": components["schemas"]["OcrProbeInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OcrProbeResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_ocr_runtime_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedOcrFenceInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedOcrFenceInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedOcrFenceInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OcrRuntimeSnapshot"];
                 };
             };
         };

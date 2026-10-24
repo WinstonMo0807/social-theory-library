@@ -7882,6 +7882,172 @@
                 }
             }
         },
+        "/api/catalog/admin/ocr-runtime/": {
+            "get": {
+                "operationId": "catalog_admin_ocr_runtime_retrieve",
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OcrRuntimeSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_ocr_runtime_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OcrProbeInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OcrProbeInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OcrProbeInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OcrProbeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_ocr_runtime_update",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OcrRuntimeInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OcrRuntimeInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OcrRuntimeInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OcrRuntimeSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_ocr_runtime_partial_update",
+                "description": "Fence a late CAS save without undoing any configuration already saved.",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedOcrFenceInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedOcrFenceInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedOcrFenceInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OcrRuntimeSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/outline-jobs/{job_id}/": {
             "post": {
                 "operationId": "catalog_admin_outline_jobs_create",
@@ -54728,6 +54894,169 @@
                     "work_id"
                 ]
             },
+            "OcrProbeInputActionEnum": {
+                "enum": [
+                    "test_nas",
+                    "test_remote"
+                ],
+                "type": "string",
+                "description": "* `test_nas` - test_nas\n* `test_remote` - test_remote"
+            },
+            "OcrProbeInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/OcrProbeInputActionEnum"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version"
+                ]
+            },
+            "OcrProbeResult": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "$ref": "#/components/schemas/ProcessingOCRTargetEnum"
+                    },
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "reachable": {
+                        "type": "boolean"
+                    },
+                    "functional": {
+                        "type": "boolean"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "configured",
+                    "detail",
+                    "reachable",
+                    "target"
+                ]
+            },
+            "OcrRuntimeInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/OcrRuntimeModeEnum"
+                    },
+                    "remote_url": {
+                        "type": "string",
+                        "maxLength": 2048
+                    },
+                    "remote_model": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "acknowledge_remote": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "mode",
+                    "remote_model",
+                    "remote_url"
+                ]
+            },
+            "OcrRuntimeModeEnum": {
+                "enum": [
+                    "nas_preferred",
+                    "nas_only",
+                    "remote_only"
+                ],
+                "type": "string",
+                "description": "* `nas_preferred` - nas_preferred\n* `nas_only` - nas_only\n* `remote_only` - remote_only"
+            },
+            "OcrRuntimeSnapshot": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "$ref": "#/components/schemas/OcrRuntimeModeEnum"
+                    },
+                    "remote_url": {
+                        "type": "string"
+                    },
+                    "remote_url_redacted": {
+                        "type": "boolean"
+                    },
+                    "remote_model": {
+                        "type": "string"
+                    },
+                    "nas_url": {
+                        "type": "string"
+                    },
+                    "nas_configured": {
+                        "type": "boolean"
+                    },
+                    "remote_key_configured": {
+                        "type": "boolean"
+                    },
+                    "remote_configured": {
+                        "type": "boolean"
+                    },
+                    "remote_fallback_available": {
+                        "type": "boolean"
+                    },
+                    "saved_configuration_version": {
+                        "type": "string"
+                    },
+                    "configuration_version": {
+                        "type": "string"
+                    },
+                    "effective_configuration": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "restart_required": {
+                        "type": "boolean"
+                    },
+                    "last_success_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_job": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "configuration_version",
+                    "effective_configuration",
+                    "last_job",
+                    "last_success_at",
+                    "mode",
+                    "nas_configured",
+                    "nas_url",
+                    "remote_configured",
+                    "remote_fallback_available",
+                    "remote_key_configured",
+                    "remote_model",
+                    "remote_url",
+                    "remote_url_redacted",
+                    "restart_required",
+                    "saved_configuration_version"
+                ]
+            },
             "OcrStrategyEnum": {
                 "enum": [
                     "auto",
@@ -57760,6 +58089,16 @@
                     "label": {
                         "type": "string",
                         "maxLength": 240
+                    }
+                }
+            },
+            "PatchedOcrFenceInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
                     }
                 }
             },

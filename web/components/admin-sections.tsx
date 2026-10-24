@@ -1,5 +1,7 @@
 "use client";
 
+import { OcrRuntimeEditor } from "./admin/ocr-runtime-editor";
+
 import { ScholarProseEditor } from "./admin/knowledge/scholar-prose-editor";
 import { scholarProseValue, type ScholarProse } from "@/lib/api/scholar-prose";
 import { ExistingScholarStart } from "./admin/knowledge/existing-scholar-start";
@@ -1564,52 +1566,6 @@ type BackupJob = {
   created_at: string;
 };
 
-type OcrRuntime = {
-  mode: "nas_preferred" | "nas_only" | "remote_only";
-  remote_url: string;
-  remote_model: string;
-  nas_url: string;
-  nas_configured: boolean;
-  remote_key_configured: boolean;
-  remote_configured: boolean;
-  remote_fallback_available: boolean;
-  saved_configuration_version: string;
-  effective_configuration: {
-    mode: string;
-    nas_url_configured: boolean;
-    remote_fallback_available: boolean;
-    loads_settings_per_job: boolean;
-  };
-  restart_required: boolean;
-  last_success_at: string | null;
-  last_job: {
-    id: string;
-    status: string;
-    engine: string;
-    settings_version: string;
-    attempt: number;
-    error: string;
-    created_at: string;
-    finished_at: string | null;
-  } | null;
-};
-
-const defaultOcrRuntime: OcrRuntime = {
-  mode: "nas_preferred",
-  remote_url: "",
-  remote_model: "",
-  nas_url: "",
-  nas_configured: false,
-  remote_key_configured: false,
-  remote_configured: false,
-  remote_fallback_available: false,
-  saved_configuration_version: "environment-default",
-  effective_configuration: { mode: "nas_preferred", nas_url_configured: false, remote_fallback_available: false, loads_settings_per_job: true },
-  restart_required: false,
-  last_success_at: null,
-  last_job: null,
-};
-
 type SemanticRuntime = {
   engine: "lightweight" | "meilisearch_hybrid";
   provider: "huggingFace" | "openAi" | "ollama";
@@ -1736,20 +1692,19 @@ const defaultSemanticRuntime: SemanticRuntime = {
 
 const settingsSections=[['public-display','网站内容'],['submissions','荐书邮箱'],['ocr','文字识别'],['ai','AI 服务'],['search','检索'],['backups','备份'],['prompts','AI 提示词']] as const;
 export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backups" | "processing" }) {
+  const [ocrBusy,setOcrBusy]=useState(false);
   const sections = settingsSections.filter(([key]) => scope === "backups" ? key === "backups" : scope === "processing" ? ["ocr", "ai", "search", "prompts", "submissions"].includes(key) : true);
   const [activeSection,setActiveSection]=useState(scope === "backups" ? "backups" : scope === "processing" ? "ocr" : "public-display");
-  useEffect(()=>{const sync=()=>{const requested=window.location.hash.slice(1);if(settingsSections.some(([key])=>key===requested) && (scope === "legacy" || scope === "backups" && requested === "backups" || scope === "processing" && ["ocr","ai","search","prompts","submissions"].includes(requested)))setActiveSection(requested);};const frame=window.requestAnimationFrame(sync);window.addEventListener('hashchange',sync);return()=>{window.cancelAnimationFrame(frame);window.removeEventListener('hashchange',sync);};},[scope]);
+  useEffect(()=>{const sync=()=>{if(ocrBusy)return;const requested=window.location.hash.slice(1);if(settingsSections.some(([key])=>key===requested) && (scope === "legacy" || scope === "backups" && requested === "backups" || scope === "processing" && ["ocr","ai","search","prompts","submissions"].includes(requested)))setActiveSection(requested);};const frame=window.requestAnimationFrame(sync);window.addEventListener('hashchange',sync);return()=>{window.cancelAnimationFrame(frame);window.removeEventListener('hashchange',sync);};},[scope,ocrBusy]);
   const user = useAdminSession();
   const canRunBackup = hasAdminCapability(user, "can_run_backup");
   const canManagePrompts = hasAdminCapability(user, "can_manage_prompt_registry");
   const configResource = useAdminResource<SiteConfig>(scope === "legacy" ? "/catalog/site-config/" : null);
   const submissionResource = useAdminResource<{ email: string }>(scope !== "backups" ? "/catalog/admin/reader-submission/" : null);
-  const ocrResource = useAdminResource<OcrRuntime>(scope !== "backups" ? "/catalog/admin/ocr-runtime/" : null);
   const semanticResource = useAdminResource<SemanticRuntime>(scope !== "backups" ? "/catalog/admin/semantic-runtime/" : null);
   const aiRuntimeResource = useAdminResource<AIRuntimeDocument>(scope !== "backups" ? "/reading/admin/ai-runtime-profiles/" : null);
   const backups = useAdminResource<Paginated<BackupJob>>(canRunBackup && scope !== "processing" ? "/distribution/backups/" : null);
   const [draft, setDraft] = useState<SiteConfig | null>(null);
-  const [ocrDraft, setOcrDraft] = useState<OcrRuntime | null>(null);
   const [semanticDraft, setSemanticDraft] = useState<SemanticRuntime | null>(null);
   const [aiRuntimeDraft, setAiRuntimeDraft] = useState<AIRuntimeDocument | null>(null);
   const [submissionEmailDraft, setSubmissionEmail] = useState<string | null>(null);
@@ -1762,7 +1717,6 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
   const submissionEmail = submissionEmailDraft
     ?? submissionResource.data?.email
     ?? "submissions@example.com";
-  const ocrRuntime = ocrDraft ?? ocrResource.data ?? defaultOcrRuntime;
   const semanticRuntime = semanticDraft
     ?? semanticResource.data
     ?? defaultSemanticRuntime;
@@ -1843,43 +1797,6 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
       );
       setSubmissionEmail(saved.email);
       return "读者中心投稿邮箱已经保存。荐书时会打开读者自己的邮件应用。";
-    });
-  }
-
-  async function saveOcrRuntime(event: FormEvent) {
-    event.preventDefault();
-    const token = getServerSessionCredential();
-    if (!token) return;
-    await runSettingsAction("save-ocr-runtime", "正在保存 OCR 设置……", "OCR 设置保存失败。", async () => {
-      const saved = await apiRequest<OcrRuntime>(
-        "/catalog/admin/ocr-runtime/",
-        {
-          method: "PUT",
-          body: JSON.stringify({
-            mode: ocrRuntime.mode,
-            remote_url: ocrRuntime.remote_url.trim(),
-            remote_model: ocrRuntime.remote_model.trim(),
-          }),
-        },
-        token,
-      );
-      setOcrDraft(saved);
-      return "OCR 运行方式已经保存。新上传的扫描 PDF 将使用该设置。";
-    });
-  }
-
-  async function testOcrRuntime(action: "test_nas" | "test_remote") {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    await runSettingsAction(`test-ocr:${action}`, "正在测试 OCR 连通性……", "OCR 连通性测试失败。", async () => {
-      const result = await apiRequest<{ reachable: boolean; functional?: boolean; detail: string; target: string }>(
-        "/catalog/admin/ocr-runtime/",
-        { method: "POST", body: JSON.stringify({ action }) },
-        token,
-      );
-      ocrResource.refresh();
-      const state = !result.reachable ? "不可连接" : result.target === "nas" ? (result.functional === true ? "当前运行已就绪" : "有响应，尚未就绪") : "可连接，解析效果待验收";
-      return `${result.target === "nas" ? "NAS OCR" : "远程 OCR"} 检查结果：${state}。${result.detail || ""}`;
     });
   }
 
@@ -1991,7 +1908,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
 
   return (
     <AdminPageFrame eyebrow={scope === "processing" ? "Processing Center" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? "处理服务设置" : "设置兼容入口"} description="查看已保存的配置与真实记录。各部分明确保存，敏感操作仍受权限保护。">
-      <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>
+      <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} disabled={ocrBusy&&activeSection!==key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(ocrBusy||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>
       <section className="settings-grid settings-tabbed">
         <form className="admin-panel settings-content-form" hidden={activeSection!=='public-display'} role="tabpanel" aria-labelledby="settings-tab-public-display" id="public-display" onSubmit={saveConfig}>
           <header><h2>品牌与首页</h2></header>
@@ -2036,37 +1953,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           <label><span>投稿邮箱</span><input type="email" value={submissionEmail} onChange={(event) => setSubmissionEmail(event.target.value)} required /></label>
           <ActionButton className="button secondary" type="submit" state={pendingAction === "save-submission-email" ? "pending" : "idle"} pendingLabel="正在保存邮箱" disabled={Boolean(pendingAction) && pendingAction !== "save-submission-email"}><Save size={15} />保存投稿邮箱</ActionButton>
         </form>
-        <form className="admin-panel ocr-runtime-settings" hidden={activeSection!=='ocr'} role="tabpanel" aria-labelledby="settings-tab-ocr" id="ocr" onSubmit={saveOcrRuntime}>
-          <header><h2>OCR 资源</h2></header>
-          <p>配置与运行状态分开显示。远程 URL、模型和 API Key 必须同时齐全，远程回退才会参与任务。</p>
-          <label>
-            <span>运行方式</span>
-            <select
-              value={ocrRuntime.mode}
-              onChange={(event) => setOcrDraft({
-                ...ocrRuntime,
-                mode: event.target.value as OcrRuntime["mode"],
-              })}
-            >
-              <option value="nas_preferred">NAS 优先，失败后使用远程</option>
-              <option value="nas_only">只使用 NAS PaddleOCR</option>
-              <option value="remote_only">只使用远程解析网关</option>
-            </select>
-          </label>
-          <label><span>远程网关地址</span><input type="url" value={ocrRuntime.remote_url} onChange={(event) => setOcrDraft({ ...ocrRuntime, remote_url: event.target.value })} placeholder="https://example.com/v1/parse-pdf" /></label>
-          <label><span>远程模型标识</span><input value={ocrRuntime.remote_model} onChange={(event) => setOcrDraft({ ...ocrRuntime, remote_model: event.target.value })} placeholder="远程回退必填" /></label>
-          <dl className="ocr-runtime-status">
-            <div><dt>NAS PaddleOCR</dt><dd>{ocrRuntime.nas_configured ? "已配置" : "未配置"}</dd></div>
-            <div><dt>远程 API 密钥</dt><dd>{ocrRuntime.remote_key_configured ? "已通过环境变量配置" : "未配置"}</dd></div>
-            <div><dt>远程回退</dt><dd>{ocrRuntime.remote_fallback_available ? "配置完整" : "不可用"}</dd></div>
-            <div><dt>实际加载方式</dt><dd>{ocrRuntime.effective_configuration.loads_settings_per_job ? "每个任务读取最新设置" : "需重启 worker"}</dd></div>
-            <div><dt>最近成功</dt><dd>{ocrRuntime.last_success_at ? new Date(ocrRuntime.last_success_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" }) : "尚无记录"}</dd></div>
-            <div><dt>最近任务引擎</dt><dd>{ocrRuntime.last_job?.engine || "尚无任务"}</dd></div>
-          </dl>
-          {ocrRuntime.last_job?.error ? <p className="attempt-error">最近错误：{ocrRuntime.last_job.error}</p> : null}
-          <small>远程密钥只写入服务器的 <code>OCR_REMOTE_API_KEY</code> 环境变量，后台页面不会读取或显示密钥原文。</small>
-          <div className="admin-action-row"><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_nas" ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== "test-ocr:test_nas"} onClick={() => void testOcrRuntime("test_nas")}>测试 NAS OCR</ActionButton><ActionButton className="button secondary" type="button" state={pendingAction === "test-ocr:test_remote" ? "pending" : "idle"} pendingLabel="测试中" disabled={!ocrRuntime.remote_fallback_available || (Boolean(pendingAction) && pendingAction !== "test-ocr:test_remote")} onClick={() => void testOcrRuntime("test_remote")}>测试远程 OCR</ActionButton><ActionButton className="button" type="submit" state={pendingAction === "save-ocr-runtime" ? "pending" : "idle"} pendingLabel="正在保存 OCR" disabled={Boolean(pendingAction) && pendingAction !== "save-ocr-runtime"}><Save size={15} />保存 OCR 设置</ActionButton></div>
-        </form>
+        {activeSection==='ocr'?<section className="admin-panel ocr-runtime-settings" role="tabpanel" aria-labelledby="settings-tab-ocr" id="ocr"><header><h2>OCR 资源</h2></header><OcrRuntimeEditor onBusyChange={setOcrBusy}/></section>:null}
         <form className="admin-panel ai-runtime-settings" hidden={activeSection!=='ai'} role="tabpanel" aria-labelledby="settings-tab-ai" id="ai" onSubmit={saveAiRuntime}>
           <header><h2>服务器 AI 能力（可选）</h2></header>
           <p>注册读者可以在 Ask 页面使用自己的云端模型。这里仅维护元数据处理、联网补全和可选的服务器默认问答服务，不是读者配置入口；密钥和实际 endpoint 只由服务器环境提供。</p>

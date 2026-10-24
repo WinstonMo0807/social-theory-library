@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 OCR配置并发保护
+
+原ocr-runtime接口与SiteSetting复用，视图移入catalog/ocr_runtime_settings.py并保留views导入兼容。PUT使用配置指纹、用户/设置行锁与实体锁；PATCH仅推进旧版本以阻止迟到保存，已完成的新值不撤回。M26与处理设置共享OcrRuntimeEditor，不存客户端配置副本，按账户只保存未确认版本指纹。无新模型或迁移。运行事务与部署仍待验收。
+
 ## 2026-10-24 存储临时清理
 
 StorageCleanupPlan保存有上限的本地导入临时文件清单，distribution0004只声明未迁移。沿原Celery/storage_tasks逐项核对原件与文件身份，不碰馆藏/读者记录。保留天数沿私有SiteSetting与原维护回执；不新增索引、馆藏或运行队列。Windows可审清单，保护式删除须运行环境支持POSIX目录描述符。

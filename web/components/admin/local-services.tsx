@@ -1,5 +1,6 @@
 "use client";
 
+import { OcrRuntimeEditor } from "./ocr-runtime-editor";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { LocalServiceHistory } from "./local-service-history";
@@ -51,7 +52,8 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
   const [unknown,setUnknown]=useState<CheckCommand|null>(null),[ready,setReady]=useState(false),[recordError,setRecordError]=useState("");
   const [reconciling,setReconciling]=useState(false),[cancelOpen,setCancelOpen]=useState(false);
   const original=useRef<CheckCommand|null>(null);
-  const writeLocked=!!checking||!!unknown||!ready||reconciling;
+  const [configurationBusy,setConfigurationBusy]=useState(false);
+  const writeLocked=!!checking||!!unknown||!ready||reconciling||configurationBusy;
   useUnsavedForm(Boolean(unknown),false);
   useEffect(()=>{let alive=true;queueMicrotask(()=>{if(!alive)return;try{const raw=sessionStorage.getItem(pendingKey(owner));if(raw){const value=savedCheck(raw);original.current=value;setUnknown(value);}setReady(true);}catch(reason){setRecordError(reason instanceof Error?reason.message:"无法读取上次检查编号。");}});return()=>{alive=false;};},[owner]);
   function preserve(value:CheckCommand|null){if(value)sessionStorage.setItem(pendingKey(owner),JSON.stringify(value));else sessionStorage.removeItem(pendingKey(owner));original.current=value;setUnknown(value);}
@@ -77,7 +79,7 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
   const data=resource.data, services=data?.groups.flatMap(group=>group.services)||[];
   const current=selected?services.find(service=>service.id===selected):services[0];
   const group=data?.groups.find(value=>value.id===current?.group);
-  const select=(service?:Service)=>{if(service){setSelected(service.id);setTab("services");}};
+  const select=(service?:Service)=>{if(service&&!configurationBusy){setSelected(service.id);setTab("services");}};
 
   async function check(items:Service[]) {
     if(busy.current||writeLocked||original.current||!lifecycle.current||lifecycle.current.signal.aborted)return;
@@ -111,7 +113,7 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
   return <main className={styles.page} aria-busy={resource.loading||resource.pending}>
     <div className={styles.breadcrumb}><Link href="/admin">首页</Link><ChevronRight size={12}/><Link href="/admin/processing/status">运行维护</Link><ChevronRight size={12}/><span>本地模型与服务状态</span></div>
     <header className={styles.title}><div><h1>本地模型与服务状态</h1><p>了解知识解析、嵌入、重排、生成与外部元数据服务的可用性。</p></div><div className={styles.refresh}><small>最后检查：{date(data?.last_checked_at||null)}</small><button disabled={resource.loading||resource.pending||!!checking} onClick={()=>resource.reload()}><RefreshCw size={15}/>刷新检查记录</button></div></header>
-    <nav className={styles.tabs} aria-label="服务维护栏目">{tabs.map(item=><button key={item.id} aria-current={tab===item.id?"page":undefined} onClick={()=>setTab(item.id)}>{item.label}</button>)}</nav>
+    <nav className={styles.tabs} aria-label="服务维护栏目">{tabs.map(item=><button key={item.id} disabled={configurationBusy} aria-current={tab===item.id?"page":undefined} onClick={()=>setTab(item.id)}>{item.label}</button>)}</nav>
     {resource.error?<div className={styles.error} role="alert"><CircleAlert size={18}/><p>{resource.error}</p><button onClick={()=>resource.reload()}>重新读取</button></div>:null}
     {message?<p className={styles.message} role="status">{message}</p>:null}
     {recordError?<p className={styles.error} role="alert">{recordError}</p>:null}
@@ -126,16 +128,16 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
         <section className={styles.services}><header className={styles.sectionHeader}><div><h2>服务状态</h2><p>按能力查看真实配置及其最近检查记录。</p></div><div className={styles.actions}><button disabled={writeLocked||resource.pending||!services.some(row=>row.can_check)} onClick={()=>void check(services)}><Play size={13}/>{checking?"检查进行中":"按权限检查全部服务"}</button>{checking?<button onClick={()=>{stop.current=true;setMessage("将在当前检查完成后停止后续检查。");}}>停止后续检查</button>:null}</div></header>
           <div className={styles.serviceTable}><div className={styles.tableHead}><span>能力</span><span>服务身份</span><span>状态</span><span>最近检查</span><span>任务积压</span><span>失败（24h）</span><span>受影响功能</span><span>操作</span></div>{data.groups.map(row=>{const Icon=icons[row.id as keyof typeof icons]||FileText;return <section className={styles.serviceRow} key={row.id}>
             <div className={styles.capability}><Icon size={21}/><div><strong>{row.label}</strong><small>{row.subtitle}</small></div></div>
-            <div className={styles.identities}>{!row.services.length?<span>尚未配置此能力的服务</span>:null}{row.services.slice(0,2).map(service=><button key={service.id} onClick={()=>select(service)}><span>{service.name}</span><small>{service.scope}</small></button>)}{row.services.length>2?<button onClick={()=>select(row.services[0])}>另有 {row.services.length-2} 项配置</button>:null}</div>
+            <div className={styles.identities}>{!row.services.length?<span>尚未配置此能力的服务</span>:null}{row.services.slice(0,2).map(service=><button key={service.id} disabled={configurationBusy} onClick={()=>select(service)}><span>{service.name}</span><small>{service.scope}</small></button>)}{row.services.length>2?<button onClick={()=>select(row.services[0])}>另有 {row.services.length-2} 项配置</button>:null}</div>
             <span className={styles.status} data-tone={tone(row.status)}>{row.status_label}</span>
             <div className={styles.checkTime}>{date(row.services.map(service=>service.observation?.checked_at).filter((value):value is string=>!!value).sort().at(-1)||null)}</div>
             <span className={styles.queueCount} title={row.task_notice}>{row.tasks?.waiting??"—"}</span><span className={styles.failedCount} title={row.task_notice}>{row.tasks?.failed_24h??"—"}</span>
             <p className={styles.affected}>{row.affected_features.join("、")}</p>
-            <div className={styles.rowActions}><button disabled={writeLocked||resource.pending||!row.services.some(service=>service.can_check)} onClick={()=>void check(row.services)}>检查</button><button disabled={!row.services.length} aria-label={`查看${row.label}详情`} onClick={()=>select(row.services[0])}><ChevronRight size={16}/></button></div>
+            <div className={styles.rowActions}><button disabled={writeLocked||resource.pending||!row.services.some(service=>service.can_check)} onClick={()=>void check(row.services)}>检查</button><button disabled={configurationBusy||!row.services.length} aria-label={`查看${row.label}详情`} onClick={()=>select(row.services[0])}><ChevronRight size={16}/></button></div>
           </section>;})}</div>
         </section>
-        <div className={styles.bottom}><ServiceHistory data={data} services={services} showAll={()=>setTab("history")} compact/>{current?<ServiceDetails service={current} compact checking={checking} pending={resource.pending||writeLocked} onCheck={service=>void check([service])}/>:null}</div>
-      </>:tab==="history"?<LocalServiceHistory key={data.generated_at} owner={owner} services={services} asOf={data.generated_at}/>:tab==="services"?<div className={styles.serviceDetail}><aside aria-label="能力与服务">{data.groups.map(row=><section key={row.id}><h2>{row.label}</h2>{row.services.map(service=><button key={service.id} aria-current={current?.id===service.id?"true":undefined} onClick={()=>setSelected(service.id)}><span>{service.name}</span><span className={styles.status} data-tone={tone(service.status)}>{service.status_label}</span></button>)}</section>)}</aside><div>{current?<ServiceDetails service={current} checking={checking} pending={resource.pending||writeLocked} onCheck={service=>void check([service])}/>:null}{group?<p className={styles.hint}>受影响功能：{group.affected_features.join("、")}。同一能力下的配置分别记录，不会用其他服务的成功结果替代。</p>:null}</div></div>:<div className={styles.configuration}>{data.groups.map(row=><section className={styles.panel} key={row.id}><header><h2>{row.label}</h2><span>{row.services.length} 项配置</span></header>{row.services.map(service=><div className={styles.configurationRow} key={service.id}><div><strong>{service.name}</strong><p>{service.scope} · {service.status_label}</p></div>{service.can_configure?<Link href={service.config_url}>打开原配置 <ChevronRight size={14}/></Link>:<span>仅查看</span>}</div>)}</section>)}</div>}
+        <div className={styles.bottom}><ServiceHistory data={data} services={services} showAll={()=>{if(!configurationBusy)setTab("history");}} compact/>{current?<ServiceDetails onBusyChange={setConfigurationBusy} onSaved={resource.reload} service={current} compact checking={checking} pending={resource.pending||writeLocked} onCheck={service=>void check([service])}/>:null}</div>
+      </>:tab==="history"?<LocalServiceHistory key={data.generated_at} owner={owner} services={services} asOf={data.generated_at}/>:tab==="services"?<div className={styles.serviceDetail}><aside aria-label="能力与服务">{data.groups.map(row=><section key={row.id}><h2>{row.label}</h2>{row.services.map(service=><button key={service.id} disabled={configurationBusy} aria-current={current?.id===service.id?"true":undefined} onClick={()=>setSelected(service.id)}><span>{service.name}</span><span className={styles.status} data-tone={tone(service.status)}>{service.status_label}</span></button>)}</section>)}</aside><div>{current?<ServiceDetails onBusyChange={setConfigurationBusy} onSaved={resource.reload} service={current} checking={checking} pending={resource.pending||writeLocked} onCheck={service=>void check([service])}/>:null}{group?<p className={styles.hint}>受影响功能：{group.affected_features.join("、")}。同一能力下的配置分别记录，不会用其他服务的成功结果替代。</p>:null}</div></div>:<div className={styles.configuration}>{data.groups.map(row=><section className={styles.panel} key={row.id}><header><h2>{row.label}</h2><span>{row.services.length} 项配置</span></header>{row.services.map(service=><div className={styles.configurationRow} key={service.id}><div><strong>{service.name}</strong><p>{service.scope} · {service.status_label}</p></div>{service.can_configure?<Link href={service.config_url}>打开原配置 <ChevronRight size={14}/></Link>:<span>仅查看</span>}</div>)}</section>)}</div>}
       <aside className={styles.notice}><CircleAlert size={18}/><strong>重要说明</strong><p>{data.notice}</p><Link href="/admin/processing/health">查看运行维护 <ChevronRight size={14}/></Link></aside>
       <p className={styles.hint}>任务统计来自现有处理队列；不展示读者私人任务内容。未检查、未启用和过期记录均不计为可用。</p>
     </>:null}
@@ -150,15 +152,17 @@ function ServiceHistory({data,services,showAll,compact=false}:{data:Snapshot|nul
     </section>;
   }
 
-function ServiceDetails({service,compact=false,checking,pending,onCheck}:{service:Service;compact?:boolean;checking:string;pending:boolean;onCheck:(service:Service)=>void}) {
+function ServiceDetails({service,compact=false,checking,pending,onCheck,onSaved,onBusyChange}:{service:Service;compact?:boolean;checking:string;pending:boolean;onCheck:(service:Service)=>void;onSaved:()=>void;onBusyChange:(value:boolean)=>void}) {
+    const [editing,setEditing]=useState(false);
     const checked=service.observation;
     const identity=checked?.identity||{};
     return <section className={styles.panel}>
-      <header><h2>{compact?"配置信息":service.name}</h2>{service.can_configure?<Link href={service.config_url}>调整配置 <ChevronRight size={14}/></Link>:<span>仅查看</span>}</header>
+      <header><h2>{compact?"配置信息":service.name}</h2>{service.can_configure?["ocr","remote-ocr"].includes(service.id)?<button type="button" disabled={pending||!!checking||editing} onClick={()=>setEditing(true)}>{editing?"配置已展开":"调整配置"}</button>:<Link href={service.config_url}>调整配置 <ChevronRight size={14}/></Link>:<span>仅查看</span>}</header>
       <div className={styles.detailHeading}><span className={styles.status} data-tone={tone(service.status)}>{service.status_label}</span><small>{service.scope}</small></div>
       <dl className={styles.details}>{service.details.map(detail=><div key={detail.label}><dt>{detail.label}</dt><dd>{detail.value}</dd></div>)}</dl>
       {checked?<div className={styles.observation} data-tone={tone(service.status)}><strong>{labels[checked.status]||"检查记录"}</strong><p>{checked.detail}</p><time dateTime={checked.checked_at}>{date(checked.checked_at)}</time>{["stale","changed"].includes(service.status)?<p>这条结果对应旧时间或旧配置，不能代表当前服务状态。</p>:null}</div>:<p className={styles.hint}>尚无这项服务的检查结果。</p>}
       {Object.keys(identity).length?<details className={styles.advanced}><summary>模型身份、设备与加载记录</summary><dl className={styles.details}>{Object.entries(identity).map(([key,value])=><div key={key}><dt>{{model:"模型",revision:"版本",artifact_id:"模型文件身份",loaded:"检查时仍驻留内存",inference_completed:"本次启动后已有推理记录",backend:"推理后端",runtime_version:"运行库版本",device:"服务报告的执行设备",threads:"推理线程数",batch_size:"批处理上限"}[key]||key}</dt><dd>{typeof value==="boolean"?value?"是":"否":String(value)}</dd></div>)}</dl><p className={styles.hint}>仅显示最近检查实际返回的字段。设备标签不是实时占用率；服务未返回内存、显存或配额时不估算。模型曾运行过，也可能已让出内存给其他能力。</p></details>:null}
+      {editing&&service.can_configure&&["ocr","remote-ocr"].includes(service.id)?<OcrRuntimeEditor onSaved={onSaved} onBusyChange={onBusyChange}/>:null}
       {!compact?<div className={styles.detailActions}><button className={styles.primary} disabled={!service.can_check||!!checking||pending} onClick={()=>onCheck(service)}><Play size={14}/>{checking===service.id?"正在检查":"检查服务"}</button><p>{service.check_notice}</p></div>:null}
     </section>;
   }
