@@ -1,4 +1,5 @@
 .workspace { color:var(--ink); }
+.workspace>header { flex-wrap:wrap; }.relationActions { display:flex; flex-wrap:wrap; gap:8px; }.relationActions button { min-height:36px; white-space:nowrap; }
 .relatedEntries button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:12px 8px;color:var(--muted);font:inherit;cursor:pointer}
 .relatedEntries button[aria-current=page]{border-bottom-color:var(--ink);color:var(--ink);font-weight:600}
 .relatedEntries button:focus-visible{outline:2px solid var(--annotation);outline-offset:2px}

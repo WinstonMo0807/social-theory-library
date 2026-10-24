@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { components } from "@/lib/api/generated/schema";
 import { PlacementSourcePicker, type PlacementChoice } from "./placement-source-picker";
 import styles from "./concept-editor.module.css";
@@ -8,11 +8,18 @@ import styles from "./concept-editor.module.css";
 type Reference = components["schemas"]["RelationAnchorInput"];
 type Material = components["schemas"]["RelationAnchorMaterial"];
 const same = (a: Reference | null, b?: Reference | null) => Boolean(a && b && a.span_id === b.span_id && a.document_revision_id === b.document_revision_id);
+export type RelationSourceRequest = { sourceRequest?: number; onSourceOpened?: () => void };
 
-export function RelationSourcePicker({ owner, value, saved, material, onChange }: {
+export function RelationSourcePicker({ owner, value, saved, material, onChange, sourceRequest = 0, onSourceOpened }: {
   owner: string; value: Reference | null; saved?: Reference | null; material?: Material | null; onChange: (reference: Reference | null) => void;
-}) {
+} & RelationSourceRequest) {
   const [open, setOpen] = useState(false), [picked, setPicked] = useState<PlacementChoice | null>(null), [error, setError] = useState("");
+  const section = useRef<HTMLElement>(null), acknowledge = useEffectEvent(() => onSourceOpened?.());
+  useEffect(() => {
+    if (!sourceRequest) return;
+    const frame = requestAnimationFrame(() => { setOpen(true); section.current?.focus(); section.current?.scrollIntoView({block:"nearest"}); acknowledge(); });
+    return () => cancelAnimationFrame(frame);
+  }, [sourceRequest]);
   const preview = value && picked?.target.id === value.span_id && picked.target.document_revision_id === value.document_revision_id ? picked.source : null;
   const details = same(value, saved) ? material : preview ? {
     available: true, public_eligible: preview.public_eligible, title: preview.title, edition_label: String(preview.edition_label || ""),
@@ -24,7 +31,7 @@ export function RelationSourcePicker({ owner, value, saved, material, onChange }
     onChange({ span_id: choice.target.id, document_revision_id: choice.target.document_revision_id });
     setPicked(choice); setOpen(false); setError("");
   }
-  return <section className={`${styles.panel} ${styles.sourceAnchor}`} aria-label="关系的原文依据">
+  return <section ref={section} tabIndex={-1} className={`${styles.panel} ${styles.sourceAnchor}`} aria-label="关系的原文依据">
     <h3>依据来源与原文锚点</h3>
     {value ? <>
       {details?.available ? <><strong>{details.title || "原题名待补"}</strong><p>{details.edition_label}{details.pdf_page ? ` · PDF 第 ${details.pdf_page} 页` : ""}</p><blockquote>{details.quote}</blockquote>{details.reader_href ? <a href={details.reader_href} target="_blank" rel="noopener">查看准确版本与原文 ↗</a> : null}</> : <p>原引用仍保留，当前不能核对原文。请重新读取或选择准确材料。</p>}

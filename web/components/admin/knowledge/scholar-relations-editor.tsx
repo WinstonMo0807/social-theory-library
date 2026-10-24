@@ -15,10 +15,10 @@ import { ScholarRelationNetwork } from "@/components/scholar-relation-network";
 import { relationArrow, scholarDirectionLabels, scholarRelationLabels, scholarRelationStatus, type ScholarRelation } from "@/lib/api/scholar-relations.types";
 import type { Paginated } from "@/lib/api/pagination";
 import { useScholarSave } from "./use-scholar-save";
-import { RelationSourcePicker } from "./relation-source-picker";
+import { RelationSourcePicker, type RelationSourceRequest } from "./relation-source-picker";
 
 export type ScholarRelationGuard = {dirty:boolean;pending:boolean;composing:boolean};
-type Props = {scholarId:string;initialRelationId?:string;embedded?:boolean;detailOnly?:boolean;onGuardChange?:(value:ScholarRelationGuard)=>void;onSaved?:()=>void};
+type Props = RelationSourceRequest & {scholarId:string;initialRelationId?:string;embedded?:boolean;detailOnly?:boolean;onGuardChange?:(value:ScholarRelationGuard)=>void;onSaved?:()=>void};
 const newRelation = (scholarId:string):ScholarRelation => ({id:"",source_scholar:scholarId,target_scholar:"",source_name:"",target_name:"",relation_type:"influence",direction:"directed",summary:"",source:"",status:"draft",edit_version:""});
 
 export function ScholarRelationsEditor(props:Props) {
@@ -27,7 +27,7 @@ export function ScholarRelationsEditor(props:Props) {
   return user?<RelationWorkspace key={`${user.id}:${epoch}:${props.scholarId}`} {...props} owner={String(user.id)}/>:<p role="status">正在核对编辑账户…</p>;
 }
 
-function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnly=false,onGuardChange,onSaved,owner}:Props&{owner:string}) {
+function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnly=false,onGuardChange,onSaved,owner,sourceRequest,onSourceOpened}:Props&{owner:string}) {
   const searchParams=useSearchParams(),user=useAdminSession(),command=useScholarSave(owner,"relation");
   const canEdit=hasAdminCapability(user,"can_edit_draft_authority"),canCreate=hasAdminCapability(user,"can_create_authority"),canPublish=hasAdminCapability(user,"can_publish_authority");
   const [selectedId,setSelectedId]=useState(initialRelationId??searchParams.get("relation")??""),loadedId=useRef("");
@@ -105,9 +105,9 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnl
           <EntityPicker label="第一位学者" endpoint="/catalog/admin/scholars/" nameField="preferred_name" values={draft.source_scholar?[{id:draft.source_scholar,name:live.source_name}]:[]} onChange={values=>{const value=values.at(-1);setDraft({...draft,source_scholar:value?.id||"",source_name:value?.name||""});}}/>
           <EntityPicker label="第二位学者" endpoint="/catalog/admin/scholars/" nameField="preferred_name" values={draft.target_scholar?[{id:draft.target_scholar,name:live.target_name}]:[]} onChange={values=>{const value=values.at(-1);setDraft({...draft,target_scholar:value?.id||"",target_name:value?.name||""});}}/>
           <label>关系类型<select value={draft.relation_type} onChange={event=>setDraft({...draft,relation_type:event.target.value as ScholarRelation["relation_type"]})}>{Object.entries(scholarRelationLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-          <label>方向<select value={draft.direction} onChange={event=>setDraft({...draft,direction:event.target.value as ScholarRelation["direction"]})}>{Object.entries(scholarDirectionLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><p>{live.source_name} {relationArrow(draft.direction)} {live.target_name}</p>
+          <label>方向<select value={draft.direction} onChange={event=>setDraft({...draft,direction:event.target.value as ScholarRelation["direction"]})}>{Object.entries(scholarDirectionLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><p aria-live="polite">{live.source_name} {relationArrow(draft.direction)} {live.target_name}</p><button type="button" disabled={ime||!validEndpoints} onClick={()=>{if(composing.current)return;setDraft(value=>({...value,source_scholar:value.target_scholar,target_scholar:value.source_scholar,source_name:live.target_name,target_name:live.source_name}));}}>交换来源与目标</button><small>交换只修改当前输入，须保存后另行确认发布。</small>
           <label>关系说明<textarea rows={5} maxLength={6000} value={draft.summary} onChange={event=>setDraft({...draft,summary:event.target.value})}/></label><label>依据与来源<textarea rows={4} maxLength={6000} value={draft.source} onChange={event=>setDraft({...draft,source:event.target.value})}/></label>
-          <RelationSourcePicker key={selectedId||"new"} owner={owner} value={draft.source_anchor??null} saved={saved.source_anchor} material={saved.source_material} onChange={source_anchor=>setDraft(value=>({...value,source_anchor,source_material:null}))}/>
+          <RelationSourcePicker sourceRequest={sourceRequest} onSourceOpened={onSourceOpened} key={selectedId||"new"} owner={owner} value={draft.source_anchor??null} saved={saved.source_anchor} material={saved.source_material} onChange={source_anchor=>setDraft(value=>({...value,source_anchor,source_material:null}))}/>
           {!hasEvidence?<p>说明或来源尚不完整，可以保存草稿，暂不发布。</p>:null}{draft.source_scholar&&draft.source_scholar===draft.target_scholar?<p role="alert">关系两端须选择不同学者。</p>:null}<button type="submit" className="button" disabled={!validEndpoints||!dirty||ime}>{pendingAction==="save"?"正在保存…":"保存关系草稿"}</button>
         </fieldset>
         <button type="button" className="button secondary" disabled={locked||ime||!canPublishSaved} onClick={()=>void act("publish")}>发布已保存关系</button>{canPublish&&saved.id&&saved.status==="published"?<button type="button" className="button secondary" disabled={locked||ime||dirty} onClick={()=>void act("archive")}>撤下公开关系</button>:null}{!canPublish?<p>当前账号没有正式发布权限。</p>:null}

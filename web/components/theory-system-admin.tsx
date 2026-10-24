@@ -1,7 +1,7 @@
 "use client";
 
 import { useScholarSave } from "./admin/knowledge/use-scholar-save";
-import { RelationSourcePicker } from "./admin/knowledge/relation-source-picker";
+import { RelationSourcePicker, type RelationSourceRequest } from "./admin/knowledge/relation-source-picker";
 import type { components } from "@/lib/api/generated/schema";
 import { ScholarProseEditor as KnowledgeProseEditor } from "./admin/knowledge/scholar-prose-editor";
 import { nodeEditorialForSave, type NodeEditorialDetails, type NodeProseField } from "@/lib/api/node-editorial";
@@ -1011,10 +1011,10 @@ export function TheoryRelationsAdmin() {
   return <TheoryRelationsEditor key={`${account}:${search.get("relation") || "list"}:${search.get("node") || "all"}:${search.get("review_work") || "all"}:${search.get("review_file") || "all"}`} requestedId={search.get("relation") || ""} />;
 }
 
-type InlineRelation = {nodeId:string;onGuardChange:(value:{dirty:boolean;pending:boolean;composing:boolean})=>void;onSaved:()=>void};
-export function NodeRelationEditor({nodeId,requestedId="",onGuardChange,onSaved}:{nodeId:string;requestedId?:string;onGuardChange:InlineRelation["onGuardChange"];onSaved:()=>void}) {
+type InlineRelation = RelationSourceRequest & {nodeId:string;onGuardChange:(value:{dirty:boolean;pending:boolean;composing:boolean})=>void;onSaved:()=>void};
+export function NodeRelationEditor({nodeId,requestedId="",onGuardChange,onSaved,sourceRequest,onSourceOpened}:{requestedId?:string} & InlineRelation) {
   const account=useEditorAccountKey();
-  return <TheoryRelationsEditor key={`${account}:${nodeId}:${requestedId}`} requestedId={requestedId} embedded={{nodeId,onGuardChange,onSaved}}/>;
+  return <TheoryRelationsEditor key={`${account}:${nodeId}:${requestedId}`} requestedId={requestedId} embedded={{nodeId,onGuardChange,onSaved,sourceRequest,onSourceOpened}}/>;
 }
 function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string; embedded?: InlineRelation }) {
   const opened = useRef(false);
@@ -1332,7 +1332,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
             <div className="relation-direction-preview"><p aria-live="polite">{relationNodeName(relationDraft.source_node)} {relationDraft.direction === "directed" ? "→" : "—"} {relationNodeName(relationDraft.target_node)}</p><button type="button" disabled={ime||!relationDraft.source_node||!relationDraft.target_node} onClick={()=>{if(composing.current)return;setRelationDraft(value=>({...value,source_node:value.target_node,target_node:value.source_node}));}}>交换来源与目标</button><small>方向、类型与说明共同保存。交换后的内容仍需确认发布。</small></div>
             <label><span>关系说明</span><textarea rows={3} value={relationDraft.description} onChange={(event) => setRelationDraft({ ...relationDraft, description: event.target.value })} /></label>
             <label><span>证据来源</span><textarea rows={3} value={relationDraft.evidence_source} onChange={(event) => setRelationDraft({ ...relationDraft, evidence_source: event.target.value })} placeholder="馆藏页码、参考文献或人工校订说明" /></label>
-            <RelationSourcePicker key={editingRelation?.id || "new"} owner={owner} value={relationDraft.source_anchor} saved={editingRelation?.source_anchor} material={editingRelation?.source_material} onChange={source_anchor => setRelationDraft(value => ({ ...value, source_anchor }))} />
+            <RelationSourcePicker sourceRequest={embedded?.sourceRequest} onSourceOpened={embedded?.onSourceOpened} key={editingRelation?.id || "new"} owner={owner} value={relationDraft.source_anchor} saved={editingRelation?.source_anchor} material={editingRelation?.source_material} onChange={source_anchor => setRelationDraft(value => ({ ...value, source_anchor }))} />
             <div className="inline-fields"><label><span>保存后的安排</span><select value={relationDraft.status} onChange={(event) => setRelationDraft({ ...relationDraft, status: event.target.value })}><option value="draft">留作草稿</option><option value="pending">留待核对</option><option value="published" disabled={!canPublish && editingRelation?.status !== "published"}>准备公开</option><option value="rejected">不采用</option><option value="archived" disabled={!canPublish}>准备下线</option></select></label></div>
             <div className="theory-review-primary-actions"><ActionButton className="button" type="submit" state={pendingAction === (editingRelation ? `save-relation:${editingRelation.id}` : "create-relation") ? "pending" : "idle"} pendingLabel="正在保存修改" disabled={Boolean(pendingAction)||ime}><Save size={15} />保存关系</ActionButton>{editingRelation && !embedded ? <button type="button" onClick={() => { if (composing.current||command.recovery||knownSavedId)return; if (relationDirty && !window.confirm("放弃当前尚未保存的输入吗？")) return; location.update({ relation: null }); setEditingRelation(null); setRelationDraft(emptyRelationDraft); }}>新建另一条关系</button> : null}</div>
             </fieldset>

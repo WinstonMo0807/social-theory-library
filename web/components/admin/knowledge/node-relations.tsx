@@ -17,7 +17,7 @@ type Page = components["schemas"]["NodeRelationPage"];
 type Row = Page["results"][number];
 export type NodeRelationGuard = { dirty: boolean; pending: boolean; composing: boolean };
 type Props = { centerKind?: "node" | "scholar"; initialRelationId?: string; initialRelationKind?: "person" | "scholar"; nodeId: string; nodeName: string; blocked: boolean; onChanged?: () => void; onGuardChange?: (value: NodeRelationGuard) => void };
-type Selection = { kind: "node" | "person" | "scholar" | "choose"; id: string; scholarId?: string; personName?: string };
+type Selection = { kind: "node" | "person" | "scholar" | "choose"; id: string; scholarId?: string; personName?: string; sourceRequest?: number };
 const statuses: Record<string, string> = { published: "已确认公开", draft: "草稿", pending: "待确认", rejected: "不采用", archived: "已下线" };
 const clearGuard: NodeRelationGuard = { dirty: false, pending: false, composing: false };
 
@@ -33,6 +33,7 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
   const [relationTypes, setRelationTypes] = useState<Page["relation_types"]>([]);
   const [filters, setFilters] = useState({ status: "", kind: "", relation_type: "", direction: "", q: "" }), [query, setQuery] = useState("");
   const [selection, setSelection] = useState<Selection | null>(()=>initialRelationId&&centerKind==="scholar"?{kind:initialRelationKind||"scholar",id:initialRelationId,scholarId:nodeId,personName:nodeName}:null), [notice, setNotice] = useState("");
+  const sourceSequence = useRef(0);
   const guard = useRef(clearGuard), ime = useRef(false), detail = useRef<HTMLElement>(null), createButton = useRef<HTMLButtonElement>(null);
   const guardCallback = useRef(onGuardChange);
   useEffect(() => { guardCallback.current = onGuardChange; }, [onGuardChange]);
@@ -56,6 +57,17 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
     updateGuard(clearGuard); setNotice(""); setSelection(value);
     requestAnimationFrame(() => detail.current?.focus());
   }
+  function selectSource() {
+    if (blocked || ime.current || guard.current.composing) return;
+    if (guard.current.pending) { setNotice("请先核对原请求结果，再更换原文依据。"); return; }
+    if (!selection && !canCreate) return;
+    const request = ++sourceSequence.current;
+    setSelection(value => ({...(value || {kind:"choose",id:""}),sourceRequest:request}));
+    setNotice(selection && selection.kind !== "choose" ? "原输入保留，请在详情中选择准确材料。" : "先选择关系对象，再选取准确原文。选材不会自动建立或公开关系。");
+    requestAnimationFrame(() => detail.current?.focus());
+  }
+  function sourceOpened() { setSelection(value => value ? {...value,sourceRequest:0} : value); }
+  const sourceRequest = {sourceRequest:selection?.sourceRequest,onSourceOpened:sourceOpened};
   function selectRow(row: Row) {
     if (row.kind === "person" && !row.scholar_id) return;
     if (selection?.kind === row.kind && selection.id === row.id) { detail.current?.focus(); return; }
@@ -67,7 +79,7 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
   }
   function filter(field: keyof typeof filters, value: string) { setFilters(current => ({ ...current, [field]: value })); setPage(1); }
   return <section className={`${shared.canonical} ${styles.workspace}`} aria-label="理论与人物关系" onCompositionStartCapture={() => { ime.current = true; }} onCompositionEndCapture={() => { ime.current = false; }}>
-    <header><div><h2>关系类型、方向与来源 <small>{data?.count ?? "…"}</small></h2><p>核对人物、概念与理论之间的关系，以及原记录的出处。</p></div><button ref={createButton} type="button" disabled={blocked || !canCreate} onClick={() => open({ kind: "choose", id: "" })}>＋ 新建关系</button></header>
+    <header><div><h2>关系类型、方向与来源 <small>{data?.count ?? "…"}</small></h2><p>核对人物、概念与理论之间的关系，以及原记录的出处。</p></div><div className={styles.relationActions}><button ref={createButton} type="button" disabled={blocked || !canCreate} onClick={() => open({ kind: "choose", id: "" })}>＋ 新建关系</button><button type="button" disabled={blocked || !selection && !canCreate} onClick={selectSource}>从材料选原文</button></div></header>
     {blocked ? <p>请先保存主体草稿并核对未完成的操作，再编辑关联。</p> : null}
     {notice ? <p role="status">{notice}</p> : null}
     <div className={styles.columns}>
@@ -97,12 +109,12 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
         <header><h3>关系详情</h3>{selection ? <button type="button" onClick={close}>收起详情</button> : null}</header>
         {!selection ? <p>从左侧选择一条关系，核对方向与出处。新建关系先保存，再明确确认公开。</p>
           : selection.kind === "choose" ? <div className={styles.choices}><p>选择关系对象</p>
-              <button type="button" disabled={blocked} onClick={() => open({ kind: centerKind === "scholar" ? "person" : "node", id: "", ...(centerKind === "scholar" ? {scholarId:nodeId,personName:nodeName} : {}) })}>{centerKind === "scholar" ? "学者与概念或理论" : "概念或理论之间"}</button>
-              <button type="button" disabled={blocked} onClick={() => open({ kind: centerKind === "scholar" ? "scholar" : "person", id: "" })}>{centerKind === "scholar" ? "学者之间" : "人物与当前条目"}</button></div>
-          : selection.kind === "scholar" ? <ScholarRelationsEditor key={selection.id} scholarId={nodeId} initialRelationId={selection.id} embedded detailOnly onGuardChange={updateGuard} onSaved={() => {setAttempt(value=>value+1);onChanged?.();}}/>
-          : selection.kind === "person" ? selection.scholarId ? <ScholarNodeLinkEditor key={`${selection.scholarId}:${selection.id}`} owner={owner} scholarId={selection.scholarId} initialId={selection.id} node={centerKind === "node" ? {id:nodeId,name:nodeName} : undefined} personName={selection.personName} onGuard={updateGuard} onSaved={() => {setAttempt(value=>value+1);onChanged?.();}}/>
-              : <EntityPicker owner={owner} label="选择已有学者" endpoint="/catalog/admin/scholars/" nameField="preferred_name" values={[]} onChange={values => { const person=values.at(-1);if(person?.id)open({kind:"person",id:"",scholarId:person.id,personName:person.name}); }}/>
-          : <Editor key={selection.id} nodeId={nodeId} requestedId={selection.id} onGuardChange={updateGuard} onSaved={() => {setAttempt(value=>value+1);onChanged?.();}}/>}
+              <button type="button" disabled={blocked} onClick={() => open({ kind: centerKind === "scholar" ? "person" : "node", id: "", sourceRequest:selection.sourceRequest, ...(centerKind === "scholar" ? {scholarId:nodeId,personName:nodeName} : {}) })}>{centerKind === "scholar" ? "学者与概念或理论" : "概念或理论之间"}</button>
+              <button type="button" disabled={blocked} onClick={() => open({ kind: centerKind === "scholar" ? "scholar" : "person", id: "", sourceRequest:selection.sourceRequest })}>{centerKind === "scholar" ? "学者之间" : "人物与当前条目"}</button></div>
+          : selection.kind === "scholar" ? <ScholarRelationsEditor {...sourceRequest} key={selection.id} scholarId={nodeId} initialRelationId={selection.id} embedded detailOnly onGuardChange={updateGuard} onSaved={() => {setAttempt(value=>value+1);onChanged?.();}}/>
+          : selection.kind === "person" ? selection.scholarId ? <ScholarNodeLinkEditor {...sourceRequest} key={`${selection.scholarId}:${selection.id}`} owner={owner} scholarId={selection.scholarId} initialId={selection.id} node={centerKind === "node" ? {id:nodeId,name:nodeName} : undefined} personName={selection.personName} onGuard={updateGuard} onSaved={() => {setAttempt(value=>value+1);onChanged?.();}}/>
+              : <EntityPicker owner={owner} label="选择已有学者" endpoint="/catalog/admin/scholars/" nameField="preferred_name" values={[]} onChange={values => { const person=values.at(-1);if(person?.id)open({kind:"person",id:"",scholarId:person.id,personName:person.name,sourceRequest:selection.sourceRequest}); }}/>
+          : <Editor {...sourceRequest} key={selection.id} nodeId={nodeId} requestedId={selection.id} onGuardChange={updateGuard} onSaved={() => {setAttempt(value=>value+1);onChanged?.();}}/>}
       </section>
     </div>
   </section>;
