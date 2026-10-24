@@ -26058,6 +26058,7 @@ export interface operations {
                  */
                 kind?: "" | "person" | "scholar";
                 page?: number;
+                page_size?: number;
                 q?: string;
                 /**
                  * @description * `` - 全部类型
@@ -26077,6 +26078,7 @@ export interface operations {
                  *     * `other` - 其他关系
                  */
                 relation_type?: "" | "related" | "proposes" | "defines" | "develops" | "criticizes" | "interprets" | "uses" | "influences" | "teaching" | "cooperation" | "influence" | "criticism" | "comparative_reading" | "other";
+                review_only?: boolean;
                 /**
                  * @description * `` -
                  *     * `draft` - draft
@@ -26628,6 +26630,7 @@ export interface operations {
                  */
                 kind?: "" | "node" | "person";
                 page?: number;
+                page_size?: number;
                 q?: string;
                 /**
                  * @description * `` - 全部类型
@@ -26652,6 +26655,7 @@ export interface operations {
                  *     * `influences` - 影响
                  */
                 relation_type?: "" | "inherited_from" | "revises" | "extends" | "criticizes" | "responds_to" | "competes_with" | "synthesizes" | "branches_from" | "borrows_concept_from" | "transferred_to" | "influenced_by" | "overlaps_with" | "related" | "proposes" | "defines" | "develops" | "interprets" | "uses" | "influences";
+                review_only?: boolean;
                 /**
                  * @description * `` -
                  *     * `draft` - draft

@@ -9,6 +9,23 @@ from catalog.services.theory_graph import _edge_payload
 pytestmark = pytest.mark.django_db
 
 
+def test_candidate_directory_only_returns_unconfirmed_original_rows(api_client, admin_user):
+    current, other = node(), node()
+    person = scholar()
+    pending = KnowledgeRelation.objects.create(source_node=current, target_node=other, relation_type="criticizes", status="pending")
+    draft = PersonNodeRelation.objects.create(person=person.person, node=current, status="draft")
+    KnowledgeRelation.objects.create(source_node=current, target_node=node(), relation_type="criticizes", status="published")
+    KnowledgeRelation.objects.create(source_node=current, target_node=node(), relation_type="criticizes", status="rejected")
+    api_client.force_authenticate(admin_user)
+    url = f"/api/catalog/admin/theory-system/nodes/{current.pk}/relations/"
+    first = api_client.get(url, {"review_only": "true", "page_size": 1}).data
+    second = api_client.get(url, {"review_only": "true", "page_size": 1, "page": 2}).data
+    assert first["count"] == second["count"] == 2 and first["next"] == 2
+    assert {row["id"] for row in first["results"] + second["results"]} == {str(pending.pk), str(draft.pk)}
+    assert api_client.get(url, {"page_size": 25}).status_code == 400
+    assert api_client.get(url, {"review_only": "not-a-boolean"}).status_code == 400
+
+
 def node(name="验收概念"):
     return KnowledgeNode.objects.create(node_type="concept", canonical_name_zh=name, slug=f"mixed-{uuid4()}", status="published")
 

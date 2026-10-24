@@ -27,6 +27,13 @@
 .rows>li>button:disabled { opacity:.65; cursor:not-allowed; }
 .arrow { color:var(--muted); text-align:center; }
 .choices { display:grid; gap:12px; }
+.candidates{border:1px solid var(--line);background:var(--surface);margin-top:22px;padding:16px;border-radius:3px}
+.candidates h3{font:600 18px var(--serif);margin:0}.candidates header p{color:var(--muted);font-size:12px;line-height:1.7}
+.candidateRows>li{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.candidateRows>li>div{min-width:0}.candidateRows strong{font:600 14px/1.6 var(--serif)}.candidateRows small{color:var(--muted)}
+.candidateRows button{flex-shrink:0;min-height:36px}.candidateRows>li[data-selected=true]{box-shadow:inset 2px 0 var(--annotation);padding-inline-start:12px}
+.candidateRows button:focus-visible{outline:2px solid var(--annotation);outline-offset:3px}
+@media(max-width:760px){.candidateRows>li{align-items:flex-start;flex-direction:column;gap:10px}}
 @media(max-width:1100px) { .columns { grid-template-columns:minmax(0,1.2fr) minmax(270px,1fr); gap:14px; }.rows>li>button { grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr); }.rows>li>button>span:last-child { grid-column:1/-1; display:flex; justify-content:space-between; gap:10px; } }
 @media(max-width:760px) { .columns { display:flex; flex-direction:column; gap:20px; }.directory,.detail { width:100%; }.detail { padding:14px; scroll-margin-top:95px; }.filters { grid-template-columns:repeat(2,minmax(0,1fr)); }.search { grid-column:auto; }.detail :is(input,textarea,select),.filters :is(input,select) { font-size:16px; } }
 

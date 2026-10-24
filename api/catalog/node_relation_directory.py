@@ -22,6 +22,8 @@ RELATION_TYPES = dict([*KNOWLEDGE_RELATION_TYPES, *PersonNodeRelation.RelationTy
 
 class NodeRelationFilters(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, default=1)
+    page_size = serializers.IntegerField(min_value=1, max_value=24, default=24)
+    review_only = serializers.BooleanField(default=False)
     q = serializers.CharField(max_length=300, allow_blank=True, default="")
     status = serializers.ChoiceField(choices=["", *KnowledgePublicationStatus.values], default="")
     kind = serializers.ChoiceField(choices=["", "node", "person"], default="")
@@ -67,6 +69,9 @@ def directory_queries(node_id, filters):
         selected_direction=Coalesce(KeyTextTransform("direction", "link_draft"), F("direction"), output_field=CharField()),
     )
     people = PersonNodeRelation.objects.filter(node_id=node_id)
+    if filters.get("review_only"):
+        nodes = nodes.filter(status__in=["draft", "pending"])
+        people = people.filter(status__in=["draft", "pending"])
     for field in ("status", "direction", "relation_type"):
         if filters.get(field):
             nodes = nodes.filter(**{f"selected_{'type' if field == 'relation_type' else field}" if field != "status" else field: filters[field]})
@@ -106,7 +111,7 @@ class NodeRelationDirectoryView(AdminEditorialDraftReadMixin, generics.GenericAP
         incoming = NodeRelationFilters(data=request.query_params)
         incoming.is_valid(raise_exception=True)
         try:
-            page = Paginator(directory_queries(node.pk, incoming.validated_data), 24).page(incoming.validated_data["page"])
+            page = Paginator(directory_queries(node.pk, incoming.validated_data), incoming.validated_data["page_size"]).page(incoming.validated_data["page"])
         except EmptyPage:
             raise NotFound("当前筛选已无这一页，请返回第一页重新读取。") from None
         entries = list(page)

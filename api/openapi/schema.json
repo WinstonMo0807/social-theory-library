@@ -10900,6 +10900,16 @@
                     },
                     {
                         "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 24,
+                            "minimum": 1,
+                            "default": 24
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "q",
                         "schema": {
                             "type": "string",
@@ -10933,6 +10943,14 @@
                             "minLength": 1
                         },
                         "description": "* `` - 全部类型\n* `related` - 相关\n* `proposes` - 提出\n* `defines` - 定义\n* `develops` - 发展\n* `criticizes` - 批判\n* `interprets` - 解释\n* `uses` - 运用\n* `influences` - 影响（人物与概念）\n* `teaching` - 师承\n* `cooperation` - 合作\n* `influence` - 影响（学者间）\n* `criticism` - 批评\n* `comparative_reading` - 比较阅读\n* `other` - 其他关系"
+                    },
+                    {
+                        "in": "query",
+                        "name": "review_only",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
                     },
                     {
                         "in": "path",
@@ -12096,6 +12114,16 @@
                     },
                     {
                         "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 24,
+                            "minimum": 1,
+                            "default": 24
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "q",
                         "schema": {
                             "type": "string",
@@ -12134,6 +12162,14 @@
                             "minLength": 1
                         },
                         "description": "* `` - 全部类型\n* `inherited_from` - 继承\n* `revises` - 修正\n* `extends` - 扩展\n* `criticizes` - 批判\n* `responds_to` - 回应\n* `competes_with` - 竞争\n* `synthesizes` - 综合\n* `branches_from` - 分化\n* `borrows_concept_from` - 概念借用\n* `transferred_to` - 跨学科传播\n* `influenced_by` - 受到影响\n* `overlaps_with` - 部分重叠\n* `related` - 相关\n* `proposes` - 提出\n* `defines` - 定义\n* `develops` - 发展\n* `interprets` - 解释\n* `uses` - 运用\n* `influences` - 影响"
+                    },
+                    {
+                        "in": "query",
+                        "name": "review_only",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
                     },
                     {
                         "in": "query",

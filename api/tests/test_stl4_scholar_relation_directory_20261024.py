@@ -8,6 +8,19 @@ from .test_stl4_person_node_directory_20261024 import node, scholar
 pytestmark = pytest.mark.django_db
 
 
+def test_scholar_candidate_rows_keep_identity_and_exclude_published_or_archived(api_client, admin_user):
+    first, other = scholar(), scholar()
+    relation = ScholarRelation.objects.create(source_scholar=first, target_scholar=other, relation_type="influence", status="draft")
+    link = PersonNodeRelation.objects.create(person=first.person, node=node(), status="pending")
+    ScholarRelation.objects.create(source_scholar=first, target_scholar=other, relation_type="teaching", status="published")
+    PersonNodeRelation.objects.create(person=first.person, node=node(), status="archived")
+    api_client.force_authenticate(admin_user)
+    result = api_client.get(directory(first), {"review_only": "true", "page_size": 6})
+    assert result.status_code == 200 and result.data["count"] == 2
+    assert {row["id"] for row in result.data["results"]} == {str(relation.pk), str(link.pk)}
+    assert api_client.get(directory(first), {"page_size": 25}).status_code == 400
+
+
 def directory(profile):
     return f"/api/catalog/admin/scholars/{profile.pk}/knowledge-relations/"
 

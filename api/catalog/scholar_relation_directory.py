@@ -23,6 +23,8 @@ RELATION_TYPES.update(influence="影响（学者间）", influences="影响（�
 
 class ScholarRelationDirectoryFilters(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, default=1)
+    page_size = serializers.IntegerField(min_value=1, max_value=24, default=24)
+    review_only = serializers.BooleanField(default=False)
     q = serializers.CharField(max_length=300, allow_blank=True, default="")
     status = serializers.ChoiceField(choices=["", *KnowledgePublicationStatus.values], default="")
     kind = serializers.ChoiceField(choices=["", "person", "scholar"], default="")
@@ -45,6 +47,9 @@ def directory_queries(scholar_id, person_id, filters):
         selected_direction=Coalesce(KeyTextTransform("direction", "link_draft"), F("direction"), output_field=CharField()),
     )
     nodes = PersonNodeRelation.objects.filter(person_id=person_id)
+    if filters.get("review_only"):
+        nodes = nodes.filter(status__in=["draft", "pending"])
+        people = people.filter(status__in=["draft", "pending"])
     for field in ("status", "direction", "relation_type"):
         if filters.get(field):
             nodes = nodes.filter(**{field: filters[field]})
@@ -74,7 +79,7 @@ class ScholarKnowledgeRelationDirectoryView(AdminPrivateResponseMixin, APIView):
         incoming = ScholarRelationDirectoryFilters(data=request.query_params)
         incoming.is_valid(raise_exception=True)
         try:
-            page = Paginator(directory_queries(scholar.pk, scholar.person_id, incoming.validated_data), 24).page(incoming.validated_data["page"])
+            page = Paginator(directory_queries(scholar.pk, scholar.person_id, incoming.validated_data), incoming.validated_data["page_size"]).page(incoming.validated_data["page"])
         except EmptyPage:
             raise NotFound("当前筛选已无这一页，请返回第一页重新读取。") from None
         entries, result = list(page), {}
