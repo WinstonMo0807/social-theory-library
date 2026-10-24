@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from catalog.node_editor_views import NodeCommandMixin, KnowledgeRelationCommandMixin
 from catalog.relation_editorial_views import relations_for_node
+from catalog.theory_review_commands import TheoryReviewCommandMixin, TheoryReviewInput
 
 from uuid import UUID, uuid4
 
@@ -91,6 +92,7 @@ from .theory_serializers import (
     NormalizedTimelinePageSerializer,
     ReadingPathSerializer,
     TheoryReviewTaskSerializer,
+    TheoryReviewResultSerializer,
     WorkNodeRelationSerializer,
     compact_work,
     _public_evidence_queryset,
@@ -1137,7 +1139,7 @@ class TheoryReviewPagination(PageNumberPagination):
     *[OpenApiParameter(name, type=UUID) for name in ("work", "file", "candidate_node", "scholar")],
     OpenApiParameter("review_only", type=bool), OpenApiParameter("page_size", type=int),
 ]))
-class AdminTheoryReviewTaskListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminTheoryReviewTaskListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = TheoryReviewTaskSerializer
     pagination_class = TheoryReviewPagination
@@ -1179,43 +1181,13 @@ class AdminTheoryReviewTaskListView(AdminPrivateResponseMixin, TheorySystemFeatu
         return queryset.order_by("-created_at", "pk")
 
 
-class AdminTheoryReviewTaskDetailView(
-    AdminPrivateResponseMixin,
-    TheorySystemFeatureMixin,
-    generics.RetrieveUpdateDestroyAPIView,
-):
+class AdminTheoryReviewTaskDetailView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.RetrieveAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = TheoryReviewTaskSerializer
-    queryset = TheoryReviewTask.objects.select_related(
-        "work", "file", "candidate_node", "assigned_to"
-    )
-
-    def perform_destroy(self, instance):
-        if getattr(self.request.user, "role", "") != "admin":
-            raise PermissionDenied("只有管理员可以删除理论审核项。")
-        snapshot = {
-            "task_type": instance.task_type,
-            "status": instance.status,
-            "work_id": str(instance.work_id or ""),
-            "work_title": instance.work.title if instance.work_id else "",
-            "candidate_node_id": str(instance.candidate_node_id or ""),
-            "suggested_node_name": instance.suggested_node_name,
-            "suggested_relation_type": instance.suggested_relation_type,
-            "evidence_pages": instance.evidence_pages,
-        }
-        object_id = str(instance.pk)
-        instance.delete()
-        AuditEvent.objects.create(
-            actor=self.request.user,
-            action="theory_review_task_delete",
-            object_type="catalog.TheoryReviewTask",
-            object_id=object_id,
-            before=snapshot,
-            after={"deleted": True},
-        )
+    queryset = TheoryReviewTask.objects.select_related("work", "file", "candidate_node", "assigned_to")
 
 
-class AdminTheoryReviewActionView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
+class AdminTheoryReviewActionView(TheoryReviewCommandMixin, AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
     permission_classes = [IsKnowledgeReviewer]
 
     @staticmethod
@@ -1235,10 +1207,11 @@ class AdminTheoryReviewActionView(AdminPrivateResponseMixin, TheorySystemFeature
 
         if not task.work_id:
             return
+        get_object_or_404(Work.objects.select_for_update(), pk=task.work_id)
         allowed_roles = {value for value, _label in WorkNodeRelation.Role.choices}
         if relation_type not in allowed_roles:
             relation_type = WorkNodeRelation.Role.GENERAL_MENTION
-        relation, _created = WorkNodeRelation.objects.update_or_create(
+        relation, _created = WorkNodeRelation.objects.get_or_create(
             work=task.work,
             node=node,
             role=relation_type,
@@ -1251,7 +1224,7 @@ class AdminTheoryReviewActionView(AdminPrivateResponseMixin, TheorySystemFeature
         )
         pages = [int(value) for value in task.evidence_pages or [] if str(value).isdigit()]
         if task.file_id and pages and task.evidence_text:
-            EvidenceSnippet.objects.update_or_create(
+            EvidenceSnippet.objects.get_or_create(
                 work=task.work,
                 file=task.file,
                 node=node,
@@ -1269,23 +1242,21 @@ class AdminTheoryReviewActionView(AdminPrivateResponseMixin, TheorySystemFeature
                     "review_status": RelationReviewStatus.SUGGESTED,
                 },
             )
-        TheoryReviewTask.objects.update_or_create(
-            task_type=TheoryReviewTask.TaskType.WORK_NODE,
-            work=task.work,
-            file=task.file,
-            candidate_node=node,
-            defaults={
-                "suggested_relation_type": relation_type,
-                "confidence": task.confidence,
-                "evidence_pages": task.evidence_pages,
-                "evidence_text": task.evidence_text,
-                "status": TheoryReviewTask.TaskStatus.PENDING,
-                "submitted_at": timezone.now(),
-            },
-        )
+        # An alias decision must not reset an existing human review or evidence.
+        if not TheoryReviewTask.objects.filter(task_type=TheoryReviewTask.TaskType.WORK_NODE,
+                work=task.work, file=task.file, candidate_node=node).exists():
+            TheoryReviewTask.objects.create(task_type=TheoryReviewTask.TaskType.WORK_NODE,
+                work=task.work, file=task.file, candidate_node=node,
+                suggested_relation_type=relation_type, confidence=task.confidence,
+                evidence_pages=task.evidence_pages, evidence_text=task.evidence_text,
+                status=TheoryReviewTask.TaskStatus.PENDING, submitted_at=timezone.now())
+
+    @extend_schema(request=TheoryReviewInput, responses=TheoryReviewResultSerializer)
+    def post(self, request, pk):
+        return self.review_command(request, pk, lambda: self._apply_decision(request, pk))
 
     @transaction.atomic
-    def post(self, request, pk):
+    def _apply_decision(self, request, pk):
         task = get_object_or_404(TheoryReviewTask.objects.select_for_update(), pk=pk)
         pending_revision = None
         action = request.data.get("action", "").strip()

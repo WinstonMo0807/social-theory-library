@@ -1244,6 +1244,7 @@ class AdminWorkNodeRelationSerializer(WorkNodeRelationSerializer):
 
 
 class TheoryReviewTaskSerializer(serializers.ModelSerializer):
+    edit_version = serializers.SerializerMethodField()
     work_title = serializers.CharField(source="work.title", read_only=True)
     node_name = serializers.CharField(source="candidate_node.canonical_name_zh", read_only=True)
     file_page_count = serializers.IntegerField(source="file.page_count", read_only=True)
@@ -1273,11 +1274,27 @@ class TheoryReviewTaskSerializer(serializers.ModelSerializer):
             "viewer_href",
             "created_at",
             "updated_at",
+            "edit_version",
         )
+
+    def get_edit_version(self, obj) -> str:
+        from catalog.theory_review_commands import review_version
+        return review_version(obj)
 
     def get_viewer_href(self, obj) -> str | None:
         page = next(iter(obj.evidence_pages or []), 1)
         return f"/reader/{obj.file_id}?page={page}" if obj.file_id else None
+
+
+class TheoryReviewResultSerializer(TheoryReviewTaskSerializer):
+    from catalog.theory_review_commands import TheoryReviewReceipt
+    save_receipt = TheoryReviewReceipt()
+    save_replayed = serializers.BooleanField(required=False)
+    deleted = serializers.BooleanField(required=False)
+    editorial_revision = serializers.DictField(required=False)
+
+    class Meta(TheoryReviewTaskSerializer.Meta):
+        fields = (*TheoryReviewTaskSerializer.Meta.fields, "save_receipt", "save_replayed", "deleted", "editorial_revision")
 
 
 class ReadingPathStageSerializer(serializers.ModelSerializer):

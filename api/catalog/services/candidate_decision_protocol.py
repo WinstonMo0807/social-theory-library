@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from typing import Any, Iterable
+from uuid import UUID
 
 
 CANDIDATE_DECISION_PROTOCOL_VERSION = "candidate-decision-protocol-v1"
@@ -131,6 +132,23 @@ def describe_candidate_actions(
 
 def attach_candidate_action_descriptors(payload: dict[str, Any]) -> dict[str, Any]:
     payload["action_protocol_version"] = CANDIDATE_DECISION_PROTOCOL_VERSION
+    prefix = "/catalog/admin/theory-system/review-tasks/"
+    endpoint = str(payload.get("decision_url") or "")
+    if endpoint.startswith(prefix) and endpoint.endswith("/action/"):
+        try:
+            task_id = UUID(endpoint[len(prefix):-len("/action/")])
+        except (ValueError, TypeError):
+            task_id = None
+        if task_id:
+            # All aggregators enter the same versioned, recoverable decision form.
+            payload.update(available_actions=["inspect", "review_task"], decision_url=None, action_payloads={})
+            payload["action_descriptors"] = [*describe_candidate_actions(["inspect"]), {
+                "key":"review_task", "label":"打开原审核任务", "method":"NAVIGATE",
+                "endpoint":f"/admin/theories/relations?review_task={task_id}&review_status=all", "payload":{},
+                "availability":{"available":True,"reason":""},
+                "evidence_requirement":{"mode":"none","minimum_count":0,"satisfied":True},
+            }]
+            return payload
     payload["action_descriptors"] = describe_candidate_actions(
         payload.get("available_actions") or ["inspect"],
         decision_url=payload.get("decision_url"),

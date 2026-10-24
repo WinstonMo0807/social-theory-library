@@ -189,6 +189,8 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "TheoryReviewTaskTypeEnum": [("work_node", "文献与节点关系"), ("node_relation", "节点关系"), ("new_node", "建议新增节点"), ("timeline", "时间轴事件")],
+        "TheoryReviewTaskStatusEnum": [("pending", "待审核"), ("needs_changes", "待修改"), ("confirmed", "已确认"), ("rejected", "已拒绝"), ("deferred", "延后处理"), ("insufficient_evidence", "证据不足")],
         "PersonNodeRelationTypeEnum": [("related", "相关"), ("proposes", "提出"), ("defines", "定义"), ("develops", "发展"), ("criticizes", "批判"), ("interprets", "解释"), ("uses", "运用"), ("influences", "影响")],
         "KnowledgeRelationDirectionEnum": [("directed", "有方向"), ("undirected", "无方向")],
         "KnowledgeRelationTypeEnum": "catalog.node_relation_directory.KNOWLEDGE_RELATION_TYPES",

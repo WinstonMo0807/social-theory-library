@@ -1,3 +1,4 @@
+from catalog.theory_review_commands import review_version
 from uuid import uuid4
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
@@ -203,7 +204,8 @@ def test_review_confirmation_drafts_then_publishes_relation_and_page_evidence(ap
     api_client.force_authenticate(admin_user)
     response = api_client.post(
         f"/api/catalog/admin/theory-system/review-tasks/{task.id}/action/",
-        {"action": "confirm", "review_note": "证据充分"},
+        {"edit_version": review_version(task), "action": "confirm", "review_note": "证据充分"},
+        HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()),
         format="json",
     )
     assert response.status_code == 200
@@ -477,11 +479,12 @@ def test_new_node_candidate_can_create_draft_and_followup_relation(api_client, a
     response = api_client.post(
         f"/api/catalog/admin/theory-system/review-tasks/{task.id}/action/",
         {
-            "action": "create_node",
+            "edit_version": review_version(task), "action": "create_node",
             "node_type": "theory_tradition",
             "primary_discipline": str(sociology.id),
             "relation_type": "systematic_exposition",
         },
+        HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()),
         format="json",
     )
 
@@ -532,10 +535,11 @@ def test_new_node_candidate_can_become_existing_alias(api_client, admin_user):
     response = api_client.post(
         f"/api/catalog/admin/theory-system/review-tasks/{task.id}/action/",
         {
-            "action": "alias_existing",
+            "edit_version": review_version(task), "action": "alias_existing",
             "candidate_node": str(node.id),
             "relation_type": "general_mention",
         },
+        HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()),
         format="json",
     )
 

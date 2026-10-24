@@ -57,7 +57,8 @@ export function CandidateDecisionBar({
           source: "legacy" as const,
         }]
       : resolved;
-    return actionFilter ? withInspect.filter(actionFilter) : withInspect;
+    const visible = withInspect.filter(row => row.action !== "inspect" || showInspect && Boolean(onInspect));
+    return actionFilter ? visible.filter(actionFilter) : visible;
   }, [actionFilter, candidate, onInspect, showInspect]);
   const candidateIdentity = String(candidate.id ?? candidate.label ?? "candidate");
   const [editor, setEditor] = useState(() => ({
@@ -85,6 +86,11 @@ export function CandidateDecisionBar({
     <div className={className}>
       <div className="candidate-decision-actions">
         {descriptors.map((descriptor) => (
+          descriptor.action === "review_task" ? (
+            descriptor.method === "NAVIGATE" && /^\/admin\/theories\/relations\?review_task=[0-9a-f-]{36}&review_status=all$/i.test(descriptor.url)
+              ? <a key={descriptor.action} className="button secondary" href={descriptor.url} target="_blank" rel="noopener" aria-disabled={disabled || Boolean(busyAction) || descriptor.disabled} onClick={event => { if(disabled || busyAction || descriptor.disabled) event.preventDefault(); }}>{descriptor.label} ↗</a>
+              : <span key={descriptor.action} role="status">原审核入口不可用，请刷新候选。</span>
+          ) :
           <ActionButton
             className={descriptor.tone === "danger" ? "danger" : descriptor.tone === "secondary" ? "secondary" : ""}
             state={busyAction === descriptor.action ? "pending" : "idle"}

@@ -1,3 +1,4 @@
+from catalog.theory_review_commands import TheoryReviewReceiptView
 from catalog.site_publication_review import SiteReviewView
 from catalog.site_history import SiteHistoryView, SiteRestoreView
 from catalog.recommendation_command_views import RecommendationRefreshReceiptView
@@ -799,6 +800,7 @@ urlpatterns = [
         AdminEvidenceDetailView.as_view(),
         name="admin-theory-evidence-detail",
     ),
+    path("admin/theory-system/review-tasks/commands/<uuid:request_id>/", TheoryReviewReceiptView.as_view(), name="theory-review-receipt"),
     path(
         "admin/theory-system/review-tasks/",
         AdminTheoryReviewTaskListView.as_view(),

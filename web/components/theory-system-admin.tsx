@@ -928,6 +928,9 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
 
 type ReviewTask = {
   id: string;
+  edit_version: string;
+  deleted?: boolean;
+  editorial_revision?: unknown;
   task_type: string;
   work: string | null;
   work_title: string;
@@ -1026,7 +1029,9 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
   const taskOpened=useRef(false);
   const relationPage = adminPageNumber(location.search.get("relations_page"));
   const [editConflict, setEditConflict] = useState(false);
-  const user=useAdminSession(),owner=String(user?.id||""),command=useScholarSave(owner,"knowledge_relation");
+  const user=useAdminSession(),owner=String(user?.id||""),command=useScholarSave(owner,"knowledge_relation"),reviewCommand=useScholarSave(owner,"review");
+  const [knownReviewId,setKnownReviewId]=useState(""),[reviewConflict,setReviewConflict]=useState(false);
+  const canReview=hasAdminCapability(user,"can_review_candidate"),canDeleteReview=["admin","superadmin"].includes(user?.access_level||"");
   const canPublish = hasAdminCapability(user, "can_publish_authority"),canEdit=hasAdminCapability(user,"can_edit_draft_authority"),canCreate=hasAdminCapability(user,"can_create_authority");
   const [knownSavedId,setKnownSavedId]=useState(""),[ime,setIme]=useState(false),composing=useRef(false);
   const notifyGuard=useEffectEvent((value:{dirty:boolean;pending:boolean;composing:boolean})=>embedded?.onGuardChange(value));
@@ -1051,8 +1056,9 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
   const [editingRelation, setEditingRelation] = useState<KnowledgeRelation | null>(null);
   const [relationDraft, setRelationDraft] = useState(()=>({...emptyRelationDraft,source_node:embedded?.nodeId||""}));
   const relationDirty = useUnsavedForm(relationDraft, editingRelation ? relationToDraft(editingRelation) : {...emptyRelationDraft,source_node:embedded?.nodeId||""});
-  useUnsavedForm(Boolean(command.recovery)||Boolean(pendingAction)||Boolean(knownSavedId),false);
-  useEffect(()=>{notifyGuard({dirty:relationDirty,pending:Boolean(command.recovery)||Boolean(pendingAction),composing:ime});},[relationDirty,command.recovery,pendingAction,knownSavedId,ime]);
+  const reviewDirty=useUnsavedForm(selected?{node:candidateNode,role:relationRole,nodeType:newNodeType,discipline:newNodeDiscipline,note:reviewNote}:null,selected?{node:selected.candidate_node||"",role:workRelationOptions.some(([value])=>value===selected.suggested_relation_type)?selected.suggested_relation_type:"general_mention",nodeType:"theory_tradition",discipline:"",note:selected.review_note||""}:null);
+  useUnsavedForm(Boolean(command.recovery)||Boolean(reviewCommand.recovery)||Boolean(pendingAction)||Boolean(knownSavedId)||Boolean(knownReviewId),false);
+  useEffect(()=>{notifyGuard({dirty:relationDirty,pending:Boolean(command.recovery)||Boolean(reviewCommand.recovery)||Boolean(pendingAction)||Boolean(knownReviewId),composing:ime});},[relationDirty,command.recovery,reviewCommand.recovery,pendingAction,knownSavedId,knownReviewId,ime]);
 
   const taskParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -1087,61 +1093,63 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
     return()=>window.clearTimeout(timer);
   }, [requested.data]);
 
-  function chooseTask(task: ReviewTask) {
-    if(composing.current||pendingAction)return;
-    taskOpened.current=true;
-    setSelected(task);
-    setCandidateNode(task.candidate_node ?? "");
-    setRelationRole(workRelationOptions.some(([value]) => value === task.suggested_relation_type) ? task.suggested_relation_type : "general_mention");
-    setNewNodeType("theory_tradition");
-    setNewNodeDiscipline("");
-    setReviewNote(task.review_note || "");
-    setMessage("");
-    setMessageState("idle");
-    setEntityLabels({});
+  function canLeaveReview() {
+    if(composing.current||pendingAction||reviewCommand.recovery||knownReviewId)return false;
+    return !reviewDirty||window.confirm("这条候选还有未提交的审核意见，放弃输入并切换吗？");
   }
-
-  async function review(action: "confirm" | "modify_confirm" | "create_node" | "alias_existing" | "reject" | "defer" | "insufficient" | "needs_changes") {
-    if (!selected) return;
-    const token = getServerSessionCredential();
-    if (!token) return;
-    const actionKey = `review-task:${selected.id}:${action}`;
-    if (!startAction(actionKey)) return;
-    setMessage("正在提交审核决定……");
-    setMessageState("pending");
+  function chooseTask(task: ReviewTask) {
+    if(!canLeaveReview())return;
+    applyReview(task);
+  }
+  function applyReview(task:ReviewTask) {
+    taskOpened.current=true;setSelected(task.deleted?null:task);setKnownReviewId("");setReviewConflict(false);
+    setCandidateNode(task.candidate_node??"");
+    setRelationRole(workRelationOptions.some(([value])=>value===task.suggested_relation_type)?task.suggested_relation_type:"general_mention");
+    setNewNodeType("theory_tradition");setNewNodeDiscipline("");setReviewNote(task.review_note||"");setEntityLabels({});
+    setMessage("");setMessageState("idle");
+  }
+  async function review(action:"confirm"|"modify_confirm"|"create_node"|"alias_existing"|"reject"|"defer"|"insufficient"|"needs_changes"|"delete") {
+    if(!selected||composing.current||!canReview||!reviewCommand.ready||reviewCommand.recovery||knownReviewId||reviewConflict)return;
+    if(!window.confirm(action==="delete"?"删除这条错误候选？已生成的条目和关系保留，本次删除会留下审计与请求回执。":"提交这项审核决定？系统将核对原任务版本，已公开内容仍须按原发布流程处理。"))return;
+    const actionKey=`review-task:${selected.id}:${action}`;
+    if(!startAction(actionKey))return;
+    setMessage("正在提交审核决定…");setMessageState("pending");
     try {
-      const updated = await apiRequest<ReviewTask>(`/catalog/admin/theory-system/review-tasks/${selected.id}/action/`, {
-        method: "POST",
-        body: JSON.stringify({
-          action,
-          candidate_node: candidateNode || null,
-          relation_type: relationRole,
-          review_note: reviewNote,
-          canonical_name_zh: selected.suggested_node_name,
-          node_type: newNodeType,
-          primary_discipline: newNodeDiscipline || null,
-        }),
-      }, token);
-      setSelected(updated);
-      setMessage(
-        action === "create_node"
-          ? "已创建待完善的理论或概念资料草稿。文献关系已进入下一条审核任务。"
-          : action === "alias_existing"
-            ? "候选名称已保存为已有理论或概念别名。文献关系已进入下一条审核任务。"
-            : action === "confirm" || action === "modify_confirm"
-              ? "候选已确认。馆藏关系和页码证据已同步写入。"
-              : "审核状态已更新。",
-      );
-      setMessageState("success");
-      tasks.refresh();
-      nodes.refresh();
-      relations.refresh(); embedded?.onSaved();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "审核操作失败");
-      setMessageState("error");
-    } finally {
-      finishAction(actionKey);
-    }
+      const updated=await reviewCommand.save<ReviewTask>(`/catalog/admin/theory-system/review-tasks/${selected.id}/action/`,JSON.stringify({
+        action,edit_version:selected.edit_version,candidate_node:candidateNode||null,relation_type:relationRole,review_note:reviewNote,
+        canonical_name_zh:selected.suggested_node_name,node_type:newNodeType,primary_discipline:newNodeDiscipline||null,
+      }),{},"POST");
+      applyReview(updated);
+      setMessage(updated.deleted?"原候选已删除，已生成条目和关系保留。":updated.editorial_revision?"审核决定已保存，并形成待发布修订；当前公开内容尚未改变。":action==="create_node"?"已创建规范条目草稿，文献关系保留在后续审核任务中。":"原审核决定已保存，可继续核对来源与相关记录。");
+      setMessageState("success");tasks.refresh();nodes.refresh();relations.refresh();embedded?.onSaved();
+    } catch(reason) {
+      if(isEditorialConflict(reason))setReviewConflict(true);
+      setMessage(reason instanceof Error?reason.message:"操作结果待核对，当前输入保留。");setMessageState("error");
+    } finally {finishAction(actionKey);}
+  }
+  async function recoverReview(mode:"lookup"|"stop"|"retry"|"read") {
+    if(mode==="read"&&reviewCommand.recovery)return;
+    if(composing.current||!startAction("review-recovery"))return;
+    try {
+      if(mode==="retry") {
+        if(!reviewCommand.canRetry)return;
+        const row=await reviewCommand.save<ReviewTask>("","",{},"POST");applyReview(row);
+      } else {
+        let id=knownReviewId||(mode==="read"?selected?.id||"":"");
+        if(mode!=="read") {
+          const receipt=await reviewCommand.lookup(mode==="stop");if(!receipt)return;
+          if(receipt.state==="cancelled"){setMessage("原请求已停止，当前输入保留。");setMessageState("success");return;}
+          if(!receipt.exists){setSelected(null);setKnownReviewId("");setMessage("原操作已完成，审核任务随后已删除；没有重新执行。");tasks.refresh();return;}
+          id=receipt.task_id||"";
+        }
+        if(!id)throw Error("没有收到原任务编号，请核对原审核列表。");
+        setKnownReviewId(id);
+        const row=await apiRequest<ReviewTask>(`/catalog/admin/theory-system/review-tasks/${id}/`,{cache:"no-store"},getServerSessionCredential());
+        applyReview(row);
+      }
+      setMessage("已查回原任务当前版本，未重复执行审核决定。");setMessageState("success");tasks.refresh();nodes.refresh();relations.refresh();
+    }catch(reason){setMessage(reason instanceof Error?reason.message:"原结果暂不可读。");setMessageState("error");}
+    finally{finishAction("review-recovery");}
   }
 
   async function saveRelation(event: FormEvent) {
@@ -1252,36 +1260,16 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
     }catch(reason){setMessage(reason instanceof Error?reason.message:"原关系暂不可读，编号仍保留。");setMessageState("error");}finally{finishAction("recover-relation");}
   }
 
-  async function removeReviewTask() {
-    if (!selected) return;
-    const label = selected.work_title || selected.suggested_node_name || "该审核项";
-    if (!window.confirm(`确认删除“${label}”的审核候选吗？已确认生成的公开关系不会随审核记录一起删除。`)) return;
-    const token = getServerSessionCredential();
-    if (!token) return;
-    const actionKey = `delete-review-task:${selected.id}`;
-    if (!startAction(actionKey)) return;
-    setMessage("正在删除审核候选……");
-    setMessageState("pending");
-    try {
-      await apiRequest(`/catalog/admin/theory-system/review-tasks/${selected.id}/`, { method: "DELETE" }, token);
-      setSelected(null);
-      setMessage("审核候选已删除，操作已写入审计记录。");
-      setMessageState("success");
-      tasks.refresh();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "审核候选删除失败");
-      setMessageState("error");
-    } finally {
-      finishAction(actionKey);
-    }
-  }
-
   const relationNodeName = (id: string) => entityLabels[id] || nodes.data?.results.find((item) => item.id === id)?.canonical_name_zh || (editingRelation?.source_node === id ? editingRelation.source_name : editingRelation?.target_node === id ? editingRelation.target_name : "") || "已选择理论";
   const relationDisciplineName = (id: string) => disciplines.data?.results.find((item) => item.id === id)?.name || entityLabels[id] || "已选择学科";
   return (
     <AdminFrame eyebrow="知识与关联" title="理论关系" description="先核对系统建议，或在下方手工编辑理论之间的关系。保存修改后，确认发布才会更新读者页面。">
       {command.recovery||knownSavedId||command.error?<section className="admin-panel" aria-label="关系保存恢复"><h2>核对原保存</h2><p>未知结果先查回；已完成但未读取的关系保留原编号，不能据此新建。</p>{command.error?<p role="alert">{command.error}</p>:null}{message?<p role="status">{message}</p>:null}{command.recovery?<><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("lookup")}>查回原请求</button><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("stop")}>停止未执行的保存</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("retry")}>重试同一请求</button>:null}</>:null}{knownSavedId?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("read")}>重新读取原关系</button>:null}</section>:null}
-      <div inert={Boolean(command.recovery)||Boolean(pendingAction)||Boolean(knownSavedId)} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}>
+      {reviewCommand.recovery||knownReviewId||reviewCommand.error||reviewConflict?<section className="admin-panel" aria-label="核对原审核决定"><h2>核对原审核决定</h2><p>原操作未确认前，保留输入并暂停新的审核、删除和切换。</p>{reviewCommand.error?<p role="alert">{reviewCommand.error}</p>:null}{message?<p role="status">{message}</p>:null}
+        {reviewCommand.recovery?<><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverReview("lookup")}>查回原操作</button>{reviewCommand.canRetry?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverReview("retry")}>重试同一请求</button>:null}<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>{if(window.confirm("停止尚未执行的原审核请求？已完成操作会返回原结果。"))void recoverReview("stop");}}>停止未执行请求</button></>:null}
+        {knownReviewId||reviewConflict?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>{if(!reviewDirty||window.confirm("读取原任务当前版本并替换当前未提交意见？"))void recoverReview("read");}}>重新读取原任务</button>:null}
+      </section>:null}
+      <div inert={Boolean(command.recovery)||Boolean(reviewCommand.recovery)||Boolean(pendingAction)||Boolean(knownSavedId)||Boolean(knownReviewId)} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}>
       <details hidden={Boolean(embedded)} className="theory-suggestion-section" open={Boolean(taskReference || sourceWork || sourceFile || taskFilter || location.search.get("review_page") || location.search.get("review_status"))}>
       <summary>系统建议{tasks.data ? `（当前筛选共 ${tasks.data.count} 条）` : ""}</summary>
       {taskReference&&!requestedTaskId?<p role="alert">候选任务编号无效，请返回原材料入口。</p>:null}
@@ -1290,7 +1278,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
       <div className="theory-review-layout">
         <section className="admin-panel theory-review-list">
           <nav className="theory-review-tabs">
-            {[["pending", "待核对"], ["needs_changes", "待修改"], ["confirmed", "已确认"], ["rejected", "不采用"], ["", "全部"]].map(([value, label]) => <button className={taskStatus === value ? "active" : ""} type="button" key={label} onClick={() => { location.update({ review_status: value || "all", review_page: 1 }); setSelected(null); }}>{label}</button>)}
+            {[["pending", "待核对"], ["needs_changes", "待修改"], ["confirmed", "已确认"], ["rejected", "不采用"], ["", "全部"]].map(([value, label]) => <button className={taskStatus === value ? "active" : ""} type="button" key={label} onClick={() => { if(!canLeaveReview())return;location.update({ review_status: value || "all", review_page: 1 }); setSelected(null); }}>{label}</button>)}
           </nav>
           <form className="theory-review-filter" onSubmit={(event) => { event.preventDefault(); location.update({ review_q: taskQuery.trim(), review_page: 1 }); }}><Search size={15} /><input aria-label="搜索待核对建议" value={taskQuery} onChange={(event) => setTaskQuery(event.target.value)} placeholder="搜索文献、理论或原文…" /><button type="submit">搜索建议</button></form>
           <ErrorNotice message={tasks.error} retry={tasks.refresh} />
@@ -1310,7 +1298,9 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
           <EditorListPages data={tasks.data} page={taskPage} pageKey="review_page" label="建议列表分页" ordering="按提交时间从新到旧" busy={tasks.loading} href={location.href} />
         </section>
 
-        <aside className="admin-panel theory-review-editor">
+        {!canReview?<p>当前账户没有候选决策权限，可查看原材料与审核状态。</p>:null}
+        {selected&&!["new_node","work_node"].includes(selected.task_type)?<p>此候选须在对应关系或时间线编辑器中核对，不能直接确认为文献关系。</p>:null}
+        <aside className="admin-panel theory-review-editor" inert={!canReview||!reviewCommand.ready||reviewConflict}>
           {selected ? <>
             <header><div><p>当前审核项</p><h2>{selected.work_title || selected.suggested_node_name}</h2><span>{selected.status === "needs_changes" ? "请修改后确认" : "请核对原文与关系"} · {selected.evidence_pages.length ? `第 ${selected.evidence_pages.join("–")} 页` : "暂无页码"}</span></div>{selected.viewer_href ? <Link href={selected.viewer_href} target="_blank">查看 PDF <ExternalLink size={14} /></Link> : null}</header>
             {selected.task_type === "new_node" ? <section className="theory-new-node-notice"><strong>建议新增知识理论或概念</strong><p>系统在多个 PDF 页面发现“{selected.suggested_node_name}”。请先判断它是新理论或概念，还是已有理论或概念的别名。创建后仍需在理论或概念管理中完善和发布。</p></section> : null}
@@ -1319,8 +1309,8 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
             <label><span>建议关系类型</span><select value={relationRole} onChange={(event) => setRelationRole(event.target.value)}>{workRelationOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
             <section className="theory-evidence-card"><header><strong>原文片段</strong><span>{selected.file ? "PDF/OCR 证据" : "系统建议"}</span></header><blockquote>{selected.evidence_text || "这条建议尚未附带原文，不应直接确认。"}</blockquote><footer>{selected.evidence_pages.length ? `页码 ${selected.evidence_pages.join("–")}` : "页码待补充"}</footer></section>
             <label><span>审核备注</span><textarea rows={4} value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} placeholder="记录修改理由或参考资料" /></label>
-            {selected.task_type === "new_node" ? <div className="theory-review-primary-actions"><ActionButton className="button" type="button" state={pendingAction?.endsWith(":create_node") ? "pending" : "idle"} pendingLabel="正在创建" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":create_node")} onClick={() => void review("create_node")}><Plus size={15} />创建草稿理论或概念</ActionButton><ActionButton disabled={!candidateNode || (Boolean(pendingAction) && !pendingAction?.endsWith(":alias_existing"))} state={pendingAction?.endsWith(":alias_existing") ? "pending" : "idle"} pendingLabel="正在归并" type="button" onClick={() => void review("alias_existing")}>作为已有理论或概念别名</ActionButton><ActionButton type="button" state={pendingAction?.endsWith(":reject") ? "pending" : "idle"} pendingLabel="正在拒绝" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":reject")} onClick={() => void review("reject")}>拒绝</ActionButton></div> : <div className="theory-review-primary-actions"><ActionButton className="button" disabled={!candidateNode || Boolean(pendingAction)} state={pendingAction?.endsWith(":confirm") || pendingAction?.endsWith(":modify_confirm") ? "pending" : "idle"} pendingLabel="正在确认" type="button" onClick={() => void review(selected.candidate_node === candidateNode && selected.suggested_relation_type === relationRole ? "confirm" : "modify_confirm")}><Check size={15} />确认</ActionButton><ActionButton type="button" state={pendingAction?.endsWith(":needs_changes") ? "pending" : "idle"} pendingLabel="正在退回" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":needs_changes")} onClick={() => void review("needs_changes")}>退回修改</ActionButton><ActionButton type="button" state={pendingAction?.endsWith(":reject") ? "pending" : "idle"} pendingLabel="正在拒绝" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":reject")} onClick={() => void review("reject")}>拒绝</ActionButton></div>}
-            <div className="theory-review-secondary-actions"><ActionButton type="button" state={pendingAction?.endsWith(":defer") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":defer")} onClick={() => void review("defer")}>延后处理</ActionButton><ActionButton type="button" state={pendingAction?.endsWith(":insufficient") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":insufficient")} onClick={() => void review("insufficient")}>证据不足</ActionButton><ActionButton className="danger-link" type="button" state={pendingAction === `delete-review-task:${selected.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-review-task:${selected.id}`} onClick={() => void removeReviewTask()}><Trash2 size={13} />删除候选</ActionButton></div>
+            {selected.task_type === "new_node" ? <div className="theory-review-primary-actions"><ActionButton className="button" type="button" state={pendingAction?.endsWith(":create_node") ? "pending" : "idle"} pendingLabel="正在创建" disabled={!canCreate||["confirmed","rejected"].includes(selected.status)||Boolean(pendingAction)} onClick={() => void review("create_node")}><Plus size={15} />创建草稿理论或概念</ActionButton><ActionButton disabled={["confirmed","rejected"].includes(selected.status)||!candidateNode||Boolean(pendingAction)} state={pendingAction?.endsWith(":alias_existing") ? "pending" : "idle"} pendingLabel="正在归并" type="button" onClick={() => void review("alias_existing")}>作为已有理论或概念别名</ActionButton><ActionButton type="button" state={pendingAction?.endsWith(":reject") ? "pending" : "idle"} pendingLabel="正在拒绝" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":reject")} onClick={() => void review("reject")}>拒绝</ActionButton></div> : <div className="theory-review-primary-actions"><ActionButton className="button" disabled={selected.task_type!=="work_node"||!candidateNode || Boolean(pendingAction)} state={pendingAction?.endsWith(":confirm") || pendingAction?.endsWith(":modify_confirm") ? "pending" : "idle"} pendingLabel="正在确认" type="button" onClick={() => void review(selected.candidate_node === candidateNode && selected.suggested_relation_type === relationRole ? "confirm" : "modify_confirm")}><Check size={15} />确认</ActionButton><ActionButton type="button" state={pendingAction?.endsWith(":needs_changes") ? "pending" : "idle"} pendingLabel="正在退回" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":needs_changes")} onClick={() => void review("needs_changes")}>退回修改</ActionButton><ActionButton type="button" state={pendingAction?.endsWith(":reject") ? "pending" : "idle"} pendingLabel="正在拒绝" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":reject")} onClick={() => void review("reject")}>拒绝</ActionButton></div>}
+            <div className="theory-review-secondary-actions"><ActionButton type="button" state={pendingAction?.endsWith(":defer") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":defer")} onClick={() => void review("defer")}>延后处理</ActionButton><ActionButton type="button" state={pendingAction?.endsWith(":insufficient") ? "pending" : "idle"} pendingLabel="处理中" disabled={Boolean(pendingAction) && !pendingAction?.endsWith(":insufficient")} onClick={() => void review("insufficient")}>证据不足</ActionButton><ActionButton className="danger-link" type="button" state={pendingAction === `review-task:${selected.id}:delete` ? "pending" : "idle"} pendingLabel="删除中" disabled={!canDeleteReview||Boolean(pendingAction)} onClick={() => void review("delete")}><Trash2 size={13} />删除候选</ActionButton></div>
           </> : <div className="theory-admin-empty"><BookOpen size={24} /><strong>选择一个审核项</strong><span>右侧会显示候选理论、原文内容和 PDF 页码。</span></div>}
           {!editingRelation && message ? <AsyncStatus state={messageState} message={message} /> : null}
         </aside>

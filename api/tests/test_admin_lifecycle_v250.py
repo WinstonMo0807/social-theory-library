@@ -405,11 +405,15 @@ def test_admin_can_delete_an_invalid_theory_review_candidate_with_audit(
     )
     api_client.force_authenticate(admin_user)
 
-    response = api_client.delete(
-        f"/api/catalog/admin/theory-system/review-tasks/{task.id}/"
+    from uuid import uuid4
+    from catalog.theory_review_commands import review_version
+    response = api_client.post(
+        f"/api/catalog/admin/theory-system/review-tasks/{task.id}/action/",
+        {"action":"delete", "edit_version":review_version(task)}, format="json",
+        HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()),
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200 and response.data["deleted"]
     assert not TheoryReviewTask.objects.filter(pk=task.id).exists()
     assert AuditEvent.objects.filter(
         action="theory_review_task_delete",

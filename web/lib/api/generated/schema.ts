@@ -2783,7 +2783,7 @@ export interface paths {
         };
         get: operations["catalog_admin_theory_system_review_tasks_list"];
         put?: never;
-        post: operations["catalog_admin_theory_system_review_tasks_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2798,12 +2798,44 @@ export interface paths {
             cookie?: never;
         };
         get: operations["catalog_admin_theory_system_review_tasks_retrieve"];
-        put: operations["catalog_admin_theory_system_review_tasks_update"];
+        put?: never;
         post?: never;
-        delete: operations["catalog_admin_theory_system_review_tasks_destroy"];
+        delete?: never;
         options?: never;
         head?: never;
-        patch: operations["catalog_admin_theory_system_review_tasks_partial_update"];
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/review-tasks/{id}/action/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_theory_system_review_tasks_action_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/review-tasks/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_review_tasks_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_theory_system_review_tasks_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/catalog/admin/theory-timeline/": {
@@ -14119,28 +14151,6 @@ export interface components {
         PatchedResearchPreferenceInputRequest: {
             research_personalization?: boolean;
         };
-        PatchedTheoryReviewTaskRequest: {
-            task_type?: components["schemas"]["TheoryReviewTaskTaskTypeEnum"];
-            /** Format: uuid */
-            work?: string | null;
-            /** Format: uuid */
-            file?: string | null;
-            /** Format: uuid */
-            candidate_node?: string | null;
-            suggested_node_name?: string;
-            suggested_relation_type?: string;
-            /** Format: double */
-            confidence?: number;
-            evidence_pages?: unknown;
-            evidence_text?: string;
-            status?: components["schemas"]["TheoryReviewTaskStatusEnum"];
-            assigned_to?: number | null;
-            /** Format: date-time */
-            submitted_at?: string | null;
-            /** Format: date-time */
-            reviewed_at?: string | null;
-            review_note?: string;
-        };
         PatchedWorkFileRightsInputRequest: {
             /** Format: uuid */
             request_key?: string;
@@ -19567,10 +19577,50 @@ export interface components {
             timeline_events: components["schemas"]["NormalizedTimelineEvent"][];
             work_relations: components["schemas"]["WorkNodeRelation"][];
         };
-        TheoryReviewTask: {
+        /**
+         * @description * `confirm` - confirm
+         *     * `modify_confirm` - modify_confirm
+         *     * `create_node` - create_node
+         *     * `alias_existing` - alias_existing
+         *     * `merge_existing` - merge_existing
+         *     * `reject` - reject
+         *     * `defer` - defer
+         *     * `insufficient` - insufficient
+         *     * `needs_changes` - needs_changes
+         *     * `delete` - delete
+         * @enum {string}
+         */
+        TheoryReviewInputActionEnum: "confirm" | "modify_confirm" | "create_node" | "alias_existing" | "merge_existing" | "reject" | "defer" | "insufficient" | "needs_changes" | "delete";
+        TheoryReviewInputRequest: {
+            action: components["schemas"]["TheoryReviewInputActionEnum"];
+            edit_version: string;
+            /** Format: uuid */
+            candidate_node?: string | null;
+            relation_type?: string;
+            review_note?: string;
+            canonical_name_zh?: string;
+            canonical_name_en?: string;
+            node_type?: string;
+            /** Format: uuid */
+            primary_discipline?: string | null;
+            assigned_to?: number;
+        };
+        TheoryReviewReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            task_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        TheoryReviewResult: {
             /** Format: uuid */
             readonly id: string;
-            task_type: components["schemas"]["TheoryReviewTaskTaskTypeEnum"];
+            task_type: components["schemas"]["TheoryReviewTaskTypeEnum"];
             /** Format: uuid */
             work?: string | null;
             readonly work_title: string;
@@ -19598,15 +19648,27 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+            readonly edit_version: string;
+            save_receipt: components["schemas"]["TheoryReviewReceipt"];
+            save_replayed?: boolean;
+            deleted?: boolean;
+            editorial_revision?: {
+                [key: string]: unknown;
+            };
         };
-        TheoryReviewTaskRequest: {
-            task_type: components["schemas"]["TheoryReviewTaskTaskTypeEnum"];
+        TheoryReviewTask: {
+            /** Format: uuid */
+            readonly id: string;
+            task_type: components["schemas"]["TheoryReviewTaskTypeEnum"];
             /** Format: uuid */
             work?: string | null;
+            readonly work_title: string;
             /** Format: uuid */
             file?: string | null;
+            readonly file_page_count: number;
             /** Format: uuid */
             candidate_node?: string | null;
+            readonly node_name: string;
             suggested_node_name?: string;
             suggested_relation_type?: string;
             /** Format: double */
@@ -19620,6 +19682,12 @@ export interface components {
             /** Format: date-time */
             reviewed_at?: string | null;
             review_note?: string;
+            readonly viewer_href: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly edit_version: string;
         };
         /**
          * @description * `pending` - 待审核
@@ -19638,7 +19706,7 @@ export interface components {
          *     * `timeline` - 时间轴事件
          * @enum {string}
          */
-        TheoryReviewTaskTaskTypeEnum: "work_node" | "node_relation" | "new_node" | "timeline";
+        TheoryReviewTaskTypeEnum: "work_node" | "node_relation" | "new_node" | "timeline";
         TheorySystemOverview: {
             disciplines: components["schemas"]["TheoryOverviewDiscipline"][];
             featured_nodes: components["schemas"]["KnowledgeNodeList"][];
@@ -27540,31 +27608,6 @@ export interface operations {
             };
         };
     };
-    catalog_admin_theory_system_review_tasks_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TheoryReviewTaskRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["TheoryReviewTaskRequest"];
-                "multipart/form-data": components["schemas"]["TheoryReviewTaskRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TheoryReviewTask"];
-                };
-            };
-        };
-    };
     catalog_admin_theory_system_review_tasks_retrieve: {
         parameters: {
             query?: never;
@@ -27586,7 +27629,7 @@ export interface operations {
             };
         };
     };
-    catalog_admin_theory_system_review_tasks_update: {
+    catalog_admin_theory_system_review_tasks_action_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -27597,9 +27640,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TheoryReviewTaskRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["TheoryReviewTaskRequest"];
-                "multipart/form-data": components["schemas"]["TheoryReviewTaskRequest"];
+                "application/json": components["schemas"]["TheoryReviewInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TheoryReviewInputRequest"];
+                "multipart/form-data": components["schemas"]["TheoryReviewInputRequest"];
             };
         };
         responses: {
@@ -27608,45 +27651,46 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TheoryReviewTask"];
+                    "application/json": components["schemas"]["TheoryReviewResult"];
                 };
             };
         };
     };
-    catalog_admin_theory_system_review_tasks_destroy: {
+    catalog_admin_theory_system_review_tasks_commands_retrieve: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                request_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TheoryReviewReceipt"];
+                };
             };
         };
     };
-    catalog_admin_theory_system_review_tasks_partial_update: {
+    catalog_admin_theory_system_review_tasks_commands_create: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                request_id: string;
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["PatchedTheoryReviewTaskRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedTheoryReviewTaskRequest"];
-                "multipart/form-data": components["schemas"]["PatchedTheoryReviewTaskRequest"];
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
             };
         };
         responses: {
@@ -27655,7 +27699,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TheoryReviewTask"];
+                    "application/json": components["schemas"]["TheoryReviewReceipt"];
                 };
             };
         };
