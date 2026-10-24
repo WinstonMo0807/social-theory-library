@@ -202,5 +202,14 @@
 .richInput a { text-decoration:underline; text-decoration-color:var(--gold); text-underline-offset:3px; cursor:text; }
 .richInput strong,.richInput b { font-weight:700; }
 .richInput em,.richInput i { font-style:italic; }
+.richInput blockquote { margin:0; padding:0 0 0 14px; border-left:2px solid var(--annotation,var(--gold)); }
+.richInput u { text-underline-offset:3px; }
+.compactText { --gold:var(--annotation,#ad8344); margin:0; }
+.compactText .textToolbar { flex-wrap:nowrap; overflow-x:auto; gap:2px; padding:4px 8px; scrollbar-width:thin; }
+.compactText .textToolbar>button { background:transparent; border:1px solid transparent; border-radius:2px; color:var(--ink); flex-shrink:0; }
+.compactText .textToolbar>button[aria-pressed=true] { background:var(--paper); border-color:var(--annotation); }
+.compactText .textToolbar>label { margin:0 6px 0 0; display:block; flex-shrink:0; }
+.compactText .textToolbar select { width:auto; border:0; background:transparent; padding:4px; color:var(--muted); font-size:12px; }
+.compactText>small { text-align:right; }
 
 @media(max-width:760px){.editor :is(input,textarea,select),.richInput,.dialog :is(input,textarea,select){font-size:16px}.textToolbar{flex-wrap:wrap;row-gap:5px}.textToolbar button,.textToolbar select{min-height:36px}.blockLabel{min-width:0}.blockLabel span{overflow:hidden;text-overflow:ellipsis}.dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}.sourceSearch button{min-height:40px}}

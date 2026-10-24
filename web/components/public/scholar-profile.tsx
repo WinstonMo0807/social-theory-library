@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { IssueProse } from "./issue-prose";
+import { scholarProseBlock } from "@/lib/api/scholar-prose";
 import { useEffect, useState } from "react";
 import { ArrowRight, ExternalLink, Network, Search } from "lucide-react";
 import { subscribeToSessionChanges } from "@/lib/api";
@@ -18,7 +20,7 @@ export function ScholarProfile({ data, preview = false, initialSection = "overvi
     <nav className={styles.breadcrumbs} aria-label="面包屑"><Link prefetch={false} href="/">首页</Link><span>›</span><Link prefetch={false} href="/scholars">学者</Link><span>›</span><span>{data.person.preferred_name}</span></nav>
     <header className={styles.profileHero} data-module-id="scholar-identity" data-edit-section="identity"><div className={styles.profilePortrait}><ScholarImage scholar={data} eager placement="detail" /></div><div className={styles.profileCopy}>
       <h1>{data.person.preferred_name}</h1><p className={styles.identityLine}>{data.person.original_name ? <span>{data.person.original_name}</span> : null}<span>{scholarYears(data.person)}</span></p>{data.nationalities.length || data.occupations.length ? <p className={styles.identityDescription}>{[...data.nationalities, ...data.occupations].join(" · ")}</p> : null}
-      {data.short_description ? <p className={styles.profileDescription}>{data.short_description}</p> : <p className={styles.profileDescription}>此学者的简介仍待补充，可从已收录的作品、问题与来源展开研究。</p>}
+      {data.short_description ? <div className={styles.profileDescription}><IssueProse block={scholarProseBlock(data.short_description,data.profile_prose?.short_description)}/></div> : <p className={styles.profileDescription}>此学者的简介仍待补充，可从已收录的作品、问题与来源展开研究。</p>}
       {data.profile_state === "sparse" ? <span className={styles.sparseBadge}>资料仍待补充</span> : null}
       {data.sources.results.length ? <p className={styles.profileSources} data-edit-section="sources">资料来源：{data.sources.results.slice(0, 3).map((source, index) => <span key={source.id}>{index ? "、" : ""}{source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a> : source.title}</span>)}<Link prefetch={false} href={scholarSectionHref(data.slug, "sources")}>查看全部（{data.sources.count}）</Link></p> : null}
       {data.person.aliases.length ? <details className={styles.aliases}><summary>已确认的异名与译名（{data.person.aliases.length}）</summary><p>{data.person.aliases.join("、")}</p></details> : null}

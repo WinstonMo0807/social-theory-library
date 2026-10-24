@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
 
-type Pending = { id: string; path: string; body: string; headers: Record<string, string>; method: string };
+type Pending = { id: string; path: string; body: string; headers: Record<string, string>; method: string; uncertain?: boolean };
 type Receipt<K extends "scholar" | "topic" | "timeline" | "path"> = { actor_id: string; request_id: string; saved_version: string; exists: boolean; state:"applied"|"cancelled" } & Record<`${K}_id`,string|null>;
 const key = (actor: string, kind: string) => `stl-${kind}-save:${actor}`;
 
@@ -36,9 +36,10 @@ export function useScholarSave<K extends "scholar" | "topic" | "timeline" | "pat
       if (result.save_receipt?.actor_id !== actor || result.save_receipt.request_id !== original.id) throw Error("回执与原请求不匹配，请核对记录。");
       sessionStorage.removeItem(key(actor,kind)); pending.current = null; setRecovery(""); setCanRetry(false); setError(""); return result;
     } catch (reason) {
-      if (reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400, 401, 403, 404, 409, 428].includes(reason.status)) {
+      // A later rejection does not prove an earlier timed-out write rolled back.
+      if (!original.uncertain && reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400, 422].includes(reason.status)) {
         sessionStorage.removeItem(key(actor,kind)); pending.current = null; if (!request.signal.aborted) { setRecovery(""); setCanRetry(false); }
-      }
+      } else original.uncertain = true;
       throw reason;
     } finally { acting.current = false; }
   }

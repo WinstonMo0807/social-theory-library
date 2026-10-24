@@ -13,8 +13,8 @@ export function scholarEditorSection(section: string) {
   if (["biography", "sources", "media"].includes(section) || section.startsWith("identity")) return "identity";
   return section;
 }
-export function ScholarEditorFrame({ form, groups, active, changeSection, dirty, disabled, locked, saved, portrait, publication, preview, previewError, rail, extra, canonical }: {
-  form: ReactElement<{ children: ReactNode }>; groups: Group[]; active: string; changeSection: (id: string) => void;
+export function ScholarEditorFrame({ composing=false, form, groups, active, changeSection, dirty, disabled, locked, saved, portrait, publication, preview, previewError, rail, extra, canonical }: {
+  composing?: boolean; form: ReactElement<{ children: ReactNode }>; groups: Group[]; active: string; changeSection: (id: string) => void;
   dirty: boolean; disabled: boolean; locked: boolean; saved?: object | null; portrait?: ReactNode; publication: ReactNode;
   preview: ReactNode; previewError?: ReactNode; rail: ReactNode; extra?: ReactNode; canonical?: ReactNode;
 }) {
@@ -42,7 +42,7 @@ export function ScholarEditorFrame({ form, groups, active, changeSection, dirty,
     <details className={styles.support} hidden={active !== "identity"}><summary>候选资料与编辑辅助</summary>{groups.filter(group => group.section === "assistance").map((group, index) => <div key={index}>{group.node}</div>)}</details>
   </fieldset>);
   return <section className={styles.editor} data-section={active} aria-label="学者公开页编辑">
-    <header className={styles.header}><div><p><span className={styles.status}>{saved ? status : "尚未建立草稿"}</span></p>{record.updated_at ? <p>上次保存 · {new Date(record.updated_at).toLocaleString("zh-CN")}</p> : null}</div><div className={styles.actions}><button type="submit" form={formId} disabled={disabled || locked}>保存草稿</button><button type="button" onClick={() => changeSection("preview")}>预览</button><button type="button" className={styles.primary} onClick={() => changeSection("publication")}>发布</button></div></header>
+    <header className={styles.header}><div><p><span className={styles.status}>{saved ? status : "尚未建立草稿"}</span></p>{record.updated_at ? <p>上次保存 · {new Date(record.updated_at).toLocaleString("zh-CN")}</p> : null}</div><div className={styles.actions}><button type="submit" form={formId} disabled={disabled || locked || composing}>保存草稿</button><button type="button" disabled={composing} onClick={() => changeSection("preview")}>预览</button><button type="button" className={styles.primary} onClick={() => changeSection("publication")}>发布</button></div></header>
     <nav className={styles.tabs} aria-label="学者编辑栏目">{tabs.map(tab => <button type="button" key={tab.id} aria-current={active === tab.id ? "page" : undefined} onClick={() => changeSection(tab.id)}>{tab.label}</button>)}<label><span>更多</span><select value={tabs.some(tab => tab.id === active) ? "" : active} onChange={event => { if (event.target.value) changeSection(event.target.value); }}><option value="">编辑工具</option>{scholarEditorSections.slice(tabs.length).map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}</select></label></nav>
     {groups.filter(group => group.persistent || group.section === "feedback").filter(group => !(isValidElement<{type?:string}>(group.node) && group.node.props.type === "submit")).map((group, index) => <div key={index}>{group.node}</div>)}
     <div className={styles.layout}><div className={styles.main} hidden={["preview", "passages", "versions"].includes(active)}>{active !== "identity" && active !== "works" && title ? <h2>{title}</h2> : null}{editForm}</div>

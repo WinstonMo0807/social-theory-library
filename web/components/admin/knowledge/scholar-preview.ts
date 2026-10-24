@@ -1,5 +1,7 @@
 import type { PublicScholarDetail, ScholarPage, ScholarProfileSource } from "@/lib/api/scholars.types";
 
+import { scholarProseValue, type ScholarProse } from "@/lib/api/scholar-prose";
+
 type Row = Record<string, unknown>;
 const text = (value: unknown) => typeof value === "string" ? value : "";
 const strings = (value: unknown): string[] => Array.isArray(value) ? value.filter((row): row is string => typeof row === "string").map(row => row.trim()).filter(Boolean) : typeof value === "string" ? value.split(/\r?\n/).map(row => row.trim()).filter(Boolean) : [];
@@ -18,11 +20,13 @@ export function projectScholar(base: Row, draft: Row): PublicScholarDetail {
   // The selections are resolved by the protected preview endpoint, across all pages.
   const paths = saved.paths || emptyPage<PublicScholarDetail["paths"]["results"][number]>();
   const quote = saved.featured_quote;
+  const prose = (draft.prose || {}) as ScholarProse;
   const reasons = (draft.workRecommendations || {}) as Record<string, string>;
   const curated = new Set([...strings(draft.essentialWorkIds), ...strings(draft.recommendedWorkIds)]);
   const withReason = (row: PublicScholarDetail["works"]["results"][number]) => ({...row, recommendation_reason: curated.has(row.id) ? reasons[row.id] || "" : ""});
   return {
     id: text(draft.id) || saved.id || "preview", person_id: text(draft.personId) || saved.person_id || "",
+    profile_prose: {short_description: scholarProseValue(text(draft.description),prose.short_description), biography: scholarProseValue(text(draft.biography),prose.biography)},
     slug: text(draft.slug), href: "", short_description: text(draft.description),
     person: { id: text(draft.personId) || person?.id || "", preferred_name: text(draft.name), original_name: text(draft.originalName),
       aliases: strings(draft.aliases), birth_year: draft.birthYear ? Number(draft.birthYear) : null, death_year: draft.deathYear ? Number(draft.deathYear) : null,

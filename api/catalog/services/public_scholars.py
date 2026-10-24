@@ -563,6 +563,8 @@ def public_scholar_detail(slug, params=None, *, request=None, preview_profile=No
     direction = _choice(params, "relation_direction", ("all", "incoming", "outgoing"), "all")
     access, candidates = _candidate_relations(profile, params, request)
     result = _cards([profile])[0]
+    from catalog.services.scholar_prose import bound_profile_prose
+    result["profile_prose"] = bound_profile_prose(profile.curation, profile.short_description, profile.person.biography)
     path = f"/api/catalog/scholars/{profile.slug}/"
     editions = scholar_editions(profile.person_id)
     curation = profile.curation if isinstance(profile.curation, dict) else {}
@@ -621,6 +623,9 @@ def validate_scholar_curation(value, profile=None):
     if not isinstance(value, dict):
         raise ValidationError({"curation": "策划内容须为对象。"})
     result = deepcopy(value)
+    if "profile_prose" in result:
+        from catalog.services.scholar_prose import normalize_profile_prose
+        result["profile_prose"] = normalize_profile_prose(result["profile_prose"])
     for key, limit in (("essential_work_ids", 100), ("recommended_work_ids", 24)):
         if key not in result:
             continue

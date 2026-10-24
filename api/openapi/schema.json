@@ -42208,10 +42208,11 @@
                 "enum": [
                     "strong",
                     "em",
+                    "underline",
                     "link"
                 ],
                 "type": "string",
-                "description": "* `strong` - strong\n* `em` - em\n* `link` - link"
+                "description": "* `strong` - strong\n* `em` - em\n* `underline` - underline\n* `link` - link"
             },
             "IssueTextMarkRequest": {
                 "type": "object",
@@ -70637,10 +70638,11 @@
                 "enum": [
                     "paragraph",
                     "ordered",
-                    "unordered"
+                    "unordered",
+                    "quote"
                 ],
                 "type": "string",
-                "description": "* `paragraph` - paragraph\n* `ordered` - ordered\n* `unordered` - unordered"
+                "description": "* `paragraph` - paragraph\n* `ordered` - ordered\n* `unordered` - unordered\n* `quote` - quote"
             },
             "TheoryBrowseCounts": {
                 "type": "object",

@@ -209,7 +209,20 @@ class ScholarDetailFacetsSerializer(serializers.Serializer):
     relation_types = ScholarFacetSerializer(many=True)
 
 
+class ScholarProseSerializer(serializers.Serializer):
+    from catalog.editorial_issue_serializers import IssueTextMarkSerializer
+    text = serializers.CharField(allow_blank=True)
+    text_style = serializers.ChoiceField(choices=["paragraph", "ordered", "unordered", "quote"])
+    text_marks = IssueTextMarkSerializer(many=True)
+
+
+class ScholarProfileProseSerializer(serializers.Serializer):
+    short_description = ScholarProseSerializer(required=False)
+    biography = ScholarProseSerializer(required=False)
+
+
 class PublicScholarDetailSerializer(PublicScholarCardSerializer):
+    profile_prose = ScholarProfileProseSerializer(required=False)
     public_revision = ScholarRevisionSerializer()
     period_notice = serializers.CharField()
     graph_href = serializers.CharField()

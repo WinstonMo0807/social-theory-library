@@ -4,13 +4,13 @@ import type { PublicScholarCard } from "./scholars.types";
 
 export type IssueSourceReference = { type: "work" | "edition" | "span" | "node" | "person" | "timeline" | "reading_path"; id: string; edition_id?: string; document_revision_id?: string };
 export type IssueResolvedSource = IssueSourceReference & { title: string; text?: string; reader_url?: string; work_url?: string; printed_label?: string; page_start?: number; source_type?: string; asset_id?: string; work_id?: string; href?: string; summary?: string; edition_label?: string; public_eligible?: boolean; edit_url?: string; image_url?:string;authors?:string[];publication_year?:number|null;publisher?:string;section?:string };
-export type IssueTextMark = {start:number;end:number;kind:"strong"|"em"|"link";href?:string};
+export type IssueTextMark = {start:number;end:number;kind:"strong"|"em"|"underline"|"link";href?:string};
 export type IssueBlock = {
   id?: string;
   type: "paragraph" | "heading" | "quote" | "link" | "image" | "evidence" | "work" | "person" | "concept" | "node" | "timeline" | "reading_path" | "analysis" | "comparison";
   image_rendition_id?: string | null; image_url?: string; alt_text?: string;
   text: string; url?: string; source?: string; target?: IssueSourceReference; references?: IssueSourceReference[];
-  text_style?: "paragraph"|"ordered"|"unordered"; text_marks?:IssueTextMark[];
+  text_style?: "paragraph"|"ordered"|"unordered"|"quote"; text_marks?:IssueTextMark[];
   heading_level?:1|2|3;
   style?: "paragraph" | "heading"; source_status?: "available" | "unavailable"; resolved_sources?: IssueResolvedSource[];
   dimensions?: string[]; rows?: Array<{ person_id: string; cells: Array<{ dimension: string; text: string; evidence: IssueSourceReference[]; missing: boolean }> }>;

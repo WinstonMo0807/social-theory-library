@@ -1,5 +1,7 @@
 "use client";
 
+import { ScholarProseEditor } from "./admin/knowledge/scholar-prose-editor";
+import { scholarProseValue, type ScholarProse } from "@/lib/api/scholar-prose";
 import { ExistingScholarStart } from "./admin/knowledge/existing-scholar-start";
 import { useScholarSave } from "./admin/knowledge/use-scholar-save";
 import { ScholarWorkEditor } from "./admin/knowledge/scholar-work-editor";
@@ -831,6 +833,7 @@ type AdminScholar = {
 };
 
 type ScholarDraft = ScholarProfileFields & {
+  prose: ScholarProse;
   id: string | null;
   edit_version?: string;
   personId: string | null;
@@ -862,6 +865,7 @@ type ScholarDraft = ScholarProfileFields & {
 };
 
 const emptyScholar: ScholarDraft = {
+  prose: {},
   profileSources: [], nationalities: [], occupations: [], featuredSourceId: "", readingPathIds: [],
   id: null,
   personId: null,
@@ -901,6 +905,7 @@ export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
 function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: string }) {
   const editor = useAdminSession(), canEdit = hasAdminCapability(editor, "can_edit_draft_authority") && (scholarId !== "new" || hasAdminCapability(editor, "can_create_authority"));
   const command = useScholarSave(owner);
+  const composing = useRef(false);
   const paging = useAdminListPage();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -955,6 +960,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
       id: scholar.id,
       edit_version: scholar.edit_version,
       personId: scholar.person_id,
+      prose: {short_description: scholarProseValue(scholar.short_description, (curation.profile_prose as ScholarProse | undefined)?.short_description), biography: scholarProseValue(scholar.biography, (curation.profile_prose as ScholarProse | undefined)?.biography)},
       profileSources: (Array.isArray(curation.profile_sources) ? curation.profile_sources : []) as ScholarProfileFields["profileSources"],
       nationalities: stringArray(curation.nationalities), occupations: stringArray(curation.occupations),
       featuredSourceId: String(curation.featured_source_id || ""), readingPathIds: stringArray(curation.reading_path_ids),
@@ -1016,7 +1022,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
   async function save(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
     const token = getServerSessionCredential();
-    if (!canEdit || !token || savingRef.current || (editorOnly && scholarId !== "new" && draft.id !== scholarId)) return false;
+    if (composing.current || !canEdit || !token || savingRef.current || (editorOnly && scholarId !== "new" && draft.id !== scholarId)) return false;
     savingRef.current = true;
     setSaving(true);
     setEditConflict(false);
@@ -1024,6 +1030,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
     const curation = {
       // Suggestions only persist together with this explicit form save.
       ...draft.baseCuration,
+      profile_prose: {short_description:scholarProseValue(draft.description,draft.prose.short_description), ...(draft.biography.length<=30000?{biography:scholarProseValue(draft.biography,draft.prose.biography)}:{})},
       profile_sources: draft.profileSources, nationalities: draft.nationalities.map(s=>s.trim()).filter(Boolean), occupations: draft.occupations.map(s=>s.trim()).filter(Boolean),
       featured_source_id: draft.featuredSourceId || null, reading_path_ids: draft.readingPathIds,
       essential_work_ids: draft.essentialWorkIds, recommended_work_ids: draft.recommendedWorkIds,
@@ -1145,7 +1152,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
         </section> : null}
         {command.recovery ? <aside className="form-message" role="status"><p>有一次保存需要核对。表单正文只在当前页面内存中，刷新后只读取回执，不重复创建。</p><button type="button" disabled={saving} onClick={() => void command.lookup().then(receipt => { if (receipt?.exists) { unsaved.current = false; setHasUnsaved(false); detail.refresh(); router.replace(`/admin/scholars/${receipt.scholar_id}`); } else if (receipt) setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但学者后来已删除；未重复创建。"); })}>读取原保存回执</button>{command.canRetry ? <button type="button" disabled={saving} onClick={() => void save(undefined, true)}>按原请求重试保存</button> : null}<button type="button" disabled={saving} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/scholars/${receipt.scholar_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原学者后来已删除，未重复创建。");});}}>停止未确认保存</button></aside> : null}{command.error ? <p role="alert">{command.error}</p> : null}
 
-        {editorOnly ? <KnowledgeVisualEditor portrait={draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => { setPortraitRevision(value => value + 1); detail.refresh(); }} /> : null} objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
+        {editorOnly ? <KnowledgeVisualEditor portrait={draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => { setPortraitRevision(value => value + 1); detail.refresh(); }} /> : null} objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onCompositionStartCapture={()=>{composing.current=true;}} onCompositionEndCapture={()=>{composing.current=false;}} onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
 
                     <fieldset disabled={!canEdit || saving || !command.ready || Boolean(command.recovery)} style={{ display: "contents" }}>
           <EditorialPrefillNotice state={prefills} />
@@ -1170,8 +1177,8 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
           <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
 
           <div data-editor-section="identity-years" className="scholar-years"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
-          <label data-editor-section="biography"><h2>二、导读</h2><span>页面简介</span><textarea aria-label="页面简介" aria-describedby="scholar-description-help" rows={3} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /><small id="scholar-description-help">用于学者列表和学者页首屏，建议用一段话概括研究位置。</small></label>
-          <label data-editor-section="biography"><h2>三、生平说明</h2><span>完整传记</span><textarea rows={7} value={draft.biography} onChange={(event) => setDraft({ ...draft, biography: event.target.value })} /><small>用于人物简介与资料来源栏目。正式事件在时间线中绑定学者与准确来源，并单独发布。</small></label>
+          <section data-editor-section="biography"><h2>二、导读</h2><ScholarProseEditor label="导读" value={draft.description} format={draft.prose.short_description} recommendedLength={300} maxLength={400} disabled={!canEdit||saving||!command.ready||Boolean(command.recovery)} onChange={(text,format)=>setDraft(current=>({...current,description:text,prose:{...current.prose,short_description:format}}))}/></section>
+          <section data-editor-section="biography"><h2>三、生平说明</h2><ScholarProseEditor label="生平说明" value={draft.biography} format={draft.prose.biography} recommendedLength={1000} maxLength={30000} disabled={!canEdit||saving||!command.ready||Boolean(command.recovery)} onChange={(text,format)=>setDraft(current=>({...current,biography:text,prose:{...current.prose,biography:format}}))}/><small>正式生平事件在时间线中绑定来源，并单独发布。</small></section>
           <section data-editor-section="assistance"><CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="译名或别名"
             targetType="person"

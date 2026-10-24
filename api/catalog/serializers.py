@@ -3350,6 +3350,15 @@ class AdminScholarSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("已有学者不能通过保存更换人物身份，请使用原身份核对流程。")
         return value
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if "curation" in attrs and "profile_prose" in attrs["curation"]:
+            from catalog.services.scholar_prose import bound_profile_prose
+            description = attrs.get("short_description", self.instance.short_description if self.instance else "")
+            biography = attrs.get("person", {}).get("biography", self.instance.person.biography if self.instance else "")
+            attrs["curation"]["profile_prose"] = bound_profile_prose(attrs["curation"], description, biography)
+        return attrs
+
     def validate_birth_year(self, value):
         from catalog.models import validate_person_year
         validate_person_year(value)

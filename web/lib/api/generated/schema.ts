@@ -10162,10 +10162,11 @@ export interface components {
         /**
          * @description * `strong` - strong
          *     * `em` - em
+         *     * `underline` - underline
          *     * `link` - link
          * @enum {string}
          */
-        IssueTextMarkKindEnum: "strong" | "em" | "link";
+        IssueTextMarkKindEnum: "strong" | "em" | "underline" | "link";
         IssueTextMarkRequest: {
             start: number;
             end: number;
@@ -18619,9 +18620,10 @@ export interface components {
          * @description * `paragraph` - paragraph
          *     * `ordered` - ordered
          *     * `unordered` - unordered
+         *     * `quote` - quote
          * @enum {string}
          */
-        TextStyleEnum: "paragraph" | "ordered" | "unordered";
+        TextStyleEnum: "paragraph" | "ordered" | "unordered" | "quote";
         TheoryBrowseCounts: {
             theory_traditions: number;
             subdisciplines: number;

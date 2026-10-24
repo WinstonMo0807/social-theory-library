@@ -15,12 +15,14 @@ export function IssueInline({block,from=0,to=block.text.length}:{block:IssueBloc
     let text:ReactNode=block.text.slice(start,end);
     if(active.some(mark=>mark.kind==="strong"))text=<strong>{text}</strong>;
     if(active.some(mark=>mark.kind==="em"))text=<em>{text}</em>;
+    if(active.some(mark=>mark.kind==="underline"))text=<u>{text}</u>;
     const link=block.type!=="link"?active.find(mark=>mark.kind==="link"&&safeEditorialLink(mark.href || "")):undefined;
     if(link)text=<a href={link.href} rel="noopener noreferrer">{text}</a>;
     return <Fragment key={start}>{text}</Fragment>;
   })}</>;
 }
 export function IssueProse({block}:{block:IssueBlock}) {
+  if(block.text_style==="quote") return <blockquote style={{whiteSpace:"pre-wrap"}}><IssueInline block={block}/></blockquote>;
   if(block.text_style==="ordered" || block.text_style==="unordered") {
     const Tag=block.text_style==="ordered"?"ol":"ul",lines=[];let offset=0;
     for(const line of block.text.split("\n")){lines.push({line,from:offset});offset+=line.length+1;}

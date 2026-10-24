@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { Bold, Italic, Link2, List, ListOrdered, X } from "lucide-react";
+import { Bold, Italic, Underline, Quote, Link2, List, ListOrdered, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { safeEditorialLink } from "@/components/public/issue-prose";
 import type { IssueBlock, IssueTextMark } from "@/lib/api/recommendation-issues.types";
@@ -10,7 +10,7 @@ import styles from "./issue-editor.module.css";
 type TextValue={text:string;text_marks:IssueTextMark[];text_style:NonNullable<IssueBlock["text_style"]>};
 type Selection={start:number;end:number};
 type Step={value:TextValue;selection:Selection};
-const blockTags=new Set(["DIV","P","LI","UL","OL"]);
+const blockTags=new Set(["DIV","P","LI","UL","OL","BLOCKQUOTE"]);
 function orderedMarks(values:IssueTextMark[]) {
   const result:IssueTextMark[]=[];
   for(const value of [...values].sort((a,b)=>a.kind.localeCompare(b.kind)||(a.href||"").localeCompare(b.href||"")||a.start-b.start||a.end-b.end)) {
@@ -35,6 +35,7 @@ function inspect(root:HTMLElement) {
     const next=active.filter(mark=>!(mark.kind==="strong"&&(weight==="normal"||Number.parseInt(weight)<600))&&!(mark.kind==="em"&&node.style.fontStyle==="normal"));
     if(["B","STRONG"].includes(node.tagName)||["bold","bolder"].includes(weight)||Number.parseInt(weight)>=600)next.push({kind:"strong"});
     if(["I","EM"].includes(node.tagName)||node.style.fontStyle==="italic")next.push({kind:"em"});
+    if(node.tagName==="U"||node.style.textDecorationLine.includes("underline")||node.style.textDecoration.includes("underline"))next.push({kind:"underline"});
     if(node.tagName==="A"&&safeEditorialLink(node.getAttribute("href")||""))next.push({kind:"link",href:node.getAttribute("href")!});
     const children=[...node.childNodes],boundaries:number[]=[];
     for(const [index,child] of children.entries()){
@@ -46,7 +47,7 @@ function inspect(root:HTMLElement) {
   }
   walk(root,[]);
   const first=root.firstElementChild,onlyList=first&&["UL","OL"].includes(first.tagName)&&[...root.childNodes].every(node=>node===first||!node.textContent?.trim());
-  const value:TextValue={text,text_marks:orderedMarks(marks),text_style:onlyList?(first.tagName==="OL"?"ordered":"unordered"):"paragraph"};
+  const value:TextValue={text,text_marks:orderedMarks(marks),text_style:onlyList?(first.tagName==="OL"?"ordered":"unordered"):first?.tagName==="BLOCKQUOTE"&&root.childNodes.length===1?"quote":"paragraph"};
   function offset(node:Node,position:number){const values=positions.get(node);return values?node.nodeType===Node.TEXT_NODE?values[0]+Math.min(position,node.textContent?.length||0):values[Math.min(position,values.length-1)]:0;}
   function selection():Selection|null{const range=window.getSelection()?.rangeCount?window.getSelection()!.getRangeAt(0):null;return range&&root.contains(range.startContainer)&&root.contains(range.endContainer)?{start:offset(range.startContainer,range.startOffset),end:offset(range.endContainer,range.endOffset)}:null;}
   function select(selected:Selection){
@@ -62,22 +63,23 @@ function renderText(root:HTMLElement,value:TextValue) {
     const marks=value.text_marks.filter(mark=>mark.end>from&&mark.start<to),points=[...new Set([from,to,...marks.flatMap(mark=>[Math.max(from,mark.start),Math.min(to,mark.end)])])].sort((a,b)=>a-b);
     for(let index=0;index<points.length-1;index++){
       const start=points[index],end=points[index+1],active=marks.filter(mark=>mark.start<=start&&mark.end>=end);let node:Node=document.createTextNode(value.text.slice(start,end));
-      for(const kind of ["strong","em","link"] as const){const mark=active.find(row=>row.kind===kind);if(mark&&(kind!=="link"||safeEditorialLink(mark.href||""))){const element=document.createElement(kind==="link"?"a":kind);if(kind==="link")element.setAttribute("href",mark.href!);element.appendChild(node);node=element;}}
+      for(const kind of ["strong","em","underline","link"] as const){const mark=active.find(row=>row.kind===kind);if(mark&&(kind!=="link"||safeEditorialLink(mark.href||""))){const element=document.createElement(kind==="link"?"a":kind==="underline"?"u":kind);if(kind==="link")element.setAttribute("href",mark.href!);element.appendChild(node);node=element;}}
       parent.appendChild(node);
     }
     if(from===to)parent.appendChild(document.createTextNode(""));
   }
   if(value.text_style==="paragraph")inline(fragment,0,value.text.length);
+  else if(value.text_style==="quote"){const quote=document.createElement("blockquote");inline(quote,0,value.text.length);fragment.appendChild(quote);}
   else {const list=document.createElement(value.text_style==="ordered"?"ol":"ul");let offset=0;for(const line of value.text.split("\n")){const item=document.createElement("li");inline(item,offset,offset+line.length);list.appendChild(item);offset+=line.length+1;}fragment.appendChild(list);}
   root.replaceChildren(fragment);
 }
 
-export function IssueTextEditor({block,label,disabled=false,onChange,onComposition,maxLength}:{block:IssueBlock;label:string;disabled?:boolean;onChange:(patch:Partial<IssueBlock>)=>void;onComposition?:(value:boolean)=>void;maxLength?:number}) {
+export function IssueTextEditor({block,label,disabled=false,onChange,onComposition,maxLength,compact=false,recommendedLength}:{block:IssueBlock;label:string;disabled?:boolean;onChange:(patch:Partial<IssueBlock>)=>void;onComposition?:(value:boolean)=>void;maxLength?:number;compact?:boolean;recommendedLength?:number}) {
   const id=useId(),area=useRef<HTMLDivElement>(null),selection=useRef<Selection>({start:0,end:0}),composing=useRef(false);
   const undo=useRef<Step[]>([]),redo=useRef<Step[]>([]),last=useRef<TextValue|null>(null),restoreSelection=useRef(false);
   const [ime,setIme]=useState(false);
   const formatDisabled=disabled||ime;
-  const [message,setMessage]=useState(""),[linkOpen,setLinkOpen]=useState(false),[href,setHref]=useState(""),[pressed,setPressed]=useState({strong:false,em:false});
+  const [message,setMessage]=useState(""),[linkOpen,setLinkOpen]=useState(false),[href,setHref]=useState(""),[pressed,setPressed]=useState({strong:false,em:false,underline:false});
   const [historySize,setHistorySize]=useState({undo:0,redo:0});
   const [redraw,setRedraw]=useState(0),painted=useRef(-1);
   const prose=!["heading","image","link"].includes(block.type)&&!(block.type==="analysis"&&block.style==="heading");
@@ -94,7 +96,7 @@ export function IssueTextEditor({block,label,disabled=false,onChange,onCompositi
     restoreSelection.current=false;
   },[block,redraw]);
   useEffect(()=>()=>onComposition?.(false),[onComposition]);
-  const remember=useCallback(()=>{const root=area.current;if(!root)return;const current=inspect(root),selected=current.selection();if(!selected)return;selection.current=selected;const next={strong:current.value.text_marks.some(row=>row.kind==="strong"&&row.start<=selected.start&&row.end>=selected.end),em:current.value.text_marks.some(row=>row.kind==="em"&&row.start<=selected.start&&row.end>=selected.end)};setPressed(previous=>previous.strong===next.strong&&previous.em===next.em?previous:next);},[]);
+  const remember=useCallback(()=>{const root=area.current;if(!root)return;const current=inspect(root),selected=current.selection();if(!selected)return;selection.current=selected;const next={underline:current.value.text_marks.some(row=>row.kind==="underline"&&row.start<=selected.start&&row.end>=selected.end),strong:current.value.text_marks.some(row=>row.kind==="strong"&&row.start<=selected.start&&row.end>=selected.end),em:current.value.text_marks.some(row=>row.kind==="em"&&row.start<=selected.start&&row.end>=selected.end)};setPressed(previous=>previous.strong===next.strong&&previous.em===next.em&&previous.underline===next.underline?previous:next);},[]);
   useEffect(()=>{document.addEventListener("selectionchange",remember);return()=>document.removeEventListener("selectionchange",remember);},[remember]);
   function publish(){
     if(!area.current||disabled||composing.current)return;
@@ -133,17 +135,18 @@ export function IssueTextEditor({block,label,disabled=false,onChange,onCompositi
     if(current.value.text.length-(selected.end-selected.start)+text.length>limit){setMessage(`粘贴内容超过${limit}字限制，请分块整理；原输入已保留。`);return;}
     if(!document.execCommand("insertText",false,text.replace(/\r\n?/g,"\n"))){setMessage("浏览器未完成粘贴，原输入已保留。");return;}publish();
   }
-  return <div className={styles.textEditor}><span id={`${id}-label`} className={styles.richLabel}>{label}</span><div className={styles.textToolbar} role="toolbar" aria-label={`${label}格式`}>
-    <label><span className="sr-only">段落格式</span><select disabled={!prose||formatDisabled} value={block.text_style||"paragraph"} onChange={event=>style(event.target.value as TextValue["text_style"])}><option value="paragraph">段落</option><option value="unordered">无序列表</option><option value="ordered">有序列表</option></select></label>
+  return <div className={`${styles.textEditor} ${compact?styles.compactText:""}`}><span id={`${id}-label`} className={compact?"sr-only":styles.richLabel}>{label}</span><div className={styles.textToolbar} role="toolbar" aria-label={`${label}格式`}>
+    <label><span className="sr-only">段落格式</span><select disabled={!prose||formatDisabled} value={block.text_style||"paragraph"} onChange={event=>style(event.target.value as TextValue["text_style"])}><option value="paragraph">正文</option><option value="quote">引用</option><option value="unordered">无序列表</option><option value="ordered">有序列表</option></select></label>
     <button type="button" disabled={formatDisabled} aria-label="加粗所选文字" aria-pressed={pressed.strong} title="加粗 · Ctrl/⌘ B" onMouseDown={event=>event.preventDefault()} onClick={()=>command("bold")}><Bold size={15}/></button><button type="button" disabled={formatDisabled} aria-label="斜体所选文字" aria-pressed={pressed.em} title="斜体 · Ctrl/⌘ I" onMouseDown={event=>event.preventDefault()} onClick={()=>command("italic")}><Italic size={15}/></button>
-    <button type="button" disabled={formatDisabled||block.type==="link"} aria-label="为所选文字添加链接" onClick={()=>{if(selection.current.start===selection.current.end){setMessage("请先选择需要链接的文字。");return;}setHref("");setLinkOpen(true);}}><Link2 size={15}/></button><button type="button" disabled={formatDisabled||!prose} aria-label="切换无序列表" aria-pressed={block.text_style==="unordered"} onMouseDown={event=>event.preventDefault()} onClick={()=>style(block.text_style==="unordered"?"paragraph":"unordered")}><List size={15}/></button><button type="button" disabled={formatDisabled||!prose} aria-label="切换有序列表" aria-pressed={block.text_style==="ordered"} onMouseDown={event=>event.preventDefault()} onClick={()=>style(block.text_style==="ordered"?"paragraph":"ordered")}><ListOrdered size={15}/></button><button type="button" disabled={formatDisabled} onClick={()=>format({text_marks:[],text_style:"paragraph"})}>清除格式</button>
-    <button type="button" disabled={formatDisabled||!historySize.undo} onMouseDown={event=>event.preventDefault()} onClick={()=>history("undo")}>撤销</button><button type="button" disabled={formatDisabled||!historySize.redo} onMouseDown={event=>event.preventDefault()} onClick={()=>history("redo")}>重做</button></div>
+    <button type="button" disabled={formatDisabled} aria-label="为所选文字加下划线" aria-pressed={pressed.underline} title="下划线 · Ctrl/⌘ U" onMouseDown={event=>event.preventDefault()} onClick={()=>command("underline")}><Underline size={15}/></button><button type="button" disabled={formatDisabled||!prose} aria-label="切换引用段落" aria-pressed={block.text_style==="quote"} onMouseDown={event=>event.preventDefault()} onClick={()=>style(block.text_style==="quote"?"paragraph":"quote")}><Quote size={15}/></button>
+    <button type="button" disabled={formatDisabled||block.type==="link"} aria-label="为所选文字添加链接" onClick={()=>{if(selection.current.start===selection.current.end){setMessage("请先选择需要链接的文字。");return;}setHref("");setLinkOpen(true);}}><Link2 size={15}/></button><button type="button" disabled={formatDisabled||!prose} aria-label="切换无序列表" aria-pressed={block.text_style==="unordered"} onMouseDown={event=>event.preventDefault()} onClick={()=>style(block.text_style==="unordered"?"paragraph":"unordered")}><List size={15}/></button><button type="button" disabled={formatDisabled||!prose} aria-label="切换有序列表" aria-pressed={block.text_style==="ordered"} onMouseDown={event=>event.preventDefault()} onClick={()=>style(block.text_style==="ordered"?"paragraph":"ordered")}><ListOrdered size={15}/></button>{!compact?<button type="button" disabled={formatDisabled} onClick={()=>format({text_marks:[],text_style:"paragraph"})}>清除格式</button>:null}
+    {!compact?<><button type="button" disabled={formatDisabled||!historySize.undo} onMouseDown={event=>event.preventDefault()} onClick={()=>history("undo")}>撤销</button><button type="button" disabled={formatDisabled||!historySize.redo} onMouseDown={event=>event.preventDefault()} onClick={()=>history("redo")}>重做</button></>:null}</div>
     <div ref={area} className={styles.richInput} role="textbox" aria-labelledby={`${id}-label`} aria-multiline="true" aria-readonly={disabled} contentEditable={!disabled} suppressContentEditableWarning tabIndex={disabled?-1:0} onInput={publish} onSelect={remember} onKeyUp={remember} onMouseUp={remember} onBlur={remember} onClick={event=>{if((event.target as HTMLElement).closest("a"))event.preventDefault();}}
       onCompositionStart={()=>{composing.current=true;setIme(true);onComposition?.(true);}} onCompositionEnd={()=>{composing.current=false;setIme(false);onComposition?.(false);publish();}}
       onBeforeInput={event=>{const type=(event.nativeEvent as InputEvent).inputType;if(type==="historyUndo"||type==="historyRedo"){event.preventDefault();history(type==="historyUndo"?"undo":"redo");}}}
-      onKeyDown={event=>{if(composing.current||event.nativeEvent.isComposing)return;if(event.ctrlKey||event.metaKey){const key=event.key.toLowerCase();if(key==="z"||key==="y"){event.preventDefault();history(key==="y"||event.shiftKey?"redo":"undo");}else if(key==="b"||key==="i"){event.preventDefault();remember();command(key==="b"?"bold":"italic");}}}}
+      onKeyDown={event=>{if(composing.current||event.nativeEvent.isComposing)return;if(event.ctrlKey||event.metaKey){const key=event.key.toLowerCase();if(key==="z"||key==="y"){event.preventDefault();history(key==="y"||event.shiftKey?"redo":"undo");}else if(key==="b"||key==="i"||key==="u"){event.preventDefault();remember();command(key==="b"?"bold":key==="u"?"underline":"italic");}}}}
       onPaste={event=>{event.preventDefault();insertPlain(event.clipboardData.getData("text/plain"));}} onDrop={event=>{if(event.dataTransfer.types.includes("application/x-stl-article-block"))return;event.preventDefault();event.stopPropagation();insertPlain(event.dataTransfer.getData("text/plain"));}}/>
-    <small>{block.text.length} / {limit} · 仅编辑本页文字，原材料保持只读</small>{message?<p role="status">{message}</p>:null}
+    <small>{block.text.length} / {recommendedLength??limit}{recommendedLength&&block.text.length>recommendedLength?" · 超过建议篇幅，已有长文仍可保留":compact?"":" · 仅编辑本页文字，原材料保持只读"}</small>{message?<p role="status">{message}</p>:null}
     <Dialog open={linkOpen} onRequestClose={()=>setLinkOpen(false)} className={styles.dialog} aria-label="设置导读链接"><header><h2>设置导读链接</h2><button type="button" aria-label="关闭链接设置" onClick={()=>setLinkOpen(false)}><X size={18}/></button></header><label>链接地址<input type="url" maxLength={1500} value={href} onChange={event=>setHref(event.target.value)} placeholder="https:// 或本站路径"/></label><button type="button" disabled={formatDisabled||!safeEditorialLink(href)} onClick={()=>{setLinkOpen(false);requestAnimationFrame(()=>command("createLink",href));}}>应用链接</button><button type="button" disabled={formatDisabled} onClick={()=>{setLinkOpen(false);requestAnimationFrame(()=>command("unlink"));}}>移除所选文字的链接</button></Dialog>
   </div>;
 }

@@ -2,6 +2,7 @@ import type { components } from "./generated/schema";
 import type { EvidenceCurationItem } from "./evidence-curation.types";
 import type { PublicReadingPath } from "./reading-paths.types";
 import type { TimelineEvent } from "./timeline.types";
+import type { ScholarProse } from "./scholar-prose";
 
 export type ScholarSection = "overview" | "works" | "concepts" | "questions" | "timeline" | "relations" | "topics" | "paths" | "sources" | "evidence";
 export type ScholarSearchParams = Record<string, string | string[] | undefined>;
@@ -53,6 +54,7 @@ export type ScholarRelationRow = {
 };
 export type ScholarProfileSource = { id: string; title: string; url: string; fields: string[]; note: string };
 export type PublicScholarDetail = PublicScholarCard & {
+  profile_prose?: ScholarProse;
   public_revision: ScholarRevision; period_notice: string;
   graph_href: string; research_href: string;
   counts: Record<Exclude<ScholarSection, "overview">, number>;

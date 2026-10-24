@@ -34,7 +34,7 @@ def normalize_text_format(row, block):
     if "text_style" not in row and "text_marks" not in row:
         return block
     style = row.get("text_style", "paragraph")
-    if style not in ("paragraph", "unordered", "ordered"):
+    if style not in ("paragraph", "unordered", "ordered", "quote"):
         raise ValidationError({"body_blocks": "导读段落格式无效。"})
     original = row.get("text", "")
     if not isinstance(original, str):
@@ -53,7 +53,7 @@ def normalize_text_format(row, block):
         if not isinstance(value, dict) or set(value) - {"start", "end", "kind", "href"}:
             raise ValidationError({"body_blocks": "文字格式标记无效。"})
         start, end, kind = value.get("start"), value.get("end"), value.get("kind")
-        if type(start) is not int or type(end) is not int or start not in offsets or end not in offsets or start >= end or kind not in ("strong", "em", "link"):
+        if type(start) is not int or type(end) is not int or start not in offsets or end not in offsets or start >= end or kind not in ("strong", "em", "underline", "link"):
             raise ValidationError({"body_blocks": "请重新选择要设置格式的导读文字。"})
         href = value.get("href", "")
         if kind == "link":

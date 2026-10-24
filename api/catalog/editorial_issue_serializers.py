@@ -8,7 +8,7 @@ from catalog.serializers import SiteConfigSerializer, AboutPageBlockSerializer
 class IssueTextMarkSerializer(serializers.Serializer):
     start = serializers.IntegerField(min_value=0)
     end = serializers.IntegerField(min_value=1)
-    kind = serializers.ChoiceField(choices=["strong", "em", "link"])
+    kind = serializers.ChoiceField(choices=["strong", "em", "underline", "link"])
     href = serializers.CharField(max_length=1500, required=False)
 
 
@@ -17,7 +17,7 @@ class IssueBodyBlockSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["paragraph", "heading", "quote", "link", "image", "evidence", "work", "person", "concept", "node", "timeline", "reading_path", "comparison", "analysis"])
     text = serializers.CharField(allow_blank=True)
     heading_level = serializers.ChoiceField(choices=[1, 2, 3], required=False)
-    text_style = serializers.ChoiceField(choices=["paragraph", "ordered", "unordered"], required=False)
+    text_style = serializers.ChoiceField(choices=["paragraph", "ordered", "unordered", "quote"], required=False)
     text_marks = IssueTextMarkSerializer(many=True, required=False)
     source = serializers.CharField(required=False, allow_blank=True)
     url = serializers.CharField(required=False, allow_blank=True)
