@@ -30861,6 +30861,22 @@
                     "node_is_source": {
                         "type": "boolean"
                     },
+                    "source_anchor": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorInput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "source_material": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorMaterial"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "kind": {
                         "$ref": "#/components/schemas/AdminScholarLinkKindEnum"
                     },
@@ -30938,6 +30954,8 @@
                     "reviewed_by",
                     "sort_order",
                     "source",
+                    "source_anchor",
+                    "source_material",
                     "status",
                     "target_href",
                     "target_id",
@@ -49621,6 +49639,9 @@
                     "evidence_source": {
                         "type": "string"
                     },
+                    "has_source_anchor": {
+                        "type": "boolean"
+                    },
                     "status": {
                         "type": "string"
                     },
@@ -49635,6 +49656,7 @@
                     "description",
                     "direction",
                     "evidence_source",
+                    "has_source_anchor",
                     "has_unpublished_changes",
                     "id",
                     "kind",
@@ -66278,6 +66300,108 @@
                     "verification_requested"
                 ]
             },
+            "RelationAnchorInput": {
+                "type": "object",
+                "properties": {
+                    "span_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "document_revision_id",
+                    "span_id"
+                ]
+            },
+            "RelationAnchorInputRequest": {
+                "type": "object",
+                "properties": {
+                    "span_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "document_revision_id",
+                    "span_id"
+                ]
+            },
+            "RelationAnchorMaterial": {
+                "type": "object",
+                "properties": {
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "public_eligible": {
+                        "type": "boolean"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string"
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "available",
+                    "detail",
+                    "document_revision_id",
+                    "edition_id",
+                    "edition_label",
+                    "pdf_page",
+                    "printed_page_label",
+                    "public_eligible",
+                    "quote",
+                    "reader_href",
+                    "title",
+                    "work_id"
+                ]
+            },
             "ReplayForkOutput": {
                 "type": "object",
                 "properties": {
@@ -67313,6 +67437,14 @@
                     },
                     "node_is_source": {
                         "type": "boolean"
+                    },
+                    "source_anchor": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorInputRequest"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "required": [

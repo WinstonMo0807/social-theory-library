@@ -1,5 +1,9 @@
 # 账号保留型业务重置
 
+## 2026-10-24 人物关系原文保护外键
+
+catalog0081/0082仅声明原PersonNodeRelation的关系方向和EvidenceSpan/DocumentRevision保护引用，无新账户表。三者均在原catalog业务清单；日常删除不能级联破坏原文，最终业务重置仍由原精确外键清单、备份恢复及用户最终确认约束。本轮只读model_tables及既有边界，没有执行迁移、预演或清理。
+
 ## 2026-10-24 个人资料显示设置
 
 reading0025声明ReaderMaterialPreference，属于业务资料，按原reset_public_library动态reading模型清单纳入未来重置。只有显示名、归档状态与版本，不属于账户凭据、身份或角色保留范围。未应用迁移、未执行预演或清理；任何生产重置仍须当前计划、备份恢复证据与最终批准。

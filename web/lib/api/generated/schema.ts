@@ -6510,6 +6510,8 @@ export interface components {
             relation_type_label: string;
             direction: components["schemas"]["KnowledgeRelationDirectionEnum"];
             node_is_source: boolean;
+            source_anchor: components["schemas"]["RelationAnchorInput"] | null;
+            source_material: components["schemas"]["RelationAnchorMaterial"] | null;
             kind: components["schemas"]["AdminScholarLinkKindEnum"];
             /** Format: uuid */
             target_id: string;
@@ -12168,6 +12170,7 @@ export interface components {
             direction: components["schemas"]["KnowledgeRelationDirectionEnum"];
             description: string;
             evidence_source: string;
+            has_source_anchor: boolean;
             status: string;
             has_unpublished_changes: boolean;
             remains_in_draft: boolean;
@@ -17269,6 +17272,37 @@ export interface components {
             verification_requested: boolean;
             notice: string;
         };
+        RelationAnchorInput: {
+            /** Format: uuid */
+            span_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+        };
+        RelationAnchorInputRequest: {
+            /** Format: uuid */
+            span_id: string;
+            /** Format: uuid */
+            document_revision_id: string;
+        };
+        RelationAnchorMaterial: {
+            available: boolean;
+            public_eligible: boolean;
+            detail: string;
+            title: string;
+            edition_label: string;
+            /** Format: uuid */
+            work_id: string | null;
+            /** Format: uuid */
+            edition_id: string | null;
+            /** Format: uuid */
+            asset_id: string | null;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            pdf_page: number | null;
+            printed_page_label: string;
+            quote: string;
+            reader_href: string;
+        };
         ReplayForkOutput: {
             owner_id: string;
             /** Format: uuid */
@@ -17598,6 +17632,7 @@ export interface components {
             relation_type?: components["schemas"]["PersonNodeRelationTypeEnum"];
             direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
             node_is_source?: boolean;
+            source_anchor?: components["schemas"]["RelationAnchorInputRequest"] | null;
         };
         ScholarLinkPage: {
             count: number;

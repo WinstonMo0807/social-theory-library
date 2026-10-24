@@ -84,7 +84,7 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
             </button>
             {!row.remains_in_draft ? <p>草稿已移出本条目；正式发布前仍保留此关系。</p> : null}
             {row.kind === "person" && !row.scholar_id ? <p>原人物尚未建立学者页面。关系已保留，请先在人物资料中核对身份并建立学者页面。</p> : null}
-            {row.evidence_source ? <details><summary>关系依据</summary><p>{row.evidence_source}</p>{row.description ? <p>{row.description}</p> : null}</details> : <small>出处尚缺，请补齐后再公开。</small>}
+            {row.evidence_source ? <details><summary>关系依据</summary><p>{row.evidence_source}</p>{row.description ? <p>{row.description}</p> : null}</details> : row.has_source_anchor ? <small>已绑定馆内原文，请在详情核对准确版本。</small> : <small>出处尚缺，请补齐后再公开。</small>}
           </li>)}</ul>
           {!data.count ? <p>当前范围没有关系。可调整筛选，或新建待核对记录。</p> : null}
           {data.count > 24 ? <nav className={shared.pagination} aria-label="节点关系分页"><button type="button" disabled={!data.previous} onClick={() => setPage(data.previous || 1)}>上一页</button><span>第 {page} 页 · 共 {data.count} 项</span><button type="button" disabled={!data.next} onClick={() => setPage(data.next || page)}>下一页</button></nav> : null}

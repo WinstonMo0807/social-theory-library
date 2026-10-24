@@ -42,6 +42,7 @@ class NodeRelationRow(serializers.Serializer):
     direction = serializers.ChoiceField(choices=KnowledgeRelation.Direction.choices)
     description = serializers.CharField(allow_blank=True)
     evidence_source = serializers.CharField(allow_blank=True)
+    has_source_anchor = serializers.BooleanField()
     status = serializers.CharField()
     has_unpublished_changes = serializers.BooleanField()
     remains_in_draft = serializers.BooleanField()
@@ -114,6 +115,7 @@ class NodeRelationDirectoryView(AdminEditorialDraftReadMixin, generics.GenericAP
                 "source_kind": "知识条目", "target_kind": "知识条目", "relation_type": data["relation_type"],
                 "relation_label": data["relation_label"], "direction": data["direction"],
                 "description": data["description"], "evidence_source": data["evidence_source"],
+                "has_source_anchor": bool(data.get("evidence")),
                 "status": data.get("public_status", data["status"]), "has_unpublished_changes": data["has_unpublished_changes"],
                 "remains_in_draft": str(node.pk) in {str(data["source_node"]), str(data["target_node"])},
             }
@@ -125,7 +127,7 @@ class NodeRelationDirectoryView(AdminEditorialDraftReadMixin, generics.GenericAP
                 "source_name": source, "target_name": target, "source_kind": "知识条目" if row.node_is_source else "人物",
                 "target_kind": "人物" if row.node_is_source else "知识条目", "relation_type": row.relation_type,
                 "relation_label": row.get_relation_type_display(), "direction": row.direction, "description": row.relation_label,
-                "evidence_source": row.source, "status": row.status, "has_unpublished_changes": False, "remains_in_draft": True}
+                "evidence_source": row.source, "has_source_anchor": bool(row.evidence_span_id), "status": row.status, "has_unpublished_changes": False, "remains_in_draft": True}
         return Response(NodeRelationPage({"count": page.paginator.count,
             "next": page.next_page_number() if page.has_next() else None,
             "previous": page.previous_page_number() if page.has_previous() else None,

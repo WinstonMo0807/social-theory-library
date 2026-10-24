@@ -227,7 +227,7 @@ def _publish_merged_work_metadata(work_ids, *, actor, operation_id):
 
 def _check_merged_relation_decisions(source, target, *, created):
     if not created and isinstance(source, PersonNodeRelation):
-        fields = ("relation_type", "direction", "node_is_source", "relation_label", "source", "is_representative", "status")
+        fields = ("relation_type", "direction", "node_is_source", "relation_label", "source", "is_representative", "status", "evidence_span_id", "source_document_revision_id")
         if any(getattr(source, name) != getattr(target, name) for name in fields):
             raise ValueError("人物与节点的关系类型、方向、出处、状态或代表性判断不同，请先核对原关系，不能在合并时丢弃其中一项。")
     if created or getattr(source, "status", "") != "published":
@@ -386,6 +386,8 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
                 "relation_type": relation.relation_type,
                 "direction": relation.direction,
                 "node_is_source": relation.node_is_source,
+                "evidence_span_id": relation.evidence_span_id,
+                "source_document_revision_id": relation.source_document_revision_id,
                 "relation_label": relation.relation_label,
                 "is_representative": relation.is_representative,
                 "sort_order": relation.sort_order,

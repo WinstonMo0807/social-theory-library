@@ -3192,6 +3192,8 @@ class PersonNodeRelation(UUIDTimeStampedModel):
     relation_type = models.CharField(max_length=24, choices=RelationType.choices, default=RelationType.RELATED)
     direction = models.CharField(max_length=20, choices=KnowledgeRelation.Direction.choices, default=KnowledgeRelation.Direction.UNDIRECTED)
     node_is_source = models.BooleanField(default=False)
+    evidence_span = models.ForeignKey(EvidenceSpan, null=True, blank=True, on_delete=models.PROTECT, related_name="person_node_relations")
+    source_document_revision = models.ForeignKey(DocumentRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="person_node_relations")
     relation_label = models.CharField(max_length=120, blank=True)
     is_representative = models.BooleanField(default=False)
     sort_order = models.PositiveIntegerField(default=0)
@@ -3216,6 +3218,8 @@ class PersonNodeRelation(UUIDTimeStampedModel):
         ordering = ["sort_order", "person__sort_name", "person__preferred_name"]
         constraints = [
             models.UniqueConstraint(fields=["person", "node"], name="unique_person_knowledge_node"),
+            models.CheckConstraint(condition=models.Q(evidence_span__isnull=True, source_document_revision__isnull=True)
+                | models.Q(evidence_span__isnull=False, source_document_revision__isnull=False), name="person_node_source_pair"),
         ]
 
 

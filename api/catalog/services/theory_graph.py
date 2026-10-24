@@ -272,10 +272,8 @@ def graph_evidence_queryset(identifiers, request=None):
 
 def _attach_evidence(edges, request):
     identifiers = [row["entity_id"] for row in edges if row["model"] == "KnowledgeRelation"]
-    if not identifiers:
-        return
     by_relation = defaultdict(list)
-    for row in graph_evidence_queryset(identifiers, request):
+    for row in graph_evidence_queryset(identifiers, request) if identifiers else []:
         if not row.quote.strip():
             continue
         revision = row.file.edition.active_catalog_revision
@@ -293,6 +291,23 @@ def _attach_evidence(edges, request):
         edge["evidence"], edge["evidence_truncated"] = sources[:6], len(sources) > 6
         if sources:
             edge["source_status"] = "available"
+    from catalog.relation_source_anchor import public_anchor_rows, anchor_material
+    people = [edge["entity_id"] for edge in edges if edge["model"] == "PersonNodeRelation"]
+    if not people:
+        return
+    links = {str(row.pk): row for row in PersonNodeRelation.objects.filter(pk__in=people)}
+    anchors = {str(span.pk): span for span in public_anchor_rows().filter(pk__in=[row.evidence_span_id for row in links.values() if row.evidence_span_id])}
+    for edge in edges:
+        row = links.get(edge["entity_id"]) if edge["model"] == "PersonNodeRelation" else None
+        if row is None or not row.evidence_span_id:
+            continue
+        material = anchor_material(anchors.get(str(row.evidence_span_id)), row.source_document_revision_id, public=True, eligible=True)
+        if material is None:
+            edge["source_status"] = "unverified"
+            continue
+        edge["source_status"] = "available"
+        edge["evidence"] = [{"id": str(row.evidence_span_id), **{key: material[key] for key in (
+            "work_id", "edition_id", "asset_id", "document_revision_id", "title", "edition_label", "quote", "pdf_page", "printed_page_label", "reader_href")}}]
 
 
 def public_graph_edge(identifier):

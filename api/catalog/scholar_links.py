@@ -16,6 +16,7 @@ from catalog.scholar_commands import ScholarCommandMixin, PendingSaveStopSeriali
 from catalog.scholar_relation_commands import ScholarRelationReceipt
 from catalog.services.canonical_mutations import record_admin_canonical_change
 from catalog.services.person_authority import AuthorityConflict, digest
+from catalog.relation_source_anchor import RelationAnchorInput, RelationAnchorMaterial, choose_anchor, anchor_material
 from common.capabilities import Capability, has_capability
 from common.permissions import IsKnowledgeEditor
 from ingestion.models import AuditEvent
@@ -41,10 +42,11 @@ def link_snapshot(row, kind):
         "featured": getattr(row, featured), "sort_order": getattr(row, "sort_order", 0),
         "relation_type": getattr(row, "relation_type", "related"), "direction": getattr(row, "direction", "undirected"),
         "node_is_source": getattr(row, "node_is_source", False),
+        "source_anchor": {"span_id": str(row.evidence_span_id), "document_revision_id": str(row.source_document_revision_id)} if kind == "node" and row.evidence_span_id else None,
         "reviewed_by": row.reviewed_by_id, "reviewed_at": row.reviewed_at, "updated_at": row.updated_at}
 
 
-def link_payload(row, kind):
+def link_payload(row, kind, *, with_source=False):
     _, _, field, _, published, _, _, _ = configuration(kind)
     data = link_snapshot(row, kind)
     target = getattr(row, field)
@@ -55,6 +57,7 @@ def link_payload(row, kind):
         "target_name": target.canonical_name_zh if kind == "node" else target.name,
         "target_type": target.node_type if kind == "node" else "topic",
         "target_published": available, "confirmed": data["status"] == published,
+        "source_material": anchor_material(row.evidence_span, row.source_document_revision_id) if with_source and kind == "node" and row.evidence_span_id else None,
         "target_href": f"/admin/theories/{target.pk}" if kind == "node" else f"/admin/topics/{target.pk}"}
 
 
@@ -70,6 +73,7 @@ class ScholarLinkInput(serializers.Serializer):
     relation_type = serializers.ChoiceField(choices=PersonNodeRelation.RelationType.choices, required=False)
     direction = serializers.ChoiceField(choices=KnowledgeRelation.Direction.choices, required=False)
     node_is_source = serializers.BooleanField(required=False)
+    source_anchor = RelationAnchorInput(required=False, allow_null=True)
 
     def to_internal_value(self, data):
         if not isinstance(data, dict) or set(data) - set(self.fields):
@@ -97,6 +101,8 @@ class AdminScholarLinkSerializer(serializers.Serializer):
     relation_type_label = serializers.CharField()
     direction = serializers.ChoiceField(choices=KnowledgeRelation.Direction.choices)
     node_is_source = serializers.BooleanField()
+    source_anchor = RelationAnchorInput(allow_null=True)
+    source_material = RelationAnchorMaterial(allow_null=True)
     kind = serializers.ChoiceField(choices=["node", "topic"])
     target_id = serializers.UUIDField()
     target_name = serializers.CharField()
@@ -139,7 +145,7 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
     permission_classes = [IsKnowledgeEditor]
 
     def _draft_read_rows(self, rows):
-        return [link_payload(row, self.kind) for row in rows]
+        return [link_payload(row, self.kind, with_source=True) for row in rows]
 
     @extend_schema(parameters=[OpenApiParameter("page", int), OpenApiParameter("id", str)], responses=ScholarLinkPage)
     def get(self, request, scholar_id, kind):
@@ -158,7 +164,7 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
         return Response(ScholarLinkPage({"count": page.paginator.count,
             "next": page.next_page_number() if page.has_next() else None,
             "previous": page.previous_page_number() if page.has_previous() else None,
-            "results": [link_payload(row, kind) for row in page]}).data)
+            "results": [link_payload(row, kind, with_source=bool(request.query_params.get("id"))) for row in page]}).data)
 
     @extend_schema(request=ScholarLinkInput, responses=AdminScholarLinkSerializer)
     def post(self, request, scholar_id, kind):
@@ -194,6 +200,11 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
             raise ValidationError("主题出处最多120字；主题按主要关联展示，不接受概念排序值。")
         if kind == "topic" and (data.get("relation_type", "related") != "related" or data.get("direction", "undirected") != "undirected" or data.get("node_is_source", False)):
             raise ValidationError("主题关联不接受人物与概念的方向字段。")
+        if kind == "topic" and data.get("source_anchor"):
+            raise ValidationError("请在人物与概念关系中核对材料原文。主题关联不能使用此来源字段。")
+        anchor, anchor_revision = (row.evidence_span, row.source_document_revision) if row and kind == "node" else (None, None)
+        if kind == "node" and "source_anchor" in data:
+            anchor, anchor_revision = choose_anchor(data["source_anchor"])
         relation_type = data.get("relation_type", getattr(row, "relation_type", "related"))
         direction = data.get("direction", getattr(row, "direction", "undirected"))
         reverse = data.get("node_is_source", getattr(row, "node_is_source", False))
@@ -204,8 +215,10 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
                 raise ValidationError("提出、批判等具体关系须明确来源与目标方向。")
             if kind == "node" and reverse and relation_type in {"proposes", "defines", "develops", "interprets", "uses"}:
                 raise ValidationError("提出、定义、发展、解释和运用须以人物为来源。若表示理论影响人物，请选择影响并核对方向。")
-            if not data["relation_label"] or not data["source"]:
+            if not data["relation_label"] or not (data["source"] or anchor):
                 raise ValidationError("确认前须补充关系说明和可追溯出处。")
+            if anchor and not anchor_material(anchor, anchor_revision.pk)["public_eligible"]:
+                raise ValidationError("所选原文的准确版本未公开或已经失效，请先核对该材料，不能把其他版本作为相同出处确认。")
             if (target.status if kind == "node" else target.editorial_status) != "published":
                 raise ValidationError("关联对象尚未公开。请先发布该对象，再确认关联。")
             if scholar.editorial_status != "published" or person.authority_status != "verified":
@@ -220,6 +233,7 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
             if kind == "node":
                 row.sort_order = data["sort_order"]
                 row.relation_type, row.direction, row.node_is_source = relation_type, direction, reverse
+                row.evidence_span, row.source_document_revision = anchor, anchor_revision
         setattr(row, status, published if action == "confirm" else withdrawn if action == "withdraw" else pending)
         row.reviewed_by = actor if action != "save" else None
         row.reviewed_at = timezone.now() if action != "save" else None
@@ -241,7 +255,7 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
                 record_admin_canonical_change(object_type=object_type, target=parent, change_kind="update",
                     changed_fields=["person_relations"], actor=actor,
                     request_idempotency_key=request.headers["Idempotency-Key"])
-        return Response(AdminScholarLinkSerializer(link_payload(row, kind)).data)
+        return Response(AdminScholarLinkSerializer(link_payload(row, kind, with_source=True)).data)
 
 
 def serializable(data):
