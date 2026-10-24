@@ -29900,13 +29900,18 @@ export interface operations {
                  *     * `journal_issue` - journal_issue
                  *     * `thesis` - thesis
                  *     * `report` - report
+                 *     * `chapter` - chapter
+                 *     * `other` - other
                  */
-                kind?: "" | "book" | "journal_article" | "journal_issue" | "thesis" | "report";
+                kind?: "" | "book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other";
                 /**
                  * @description * `manual` - manual
                  *     * `newest` - newest
+                 *     * `oldest` - oldest
+                 *     * `title` - title
+                 *     * `author` - author
                  */
-                order?: "manual" | "newest";
+                order?: "manual" | "newest" | "oldest" | "title" | "author";
                 page?: number;
                 q?: string;
                 trash?: boolean;
@@ -29969,13 +29974,18 @@ export interface operations {
                  *     * `journal_issue` - journal_issue
                  *     * `thesis` - thesis
                  *     * `report` - report
+                 *     * `chapter` - chapter
+                 *     * `other` - other
                  */
-                kind?: "" | "book" | "journal_article" | "journal_issue" | "thesis" | "report";
+                kind?: "" | "book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other";
                 /**
                  * @description * `manual` - manual
                  *     * `newest` - newest
+                 *     * `oldest` - oldest
+                 *     * `title` - title
+                 *     * `author` - author
                  */
-                order?: "manual" | "newest";
+                order?: "manual" | "newest" | "oldest" | "title" | "author";
                 page?: number;
                 q?: string;
                 trash?: boolean;

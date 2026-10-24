@@ -78,6 +78,7 @@ def download(request, row, data):
             "journal": csl.get("container-title", ""), "type": csl.get("type", ""), "citation": bundle.get("gbt7714-2025", "来源暂不可用"),
             "version": str((edition.active_catalog_revision.snapshot.get("edition") or {}).get("version_label") or "") if edition else "",
             "isbn": str((edition.active_catalog_revision.snapshot.get("edition") or {}).get("isbn") or "") if edition else "",
+            "pages": str((edition.active_catalog_revision.snapshot.get("edition") or {}).get("page_range") or "") if edition else "",
             "added": item.created_at.isoformat(), "progress": "", "notes": ""}
         if data["include_progress"]:
             current = booklists.readable_progress_for_user(request.user).filter(asset__edition__work_id=item.work_id).order_by("-updated_at", "-id").first() if edition else None
@@ -116,17 +117,20 @@ def download(request, row, data):
         chunks = []
         for record in records:
             fields = {"title": record["title"], "author": " and ".join(record["authors"]), "year": record["year"],
-                "publisher": record["publisher"], "doi": record["doi"], "journal": record["journal"],
+                "publisher": record["publisher"], "doi": record["doi"],
+                "booktitle" if record["type"] == "chapter" else "journal": record["journal"],
+                "pages": record["pages"], "isbn": record["isbn"], "edition": record["version"],
                 "note": "\n".join(filter(None, [record["progress"], record["notes"]]))}
-            kind = "article" if record["type"] == "article-journal" else "book" if record["type"] else "misc"
+            kind = {"article-journal": "article", "book": "book", "chapter": "incollection", "report": "techreport"}.get(record["type"], "misc")
             chunks.append("@" + kind + "{stl" + record["id"].replace("-", "") + ",\n" + ",\n".join(f"  {key} = {{{bib(value)}}}" for key, value in fields.items() if value) + "\n}")
         body, mime = "\n\n".join(chunks).encode(), "application/x-bibtex; charset=utf-8"
     elif format_ == "ris":
         chunks = []
         for record in records:
-            fields = [("TY", "JOUR" if record["type"] == "article-journal" else "BOOK" if record["type"] else "GEN"),
+            fields = [("TY", {"article-journal": "JOUR", "book": "BOOK", "chapter": "CHAP", "thesis": "THES", "report": "RPRT", "periodical": "JFULL"}.get(record["type"], "GEN")),
                 ("TI", record["title"]), *[("AU", author) for author in record["authors"]], ("PY", record["year"]),
-                ("PB", record["publisher"]), ("DO", record["doi"]), ("JO", record["journal"]),
+                ("PB", record["publisher"]), ("DO", record["doi"]), ("T2", record["journal"]),
+                ("SP", record["pages"]), ("SN", record["isbn"]), ("ET", record["version"]),
                 ("N1", "\n".join(filter(None, [record["progress"], record["notes"]])))]
             chunks.append("\r\n".join(f"{key}  - {clean(value)}" for key, value in fields if value) + "\r\nER  -\r\n")
         body, mime = "\r\n".join(chunks).encode(), "application/x-research-info-systems; charset=utf-8"

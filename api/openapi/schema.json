@@ -21675,13 +21675,15 @@
                                 "journal_article",
                                 "journal_issue",
                                 "thesis",
-                                "report"
+                                "report",
+                                "chapter",
+                                "other"
                             ],
                             "type": "string",
                             "default": "",
                             "minLength": 1
                         },
-                        "description": "* `` - \n* `book` - book\n* `journal_article` - journal_article\n* `journal_issue` - journal_issue\n* `thesis` - thesis\n* `report` - report"
+                        "description": "* `` - \n* `book` - book\n* `journal_article` - journal_article\n* `journal_issue` - journal_issue\n* `thesis` - thesis\n* `report` - report\n* `chapter` - chapter\n* `other` - other"
                     },
                     {
                         "in": "query",
@@ -21689,13 +21691,16 @@
                         "schema": {
                             "enum": [
                                 "manual",
-                                "newest"
+                                "newest",
+                                "oldest",
+                                "title",
+                                "author"
                             ],
                             "type": "string",
                             "default": "manual",
                             "minLength": 1
                         },
-                        "description": "* `manual` - manual\n* `newest` - newest"
+                        "description": "* `manual` - manual\n* `newest` - newest\n* `oldest` - oldest\n* `title` - title\n* `author` - author"
                     },
                     {
                         "in": "query",
@@ -21830,13 +21835,15 @@
                                 "journal_article",
                                 "journal_issue",
                                 "thesis",
-                                "report"
+                                "report",
+                                "chapter",
+                                "other"
                             ],
                             "type": "string",
                             "default": "",
                             "minLength": 1
                         },
-                        "description": "* `` - \n* `book` - book\n* `journal_article` - journal_article\n* `journal_issue` - journal_issue\n* `thesis` - thesis\n* `report` - report"
+                        "description": "* `` - \n* `book` - book\n* `journal_article` - journal_article\n* `journal_issue` - journal_issue\n* `thesis` - thesis\n* `report` - report\n* `chapter` - chapter\n* `other` - other"
                     },
                     {
                         "in": "query",
@@ -21844,13 +21851,16 @@
                         "schema": {
                             "enum": [
                                 "manual",
-                                "newest"
+                                "newest",
+                                "oldest",
+                                "title",
+                                "author"
                             ],
                             "type": "string",
                             "default": "manual",
                             "minLength": 1
                         },
-                        "description": "* `manual` - manual\n* `newest` - newest"
+                        "description": "* `manual` - manual\n* `newest` - newest\n* `oldest` - oldest\n* `title` - title\n* `author` - author"
                     },
                     {
                         "in": "query",

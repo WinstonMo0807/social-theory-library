@@ -3,6 +3,7 @@ from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
+from catalog.models import DocumentType
 
 from . import booklists
 from .research_serializers import EvidenceReferenceInput, PlanPolicyInput
@@ -11,8 +12,8 @@ from .research_serializers import EvidenceReferenceInput, PlanPolicyInput
 class ListQuery(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, max_value=10000, default=1)
     q = serializers.CharField(max_length=180, allow_blank=True, default="")
-    kind = serializers.ChoiceField(choices=["", "book", "journal_article", "journal_issue", "thesis", "report"], default="")
-    order = serializers.ChoiceField(choices=["manual", "newest"], default="manual")
+    kind = serializers.ChoiceField(choices=["", *DocumentType.values], default="")
+    order = serializers.ChoiceField(choices=["manual", "newest", "oldest", "title", "author"], default="manual")
     trash = serializers.BooleanField(default=False)
 
 

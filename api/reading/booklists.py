@@ -3,6 +3,10 @@ from datetime import timedelta
 from hashlib import sha256
 import json
 import re
+import unicodedata
+
+from pypinyin import lazy_pinyin
+from unidecode import unidecode
 
 from django.db import transaction
 from django.db.models import Max
@@ -64,6 +68,26 @@ def project_item(request, row):
         "reader_url": f"/reader/{progress.asset_id}?page={progress.current_page}" if progress else f"/reader/{asset['id']}" if asset else None}
 
 
+def alphabetical_items(rows, order):
+    from catalog.services.citations import _contributors
+    # ponytail: lists hold <=1000 active works; bounded in-memory sorting reuses
+    # installed transliteration and exact public authors without another index.
+    if rows.count() > 5000:
+        raise ValidationError("当前范围超过5000项，请先缩小范围或使用加入时间排序；没有截断结果。")
+    values, versions = {}, {}
+    def key(value):
+        return unidecode(" ".join(lazy_pinyin(unicodedata.normalize("NFKC", str(value or ""))))).casefold().strip()
+    for edition in public_editions().filter(work_id__in=rows.values("work_id")).select_related("active_catalog_revision"):
+        snapshot = edition.active_catalog_revision.snapshot or {}
+        title = key((snapshot.get("work") or {}).get("title"))
+        authors = _contributors(edition, snapshot) if snapshot else []
+        selected = key(authors[0]) if order == "author" and authors else "" if order == "author" else title
+        values[edition.work_id] = (not bool(selected), selected, title)
+        versions[str(edition.pk)] = str(edition.active_catalog_revision_id)
+    ordered = sorted(rows, key=lambda item: (*values.get(item.work_id, (True, "", "")), str(item.pk)))
+    return ordered, versions
+
+
 def workspace(request, row, query):
     rows = row.items.select_related("work").order_by("order", "created_at", "id")
     cutoff = timezone.now() - timedelta(days=30)
@@ -80,11 +104,18 @@ def workspace(request, row, query):
         rows = rows.filter(work_id__in=editions.values("work_id"))
     if query["order"] == "newest":
         rows = rows.order_by("-created_at", "-id")
+    elif query["order"] == "oldest":
+        rows = rows.order_by("created_at", "id")
     count = rows.count()
     page = query["page"]
     if page > 1 and (page - 1) * PAGE_SIZE >= count:
         raise NotFound("这一页已没有作品，请返回第一页。")
-    result = [project_item(request, item) for item in rows[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]]
+    ordered, source_versions = alphabetical_items(rows, query["order"]) if query["order"] in {"title", "author"} else (rows, None)
+    result = [project_item(request, item) for item in ordered[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]]
+    if source_versions is not None:
+        current = public_editions().filter(work_id__in=rows.values("work_id"))
+        if source_versions != {str(pk): str(revision) for pk, revision in current.values_list("pk", "active_catalog_revision_id")}:
+            raise research.ResearchConflict("公开书目在排序时发生变化，请重新读取。")
     if version(owned(request.user, row.pk)) != version(row):
         raise research.ResearchConflict("书单正在另一页面修改，请重新读取。")
     return {"owner_id": str(request.user.pk), "list": summary(row), "items": result,
