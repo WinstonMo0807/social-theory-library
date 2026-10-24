@@ -30,7 +30,7 @@ def collection(request, queryset, *, public=False):
                                        (~due & Q(active_revision__materialized_preview__title__icontains=query)))
         else:
             queryset = queryset.filter(title__icontains=query)
-    paginator = Paginator(queryset.order_by("-effective_display_from" if public else "-created_at", "-created_at", "id"), 12)
+    paginator = Paginator(queryset.order_by("-effective_display_from" if public else "-updated_at", "-created_at", "id"), 12)
     page = paginator.get_page(request.query_params.get("page", 1))
     def page_url(number):
         params = request.query_params.copy()
@@ -113,7 +113,8 @@ class EditorialErrorMixin:
 class AdminIssueListView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     def get_permissions(self):
         return [CanEditMetadata()] if self.request.method == "POST" else [CanAccessBackOffice()]
-    @extend_schema(operation_id="catalog_admin_recommendation_issues_list", responses=AdminRecommendationIssueCollectionSerializer)
+    @extend_schema(operation_id="catalog_admin_recommendation_issues_list", responses=AdminRecommendationIssueCollectionSerializer,
+        parameters=[OpenApiParameter("scope", enum=["all", "mine", "unassigned", "draft", "published", "scheduled"]), OpenApiParameter("q"), OpenApiParameter("page", type=int)])
     def get(self, request):
         from catalog.services.curation_projects import visible_issues
         issues = visible_issues(request.user).select_related("active_revision", "scheduled_revision")
@@ -121,7 +122,17 @@ class AdminIssueListView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
         if request.query_params.get("mine") == "1": issues = issues.filter(created_by=request.user)
         upcoming = issues.filter(scheduled_revision__status="published", scheduled_for__gt=timezone.now())
         drafts = EditorialRevision.objects.filter(target_type="recommendation_issue", target_id=OuterRef("pk"), status="draft")
-        payload = collection(request, issues)
+        from rest_framework import serializers
+        scope = serializers.ChoiceField(choices=["all", "mine", "unassigned", "draft", "published", "scheduled"]).run_validation(request.query_params.get("scope", "all"))
+        filtered = issues
+        if scope == "mine": filtered = filtered.filter(created_by=request.user)
+        elif scope == "unassigned": filtered = filtered.filter(project__isnull=True)
+        elif scope == "draft": filtered = filtered.filter(Exists(drafts))
+        elif scope == "published": filtered = filtered.filter(pk__in=service.published_issues().values("pk"))
+        elif scope == "scheduled": filtered = upcoming
+        payload = collection(request, filtered)
+        public_ids = set(str(value) for value in service.published_issues().filter(pk__in=[row["id"] for row in payload["results"]]).values_list("pk", flat=True))
+        for item in payload["results"]: item["is_public"] = str(item["id"]) in public_ids
         # Dashboard metrics describe the inventory, independently of a search
         # or page. A published issue can also have a draft or a future revision.
         payload["summary"] = {"total": issues.count(), "published": service.published_issues().filter(pk__in=issues.values("pk")).count(),

@@ -20,9 +20,11 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 
 from common.capabilities import Capability, has_capability
-from common.permissions import IsLibraryStaff
+from common.permissions import CanEditMetadata, CanPublishAuthority, IsLibraryStaff
 
-from .editorial_read import AdminEditorialDraftReadMixin
+from .editorial_read import AdminEditorialDraftReadMixin, AdminPrivateResponseMixin
+from .recommendation_command_views import (RecommendationRefreshCommandSerializer, RecommendationRefreshReceiptSerializer,
+    command_record, publication_actor, publication_result)
 from .relation_editorial_views import StagedRelationEditorMixin
 from .timeline_editor_views import TimelineCommandMixin
 
@@ -693,7 +695,7 @@ class AdminTheoryTimelineDetailView(TimelineCommandMixin, StagedRelationEditorMi
         )
 
 
-class AdminRecommendationListView(APIView):
+class AdminRecommendationListView(AdminPrivateResponseMixin, APIView):
     permission_classes = [IsLibraryStaff]
 
     def get(self, request):
@@ -703,14 +705,16 @@ class AdminRecommendationListView(APIView):
         return Response(RecommendationPolicySerializer(policies, many=True, context={"request": request}).data)
 
 
-class AdminRecommendationPolicyView(APIView):
-    permission_classes = [IsLibraryStaff]
+class AdminRecommendationPolicyView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanPublishAuthority]
 
+    @transaction.atomic
     def put(self, request, placement):
-        policy = get_object_or_404(RecommendationPolicy, placement=placement)
+        actor = publication_actor(request)
+        policy = get_object_or_404(RecommendationPolicy.objects.select_for_update(), placement=placement)
         serializer = RecommendationPolicySerializer(policy, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        policy = serializer.save(updated_by=request.user)
+        policy = serializer.save(updated_by=actor)
         return Response(RecommendationPolicySerializer(policy, context={"request": request}).data)
 
 
@@ -739,8 +743,8 @@ def _resolve_manual_target(target_type, identifier):
         return None
 
 
-class AdminRecommendationPreviewView(APIView):
-    permission_classes = [IsLibraryStaff]
+class AdminRecommendationPreviewView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanEditMetadata]
 
     @transaction.atomic
     def post(self, request, placement):
@@ -772,19 +776,29 @@ class AdminRecommendationPreviewView(APIView):
                          "expires_in_seconds": 900, "public_unchanged": True}, headers={"Cache-Control": "private, no-store"})
 
 
-class AdminRecommendationRefreshView(APIView):
-    permission_classes = [IsLibraryStaff]
+class AdminRecommendationRefreshView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanPublishAuthority]
 
+    @extend_schema(request=RecommendationRefreshCommandSerializer, responses=RecommendationRefreshReceiptSerializer)
     @transaction.atomic
     def post(self, request, placement):
         from ingestion.models import AuditEvent
 
+        actor = publication_actor(request)
+        if not isinstance(request.data, dict):
+            raise ValidationError("请提交完整的推荐发布请求。")
+        if request.data.get("request_id") and request.headers.get("X-Editor-Owner") != str(actor.pk):
+            raise ValidationError("请从当前账户的首页编排确认发布。")
+        if request.data.get("request_id") and not request.data.get("preview_token"):
+            raise ValidationError("请先生成推荐预览，再明确确认发布。")
+        if request.data.get("request_id") and request.data.get("request_key") and str(request.data["request_id"]) != str(request.data["request_key"]):
+            raise ValidationError("请使用同一个原请求编号查回或发布。")
         # Serialize competing refreshes on the existing policy. A receipt uses
         # the existing audit log, not a second publication/success marker.
         policy = get_object_or_404(RecommendationPolicy.objects.select_for_update(), placement=placement)
         raw_items = request.data.get("items")
         try:
-            request_key = str(UUID(str(request.data.get("request_key", ""))))
+            request_key = str(UUID(str(request.data.get("request_id") or request.data.get("request_key", ""))))
             expected_updated_at = parse_datetime(str(request.data.get("expected_updated_at", "")))
         except (TypeError, ValueError):
             return Response({"detail": "请刷新推荐页面并重新确认发布。未修改当前推荐。"}, status=400)
@@ -796,12 +810,9 @@ class AdminRecommendationRefreshView(APIView):
             "expected_snapshot_id": request.data["expected_snapshot_id"],
             "expected_updated_at": expected_updated_at.isoformat(),
         }, sort_keys=True).encode()).hexdigest()
-        receipt = AuditEvent.objects.filter(
-            action="catalog.recommendations_published", object_type="catalog.RecommendationPolicy",
-            object_id=str(policy.pk), after__request_key=request_key,
-        ).first()
+        receipt = command_record(policy, request_key).first()
         if receipt:
-            if receipt.actor_id != request.user.pk or receipt.before.get("fingerprint") != fingerprint:
+            if receipt.actor_id != actor.pk or (not receipt.after.get("cancelled") and receipt.before.get("fingerprint") != fingerprint):
                 return Response({"detail": "此请求编号已用于其他选择。请刷新后重新确认。"}, status=409)
             return self._result(request, policy, receipt, replayed=True)
         current = policy.snapshots.filter(is_current=True).first()
@@ -847,7 +858,7 @@ class AdminRecommendationRefreshView(APIView):
         except ValueError as error:
             return Response({"detail": str(error)}, status=409)
         receipt = AuditEvent.objects.create(
-            actor=request.user, object_type="catalog.RecommendationPolicy", object_id=str(policy.pk),
+            actor=actor, object_type="catalog.RecommendationPolicy", object_id=str(policy.pk), request_id=request_key,
             action="catalog.recommendations_published",
             before={"fingerprint": fingerprint, "snapshot_id": current_id},
             after={"request_key": request_key, "snapshot_id": str(snapshot.pk), "placement": placement,
@@ -857,18 +868,7 @@ class AdminRecommendationRefreshView(APIView):
         return self._result(request, policy, receipt, replayed=False)
 
     def _result(self, request, policy, receipt, *, replayed):
-        # Replaying an accepted request reports today's result; it must never
-        # make an old recommendation current again after a later edit.
-        current = policy.snapshots.filter(is_current=True).first()
-        policy.resolved_snapshot = current
-        data = dict(RecommendationPolicySerializer(policy, context={"request": request}).data)
-        data.update({
-            "command_accepted": True, "replayed": replayed,
-            "accepted_snapshot_id": receipt.after["snapshot_id"], "audit_id": str(receipt.pk),
-            "publication_effective": bool(policy.enabled and current and str(current.pk) == receipt.after["snapshot_id"]
-                                          and current.starts_at <= timezone.now() < current.expires_at),
-        })
-        return Response(data)
+        return Response(publication_result(request, policy, receipt, replayed=replayed))
 
 
 class AdminRecommendationOverrideListView(generics.ListCreateAPIView):

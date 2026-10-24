@@ -8402,6 +8402,37 @@
         "/api/catalog/admin/recommendation-issues/": {
             "get": {
                 "operationId": "catalog_admin_recommendation_issues_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "scope",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "all",
+                                "draft",
+                                "mine",
+                                "published",
+                                "scheduled",
+                                "unassigned"
+                            ]
+                        }
+                    }
+                ],
                 "tags": [
                     "catalog"
                 ],
@@ -9460,6 +9491,320 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/IssueSuggestionDismissed"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recommendation-issues/create/": {
+            "post": {
+                "operationId": "catalog_admin_recommendation_issues_create_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssueCreateCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssueCreateCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssueCreateCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssueCreateReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recommendation-issues/create/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_recommendation_issues_create_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssueCreateReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_recommendation_issues_create_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssueCreateStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssueCreateStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IssueCreateStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssueCreateReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recommendations/{placement}/refresh/": {
+            "post": {
+                "operationId": "catalog_admin_recommendations_refresh_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "placement",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationRefreshCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationRefreshCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationRefreshCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecommendationRefreshReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/recommendations/{placement}/refresh/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_recommendations_refresh_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "placement",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecommendationRefreshReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_recommendations_refresh_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "placement",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationRefreshStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationRefreshStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecommendationRefreshStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecommendationRefreshReceipt"
                                 }
                             }
                         },
@@ -29650,7 +29995,7 @@
                 "type": "object",
                 "properties": {
                     "kind": {
-                        "$ref": "#/components/schemas/ArticleMetadataKindEnum"
+                        "$ref": "#/components/schemas/IssueCreationKindEnum"
                     },
                     "keywords": {
                         "type": "array",
@@ -29699,20 +30044,11 @@
                     }
                 }
             },
-            "ArticleMetadataKindEnum": {
-                "enum": [
-                    "article",
-                    "research",
-                    "exhibition"
-                ],
-                "type": "string",
-                "description": "* `article` - article\n* `research` - research\n* `exhibition` - exhibition"
-            },
             "ArticleMetadataRequest": {
                 "type": "object",
                 "properties": {
                     "kind": {
-                        "$ref": "#/components/schemas/ArticleMetadataKindEnum"
+                        "$ref": "#/components/schemas/IssueCreationKindEnum"
                     },
                     "keywords": {
                         "type": "array",
@@ -40243,6 +40579,82 @@
                 ],
                 "type": "string",
                 "description": "* `paragraph` - paragraph\n* `heading` - heading\n* `quote` - quote\n* `link` - link\n* `image` - image\n* `evidence` - evidence\n* `work` - work\n* `person` - person\n* `concept` - concept\n* `node` - node\n* `timeline` - timeline\n* `reading_path` - reading_path\n* `comparison` - comparison\n* `analysis` - analysis"
+            },
+            "IssueCreateCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 600
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/IssueCreationKindEnum"
+                    }
+                },
+                "required": [
+                    "kind",
+                    "request_id",
+                    "title"
+                ]
+            },
+            "IssueCreateReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "issue_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "available": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "available",
+                    "issue_id",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "state"
+                ]
+            },
+            "IssueCreateStopRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "IssueCreationKindEnum": {
+                "enum": [
+                    "article",
+                    "research",
+                    "exhibition"
+                ],
+                "type": "string",
+                "description": "* `article` - article\n* `research` - research\n* `exhibition` - exhibition"
             },
             "IssueHistoryItem": {
                 "type": "object",
@@ -53297,6 +53709,18 @@
                     "request_id"
                 ]
             },
+            "PlacementEnum": {
+                "enum": [
+                    "home_featured",
+                    "home_theories",
+                    "home_scholars",
+                    "home_topics",
+                    "home_random",
+                    "theory_weekly"
+                ],
+                "type": "string",
+                "description": "* `home_featured` - 首页精选馆藏\n* `home_theories` - 首页理论传统\n* `home_scholars` - 首页学者\n* `home_topics` - 首页问题主题\n* `home_random` - 首页随机推荐\n* `theory_weekly` - 理论页本周馆藏"
+            },
             "PlacementGroup": {
                 "type": "object",
                 "properties": {
@@ -62251,6 +62675,10 @@
             "RecommendationIssue": {
                 "type": "object",
                 "properties": {
+                    "is_public": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
                     "project_id": {
                         "type": "string",
                         "format": "uuid",
@@ -62416,6 +62844,7 @@
                     "has_unpublished_changes",
                     "id",
                     "is_current_revision",
+                    "is_public",
                     "project_archived",
                     "project_id",
                     "project_title",
@@ -62565,6 +62994,238 @@
                 },
                 "required": [
                     "title"
+                ]
+            },
+            "RecommendationPublishedItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "image_override": {
+                        "type": "string"
+                    },
+                    "target_type": {
+                        "type": "string"
+                    },
+                    "target": {}
+                },
+                "required": [
+                    "id",
+                    "image_override",
+                    "position",
+                    "reason",
+                    "target",
+                    "target_type"
+                ]
+            },
+            "RecommendationPublishedSnapshot": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "starts_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/RecommendationPublishedSnapshotSourceEnum"
+                    },
+                    "seed": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecommendationPublishedItem"
+                        },
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "expires_at",
+                    "id",
+                    "items",
+                    "starts_at"
+                ]
+            },
+            "RecommendationPublishedSnapshotSourceEnum": {
+                "enum": [
+                    "automatic",
+                    "manual"
+                ],
+                "type": "string",
+                "description": "* `automatic` - 系统轮换\n* `manual` - 管理员更新"
+            },
+            "RecommendationRefreshCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "request_key": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "confirm": {
+                        "type": "boolean"
+                    },
+                    "expected_snapshot_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "preview_token": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "confirm",
+                    "expected_snapshot_id",
+                    "expected_updated_at"
+                ]
+            },
+            "RecommendationRefreshReceipt": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "placement": {
+                        "$ref": "#/components/schemas/PlacementEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "item_count": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "rotation_days": {
+                        "type": "integer",
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
+                    },
+                    "rules": {},
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "last_generated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "next_refresh_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "current": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RecommendationPublishedSnapshot"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "command_accepted": {
+                        "type": "boolean"
+                    },
+                    "replayed": {
+                        "type": "boolean"
+                    },
+                    "accepted_snapshot_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "audit_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "publication_effective": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "accepted_snapshot_id",
+                    "audit_id",
+                    "command_accepted",
+                    "current",
+                    "id",
+                    "next_url",
+                    "owner_id",
+                    "placement",
+                    "publication_effective",
+                    "replayed",
+                    "request_id",
+                    "state",
+                    "title",
+                    "updated_at"
+                ]
+            },
+            "RecommendationRefreshStopRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
                 ]
             },
             "RecoveryConfirmInputKindEnum": {

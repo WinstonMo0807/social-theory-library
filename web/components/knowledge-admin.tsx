@@ -16,7 +16,7 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EntityLifecycleActions } from "@/components/entity-lifecycle-actions";
@@ -27,8 +27,11 @@ import { StringListEditor } from "@/components/structured-editors";
 import { KnowledgeVisualEditor } from "@/components/admin/knowledge/knowledge-visual-editor";
 import { KnowledgeObjectContextPanel } from "@/components/admin/knowledge/knowledge-object-context-panel";
 import { KnowledgeImagePanel } from "@/components/admin/media/knowledge-image-panel";
-import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
+import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
+import { withPrivateOwner } from "@/lib/api/private-owner";
 import { createRequestKey } from "@/lib/request-key";
+import { useCatalogCommand } from "@/components/admin/workflow/use-intake-command";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { AdminListPages, useAdminListPage } from "@/components/admin/knowledge/list-pages";
 import { EditorialPrefillNotice, useEditorialPrefills } from "@/components/admin/curation/editorial-prefills";
@@ -42,7 +45,7 @@ function pickerLabels(values: EntityValue[]): Record<string, string> {
   return Object.fromEntries(values.flatMap((value) => value.id ? [[value.id, value.name]] : []));
 }
 
-function useResource<T>(path: string | null) {
+function useResource<T>(path: string | null, owner?: string) {
   const [data, setData] = useState<T | null>(null);
   const [loadedPath, setLoadedPath] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -57,19 +60,21 @@ function useResource<T>(path: string | null) {
     let active = true;
     const token = getServerSessionCredential();
     if (!token) return;
-    apiRequest<T>(path, {}, token)
+    const controller = new AbortController();
+    const read = () => apiRequest<T>(path, { signal: controller.signal, cache: "no-store", ...(owner ? { headers: { "X-Editor-Owner": owner } } : {}) }, token);
+    (owner ? withPrivateOwner(owner, read, controller.signal) : read())
       .then((payload) => { if (active) { setData(payload); setLoadedPath(path); setError(""); } })
       .catch((reason) => { if (active) { setData(null); setLoadedPath(path); setError(reason instanceof Error ? reason.message : "读取失败"); } })
       .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [path, revision]);
+    return () => { active = false; controller.abort(); };
+  }, [path, revision, owner]);
   // A list belongs to its request, never to the newly selected object/type.
   // Gate during render, before the effect runs, so even a fast click is safe.
   return { data: loadedPath === path ? data : null, error: loadedPath === path ? error : "", loading: Boolean(path) && (loading || loadedPath !== path), refresh };
 }
 
-function Frame({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: ReactNode }) {
-  return <div className="admin-page knowledge-admin-page"><header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div></header>{children}</div>;
+function Frame({ eyebrow, title, description, children, embedded=false }: { eyebrow: string; title: string; description: string; children: ReactNode; embedded?: boolean }) {
+  return <div className="admin-page knowledge-admin-page">{embedded?null:<header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div></header>}{children}</div>;
 }
 
 function Notice({ children }: { children?: string }) {
@@ -601,12 +606,20 @@ type RecommendationPreview = { placement: string; source: string; preview_token:
 type RecommendationPolicy = { id: string; placement: string; title: string; item_count: number; rotation_days: number; enabled: boolean; updated_at: string; last_generated_at: string | null; next_refresh_at: string | null; current: null | { id: string; source: string; starts_at: string; expires_at: string; items: { id: string; reason: string; target: { id: string; title?: string; name?: string }; target_type: string }[] } };
 const targetByPlacement: Record<string, "work" | "theory_school" | "topic" | "scholar"> = { home_featured: "work", home_random: "work", theory_weekly: "work", home_theories: "theory_school", home_topics: "topic", home_scholars: "scholar" };
 
-export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlacement?: string } = {}) {
+export function RecommendationsAdmin({ initialPlacement = "", embedded=false }: { initialPlacement?: string; embedded?: boolean } = {}) {
+  const user=useAdminSession(),[epoch,setEpoch]=useState(0);
+  useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
+  return user?<RecommendationPlacementEditor key={`${user.id}:${epoch}`} owner={String(user.id)} canEdit={hasAdminCapability(user,"can_edit_metadata")} canPublish={hasAdminCapability(user,"can_publish_authority")} initialPlacement={initialPlacement} embedded={embedded}/>:<p role="status">正在核对编辑账户…</p>;
+}
+function RecommendationPlacementEditor({owner,initialPlacement,embedded,canEdit,canPublish}:{owner:string;initialPlacement:string;embedded:boolean;canEdit:boolean;canPublish:boolean}) {
+  const lifetime=useRef<AbortController|null>(null);
+  useEffect(()=>{const controller=new AbortController();lifetime.current=controller;return()=>controller.abort();},[]);
+  async function owned<T>(url:string,body:object){const signal=AbortSignal.any([lifetime.current!.signal,AbortSignal.timeout(60000)]);return withPrivateOwner(owner,()=>apiRequest<T>(url,{method:"POST",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},body:JSON.stringify(body)},getServerSessionCredential(),false),signal);}
+
   const [preview, setPreview] = useState<RecommendationPreview | null>(null);
   const publishingRequest=useRef(false);
-  const retryRequest = useRef<{ signature: string; body: Record<string, unknown> } | null>(null);
   const [publishing,setPublishing]=useState(false);
-  const policies = useResource<RecommendationPolicy[]>("/catalog/admin/recommendations/");
+  const policies = useResource<RecommendationPolicy[]>("/catalog/admin/recommendations/",owner);
   const [scholarSearchDraft, setScholarSearchDraft] = useState("");
   const [scholarSearch, setScholarSearch] = useState("");
   const [scholarPage, setScholarPage] = useState(1);
@@ -615,11 +628,18 @@ export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlaceme
     page: String(scholarPage),
   });
   if (scholarSearch) scholarQuery.set("search", scholarSearch);
-  const [selectedPolicy, setSelectedPolicy] = useState<string>(initialPlacement);
+  const params=useSearchParams(),router=useRouter(),pathname=usePathname();
+  const selectedPolicy=params.get("placement")||initialPlacement;
+  function selectPolicy(placement:string){const next=new URLSearchParams(params.toString());next.set("placement",placement);router.replace(`${pathname}?${next}`);setPreview(null);}
   const [manualSelections, setManualSelections] = useState<Record<string, string[]>>({});
   const [selectionLabels, setSelectionLabels] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
-  const policy = policies.data?.find((item) => item.placement === selectedPolicy) ?? policies.data?.[0];
+  const policy = selectedPolicy ? policies.data?.find((item) => item.placement === selectedPolicy) : policies.data?.[0];
+  type Publication = { confirm: true; expected_snapshot_id:string|null; expected_updated_at:string; preview_token:string };
+  type PublicationReceipt = RecommendationPolicy & { owner_id:string; request_id:string; state:"applied"|"cancelled"; next_url:string; publication_effective:boolean };
+  const command=useCatalogCommand<Publication,PublicationReceipt>(owner,`/catalog/admin/recommendations/${policy?.placement||"unselected"}/refresh/`,`stl-home-publication:${owner}:${policy?.placement||"unselected"}`,row=>row.id===policy?.id&&row.placement===policy?.placement);
+  const locked=publishing||command.busy||Boolean(command.recovery)||!canEdit;
+  useUnsavedForm(Object.keys(manualSelections).length>0||publishing||Boolean(command.recovery),false);
   const selectionKey = policy?.id ?? "";
   const currentSelection = policy?.current?.items
     .filter((item) => (
@@ -630,7 +650,8 @@ export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlaceme
     .map((item) => item.target.id) ?? [];
   const selected = manualSelections[selectionKey] ?? currentSelection;
   const updateSelected = (updater: (current: string[]) => string[]) => {
-    if (!selectionKey) return;
+    if (!selectionKey || locked) return;
+    setPreview(null);
     setManualSelections((current) => ({
       ...current,
       [selectionKey]: updater(current[selectionKey] ?? currentSelection),
@@ -638,7 +659,7 @@ export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlaceme
   };
   const targetType = policy ? targetByPlacement[policy.placement] : "work";
   const candidateEndpoint = targetType === "work" ? "/catalog/works/" : targetType === "theory_school" ? "/catalog/admin/theory-schools/" : targetType === "topic" ? "/catalog/admin/topics/" : "/catalog/admin/scholars/";
-  const candidateResource = useResource<Page<Candidate>>(`${candidateEndpoint}?${scholarQuery.toString()}`);
+  const candidateResource = useResource<Page<Candidate>>(policy ? `${candidateEndpoint}?${scholarQuery.toString()}` : null,owner);
   const candidates = candidateResource.data?.results;
   const visibleCandidates = candidates?.filter((item) => !item.editorial_status || item.editorial_status === "published");
   const selectedSet = new Set(selected);
@@ -667,72 +688,49 @@ export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlaceme
     setScholarSearch(scholarSearchDraft.trim());
   }
 
+  function accept(result: PublicationReceipt|null) {
+    if (!result) return;
+    setPreview(null); policies.refresh();
+    if(result.state==="cancelled"){setMessage("尚未执行的原发布请求已停止，当前推荐未被此请求改变。");return;}
+    setMessage(result.publication_effective ? "推荐已发布，读者现在可以看到。" : "原发布已完成，当前推荐已有后续变化。请核对读者现在看到的推荐。");
+    setManualSelections(current=>{const next={...current};delete next[result.id];return next;});
+  }
   async function refresh(manual: boolean, confirmedPreview?: RecommendationPreview) {
-    if (!policy || publishingRequest.current) return;
-    const token = getServerSessionCredential();
-    if (!token) return;
+    if (!policy || locked || publishingRequest.current || !lifetime.current || lifetime.current.signal.aborted) return;
     if (!confirmedPreview) {
       publishingRequest.current = true; setPublishing(true); setPreview(null);
       try {
-        const result = await apiRequest<RecommendationPreview>(`/catalog/admin/recommendations/${policy.placement}/preview/`, { method: "POST", body: JSON.stringify(manual ? { items: selected.map((id) => ({ target_type: targetType, id })) } : {}) }, token);
+        const result = await owned<RecommendationPreview>(`/catalog/admin/recommendations/${policy.placement}/preview/`, manual ? { items: selected.map((id) => ({ target_type: targetType, id })) } : {});
+        if(lifetime.current.signal.aborted)return;
+        if(result.placement!==policy.placement)throw Error("预览与当前展示位置不一致，请重新读取。");
         setPreview(result); setMessage("新推荐已生成预览，读者页面没有改变。请核对下面的完整名单，再确认发布。");
-      } catch (reason) { setMessage(reason instanceof Error ? reason.message : "预览未能生成，当前推荐未改变。"); }
-      finally { publishingRequest.current = false; setPublishing(false); }
+      } catch (reason) { if(!lifetime.current.signal.aborted)setMessage(reason instanceof Error ? reason.message : "预览未能生成，当前推荐未改变。"); }
+      finally { publishingRequest.current = false; if(!lifetime.current.signal.aborted)setPublishing(false); }
       return;
     }
-    if (!window.confirm("发布下面预览的这一组推荐？确认后读者页面才会更新。")) return;
-    publishingRequest.current=true;
-    setPublishing(true);
-    const items = manual ? selected.map((id) => ({ target_type: targetType, id })) : undefined;
-    const signature = JSON.stringify({ placement: policy.placement, items, preview_token: confirmedPreview.preview_token });
-    if (retryRequest.current?.signature !== signature) {
-      retryRequest.current = { signature, body: {
-        confirm: true, request_key: createRequestKey(),
-        expected_snapshot_id: confirmedPreview.expected_snapshot_id, expected_updated_at: confirmedPreview.expected_updated_at,
-        preview_token: confirmedPreview.preview_token,
-        ...(manual ? { items } : {}),
-      } };
-    }
-    try {
-      const result = await apiRequest<RecommendationPolicy & { publication_effective: boolean }>(`/catalog/admin/recommendations/${policy.placement}/refresh/`, { method: "POST", body: JSON.stringify(retryRequest.current.body) }, token);
-      retryRequest.current = null;
-      setPreview(null);
-      setMessage(result.publication_effective
-        ? `推荐已发布，读者现在可以看到。下次自动更新：${result.next_refresh_at ? new Date(result.next_refresh_at).toLocaleString("zh-CN") : "尚未安排"}。`
-        : "这次操作已完成，但当前推荐已发生后续变化。请查看读者现在看到的推荐。");
-      policies.refresh();
-      setManualSelections((current) => {
-        const next = { ...current };
-        delete next[selectionKey];
-        return next;
-      });
-    } catch (reason) {
-      if (reason instanceof ApiRequestError && reason.status >= 400 && reason.status < 500) {
-        retryRequest.current = null;
-        policies.refresh();
-        setMessage(reason.message);
-      } else {
-        setMessage("暂时未能确认发布结果。网络恢复后可再次点击同一按钮，本次重试不会重复更换推荐。");
-      }
-    }
-    finally { publishingRequest.current=false; setPublishing(false); }
+    if (!canPublish || !command.ready || !window.confirm("发布下面预览的这一组推荐？确认后读者页面才会更新。")) return;
+    accept(await command.send({confirm:true,expected_snapshot_id:confirmedPreview.expected_snapshot_id,
+      expected_updated_at:confirmedPreview.expected_updated_at,preview_token:confirmedPreview.preview_token}));
   }
 
   return (
-    <Frame eyebrow="公开展示" title="推荐管理" description="先选展示位置，再选择和排序推荐内容。所有读者看到同一组推荐，确认发布后生效。">
+    <Frame embedded={embedded} eyebrow="公开展示" title="推荐管理" description="先选展示位置，再选择和排序推荐内容。所有读者看到同一组推荐，确认发布后生效。">
       {policies.error || candidateResource.error ? <p role="alert">{policies.error || candidateResource.error}<button type="button" onClick={() => { policies.refresh(); candidateResource.refresh(); }}>重新读取推荐</button></p> : null}
+      {command.error ? <p role="alert">{command.error}</p> : null}
+      {command.recovery ? <section className="admin-panel" aria-label="核对原发布请求"><p>上次发布结果尚未确认。先查回或停止原请求，避免覆盖后来已发布的推荐。</p><button disabled={command.busy||!canPublish} onClick={()=>void command.lookup().then(accept)}>查回原发布</button>{command.canRetry?<button disabled={command.busy||!canPublish} onClick={()=>void command.send().then(accept)}>重试原请求</button>:null}<button disabled={command.busy||!canPublish} onClick={()=>void command.lookup(true).then(accept)}>停止尚未执行的发布</button></section>:null}
+      {selectedPolicy&&policies.data&&!policy ? <p role="alert">该展示位置不存在或已停用，请从左侧明确选择。</p> : null}
       <div className="recommendation-admin-layout">
         <nav className="admin-panel recommendation-policy-list">{policies.data?.map((item) => {
           const hasAutomaticFill = item.current?.items.some((entry) => entry.reason === "三天自动补足");
           const sourceLabel = item.current?.source === "manual"
             ? hasAutomaticFill ? "人工优先" : "人工选择"
             : "自动推荐";
-          return <button className={item.placement === policy?.placement ? "active" : ""} type="button" disabled={publishing} onClick={() => { setSelectedPolicy(item.placement); setScholarPage(1); setScholarSearch(""); setScholarSearchDraft(""); }} key={item.id}><strong>{item.title}</strong><small>{sourceLabel} · {item.item_count} 项</small><ArrowRight size={15} /></button>;
+          return <button className={item.placement === policy?.placement ? "active" : ""} type="button" disabled={publishing||command.busy||Boolean(command.recovery)} onClick={() => { selectPolicy(item.placement); setScholarPage(1); setScholarSearch(""); setScholarSearchDraft(""); }} key={item.id}><strong>{item.title}</strong><small>{sourceLabel} · {item.item_count} 项</small><ArrowRight size={15} /></button>;
         })}</nav>
         <section className="admin-panel recommendation-editor">
-          <header><div><h2>{policy?.title || "推荐位置"}</h2><p>下一次自动更新 {policy?.next_refresh_at ? new Date(policy.next_refresh_at).toLocaleString("zh-CN") : "待生成"}</p></div><button type="button" disabled={publishing} onClick={() => void refresh(false)}><RefreshCw size={15} />预览新一组推荐</button></header>
-          {preview?.placement === policy?.placement ? <section className="admin-panel" aria-label="待发布推荐预览"><h3>准备发布的推荐</h3><p>这份预览包含自动补足的内容，15分钟内有效。发布前不会改变读者页面。</p><ol>{preview?.items.map((item) => <li key={item.id}>{item.name}</li>)}</ol>{!preview?.items.length ? <p>没有符合当前规则的公开内容。</p> : null}<button className="button" type="button" disabled={publishing || !preview || preview.expected_updated_at !== policy?.updated_at} onClick={() => preview && void refresh(preview.source === "manual", preview)}>确认发布这一组</button>{preview?.expected_updated_at !== policy?.updated_at ? <p>推荐规则已改变，请重新预览。</p> : null}</section> : null}
-          <details className="recommendation-current"><summary>查看读者现在看到的推荐</summary>{policy?.current?.items.map((item, index) => <div key={item.id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item.target.title || item.target.name}</strong><small>{item.reason === "管理员策展" ? "人工指定" : item.reason === "三天自动补足" ? "自动补位" : "自动轮换"}</small></div>)}{!policy?.current?.items.length ? <p>还没有推荐内容。</p> : null}</details>
+          <header><div><h2>{policy?.title || "推荐位置"}</h2><p>下一次自动更新 {policy?.next_refresh_at ? new Date(policy.next_refresh_at).toLocaleString("zh-CN") : "待生成"}</p></div><button type="button" disabled={locked || !policy} onClick={() => void refresh(false)}><RefreshCw size={15} />预览新一组推荐</button></header>
+          {preview && preview.placement === policy?.placement ? <section className="admin-panel" aria-label="待发布推荐预览"><h3>准备发布的推荐</h3><p>这份预览包含自动补足的内容，15分钟内有效。发布前不会改变读者页面。</p><ol>{preview?.items.map((item) => <li key={item.id}>{item.name}</li>)}</ol>{!preview?.items.length ? <p>没有符合当前规则的公开内容。</p> : null}<button className="button" type="button" disabled={locked || !canPublish || !command.ready || !preview || preview.expected_updated_at !== policy?.updated_at} onClick={() => preview && void refresh(preview.source === "manual", preview)}>确认发布这一组</button>{preview?.expected_updated_at !== policy?.updated_at ? <p>推荐规则已改变，请重新预览。</p> : null}</section> : null}
+          <details className="recommendation-current"><summary>查看最近保存的推荐</summary><p className="admin-help">{policy?.enabled ? "读者展示仍以有效时段和内容当前公开状态为准。" : "此位置已停用，保存的推荐不向读者展示。"}</p>{policy?.current?.items.map((item, index) => <div key={item.id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item.target.title || item.target.name}</strong><small>{item.reason === "管理员策展" ? "人工指定" : item.reason === "三天自动补足" ? "自动补位" : "自动轮换"}</small></div>)}{!policy?.current?.items.length ? <p>还没有推荐内容。</p> : null}</details>
           <h3>人工选择与排序</h3>
           <p className="admin-help">选择最多 {policy?.item_count || 4} 项。此处顺序就是公开展示顺序。{policy?.placement === "home_scholars" ? "不足数量由系统从公开学者中自动补足。" : ""}</p>
           <div className="recommendation-selected-order">
@@ -741,9 +739,9 @@ export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlaceme
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{selectionNameById.get(id) || id}</strong>
                 <div>
-                  <button type="button" aria-label={`上移${selectionNameById.get(id) || "推荐项"}`} disabled={publishing || index === 0} onClick={() => moveSelected(index, -1)}><ArrowUp size={14} /></button>
-                  <button type="button" aria-label={`下移${selectionNameById.get(id) || "推荐项"}`} disabled={publishing || index === selected.length - 1} onClick={() => moveSelected(index, 1)}><ArrowDown size={14} /></button>
-                  <button type="button" aria-label={`移除${selectionNameById.get(id) || "推荐项"}`} disabled={publishing} onClick={() => updateSelected((current) => current.filter((itemId) => itemId !== id))}><Trash2 size={14} /></button>
+                  <button type="button" aria-label={`上移${selectionNameById.get(id) || "推荐项"}`} disabled={locked || index === 0} onClick={() => moveSelected(index, -1)}><ArrowUp size={14} /></button>
+                  <button type="button" aria-label={`下移${selectionNameById.get(id) || "推荐项"}`} disabled={locked || index === selected.length - 1} onClick={() => moveSelected(index, 1)}><ArrowDown size={14} /></button>
+                  <button type="button" aria-label={`移除${selectionNameById.get(id) || "推荐项"}`} disabled={locked} onClick={() => updateSelected((current) => current.filter((itemId) => itemId !== id))}><Trash2 size={14} /></button>
                 </div>
               </div>
             ))}
@@ -753,11 +751,12 @@ export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlaceme
               <label><span>{targetType === "scholar" ? "搜索公开学者" : "搜索可推荐内容"}</span><input type="search" value={scholarSearchDraft} onChange={(event) => setScholarSearchDraft(event.target.value)} placeholder="输入名称查找…" /></label>
               <button type="submit">搜索</button>
             </form>
+          {!canEdit ? <p className="admin-help">当前账户可查看编排，修改需编辑权限，公开发布需发布权限。</p> : !canPublish ? <p className="admin-help">可以调整本次选择与预览，当前账户没有发布权限。</p> : null}
           {candidateResource.loading ? <p role="status">正在读取可推荐内容…</p> : null}
           <div className="recommendation-candidates" aria-busy={candidateResource.loading}>{visibleCandidates?.map((item) => {
             const checked = selectedSet.has(item.id);
             const label = item.title || item.name || item.preferred_name || item.id;
-            return <label className={checked ? "selected" : ""} key={item.id}><input type="checkbox" checked={checked} disabled={publishing} onChange={() => {
+            return <label className={checked ? "selected" : ""} key={item.id}><input type="checkbox" checked={checked} disabled={locked || (!checked && selected.length >= (policy?.item_count || 4))} onChange={() => {
               setSelectionLabels((current) => ({ ...current, [item.id]: label }));
               updateSelected((current) => checked ? current.filter((id) => id !== item.id) : current.length < (policy?.item_count || 4) ? current.concat(item.id) : current);
             }} /><span>{label}</span>{checked ? <Check size={15} /> : null}</label>;
@@ -767,7 +766,7 @@ export function RecommendationsAdmin({ initialPlacement = "" }: { initialPlaceme
               <span>第 {scholarPage} 页，共 {candidateResource.data?.count ?? 0} 项</span>
               <button type="button" disabled={!candidateResource.data?.next} onClick={() => setScholarPage((page) => page + 1)}>下一页</button>
             </nav>
-          <button className="button" type="button" disabled={!selected.length || publishing} onClick={() => void refresh(true)}><Save size={15} />{publishing ? "正在处理…" : "预览选中的推荐"}</button>
+          <button className="button" type="button" disabled={!selected.length || locked} onClick={() => void refresh(true)}><Save size={15} />{publishing ? "正在处理…" : "预览选中的推荐"}</button>
           <Notice>{message}</Notice>
         </section>
       </div>

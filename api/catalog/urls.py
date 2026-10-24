@@ -1,7 +1,9 @@
+from catalog.recommendation_command_views import RecommendationRefreshReceiptView
 from catalog.visual_review_views import VisualReviewView, VisualReviewReceiptView, VisualReviewReferenceView
 from catalog.journal_candidate_views import JournalContentsCandidatesView
 from catalog.local_service_views import LocalServicesView, LocalServiceCheckView
 from catalog.media_legacy_views import LegacyImageHistoryView, LegacyImageFileView
+from catalog.issue_creation_views import IssueCreateView, IssueCreateReceiptView
 from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
@@ -301,6 +303,8 @@ urlpatterns = [
     path("recommendation-issues/<slug:slug>/save-list/", SaveIssueReadingListView.as_view(), name="recommendation-issue-save-list"),
     path("recommendation-issues/<slug:slug>/items/<uuid:item_id>/cover/", IssueItemCoverView.as_view(), name="recommendation-issue-item-cover"),
     path("admin/recommendation-issues/", AdminIssueListView.as_view(), name="admin-recommendation-issue-list"),
+    path("admin/recommendation-issues/create/", IssueCreateView.as_view(), name="admin-issue-create"),
+    path("admin/recommendation-issues/create/commands/<uuid:request_id>/", IssueCreateReceiptView.as_view(), name="admin-issue-create-receipt"),
     path("admin/recommendation-issues/<uuid:issue_id>/", AdminIssueDetailView.as_view(), name="admin-recommendation-issue-detail"),
     path("admin/recommendation-issues/<uuid:issue_id>/preview/", AdminIssuePreviewView.as_view(), name="admin-recommendation-issue-preview"),
     path("admin/recommendation-issues/<uuid:issue_id>/history/", IssueHistoryView.as_view(), name="admin-issue-history"),
@@ -701,6 +705,7 @@ urlpatterns = [
     path("admin/theory-timeline/<uuid:pk>/", AdminTheoryTimelineDetailView.as_view(), name="admin-theory-timeline-detail"),
     path("admin/recommendations/", AdminRecommendationListView.as_view(), name="admin-recommendation-list"),
     path("admin/recommendations/<str:placement>/", AdminRecommendationPolicyView.as_view(), name="admin-recommendation-policy"),
+    path("admin/recommendations/<str:placement>/refresh/commands/<uuid:request_id>/", RecommendationRefreshReceiptView.as_view(), name="admin-recommendation-refresh-receipt"),
     path("admin/recommendations/<str:placement>/refresh/", AdminRecommendationRefreshView.as_view(), name="admin-recommendation-refresh"),
     path("admin/recommendations/<str:placement>/preview/", AdminRecommendationPreviewView.as_view(), name="admin-recommendation-preview"),
     path("admin/recommendation-overrides/", AdminRecommendationOverrideListView.as_view(), name="admin-recommendation-override-list"),

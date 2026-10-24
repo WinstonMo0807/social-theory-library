@@ -24,6 +24,7 @@ export type IssueItem = {
   linked_edition_id?: string | null;
 };
 export type RecommendationIssue = {
+  is_public?: boolean;
   project_id?: string | null; project_title?: string; project_archived?: boolean;
   selection_workspace?: IssueSelection;
   id: string; slug: string; title: string; issue_label: string; introduction: string;

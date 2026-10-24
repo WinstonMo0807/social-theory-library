@@ -189,6 +189,7 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "IssueCreationKindEnum": ["article", "research", "exhibition"],
         "MediaDisplayUseEnum": ["detail", "list", "mobile", "share"],
         "WorkMediaSlotEnum": ["cover", "recommendation"],
         "ObjectMediaSlotEnum": ["portrait", "hero"],

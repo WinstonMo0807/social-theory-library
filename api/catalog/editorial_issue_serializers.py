@@ -164,6 +164,7 @@ class PublicEditorialDirectorySerializer(serializers.Serializer):
 
 
 class RecommendationIssueSerializer(serializers.Serializer):
+    is_public = serializers.BooleanField(read_only=True, required=False)
     project_id = serializers.UUIDField(read_only=True, allow_null=True)
     project_title = serializers.CharField(read_only=True, allow_blank=True)
     project_archived = serializers.BooleanField(read_only=True)

@@ -2019,6 +2019,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendation-issues/create/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_create_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recommendation-issues/create/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_create_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_recommendation_issues_create_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recommendations/{placement}/refresh/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_recommendations_refresh_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/recommendations/{placement}/refresh/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendations_refresh_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_recommendations_refresh_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recycle/": {
         parameters: {
             query?: never;
@@ -6386,7 +6450,7 @@ export interface components {
          */
         ApiErrorSeverityEnum: "blocking" | "warning" | "info";
         ArticleMetadata: {
-            kind?: components["schemas"]["ArticleMetadataKindEnum"];
+            kind?: components["schemas"]["IssueCreationKindEnum"];
             keywords?: string[];
             topic_ids?: string[];
             scholar_ids?: string[];
@@ -6396,15 +6460,8 @@ export interface components {
             /** Format: uuid */
             curator_portrait_id?: string | null;
         };
-        /**
-         * @description * `article` - article
-         *     * `research` - research
-         *     * `exhibition` - exhibition
-         * @enum {string}
-         */
-        ArticleMetadataKindEnum: "article" | "research" | "exhibition";
         ArticleMetadataRequest: {
-            kind?: components["schemas"]["ArticleMetadataKindEnum"];
+            kind?: components["schemas"]["IssueCreationKindEnum"];
             keywords?: string[];
             topic_ids?: string[];
             scholar_ids?: string[];
@@ -9628,6 +9685,32 @@ export interface components {
          * @enum {string}
          */
         IssueBodyBlockTypeEnum: "paragraph" | "heading" | "quote" | "link" | "image" | "evidence" | "work" | "person" | "concept" | "node" | "timeline" | "reading_path" | "comparison" | "analysis";
+        IssueCreateCommandRequest: {
+            /** Format: uuid */
+            request_id: string;
+            title: string;
+            kind: components["schemas"]["IssueCreationKindEnum"];
+        };
+        IssueCreateReceipt: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            next_url: string;
+            /** Format: uuid */
+            issue_id: string | null;
+            available: boolean;
+        };
+        IssueCreateStopRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
+        /**
+         * @description * `article` - article
+         *     * `research` - research
+         *     * `exhibition` - exhibition
+         * @enum {string}
+         */
+        IssueCreationKindEnum: "article" | "research" | "exhibition";
         IssueHistoryItem: {
             /** Format: uuid */
             id: string;
@@ -13584,6 +13667,16 @@ export interface components {
             confirmed_only?: boolean;
             groups?: components["schemas"]["PlacementGroupRequest"][];
         };
+        /**
+         * @description * `home_featured` - 首页精选馆藏
+         *     * `home_theories` - 首页理论传统
+         *     * `home_scholars` - 首页学者
+         *     * `home_topics` - 首页问题主题
+         *     * `home_random` - 首页随机推荐
+         *     * `theory_weekly` - 理论页本周馆藏
+         * @enum {string}
+         */
+        PlacementEnum: "home_featured" | "home_theories" | "home_scholars" | "home_topics" | "home_random" | "theory_weekly";
         PlacementGroup: {
             area: string;
             name: string;
@@ -16255,6 +16348,7 @@ export interface components {
             detail: string;
         };
         RecommendationIssue: {
+            readonly is_public: boolean;
             /** Format: uuid */
             readonly project_id: string | null;
             readonly project_title: string;
@@ -16339,6 +16433,81 @@ export interface components {
             /** Format: uuid */
             restore_revision_id?: string;
             autosave?: boolean;
+        };
+        RecommendationPublishedItem: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            reason: string;
+            image_override: string;
+            target_type: string;
+            target: unknown;
+        };
+        RecommendationPublishedSnapshot: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: date-time */
+            starts_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            source?: components["schemas"]["RecommendationPublishedSnapshotSourceEnum"];
+            seed?: string;
+            readonly items: components["schemas"]["RecommendationPublishedItem"][];
+        };
+        /**
+         * @description * `automatic` - 系统轮换
+         *     * `manual` - 管理员更新
+         * @enum {string}
+         */
+        RecommendationPublishedSnapshotSourceEnum: "automatic" | "manual";
+        RecommendationRefreshCommandRequest: {
+            /** Format: uuid */
+            request_id?: string;
+            /** Format: uuid */
+            request_key?: string;
+            confirm: boolean;
+            /** Format: uuid */
+            expected_snapshot_id: string | null;
+            /** Format: date-time */
+            expected_updated_at: string;
+            preview_token?: string;
+            items?: {
+                [key: string]: unknown;
+            }[];
+        };
+        RecommendationRefreshReceipt: {
+            /** Format: uuid */
+            readonly id: string;
+            placement: components["schemas"]["PlacementEnum"];
+            title: string;
+            /** Format: int64 */
+            item_count?: number;
+            /** Format: int64 */
+            rotation_days?: number;
+            rules?: unknown;
+            enabled?: boolean;
+            /** Format: date-time */
+            last_generated_at?: string | null;
+            /** Format: date-time */
+            next_refresh_at?: string | null;
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly current: components["schemas"]["RecommendationPublishedSnapshot"] | null;
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            next_url: string;
+            command_accepted: boolean;
+            replayed: boolean;
+            /** Format: uuid */
+            accepted_snapshot_id: string | null;
+            /** Format: uuid */
+            audit_id: string;
+            publication_effective: boolean;
+        };
+        RecommendationRefreshStopRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
         /**
          * @description * `upload` - upload
@@ -23410,7 +23579,11 @@ export interface operations {
     };
     catalog_admin_recommendation_issues_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                q?: string;
+                scope?: "all" | "draft" | "mine" | "published" | "scheduled" | "unassigned";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -23886,6 +24059,156 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueSuggestionDismissed"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_create_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCreateCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IssueCreateCommandRequest"];
+                "multipart/form-data": components["schemas"]["IssueCreateCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCreateReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_create_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCreateReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendation_issues_create_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCreateStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["IssueCreateStopRequest"];
+                "multipart/form-data": components["schemas"]["IssueCreateStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCreateReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendations_refresh_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationRefreshCommandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecommendationRefreshCommandRequest"];
+                "multipart/form-data": components["schemas"]["RecommendationRefreshCommandRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationRefreshReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendations_refresh_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationRefreshReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_recommendations_refresh_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationRefreshStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecommendationRefreshStopRequest"];
+                "multipart/form-data": components["schemas"]["RecommendationRefreshStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationRefreshReceipt"];
                 };
             };
         };
