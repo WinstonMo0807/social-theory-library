@@ -6,6 +6,20 @@ from catalog.editorial_read import AdminEditorialDraftReadMixin
 from catalog.models import EditorialRevision
 
 
+def relations_for_node(queryset, value):
+    """Keep formal memberships until publish, including newly linked draft endpoints."""
+    from django.db.models import CharField, OuterRef, Q, Subquery, Value
+    from django.db.models.fields.json import KeyTextTransform
+    from django.db.models.functions import Replace
+    from rest_framework import serializers
+    key = serializers.UUIDField().run_validation(value)
+    draft = EditorialRevision.objects.filter(target_type="knowledge_relation", target_id=OuterRef("pk"), status="draft").order_by("-revision")
+    return queryset.alias(link_draft=Subquery(draft.values("materialized_preview")[:1])).alias(
+        draft_source=Replace(KeyTextTransform("source_node", "link_draft"), Value("-"), Value(""), output_field=CharField()),
+        draft_target=Replace(KeyTextTransform("target_node", "link_draft"), Value("-"), Value(""), output_field=CharField()),
+    ).filter(Q(source_node_id=key) | Q(target_node_id=key) | Q(draft_source=key.hex) | Q(draft_target=key.hex))
+
+
 class StagedRelationEditorMixin(AdminEditorialDraftReadMixin):
     public_status_field = "status"
     public_status_value = "published"

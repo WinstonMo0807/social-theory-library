@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from catalog.node_editor_views import NodeCommandMixin
+from catalog.node_editor_views import NodeCommandMixin, KnowledgeRelationCommandMixin
+from catalog.relation_editorial_views import relations_for_node
 
 from uuid import UUID, uuid4
 
@@ -927,7 +928,8 @@ class AdminKnowledgeNodeMergeRollbackView(AdminPrivateResponseMixin, TheorySyste
         return Response(KnowledgeNodeMergeRecordSerializer(record).data)
 
 
-class AdminKnowledgeRelationListView(StagedRelationEditorMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+@extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("node", str, description="当前正式或草稿关联的节点编号。")]))
+class AdminKnowledgeRelationListView(KnowledgeRelationCommandMixin, StagedRelationEditorMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     editorial_target_type = "knowledge_relation"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeRelationSerializer
@@ -941,7 +943,7 @@ class AdminKnowledgeRelationListView(StagedRelationEditorMixin, TheorySystemFeat
                 queryset = queryset.filter(**{field: value})
         node = params.get("node", "").strip()
         if node:
-            queryset = queryset.filter(Q(source_node_id=node) | Q(target_node_id=node))
+            queryset = relations_for_node(queryset, node)
         query = params.get("q", "").strip()
         if query:
             queryset = queryset.filter(
@@ -953,7 +955,9 @@ class AdminKnowledgeRelationListView(StagedRelationEditorMixin, TheorySystemFeat
         return queryset.order_by("-updated_at", "pk")
 
 
+@extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("node", str, description="可选节点范围，包含正式及草稿端点。")]))
 class AdminKnowledgeRelationDetailView(
+    KnowledgeRelationCommandMixin,
     StagedRelationEditorMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
@@ -962,6 +966,11 @@ class AdminKnowledgeRelationDetailView(
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeRelationSerializer
     queryset = KnowledgeRelation.objects.select_related("source_node", "target_node")
+
+    def get_queryset(self):
+        rows = super().get_queryset()
+        node = self.request.query_params.get("node")
+        return relations_for_node(rows, node) if node else rows
 
     def destroy(self, request, *args, **kwargs):
         relation = self.get_object()

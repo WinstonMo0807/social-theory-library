@@ -1,3 +1,4 @@
+from uuid import uuid4
 """R38/R39: protected drafts and real public reads from the dedicated editors."""
 import pytest
 from rest_framework.test import APIClient
@@ -77,11 +78,11 @@ def test_A14_dedicated_editor_requires_current_version_and_preserves_public_data
     assert "edit_version" in before.data, "专门编辑页必须收到当前修改版本"
     assert before["Cache-Control"] == "private, no-store"
     version = before.data["edit_version"]
-    assert api_client.patch(url, {"description": "缺版本"}, format="json").status_code == 428
-    saved = api_client.patch(url, {"description": "甲保存的新说明"}, format="json", HTTP_IF_MATCH=version)
+    assert api_client.patch(url, {"description": "缺版本"}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 428
+    saved = api_client.patch(url, {"description": "甲保存的新说明"}, format="json", HTTP_IF_MATCH=version, HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert saved.status_code == (202 if published else 200), saved.data
     assert saved.data["edit_version"] != version
-    assert api_client.patch(url, {"description": "乙旧窗口覆盖"}, format="json", HTTP_IF_MATCH=version).status_code == 409
+    assert api_client.patch(url, {"description": "乙旧窗口覆盖"}, format="json", HTTP_IF_MATCH=version, HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 409
     row.refresh_from_db()
     assert row.description == ("原说明" if published else "甲保存的新说明")
     assert api_client.get(url).data["description"] == "甲保存的新说明"
@@ -92,7 +93,7 @@ def test_A32_save_draft_does_not_publish_and_explicit_publication_is_idempotent(
     row, url = editor_object(kind)
     api_client.force_authenticate(admin_user)
     before = api_client.get(url)
-    saved = api_client.patch(url, {"description": "正式发布的新说明"}, format="json", HTTP_IF_MATCH=before.data.get("edit_version", "baseline"))
+    saved = api_client.patch(url, {"description": "正式发布的新说明"}, format="json", HTTP_IF_MATCH=before.data.get("edit_version", "baseline"), HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert saved.status_code == 202, "保存已公开内容只能建立编辑草稿"
     revision = saved.data["editorial_revision"]
     row.refresh_from_db()
@@ -131,7 +132,7 @@ def test_new_public_item_stays_private_until_explicit_publish(api_client, admin_
     else:
         payload = {"title": "新时间线", "event_type": "development", "review_status": "approved", "relations": [{"node": str(row.normalized_relations.get().node_id), "relation_type": "subject"}]}
         status_field, public_value = "review_status", "approved"
-    response = api_client.post(detail.rsplit(str(row.pk), 1)[0], payload, format="json")
+    response = api_client.post(detail.rsplit(str(row.pk), 1)[0], payload, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert response.status_code == 201, response.data
     created = type(row).objects.get(pk=response.data["id"])
     assert getattr(created, status_field) != public_value
@@ -171,7 +172,7 @@ def test_withdraw_is_a_saved_draft_until_publisher_confirms(api_client, admin_us
     api_client.force_authenticate(admin_user)
     version = api_client.get(url).data["edit_version"]
     field, before, after = ("status", "published", "archived") if kind == "knowledge_relation" else ("review_status", "approved", "rejected")
-    saved = api_client.patch(url, {field: after}, format="json", HTTP_IF_MATCH=version)
+    saved = api_client.patch(url, {field: after}, format="json", HTTP_IF_MATCH=version, HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert saved.status_code == 202, saved.data
     row.refresh_from_db()
     assert getattr(row, field) == before
@@ -202,7 +203,7 @@ def test_editor_can_save_and_publish_without_second_approver(api_client, kind):
     row, url = editor_object(kind)
     before = api_client.get(url)
     field, value = ("status", "published") if kind == "knowledge_relation" else ("review_status", "approved")
-    response = api_client.patch(url, {"description": "复核员保存的草稿", field: value}, format="json", HTTP_IF_MATCH=before.data["edit_version"])
+    response = api_client.patch(url, {"description": "复核员保存的草稿", field: value}, format="json", HTTP_IF_MATCH=before.data["edit_version"], HTTP_X_EDITOR_OWNER=str(user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert response.status_code == 202, response.data
     assert api_client.post(f"/api{response.data['editorial_revision']['publish_url']}", {}, format="json").status_code == 200
     row.refresh_from_db()

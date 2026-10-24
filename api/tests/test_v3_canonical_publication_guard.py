@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 
 from accounts.models import User
@@ -94,8 +96,7 @@ def test_legacy_reviewer_is_normalized_to_editor_for_authority_publication(
             "evidence_source": "人工来源说明",
             "status": "published",
         },
-        format="json",
-    )
+        format="json", HTTP_X_EDITOR_OWNER=str(reviewer.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
 
     assert topic_response.status_code == 201
     assert relation_response.status_code == 201
@@ -127,8 +128,7 @@ def test_published_knowledge_relation_propagates_and_cannot_be_hard_deleted(
             "status": "published",
         },
         format="json",
-        HTTP_IDEMPOTENCY_KEY="knowledge-relation-publication-test",
-    )
+        HTTP_IDEMPOTENCY_KEY="knowledge-relation-publication-test", HTTP_X_EDITOR_OWNER=str(admin_user.pk))
 
     assert created.status_code == 201
     assert created.data["public_status"] == "draft"
@@ -143,8 +143,7 @@ def test_published_knowledge_relation_propagates_and_cannot_be_hard_deleted(
 
     deleted = api_client.delete(
         f"/api/catalog/admin/theory-system/relations/{relation.id}/",
-        HTTP_IF_MATCH=api_client.get(f"/api/catalog/admin/theory-system/relations/{relation.id}/").data["edit_version"],
-    )
+        HTTP_IF_MATCH=api_client.get(f"/api/catalog/admin/theory-system/relations/{relation.id}/").data["edit_version"], HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert deleted.status_code == 409
     assert deleted.data["code"] == "published_relation_requires_withdrawal"
     assert KnowledgeRelation.objects.filter(pk=relation.id).exists()

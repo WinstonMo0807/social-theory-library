@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NodeRelations } from "./node-relations";
 import { cloneElement, useId, type FormHTMLAttributes, type ReactElement, type ReactNode } from "react";
 import { PreviewViewport } from "../curation/fixed-page-editor";
 import styles from "./concept-editor.module.css";
@@ -20,10 +21,10 @@ export function knowledgeNodeSection(section: string) {
   return section;
 }
 
-export function KnowledgeNodeEditorFrame({ composing=false, form, groups, active, changeSection, dirty, disabled, locked, saved, draft, objectType, publication, preview, rail, extra }: {
+export function KnowledgeNodeEditorFrame({ composing=false, form, groups, active, changeSection, dirty, disabled, locked, saved, draft, objectType, publication, preview, rail, extra, onRelationsChanged }: {
   composing?: boolean; form: ReactElement<{ children: ReactNode }>; groups: Group[]; active: string; changeSection: (id: string) => void;
   dirty: boolean; disabled: boolean; locked: boolean; saved?: object | null; draft: object; objectType: string;
-  publication: ReactNode; preview: ReactNode; rail: ReactNode; extra: ReactNode;
+  publication: ReactNode; preview: ReactNode; rail: ReactNode; extra: ReactNode; onRelationsChanged?:()=>void;
 }) {
   const formId = useId(), record = (saved || {}) as { id?: string; updated_at?: string; editorial_revision?: { status?: string }; status?: string };
   const input = draft as { canonical_name_zh?: string; canonical_name_en?: string; name?: string; summary?: string };
@@ -41,7 +42,7 @@ export function KnowledgeNodeEditorFrame({ composing=false, form, groups, active
     <nav className={styles.nodeTabs} aria-label="理论与概念编辑栏目">{tabs.map(tab => <button key={tab.id} type="button" aria-current={tab.id === active ? "page" : undefined} onClick={() => changeSection(tab.id)}>{tab.label}</button>)}<label><span className="sr-only">其他编辑区域</span><select aria-label="其他编辑区域" value={tabs.some(tab => tab.id === active) ? "" : active} onChange={event => { if (event.target.value) changeSection(event.target.value); }}><option value="">更多</option>{knowledgeNodeSections.slice(tabs.length).map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}</select></label></nav>
     {locked && active !== "publication" ? <p role="status" className={styles.notice}>发布记录正在核对。<button type="button" onClick={() => changeSection("publication")}>查看原操作</button></p> : null}
     {editForm}
-    {active === "relations" ? <aside className={styles.panel}><h3>正式关系与出处</h3><p>下方为同一对象的共享关联。新增和修订正式关系沿用原关系编辑器，来源候选须明确核对后确认。</p>{record.id && !dirty && !locked ? <Link href={`/admin/theories/relations?node=${record.id}`}>进入原关系编辑与候选核对 →</Link> : <p>先保存当前条目，再建立正式关系。</p>}</aside> : null}
+    {active === "relations" ? record.id ? <NodeRelations nodeId={record.id} blocked={dirty || disabled || locked} onChanged={onRelationsChanged}/> : <p>先保存当前条目，再建立正式关系。</p> : null}
     {extra}
     <div hidden={active !== "publication"}>{publication}</div>
     <div hidden={!["media", "relations", "versions"].includes(active)} inert={locked}>{rail}</div>

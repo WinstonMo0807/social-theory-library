@@ -1,3 +1,4 @@
+from uuid import uuid4
 import pytest
 from django.test import RequestFactory, override_settings
 
@@ -446,8 +447,7 @@ def test_existing_theory_relation_can_be_edited_and_archived(
             "confidence": 0.8,
             "status": "published",
         },
-        format="json",
-    )
+        format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
     assert created.status_code == 201
 
     published = api_client.post(f"/api{created.data['editorial_revision']['publish_url']}", {}, format="json")
@@ -457,8 +457,7 @@ def test_existing_theory_relation_can_be_edited_and_archived(
         detail_url,
         {"description": "修改后的说明", "status": "archived"},
         format="json",
-        HTTP_IF_MATCH=api_client.get(detail_url).data["edit_version"],
-    )
+        HTTP_IF_MATCH=api_client.get(detail_url).data["edit_version"], HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
 
     assert updated.status_code == 202
     assert updated.data["description"] == "修改后的说明"

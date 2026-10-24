@@ -1101,10 +1101,17 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
 
 
 class AdminKnowledgeRelationSerializer(KnowledgeRelationSerializer):
+    from catalog.scholar_relation_commands import ScholarRelationReceipt
+    save_receipt = ScholarRelationReceipt(read_only=True)
+    save_replayed = serializers.BooleanField(read_only=True)
+
+    class Meta(KnowledgeRelationSerializer.Meta):
+        fields = (*KnowledgeRelationSerializer.Meta.fields, "save_receipt", "save_replayed")
+
     def validate_status(self, value):
         request = self.context.get("request")
         user = getattr(request, "user", None)
-        if value == "published" and not has_capability(
+        if value == "published" and (self.instance is None or self.instance.status != "published") and not has_capability(
             user,
             Capability.PUBLISH_AUTHORITY,
         ):
