@@ -223,7 +223,7 @@ class Runtime:
             "batch_size": self.batch_size,
             "resident_model": self.session_role,
             "resident_tokenizer": next(iter(self.tokenizers), ""),
-            "models": {role: {**self.identity(role), "loaded": role in self.loaded_roles,
+            "models": {role: {**self.identity(role), "loaded": self.session is not None and self.session_role == role,
                               "inference_completed": role in self.completed_roles}
                        for role in self.models},
             "deep": self.deep_health(),

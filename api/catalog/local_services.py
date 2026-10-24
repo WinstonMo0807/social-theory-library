@@ -129,7 +129,16 @@ def observation_payload(run):
         "status": state if state in STATUS_LABELS else "untested", "checked_at": run.started_at,
         "completed_at": run.completed_at, "latency_ms": run.latency_ms,
         "detail": details.get("safe_detail", "检查结果暂不可读。"),
-        "identity": details.get("identity", {}), "configuration_version": details.get("configuration_version", "")}
+        "identity": safe_identity(details.get("identity")), "configuration_version": details.get("configuration_version", "")}
+
+
+def safe_identity(raw):
+    """Only bounded runtime labels, never raw health payloads or paths."""
+    if not isinstance(raw,dict):return {}
+    result={field:raw[field][:300] for field in ("model","revision","artifact_id","backend","runtime_version","device") if isinstance(raw.get(field),str)}
+    result.update({field:raw[field] for field in ("loaded","inference_completed") if type(raw.get(field)) is bool})
+    result.update({field:raw[field] for field in ("threads","batch_size") if type(raw.get(field)) is int and 1<=raw[field]<=4096})
+    return result
 
 
 def latest_observations(keys):
@@ -207,6 +216,8 @@ def _check(definition):
         raw = models.get(role, {})
         identity = {field: str(raw[field])[:300] for field in ("model", "revision", "artifact_id") if isinstance(raw.get(field), str)}
         identity.update(loaded=raw.get("loaded") is True, inference_completed=raw.get("inference_completed") is True)
+        identity.update(safe_identity({field:health.get(field) for field in ("backend","runtime_version","threads","batch_size")}))
+        if identity.get("backend")=="onnxruntime-cpu":identity["device"]="CPU"
         if health.get("manifest_ready") is not True or not identity.get("artifact_id"):
             return "model_unloaded", "模型文件或清单未就绪，请核对本地模型部署。", identity
         if identity["inference_completed"]:
