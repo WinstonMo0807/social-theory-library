@@ -1,3 +1,4 @@
+from uuid import uuid4
 import pytest
 from hashlib import sha256
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -497,6 +498,8 @@ def test_published_knowledge_node_patch_stays_draft_until_single_editor_confirm(
         f"/api/catalog/admin/theory-system/nodes/{node.id}/",
         {"summary": "经过编辑确认前仍不公开的新摘要"},
         format="json",
+        HTTP_X_EDITOR_OWNER=str(editor.pk),
+        HTTP_IDEMPOTENCY_KEY=str(uuid4()),
     )
 
     assert draft.status_code == 202
@@ -569,6 +572,8 @@ def test_published_node_normalized_taxonomy_links_publish_through_revision(api_c
             ],
         },
         format="json",
+        HTTP_X_EDITOR_OWNER=str(editor.pk),
+        HTTP_IDEMPOTENCY_KEY=str(uuid4()),
     )
 
     assert draft.status_code == 202

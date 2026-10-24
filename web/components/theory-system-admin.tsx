@@ -399,6 +399,11 @@ export function TheoryNodesAdmin({ initialNodeId = "" }: { initialNodeId?: strin
 
 function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: string; initialLegacyId: string }) {
   const apiRequest = useEditorRequest();
+  const user = useAdminSession(), owner = String(user?.id || ""), command = useScholarSave(owner, "node");
+  const canEdit = hasAdminCapability(user, "can_edit_draft_authority"), canCreate = hasAdminCapability(user, "can_create_authority");
+  const [knownSavedId, setKnownSavedId] = useState("");
+  const composing = useRef(false), mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const theoryLocation = useEditorListLocation();
   const nodePage = adminPageNumber(theoryLocation.search.get("page"));
   const [editConflict, setEditConflict] = useState(false);
@@ -418,6 +423,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   const [message, setMessage] = useState("");
   const [messageState, setMessageState] = useState<ActionState>("idle");
   const { pendingAction, startAction, finishAction } = useActionGuard();
+  useUnsavedForm(Boolean(command.recovery) || Boolean(pendingAction) || Boolean(knownSavedId), false);
   const [entityLabels, setEntityLabels] = useState<Record<string, string>>({});
   const [versions, setVersions] = useState<Array<{ id: string; version_number: number; change_note: string; created_by_name: string; created_at: string }> | null>(null);
   const [mergeTarget, setMergeTarget] = useState("");
@@ -497,6 +503,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   }, [requestedNode.data, requestedNodeId, requestedNodeOpened]);
 
   function start(node?: KnowledgeNode) {
+    if (composing.current || command.recovery || pendingAction || knownSavedId) return;
     if (nodeDirty && !window.confirm("当前理论或概念还有未保存的填写。放弃填写并切换吗？")) return;
     prefills.clear();
     setEditing(node ?? null);
@@ -511,6 +518,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
 
   async function saveNode(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
+    if (composing.current || !canEdit || !command.ready || command.recovery || knownSavedId || openingNode || !editing && !canCreate) return false;
     const token = getServerSessionCredential();
     if (!token) return false;
     const actionKey = "save-theory-node";
@@ -577,11 +585,11 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       sort_order: draft.sort_order,
     };
     try {
-      const saved = await apiRequest<KnowledgeNode>(
+      const saved = await command.save<KnowledgeNode>(
         `/catalog/admin/theory-system/nodes/${editing ? `${editing.id}/` : ""}`,
-        { method: editing ? "PATCH" : "POST", headers: editing ? editorialHeaders(editing) : undefined, body: JSON.stringify(payload) },
-        token,
+        JSON.stringify(payload), editing ? editorialHeaders(editing) : {}, editing ? "PATCH" : "POST",
       );
+      if (!mounted.current) return false;
       setEditing(saved);
       prefills.clear();
       setPendingRevision(saved.editorial_revision ?? null);
@@ -594,6 +602,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       allNodes.refresh();
       return true;
     } catch (reason) {
+      if (!mounted.current) return false;
       setEditConflict(isEditorialConflict(reason));
       setMessage(reason instanceof Error ? reason.message : "保存失败");
       setMessageState("error");
@@ -601,6 +610,41 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     } finally {
       finishAction(actionKey);
     }
+  }
+
+  function applyRecoveredNode(saved: KnowledgeNode) {
+    setEditing(saved); setDraft(nodeToDraft(saved)); setNodeType(saved.node_type);
+    setPendingRevision(saved.editorial_revision ?? null); setKnownSavedId("");
+    setRequestedNodeOpened(true); setLegacyOpened(true); prefills.clear();
+    setVersions(null); setMergeTarget(""); setEditConflict(false); nodes.refresh(); allNodes.refresh();
+  }
+  async function recoverNode(mode: "lookup" | "stop" | "retry" | "read") {
+    if (composing.current || !startAction("recover-node")) return;
+    setMessage(""); setMessageState("pending");
+    try {
+      if (mode === "retry") {
+        if (!command.canRetry) return;
+        const saved = await command.save<KnowledgeNode>("", "{}", {}, "POST");
+        if (!mounted.current) return;
+        applyRecoveredNode(saved); setMessage("原请求已完成，当前保存版本已重新读取。");
+      } else {
+        let id = knownSavedId;
+        if (mode !== "read") {
+          const receipt = await command.lookup(mode === "stop");
+          if (!receipt || !mounted.current) return;
+          if (receipt.state === "cancelled") { setMessage("未执行的保存已停止，当前输入仍保留。"); setMessageState("success"); return; }
+          id = receipt.node_id || "";
+          if (!id) throw Error("原请求缺少对象编号，请核对操作记录。");
+          setKnownSavedId(id);
+        }
+        if (!id) return;
+        const saved = await apiRequest<KnowledgeNode>(`/catalog/admin/theory-system/nodes/${id}/`, { cache:"no-store" }, getServerSessionCredential());
+        if (!mounted.current) return;
+        applyRecoveredNode(saved); setMessage("原保存已完成，已返回同一个理论或概念；不会再次新建。");
+      }
+      setMessageState("success");
+    } catch (reason) { if (mounted.current) { setMessage(reason instanceof Error ? reason.message : "原请求暂不可读取。"); setMessageState("error"); } }
+    finally { finishAction("recover-node"); }
   }
 
   async function refreshAssistantRevision() {
@@ -616,7 +660,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   }
 
   async function publishRevision() {
-    if (!pendingRevision) return;
+    if (!pendingRevision || composing.current || command.recovery || knownSavedId) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = "publish-node-revision";
@@ -666,7 +710,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   }
 
   async function mergeNode() {
-    if (!editing || !mergeTarget) return;
+    if (!editing || !mergeTarget || composing.current || command.recovery || knownSavedId || nodeDirty) return;
     const target = allNodes.data?.results.find((item) => item.id === mergeTarget);
     const token = getServerSessionCredential();
     if (!token) return;
@@ -709,7 +753,13 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       description="选择条目后修改名称、简介和相关资料。保存后可预览，确认发布后读者才会看到修改。"
       actions={<><Link className="admin-outline-button" href="/admin/theories/timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></>}
     >
-      <div className="theory-node-admin-grid knowledge-object-host-layout">
+      {command.recovery || knownSavedId || command.error ? <section className="admin-panel" aria-label="核对理论与概念保存">
+        <h2>核对原保存</h2><p>{knownSavedId ? "原保存已完成，但原记录尚未重新读取。请先核对原对象，不要再次创建。" : "保存结果尚未确认。输入与原请求编号已保留，请查回结果后继续。"}</p>
+        {command.error ? <p role="alert">{command.error}</p> : null}{message ? <p role="status">{message}</p> : null}
+        {command.recovery ? <><button type="button" disabled={Boolean(pendingAction)} onClick={() => void recoverNode("lookup")}>查回原请求</button><button type="button" disabled={Boolean(pendingAction)} onClick={() => void recoverNode("stop")}>停止未执行的保存</button>{command.canRetry ? <button type="button" disabled={Boolean(pendingAction)} onClick={() => void recoverNode("retry")}>重试同一请求</button> : null}</> : null}
+        {knownSavedId ? <button type="button" disabled={Boolean(pendingAction)} onClick={() => void recoverNode("read")}>重新读取原对象</button> : null}
+      </section> : null}
+      <div className="theory-node-admin-grid knowledge-object-host-layout" inert={Boolean(command.recovery) || Boolean(pendingAction) || Boolean(knownSavedId)} onCompositionStartCapture={() => { composing.current = true; }} onCompositionEndCapture={() => { composing.current = false; }}>
         <section className="admin-panel theory-node-table-panel">
           <nav className="theory-node-tabs">
             {editableNodeTypeEntries.map(([value, label]) => <button className={nodeType === value ? "active" : ""} type="button" key={value} onClick={() => { theoryLocation.update({ page: 1, node_type: value }); setNodeType(value); start(); }}>{label}</button>)}
@@ -744,7 +794,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
         <form className="admin-panel theory-node-editor" onSubmit={(event) => void saveNode(event, true)} inert={openingNode} aria-busy={openingNode}>
           <p>保存本页名称、说明、分类和关联，不跳转。已有公开内容的修改需另行发布。时间线在当前理论的次级页面维护。</p>
           <EditorialPrefillNotice state={prefills} />
-          <fieldset disabled={openingNode} style={{ display: "contents" }}>
+          <fieldset disabled={openingNode || !canEdit || !command.ready || !editing && !canCreate} style={{ display: "contents" }}>
           <header><div><h2>{editing ? `编辑 ${editing.canonical_name_zh}` : "新建条目"}</h2><p>{editing ? `相关文献 ${editing.work_count} · 关联 ${editing.relation_count}` : "先填写名称和简介，其他资料可以稍后补充。"}</p></div>{editing ? <div className="theory-editor-preview-links"><Link href={`/admin/preview/knowledge/${knowledgeStudioNodeType(editing.node_type)}/${editing.id}`} target="_blank">预览已保存内容 <ExternalLink size={14} /></Link><Link href={`/admin/theories/${editing.id}?section=timeline&returnTo=${encodeURIComponent(theoryLocation.href({ node: editing.id }))}`}>管理此理论的时间线</Link><Link href={`/theories/graph?center=${encodeURIComponent(editing.slug)}`} target="_blank">查看公开关系图 <ExternalLink size={14} /></Link></div> : null}</header>
           <div className="inline-fields"><label><span>标准中文名</span><input autoComplete="off" required value={draft.canonical_name_zh} onChange={(event) => setDraft({ ...draft, canonical_name_zh: event.target.value })} /></label><label><span>资料类型</span><select value={draft.node_type} onChange={(event) => setDraft({ ...draft, node_type: event.target.value })}>{editableNodeTypeEntries.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
           <CurationFieldAssistant

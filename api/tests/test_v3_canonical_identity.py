@@ -1,3 +1,4 @@
+from uuid import uuid4
 from __future__ import annotations
 
 import pytest
@@ -160,6 +161,8 @@ def test_node_uses_independent_subdiscipline_and_topic_relations(
             ],
         },
         format="json",
+        HTTP_X_EDITOR_OWNER=str(admin_user.pk),
+        HTTP_IDEMPOTENCY_KEY=str(uuid4()),
     )
 
     assert created.status_code == 201

@@ -853,6 +853,9 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
 
 
 class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
+    from catalog.node_editor_views import NodeSaveReceipt
+    save_receipt = NodeSaveReceipt(read_only=True)
+    save_replayed = serializers.BooleanField(read_only=True)
     edit_version = serializers.CharField(read_only=True)
     aliases = KnowledgeNodeAliasSerializer(many=True, required=False)
     discipline_links = KnowledgeNodeDisciplineSerializer(many=True, required=False)
@@ -870,7 +873,7 @@ class AdminKnowledgeNodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = KnowledgeNode
         fields = (
-            "id",
+            "id", "save_receipt", "save_replayed",
             "edit_version",
             "node_type",
             "canonical_name_zh",

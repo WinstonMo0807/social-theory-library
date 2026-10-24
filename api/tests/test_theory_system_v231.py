@@ -1,3 +1,4 @@
+from uuid import uuid4
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 import pytest
@@ -117,6 +118,8 @@ def test_editor_can_create_and_publish_node_without_superadmin(api_client):
             "status": "published",
         },
         format="json",
+        HTTP_X_EDITOR_OWNER=str(editor.pk),
+        HTTP_IDEMPOTENCY_KEY=str(uuid4()),
     )
     assert published_directly.status_code == 201
     assert published_directly.data["published_at"]
@@ -131,6 +134,8 @@ def test_editor_can_create_and_publish_node_without_superadmin(api_client):
             "aliases": [{"alias": "编辑别名", "language": "zh-CN", "alias_type": "alias"}],
         },
         format="json",
+        HTTP_X_EDITOR_OWNER=str(editor.pk),
+        HTTP_IDEMPOTENCY_KEY=str(uuid4()),
     )
     assert draft.status_code == 201
     assert KnowledgeNodeAlias.objects.filter(node_id=draft.data["id"], alias="编辑别名").exists()
@@ -139,6 +144,8 @@ def test_editor_can_create_and_publish_node_without_superadmin(api_client):
         f"/api/catalog/admin/theory-system/nodes/{draft.data['id']}/",
         {"status": "published"},
         format="json",
+        HTTP_X_EDITOR_OWNER=str(editor.pk),
+        HTTP_IDEMPOTENCY_KEY=str(uuid4()),
     )
     assert published.status_code == 200
     assert published.data["published_at"]

@@ -2499,6 +2499,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/nodes/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_nodes_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_theory_system_nodes_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/theory-system/reading-paths/": {
         parameters: {
             query?: never;
@@ -12044,6 +12060,18 @@ export interface components {
             /** Format: uuid */
             request_key: string;
             workbench_url: string;
+        };
+        NodeSaveReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            node_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
         };
         NormalizedTimelineDetail: {
             /** Format: uuid */
@@ -25804,6 +25832,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HomeSourcePage"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeSaveReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeSaveReceipt"];
                 };
             };
         };

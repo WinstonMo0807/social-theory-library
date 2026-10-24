@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from catalog.node_editor_views import NodeCommandMixin
+
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -699,7 +701,7 @@ class ReadingPathDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView):
         return response
 
 
-class AdminKnowledgeNodeListView(AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminKnowledgeNodeListView(NodeCommandMixin, AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     editorial_target_type = "knowledge_node"
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminKnowledgeNodeSerializer
@@ -725,6 +727,7 @@ class AdminKnowledgeNodeListView(AdminEditorialDraftReadMixin, TheorySystemFeatu
 
 
 class AdminKnowledgeNodeDetailView(
+    NodeCommandMixin,
     AdminEditorialDraftReadMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
