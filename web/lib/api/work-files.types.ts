@@ -11,6 +11,7 @@ export type WorkFilesState = {
   editions: WorkEdition[]; selected_edition_id: string | null;
   edition: { id: string; updated_at: string; active_revision_id: string | null; current_reader_asset_id: string | null; public_reader_asset_id: string | null; rights: { note: string; access_status: string; source_asset_id: string | null; updated_at: string | null; can_edit: boolean }; workbench_url: string } | null;
   files: { count: number; page: number; page_size: number; results: WorkFile[] }; current_reader_file: WorkFile | null; public_reader_file: WorkFile | null; tasks: WorkFileTask[]; task_count: number;
+  inspected_file: WorkFile | null;
   capabilities: { formats: FileFormatCapability[]; can_edit: boolean; can_publish: boolean; max_active_tasks_per_edition: number };
   history: { count: number; page: number; page_size: number; results: { id: string; revision: number; title: string; status: string; activated_at: string | null; is_current: boolean; can_rollback: boolean }[] }; impact: FileImpact;
 };

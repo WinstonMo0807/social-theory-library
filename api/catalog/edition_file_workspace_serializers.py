@@ -183,6 +183,7 @@ class WorkFilesStateOutput(serializers.Serializer):
     edition = WorkFilesEditionOutput(allow_null=True)
     files = WorkFilePageOutput()
     current_reader_file = WorkFileOutput(allow_null=True)
+    inspected_file = WorkFileOutput(allow_null=True)
     public_reader_file = WorkFileOutput(allow_null=True)
     tasks = WorkFileTaskOutput(many=True)
     task_count = serializers.IntegerField()

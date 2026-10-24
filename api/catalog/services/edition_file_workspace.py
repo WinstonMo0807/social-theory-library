@@ -146,6 +146,7 @@ def state(work_id, actor, *, edition_id=None, page=1, impact_page=1, history_pag
         "title": row.snapshot.get("work", {}).get("title", ""), "status": row.status, "activated_at": row.activated_at,
         "is_current": row.pk == selected.active_catalog_revision_id,
         "can_rollback": bool(row.activated_at and row.status in {"active", "superseded"})})
+    inspected = next((row for row in assets if str(row.pk) == str(asset_id)), None) if asset_id else None
     return {"work": {"id": str(work.pk), "title": work.title, "updated_at": work.updated_at,
         "cover_url": f"/api/catalog/works/{work.pk}/cover/" if public_cover.get("cover") or public_cover.get("cover_media") else "",
         "authors": list(dict.fromkeys(author_names)), "document_type": work.document_type,
@@ -156,6 +157,7 @@ def state(work_id, actor, *, edition_id=None, page=1, impact_page=1, history_pag
             "original_count": counts.get((str(row.pk), "original"), 0), "reader_count": counts.get((str(row.pk), "normalized"), 0),
             "current_reader_asset_id": str(selected_reader(row).pk) if selected_reader(row) else None} for row in editions],
         "selected_edition_id": str(selected.pk) if selected else None,
+        "inspected_file": file_row(inspected, public, actors, False) if inspected else None,
         "edition": {"id": str(selected.pk), "updated_at": selected.updated_at,
             "active_revision_id": str(selected.active_catalog_revision_id) if selected.active_catalog_revision_id else None,
             "current_reader_asset_id": str(active.pk) if active else None,

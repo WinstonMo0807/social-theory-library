@@ -33,6 +33,7 @@ async function setup(page: Page) {
       editions: [{ id: editionId, label: "合成出版版本", version_label: "合成出版版本", publication_year: 2024, publisher: "合成机构", language: "zh",
         is_primary: true, state: "published", original_count: 21, reader_count: 21, current_reader_asset_id: file(1).id }],
       selected_edition_id: editionId,
+      inspected_file: null,
       edition: { id: editionId, updated_at: stamp, active_revision_id: id(3), current_reader_asset_id: file(1).id, public_reader_asset_id: file(1).id,
         rights: { note: "合成授权", access_status: "public", source_asset_id: file(1).id, updated_at: stamp, can_edit: true }, workbench_url: `/admin/library/works/${workId}?edition=${editionId}` },
       files: { count: 21, page: 1, page_size: 20, results: Array.from({ length: 20 }, (_, index) => file(index + 1)) }, current_reader_file: file(1), public_reader_file: file(1),

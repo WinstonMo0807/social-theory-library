@@ -70521,6 +70521,14 @@
                         ],
                         "nullable": true
                     },
+                    "inspected_file": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkFileOutput"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "public_reader_file": {
                         "allOf": [
                             {
@@ -70556,6 +70564,7 @@
                     "files",
                     "history",
                     "impact",
+                    "inspected_file",
                     "public_reader_file",
                     "selected_edition_id",
                     "task_count",

@@ -196,16 +196,23 @@ def _metadata_evidence(candidate: MetadataCandidate) -> list[dict]:
     output: list[dict] = []
     source = str(candidate.source or "").casefold()
     imported = source.startswith("manual_import:")
-    for row in candidate.evidence_records.all()[:20]:
-        locator = {"page": row.page_number} if row.page_number else None
+    for row in candidate.evidence_records.select_related("asset__edition__work")[:20]:
+        locator = {"page": row.page_number} if row.page_number else {}
+        if row.asset_id:
+            locator.update({"asset_id": str(row.asset_id), "edition_id": str(row.asset.edition_id),
+                            "work_id": str(row.asset.edition.work_id), "title": row.asset.edition.work.title})
         summary = row.text_quote.strip() or ((candidate.evidence or {}).get("source_label") if imported else "当前文件中的书目信息")
         if imported and row.external_identifier:
-            locator = {"url": row.external_identifier}
+            locator["url"] = row.external_identifier
         output.append(_evidence("人工导入" if imported else "来自本书", str(summary or "书目建议")[:280], locator=locator))
     if not output:
         source = str(candidate.source or "").casefold()
         category = "来自本书" if any(key in source for key in ("pdf", "ocr", "native")) else "其他资料"
-        output.append(_evidence(category, "发现了与当前字段一致的值"))
+        evidence = candidate.evidence or {}
+        locator = {"url": evidence.get("record_url") or evidence.get("source_url") or ""}
+        if evidence.get("catalog_work_id") and evidence.get("catalog_edition_id"):
+            locator.update({"work_id": str(evidence["catalog_work_id"]), "edition_id": str(evidence["catalog_edition_id"])})
+        output.append(_evidence(category, "发现了与当前字段一致的值", locator=locator))
     source = str(candidate.source or "").casefold()
     evidence = dict(candidate.evidence or {})
     if any(key in source for key in ("synthesis", "ai_generated", "llm")) or evidence.get("ai_assisted"):
@@ -241,6 +248,7 @@ def _enrichment_evidence(candidate: EnrichmentCandidate) -> list[dict]:
     for row in candidate.evidence_records.filter(is_current=True)[:20]:
         category = official.get(row.source_class, "其他外部资料")
         locator = dict(row.locator or {})
+        locator.setdefault("url", row.canonical_url or row.source_url)
         output.append(
             _evidence(category, row.supporting_text[:280], locator=locator or None)
         )

@@ -18754,6 +18754,7 @@ export interface components {
             edition: components["schemas"]["WorkFilesEditionOutput"] | null;
             files: components["schemas"]["WorkFilePageOutput"];
             current_reader_file: components["schemas"]["WorkFileOutput"] | null;
+            inspected_file: components["schemas"]["WorkFileOutput"] | null;
             public_reader_file: components["schemas"]["WorkFileOutput"] | null;
             tasks: components["schemas"]["WorkFileTaskOutput"][];
             task_count: number;
