@@ -3177,8 +3177,21 @@ class WorkNodeRelation(UUIDTimeStampedModel):
 
 
 class PersonNodeRelation(UUIDTimeStampedModel):
+    class RelationType(models.TextChoices):
+        RELATED = "related", "相关"
+        PROPOSES = "proposes", "提出"
+        DEFINES = "defines", "定义"
+        DEVELOPS = "develops", "发展"
+        CRITICIZES = "criticizes", "批判"
+        INTERPRETS = "interprets", "解释"
+        USES = "uses", "运用"
+        INFLUENCES = "influences", "影响"
+
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="node_relations")
     node = models.ForeignKey(KnowledgeNode, on_delete=models.CASCADE, related_name="person_relations")
+    relation_type = models.CharField(max_length=24, choices=RelationType.choices, default=RelationType.RELATED)
+    direction = models.CharField(max_length=20, choices=KnowledgeRelation.Direction.choices, default=KnowledgeRelation.Direction.UNDIRECTED)
+    node_is_source = models.BooleanField(default=False)
     relation_label = models.CharField(max_length=120, blank=True)
     is_representative = models.BooleanField(default=False)
     sort_order = models.PositiveIntegerField(default=0)

@@ -189,6 +189,10 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "PersonNodeRelationTypeEnum": [("related", "相关"), ("proposes", "提出"), ("defines", "定义"), ("develops", "发展"), ("criticizes", "批判"), ("interprets", "解释"), ("uses", "运用"), ("influences", "影响")],
+        "KnowledgeRelationDirectionEnum": [("directed", "有方向"), ("undirected", "无方向")],
+        "KnowledgeRelationTypeEnum": "catalog.node_relation_directory.KNOWLEDGE_RELATION_TYPES",
+        "NodeDirectoryRelationTypeEnum": "catalog.node_relation_directory.RELATION_TYPES",
         "IssueCreationKindEnum": ["article", "research", "exhibition"],
         "MediaDisplayUseEnum": ["detail", "list", "mobile", "share"],
         "WorkMediaSlotEnum": ["cover", "recommendation"],

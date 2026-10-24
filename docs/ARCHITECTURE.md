@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 原人物概念关系方向与混合目录
+
+PersonNodeRelation新增relation_type/direction/node_is_source（catalog0081仅声明）；原身份及唯一约束继续，旧行默认相关/无方向。人物关联确认原事务、AuditEvent、发布依赖继续；公共图谱保持person_node类别与原ID，箭头按明确方向。概念混合目录SQL UNION分页原KnowledgeRelation与PersonNodeRelation，不建关系副本。合并保留新字段并拒绝语义冲突；回滚以原关系全字段及关联范围指纹保护后续改动，历史缺失指纹转人工核对。未执行迁移、测试或部署。
+
 ## 2026-10-24 原人物知识关联的确认入口
 
 学者编辑页沿原PersonNodeRelation/PersonTopicRelation保存待核对及明确确认/撤回。原规范行无并行草稿表，公开行修改必须明确确认；不允许普通保存隐式改公开内容。原AuditEvent保存前后关系元数据，原ScholarCommandMixin固定请求回执防重。对已公开父对象使用原KnowledgePublicationEvent/DomainChangeEvent持久更新投影；无新增迁移。

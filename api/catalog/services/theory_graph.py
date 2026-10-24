@@ -237,6 +237,11 @@ def _edge_payload(spec, row):
         relation_type, direction = payload["relation_type"], payload["direction"]
         description, evidence_source = payload.get("summary", ""), payload.get("source", "")
         label = LINK_LABELS.get(relation_type, relation_type)
+    elif model is PersonNodeRelation:
+        direction, description = row.direction, row.relation_label
+        label = row.get_relation_type_display() if row.relation_type != "related" else row.relation_label or LINK_LABELS[relation_type]
+        if row.node_is_source:
+            source, target, left_kind, right_kind = target, source, right_kind, left_kind
     else:
         label = getattr(row, "relation_label", "") or LINK_LABELS[relation_type]
         description = getattr(row, "relation_role", "")

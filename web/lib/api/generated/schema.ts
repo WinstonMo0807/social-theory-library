@@ -2499,6 +2499,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/nodes/{node_id}/relations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        get: operations["catalog_admin_theory_system_nodes_relations_retrieve"];
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        put: operations["catalog_admin_theory_system_nodes_relations_update"];
+        post?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        delete: operations["catalog_admin_theory_system_nodes_relations_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Opt-in only on protected Admin views, never public catalog views. */
+        patch: operations["catalog_admin_theory_system_nodes_relations_partial_update"];
+        trace?: never;
+    };
     "/api/catalog/admin/theory-system/nodes/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -6358,6 +6378,50 @@ export interface components {
             drafts: number;
             scheduled: number;
         };
+        AdminKnowledgeRelation: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            source_node: string;
+            readonly source_name: string;
+            readonly source_slug: string;
+            readonly source_node_type: string;
+            /** Format: uuid */
+            target_node: string;
+            readonly target_name: string;
+            readonly target_slug: string;
+            readonly target_node_type: string;
+            relation_type: components["schemas"]["KnowledgeRelationTypeEnum"];
+            readonly relation_label: string;
+            direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
+            description?: string;
+            evidence_source?: string;
+            readonly evidence: components["schemas"]["EvidenceSnippet"][];
+            /** Format: double */
+            confidence?: number;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+            /** Format: date-time */
+            readonly published_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly save_receipt: components["schemas"]["ScholarRelationReceipt"];
+            readonly save_replayed: boolean;
+        };
+        AdminKnowledgeRelationRequest: {
+            /** Format: uuid */
+            source_node: string;
+            /** Format: uuid */
+            target_node: string;
+            relation_type: components["schemas"]["KnowledgeRelationTypeEnum"];
+            direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
+            description?: string;
+            evidence_source?: string;
+            /** Format: double */
+            confidence?: number;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+        };
         AdminReadingPath: {
             /** Format: uuid */
             readonly id: string;
@@ -6441,6 +6505,11 @@ export interface components {
             id: string;
             /** Format: uuid */
             person_id: string;
+            person_name: string;
+            relation_type: components["schemas"]["PersonNodeRelationTypeEnum"];
+            relation_type_label: string;
+            direction: components["schemas"]["KnowledgeRelationDirectionEnum"];
+            node_is_source: boolean;
             kind: components["schemas"]["AdminScholarLinkKindEnum"];
             /** Format: uuid */
             target_id: string;
@@ -10591,7 +10660,7 @@ export interface components {
             readonly target_name: string;
             readonly target_slug: string;
             readonly target_node_type: string;
-            relation_type: components["schemas"]["KnowledgeRelationRelationTypeEnum"];
+            relation_type: components["schemas"]["KnowledgeRelationTypeEnum"];
             readonly relation_label: string;
             direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
             description?: string;
@@ -10628,7 +10697,7 @@ export interface components {
          *     * `overlaps_with` - 部分重叠
          * @enum {string}
          */
-        KnowledgeRelationRelationTypeEnum: "inherited_from" | "revises" | "extends" | "criticizes" | "responds_to" | "competes_with" | "synthesizes" | "branches_from" | "borrows_concept_from" | "transferred_to" | "influenced_by" | "overlaps_with";
+        KnowledgeRelationTypeEnum: "inherited_from" | "revises" | "extends" | "criticizes" | "responds_to" | "competes_with" | "synthesizes" | "branches_from" | "borrows_concept_from" | "transferred_to" | "influenced_by" | "overlaps_with";
         KnowledgeSaveCommandRequest: {
             saved: boolean;
             /** Format: uuid */
@@ -12077,6 +12146,42 @@ export interface components {
             request_key: string;
             workbench_url: string;
         };
+        NodeRelationPage: {
+            count: number;
+            next: number | null;
+            previous: number | null;
+            results: components["schemas"]["NodeRelationRow"][];
+            relation_types: components["schemas"]["NodeRelationTypeOption"][];
+        };
+        NodeRelationRow: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["NodeRelationRowKindEnum"];
+            /** Format: uuid */
+            scholar_id: string | null;
+            source_name: string;
+            target_name: string;
+            source_kind: string;
+            target_kind: string;
+            relation_type: string;
+            relation_label: string;
+            direction: components["schemas"]["KnowledgeRelationDirectionEnum"];
+            description: string;
+            evidence_source: string;
+            status: string;
+            has_unpublished_changes: boolean;
+            remains_in_draft: boolean;
+        };
+        /**
+         * @description * `node` - node
+         *     * `person` - person
+         * @enum {string}
+         */
+        NodeRelationRowKindEnum: "node" | "person";
+        NodeRelationTypeOption: {
+            value: string;
+            label: string;
+        };
         NodeSaveReceipt: {
             actor_id: string;
             /** Format: uuid */
@@ -13261,6 +13366,19 @@ export interface components {
             /** @default /account */
             next: string;
         };
+        PatchedAdminKnowledgeRelationRequest: {
+            /** Format: uuid */
+            source_node?: string;
+            /** Format: uuid */
+            target_node?: string;
+            relation_type?: components["schemas"]["KnowledgeRelationTypeEnum"];
+            direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
+            description?: string;
+            evidence_source?: string;
+            /** Format: double */
+            confidence?: number;
+            status?: components["schemas"]["KnowledgePublicationStatusEnum"];
+        };
         PatchedAdminReadingPathRequest: {
             title?: string;
             slug?: string;
@@ -14076,6 +14194,18 @@ export interface components {
             /** Format: int64 */
             sort_order?: number;
         };
+        /**
+         * @description * `related` - 相关
+         *     * `proposes` - 提出
+         *     * `defines` - 定义
+         *     * `develops` - 发展
+         *     * `criticizes` - 批判
+         *     * `interprets` - 解释
+         *     * `uses` - 运用
+         *     * `influences` - 影响
+         * @enum {string}
+         */
+        PersonNodeRelationTypeEnum: "related" | "proposes" | "defines" | "develops" | "criticizes" | "interprets" | "uses" | "influences";
         PersonResolutionSummary: {
             /** Format: uuid */
             id: string;
@@ -17465,6 +17595,9 @@ export interface components {
             source?: string;
             featured?: boolean;
             sort_order?: number;
+            relation_type?: components["schemas"]["PersonNodeRelationTypeEnum"];
+            direction?: components["schemas"]["KnowledgeRelationDirectionEnum"];
+            node_is_source?: boolean;
         };
         ScholarLinkPage: {
             count: number;
@@ -25848,6 +25981,148 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HomeSourcePage"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_relations_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `` - 全部方向
+                 *     * `directed` - 有方向
+                 *     * `undirected` - 无方向
+                 */
+                direction?: "" | "directed" | "undirected";
+                /**
+                 * @description * `` -
+                 *     * `node` - node
+                 *     * `person` - person
+                 */
+                kind?: "" | "node" | "person";
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `` - 全部类型
+                 *     * `inherited_from` - 继承
+                 *     * `revises` - 修正
+                 *     * `extends` - 扩展
+                 *     * `criticizes` - 批判
+                 *     * `responds_to` - 回应
+                 *     * `competes_with` - 竞争
+                 *     * `synthesizes` - 综合
+                 *     * `branches_from` - 分化
+                 *     * `borrows_concept_from` - 概念借用
+                 *     * `transferred_to` - 跨学科传播
+                 *     * `influenced_by` - 受到影响
+                 *     * `overlaps_with` - 部分重叠
+                 *     * `related` - 相关
+                 *     * `proposes` - 提出
+                 *     * `defines` - 定义
+                 *     * `develops` - 发展
+                 *     * `interprets` - 解释
+                 *     * `uses` - 运用
+                 *     * `influences` - 影响
+                 */
+                relation_type?: "" | "inherited_from" | "revises" | "extends" | "criticizes" | "responds_to" | "competes_with" | "synthesizes" | "branches_from" | "borrows_concept_from" | "transferred_to" | "influenced_by" | "overlaps_with" | "related" | "proposes" | "defines" | "develops" | "interprets" | "uses" | "influences";
+                /**
+                 * @description * `` -
+                 *     * `draft` - draft
+                 *     * `pending` - pending
+                 *     * `published` - published
+                 *     * `rejected` - rejected
+                 *     * `archived` - archived
+                 */
+                status?: "" | "draft" | "pending" | "published" | "rejected" | "archived";
+            };
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeRelationPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_relations_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminKnowledgeRelationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminKnowledgeRelationRequest"];
+                "multipart/form-data": components["schemas"]["AdminKnowledgeRelationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminKnowledgeRelation"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_relations_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_relations_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
+                "multipart/form-data": components["schemas"]["PatchedAdminKnowledgeRelationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminKnowledgeRelation"];
                 };
             };
         };

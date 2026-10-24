@@ -16,6 +16,7 @@ VERIFIED_NAMES = {
     "scholar-link-list", "scholar-link-receipt",
     "node-save-receipt",
     "knowledge-relation-receipt",
+    "node-relation-directory",
     "admin-visual-review", "admin-visual-review-receipt", "admin-visual-review-reference",
     "curation-projects", "curation-project-detail", "curation-project-receipt", "curation-project-people", "curation-project-materials", "curation-project-sources", "curation-project-preview",
     "index-maintenance", "index-maintenance-receipt", "index-maintenance-terms", "index-maintenance-query", "index-maintenance-query-receipt",

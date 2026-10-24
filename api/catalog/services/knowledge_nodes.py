@@ -29,6 +29,7 @@ from catalog.models import (
     WorkNodeRelation,
 )
 from catalog.services.canonical_mutations import record_admin_canonical_change
+from catalog.services.knowledge_merge_guard import merge_scope_fingerprint
 
 
 def _user_id(user):
@@ -225,6 +226,10 @@ def _publish_merged_work_metadata(work_ids, *, actor, operation_id):
 
 
 def _check_merged_relation_decisions(source, target, *, created):
+    if not created and isinstance(source, PersonNodeRelation):
+        fields = ("relation_type", "direction", "node_is_source", "relation_label", "source", "is_representative", "status")
+        if any(getattr(source, name) != getattr(target, name) for name in fields):
+            raise ValueError("人物与节点的关系类型、方向、出处、状态或代表性判断不同，请先核对原关系，不能在合并时丢弃其中一项。")
     if created or getattr(source, "status", "") != "published":
         return
     if getattr(target, "status", "") != "published":
@@ -378,6 +383,9 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
             person=relation.person,
             node=target,
             defaults={
+                "relation_type": relation.relation_type,
+                "direction": relation.direction,
+                "node_is_source": relation.node_is_source,
                 "relation_label": relation.relation_label,
                 "is_representative": relation.is_representative,
                 "sort_order": relation.sort_order,
@@ -524,6 +532,8 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
         request_idempotency_key=f"knowledge-node-merge:{record.id}:target",
     )
     _publish_merged_work_metadata(work_ids, actor=actor, operation_id=record.pk)
+    record.rollback_payload["scope_fingerprint"] = merge_scope_fingerprint(source.pk, target.pk)
+    record.save(update_fields=["rollback_payload", "updated_at"])
     return record
 
 
@@ -535,6 +545,12 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
     source = KnowledgeNode.objects.select_for_update().get(pk=record.source_node_id)
     target = KnowledgeNode.objects.select_for_update().get(pk=record.target_node_id)
     payload = record.rollback_payload or {}
+    expected = payload.get("scope_fingerprint")
+    if not expected:
+        raise ValueError("这是缺少原关系版本核对记录的历史合并，不能直接自动回滚。请先核对原备份与后续修改；当前数据未改变。")
+    from django.utils.crypto import constant_time_compare
+    if not constant_time_compare(expected, merge_scope_fingerprint(source.pk, target.pk)):
+        raise ValueError("合并后的节点、关系、出处、路径或编辑版本已经变化，不能回滚覆盖后续工作。请先核对原记录与当前修改。")
     created_ids = payload.get("created_ids", {})
     model_map = {
         "EvidenceSnippet": EvidenceSnippet,
@@ -577,7 +593,8 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
     ).update(node=source)
 
     source.status = record.source_snapshot.get("status", "draft")
-    source.published_at = None
+    from django.utils.dateparse import parse_datetime
+    source.published_at = parse_datetime(record.source_snapshot["published_at"]) if record.source_snapshot.get("published_at") else None
     source.save(update_fields=["status", "published_at", "updated_at"])
     record_node_version(source, actor, f"回滚与 {target.canonical_name_zh} 的合并")
     record_node_version(target, actor, f"回滚来源节点 {source.canonical_name_zh}")

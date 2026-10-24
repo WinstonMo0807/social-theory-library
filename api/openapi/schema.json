@@ -11748,6 +11748,289 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-system/nodes/{node_id}/relations/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_nodes_relations_retrieve",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "direction",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "directed",
+                                "undirected"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - 全部方向\n* `directed` - 有方向\n* `undirected` - 无方向"
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "node",
+                                "person"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `node` - node\n* `person` - person"
+                    },
+                    {
+                        "in": "path",
+                        "name": "node_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 300
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "relation_type",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "inherited_from",
+                                "revises",
+                                "extends",
+                                "criticizes",
+                                "responds_to",
+                                "competes_with",
+                                "synthesizes",
+                                "branches_from",
+                                "borrows_concept_from",
+                                "transferred_to",
+                                "influenced_by",
+                                "overlaps_with",
+                                "related",
+                                "proposes",
+                                "defines",
+                                "develops",
+                                "interprets",
+                                "uses",
+                                "influences"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - 全部类型\n* `inherited_from` - 继承\n* `revises` - 修正\n* `extends` - 扩展\n* `criticizes` - 批判\n* `responds_to` - 回应\n* `competes_with` - 竞争\n* `synthesizes` - 综合\n* `branches_from` - 分化\n* `borrows_concept_from` - 概念借用\n* `transferred_to` - 跨学科传播\n* `influenced_by` - 受到影响\n* `overlaps_with` - 部分重叠\n* `related` - 相关\n* `proposes` - 提出\n* `defines` - 定义\n* `develops` - 发展\n* `interprets` - 解释\n* `uses` - 运用\n* `influences` - 影响"
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "draft",
+                                "pending",
+                                "published",
+                                "rejected",
+                                "archived"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `draft` - draft\n* `pending` - pending\n* `published` - published\n* `rejected` - rejected\n* `archived` - archived"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeRelationPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_theory_system_nodes_relations_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "node_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminKnowledgeRelationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_theory_system_nodes_relations_partial_update",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "node_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAdminKnowledgeRelationRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminKnowledgeRelation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "catalog_admin_theory_system_nodes_relations_destroy",
+                "description": "Opt-in only on protected Admin views, never public catalog views.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "node_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-system/nodes/commands/{request_id}/": {
             "get": {
                 "operationId": "catalog_admin_theory_system_nodes_commands_retrieve",
@@ -30093,6 +30376,164 @@
                     "total"
                 ]
             },
+            "AdminKnowledgeRelation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "source_slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "source_node_type": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target_slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target_node_type": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/KnowledgeRelationTypeEnum"
+                    },
+                    "relation_label": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/KnowledgeRelationDirectionEnum"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "evidence_source": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceSnippet"
+                        },
+                        "readOnly": true
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "save_receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ScholarRelationReceipt"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "save_replayed": {
+                        "type": "boolean",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "evidence",
+                    "id",
+                    "published_at",
+                    "relation_label",
+                    "relation_type",
+                    "save_receipt",
+                    "save_replayed",
+                    "source_name",
+                    "source_node",
+                    "source_node_type",
+                    "source_slug",
+                    "target_name",
+                    "target_node",
+                    "target_node_type",
+                    "target_slug",
+                    "updated_at"
+                ]
+            },
+            "AdminKnowledgeRelationRequest": {
+                "type": "object",
+                "properties": {
+                    "source_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/KnowledgeRelationTypeEnum"
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/KnowledgeRelationDirectionEnum"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "evidence_source": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    }
+                },
+                "required": [
+                    "relation_type",
+                    "source_node",
+                    "target_node"
+                ]
+            },
             "AdminReadingPath": {
                 "type": "object",
                 "properties": {
@@ -30405,6 +30846,21 @@
                         "type": "string",
                         "format": "uuid"
                     },
+                    "person_name": {
+                        "type": "string"
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/PersonNodeRelationTypeEnum"
+                    },
+                    "relation_type_label": {
+                        "type": "string"
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/KnowledgeRelationDirectionEnum"
+                    },
+                    "node_is_source": {
+                        "type": "boolean"
+                    },
                     "kind": {
                         "$ref": "#/components/schemas/AdminScholarLinkKindEnum"
                     },
@@ -30467,12 +30923,17 @@
                 },
                 "required": [
                     "confirmed",
+                    "direction",
                     "edit_version",
                     "featured",
                     "id",
                     "kind",
+                    "node_is_source",
                     "person_id",
+                    "person_name",
                     "relation_label",
+                    "relation_type",
+                    "relation_type_label",
                     "reviewed_at",
                     "reviewed_by",
                     "sort_order",
@@ -43941,7 +44402,7 @@
                         "readOnly": true
                     },
                     "relation_type": {
-                        "$ref": "#/components/schemas/KnowledgeRelationRelationTypeEnum"
+                        "$ref": "#/components/schemas/KnowledgeRelationTypeEnum"
                     },
                     "relation_label": {
                         "type": "string",
@@ -44014,7 +44475,7 @@
                 "type": "string",
                 "description": "* `directed` - 有方向\n* `undirected` - 无方向"
             },
-            "KnowledgeRelationRelationTypeEnum": {
+            "KnowledgeRelationTypeEnum": {
                 "enum": [
                     "inherited_from",
                     "revises",
@@ -49083,6 +49544,134 @@
                     "workbench_url"
                 ]
             },
+            "NodeRelationPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NodeRelationRow"
+                        }
+                    },
+                    "relation_types": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NodeRelationTypeOption"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "relation_types",
+                    "results"
+                ]
+            },
+            "NodeRelationRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/NodeRelationRowKindEnum"
+                    },
+                    "scholar_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "source_name": {
+                        "type": "string"
+                    },
+                    "target_name": {
+                        "type": "string"
+                    },
+                    "source_kind": {
+                        "type": "string"
+                    },
+                    "target_kind": {
+                        "type": "string"
+                    },
+                    "relation_type": {
+                        "type": "string"
+                    },
+                    "relation_label": {
+                        "type": "string"
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/KnowledgeRelationDirectionEnum"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "evidence_source": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "has_unpublished_changes": {
+                        "type": "boolean"
+                    },
+                    "remains_in_draft": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "description",
+                    "direction",
+                    "evidence_source",
+                    "has_unpublished_changes",
+                    "id",
+                    "kind",
+                    "relation_label",
+                    "relation_type",
+                    "remains_in_draft",
+                    "scholar_id",
+                    "source_kind",
+                    "source_name",
+                    "status",
+                    "target_kind",
+                    "target_name"
+                ]
+            },
+            "NodeRelationRowKindEnum": {
+                "enum": [
+                    "node",
+                    "person"
+                ],
+                "type": "string",
+                "description": "* `node` - node\n* `person` - person"
+            },
+            "NodeRelationTypeOption": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "label",
+                    "value"
+                ]
+            },
             "NodeSaveReceipt": {
                 "type": "object",
                 "properties": {
@@ -52748,6 +53337,39 @@
                     "email"
                 ]
             },
+            "PatchedAdminKnowledgeRelationRequest": {
+                "type": "object",
+                "properties": {
+                    "source_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/KnowledgeRelationTypeEnum"
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/KnowledgeRelationDirectionEnum"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "evidence_source": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/KnowledgePublicationStatusEnum"
+                    }
+                }
+            },
             "PatchedAdminReadingPathRequest": {
                 "type": "object",
                 "properties": {
@@ -55411,6 +56033,20 @@
                     "portrait_url",
                     "scholar_slug"
                 ]
+            },
+            "PersonNodeRelationTypeEnum": {
+                "enum": [
+                    "related",
+                    "proposes",
+                    "defines",
+                    "develops",
+                    "criticizes",
+                    "interprets",
+                    "uses",
+                    "influences"
+                ],
+                "type": "string",
+                "description": "* `related` - 相关\n* `proposes` - 提出\n* `defines` - 定义\n* `develops` - 发展\n* `criticizes` - 批判\n* `interprets` - 解释\n* `uses` - 运用\n* `influences` - 影响"
             },
             "PersonResolutionSummary": {
                 "type": "object",
@@ -66668,6 +67304,15 @@
                         "type": "integer",
                         "maximum": 2147483647,
                         "minimum": 0
+                    },
+                    "relation_type": {
+                        "$ref": "#/components/schemas/PersonNodeRelationTypeEnum"
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/KnowledgeRelationDirectionEnum"
+                    },
+                    "node_is_source": {
+                        "type": "boolean"
                     }
                 },
                 "required": [

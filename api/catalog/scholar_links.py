@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.editorial_read import AdminPrivateResponseMixin
-from catalog.models import KnowledgeNode, Person, PersonNodeRelation, PersonTopicRelation, ScholarProfile, Topic
+from catalog.models import KnowledgeNode, KnowledgeRelation, Person, PersonNodeRelation, PersonTopicRelation, ScholarProfile, Topic
 from catalog.scholar_commands import ScholarCommandMixin, PendingSaveStopSerializer, command_receipt, stop_pending_save
 from catalog.scholar_relation_commands import ScholarRelationReceipt
 from catalog.services.canonical_mutations import record_admin_canonical_change
@@ -39,6 +39,8 @@ def link_snapshot(row, kind):
     return {"id": str(row.pk), "person_id": str(row.person_id), "target_id": str(getattr(row, f"{field}_id")),
         "relation_label": row.relation_label, "source": row.source, "status": getattr(row, status),
         "featured": getattr(row, featured), "sort_order": getattr(row, "sort_order", 0),
+        "relation_type": getattr(row, "relation_type", "related"), "direction": getattr(row, "direction", "undirected"),
+        "node_is_source": getattr(row, "node_is_source", False),
         "reviewed_by": row.reviewed_by_id, "reviewed_at": row.reviewed_at, "updated_at": row.updated_at}
 
 
@@ -48,6 +50,8 @@ def link_payload(row, kind):
     target = getattr(row, field)
     available = (target.status if kind == "node" else target.editorial_status) == "published"
     return {**data, "edit_version": digest(data), "kind": kind,
+        "person_name": row.person.preferred_name,
+        "relation_type_label": row.get_relation_type_display() if kind == "node" else "相关主题",
         "target_name": target.canonical_name_zh if kind == "node" else target.name,
         "target_type": target.node_type if kind == "node" else "topic",
         "target_published": available, "confirmed": data["status"] == published,
@@ -63,6 +67,9 @@ class ScholarLinkInput(serializers.Serializer):
     source = serializers.CharField(max_length=160, allow_blank=True, required=False)
     featured = serializers.BooleanField(required=False)
     sort_order = serializers.IntegerField(min_value=0, max_value=2147483647, required=False)
+    relation_type = serializers.ChoiceField(choices=PersonNodeRelation.RelationType.choices, required=False)
+    direction = serializers.ChoiceField(choices=KnowledgeRelation.Direction.choices, required=False)
+    node_is_source = serializers.BooleanField(required=False)
 
     def to_internal_value(self, data):
         if not isinstance(data, dict) or set(data) - set(self.fields):
@@ -85,6 +92,11 @@ class ScholarLinkInput(serializers.Serializer):
 class AdminScholarLinkSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     person_id = serializers.UUIDField()
+    person_name = serializers.CharField()
+    relation_type = serializers.ChoiceField(choices=PersonNodeRelation.RelationType.choices)
+    relation_type_label = serializers.CharField()
+    direction = serializers.ChoiceField(choices=KnowledgeRelation.Direction.choices)
+    node_is_source = serializers.BooleanField()
     kind = serializers.ChoiceField(choices=["node", "topic"])
     target_id = serializers.UUIDField()
     target_name = serializers.CharField()
@@ -133,7 +145,7 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
     def get(self, request, scholar_id, kind):
         model, _, field, *_ = configuration(kind)
         scholar = get_object_or_404(ScholarProfile, pk=scholar_id)
-        rows = model.objects.filter(person_id=scholar.person_id).select_related(field)
+        rows = model.objects.filter(person_id=scholar.person_id).select_related(field, "person")
         if request.query_params.get("id"):
             key = serializers.UUIDField().run_validation(request.query_params["id"])
             rows = rows.filter(pk=key)
@@ -180,7 +192,18 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
         target = get_object_or_404(target_model.objects.select_for_update(), pk=target_id)
         if kind == "topic" and (len(data.get("source", "")) > 120 or data.get("sort_order", 0)):
             raise ValidationError("主题出处最多120字；主题按主要关联展示，不接受概念排序值。")
+        if kind == "topic" and (data.get("relation_type", "related") != "related" or data.get("direction", "undirected") != "undirected" or data.get("node_is_source", False)):
+            raise ValidationError("主题关联不接受人物与概念的方向字段。")
+        relation_type = data.get("relation_type", getattr(row, "relation_type", "related"))
+        direction = data.get("direction", getattr(row, "direction", "undirected"))
+        reverse = data.get("node_is_source", getattr(row, "node_is_source", False))
+        if direction == "undirected" and reverse:
+            raise ValidationError("无方向关联不能指定节点为来源，请重新核对方向。")
         if action == "confirm":
+            if kind == "node" and relation_type != "related" and direction != "directed":
+                raise ValidationError("提出、批判等具体关系须明确来源与目标方向。")
+            if kind == "node" and reverse and relation_type in {"proposes", "defines", "develops", "interprets", "uses"}:
+                raise ValidationError("提出、定义、发展、解释和运用须以人物为来源。若表示理论影响人物，请选择影响并核对方向。")
             if not data["relation_label"] or not data["source"]:
                 raise ValidationError("确认前须补充关系说明和可追溯出处。")
             if (target.status if kind == "node" else target.editorial_status) != "published":
@@ -196,6 +219,7 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
             setattr(row, featured, data["featured"])
             if kind == "node":
                 row.sort_order = data["sort_order"]
+                row.relation_type, row.direction, row.node_is_source = relation_type, direction, reverse
         setattr(row, status, published if action == "confirm" else withdrawn if action == "withdraw" else pending)
         row.reviewed_by = actor if action != "save" else None
         row.reviewed_at = timezone.now() if action != "save" else None

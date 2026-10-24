@@ -401,6 +401,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   const apiRequest = useEditorRequest();
   const user = useAdminSession(), owner = String(user?.id || ""), command = useScholarSave(owner, "node");
   const canEdit = hasAdminCapability(user, "can_edit_draft_authority"), canCreate = hasAdminCapability(user, "can_create_authority");
+  const relationGuard = useRef({dirty:false,pending:false,composing:false});
   const [knownSavedId, setKnownSavedId] = useState("");
   const composing = useRef(false), mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -504,6 +505,8 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
 
   function start(node?: KnowledgeNode) {
     if (composing.current || command.recovery || pendingAction || knownSavedId) return;
+    if (relationGuard.current.pending || relationGuard.current.composing) { setMessage("请先在关系详情核对原请求，再切换主体。"); setMessageState("error"); return; }
+    if (relationGuard.current.dirty && !window.confirm("关系还有未保存输入，放弃这些输入并切换主体吗？")) return;
     if (nodeDirty && !window.confirm("当前理论或概念还有未保存的填写。放弃填写并切换吗？")) return;
     prefills.clear();
     setEditing(node ?? null);
@@ -514,10 +517,12 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     setVersions(null);
     setMergeTarget("");
     setPendingRevision(node?.editorial_revision ?? null);
+    return true;
   }
 
   async function saveNode(event?: FormEvent, draftOnly = false) {
     event?.preventDefault();
+    if (relationGuard.current.dirty || relationGuard.current.pending || relationGuard.current.composing) { setMessage("请先保存关系输入并核对原请求，再保存主体。"); setMessageState("error"); return false; }
     if (composing.current || !canEdit || !command.ready || command.recovery || knownSavedId || openingNode || !editing && !canCreate) return false;
     const token = getServerSessionCredential();
     if (!token) return false;
@@ -710,7 +715,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   }
 
   async function mergeNode() {
-    if (!editing || !mergeTarget || composing.current || command.recovery || knownSavedId || nodeDirty) return;
+    if (!editing || !mergeTarget || composing.current || command.recovery || knownSavedId || nodeDirty || relationGuard.current.dirty || relationGuard.current.pending) return;
     const target = allNodes.data?.results.find((item) => item.id === mergeTarget);
     const token = getServerSessionCredential();
     if (!token) return;
@@ -762,7 +767,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       <div className="theory-node-admin-grid knowledge-object-host-layout" inert={Boolean(command.recovery) || Boolean(pendingAction) || Boolean(knownSavedId)} onCompositionStartCapture={() => { composing.current = true; }} onCompositionEndCapture={() => { composing.current = false; }}>
         <section className="admin-panel theory-node-table-panel">
           <nav className="theory-node-tabs">
-            {editableNodeTypeEntries.map(([value, label]) => <button className={nodeType === value ? "active" : ""} type="button" key={value} onClick={() => { theoryLocation.update({ page: 1, node_type: value }); setNodeType(value); start(); }}>{label}</button>)}
+            {editableNodeTypeEntries.map(([value, label]) => <button className={nodeType === value ? "active" : ""} type="button" key={value} onClick={() => { if(start()){ theoryLocation.update({ page: 1, node_type: value }); setNodeType(value); setDraft(current=>({...current,node_type:value})); } }}>{label}</button>)}
           </nav>
           <div className="theory-admin-filters">
             <ResearchEntityPicker label="所属学科筛选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_nodes" field="filter_discipline" values={onePickerValue(disciplineFilter, disciplineName(disciplineFilter))} onChange={(next) => { const selected = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDisciplineFilter(selected?.id ?? ""); theoryLocation.update({ page: 1, discipline: selected?.id ?? "" }); }} />
@@ -789,7 +794,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
           <EditorListPages data={nodes.data} page={nodePage} pageKey="page" label="理论与概念分页" ordering="按排序值、名称及编号稳定排序" busy={nodes.loading} href={(updates) => theoryLocation.href({ node_type: nodeType, status: statusFilter, discipline: disciplineFilter, q: query, ...updates })} />
         </section>
 
-        <KnowledgeVisualEditor objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)} objectId={editing?.id} savedRecord={editing} onPublished={() => {nodes.refresh();allNodes.refresh();requestedNode.refresh();setEditConflict(true);setMessage("发布操作已提交，请打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels,...Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}}} dirty={nodeDirty} refreshKey={`${editing?.updated_at}:${imageRevision}`}>
+        <KnowledgeVisualEditor onRelationGuardChange={value=>{relationGuard.current=value;}} objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)} objectId={editing?.id} savedRecord={editing} onPublished={() => {nodes.refresh();allNodes.refresh();requestedNode.refresh();setEditConflict(true);setMessage("发布操作已提交，请打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels,...Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}}} dirty={nodeDirty} refreshKey={`${editing?.updated_at}:${imageRevision}`}>
         {openingNode ? <div role="status"><p>正在读取指定理论或概念，载入后即可编辑。</p><ErrorNotice message={requestedNode.error || nodes.error} retry={requestedNodeId ? requestedNode.refresh : nodes.refresh} /></div> : null}
         <form className="admin-panel theory-node-editor" onSubmit={(event) => void saveNode(event, true)} inert={openingNode} aria-busy={openingNode}>
           <p>保存本页名称、说明、分类和关联，不跳转。已有公开内容的修改需另行发布。时间线在当前理论的次级页面维护。</p>

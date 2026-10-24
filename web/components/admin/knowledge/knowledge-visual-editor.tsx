@@ -8,6 +8,7 @@ import type { PublicReadingPath } from "@/lib/api/reading-paths.types";
 import { TopicEditorFrame, topicEditorSection, topicEditorSections } from "./topic-editor-frame";
 import type { PublicTopicDetail } from "@/lib/api/topics.types";
 import { ScholarCanonicalSections } from "./scholar-canonical-sections";
+import type { NodeRelationGuard } from "./node-relations";
 import { ConceptPlacementEditor } from "./concept-placement-editor";
 import { KnowledgeNodeEditorFrame, knowledgeNodeSection, knowledgeNodeSections } from "./knowledge-node-editor-frame";
 import type { PublicScholarDetail } from "@/lib/api/scholars.types";
@@ -29,7 +30,7 @@ import { AsyncStatus } from "@/components/action-feedback";
 import { EvidenceCurationEditor } from "@/components/admin/curation/evidence-curation-editor";
 import type { EvidenceCurationType } from "@/lib/api/evidence-curation.types";
 
-type Props = {portrait?: ReactNode; objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; previewStageId?: string; onPreviewSelect?: (selection: PreviewSelection) => void};
+type Props = {onRelationGuardChange?: (value: NodeRelationGuard) => void; portrait?: ReactNode; objectType: string; objectId?: string | null; draft: object; dirty: boolean; refreshKey?: string | number; children: ReactNode; initialSection?: string; mediaFile?: File | null; savedRecord?: object | null; onPublished?: () => void; previewStageId?: string; onPreviewSelect?: (selection: PreviewSelection) => void};
 type FieldProps = {children?: ReactNode; label?: string; className?: string; type?: string; role?: string; disabled?: boolean; style?: {display?: string}; "data-editor-section"?: string};
 const sectionLabels: Record<string, string> = {dependencies:"先修关系",stages:"阶段编排",identity:"基本信息", biography:"传记与机构", questions:"研究问题", scholars:"相关学者", articles:"策划文章", history:"形成与发展", dimensions:"研究维度", methods:"研究方法 / 工具", concepts:"关键概念", timeline:"生平与事件", "concept-map":"概念图", network:"学术关系", content:"内容与说明", relations:"人物与馆藏关联", works:"代表作品", paths:"阅读路径", passages:"原文策展", media:"图片", learning:"学习问题与争论", curation:"策划说明与署名", versions:"版本记录", sources:"资料来源与路径", publication:"保存与发布"};
 function textOf(node: ReactNode): string { if (typeof node === "string") return node; if (!isValidElement<FieldProps>(node)) return ""; return node.props.label || Children.toArray(node.props.children).map(textOf).join(" "); }
@@ -77,7 +78,7 @@ function project(type: string, raw: unknown, draft: Record<string, unknown>): Re
 }
 
 /** Public components project local fields and server-verified, unsaved selections. */
-export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, previewStageId, onPreviewSelect, portrait}: Props) {
+export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refreshKey, children, initialSection, mediaFile, savedRecord, onPublished, previewStageId, onPreviewSelect, portrait, onRelationGuardChange}: Props) {
   const assistantRoot=useRef<HTMLDivElement|null>(null);
   const composing=useRef(false);
   const [ime,setIme]=useState(false);
@@ -95,6 +96,8 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const error = failure?.key === previewKey ? failure.message : "";
   const [evidenceDirty, setEvidenceDirty] = useState(false);
   const [publicationLocked,setPublicationLocked] = useState(Boolean(objectId && savedRecord));
+  const [relationGuard, setRelationGuard] = useState<NodeRelationGuard>({dirty:false,pending:false,composing:false});
+  useEffect(() => { onRelationGuardChange?.(relationGuard); }, [onRelationGuardChange, relationGuard]);
   const [placementPending, setPlacementPending] = useState(false);
   const [localImage, setLocalImage] = useState("");
   useEffect(()=>{let active=true;const url=mediaFile?URL.createObjectURL(mediaFile):"";queueMicrotask(()=>{if(active)setLocalImage(url);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[mediaFile]);
@@ -126,6 +129,11 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const page = objectType === "reading_path" ? selected : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works","sources","paths"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths","scholars","articles"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
   function changeSection(id: string) {
     if (composing.current || id === selected || (publicationLocked && id !== "publication")) return;
+    if (selected === "relations" && isNode) {
+      if (relationGuard.composing) return;
+      if (relationGuard.pending) { window.alert("请先在关系详情查回原请求，或停止未执行的请求，再切换栏目。"); return; }
+      if (relationGuard.dirty && !window.confirm("关系还有未保存输入，放弃这些输入并切换栏目吗？")) return;
+    }
     if (selected === "passages" && evidenceDirty && !window.confirm("原文策展尚未保存，确定切换并放弃这些输入吗？")) return;
     setEvidenceDirty(false); setActive(id);
     const url = new URL(window.location.href); url.searchParams.set("section",id); window.history.replaceState(null,"",url.pathname+url.search);
@@ -138,9 +146,9 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
     return withAssistant(<KnowledgePublicationContext value={{locked:publicationLocked,requestReview:()=>setActive("publication"),requestHistory:()=>setActive("versions")}}><ScholarEditorFrame composing={ime} canonical={objectId ? <ScholarCanonicalSections blocked={dirty||disabled||publicationLocked} section={selected} scholarId={objectId} data={payload ? live as unknown as PublicScholarDetail : null} error={error} reload={() => setPreviewRetry(value => value + 1)} /> : null} form={form} groups={groups} active={selected} changeSection={changeSection} dirty={dirty} disabled={disabled} locked={publicationLocked} saved={savedRecord} portrait={portrait} publication={publish} preview={renderedPreview} rail={rail} previewError={error ? <button type="button" onClick={() => setPreviewRetry(value => value + 1)}>重新核对预览</button> : null} extra={<>{selected === "passages" ? evidenceEditor : null}{selected === "versions" && objectId ? <section className="private-preview-label"><h2>完整版本记录</h2>{dirty || evidenceDirty || publicationLocked ? <p>请先保存当前填写，并核对未完成的发布操作。</p> : <Link href={`/admin/publication/knowledge/scholar/${objectId}?${new URLSearchParams({return_to:`${pathname}?${searchParams}`})}`}>查看原版本历史、撤回与恢复 →</Link>}</section> : null}</>} /></KnowledgePublicationContext>);
   }
   if (isNode && form) {
-    const publish = objectId && savedRecord ? <KnowledgePublishControl embedded objectType={objectType} objectId={objectId} savedRecord={savedRecord} dirty={dirty || evidenceDirty || placementPending} onPublished={onPublished} onLockChange={setPublicationLocked} reviewHref={`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",edit_version:savedVersion,return_to:`${pathname}?${searchParams}`})}`} /> : null;
+    const publish = objectId && savedRecord ? <KnowledgePublishControl embedded objectType={objectType} objectId={objectId} savedRecord={savedRecord} dirty={dirty || evidenceDirty || placementPending || relationGuard.dirty || relationGuard.pending} onPublished={onPublished} onLockChange={setPublicationLocked} reviewHref={`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",edit_version:savedVersion,return_to:`${pathname}?${searchParams}`})}`} /> : null;
     const renderedPreview = error ? <p role="alert">{error}。当前输入仍然保留。<button type="button" onClick={() => setPreviewRetry(value => value + 1)}>重新核对</button></p> : objectId && !payload ? <p role="status">正在读取当前对象的受控预览…</p> : <div onClickCapture={event => { if ((event.target as Element).closest("a")) event.preventDefault(); }}><PreviewSurface payload={previewPayload} pageId="overview" /></div>;
-    return withAssistant(<KnowledgePublicationContext value={{locked:publicationLocked || placementPending,requestReview:()=>setActive("publication"),requestHistory:()=>setActive("versions")}}><KnowledgeNodeEditorFrame onRelationsChanged={()=>setPreviewRetry(value=>value+1)} composing={ime} form={form} groups={groups} active={selected} changeSection={changeSection} dirty={dirty} disabled={disabled || placementPending} locked={publicationLocked} saved={savedRecord} draft={draft} objectType={objectType} publication={publish} preview={renderedPreview} rail={rail} extra={<>{placementPending && !["usages", "materials", "impact", "versions"].includes(selected) ? <p role="status">原编排请求需要核对。<button type="button" onClick={() => setActive("usages")}>查看原编排操作</button></p> : null}<div hidden={!["usages", "materials", "impact", "versions"].includes(selected)}>{objectId ? <ConceptPlacementEditor key={`${owner}:${objectId}`} nodeId={objectId} objectType={objectType} mode={selected === "materials" ? "materials" : selected === "impact" ? "impact" : selected === "versions" ? "history" : "usages"} blocked={dirty || publicationLocked} onPendingChange={setPlacementPending} /> : <p>先保存主体草稿，再从馆内选择准确来源。</p>}</div>{selected === "passages" ? evidenceEditor : null}</>} /></KnowledgePublicationContext>);
+    return withAssistant(<KnowledgePublicationContext value={{locked:publicationLocked || placementPending,requestReview:()=>changeSection("publication"),requestHistory:()=>changeSection("versions")}}><KnowledgeNodeEditorFrame relationBusy={relationGuard.dirty || relationGuard.pending} onRelationGuardChange={setRelationGuard} onRelationsChanged={()=>setPreviewRetry(value=>value+1)} composing={ime} form={form} groups={groups} active={selected} changeSection={changeSection} dirty={dirty} disabled={disabled || placementPending} locked={publicationLocked} saved={savedRecord} draft={draft} objectType={objectType} publication={publish} preview={renderedPreview} rail={rail} extra={<>{placementPending && !["usages", "materials", "impact", "versions"].includes(selected) ? <p role="status">原编排请求需要核对。<button type="button" onClick={() => setActive("usages")}>查看原编排操作</button></p> : null}<div hidden={!["usages", "materials", "impact", "versions"].includes(selected)}>{objectId ? <ConceptPlacementEditor key={`${owner}:${objectId}`} nodeId={objectId} objectType={objectType} mode={selected === "materials" ? "materials" : selected === "impact" ? "impact" : selected === "versions" ? "history" : "usages"} blocked={dirty || publicationLocked} onPendingChange={setPlacementPending} /> : <p>先保存主体草稿，再从馆内选择准确来源。</p>}</div>{selected === "passages" ? evidenceEditor : null}</>} /></KnowledgePublicationContext>);
   }
   if (objectType === "reading_path" && form) {
     const publish = objectId && savedRecord ? <KnowledgePublishControl embedded objectType={objectType} objectId={objectId} savedRecord={savedRecord} dirty={dirty} onPublished={onPublished} onLockChange={setPublicationLocked} reviewHref={`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",edit_version:savedVersion,return_to:`${pathname}?${searchParams}`})}`} /> : null;
