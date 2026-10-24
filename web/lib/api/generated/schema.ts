@@ -2978,6 +2978,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/topics/association-choices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_topics_association_choices_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/topics/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -20032,6 +20048,7 @@ export interface components {
             readonly curated_claims: string;
         };
         TopicArticle: {
+            curation_note: string;
             /** Format: uuid */
             id: string;
             slug: string;
@@ -20051,6 +20068,21 @@ export interface components {
             next: string | null;
             previous: string | null;
             results: components["schemas"]["TopicArticle"][];
+        };
+        TopicAssociationPage: {
+            count: number;
+            page: number;
+            page_size: number;
+            total_pages: number;
+            results: components["schemas"]["TopicAssociationRow"][];
+        };
+        TopicAssociationRow: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            subtitle: string;
+            cover_url: string;
+            status: string;
         };
         TopicDetailFilters: {
             section: components["schemas"]["TopicDetailFiltersSectionEnum"];
@@ -20129,6 +20161,7 @@ export interface components {
             slug: string;
             name: string;
             href: string;
+            curation_note: string;
             node_type: components["schemas"]["TopicKnowledgeNodeTypeEnum"];
             summary: string;
             relation_label: string;
@@ -20209,6 +20242,40 @@ export interface components {
             editorial_status: string;
             children_count: number;
         };
+        TopicPath: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            introduction: string;
+            learning_goal: string;
+            audience: string;
+            difficulty: string;
+            estimated_reading: string;
+            estimated_weeks: number | null;
+            prerequisite: string;
+            curator_note: string;
+            credits: components["schemas"]["PathCreditInput"][];
+            topics: components["schemas"]["PathLinkOutput"][];
+            learning_questions: string[];
+            related_debates: components["schemas"]["PathLinkOutput"][];
+            revision: components["schemas"]["PathRevisionOutput"];
+            latest_revision: components["schemas"]["PathRevisionOutput"];
+            is_current_revision: boolean;
+            versions: components["schemas"]["PathRevisionOutput"][];
+            versions_truncated: boolean;
+            stages: components["schemas"]["PathStageOutput"][];
+            items: components["schemas"]["PathMaterialOutput"][];
+            counts: {
+                [key: string]: number;
+            };
+            cover_url: string;
+            cover_media: components["schemas"]["PublicCoverMedia"] | null;
+            primary_discipline_data: unknown;
+            diff?: unknown;
+            preview?: boolean;
+            curation_note: string;
+        };
         TopicPathPage: {
             count: number;
             page: number;
@@ -20216,7 +20283,7 @@ export interface components {
             total_pages: number;
             next: string | null;
             previous: string | null;
-            results: components["schemas"]["PublicReadingPath"][];
+            results: components["schemas"]["TopicPath"][];
         };
         TopicPreviewCurationRequest: {
             question_node_ids?: string[];
@@ -20284,6 +20351,27 @@ export interface components {
             request_id: string;
             applied_saved: boolean;
         };
+        TopicScholar: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            person_id: string;
+            slug: string;
+            href: string;
+            person: components["schemas"]["ScholarPerson"];
+            short_description: string;
+            affiliations: string[];
+            key_concerns: string[];
+            nationalities: string[];
+            occupations: string[];
+            matched_alias: string;
+            fields: components["schemas"]["ScholarLink"][];
+            schools: components["schemas"]["ScholarLink"][];
+            work_count: number;
+            authored_work_count: number;
+            profile_state: components["schemas"]["ProfileStateEnum"];
+            curation_note: string;
+        };
         TopicScholarPage: {
             count: number;
             page: number;
@@ -20291,7 +20379,7 @@ export interface components {
             total_pages: number;
             next: string | null;
             previous: string | null;
-            results: components["schemas"]["PublicScholarCard"][];
+            results: components["schemas"]["TopicScholar"][];
         };
         TopicUnavailable: {
             /** Format: uuid */
@@ -20341,6 +20429,7 @@ export interface components {
             is_recommended: boolean;
             /** @default  */
             recommendation_reason: string;
+            curation_note: string;
             source_notice: string;
             selection: components["schemas"]["SelectionEnum"];
             /** Format: uuid */
@@ -28167,6 +28256,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopicOrganizationPreview"];
+                };
+            };
+        };
+    };
+    catalog_admin_topics_association_choices_retrieve: {
+        parameters: {
+            query?: {
+                field?: "concept_node_ids" | "debate_node_ids" | "disputed_edition_ids" | "edition_ids" | "foundational_edition_ids" | "issue_ids" | "question_node_ids" | "reading_path_ids" | "related_scholar_ids";
+                /** @description 最多200个已选编号，以逗号分隔；仍受当前账户权限限制。 */
+                ids?: string;
+                page?: number;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicAssociationPage"];
                 };
             };
         };

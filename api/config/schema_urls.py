@@ -45,7 +45,7 @@ VERIFIED_NAMES = {
     "path-save-receipt", "path-editor-validation",
     "timeline-save-receipt", "timeline-similar",
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
-    "topic-organization", "topic-save-receipt", "topic-organization-preview",
+    "topic-organization", "topic-save-receipt", "topic-organization-preview", "topic-association-choices",
     "topic-list", "topic-detail", "admin-topic-list", "admin-topic-detail",
     "knowledge-entry-citation", "theory-system-overview", "knowledge-node-list", "knowledge-node-detail",
     "normalized-theory-timeline", "normalized-theory-timeline-detail", "reading-path-list", "reading-path-detail",

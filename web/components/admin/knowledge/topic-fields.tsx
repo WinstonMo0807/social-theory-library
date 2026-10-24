@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import styles from "./topic-editor.module.css";
+import { useAdminSession } from "@/lib/admin-session";
+import { TopicAssociations } from "./topic-associations";
 import { StringListEditor } from "@/components/structured-editors";
 import { TopicOrganizationChecks } from "./topic-organization";
 import { getServerSessionCredential } from "@/lib/api";
@@ -15,42 +16,55 @@ export const topicSelectionFields = {
   topicScholarIds: "related_scholar_ids", readingPathIds: "reading_path_ids", issueIds: "issue_ids",
 } as const;
 export type TopicCurationFields = { [K in keyof typeof topicSelectionFields]: string[] } & {
-  parentId: string; topicAliases: string[]; featuredSourceId: string; preview_labels: Record<string, string>;
+  associationNotes: Record<string, Record<string, string>>; parentId: string; topicAliases: string[]; featuredSourceId: string; preview_labels: Record<string, string>;
 };
 export function topicFields(curation: Record<string, unknown> = {}, parent: string | null = null, aliases: string[] = []): TopicCurationFields {
   return { ...Object.fromEntries(Object.entries(topicSelectionFields).map(([field, key]) => [field,
     Array.isArray(curation[key]) ? curation[key].filter((id): id is string => typeof id === "string") : []])),
+    associationNotes: typeof curation.association_notes === "object" && curation.association_notes !== null
+      ? Object.fromEntries(Object.values(topicSelectionFields).map(key => {
+        const group = (curation.association_notes as Record<string, unknown>)[key];
+        return [key, group && typeof group === "object" && !Array.isArray(group)
+          ? Object.fromEntries(Object.entries(group).filter((entry): entry is [string, string] => typeof entry[1] === "string")) : {}];
+      })) : {},
     parentId: parent || "", topicAliases:aliases, featuredSourceId: typeof curation.featured_source_id === "string" ? curation.featured_source_id : "", preview_labels: {},
   } as TopicCurationFields;
 }
 export function topicCuration(value: TopicCurationFields): Record<string, unknown> {
   return { ...Object.fromEntries(Object.entries(topicSelectionFields).map(([field, key]) => [key, value[field as keyof typeof topicSelectionFields]])),
-    featured_source_id: value.featuredSourceId || null };
+    association_notes: Object.fromEntries(Object.entries(topicSelectionFields).map(([field, key]) => [key,
+      Object.fromEntries(value[field as keyof typeof topicSelectionFields].flatMap(id => {
+        const text = value.associationNotes[key]?.[id]?.trim(); return text ? [[id, text]] : [];
+      }))])), featured_source_id: value.featuredSourceId || null };
 }
 const choices = [
-  ["questions", "questionNodeIds", "核心问题", "/catalog/admin/theory-system/nodes/?type=research_problem", "canonical_name_zh"],
-  ["questions", "debateNodeIds", "相关争论", "/catalog/admin/theory-system/nodes/?type=debate", "canonical_name_zh"],
-  ["concepts", "conceptNodeIds", "规范概念条目", "/catalog/admin/theory-system/nodes/?type=concept", "canonical_name_zh"],
-  ["works", "editionIds", "相关作品的出版版本", "/catalog/admin/library/works/?view=editions", "label"],
-  ["works", "foundationalEditionIds", "基础阅读版本", "/catalog/admin/library/works/?view=editions", "label"],
-  ["works", "disputedEditionIds", "争议阅读版本", "/catalog/admin/library/works/?view=editions", "label"],
-  ["scholars", "topicScholarIds", "相关学者档案", "/catalog/admin/scholars/", "name"],
-  ["paths", "readingPathIds", "研究路径", "/catalog/admin/theory-system/reading-paths/", "title"],
-  ["articles", "issueIds", "策划文章", "/catalog/admin/recommendation-issues/", "title"],
+  ["questions", "questionNodeIds", "核心问题"],
+  ["questions", "debateNodeIds", "相关争论"],
+  ["concepts", "conceptNodeIds", "规范概念条目"],
+  ["works", "editionIds", "相关作品的出版版本"],
+  ["works", "foundationalEditionIds", "基础阅读版本"],
+  ["works", "disputedEditionIds", "争议阅读版本"],
+  ["scholars", "topicScholarIds", "相关学者档案"],
+  ["paths", "readingPathIds", "研究路径"],
+  ["articles", "issueIds", "策划文章"],
 ] as const;
 
 export function TopicFieldsEditor({ topicId, name, section, value, onChange }: {
   topicId: string | null; name: string; section: string; value: TopicCurationFields; onChange: (patch: Partial<TopicCurationFields>) => void;
 }) {
+  const owner = String(useAdminSession()?.id || "");
   return <section>
-    {section === "identity" ? <><StringListEditor label="主题别名" itemLabel="别名" addLabel="添加别名" value={value.topicAliases} onChange={topicAliases=>onChange({topicAliases})}/><EntityPicker label="上级主题" endpoint="/catalog/admin/topics/" queryParam="search"
+    {section === "identity" ? <><StringListEditor label="主题别名" itemLabel="别名" addLabel="添加别名" value={value.topicAliases} onChange={topicAliases=>onChange({topicAliases})}/><EntityPicker owner={owner} label="上级主题" endpoint="/catalog/admin/topics/" queryParam="search"
       values={value.parentId ? [{ id: value.parentId, name: value.preview_labels[value.parentId] || "已保存的上级主题" }] : []}
       onChange={rows => { const row = rows.at(-1); onChange({ parentId: row?.id || "", preview_labels: { ...value.preview_labels, ...(row?.id ? { [row.id]: row.name } : {}) } }); }} />
       <p>留空表示一级主题。不能选择自身或后代；上级未公开时不对读者展示其名称。</p><TopicOrganizationChecks topicId={topicId} name={name} value={value}/></> : null}
-    {choices.filter(row => row[0] === section).map(([, field, label, endpoint, nameField]) => <div key={field}><EntityPicker label={label} endpoint={endpoint}
-      queryParam={field === "topicScholarIds" ? "search" : "q"} nameField={nameField}
-      values={value[field].map(id => ({ id, name: value.preview_labels[id] || `${label} · ${id.slice(0, 8)}` }))}
-      onChange={rows => onChange({ [field]: rows.flatMap(row => row.id ? [row.id] : []), preview_labels: { ...value.preview_labels, ...Object.fromEntries(rows.flatMap(row => row.id ? [[row.id, row.name]] : [])) } })} /><ol className={styles.selectedItems}>{value[field].map((id,index)=><li key={id}><span>{value.preview_labels[id]||"原条目当前未能读取名称"}</span><button type="button" disabled={index===0} aria-label={`上移第${index+1}项`} onClick={()=>{const rows=[...value[field]];[rows[index-1],rows[index]]=[rows[index],rows[index-1]];onChange({[field]:rows});}}>上移</button><button type="button" disabled={index===value[field].length-1} aria-label={`下移第${index+1}项`} onClick={()=>{const rows=[...value[field]];[rows[index+1],rows[index]]=[rows[index],rows[index+1]];onChange({[field]:rows});}}>下移</button><button type="button" onClick={()=>onChange({[field]:value[field].filter(item=>item!==id)})}>移除关联</button></li>)}</ol></div>)}
+    {choices.filter(row => row[0] === section).map(([, field, label]) => {
+      const key = topicSelectionFields[field];
+      return <TopicAssociations key={`${owner}:${topicId}:${field}`} field={key} label={label} ids={value[field]} labels={value.preview_labels}
+        notes={value.associationNotes[key] || {}} onChange={(ids, labels) => onChange({ [field]: ids, preview_labels: { ...value.preview_labels, ...labels },
+          associationNotes: { ...value.associationNotes, [key]: Object.fromEntries(ids.flatMap(id => value.associationNotes[key]?.[id] ? [[id, value.associationNotes[key][id]]] : [])) } })}
+        onNote={(id, text) => onChange({ associationNotes: { ...value.associationNotes, [key]: { ...value.associationNotes[key], [id]: text } } })} />;
+    })}
     {section === "questions" ? <p>问题与争论关联规范条目；导读中的文字问题不会自动创建条目或生成讨论数量。</p> : null}
     {section === "works" ? <p>每项固定到准确出版版本。没有全文只显示书目；待购状态来自已发布策划中的明确计划记录。</p> : null}
     {section === "paths" ? <><p>复用已有阅读路径及其真实阶段、材料和来源。草稿或撤下的路径不会公开显示。</p><Link href="/admin/reading-paths">管理阅读路径</Link></> : null}

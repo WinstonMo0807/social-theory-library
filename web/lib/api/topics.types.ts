@@ -125,24 +125,25 @@ export type TopicDirectory = TopicPage<PublicTopicCard> & {
   disambiguation: PublicTopicCard[]; overlap_notice: string;
 };
 export type TopicKnowledge = TopicLink & {
+  curation_note?: string;
   node_type: "research_problem" | "debate" | "concept"; summary: string; relation_label: string;
   work_count: number; discussion_count: number; response_count: number; count_notice: string;
 };
 export type TopicWork = Omit<ScholarWork, "edition_id" | "catalog_revision_id" | "source_status"> & {
-  edition_id: string | null; catalog_revision_id: string | null;
+  curation_note?: string; edition_id: string | null; catalog_revision_id: string | null;
   source_status: "available" | "no_fulltext" | "planned";
   source_notice: string; selection: "related" | "foundational" | "disputed";
   issue_id: string | null; issue_item_id: string | null;
 };
-export type TopicArticle = { id: string; slug: string; title: string; summary: string; href: string; cover_url: string; public_byline: string; published_at: string | null };
+export type TopicArticle = { curation_note?: string; id: string; slug: string; title: string; summary: string; href: string; cover_url: string; public_byline: string; published_at: string | null };
 export type TopicUnavailable = { id: string; kind: "question" | "concept" | "work" | "scholar" | "article" | "path"; status: "unavailable"; notice: string };
 export type TopicLegacyWork = { id: string; title: string; href: string; notice: string };
 export type PublicTopicDetail = PublicTopicCard & {
   public_revision: ScholarRevision; breadcrumbs: TopicLink[]; children: TopicLink[];
   introduction: { description: string; problem_statement: string; formation_context: string; core_questions: string[]; research_dimensions: string[]; methods: string[] };
   counts: Record<Exclude<TopicSection, "overview">, number>;
-  questions: TopicPage<TopicKnowledge>; works: TopicPage<TopicWork>; scholars: TopicPage<PublicScholarCard>;
-  concepts: TopicPage<TopicKnowledge>; articles: TopicPage<TopicArticle>; paths: TopicPage<PublicReadingPath>;
+  questions: TopicPage<TopicKnowledge>; works: TopicPage<TopicWork>; scholars: TopicPage<PublicScholarCard & { curation_note?: string }>;
+  concepts: TopicPage<TopicKnowledge>; articles: TopicPage<TopicArticle>; paths: TopicPage<PublicReadingPath & { curation_note?: string }>;
   evidence: TopicPage<EvidenceCurationItem>; featured_quote: EvidenceCurationItem | null;
   unavailable_links: TopicUnavailable[]; unavailable_notice: string; discussion_notice: string;
   feedback_href: string; graph_href: string; research_href: string;

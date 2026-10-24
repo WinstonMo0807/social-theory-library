@@ -83,6 +83,8 @@ def validate_topic_curation(value, topic=None):
         if len(found) != len(identifiers):
             raise ValidationError({key: "包含不存在或类型不符的对象。"})
         result[key] = identifiers
+    from catalog.topic_associations import validate_association_notes
+    validate_association_notes(result, CURATION_IDS)
     if "featured_source_id" in result:
         value = result["featured_source_id"]
         if value in (None, ""):
@@ -372,6 +374,7 @@ def public_topic_directory(params=None, *, request=None):
 
 
 def _knowledge_rows(rows, topic):
+    from catalog.topic_associations import association_note
     rows = list(rows)
     result = []
     relations = {row.node_id: row.relation_label for row in KnowledgeNodeTopic.objects.filter(topic=topic, status="published", node__in=rows)}
@@ -386,6 +389,7 @@ def _knowledge_rows(rows, topic):
     for row in rows:
         result.append({"id": str(row.pk), "slug": row.slug, "name": row.canonical_name_zh, "href": f"/theories/nodes/{row.slug}",
             "node_type": row.node_type, "summary": row.summary, "relation_label": relations.get(row.pk) or "编辑选入",
+            "curation_note": association_note(topic, row.pk, "question_node_ids", "debate_node_ids", "concept_node_ids"),
             "work_count": public_editions().filter(_SnapshotEntity("knowledge_node", Value(str(row.pk)))).values("work_id").distinct().count(),
             "discussion_count": counts.get((row.pk, "major_criticism"), 0) + counts.get((row.pk, "debate_position"), 0),
             "response_count": counts.get((row.pk, "major_response"), 0), "count_notice": DISCUSSION_NOTICE})
@@ -422,6 +426,7 @@ def _evidence(topic):
 
 
 def _articles_and_planned(topic):
+    from catalog.topic_associations import association_note
     from catalog.services.editorial_issues import published_issues, issue_payload
     ids = _ids((topic.curation or {}).get("issue_ids"))
     issues = {str(row.pk): row for row in published_issues().filter(pk__in=ids)}
@@ -434,7 +439,8 @@ def _articles_and_planned(topic):
         linked = {str(value) for value in issue.items.filter(linked_edition__isnull=False).values_list("pk", flat=True)}
         articles.append({"id": identifier, "slug": data["slug"], "title": data.get("title", ""),
             "summary": data.get("introduction", ""), "href": f"/recommendations/{data['slug']}", "cover_url": data.get("cover_url", ""),
-            "public_byline": data.get("public_byline", ""), "published_at": data.get("published_at")})
+            "public_byline": data.get("public_byline", ""), "published_at": data.get("published_at"),
+            "curation_note": association_note(topic, identifier, "issue_ids")})
         for item in data.get("items", []):
             if item.get("kind") != "planned" or item.get("status") != "planned" or item["id"] in linked:
                 continue
@@ -443,11 +449,12 @@ def _articles_and_planned(topic):
                 "document_type": item.get("document_type", ""), "language": item.get("language", ""), "publication_year": item.get("publication_year"),
                 "version_label": item.get("version_label", ""), "roles": [], "role_labels": [], "contributions": [],
                 "source_status": "planned", "source_notice": "已由本期公开策划明确列为计划材料；尚无可读馆藏版本。",
-                "reader_href": "", "is_essential": False, "selection": "related", "issue_id": identifier, "issue_item_id": item["id"]})
+                "reader_href": "", "is_essential": False, "selection": "related", "issue_id": identifier, "issue_item_id": item["id"], "curation_note": ""})
     return articles, planned
 
 
-def _work_rows(rows, topic):
+def _work_rows(rows, topic, *, reading="all"):
+    from catalog.topic_associations import association_note
     from catalog.services.public_scholars import _work_rows as edition_cards
     curated = topic.curation or {}
     foundational, disputed = set(_ids(curated.get("foundational_edition_ids"))), set(_ids(curated.get("disputed_edition_ids")))
@@ -460,7 +467,10 @@ def _work_rows(rows, topic):
             row.update(source_status="no_fulltext", reader_href="")
         row.update(selection="foundational" if row["edition_id"] in foundational else "disputed" if row["edition_id"] in disputed else "related",
             source_notice="可打开当前公开版本原文。" if row["source_status"] == "available" else "当前仅有公开书目，尚无可读全文；此状态不代表待购。",
-            issue_id=None, issue_item_id=None)
+            issue_id=None, issue_item_id=None,
+            curation_note=association_note(topic, row["edition_id"], *(
+                (reading + "_edition_ids", "edition_ids") if reading != "all" else
+                ("edition_ids", "foundational_edition_ids", "disputed_edition_ids"))))
     return output
 
 
@@ -474,6 +484,7 @@ def _path_candidates(topic, editions, nodes, explicit):
 
 
 def _paths(topic, editions, nodes, params, path, request):
+    from catalog.topic_associations import annotated_rows
     from catalog.services.public_reading_paths import public_reading_path_snapshots
     explicit = set(_ids((topic.curation or {}).get("reading_path_ids")))
     # The candidate SQL is not membership proof: a withdrawn or revised material cannot keep a path related.
@@ -501,11 +512,12 @@ def _paths(topic, editions, nodes, params, path, request):
             batch = []
     accept(batch)
     output = _page(range(total), params, path, section="paths")
-    output["results"] = selected
+    output["results"] = annotated_rows(selected, topic, "reading_path_ids")
     return output
 
 
 def public_topic_detail(slug, params=None, *, request=None, preview_topic=None):
+    from catalog.topic_associations import annotated_rows
     params = params or {}
     _paging(params)
     section = _choice(params, "section", SECTIONS, "overview")
@@ -549,7 +561,7 @@ def public_topic_detail(slug, params=None, *, request=None, preview_topic=None):
     works = works.annotate(public_title=KeyTextTransform("title", "active_catalog_revision__snapshot__work"))
     ordering = ("public_title", "pk") if sort == "title" else ("-active_catalog_revision__snapshot__edition__publication_year", "pk") if sort == "published" else ("-published_at", "pk")
     works = _selected_first(works, [identifier for key in ("edition_ids", "foundational_edition_ids", "disputed_edition_ids") for identifier in _ids(curation.get(key))], ordering) if sort == "relevance" else works.order_by(*ordering)
-    work_page = _page(works, params, path, transform=lambda rows: _work_rows(rows, topic), section="works")
+    work_page = _page(works, params, path, transform=lambda rows: _work_rows(rows, topic, reading=reading), section="works")
     # Explicit planned records follow catalog versions; their page count remains exact.
     work_total = works.count()
     page, size = _paging(params)
@@ -564,7 +576,7 @@ def public_topic_detail(slug, params=None, *, request=None, preview_topic=None):
     result.update(public_revision=_revision(topic), introduction={key: getattr(topic, key) for key in ("description", "problem_statement", "formation_context", "core_questions", "research_dimensions", "methods")},
         questions=_page(_selected_first(questions, [*_ids(curation.get("question_node_ids")), *_ids(curation.get("debate_node_ids"))], ("sort_order", "canonical_name_zh", "pk")), params, path, transform=lambda rows: _knowledge_rows(rows, topic), section="questions"),
         concepts=_page(_selected_first(concepts, curation.get("concept_node_ids", []), ("sort_order", "canonical_name_zh", "pk")), params, path, transform=lambda rows: _knowledge_rows(rows, topic), section="concepts"),
-        works=work_page, scholars=_page(scholars, params, path, transform=scholar_cards, section="scholars"),
+        works=work_page, scholars=_page(scholars, params, path, transform=lambda rows: annotated_rows(scholar_cards(rows), topic, "related_scholar_ids"), section="scholars"),
         articles=_page(articles, params, path, section="articles"), paths=_paths(topic, editions, nodes, params, path, request),
         evidence=_page(evidence, params, path, section="evidence"), featured_quote=next((row for row in evidence if row["id"] == (curation.get("featured_source_id") if "featured_source_id" in curation else curation.get("featured_passage_id"))), None),
         filters={"section": section, "question_type": question_type, "availability": availability, "reading": reading, "sort": sort}, work_facets=facets,
@@ -654,7 +666,7 @@ def preview_topic(target, *, snapshot=None, request=None, curation_overrides=Non
         if not isinstance(curation_overrides, dict) or set(curation_overrides) - {"curation", "parent"}:
             raise ValidationError("主题预览只接受明确的编排字段。")
         overrides = curation_overrides.get("curation", {})
-        if not isinstance(overrides, dict) or set(overrides) - set(CURATION_IDS) - {"featured_source_id"}:
+        if not isinstance(overrides, dict) or set(overrides) - set(CURATION_IDS) - {"featured_source_id", "association_notes"}:
             raise ValidationError("主题预览包含不支持的策划字段。")
         if "parent" in curation_overrides:
             row.parent_id = validate_topic_parent(row, curation_overrides["parent"])

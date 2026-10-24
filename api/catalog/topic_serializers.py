@@ -63,6 +63,7 @@ class PublicTopicDirectorySerializer(ScholarPageSerializer):
 
 
 class TopicKnowledgeSerializer(TopicLinkSerializer):
+    curation_note = serializers.CharField(allow_blank=True)
     node_type = serializers.ChoiceField(choices=("research_problem", "debate", "concept"))
     summary = serializers.CharField(allow_blank=True)
     relation_label = serializers.CharField(allow_blank=True)
@@ -73,6 +74,7 @@ class TopicKnowledgeSerializer(TopicLinkSerializer):
 
 
 class TopicWorkSerializer(ScholarWorkSerializer):
+    curation_note = serializers.CharField(allow_blank=True)
     edition_id = serializers.UUIDField(allow_null=True)
     catalog_revision_id = serializers.UUIDField(allow_null=True)
     source_status = serializers.ChoiceField(choices=("available", "no_fulltext", "planned"))
@@ -83,6 +85,7 @@ class TopicWorkSerializer(ScholarWorkSerializer):
 
 
 class TopicArticleSerializer(serializers.Serializer):
+    curation_note = serializers.CharField(allow_blank=True)
     id = serializers.UUIDField()
     slug = serializers.CharField()
     title = serializers.CharField()
@@ -108,16 +111,24 @@ class TopicWorkPageSerializer(ScholarPageSerializer):
     results = TopicWorkSerializer(many=True)
 
 
+class TopicScholarSerializer(PublicScholarCardSerializer):
+    curation_note = serializers.CharField(allow_blank=True)
+
+
 class TopicScholarPageSerializer(ScholarPageSerializer):
-    results = PublicScholarCardSerializer(many=True)
+    results = TopicScholarSerializer(many=True)
 
 
 class TopicArticlePageSerializer(ScholarPageSerializer):
     results = TopicArticleSerializer(many=True)
 
 
+class TopicPathSerializer(PublicReadingPathSerializer):
+    curation_note = serializers.CharField(allow_blank=True)
+
+
 class TopicPathPageSerializer(ScholarPageSerializer):
-    results = PublicReadingPathSerializer(many=True)
+    results = TopicPathSerializer(many=True)
 
 
 class TopicEvidencePageSerializer(ScholarPageSerializer):

@@ -613,7 +613,7 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
             </>
           ) : null}
         </section> : null}
-        {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
+        {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={event => { if (event.target instanceof Element && event.target.closest("[data-editor-transient]")) return; unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
           <fieldset disabled={!canEdit||Boolean(pendingAction)||(draft.kind==="topic"&&(!command.ready||Boolean(command.recovery)))} style={{display:"contents"}}>
           <p>保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />

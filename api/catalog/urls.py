@@ -10,6 +10,7 @@ from catalog.issue_creation_views import IssueCreateView, IssueCreateReceiptView
 from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
+from catalog.topic_association_views import TopicAssociationChoicesView
 from catalog.scholar_work_views import ScholarWorkSelectionView
 from django.urls import path
 from .home_views import HomeView
@@ -910,6 +911,7 @@ urlpatterns = [
     path("admin/theory-schools/", AdminTheorySchoolListView.as_view(), name="admin-theory-school-list"),
     path("admin/theory-schools/<uuid:pk>/", AdminTheorySchoolDetailView.as_view(), name="admin-theory-school-detail"),
     path("admin/topics/organization/", TopicOrganizationView.as_view(), name="topic-organization"),
+    path("admin/topics/association-choices/", TopicAssociationChoicesView.as_view(), name="topic-association-choices"),
     path("admin/topics/commands/<uuid:request_id>/", TopicReceiptView.as_view(), name="topic-save-receipt"),
     path("admin/topics/<uuid:pk>/organization-preview/", TopicOrganizationPreviewView.as_view(), name="topic-organization-preview"),
     path("admin/topics/", AdminTopicListView.as_view(), name="admin-topic-list"),
