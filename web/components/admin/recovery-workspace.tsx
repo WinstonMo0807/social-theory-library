@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { components } from "@/lib/api/generated/schema";
 import styles from "./recovery-workspace.module.css";
 import { RecoveryBatch } from "./recovery-batch";
+import { RecoveryRestoreDialog } from "./recovery-restore-dialog";
 import { parseRecoveryBatch, recoveryBatchKey, type RecoveryBatchState } from "./recovery-batch-state";
 
 type Directory=components["schemas"]["RecoveryDirectory"];
@@ -50,7 +51,7 @@ function Workspace({owner}:{owner:string}){
   const [original,setOriginal]=useState<Request|null>(null),[ready,setReady]=useState(false),[recoveryError,setRecoveryError]=useState("");
   useEffect(()=>{let alive=true;queueMicrotask(()=>{if(!alive)return;try{const raw=sessionStorage.getItem(requestKey(owner));if(raw){const value=savedRestore(raw);setOriginal(value);setSelected(value);setLocked(true);}const batchRaw=sessionStorage.getItem(recoveryBatchKey(owner));if(batchRaw){const saved=parseRecoveryBatch(batchRaw);setBatchSaved(saved);setBatchTargets(saved.items.map(item=>item.command));setBatchOpen(!raw);}setReady(true);}catch(reason){setRecoveryError(reason instanceof Error?reason.message:"不能读取原恢复请求，请保留本页。");}});return()=>{alive=false;};},[owner]);
   const locked=singleLocked||batchTargets!==null||!ready;
-  function preserve(value:Request|null){if(value)sessionStorage.setItem(requestKey(owner),JSON.stringify(value));else sessionStorage.removeItem(requestKey(owner));setOriginal(value);}
+  function preserve(value:Request|null){if(value){const {request_id,kind,object_id,expected_version,confirmed}=value;sessionStorage.setItem(requestKey(owner),JSON.stringify({request_id,kind,object_id,expected_version,confirmed}));}else sessionStorage.removeItem(requestKey(owner));setOriginal(value);}
   const url=`${base}?page=${page}&search=${encodeURIComponent(search)}&kind=${kind}&state=${state}&operator=${encodeURIComponent(operator)}&reason=${encodeURIComponent(reasonQuery)}${since?`&since=${encodeURIComponent(since)}`:""}`;
   const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Directory>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
   const resource=usePersistentWorkspace<Directory>(url,owner,undefined,load),data=resource.data;
@@ -104,10 +105,10 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
     }catch(reason){if(!controller.signal.aborted)setMessage(reason instanceof Error?reason.message:"关联与文件尚未核对完成，请稍后重试。");}
     finally{if(!controller.signal.aborted){busy.current=false;setChecking(false);onLock(false);}}
   }
-  async function restore(){
+  async function restore(rename?:Request["rename"],keepSeparate=false){
     if(busy.current||pending.current||!lifecycle.current||lifecycle.current.signal.aborted||!preview?.can_restore)return;
     const controller=lifecycle.current;
-    const values:Request={request_id:createRequestKey(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true,...(preview!.names.count?{keep_separate:true}:{})};
+    const values:Request={request_id:createRequestKey(),object_id:preview!.object_id,kind:preview!.kind as Request["kind"],expected_version:preview!.version,confirmed:true,...(rename?{rename}:keepSeparate?{keep_separate:true}:{})};
     try{preserve(values);}catch{setMessage("浏览器不能保存原恢复请求，尚未提交。请保留本页并恢复浏览器存储后再继续。");return;}
     pending.current=values;setUnknown(values);busy.current=true;setSubmitting(true);onLock(true);setMessage("");
     try{
@@ -162,7 +163,7 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
         <p className={styles.hint}>正在恢复：{data.title}。以下是当前未回收、未归档的同名管理对象。</p>
         {comparison?<RelatedRecords owner={owner} target={target} category="names" disabled={disabled} onSelect={onSelect}/>:null}
       </Dialog>
-      <ConfirmDialog open={!!preview} title="确认恢复对象" description={preview?.notice||""} details={preview?[preview.title,`关联摘要：${preview.dependency_count} 项；其他已删除对象需单独恢复。`,...(preview.names.count?[`另有 ${preview.names.count} 个同名对象。确认将保留独立身份，不改名、不覆盖、不合并。`,...preview.names.results.map(row=>`${row.label}：${row.name} · ${row.detail}`),...(preview.names.count>preview.names.results.length?["其余同名对象请先关闭确认，进入同名比较分页查看。"]:[])]:[]),...(preview.storage.state==="checked"?[`已核对 ${preview.storage.total} 份登记文件的存在与大小，不含内容完整性校验。`]:[]),...preview.blockers,...(message?[message]:[])]:[]} confirmLabel={submitting?"正在恢复…":preview?.names.count?"保留独立对象并恢复":"确认恢复（保持未发布）"} pending={submitting} onCancel={()=>{if(!unknown)setPreview(null);}} onConfirm={()=>void restore()}/>
+      <RecoveryRestoreDialog preview={preview} pending={submitting} message={message} onCancel={()=>{if(!unknown)setPreview(null);}} onConfirm={(rename,keepSeparate)=>void restore(rename,keepSeparate)}/>
     </>:null}
   </aside>;
 }

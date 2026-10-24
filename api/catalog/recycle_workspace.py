@@ -205,8 +205,10 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
     archived=bool(obj and config.status_field and getattr(obj,config.status_field)==config.archived_value)
     state="deleted" if deleted else "archived" if archived else "restored"
     from .recycle_related import destination, name_summary, history_query, history_payload
+    from .recycle_names import rename_info
     deps,total=dependency_rows(obj,actor) if obj else ([],0)
     names=name_summary(kind,obj,actor)
+    rename=rename_info(kind,obj,actor,restoring=True)
     blockers=[row["detail"] for row in deps if row["blocking"]]
     if names["limited"]:blockers.append("同名对象超过500个，本次未完成身份比较，请先沿原管理入口整理同名记录。")
     if obj is None:
@@ -242,13 +244,13 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
     before=entry.before if entry and isinstance(entry.before,dict) else {}
     version=sha256(json.dumps({"kind":kind,"id":identifier,"object_updated":obj.updated_at if obj else None,
         "entry_updated":entry.updated_at if entry else None,"state":state,"dependencies":deps,"total":total,"blockers":blockers,
-        "files":storage["checks"],"public_children":public_children,"public_editions":public_editions,"names":names["fingerprint"]},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
+        "files":storage["checks"],"public_children":public_children,"public_editions":public_editions,"names":names["fingerprint"],"rename":rename["version"]},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
     return {"kind":kind,"object_id":str(identifier),"entry_id":str(entry.pk) if entry else None,"title":title,"label":LABELS[kind],
         "record_state":state,"version":version,"destination":destination(kind,obj) if obj else DESTINATIONS[kind],"cover_url":cover_url(obj,kind),
         "created_at":obj.created_at if obj else None,"updated_at":obj.updated_at if obj else None,
         "changed_at":entry.updated_at if entry and not archived else obj.updated_at,"operator":entry.deleted_by.display_name if deleted and entry.deleted_by else "详见变更历史",
         "reason":str(before.get("_recycle_reason") or "原记录未保存操作原因"),"dependencies":deps,"dependency_count":total,
-        "dependencies_limited":total>len(deps),"history":changes,"history_count":history_count,"names":{key:names[key] for key in ("count","results","limited")},"blockers":blockers,"can_restore":can_restore,
+        "dependencies_limited":total>len(deps),"history":changes,"history_count":history_count,"names":{key:names[key] for key in ("count","results","limited")},"rename":rename,"blockers":blockers,"can_restore":can_restore,
         "storage":{"state":storage["state"],"checked_at":storage["checked_at"],"total":storage["total"]},
         "notice":"恢复原对象和保留的关联，保持未发布；不自动恢复其他已删除对象，不覆盖同名内容，不重启任务。"+(" 此人物的旧公开学者页将一并撤下，档案内容和历史修订保留，需另行审核发布。" if public_children else "")+(f" {len(public_editions)}个旧公开版本将通过原下架流程撤下，文件、身份与版本历史保留，需要另行审核发布。" if public_editions else "")}
 
@@ -315,20 +317,32 @@ def confirm_restore(request, values):
         if not isinstance(receipt.after,dict) or receipt.after.get("fingerprint")!=fingerprint:
             raise RecoveryConflict("该请求编号对应其他恢复操作。")
         return command_result(receipt,actor)
+    if values.get("rename"):
+        if values["kind"]=="topic":
+            from .topic_editor import lock_topic_hierarchy
+            lock_topic_hierarchy()
+        # Both identities are locked in a deterministic order before their
+        # separate ledger/revision locks. No current content is overwritten.
+        model=LIFECYCLE_MODELS[values["kind"]].model
+        list(model.all_objects.select_for_update().filter(pk__in=[values["object_id"],values["rename"]["object_id"]]).order_by("pk"))
     locked=object_and_entry(values["kind"],values["object_id"],lock=True,actor=actor)
     preview=detail(values["kind"],values["object_id"],actor,locked=locked,check_files=True)
     if preview["version"]!=values["expected_version"]:
         raise RecoveryConflict()
     if not preview["can_restore"]:
         raise RecoveryConflict("；".join(preview["blockers"]) or "当前账户或对象状态不允许恢复。")
-    if preview["names"]["count"] and values.get("keep_separate") is not True:
+    if preview["names"]["count"] and values.get("keep_separate") is not True and not values.get("rename"):
         raise RecoveryConflict("存在同名对象，请先比较并明确选择保留独立对象后恢复。不会自动覆盖或合并。")
     _,obj,entry=locked
+    from .recycle_names import prepare_rename,apply_rename
+    prepared=prepare_rename(values["kind"],obj,actor,values)
     if preview["record_state"]=="deleted":
         restore_object(entry.pk,actor=actor)
     else:
         restore_archived_object(values["kind"],obj,actor=actor)
+    apply_rename(values["kind"],prepared,actor,identifier)
     result={"request_id":str(identifier),"kind":values["kind"],"object_id":str(obj.pk),"restored":True,"public_restored":False,
         "destination":preview["destination"],"detail":"已恢复到原管理列表，未重新发布或启动处理。此回执记录本次操作，请刷新核对后续变更。"}
+    if prepared:result["detail"]="已按确认方案改名，两个对象的身份、内容与关联均保留。"+result["detail"]
     AuditEvent.objects.create(actor=actor,action="recovery.confirmed",object_type=obj._meta.label_lower,object_id=str(obj.pk),request_id=str(identifier),after={"fingerprint":fingerprint,"result":result})
     return result

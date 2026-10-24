@@ -18068,6 +18068,7 @@ export interface components {
             expected_version: string;
             confirmed: boolean;
             keep_separate?: boolean;
+            rename?: components["schemas"]["RecoveryRenameInputRequest"];
         };
         RecoveryDependency: {
             kind: string;
@@ -18079,6 +18080,7 @@ export interface components {
             blocking: boolean;
             destination: string;
             detail: string;
+            rename?: components["schemas"]["RecoveryRenameInfo"];
         };
         RecoveryDetail: {
             kind: string;
@@ -18106,6 +18108,7 @@ export interface components {
             history: components["schemas"]["RecoveryHistory"][];
             history_count: number;
             names: components["schemas"]["RecoveryNames"];
+            rename: components["schemas"]["RecoveryRenameInfo"];
             blockers: string[];
             can_restore: boolean;
             notice: string;
@@ -18174,6 +18177,27 @@ export interface components {
             label: string;
             count: number;
         };
+        RecoveryRenameInfo: {
+            allowed: boolean;
+            reason: string;
+            max_length: number;
+            suggested_name: string;
+            version: string;
+            public_count: number;
+        };
+        RecoveryRenameInputRequest: {
+            target: components["schemas"]["RecoveryRenameInputTargetEnum"];
+            /** Format: uuid */
+            object_id: string;
+            expected_version: string;
+            new_name: string;
+        };
+        /**
+         * @description * `restored` - restored
+         *     * `existing` - existing
+         * @enum {string}
+         */
+        RecoveryRenameInputTargetEnum: "restored" | "existing";
         RecoveryResult: {
             /** Format: uuid */
             request_id: string;

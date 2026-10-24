@@ -63,6 +63,15 @@ class RecoveryDirectory(serializers.Serializer):
     notice = serializers.CharField()
 
 
+class RecoveryRenameInfo(serializers.Serializer):
+    allowed = serializers.BooleanField()
+    reason = serializers.CharField(allow_blank=True)
+    max_length = serializers.IntegerField()
+    suggested_name = serializers.CharField(allow_blank=True)
+    version = serializers.CharField(allow_blank=True)
+    public_count = serializers.IntegerField()
+
+
 class RecoveryDependency(serializers.Serializer):
     kind = serializers.CharField()
     object_id = serializers.UUIDField()
@@ -72,6 +81,7 @@ class RecoveryDependency(serializers.Serializer):
     blocking = serializers.BooleanField()
     destination = serializers.CharField()
     detail = serializers.CharField()
+    rename = RecoveryRenameInfo(required=False)
 
 
 class RecoveryHistory(serializers.Serializer):
@@ -149,10 +159,23 @@ class RecoveryDetail(serializers.Serializer):
     history = RecoveryHistory(many=True)
     history_count = serializers.IntegerField()
     names = RecoveryNames()
+    rename = RecoveryRenameInfo()
     blockers = serializers.ListField(child=serializers.CharField())
     can_restore = serializers.BooleanField()
     notice = serializers.CharField()
     storage = RecoveryStorage()
+
+
+class RecoveryRenameInput(serializers.Serializer):
+    target = serializers.ChoiceField(choices=["restored","existing"])
+    object_id = serializers.UUIDField()
+    expected_version = serializers.RegexField(r"^[a-f0-9]{64}$")
+    new_name = serializers.CharField(max_length=600)
+
+    def to_internal_value(self, data):
+        if not isinstance(data,dict) or set(data)!=set(self.fields):
+            raise serializers.ValidationError("请完整确认改名对象与新名称。")
+        return super().to_internal_value(data)
 
 
 class RecoveryConfirmInput(serializers.Serializer):
@@ -162,11 +185,17 @@ class RecoveryConfirmInput(serializers.Serializer):
     expected_version = serializers.RegexField(r"^[a-f0-9]{64}$")
     confirmed = serializers.BooleanField()
     keep_separate = serializers.BooleanField(required=False)
+    rename = RecoveryRenameInput(required=False)
 
     def to_internal_value(self, data):
         if not isinstance(data, dict) or set(data)-set(self.fields):
             raise serializers.ValidationError("请先预览恢复影响，再提交本次确认字段。")
         return super().to_internal_value(data)
+
+    def validate(self, values):
+        if "rename" in values and "keep_separate" in values:
+            raise serializers.ValidationError("只能选择一种名称冲突处理方式。")
+        return values
 
     def validate_confirmed(self,value):
         if value is not True:

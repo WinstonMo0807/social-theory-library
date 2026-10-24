@@ -116,8 +116,10 @@ def names_query(kind,obj,actor):
     return filter_related_objects(rows,actor).order_by("pk")
 
 
-def name_payload(kind,obj):
+def name_payload(kind,obj,actor=None):
+    from .recycle_names import rename_info
     row=row_payload(kind,obj)
+    row["rename"]=rename_info(kind,obj,actor)
     if kind=="edition":
         row["detail"]=" · ".join(str(value) for value in [obj.version_label,obj.publication_year,obj.publisher,obj.isbn or obj.doi] if value) or "版本信息尚未填写"
     elif kind=="work":
@@ -129,7 +131,7 @@ def name_payload(kind,obj):
 def name_summary(kind,obj,actor):
     query=names_query(kind,obj,actor)
     identities=list(query.values_list("pk","updated_at")[:501])
-    return {"count":query.count(), "results":[name_payload(kind,row) for row in query[:10]],
+    return {"count":query.count(), "results":[name_payload(kind,row,actor) for row in query[:10]],
         "limited":len(identities)>500,"fingerprint":sha256(json.dumps(identities,default=str).encode()).hexdigest()}
 
 
@@ -142,7 +144,8 @@ def history_query(kind,identifier):
 def history_payload(event):
     return {"id":str(event.pk),"at":event.created_at,"action":event.action,"actor":event.actor.display_name if event.actor else "系统或未记录",
         "detail":{"record.recycle":"移入回收站，文件和原关联保留。","record.restore":"恢复到管理列表，未自动公开。",
-            "entity_archive":"已归档或撤下公开展示。","entity_restore":"恢复为草稿。","recovery.confirmed":"按预览确认恢复，保留原身份。"}.get(event.action,"原对象变更记录，详情沿原编辑历史查看。")}
+            "entity_archive":"已归档或撤下公开展示。","entity_restore":"恢复为草稿。","recovery.confirmed":"按预览确认恢复，保留原身份。",
+            "recovery.renamed":"按恢复确认方案改名，原身份、内容、关联与历史保留。"}.get(event.action,"原对象变更记录，详情沿原编辑历史查看。")}
 
 
 def related_page(kind,identifier,actor,*,category="dependencies",relation="",page=1,as_of=None):
@@ -169,5 +172,5 @@ def related_page(kind,identifier,actor,*,category="dependencies",relation="",pag
         "notice":"按类型分页查看已接入的管理对象外键及内容编排引用；不含读者私人资料。编排包括最新与登记公开修订，其他历史和未接入的内容结构仍需原编辑入口核对。" if category=="dependencies" else
             "显示原对象审计摘要，不含原始操作载荷、凭据或私人正文。" if category=="history" else
             "同名可能是不同作品、版本或身份。恢复保留原ID，不自动合并、覆盖或更改公开内容。"}
-    result[category]=[history_payload(row) if category=="history" else name_payload(kind,row) if category=="names" else row_payload(row_kind,row,blocking=blocking,actor=actor) for row in current.object_list]
+    result[category]=[history_payload(row) if category=="history" else name_payload(kind,row,actor) if category=="names" else row_payload(row_kind,row,blocking=blocking,actor=actor) for row in current.object_list]
     return result

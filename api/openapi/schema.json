@@ -69763,6 +69763,9 @@
                     },
                     "keep_separate": {
                         "type": "boolean"
+                    },
+                    "rename": {
+                        "$ref": "#/components/schemas/RecoveryRenameInputRequest"
                     }
                 },
                 "required": [
@@ -69800,6 +69803,9 @@
                     },
                     "detail": {
                         "type": "string"
+                    },
+                    "rename": {
+                        "$ref": "#/components/schemas/RecoveryRenameInfo"
                     }
                 },
                 "required": [
@@ -69890,6 +69896,9 @@
                     "names": {
                         "$ref": "#/components/schemas/RecoveryNames"
                     },
+                    "rename": {
+                        "$ref": "#/components/schemas/RecoveryRenameInfo"
+                    },
                     "blockers": {
                         "type": "array",
                         "items": {
@@ -69927,6 +69936,7 @@
                     "operator",
                     "reason",
                     "record_state",
+                    "rename",
                     "storage",
                     "title",
                     "updated_at",
@@ -70185,6 +70195,73 @@
                     "id",
                     "label"
                 ]
+            },
+            "RecoveryRenameInfo": {
+                "type": "object",
+                "properties": {
+                    "allowed": {
+                        "type": "boolean"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "max_length": {
+                        "type": "integer"
+                    },
+                    "suggested_name": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "public_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "allowed",
+                    "max_length",
+                    "public_count",
+                    "reason",
+                    "suggested_name",
+                    "version"
+                ]
+            },
+            "RecoveryRenameInputRequest": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "$ref": "#/components/schemas/RecoveryRenameInputTargetEnum"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "new_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 600
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "new_name",
+                    "object_id",
+                    "target"
+                ]
+            },
+            "RecoveryRenameInputTargetEnum": {
+                "enum": [
+                    "restored",
+                    "existing"
+                ],
+                "type": "string",
+                "description": "* `restored` - restored\n* `existing` - existing"
             },
             "RecoveryResult": {
                 "type": "object",
