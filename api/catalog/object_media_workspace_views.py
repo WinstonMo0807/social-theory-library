@@ -37,7 +37,7 @@ ACTION = "media.object_workspace.command"
 
 
 class ObjectMediaCommandSerializer(MediaWorkspaceCommandSerializer):
-    action = serializers.ChoiceField(choices=["save", "restore", "clear", "legacy"])
+    action = serializers.ChoiceField(choices=["save", "restore", "clear", "legacy", "legacy_history"])
     slot = serializers.ChoiceField(choices=["portrait", "hero"])
 
     def validate(self, value):
@@ -177,7 +177,10 @@ class ObjectMediaWorkspaceView(ObjectMediaBase):
         try:
             primary=None
             prepared=None
-            if data["action"]=="legacy":
+            if data["action"]=="legacy_history":
+                from catalog.media_legacy_views import prepare_legacy_image
+                prepared=prepare_legacy_image(object_type,target,kind,data,actor)
+            elif data["action"]=="legacy":
                 file=target.person.portrait if object_type=="scholar_profile" else image_legacy_file(target)
                 if not file or selected.get("legacy_path")!=file.name or selected.get("rendition_id"):
                     raise ValidationError("当前选图不是旧文件，请重新读取后核对。")
@@ -192,7 +195,7 @@ class ObjectMediaWorkspaceView(ObjectMediaBase):
             elif data["action"]=="restore":
                 primary=get_object_or_404(history_for(target,object_type,selected["rendition_id"]),pk=data["rendition_id"])
                 if not primary.file.storage.exists(primary.file.name):raise ValidationError("历史文件暂时不可读，请选择其他版本。")
-            if data["action"]=="legacy":
+            if data["action"] in {"legacy", "legacy_history"}:
                 pass  # Preparing a copy never changes the object's selected image.
             elif object_type=="scholar_profile":
                 select_prepared_scholar_portrait(target.pk,primary,actor=actor,expected_person_id=target.person_id,fingerprint=version)

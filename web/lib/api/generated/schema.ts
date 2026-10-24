@@ -1442,6 +1442,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/media-legacy/{object_type}/{object_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_media_legacy_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/media-objects/{object_type}/{object_id}/": {
         parameters: {
             query?: never;
@@ -10310,6 +10326,31 @@ export interface components {
             theories: components["schemas"]["LegacySearchTheory"][];
             passages: components["schemas"]["LegacyGlobalPassage"][];
         };
+        LegacyImageHistory: {
+            count: number;
+            page: number;
+            pages: number;
+            results: components["schemas"]["LegacyImageItem"][];
+        };
+        LegacyImageItem: {
+            source: components["schemas"]["LegacyMediaSourceEnum"];
+            /** Format: uuid */
+            record_id: string;
+            /** Format: date-time */
+            created_at: string;
+            label: string;
+            fingerprint: string;
+            url: string;
+        };
+        /**
+         * @description * `current` - current
+         *     * `editorial` - editorial
+         *     * `publication` - publication
+         *     * `before` - before
+         *     * `after` - after
+         * @enum {string}
+         */
+        LegacyMediaSourceEnum: "current" | "editorial" | "publication" | "before" | "after";
         LegacySearchScholar: {
             /** Format: uuid */
             readonly id: string;
@@ -11295,9 +11336,10 @@ export interface components {
          *     * `restore` - restore
          *     * `clear` - clear
          *     * `pdf_page` - pdf_page
+         *     * `legacy_history` - legacy_history
          * @enum {string}
          */
-        MediaWorkspaceCommandActionEnum: "save" | "restore" | "clear" | "pdf_page";
+        MediaWorkspaceCommandActionEnum: "save" | "restore" | "clear" | "pdf_page" | "legacy_history";
         MediaWorkspaceCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -11308,6 +11350,10 @@ export interface components {
             media_id?: string;
             /** Format: uuid */
             rendition_id?: string;
+            legacy_source?: components["schemas"]["LegacyMediaSourceEnum"];
+            /** Format: uuid */
+            legacy_record_id?: string;
+            legacy_fingerprint?: string;
             page?: number;
             transform?: components["schemas"]["MediaTransformRequest"];
             metadata?: components["schemas"]["MediaRevisionMetadataRequest"];
@@ -11828,9 +11874,10 @@ export interface components {
          *     * `restore` - restore
          *     * `clear` - clear
          *     * `legacy` - legacy
+         *     * `legacy_history` - legacy_history
          * @enum {string}
          */
-        ObjectMediaCommandActionEnum: "save" | "restore" | "clear" | "legacy";
+        ObjectMediaCommandActionEnum: "save" | "restore" | "clear" | "legacy" | "legacy_history";
         ObjectMediaCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -11841,6 +11888,10 @@ export interface components {
             media_id?: string;
             /** Format: uuid */
             rendition_id?: string;
+            legacy_source?: components["schemas"]["LegacyMediaSourceEnum"];
+            /** Format: uuid */
+            legacy_record_id?: string;
+            legacy_fingerprint?: string;
             page?: number;
             transform?: components["schemas"]["MediaTransformRequest"];
             metadata?: components["schemas"]["MediaRevisionMetadataRequest"];
@@ -22540,6 +22591,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MediaAsset"];
+                };
+            };
+        };
+    };
+    catalog_admin_media_legacy_retrieve: {
+        parameters: {
+            query: {
+                page?: number;
+                slot: string;
+            };
+            header?: never;
+            path: {
+                object_id: string;
+                object_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegacyImageHistory"];
                 };
             };
         };

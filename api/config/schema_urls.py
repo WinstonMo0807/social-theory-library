@@ -16,7 +16,7 @@ VERIFIED_NAMES = {
     "curation-projects", "curation-project-detail", "curation-project-receipt", "curation-project-people", "curation-project-materials", "curation-project-sources", "curation-project-preview",
     "index-maintenance", "index-maintenance-receipt", "index-maintenance-terms", "index-maintenance-query", "index-maintenance-query-receipt",
     "index-knowledge-terms-command", "index-knowledge-terms-receipt", "index-knowledge-terms-source",
-    "media-workspace", "media-workspace-receipt",
+    "media-workspace", "media-workspace-receipt", "media-legacy-history",
     "media-library-workspace", "media-library-receipt",
     "object-media-workspace", "object-media-workspace-receipt",
     "workspace-save-receipt", "admin-work-workspace-edits", "journal-contents-candidates",

@@ -6681,6 +6681,68 @@
                 }
             }
         },
+        "/api/catalog/admin/media-legacy/{object_type}/{object_id}/": {
+            "get": {
+                "operationId": "catalog_admin_media_legacy_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "slot",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LegacyImageHistory"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/media-objects/{object_type}/{object_id}/": {
             "get": {
                 "operationId": "catalog_admin_media_objects_retrieve",
@@ -42554,6 +42616,76 @@
                     "works"
                 ]
             },
+            "LegacyImageHistory": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LegacyImageItem"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "results"
+                ]
+            },
+            "LegacyImageItem": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "$ref": "#/components/schemas/LegacyMediaSourceEnum"
+                    },
+                    "record_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "fingerprint",
+                    "label",
+                    "record_id",
+                    "source",
+                    "url"
+                ]
+            },
+            "LegacyMediaSourceEnum": {
+                "enum": [
+                    "current",
+                    "editorial",
+                    "publication",
+                    "before",
+                    "after"
+                ],
+                "type": "string",
+                "description": "* `current` - current\n* `editorial` - editorial\n* `publication` - publication\n* `before` - before\n* `after` - after"
+            },
             "LegacySearchScholar": {
                 "type": "object",
                 "properties": {
@@ -45998,10 +46130,11 @@
                     "save",
                     "restore",
                     "clear",
-                    "pdf_page"
+                    "pdf_page",
+                    "legacy_history"
                 ],
                 "type": "string",
-                "description": "* `save` - save\n* `restore` - restore\n* `clear` - clear\n* `pdf_page` - pdf_page"
+                "description": "* `save` - save\n* `restore` - restore\n* `clear` - clear\n* `pdf_page` - pdf_page\n* `legacy_history` - legacy_history"
             },
             "MediaWorkspaceCommandRequest": {
                 "type": "object",
@@ -46028,6 +46161,18 @@
                     "rendition_id": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "legacy_source": {
+                        "$ref": "#/components/schemas/LegacyMediaSourceEnum"
+                    },
+                    "legacy_record_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "legacy_fingerprint": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
                     },
                     "page": {
                         "type": "integer",
@@ -47959,10 +48104,11 @@
                     "save",
                     "restore",
                     "clear",
-                    "legacy"
+                    "legacy",
+                    "legacy_history"
                 ],
                 "type": "string",
-                "description": "* `save` - save\n* `restore` - restore\n* `clear` - clear\n* `legacy` - legacy"
+                "description": "* `save` - save\n* `restore` - restore\n* `clear` - clear\n* `legacy` - legacy\n* `legacy_history` - legacy_history"
             },
             "ObjectMediaCommandRequest": {
                 "type": "object",
@@ -47989,6 +48135,18 @@
                     "rendition_id": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "legacy_source": {
+                        "$ref": "#/components/schemas/LegacyMediaSourceEnum"
+                    },
+                    "legacy_record_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "legacy_fingerprint": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
                     },
                     "page": {
                         "type": "integer",

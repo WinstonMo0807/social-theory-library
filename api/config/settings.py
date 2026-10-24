@@ -192,6 +192,7 @@ SPECTACULAR_SETTINGS = {
         "MediaDisplayUseEnum": ["detail", "list", "mobile", "share"],
         "WorkMediaSlotEnum": ["cover", "recommendation"],
         "ObjectMediaSlotEnum": ["portrait", "hero"],
+        "LegacyMediaSourceEnum": ["current", "editorial", "publication", "before", "after"],
         "CurationProjectVisibilityEnum": ["team", "staff"],
         "CurationProjectSourceOriginEnum": ["body", "selection"],
         "CurationProjectSourceStatusEnum": ["public", "private", "unavailable"],

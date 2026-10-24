@@ -1,6 +1,7 @@
 from catalog.visual_review_views import VisualReviewView, VisualReviewReceiptView, VisualReviewReferenceView
 from catalog.journal_candidate_views import JournalContentsCandidatesView
 from catalog.local_service_views import LocalServicesView, LocalServiceCheckView
+from catalog.media_legacy_views import LegacyImageHistoryView, LegacyImageFileView
 from catalog.path_editor_views import PathSaveReceiptView, PathValidationView
 from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimilarView
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
@@ -317,6 +318,8 @@ urlpatterns = [
     path("editorial-media/<uuid:rendition_id>/", PublicEditorialMediaView.as_view(), name="editorial-media-file"),
     path("admin/editions/<uuid:edition_id>/cover/", EditionCoverView.as_view(), name="admin-edition-cover"),
     path("admin/editions/<uuid:edition_id>/media-workspace/", MediaWorkspaceView.as_view(), name="media-workspace"),
+    path("admin/media-legacy/<str:object_type>/<uuid:object_id>/", LegacyImageHistoryView.as_view(), name="media-legacy-history"),
+    path("admin/media-legacy/<str:object_type>/<uuid:object_id>/file/", LegacyImageFileView.as_view(), name="media-legacy-file"),
     path("admin/media-objects/<str:object_type>/<uuid:object_id>/", ObjectMediaWorkspaceView.as_view(), name="object-media-workspace"),
     path("admin/media-objects/<str:object_type>/<uuid:object_id>/commands/<uuid:request_id>/", ObjectMediaReceiptView.as_view(), name="object-media-workspace-receipt"),
     path("admin/media-objects/<str:object_type>/<uuid:object_id>/legacy/", ObjectMediaLegacyFileView.as_view(), name="object-media-legacy-file"),

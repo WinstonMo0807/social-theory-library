@@ -61,17 +61,21 @@ class MediaRevisionMetadataSerializer(serializers.Serializer):
 class MediaWorkspaceCommandSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     expected_version = serializers.CharField(max_length=64)
-    action = serializers.ChoiceField(choices=["save", "restore", "clear", "pdf_page"])
+    action = serializers.ChoiceField(choices=["save", "restore", "clear", "pdf_page", "legacy_history"])
     slot = serializers.ChoiceField(choices=list(WORK_IMAGE_SLOTS))
     media_id = serializers.UUIDField(required=False)
     rendition_id = serializers.UUIDField(required=False)
+    legacy_source = serializers.ChoiceField(choices=["current", "editorial", "publication", "before", "after"], required=False)
+    legacy_record_id = serializers.UUIDField(required=False)
+    legacy_fingerprint = serializers.CharField(min_length=64, max_length=64, required=False)
     page = serializers.IntegerField(min_value=1, required=False)
     transform = MediaTransformSerializer(required=False)
     metadata = MediaRevisionMetadataSerializer(required=False)
     display_uses = serializers.ListField(child=serializers.ChoiceField(choices=MEDIA_DISPLAY_USES), max_length=4, required=False)
 
     def validate(self, value):
-        fields = {"save": {"media_id", "transform", "metadata"}, "restore": {"rendition_id"}, "pdf_page": {"page"}, "clear": set()}[value["action"]]
+        fields = {"save": {"media_id", "transform", "metadata"}, "restore": {"rendition_id"}, "pdf_page": {"page"},
+            "legacy_history": {"legacy_source", "legacy_record_id", "legacy_fingerprint"}, "clear": set()}[value["action"]]
         expected = fields | {"request_id", "expected_version", "action", "slot"}
         if value["action"] == "save" and "display_uses" in self.initial_data:
             expected.add("display_uses")
@@ -264,7 +268,11 @@ class MediaWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
         after = {"work_id": str(edition.work_id), "slot": slot, "signature": signature,
                  "next_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}#work"}
         try:
-            if action == "pdf_page":
+            if action == "legacy_history":
+                from catalog.media_legacy_views import prepare_legacy_image
+                media = prepare_legacy_image("edition", edition, slot, data, actor)
+                after.update(prepared_media_id=str(media.pk), legacy_source=data["legacy_source"], legacy_record_id=str(data["legacy_record_id"]))
+            elif action == "pdf_page":
                 if not asset:
                     raise ValidationError("当前出版版本尚无可选页的PDF。")
                 candidate = prepare_cover_page(asset, data["page"])
