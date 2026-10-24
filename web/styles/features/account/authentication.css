@@ -305,3 +305,12 @@
 .auth-recovery-appeal textarea { width:100%;padding:10px;border:1px solid var(--line-dark);background:var(--surface);color:var(--ink);resize:vertical; }
 .auth-recovery-appeal fieldset:disabled { opacity:.75; }
 @media(max-width:760px) { .auth-recovery-appeal textarea { font-size:16px; } }
+
+.auth-return-card .auth-return-cover { width:124px;height:150px;object-fit:contain;background:var(--surface);flex-shrink:0; }
+.auth-return-card > span { min-width:0; }
+.auth-return-card > span > strong { overflow-wrap:anywhere; }
+.auth-return-kind { width:fit-content;padding:3px 6px;background:var(--night-wash,#f4f0e8); }
+.auth-context .auth-return-status { margin:12px 0 0;font:12px/1.7 var(--sans);color:var(--muted); }
+.auth-return-status button { display:flex;align-items:center;gap:6px;min-height:36px;margin-top:7px;text-decoration:underline;text-underline-offset:4px; }
+@media(max-width:1000px) { .auth-atlas-page[data-mode=reset] .auth-return-card .auth-return-cover { width:64px;height:96px; } }
+@media(max-width:760px) { .auth-return-card .auth-return-cover { width:82px;height:112px; } }

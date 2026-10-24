@@ -176,6 +176,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/return-context/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_return_context_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/users/{user_id}/avatar/": {
         parameters: {
             query?: never;
@@ -17204,6 +17220,18 @@ export interface components {
             policy: string;
             detail: string;
         };
+        ReturnContextOutput: {
+            path: string;
+            state: components["schemas"]["PublicSourceAvailabilityEnum"];
+            title: string;
+            authors: string[];
+            cover_url: string;
+            display_uses: components["schemas"]["MediaDisplayUseEnum"][];
+            source_type: string;
+            version_label: string;
+            location: string;
+            notice: string;
+        };
         ReviewPointRequest: {
             /** Format: double */
             x: number;
@@ -20324,6 +20352,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RegistrationOutput"];
+                };
+            };
+        };
+    };
+    auth_return_context_retrieve: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnContextOutput"];
                 };
             };
         };

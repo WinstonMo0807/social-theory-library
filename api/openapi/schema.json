@@ -594,6 +594,41 @@
                 }
             }
         },
+        "/api/auth/return-context/": {
+            "get": {
+                "operationId": "auth_return_context_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "path",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 400
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReturnContextOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/auth/users/{user_id}/avatar/": {
             "get": {
                 "operationId": "auth_users_avatar_retrieve",
@@ -45481,8 +45516,8 @@
                     "password": {
                         "type": "string",
                         "writeOnly": true,
-                        "minLength": 10,
-                        "maxLength": 128
+                        "minLength": 1,
+                        "maxLength": 4096
                     }
                 },
                 "required": [
@@ -65556,6 +65591,59 @@
                     "detail",
                     "label",
                     "policy"
+                ]
+            },
+            "ReturnContextOutput": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/PublicSourceAvailabilityEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        }
+                    },
+                    "source_type": {
+                        "type": "string"
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "location": {
+                        "type": "string"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authors",
+                    "cover_url",
+                    "display_uses",
+                    "location",
+                    "notice",
+                    "path",
+                    "source_type",
+                    "state",
+                    "title",
+                    "version_label"
                 ]
             },
             "ReviewPointRequest": {

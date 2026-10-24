@@ -180,6 +180,10 @@ def operate(token, purpose, action, password=None):
         user.save(update_fields=["password", "token_version"])
         user.recovery_codes.filter(used_at__isnull=True).update(expires_at=timezone.now())
     else:
+        # Prove both the mailbox and the account password. A third party who
+        # pre-registers someone else's mailbox must not gain a verified identity.
+        if not password or not user.check_password(password):
+            raise ValidationError({"password": "账户密码不正确。请填写注册时设置的密码；如忘记，请先找回密码后重新申请验证。"})
         if not user.email_verified_at:
             user.email_verified_at = timezone.now()
             user.save(update_fields=["email_verified_at"])

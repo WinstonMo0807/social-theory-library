@@ -42,7 +42,9 @@ def test_single_use_and_purpose_isolation_preserve_original_account(reader_user,
     assert email_links.operate(token, row.purpose, "inspect")["state"] == "ready"
     with pytest.raises(ValidationError):
         email_links.operate(token, RecoveryCode.Purpose.PASSWORD_LINK, "confirm", "unrelated-example")
-    assert email_links.operate(token, row.purpose, "confirm")["state"] == "completed"
+    with pytest.raises(ValidationError):
+        email_links.operate(token, row.purpose, "confirm", "not-the-account-password")
+    assert email_links.operate(token, row.purpose, "confirm", "Reader-Secure-Password-2026")["state"] == "completed"
     assert email_links.operate(token, row.purpose, "confirm")["state"] == "completed"
     reader_user.refresh_from_db()
     assert reader_user.email_verified_at

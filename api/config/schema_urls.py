@@ -80,7 +80,7 @@ VERIFIED_NAMES = {
     "edition-file-request", "edition-generate-reader", "edition-file-adopt", "edition-file-content", "edition-file-rights", "edition-file-prepare-public",
 }
 urlpatterns = [
-    path("api/auth/", include([pattern for pattern in account_patterns if pattern.name in {"account-recovery-appeal", "password-link", "email-verification", "email-verification-request", "login", "register", "password-reset-request", "password-reset-confirm", "account-management-workspace", "account-management-roles", "account-management-preview", "account-management-command", "account-management-receipt", "account-management-history", "account-management-invitation", "account-activation", "account-avatar", "account-avatar-image", "account-avatar-receipt"}])),
+    path("api/auth/", include([pattern for pattern in account_patterns if pattern.name in {"auth-return-context", "account-recovery-appeal", "password-link", "email-verification", "email-verification-request", "login", "register", "password-reset-request", "password-reset-confirm", "account-management-workspace", "account-management-roles", "account-management-preview", "account-management-command", "account-management-receipt", "account-management-history", "account-management-invitation", "account-activation", "account-avatar", "account-avatar-image", "account-avatar-receipt"}])),
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
     path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name in {
         "asset-access", "asset-file", "admin-asset-preview", "backup-job-list", "reader-ocr-status",

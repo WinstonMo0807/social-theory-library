@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AuthReturnCard } from "./auth-return-card";
 import { AccountRecoveryAppeal } from "./account-recovery-appeal";
 import { AccountEmailLink } from "./account-email-link";
 import Link from "next/link";
@@ -11,9 +12,7 @@ import { AuthForm, type AuthMode } from "./auth-form";
 import { safeAuthDestination } from "@/lib/auth-navigation";
 
 export function AuthReturnContext({ destination }: { destination: string }) {
-  const path = safeAuthDestination(destination);
-  const label = path.startsWith("/reader/") ? "原来的阅读位置" : path.startsWith("/account/research/") ? "原来的研究会话" : path.startsWith("/account") ? "你的读者中心" : path.startsWith("/admin") ? "原来的管理工作台" : "刚才浏览的页面";
-  return <aside className="auth-context"><section><h2>登录后，你将返回</h2><Link className="auth-return-card" href={path}><Bookmark size={30} /><span><strong>{label}</strong><small>保留原页面与定位，权限由当前账户重新核对。</small></span><ArrowRight size={17} /></Link></section>
+  return <aside className="auth-context"><section><h2>登录后，你将返回</h2><AuthReturnCard key={destination} destination={destination} /></section>
     <section><h3>保留你的研究内容</h3><p>登录后可以在不同设备继续查看已保存的资料。</p><div className="auth-benefits"><span><Bookmark size={24} /><strong>书签</strong><small>保存与同步</small></span><span><NotebookPen size={24} /><strong>笔记</strong><small>梳理与复习</small></span><span><Clock3 size={24} /><strong>阅读历史</strong><small>随时继续</small></span></div></section>
     <section><h3><FolderInput size={20} />本机研究记录</h3><p>登录后可在读者中心查看、选择并转存。只有你明确确认的记录才会上传，原记录保留。</p><small>本页不读取未登录设备上的私人草稿。</small></section>
     <p className="auth-private-note"><LockKeyhole size={17} />私人资料按账户保存，登录不会合并他人的数据。</p>

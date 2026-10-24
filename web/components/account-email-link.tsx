@@ -43,7 +43,7 @@ export function AccountEmailLink({ purpose, destination }: { purpose: "password"
     if (action === "confirm") setUncertain(true);
     try {
       const result = await post<LinkState>(reset ? "/auth/password/link/" : "/auth/email/verify/", { action, token: token.current,
-        ...(action === "confirm" ? { confirmed: true, ...(reset ? { password } : {}) } : {}) }, request.signal);
+        ...(action === "confirm" ? { confirmed: true, password } : {}) }, request.signal);
       if (!request.signal.aborted) accept(result, reset && action === "confirm");
     } catch (reason) { if (!request.signal.aborted) {
       if (reason instanceof ApiRequestError && reason.status === 400) {
@@ -76,11 +76,11 @@ export function AccountEmailLink({ purpose, destination }: { purpose: "password"
   function submit(event: FormEvent) { event.preventDefault(); void act("confirm"); }
   return <div className="auth-form" aria-busy={busy}>
     <nav className="auth-tabs" aria-label="账户入口"><span aria-current="page">{reset ? "设置新密码" : "验证邮箱"}</span><Link href={authPageHref("login", destination)}>登录</Link></nav>
-    <div className="auth-form-intro"><h2><MailCheck size={24} />{reset ? "恢复你的账户" : "确认你的邮箱"}</h2><p>{reset ? "设置新密码后，原登录凭据将失效，已保存的私人资料保留。" : "验证只确认邮箱归属，不会自动登录、调整角色或合并任何资料。"}</p></div>
+    <div className="auth-form-intro"><h2><MailCheck size={24} />{reset ? "恢复你的账户" : "确认你的邮箱"}</h2><p>{reset ? "设置新密码后，原登录凭据将失效，已保存的私人资料保留。" : "请同时核对邮件链接和账户密码。验证不会自动登录、调整角色或合并任何资料。"}</p></div>
     {state ? <p role="status" className="form-message">{state.detail}</p> : busy ? <p role="status">正在核对链接…</p> : null}
     {hasToken && state?.state === "ready" ? <form onSubmit={submit} onKeyDown={event => { if (event.key === "Enter" && event.nativeEvent.isComposing) event.preventDefault(); }}>
       <p className="field-help">有效至 {state.expires_at ? new Date(state.expires_at).toLocaleString("zh-CN") : "请重新核对"}。链接只供本人使用。</p>
-      {reset ? <><label>新密码<div className="password-input"><input type={visible ? "text" : "password"} autoComplete="new-password" minLength={10} maxLength={128} required disabled={busy || uncertain} value={password} onChange={event => setPassword(event.target.value)} /><button type="button" aria-label={visible ? "隐藏密码" : "显示密码"} aria-pressed={visible} onClick={() => setVisible(value => !value)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label><p className="field-help">至少10位，不使用常见、纯数字或与账户资料相近的密码。</p><label>确认密码<input type={visible ? "text" : "password"} autoComplete="new-password" minLength={10} maxLength={128} required disabled={busy || uncertain} value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label></> : null}
+      <label>{reset ? "新密码" : "账户密码"}<div className="password-input"><input type={visible ? "text" : "password"} autoComplete={reset ? "new-password" : "current-password"} minLength={reset ? 10 : undefined} maxLength={reset ? 128 : 4096} required disabled={busy || uncertain} value={password} onChange={event => setPassword(event.target.value)} /><button type="button" aria-label={visible ? "隐藏密码" : "显示密码"} aria-pressed={visible} onClick={() => setVisible(value => !value)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label>{reset ? <><p className="field-help">至少10位，不使用常见、纯数字或与账户资料相近的密码。</p><label>确认密码<input type={visible ? "text" : "password"} autoComplete="new-password" minLength={10} maxLength={128} required disabled={busy || uncertain} value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label></> : <p className="field-help">填写注册时设置的密码。若已忘记，请先<Link href={authPageHref("reset", destination)}>找回密码</Link>，再重新申请验证链接。</p>}
       <label className="auth-consent"><input type="checkbox" required disabled={busy || uncertain} checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />这是我本人发起的{reset ? "密码恢复" : "邮箱验证"}。</label>
       <button className="button auth-submit" disabled={busy || !confirmed} type="submit">{busy ? "正在提交…" : uncertain ? "重试原确认" : reset ? "确认重置密码" : "确认邮箱归属"}</button>
     </form> : null}

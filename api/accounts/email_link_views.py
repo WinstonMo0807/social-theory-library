@@ -16,13 +16,15 @@ class MailLinkInput(StrictInput):
     action = serializers.ChoiceField(choices=["inspect", "confirm"])
     token = serializers.CharField(max_length=100, trim_whitespace=False, write_only=True)
     confirmed = serializers.BooleanField(required=False)
-    password = serializers.CharField(min_length=10, max_length=128, trim_whitespace=False, write_only=True, required=False)
+    password = serializers.CharField(max_length=4096, trim_whitespace=False, write_only=True, required=False)
 
     def validate(self, data):
         reset = self.context.get("purpose") == RecoveryCode.Purpose.PASSWORD_LINK
-        if data["action"] == "confirm" and (data.get("confirmed") is not True or reset and not data.get("password")):
+        if data["action"] == "confirm" and (data.get("confirmed") is not True or not data.get("password")):
             raise serializers.ValidationError("请确认这是本人发起的操作，并填写必要信息。")
-        if (not reset or data["action"] == "inspect") and "password" in data:
+        if reset and data["action"] == "confirm" and not 10 <= len(data["password"]) <= 128:
+            raise serializers.ValidationError({"password": "新密码需要10至128个字符。"})
+        if data["action"] == "inspect" and "password" in data:
             raise serializers.ValidationError("此操作不接受密码。")
         return data
 

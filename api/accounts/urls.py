@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.response import Response
 
 from .serializers import VersionedTokenRefreshSerializer
+from .return_context import AuthReturnContextView
 from .email_link_views import AccountRecoveryAppealView, PasswordLinkView, EmailVerificationView, EmailVerificationRequestView
 from .activation_views import ActivationView, InvitationView
 from .avatar_views import AvatarView, AvatarImageView, AvatarReceiptView
@@ -58,6 +59,7 @@ class ThrottledTokenRefreshView(TokenRefreshView):
 
 
 urlpatterns = [
+    path("return-context/", AuthReturnContextView.as_view(), name="auth-return-context"),
     path("register/", RegisterView.as_view(), name="register"),
     path("activation/", ActivationView.as_view(), name="account-activation"),
     path("login/", LoginView.as_view(), name="login"),
