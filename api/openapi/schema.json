@@ -69806,6 +69806,16 @@
                     },
                     "rename": {
                         "$ref": "#/components/schemas/RecoveryRenameInfo"
+                    },
+                    "relation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "linked_objects": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecoveryLinkedObject"
+                        }
                     }
                 },
                 "required": [
@@ -70040,6 +70050,34 @@
                 "required": [
                     "id",
                     "label"
+                ]
+            },
+            "RecoveryLinkedObject": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string"
+                    },
+                    "object_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "destination": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "destination",
+                    "kind",
+                    "name",
+                    "object_id",
+                    "state"
                 ]
             },
             "RecoveryNames": {

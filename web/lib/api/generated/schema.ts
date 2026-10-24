@@ -18081,6 +18081,9 @@ export interface components {
             destination: string;
             detail: string;
             rename?: components["schemas"]["RecoveryRenameInfo"];
+            /** Format: uuid */
+            relation_id?: string;
+            linked_objects?: components["schemas"]["RecoveryLinkedObject"][];
         };
         RecoveryDetail: {
             kind: string;
@@ -18139,6 +18142,14 @@ export interface components {
         RecoveryKind: {
             id: string;
             label: string;
+        };
+        RecoveryLinkedObject: {
+            kind: string;
+            /** Format: uuid */
+            object_id: string;
+            name: string;
+            state: string;
+            destination: string;
         };
         RecoveryNames: {
             count: number;

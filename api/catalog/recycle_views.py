@@ -72,6 +72,14 @@ class RecoveryRenameInfo(serializers.Serializer):
     public_count = serializers.IntegerField()
 
 
+class RecoveryLinkedObject(serializers.Serializer):
+    kind = serializers.CharField()
+    object_id = serializers.UUIDField()
+    name = serializers.CharField()
+    state = serializers.CharField()
+    destination = serializers.CharField()
+
+
 class RecoveryDependency(serializers.Serializer):
     kind = serializers.CharField()
     object_id = serializers.UUIDField()
@@ -82,6 +90,8 @@ class RecoveryDependency(serializers.Serializer):
     destination = serializers.CharField()
     detail = serializers.CharField()
     rename = RecoveryRenameInfo(required=False)
+    relation_id = serializers.UUIDField(required=False)
+    linked_objects = RecoveryLinkedObject(many=True,required=False)
 
 
 class RecoveryHistory(serializers.Serializer):
