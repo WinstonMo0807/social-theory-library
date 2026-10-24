@@ -86,10 +86,17 @@ class TopicOrganizationInput(serializers.Serializer):
     curation = serializers.DictField(required=False)
 
 
+class TopicParentLinkSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+
+
 class TopicOrganizationPreviewSerializer(serializers.Serializer):
     topic_id = serializers.UUIDField()
     parent_id = serializers.UUIDField(allow_null=True)
     parent_changed = serializers.BooleanField()
+    parent_path = TopicParentLinkSerializer(many=True)
+    cycle_path = TopicParentLinkSerializer(many=True)
     descendant_count = serializers.IntegerField()
     public_descendant_count = serializers.IntegerField()
     content_counts = serializers.DictField(child=serializers.IntegerField())

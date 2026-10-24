@@ -77042,6 +77042,18 @@
                     "parent_changed": {
                         "type": "boolean"
                     },
+                    "parent_path": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicParentLink"
+                        }
+                    },
+                    "cycle_path": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TopicParentLink"
+                        }
+                    },
                     "descendant_count": {
                         "type": "integer"
                     },
@@ -77068,9 +77080,11 @@
                 "required": [
                     "can_publish",
                     "content_counts",
+                    "cycle_path",
                     "descendant_count",
                     "parent_changed",
                     "parent_id",
+                    "parent_path",
                     "problems",
                     "public_descendant_count",
                     "topic_id"
@@ -77104,6 +77118,22 @@
                     "id",
                     "name",
                     "parent_id"
+                ]
+            },
+            "TopicParentLink": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
                 ]
             },
             "TopicPath": {

@@ -50,11 +50,8 @@ def topic_organization_preview(topic, data):
         proposed.parent_id = data["parent"]
     if "curation" in data:
         proposed.curation = {**(topic.curation or {}), **public_topics.validate_topic_curation(data["curation"], topic)}
-    errors = []
-    try:
-        public_topics.validate_topic_parent(topic, proposed.parent_id)
-    except ValidationError as error:
-        errors.append({"field": "parent", "detail": str(error.detail)})
+    parent_check = public_topics.inspect_topic_parent(topic, proposed.parent_id)
+    errors = [{"field": "parent", "detail": parent_check["problem"]}] if parent_check["problem"] else []
     # Enumerate only identifiers/counts; never reader SavedTopic/User rows.
     descendants, frontier, seen = [], [topic.pk], {topic.pk}
     while frontier:
@@ -65,7 +62,8 @@ def topic_organization_preview(topic, data):
             raise ValidationError("主题层级超过当前预览范围，请缩小调整范围后核对。")
     counts = topic_content_counts(proposed)
     return {"topic_id": str(topic.pk), "parent_id": str(proposed.parent_id) if proposed.parent_id else None,
-            "parent_changed": proposed.parent_id != topic.parent_id, "descendant_count": len(descendants),
+            "parent_changed": str(proposed.parent_id or "") != str(topic.parent_id or ""), "descendant_count": len(descendants),
+            "parent_path": parent_check["parent_path"], "cycle_path": parent_check["cycle_path"],
             "public_descendant_count": Topic.objects.filter(pk__in=descendants, editorial_status="published").count(),
             "content_counts": counts, "can_publish": bool(any(counts.values())) and not errors, "problems": errors}
 

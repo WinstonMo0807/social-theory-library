@@ -20223,6 +20223,8 @@ export interface components {
             /** Format: uuid */
             parent_id: string | null;
             parent_changed: boolean;
+            parent_path: components["schemas"]["TopicParentLink"][];
+            cycle_path: components["schemas"]["TopicParentLink"][];
             descendant_count: number;
             public_descendant_count: number;
             content_counts: {
@@ -20241,6 +20243,11 @@ export interface components {
             parent_id: string | null;
             editorial_status: string;
             children_count: number;
+        };
+        TopicParentLink: {
+            /** Format: uuid */
+            id: string;
+            name: string;
         };
         TopicPath: {
             /** Format: uuid */

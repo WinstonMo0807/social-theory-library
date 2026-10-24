@@ -40,25 +40,46 @@ def _ids(value):
     return list(dict.fromkeys(identifier for item in _strings(value) if (identifier := _uuid(item))))
 
 
-def validate_topic_parent(topic, parent_id):
+def inspect_topic_parent(topic, parent_id):
+    path = [{"id": str(topic.pk), "name": topic.name}] if topic is not None and topic.pk else []
+    result = {"parent_id": None, "parent_path": path, "cycle_path": [], "problem": ""}
     if parent_id in (None, ""):
-        return None
+        return result
     identifier = _uuid(getattr(parent_id, "pk", parent_id))
+    result["parent_id"] = identifier
     if not identifier:
-        raise ValidationError({"parent": "上级主题编号无效。"})
-    seen = {str(topic.pk)} if topic is not None and topic.pk else set()
+        result["problem"] = "上级主题编号无效。"
+        return result
+    seen = {row["id"]: index for index, row in enumerate(path)}
     current = identifier
     while current:
         if current in seen:
-            raise ValidationError({"parent": "主题不能以自身或后代为上级。"})
-        seen.add(current)
-        row = Topic.objects.filter(pk=current).values("parent_id", "curation").first()
+            repeated = dict(path[seen[current]])
+            result["cycle_path"] = path[seen[current]:] + [repeated]
+            path.append(repeated)
+            result["problem"] = "主题不能以自身或后代为上级，已有层级也不能包含循环。"
+            return result
+        if len(path) >= 200:
+            result["problem"] = "上级链超过200层，请先核对已有主题结构。"
+            return result
+        row = Topic.objects.filter(pk=current).values("name", "parent_id", "curation").first()
         if row is None:
-            raise ValidationError({"parent": "上级主题不存在。"})
+            result["problem"] = "上级主题不存在。"
+            return result
+        seen[current] = len(path)
+        path.append({"id": current, "name": row["name"]})
         if (row.get("curation") or {}).get("topic_merge"):
-            raise ValidationError({"parent": "合并后的旧主题不能再作为上级，请选择保留的主题。"})
+            result["problem"] = "合并后的旧主题不能再作为上级，请选择保留的主题。"
+            return result
         current = str(row["parent_id"]) if row["parent_id"] else None
-    return identifier
+    return result
+
+
+def validate_topic_parent(topic, parent_id):
+    result = inspect_topic_parent(topic, parent_id)
+    if result["problem"]:
+        raise ValidationError({"parent": result["problem"]})
+    return result["parent_id"]
 
 
 def validate_topic_curation(value, topic=None):

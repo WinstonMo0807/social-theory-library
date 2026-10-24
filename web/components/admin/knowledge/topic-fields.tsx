@@ -8,7 +8,7 @@ import { TopicOrganizationChecks } from "./topic-organization";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
 import type { PublishedEvidenceCuration } from "@/lib/api/evidence-curation.types";
-import { EntityPicker } from "../forms/workflow-fields";
+import { TopicHierarchy } from "./topic-hierarchy";
 
 export const topicSelectionFields = {
   questionNodeIds: "question_node_ids", debateNodeIds: "debate_node_ids", conceptNodeIds: "concept_node_ids",
@@ -54,10 +54,8 @@ export function TopicFieldsEditor({ topicId, name, section, value, onChange }: {
 }) {
   const owner = String(useAdminSession()?.id || "");
   return <section>
-    {section === "identity" ? <><StringListEditor label="主题别名" itemLabel="别名" addLabel="添加别名" value={value.topicAliases} onChange={topicAliases=>onChange({topicAliases})}/><EntityPicker owner={owner} label="上级主题" endpoint="/catalog/admin/topics/" queryParam="search"
-      values={value.parentId ? [{ id: value.parentId, name: value.preview_labels[value.parentId] || "已保存的上级主题" }] : []}
-      onChange={rows => { const row = rows.at(-1); onChange({ parentId: row?.id || "", preview_labels: { ...value.preview_labels, ...(row?.id ? { [row.id]: row.name } : {}) } }); }} />
-      <p>留空表示一级主题。不能选择自身或后代；上级未公开时不对读者展示其名称。</p><TopicOrganizationChecks topicId={topicId} name={name} value={value}/></> : null}
+    {section === "identity" ? <><StringListEditor label="主题别名" itemLabel="别名" addLabel="添加别名" value={value.topicAliases} onChange={topicAliases=>onChange({topicAliases})}/><TopicHierarchy topicId={topicId} name={name} value={value} onChange={onChange} />
+      <p>一级主题没有上级。不能以自身或后代为上级；上级未公开时不对读者展示其名称。</p><TopicOrganizationChecks topicId={topicId} name={name} value={value}/></> : null}
     {choices.filter(row => row[0] === section).map(([, field, label]) => {
       const key = topicSelectionFields[field];
       return <TopicAssociations key={`${owner}:${topicId}:${field}`} field={key} label={label} ids={value[field]} labels={value.preview_labels}
