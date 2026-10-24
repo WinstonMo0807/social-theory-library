@@ -37,6 +37,7 @@ from .editorial_issue_views import (PublicIssueListView, PublicIssueDetailView, 
     PublicEditorialMediaView, IssueItemCoverView, AdminIssueItemCoverView)
 from .cover_views import EditionCoverView
 from .media_workspace_views import MediaWorkspaceView, MediaWorkspaceReceiptView, MediaSourceFileView
+from .object_media_workspace_views import ObjectMediaWorkspaceView, ObjectMediaReceiptView, ObjectMediaLegacyFileView
 from .edition_file_views import EditionFileView
 from .edition_file_workspace_views import (WorkFilesView, NewWorkEditionView, EditionFileAdoptionView,
                                           EditionFileContentView, EditionFileImpactCSVView,
@@ -315,6 +316,9 @@ urlpatterns = [
     path("editorial-media/<uuid:rendition_id>/", PublicEditorialMediaView.as_view(), name="editorial-media-file"),
     path("admin/editions/<uuid:edition_id>/cover/", EditionCoverView.as_view(), name="admin-edition-cover"),
     path("admin/editions/<uuid:edition_id>/media-workspace/", MediaWorkspaceView.as_view(), name="media-workspace"),
+    path("admin/media-objects/<str:object_type>/<uuid:object_id>/", ObjectMediaWorkspaceView.as_view(), name="object-media-workspace"),
+    path("admin/media-objects/<str:object_type>/<uuid:object_id>/commands/<uuid:request_id>/", ObjectMediaReceiptView.as_view(), name="object-media-workspace-receipt"),
+    path("admin/media-objects/<str:object_type>/<uuid:object_id>/legacy/", ObjectMediaLegacyFileView.as_view(), name="object-media-legacy-file"),
     path("admin/editions/<uuid:edition_id>/media-workspace/commands/<uuid:request_id>/", MediaWorkspaceReceiptView.as_view(), name="media-workspace-receipt"),
     path("admin/media/<uuid:media_id>/source/", MediaSourceFileView.as_view(), name="media-source-file"),
     path("admin/editions/<uuid:edition_id>/files/", EditionFileView.as_view(), name="edition-file-submit"),

@@ -89,20 +89,27 @@ def apply_image_selection(target, value, *, actor):
 
 
 def select_knowledge_image(object_type, object_id, media_id, *, actor, fingerprint):
+    with transaction.atomic():
+        variants = {width: build_rendition(media_id, width=width, kind="hero") for width in RENDITION_WIDTHS} if media_id else {}
+    return select_prepared_knowledge_image(object_type, object_id, variants.get(640), actor=actor, fingerprint=fingerprint)
+
+
+def select_prepared_knowledge_image(object_type, object_id, primary, *, actor, fingerprint):
     from catalog.services.editorial_revision import EditorialRevisionError
 
     model = TARGETS[object_type]
     with transaction.atomic():
-        variants = {width: build_rendition(media_id, width=width, kind="hero") for width in RENDITION_WIDTHS} if media_id else {}
-    with transaction.atomic():
         target = model.objects.select_for_update().get(pk=object_id)
+        if image_status(target) in {"archived", "merged", "rejected"}:
+            raise EditorialRevisionError("该对象已经下线，请先恢复对象，再修改图片。")
         draft = EditorialRevision.objects.filter(target_type=object_type, target_id=target.pk, status="draft").order_by("-revision").first()
         if fingerprint != image_fingerprint(target, draft):
             raise EditorialRevisionError("对象或图片草稿已变化，请重新读取后选择。")
         selection = image_selection(target)
-        selection["rendition_id"] = str(variants[640].pk) if variants else None
-        if not variants:
+        selection["rendition_id"] = str(primary.pk) if primary else None
+        if not primary:
             selection["legacy_path"] = ""
+        selection = validate_image_selection(target, selection)
         return save_object_editorial_patch(object_type, target.pk, {"image_selection": selection}, actor=actor, change_note="更新页面图片，等待人工发布")
 
 

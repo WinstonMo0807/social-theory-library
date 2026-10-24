@@ -26,7 +26,7 @@ export function PrivateMediaImage({owner,path,alt}:{owner:string;path:string;alt
   return !path?<span className={styles.empty}>尚无图片</span>:current?.error?<span role="status" title={current.error}>图片暂不可用</span>:current?.src?<img src={current.src} alt={alt} loading="lazy"/>:<span role="status">正在读取图片…</span>;
 }
 
-export function MediaCrop({owner,mediaId,value,onChange,onReady,disabled}:{owner:string;mediaId:string;value:MediaTransform;onChange:(value:MediaTransform)=>void;onReady:(ready:boolean)=>void;disabled:boolean}){
+export function MediaCrop({owner,mediaId,value,onChange,onReady,disabled,labels=["书页大封面","列表封面","移动端封面"]}:{labels?:string[];owner:string;mediaId:string;value:MediaTransform;onChange:(value:MediaTransform)=>void;onReady:(ready:boolean)=>void;disabled:boolean}){
   const [image,setImage]=useState<HTMLImageElement|null>(null),[error,setError]=useState(""),[attempt,setAttempt]=useState(0),[ratio,setRatioValue]=useState("free");
   const source=useRef<HTMLCanvasElement>(null),outputs=useRef<(HTMLCanvasElement|null)[]>([]),stage=useRef<HTMLDivElement>(null);
   const drag=useRef<{x:number;y:number;rect:MediaTransform;corner:string}|null>(null);
@@ -54,7 +54,7 @@ export function MediaCrop({owner,mediaId,value,onChange,onReady,disabled}:{owner
     <div className={styles.cropColumns}><div className={styles.stageFrame}><div className={styles.stage} ref={stage} style={{aspectRatio:`${width}/${height}`}}>
       <canvas ref={source} role="img" aria-label="原图与裁切范围"/>
       {image?<div className={styles.selection} style={{left:`${value.x*100}%`,top:`${value.y*100}%`,width:`${value.width*100}%`,height:`${value.height*100}%`}} onPointerDown={begin} onPointerMove={move} onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}} aria-hidden="true">{["nw","ne","sw","se"].map(corner=><span key={corner} data-corner={corner}/>)}</div>:null}
-    </div></div><div className={styles.samples}>{["书页大封面","列表封面","移动端封面"].map((label,i)=><figure key={label}><canvas ref={node=>{outputs.current[i]=node;}} role="img" aria-label={`${label}裁切预览`}/><figcaption>{label}</figcaption></figure>)}</div></div>
+    </div></div><div className={styles.samples}>{labels.map((label,i)=><figure key={label}><canvas ref={node=>{outputs.current[i]=node;}} role="img" aria-label={`${label}裁切预览`}/><figcaption>{label}</figcaption></figure>)}</div></div>
     <fieldset disabled={disabled||!image}><legend>裁切比例</legend><div className={styles.controls}>{[["original","原图"],["3:4","3:4"],["1:1","1:1"],["16:9","16:9"],["free","自由"]].map(([key,label])=><button type="button" key={key} aria-pressed={ratio===key} onClick={()=>setRatio(key)}>{label}</button>)}</div>
       <div className={styles.controls}><button type="button" onClick={()=>zoom(1.1)} aria-label="缩小图片，扩大裁切范围">−</button><label>选区大小<input type="range" min={10} max={100} value={Math.round(Math.max(value.width,value.height)*100)} onChange={event=>zoom(Number(event.target.value)/100/Math.max(value.width,value.height))}/></label><button type="button" onClick={()=>zoom(.9)} aria-label="放大图片，缩小裁切范围">＋</button></div>
       <div className={styles.controls}><button type="button" onClick={()=>{setRatio("free");onChange({...wholeImage,rotation:(value.rotation+270)%360});}}>↶ 向左旋转</button><button type="button" onClick={()=>{setRatio("free");onChange({...wholeImage,rotation:(value.rotation+90)%360});}}>↷ 向右旋转</button><button type="button" onClick={()=>{setRatio("original");onChange({...wholeImage});}}>重置</button></div>

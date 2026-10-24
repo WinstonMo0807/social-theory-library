@@ -11,7 +11,7 @@ pytestmark = pytest.mark.django_db
 
 def context(client, actor):
     client.force_authenticate(actor); client.credentials(HTTP_X_EDITOR_OWNER=str(actor.pk))
-    target = Discipline.objects.create(name="待核对的合成学科")
+    target = Discipline.objects.create(name="待核对的合成学科",slug="synthetic-field",code="synthetic-field")
     candidate = EnrichmentCandidate.objects.create(target_type="discipline", target_id=target.pk,
         field_name="foreign_name", candidate_kind="factual", proposed_value="Synthetic field", current_value="",
         fingerprint=uuid4().hex, conflict_group="foreign_name", policy_version="deferred-fixture", extraction_version="fixture")
@@ -45,7 +45,7 @@ def test_stop_fences_late_write_and_version_change_preserves_pending_candidate(a
 
 def test_cross_target_wrong_owner_and_reader_cannot_decide_or_read_receipt(api_client, admin_user, reader_user):
     target,candidate,path,body=context(api_client,admin_user)
-    other=Discipline.objects.create(name="另一学科")
+    other=Discipline.objects.create(name="另一学科",slug="another-field",code="another-field")
     assert api_client.post(path.replace(str(target.pk),str(other.pk)),body,format="json").status_code==404
     api_client.credentials(HTTP_X_EDITOR_OWNER=str(reader_user.pk))
     assert api_client.post(path,body,format="json").status_code==403

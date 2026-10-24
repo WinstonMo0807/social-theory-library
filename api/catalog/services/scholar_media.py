@@ -80,19 +80,26 @@ def save_scholar_editorial_patch(profile_id, patch, *, actor, change_note="更�
 
 
 def select_scholar_portrait(profile_id, media_id, *, actor, expected_person_id, fingerprint=None):
+    with transaction.atomic():
+        variants = {width: build_rendition(media_id, kind="portrait", width=width) for width in RENDITION_WIDTHS} if media_id else {}
+    return select_prepared_scholar_portrait(profile_id, variants.get(640), actor=actor, expected_person_id=expected_person_id, fingerprint=fingerprint)
+
+
+def select_prepared_scholar_portrait(profile_id, primary, *, actor, expected_person_id, fingerprint):
     from catalog.services.editorial_revision import EditorialRevisionError
 
     with transaction.atomic():
-        variants = {width: build_rendition(media_id, kind="portrait", width=width) for width in RENDITION_WIDTHS} if media_id else {}
-    with transaction.atomic():
         profile = ScholarProfile.objects.select_for_update().select_related("person").get(pk=profile_id)
+        if profile.editorial_status == "archived" or profile.person.authority_status in {"merged", "rejected"}:
+            raise EditorialRevisionError("学者或人物身份已经停用，请先恢复并核对身份，再修改肖像。")
         if str(expected_person_id) != str(profile.person_id):
             raise EditorialRevisionError("学者对应人物已变化，请重新打开学者页面。")
         if fingerprint is not None and fingerprint != portrait_selection_fingerprint(profile):
             raise EditorialRevisionError("肖像或学者草稿已变化，请重新读取后选择。")
         selection = portrait_selection(profile)
-        selection["rendition_id"] = str(variants[640].pk) if variants else None
+        selection["rendition_id"] = str(primary.pk) if primary else None
         # Clearing removes the old selection, never its original file.
-        if not variants:
+        if not primary:
             selection["legacy_path"] = ""
+        selection = validate_portrait_selection(profile, selection)
         return save_scholar_editorial_patch(profile.pk, {"portrait_selection": selection}, actor=actor, change_note="更新学者肖像，等待人工发布")

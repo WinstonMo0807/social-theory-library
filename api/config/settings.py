@@ -189,6 +189,8 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "WorkMediaSlotEnum": ["cover", "recommendation"],
+        "ObjectMediaSlotEnum": ["portrait", "hero"],
         "CurationProjectVisibilityEnum": ["team", "staff"],
         "CurationProjectSourceOriginEnum": ["body", "selection"],
         "CurationProjectSourceStatusEnum": ["public", "private", "unavailable"],

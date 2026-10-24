@@ -6667,6 +6667,255 @@
                 }
             }
         },
+        "/api/catalog/admin/media-objects/{object_type}/{object_id}/": {
+            "get": {
+                "operationId": "catalog_admin_media_objects_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "history_page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ObjectMediaWorkspace"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_media_objects_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ObjectMediaCommandRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ObjectMediaCommandRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ObjectMediaCommandRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ObjectMediaReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/media-objects/{object_type}/{object_id}/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_media_objects_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ObjectMediaReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_media_objects_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "object_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "object_type",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MediaWorkspaceCancelRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ObjectMediaReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/media/{media_id}/": {
             "get": {
                 "operationId": "catalog_admin_media_retrieve",
@@ -45128,7 +45377,7 @@
                         "type": "string"
                     },
                     "slot": {
-                        "$ref": "#/components/schemas/SlotEnum"
+                        "$ref": "#/components/schemas/WorkMediaSlotEnum"
                     },
                     "version": {
                         "type": "string"
@@ -45202,7 +45451,7 @@
                         "$ref": "#/components/schemas/MediaWorkspaceCommandActionEnum"
                     },
                     "slot": {
-                        "$ref": "#/components/schemas/SlotEnum"
+                        "$ref": "#/components/schemas/WorkMediaSlotEnum"
                     },
                     "media_id": {
                         "type": "string",
@@ -45302,7 +45551,7 @@
                         "nullable": true,
                         "oneOf": [
                             {
-                                "$ref": "#/components/schemas/SlotEnum"
+                                "$ref": "#/components/schemas/WorkMediaSlotEnum"
                             },
                             {
                                 "$ref": "#/components/schemas/NullEnum"
@@ -47101,6 +47350,189 @@
                     {
                         "$ref": "#/components/schemas/OCRCorrectionPreview"
                     }
+                ]
+            },
+            "ObjectMediaCommandActionEnum": {
+                "enum": [
+                    "save",
+                    "restore",
+                    "clear",
+                    "legacy"
+                ],
+                "type": "string",
+                "description": "* `save` - save\n* `restore` - restore\n* `clear` - clear\n* `legacy` - legacy"
+            },
+            "ObjectMediaCommandRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/ObjectMediaCommandActionEnum"
+                    },
+                    "slot": {
+                        "$ref": "#/components/schemas/ObjectMediaSlotEnum"
+                    },
+                    "media_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "rendition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "transform": {
+                        "$ref": "#/components/schemas/MediaTransformRequest"
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/MediaRevisionMetadataRequest"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "request_id",
+                    "slot"
+                ]
+            },
+            "ObjectMediaReceipt": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "next_url": {
+                        "type": "string"
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "slot": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ObjectMediaSlotEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "media": {
+                        "$ref": "#/components/schemas/MediaAsset"
+                    },
+                    "target_type": {
+                        "$ref": "#/components/schemas/TargetTypeEnum"
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "edition_id",
+                    "next_url",
+                    "owner_id",
+                    "request_id",
+                    "slot",
+                    "state",
+                    "target_id",
+                    "target_type"
+                ]
+            },
+            "ObjectMediaSlotEnum": {
+                "enum": [
+                    "portrait",
+                    "hero"
+                ],
+                "type": "string",
+                "description": "* `portrait` - portrait\n* `hero` - hero"
+            },
+            "ObjectMediaWorkspace": {
+                "type": "object",
+                "properties": {
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slot": {
+                        "$ref": "#/components/schemas/ObjectMediaSlotEnum"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "has_unpublished_changes": {
+                        "type": "boolean"
+                    },
+                    "cover": {},
+                    "current": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MediaWorkspaceRevision"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "history": {
+                        "$ref": "#/components/schemas/MediaWorkspaceHistory"
+                    },
+                    "publication": {
+                        "$ref": "#/components/schemas/MediaWorkspacePublication"
+                    },
+                    "target_type": {
+                        "$ref": "#/components/schemas/TargetTypeEnum"
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "editor_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "cover",
+                    "current",
+                    "edition_id",
+                    "editor_url",
+                    "has_unpublished_changes",
+                    "history",
+                    "publication",
+                    "slot",
+                    "target_id",
+                    "target_type",
+                    "title",
+                    "version",
+                    "work_id"
                 ]
             },
             "OcrStrategyEnum": {
@@ -64977,14 +65409,6 @@
                     "action"
                 ]
             },
-            "SlotEnum": {
-                "enum": [
-                    "cover",
-                    "recommendation"
-                ],
-                "type": "string",
-                "description": "* `cover` - cover\n* `recommendation` - recommendation"
-            },
             "SourceCommandOutput": {
                 "type": "object",
                 "properties": {
@@ -66762,6 +67186,18 @@
                     "results",
                     "version"
                 ]
+            },
+            "TargetTypeEnum": {
+                "enum": [
+                    "knowledge_node",
+                    "reading_path",
+                    "discipline",
+                    "subdiscipline",
+                    "topic",
+                    "scholar_profile"
+                ],
+                "type": "string",
+                "description": "* `knowledge_node` - knowledge_node\n* `reading_path` - reading_path\n* `discipline` - discipline\n* `subdiscipline` - subdiscipline\n* `topic` - topic\n* `scholar_profile` - scholar_profile"
             },
             "TextSourceEnum": {
                 "enum": [
@@ -70962,6 +71398,14 @@
                     "position",
                     "title"
                 ]
+            },
+            "WorkMediaSlotEnum": {
+                "enum": [
+                    "cover",
+                    "recommendation"
+                ],
+                "type": "string",
+                "description": "* `cover` - cover\n* `recommendation` - recommendation"
             },
             "WorkNodeRelation": {
                 "type": "object",

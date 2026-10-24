@@ -10,7 +10,7 @@ import type { components } from "@/lib/api/generated/schema";
 import { scholarPortraitEndpoint, selectScholarPortrait, type ScholarPortraitState } from "@/lib/api/scholar-media";
 import { knowledgeImageEndpoint, selectKnowledgeImage, type KnowledgeImageState, type KnowledgeImageType } from "@/lib/api/knowledge-media";
 import styles from "./media-library.module.css";
-import { MediaWorkspace } from "./media-workspace";
+import { MediaWorkspace, ObjectMediaWorkspace, type MediaObjectType } from "./media-workspace";
 
 type Media = components["schemas"]["MediaAsset"];
 type Rendition = components["schemas"]["MediaRendition"];
@@ -105,6 +105,11 @@ function MediaEditor({ media, onSaved, destination }: { media: Media; onSaved: (
 
 export function MediaLibrary() {
   const params = useSearchParams(), edition = params.get("edition"), slot = params.get("slot") || "cover";
+  const scholar=params.get("scholar"),objectId=params.get("object_id"),objectType=params.get("object_type");
+  const validId=(value:string|null)=>Boolean(value&&/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value));
+  if([edition,scholar,objectId].filter(Boolean).length>1||edition&&!validId(edition)||scholar&&!validId(scholar)||objectId&&!validId(objectId))return <p role="alert">媒体入口的对象不明确，请返回原编辑页面重新进入。</p>;
+  if(scholar&&!edition&&!objectId&&!objectType)return <ObjectMediaWorkspace objectType="scholar_profile" objectId={scholar}/>;
+  if(objectId&&objectType&&["knowledge_node","reading_path","discipline","subdiscipline","topic"].includes(objectType)&&!edition&&!scholar)return <ObjectMediaWorkspace objectType={objectType as MediaObjectType} objectId={objectId}/>;
   if (edition && !params.get("scholar") && !params.get("object_id") && !params.get("object_type") && (slot === "cover" || slot === "recommendation")) return <MediaWorkspace editionId={edition} slot={slot}/>;
   return <LegacyMediaLibrary/>;
 }
