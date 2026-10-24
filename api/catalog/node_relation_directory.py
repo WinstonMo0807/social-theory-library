@@ -31,7 +31,7 @@ class NodeRelationFilters(serializers.Serializer):
 
 class NodeRelationRow(serializers.Serializer):
     id = serializers.UUIDField()
-    kind = serializers.ChoiceField(choices=["node", "person"])
+    kind = serializers.ChoiceField(choices=["node", "person", "scholar"])
     scholar_id = serializers.UUIDField(allow_null=True)
     source_name = serializers.CharField()
     target_name = serializers.CharField()
@@ -39,7 +39,7 @@ class NodeRelationRow(serializers.Serializer):
     target_kind = serializers.CharField()
     relation_type = serializers.CharField()
     relation_label = serializers.CharField()
-    direction = serializers.ChoiceField(choices=KnowledgeRelation.Direction.choices)
+    direction = serializers.ChoiceField(choices=["directed", "bidirectional", "undirected"])
     description = serializers.CharField(allow_blank=True)
     evidence_source = serializers.CharField(allow_blank=True)
     has_source_anchor = serializers.BooleanField()

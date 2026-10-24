@@ -17,7 +17,7 @@ import type { Paginated } from "@/lib/api/pagination";
 import { useScholarSave } from "./use-scholar-save";
 
 export type ScholarRelationGuard = {dirty:boolean;pending:boolean;composing:boolean};
-type Props = {scholarId:string;initialRelationId?:string;embedded?:boolean;onGuardChange?:(value:ScholarRelationGuard)=>void;onSaved?:()=>void};
+type Props = {scholarId:string;initialRelationId?:string;embedded?:boolean;detailOnly?:boolean;onGuardChange?:(value:ScholarRelationGuard)=>void;onSaved?:()=>void};
 const newRelation = (scholarId:string):ScholarRelation => ({id:"",source_scholar:scholarId,target_scholar:"",source_name:"",target_name:"",relation_type:"influence",direction:"directed",summary:"",source:"",status:"draft",edit_version:""});
 
 export function ScholarRelationsEditor(props:Props) {
@@ -26,7 +26,7 @@ export function ScholarRelationsEditor(props:Props) {
   return user?<RelationWorkspace key={`${user.id}:${epoch}:${props.scholarId}`} {...props} owner={String(user.id)}/>:<p role="status">正在核对编辑账户…</p>;
 }
 
-function RelationWorkspace({scholarId,initialRelationId,embedded=false,onGuardChange,onSaved,owner}:Props&{owner:string}) {
+function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnly=false,onGuardChange,onSaved,owner}:Props&{owner:string}) {
   const searchParams=useSearchParams(),user=useAdminSession(),command=useScholarSave(owner,"relation");
   const canEdit=hasAdminCapability(user,"can_edit_draft_authority"),canCreate=hasAdminCapability(user,"can_create_authority"),canPublish=hasAdminCapability(user,"can_publish_authority");
   const [selectedId,setSelectedId]=useState(initialRelationId??searchParams.get("relation")??""),loadedId=useRef("");
@@ -52,9 +52,9 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,onGuardCh
     if(!selectedId||loadedId.current===selectedId)return;
     const controller=new AbortController(),signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
     queueMicrotask(()=>{if(!controller.signal.aborted){setLoadingRecord(true);setConflict(false);setError("");}});
-    withPrivateOwner(owner,()=>apiRequest<ScholarRelation>(`/catalog/admin/scholar-relations/${selectedId}/`,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),signal).then(row=>{if(!controller.signal.aborted){loadedId.current=row.id;setDraft(row);setSaved(row);}}).catch(reason=>{if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:"关系读取失败。");}).finally(()=>{if(!controller.signal.aborted)setLoadingRecord(false);});
+    withPrivateOwner(owner,()=>apiRequest<ScholarRelation>(`/catalog/admin/scholar-relations/${selectedId}/?scholar=${encodeURIComponent(scholarId)}`,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),signal).then(row=>{if(!controller.signal.aborted){loadedId.current=row.id;setDraft(row);setSaved(row);}}).catch(reason=>{if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:"关系读取失败。");}).finally(()=>{if(!controller.signal.aborted)setLoadingRecord(false);});
     return()=>controller.abort();
-  },[selectedId,attempt,owner]);
+  },[selectedId,attempt,owner,scholarId]);
   function rememberSelection(id:string){if(embedded)return;const url=new URL(window.location.href);if(id)url.searchParams.set("relation",id);else url.searchParams.delete("relation");window.history.replaceState(null,"",url.pathname+url.search);}
   function select(id:string){
     if(composing.current||busy||command.recovery||id&&id===selectedId)return;
@@ -73,6 +73,7 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,onGuardCh
   async function act(operation:"save"|"publish"|"archive"|"retry") {
     if(composing.current||!canEdit||!editingReady||!command.ready||command.recovery&&operation!=="retry")return;
     if(operation==="save"&&(!validEndpoints||!draft.id&&!canCreate))return;
+    if(operation==="save"&&embedded&&![draft.source_scholar,draft.target_scholar].includes(scholarId)){setError("页内关系至少一端须是当前学者，请核对来源与目标。");return;}
     if(operation==="publish"&&(!canPublishSaved||!window.confirm("发布这条已保存关系？两端学者页面将同时使用此方向、说明和来源。")))return;
     if(operation==="archive"&&(!canPublish||!saved.id||dirty||!window.confirm("撤下这条已公开关系？两端公开页面将同时移除，原内容和历史保留。")))return;
     if(!startAction(operation))return;
@@ -93,11 +94,11 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,onGuardCh
     }catch(reason){setError(reason instanceof Error?reason.message:"原结果暂不可读，请重新读取关系列表。");}finally{finishAction("recover");}
   }
   return <div className="scholar-relations-editor" data-embedded={embedded} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}>
-    <header className="v307-editor-heading"><div>{!embedded?<Link href={`/admin/scholars/${scholarId}?section=theory`}>返回学者编辑</Link>:null}<h2>{profile?.preferred_name||"学者"} · 学术关系</h2><p>明确两端、方向与出处；保存草稿与公开发布分别进行。</p></div><button type="button" className="button secondary" disabled={busy||ime||Boolean(command.recovery)||!canCreate} onClick={()=>select("")}>新建关系</button></header>
+    {!detailOnly?<header className="v307-editor-heading"><div>{!embedded?<Link href={`/admin/scholars/${scholarId}?section=theory`}>返回学者编辑</Link>:null}<h2>{profile?.preferred_name||"学者"} · 学术关系</h2><p>明确两端、方向与出处；保存草稿与公开发布分别进行。</p></div><button type="button" className="button secondary" disabled={busy||ime||Boolean(command.recovery)||!canCreate} onClick={()=>select("")}>新建关系</button></header>:null}
     {error?<p className="form-message" role="alert">{error}<button type="button" disabled={busy||ime||dirty||Boolean(command.recovery)} onClick={()=>{loadedId.current="";setAttempt(value=>value+1);}}>重新读取</button></p>:null}{message?<p role="status">{message}</p>:null}
     {command.recovery?<aside role="status"><p>原操作结果尚未确认。请先查回或停止原请求，不能另建关系或重复发布。</p><button type="button" disabled={busy||ime} onClick={()=>void recover()}>查回原操作</button>{command.canRetry?<button type="button" disabled={busy||ime} onClick={()=>void act("retry")}>重试原操作</button>:null}<button type="button" disabled={busy||ime} onClick={()=>{if(window.confirm("停止尚未执行的原请求？已经完成的操作会返回原结果。"))void recover(true);}}>停止未执行请求</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
-    <div className="scholar-relations-workspace"><aside className="fixed-editor-panel"><nav className="scholar-relation-index" aria-label="当前学者关系">{loading?<p>正在读取关系…</p>:collection.results.length?collection.results.map(row=><button type="button" key={row.id} disabled={busy||ime||Boolean(command.recovery)} aria-current={row.id===selectedId?"true":undefined} onClick={()=>select(row.id)}><strong>{row.source_name} {relationArrow(row.direction)} {row.target_name}</strong><small>{scholarRelationLabels[row.relation_type]} · {scholarRelationStatus(row)}</small></button>):<p>尚未建立规范关系，可从新建关系开始。</p>}
-      {collection.count>24?<div><button type="button" disabled={page<=1||loading||dirty||busy||ime||Boolean(command.recovery)} onClick={()=>setPage(value=>value-1)}>上一页</button><span>第 {page} 页 · 共 {collection.count} 项</span><button type="button" disabled={!collection.next||loading||dirty||busy||ime||Boolean(command.recovery)} onClick={()=>setPage(value=>value+1)}>下一页</button></div>:null}</nav>
+    <div className="scholar-relations-workspace"><aside className="fixed-editor-panel">{!detailOnly?<nav className="scholar-relation-index" aria-label="当前学者关系">{loading?<p>正在读取关系…</p>:collection.results.length?collection.results.map(row=><button type="button" key={row.id} disabled={busy||ime||Boolean(command.recovery)} aria-current={row.id===selectedId?"true":undefined} onClick={()=>select(row.id)}><strong>{row.source_name} {relationArrow(row.direction)} {row.target_name}</strong><small>{scholarRelationLabels[row.relation_type]} · {scholarRelationStatus(row)}</small></button>):<p>尚未建立规范关系，可从新建关系开始。</p>}
+      {collection.count>24?<div><button type="button" disabled={page<=1||loading||dirty||busy||ime||Boolean(command.recovery)} onClick={()=>setPage(value=>value-1)}>上一页</button><span>第 {page} 页 · 共 {collection.count} 项</span><button type="button" disabled={!collection.next||loading||dirty||busy||ime||Boolean(command.recovery)} onClick={()=>setPage(value=>value+1)}>下一页</button></div>:null}</nav>:null}
       <form className="fixed-editor-fields" onSubmit={event=>{event.preventDefault();event.stopPropagation();void act("save");}}><h3>{draft.id?"编辑当前关系":"新建关系"}</h3><p>{dirty?"有未保存输入":draft.id?scholarRelationStatus(draft):"填写两端学者"}</p>{loadingRecord?<p role="status">正在读取所选关系…</p>:null}
         <fieldset disabled={locked||!draft.id&&!canCreate}>
           <EntityPicker label="第一位学者" endpoint="/catalog/admin/scholars/" nameField="preferred_name" values={draft.source_scholar?[{id:draft.source_scholar,name:live.source_name}]:[]} onChange={values=>{const value=values.at(-1);setDraft({...draft,source_scholar:value?.id||"",source_name:value?.name||""});}}/>
@@ -109,7 +110,7 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,onGuardCh
         </fieldset>
         <button type="button" className="button secondary" disabled={locked||ime||!canPublishSaved} onClick={()=>void act("publish")}>发布已保存关系</button>{canPublish&&saved.id&&saved.status==="published"?<button type="button" className="button secondary" disabled={locked||ime||dirty} onClick={()=>void act("archive")}>撤下公开关系</button>:null}{!canPublish?<p>当前账号没有正式发布权限。</p>:null}
         {conflict&&saved.id&&!command.recovery?<DraftConflict endpoint={`/catalog/admin/scholar-relations/${saved.id}/`} local={draft} onUseRemote={row=>{setDraft(row);setSaved(row);setConflict(false);}} onKeepLocal={row=>{setSaved(row);setDraft(value=>({...value,edit_version:row.edit_version}));setConflict(false);}}/>:null}
-      </form></aside><section><p className="private-preview-label">{dirty?"当前输入预览，尚未保存。":"本页关系与已保存草稿。"}图中只显示当前分页；全部记录见列表分页。</p><ScholarRelationNetwork relations={rows} centerScholarId={scholarId} selectedId={live.id} onSelect={row=>{if(row.id!=="current-input")select(row.id);}}/></section>
+      </form></aside>{!detailOnly?<section><p className="private-preview-label">{dirty?"当前输入预览，尚未保存。":"本页关系与已保存草稿。"}图中只显示当前分页；全部记录见列表分页。</p><ScholarRelationNetwork relations={rows} centerScholarId={scholarId} selectedId={live.id} onSelect={row=>{if(row.id!=="current-input")select(row.id);}}/></section>:null}
     </div>
   </div>;
 }

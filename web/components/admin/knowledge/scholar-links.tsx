@@ -70,7 +70,7 @@ type Fields = { source_anchor: Association["source_anchor"]; relation_type:Assoc
 const empty: Fields = { source_anchor: null, relation_type:"related",direction:"undirected",node_is_source:false, target_id: "", target_name: "", relation_label: "", source: "", featured: false, sort_order: 0 };
 const fields = (row: Association): Fields => ({ source_anchor: row.source_anchor, relation_type:row.relation_type,direction:row.direction,node_is_source:row.node_is_source, target_id: row.target_id, target_name: row.target_name, relation_label: row.relation_label, source: row.source, featured: row.featured, sort_order: row.sort_order });
 
-export function ScholarNodeLinkEditor({ owner, scholarId, initialId, node, personName, onGuard, onSaved }: { owner: string; scholarId: string; initialId: string; node: { id: string; name: string }; personName?: string; onGuard: (value: Guard) => void; onSaved: () => void }) {
+export function ScholarNodeLinkEditor({ owner, scholarId, initialId, node, personName, onGuard, onSaved }: { owner: string; scholarId: string; initialId: string; node?: { id: string; name: string }; personName?: string; onGuard: (value: Guard) => void; onSaved: () => void }) {
   return <LinkEditor owner={owner} scholarId={scholarId} initialId={initialId} kind="node" fixedTarget={node} personName={personName} onGuard={onGuard} onSaved={onSaved} />;
 }
 

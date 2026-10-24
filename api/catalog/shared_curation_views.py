@@ -1,8 +1,7 @@
 from django.core.paginator import Paginator
-from django.db.models import CharField, F, OuterRef, Q, Subquery, Value
-from django.db.models.fields.json import KeyTextTransform
+from django.db.models import CharField, F, Q, Value
 from django.db.models.functions import Cast
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -172,13 +171,8 @@ class AdminScholarRelationListView(ScholarRelationCommandMixin, EditorialErrorMi
     def get(self, request):
         rows = ScholarRelation.objects.select_related("active_revision")
         if request.query_params.get("scholar"):
-            key = str(service.identifier(request.query_params["scholar"]))
-            latest = EditorialRevision.objects.filter(target_type="scholar_relation", target_id=OuterRef("pk")).order_by("-revision").annotate(
-                source_key=KeyTextTransform("source_scholar", "materialized_preview"),
-                target_key=KeyTextTransform("target_scholar", "materialized_preview"),
-            )
-            rows = rows.annotate(draft_source=Subquery(latest.values("source_key")[:1]), draft_target=Subquery(latest.values("target_key")[:1]))
-            rows = rows.filter(Q(source_scholar_id=key) | Q(target_scholar_id=key) | Q(draft_source=key) | Q(draft_target=key))
+            from catalog.scholar_relation_directory import relations_for_scholar
+            rows = relations_for_scholar(rows, request.query_params["scholar"])
         return Response(paged(request, rows.order_by("-updated_at", "pk"), service.relation_payload))
 
     @extend_schema(request=ScholarRelationSerializer, responses={201: ScholarRelationSerializer})
@@ -189,10 +183,14 @@ class AdminScholarRelationListView(ScholarRelationCommandMixin, EditorialErrorMi
 class AdminScholarRelationDetailView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsKnowledgeEditor]
 
-    @extend_schema(responses=ScholarRelationSerializer)
+    @extend_schema(parameters=[OpenApiParameter("scholar", str, description="可选学者范围，包含正式与最新草稿端点。")], responses=ScholarRelationSerializer)
     def get(self, request, pk):
         from django.shortcuts import get_object_or_404
-        return Response(service.relation_payload(get_object_or_404(ScholarRelation, pk=pk)))
+        from catalog.scholar_relation_directory import relations_for_scholar
+        rows = ScholarRelation.objects.all()
+        if request.query_params.get("scholar"):
+            rows = relations_for_scholar(rows, request.query_params["scholar"])
+        return Response(service.relation_payload(get_object_or_404(rows, pk=pk)))
 
     @extend_schema(request=ScholarRelationSerializer, responses=ScholarRelationSerializer)
     def put(self, request, pk):

@@ -2307,6 +2307,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/scholars/{scholar_id}/knowledge-relations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_scholars_knowledge_relations_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/scholars/{scholar_id}/links/{kind}/": {
         parameters: {
             query?: never;
@@ -12443,7 +12459,7 @@ export interface components {
             target_kind: string;
             relation_type: string;
             relation_label: string;
-            direction: components["schemas"]["KnowledgeRelationDirectionEnum"];
+            direction: components["schemas"]["PublicGraphDirectionEnum"];
             description: string;
             evidence_source: string;
             has_source_anchor: boolean;
@@ -12454,9 +12470,10 @@ export interface components {
         /**
          * @description * `node` - node
          *     * `person` - person
+         *     * `scholar` - scholar
          * @enum {string}
          */
-        NodeRelationRowKindEnum: "node" | "person";
+        NodeRelationRowKindEnum: "node" | "person" | "scholar";
         NodeRelationTypeOption: {
             value: string;
             label: string;
@@ -25795,7 +25812,10 @@ export interface operations {
     };
     catalog_admin_scholar_relations_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 可选学者范围，包含正式与最新草稿端点。 */
+                scholar?: string;
+            };
             header?: never;
             path: {
                 id: string;
@@ -25939,6 +25959,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarRelationReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_scholars_knowledge_relations_retrieve: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `` -
+                 *     * `directed` - directed
+                 *     * `bidirectional` - bidirectional
+                 *     * `undirected` - undirected
+                 */
+                direction?: "" | "directed" | "bidirectional" | "undirected";
+                /**
+                 * @description * `` -
+                 *     * `person` - person
+                 *     * `scholar` - scholar
+                 */
+                kind?: "" | "person" | "scholar";
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `` - 全部类型
+                 *     * `related` - 相关
+                 *     * `proposes` - 提出
+                 *     * `defines` - 定义
+                 *     * `develops` - 发展
+                 *     * `criticizes` - 批判
+                 *     * `interprets` - 解释
+                 *     * `uses` - 运用
+                 *     * `influences` - 影响（人物与概念）
+                 *     * `teaching` - 师承
+                 *     * `cooperation` - 合作
+                 *     * `influence` - 影响（学者间）
+                 *     * `criticism` - 批评
+                 *     * `comparative_reading` - 比较阅读
+                 *     * `other` - 其他关系
+                 */
+                relation_type?: "" | "related" | "proposes" | "defines" | "develops" | "criticizes" | "interprets" | "uses" | "influences" | "teaching" | "cooperation" | "influence" | "criticism" | "comparative_reading" | "other";
+                /**
+                 * @description * `` -
+                 *     * `draft` - draft
+                 *     * `pending` - pending
+                 *     * `published` - published
+                 *     * `rejected` - rejected
+                 *     * `archived` - archived
+                 */
+                status?: "" | "draft" | "pending" | "published" | "rejected" | "archived";
+            };
+            header?: never;
+            path: {
+                scholar_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeRelationPage"];
                 };
             };
         };

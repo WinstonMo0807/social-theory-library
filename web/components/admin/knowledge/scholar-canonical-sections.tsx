@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { ScholarLinks } from "./scholar-links";
 import { ScholarPersonRelations } from "./scholar-person-relations";
 import type { PublicScholarDetail } from "@/lib/api/scholars.types";
@@ -15,6 +17,7 @@ export function ScholarCanonicalSections({ section, scholarId, data, error, relo
     {error?<p role="alert">{error}<button type="button" onClick={reload}>重新核对正式资料</button></p>:null}
     {!data?<p role="status">正在读取已确认的关系与事件…</p>:null}
     {section === "theory" ? <>
+      {blocked ? <p>保存学者草稿并核对原操作后，可打开统一关系工作区。</p> : <Link href={`/admin/scholars/${scholarId}/relations`}>打开理论、概念与关系编辑 ↗</Link>}
       <ScholarLinks kind="node" scholarId={scholarId} blocked={blocked} onChanged={reload} derived={data?.concepts.results.filter(row=>row.relation_source==="published_work_relation")}/>
       <ScholarPersonRelations scholarId={scholarId} blocked={blocked} onChanged={reload}/>
       <ScholarLinks kind="topic" scholarId={scholarId} blocked={blocked} onChanged={reload}/>

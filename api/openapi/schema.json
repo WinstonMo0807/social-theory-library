@@ -10500,6 +10500,14 @@
                             "format": "uuid"
                         },
                         "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "scholar",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "可选学者范围，包含正式与最新草稿端点。"
                     }
                 ],
                 "tags": [
@@ -10790,6 +10798,139 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ScholarRelationReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/scholars/{scholar_id}/knowledge-relations/": {
+            "get": {
+                "operationId": "catalog_admin_scholars_knowledge_relations_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "direction",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "directed",
+                                "bidirectional",
+                                "undirected"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `directed` - directed\n* `bidirectional` - bidirectional\n* `undirected` - undirected"
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "person",
+                                "scholar"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `person` - person\n* `scholar` - scholar"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 300
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "relation_type",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "related",
+                                "proposes",
+                                "defines",
+                                "develops",
+                                "criticizes",
+                                "interprets",
+                                "uses",
+                                "influences",
+                                "teaching",
+                                "cooperation",
+                                "influence",
+                                "criticism",
+                                "comparative_reading",
+                                "other"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - 全部类型\n* `related` - 相关\n* `proposes` - 提出\n* `defines` - 定义\n* `develops` - 发展\n* `criticizes` - 批判\n* `interprets` - 解释\n* `uses` - 运用\n* `influences` - 影响（人物与概念）\n* `teaching` - 师承\n* `cooperation` - 合作\n* `influence` - 影响（学者间）\n* `criticism` - 批评\n* `comparative_reading` - 比较阅读\n* `other` - 其他关系"
+                    },
+                    {
+                        "in": "path",
+                        "name": "scholar_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "",
+                                "draft",
+                                "pending",
+                                "published",
+                                "rejected",
+                                "archived"
+                            ],
+                            "type": "string",
+                            "default": "",
+                            "minLength": 1
+                        },
+                        "description": "* `` - \n* `draft` - draft\n* `pending` - pending\n* `published` - published\n* `rejected` - rejected\n* `archived` - archived"
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeRelationPage"
                                 }
                             }
                         },
@@ -50867,7 +51008,7 @@
                         "type": "string"
                     },
                     "direction": {
-                        "$ref": "#/components/schemas/KnowledgeRelationDirectionEnum"
+                        "$ref": "#/components/schemas/PublicGraphDirectionEnum"
                     },
                     "description": {
                         "type": "string"
@@ -50910,10 +51051,11 @@
             "NodeRelationRowKindEnum": {
                 "enum": [
                     "node",
-                    "person"
+                    "person",
+                    "scholar"
                 ],
                 "type": "string",
-                "description": "* `node` - node\n* `person` - person"
+                "description": "* `node` - node\n* `person` - person\n* `scholar` - scholar"
             },
             "NodeRelationTypeOption": {
                 "type": "object",

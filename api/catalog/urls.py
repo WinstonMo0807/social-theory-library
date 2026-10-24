@@ -66,6 +66,7 @@ from .knowledge_media_views import KnowledgeImageSelectionView, PublicKnowledgeI
 from .scholar_relation_commands import ScholarRelationReceiptView
 from .scholar_links import ScholarLinkView, ScholarLinkReceiptView
 from .node_relation_directory import NodeRelationDirectoryView
+from .scholar_relation_directory import ScholarKnowledgeRelationDirectoryView
 from .node_editor_views import NodeSaveReceiptView, KnowledgeRelationReceiptView
 from .media_views import WorkCoverMediaSelectionView, PublicCoverMetadataView, WorkRecommendationMediaSelectionView, PublicRecommendationMetadataView, RecommendationImageMetadataView
 from .publication_command_views import PublicationPrepareView, PublicationRollbackView, PublicationHistoryView
@@ -296,6 +297,7 @@ urlpatterns = [
     path("admin/theory-system/relations/commands/<uuid:request_id>/", KnowledgeRelationReceiptView.as_view(), name="knowledge-relation-receipt"),
     path("admin/scholars/<uuid:scholar_id>/links/<str:kind>/", ScholarLinkView.as_view(), name="scholar-link-list"),
     path("admin/theory-system/nodes/<uuid:node_id>/relations/", NodeRelationDirectoryView.as_view(), name="node-relation-directory"),
+    path("admin/scholars/<uuid:scholar_id>/knowledge-relations/", ScholarKnowledgeRelationDirectoryView.as_view(), name="scholar-knowledge-relation-directory"),
     path("admin/scholar-links/<str:kind>/commands/<uuid:request_id>/", ScholarLinkReceiptView.as_view(), name="scholar-link-receipt"),
     path("admin/scholar-relations/commands/<uuid:request_id>/", ScholarRelationReceiptView.as_view(), name="scholar-relation-receipt"),
     path("admin/scholar-relations/<uuid:pk>/", AdminScholarRelationDetailView.as_view(), name="admin-scholar-relation-detail"),

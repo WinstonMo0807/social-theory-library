@@ -1,5 +1,5 @@
-import { ScholarRelationsEditor } from "@/components/admin/knowledge/scholar-relations-editor";
+import { ScholarKnowledgeRelations } from "@/components/admin/knowledge/scholar-knowledge-relations";
 export default async function Page({params}:{params:Promise<{scholarId:string}>}) {
   const {scholarId} = await params;
-  return <ScholarRelationsEditor key={scholarId} scholarId={scholarId}/>;
+  return <ScholarKnowledgeRelations key={scholarId} scholarId={scholarId}/>;
 }
