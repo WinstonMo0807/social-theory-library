@@ -10888,6 +10888,77 @@
                 }
             }
         },
+        "/api/catalog/admin/site-content/history/": {
+            "get": {
+                "operationId": "catalog_admin_site_content_history_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "compare",
+                        "schema": {
+                            "enum": [
+                                "public",
+                                "saved"
+                            ],
+                            "type": "string",
+                            "default": "public",
+                            "minLength": 1
+                        },
+                        "description": "* `public` - public\n* `saved` - saved"
+                    },
+                    {
+                        "in": "query",
+                        "name": "edit_version",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100000,
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "revision",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SiteHistoryPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/site-content/publish/": {
             "post": {
                 "operationId": "catalog_admin_site_content_publish_create",
@@ -10909,6 +10980,54 @@
                         "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/SitePublishRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SiteContent"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/site-content/restore/": {
+            "post": {
+                "operationId": "catalog_admin_site_content_restore_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SiteRestoreRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SiteRestoreRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SiteRestoreRequest"
                             }
                         }
                     },
@@ -66873,6 +66992,155 @@
                     "state"
                 ]
             },
+            "SiteHistoryPage": {
+                "type": "object",
+                "properties": {
+                    "edit_version": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "total_pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SiteHistory"
+                        }
+                    },
+                    "selected": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SiteHistory"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "current_public_id": {
+                        "type": "string"
+                    },
+                    "latest_id": {
+                        "type": "string"
+                    },
+                    "compare": {
+                        "type": "string"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "snapshot": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SiteContent"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SiteReviewChange"
+                        }
+                    },
+                    "checks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SiteReviewCheck"
+                        }
+                    },
+                    "references": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SiteHistoryReference"
+                        }
+                    }
+                },
+                "required": [
+                    "changes",
+                    "checks",
+                    "compare",
+                    "count",
+                    "current_public_id",
+                    "edit_version",
+                    "fingerprint",
+                    "latest_id",
+                    "page",
+                    "references",
+                    "results",
+                    "selected",
+                    "snapshot",
+                    "total_pages"
+                ]
+            },
+            "SiteHistoryReference": {
+                "type": "object",
+                "properties": {
+                    "curator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicEditorialCurator"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "href": {
+                        "type": "string"
+                    },
+                    "image_url": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "source_title": {
+                        "type": "string"
+                    },
+                    "source_description": {
+                        "type": "string"
+                    },
+                    "source_image_url": {
+                        "type": "string"
+                    },
+                    "area": {
+                        "type": "string"
+                    },
+                    "target": {
+                        "$ref": "#/components/schemas/HomeTarget"
+                    }
+                },
+                "required": [
+                    "area",
+                    "available",
+                    "description",
+                    "href",
+                    "id",
+                    "image_url",
+                    "label",
+                    "target",
+                    "title",
+                    "visible"
+                ]
+            },
             "SiteHistoryRequest": {
                 "type": "object",
                 "properties": {
@@ -66963,10 +67231,11 @@
                 "enum": [
                     "save",
                     "publish",
+                    "restore",
                     "cancelled"
                 ],
                 "type": "string",
-                "description": "* `save` - save\n* `publish` - publish\n* `cancelled` - cancelled"
+                "description": "* `save` - save\n* `publish` - publish\n* `restore` - restore\n* `cancelled` - cancelled"
             },
             "SiteReceiptRequest": {
                 "type": "object",
@@ -66996,6 +67265,39 @@
                     "created_at",
                     "request_id",
                     "saved_version"
+                ]
+            },
+            "SiteRestoreRequest": {
+                "type": "object",
+                "properties": {
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "edit_version": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "expected_fingerprint": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                    },
+                    "confirm": {
+                        "type": "boolean"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "confirm",
+                    "edit_version",
+                    "expected_fingerprint",
+                    "reason",
+                    "revision_id"
                 ]
             },
             "SiteReview": {

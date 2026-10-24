@@ -492,17 +492,22 @@ def site_target(*, lock=False):
     return SiteSetting.objects.select_for_update().get(pk=setting.pk) if lock else setting
 
 
-def site_payload():
+def site_snapshot(payload):
     from catalog.site_layout import AREAS, present
-    setting = site_target()
-    latest = _latest("site_content", setting.pk)
-    payload = deepcopy(latest.materialized_preview) if latest and latest.status == "draft" else site_public_payload()
+    payload = deepcopy(payload)
     rid = payload["config"].get("home_hero_rendition_id")
     if rid:
         payload["config"]["home_hero_image"] = f"/api/catalog/admin/media/renditions/{rid}/file/"
     payload["home_layout"] = {area: payload.get("home_layout", {}).get(area) for area in AREAS}
+    return {**payload, "home_preview": present(payload["home_layout"])}
+
+
+def site_payload():
+    setting = site_target()
+    latest = _latest("site_content", setting.pk)
+    payload = site_snapshot(latest.materialized_preview if latest and latest.status == "draft" else site_public_payload())
     history = EditorialRevision.objects.filter(target_type="site_content", target_id=setting.pk).select_related("created_by", "published_by").order_by("-revision")[:30]
-    return {**payload, "home_preview": present(payload["home_layout"]), "site_id": str(setting.pk),
+    return {**payload, "site_id": str(setting.pk),
             "history": [{"id": str(row.pk), "revision": row.revision, "state": row.status,
                 "saved_at": row.created_at, "saved_by": row.created_by.display_name if row.created_by else "",
                 "published_at": row.published_at, "published_by": row.published_by.display_name if row.published_by else ""} for row in history],
@@ -510,7 +515,7 @@ def site_payload():
 
 
 @transaction.atomic
-def save_site(data, actor):
+def save_site(data, actor, *, retained_layout=None):
     from catalog.serializers import SiteConfigSerializer, AboutPageBlockSerializer
     from catalog.site_layout import normalize, published_layout
     setting = site_target(lock=True)
@@ -542,7 +547,7 @@ def save_site(data, actor):
         clean_blocks.append(clean)
     latest = _latest("site_content", setting.pk)
     previous = latest.materialized_preview.get("home_layout", {}) if latest else published_layout()
-    layout = normalize(data.get("home_layout", {area: previous.get(area) for area in ("featured", "scholars", "topics")}), retained=previous)
+    layout = normalize(data.get("home_layout", {area: previous.get(area) for area in ("featured", "scholars", "topics")}), retained=previous if retained_layout is None else retained_layout)
     _save_revision("site_content", setting.pk, {"config": clean_config, "about_blocks": clean_blocks, "home_layout": layout}, actor)
     return site_payload()
 

@@ -25,7 +25,7 @@ ACTION = "site_content.command"
 class SiteReceiptSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     actor_id = serializers.CharField()
-    action = serializers.ChoiceField(choices=["save", "publish", "cancelled"])
+    action = serializers.ChoiceField(choices=["save", "publish", "restore", "cancelled"])
     saved_version = serializers.CharField(allow_blank=True)
     created_at = serializers.DateTimeField()
 
@@ -51,13 +51,13 @@ def lock_actor(request, key):
 
 
 @transaction.atomic
-def execute(request, *, publishing=False):
+def execute(request, *, publishing=False, restoring=False):
     try:
         key = UUID(request.headers.get("Idempotency-Key", ""))
     except (ValueError, TypeError):
         raise ValidationError("网站保存与发布需要固定请求编号。") from None
     actor = lock_actor(request, key)
-    operation = "publish" if publishing else "save"
+    operation = "restore" if restoring else "publish" if publishing else "save"
     fingerprint = salted_hmac("stl4-site-content", json.dumps({"actor": actor.pk, "operation": operation, "data": request.data}, cls=DjangoJSONEncoder, ensure_ascii=False, sort_keys=True), algorithm="sha256").hexdigest()
     previous = AuditEvent.objects.filter(pk=key).first()
     if previous:
@@ -71,9 +71,14 @@ def execute(request, *, publishing=False):
         checked = review(request.data.get("edit_version"))
         if checked["fingerprint"] != request.data["expected_fingerprint"]:
             raise service.EditConflict("网站内容或所引来源已变化，请重新读取发布检查再确认。")
-    payload = service.publish_site(request.data.get("edit_version"), actor) if publishing else service.save_site(request.data, actor)
+    if restoring:
+        from catalog.site_history import restore
+        payload = restore(request.data, actor)
+    else:
+        payload = service.publish_site(request.data.get("edit_version"), actor) if publishing else service.save_site(request.data, actor)
     row = AuditEvent.objects.create(pk=key, actor=actor, action=ACTION, object_type="site_content", object_id=payload["site_id"],
-        after={"operation": operation, "fingerprint": fingerprint, "saved_version": payload["edit_version"]})
+        after={"operation": operation, "fingerprint": fingerprint, "saved_version": payload["edit_version"],
+            **({"restored_revision_id": str(request.data.get("revision_id")), "reason": str(request.data.get("reason", ""))} if restoring else {})})
     return {**payload, "receipt": receipt(row), "replayed": False}
 
 

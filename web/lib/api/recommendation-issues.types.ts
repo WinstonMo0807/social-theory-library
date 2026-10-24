@@ -57,5 +57,5 @@ export type IssuePage = { count: number; next: string | null; previous: string |
 export type SiteContentDraft = { config: SiteConfig; about_blocks: AboutPageBlock[]; edit_version: string; has_unpublished_changes: boolean;
   home_layout: import("./home.types").HomeLayout; home_preview: import("./home.types").HomeLayoutPreview; site_id: string;
   history: {id:string;revision:number;state:string;saved_at:string;saved_by:string;published_at:string|null;published_by:string}[];
-  receipt?: {request_id:string;actor_id:string;action:"save"|"publish"|"cancelled";saved_version:string;created_at:string}; replayed?:boolean;
+  receipt?: {request_id:string;actor_id:string;action:"save"|"publish"|"restore"|"cancelled";saved_version:string;created_at:string}; replayed?:boolean;
 };

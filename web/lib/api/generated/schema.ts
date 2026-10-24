@@ -2275,6 +2275,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/site-content/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_site_content_history_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/site-content/publish/": {
         parameters: {
             query?: never;
@@ -2285,6 +2301,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["catalog_admin_site_content_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/site-content/restore/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_site_content_restore_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17552,6 +17584,38 @@ export interface components {
             published_at: string | null;
             published_by: string;
         };
+        SiteHistoryPage: {
+            edit_version: string;
+            count: number;
+            page: number;
+            total_pages: number;
+            results: components["schemas"]["SiteHistory"][];
+            selected: components["schemas"]["SiteHistory"] | null;
+            current_public_id: string;
+            latest_id: string;
+            compare: string;
+            fingerprint: string;
+            snapshot: components["schemas"]["SiteContent"] | null;
+            changes: components["schemas"]["SiteReviewChange"][];
+            checks: components["schemas"]["SiteReviewCheck"][];
+            references: components["schemas"]["SiteHistoryReference"][];
+        };
+        SiteHistoryReference: {
+            curator?: components["schemas"]["PublicEditorialCurator"] | null;
+            id: string;
+            title: string;
+            description: string;
+            href: string;
+            image_url: string;
+            label: string;
+            available: boolean;
+            visible: boolean;
+            source_title?: string;
+            source_description?: string;
+            source_image_url?: string;
+            area: string;
+            target: components["schemas"]["HomeTarget"];
+        };
         SiteHistoryRequest: {
             /** Format: uuid */
             id: string;
@@ -17580,10 +17644,11 @@ export interface components {
         /**
          * @description * `save` - save
          *     * `publish` - publish
+         *     * `restore` - restore
          *     * `cancelled` - cancelled
          * @enum {string}
          */
-        SiteReceiptActionEnum: "save" | "publish" | "cancelled";
+        SiteReceiptActionEnum: "save" | "publish" | "restore" | "cancelled";
         SiteReceiptRequest: {
             /** Format: uuid */
             request_id: string;
@@ -17592,6 +17657,14 @@ export interface components {
             saved_version: string;
             /** Format: date-time */
             created_at: string;
+        };
+        SiteRestoreRequest: {
+            /** Format: uuid */
+            revision_id: string;
+            edit_version: string;
+            expected_fingerprint: string;
+            confirm: boolean;
+            reason: string;
         };
         SiteReview: {
             edit_version: string;
@@ -24783,6 +24856,34 @@ export interface operations {
             };
         };
     };
+    catalog_admin_site_content_history_retrieve: {
+        parameters: {
+            query: {
+                /**
+                 * @description * `public` - public
+                 *     * `saved` - saved
+                 */
+                compare?: "public" | "saved";
+                edit_version: string;
+                page?: number;
+                revision?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteHistoryPage"];
+                };
+            };
+        };
+    };
     catalog_admin_site_content_publish_create: {
         parameters: {
             query?: never;
@@ -24795,6 +24896,31 @@ export interface operations {
                 "application/json": components["schemas"]["SitePublishRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["SitePublishRequest"];
                 "multipart/form-data": components["schemas"]["SitePublishRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteContent"];
+                };
+            };
+        };
+    };
+    catalog_admin_site_content_restore_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteRestoreRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SiteRestoreRequest"];
+                "multipart/form-data": components["schemas"]["SiteRestoreRequest"];
             };
         };
         responses: {

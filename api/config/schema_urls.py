@@ -27,7 +27,7 @@ VERIFIED_NAMES = {
     "curation-field-decision", "curation-field-decision-receipt",
     "manual-catalog", "manual-catalog-receipt", "manual-catalog-candidates", "edition-supporting-materials", "edition-supporting-material-receipt",
     "upload-workspace", "upload-workspace-receipt",
-    "admin-site-review", "admin-site-sources", "admin-site-receipt",
+    "admin-site-review", "admin-site-history", "admin-site-restore", "admin-site-sources", "admin-site-receipt",
     "admin-recycle", "admin-recycle-detail",
     "local-services", "local-service-check",
     "path-save-receipt", "path-editor-validation",

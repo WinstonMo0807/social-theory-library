@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { SiteHomePicker, type HomeChoice } from "./site-home-picker";
 import { SiteTextFields, siteTextSections } from "./site-text-fields";
+import { SiteHistory } from "./site-history";
 import { SitePublicationReview } from "./site-publication-review";
 import type { SiteContentDraft } from "@/lib/api/recommendation-issues.types";
 import { useSiteContent } from "./use-site-content";
@@ -24,7 +25,7 @@ import styles from "./site-content.module.css";
 const areas:HomeArea[]=["featured","scholars","topics"];
 const names={featured:"主页主推",scholars:"学者聚焦",topics:"探索主题"};
 const groups={home:["home","brand","footer"],about:["about","about-why","about-feature-source","about-feature-reading","about-feature-knowledge"],usage:["about-process","about-open","about-copyright","about-privacy"],help:["about-notice"]};
-type Props={home:HomeViewData;stats:SiteStats;fullPreview?:boolean};
+type Props={home:HomeViewData;stats:SiteStats;fullPreview?:boolean;initialPanel?:string};
 export function SiteContentEditor(props:Props){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
@@ -32,12 +33,12 @@ export function SiteContentEditor(props:Props){
   return <Workspace key={`${user.id}:${epoch}`} {...props} owner={String(user.id)}/>;
 }
 
-function Workspace({home,stats,owner,fullPreview=false}:Props&{owner:string}){
+function Workspace({home,stats,owner,fullPreview=false,initialPanel=""}:Props&{owner:string}){
   const editor=useSiteContent(owner),{draft,setDraft,saved}=editor;
   const [group,setGroup]=useState<keyof typeof groups>("home"),[textSection,setTextSection]=useState("home"),[tab,setTab]=useState("settings");
   const [selection,setSelection]=useState<{area:HomeArea;id:string}|null>(null),[picker,setPicker]=useState<{area:HomeArea;replace?:string}|null>(null);
   const [cache,setCache]=useState<Record<string,HomeCard>>({}),[covers,setCovers]=useState<Record<string,string>>({});
-  const [reviewOpen,setReviewOpen]=useState(false);
+  const [reviewOpen,setReviewOpen]=useState(initialPanel==="review"),[historyOpen,setHistoryOpen]=useState(initialPanel==="history");
   const [confirm,setConfirm]=useState<"reset"|null>(null),[moreOpen,setMoreOpen]=useState(false),[previewOpen,setPreviewOpen]=useState(false),[small,setSmall]=useState(false),[mobileOpen,setMobileOpen]=useState(false);
   const dragging=useRef<{area:HomeArea;id:string}|null>(null);
   useEffect(()=>{const query=window.matchMedia("(max-width: 760px)");const update=()=>setSmall(query.matches);update();query.addEventListener("change",update);return()=>query.removeEventListener("change",update);},[]);
@@ -64,7 +65,7 @@ function Workspace({home,stats,owner,fullPreview=false}:Props&{owner:string}){
   const patch=(values:Partial<HomeSlot>)=>{if(selected&&selection)update(selection.area,draft.home_layout[selection.area]!.map(row=>row.id===selected.id?{...row,...values}:row));};
   const renderPreview=(snapshot:SiteContentDraft,previewGroup:string=group,previewLayout:HomeLayoutPreview=snapshot.home_preview)=><div onClickCapture={event=>{if((event.target as Element).closest("a,button,input,form,select,textarea")){event.preventDefault();event.stopPropagation();}}} onSubmitCapture={event=>event.preventDefault()}><SiteHeader config={snapshot.config} preview/>{previewGroup==="home"?<HomePublicView {...home} config={snapshot.config} homeLayout={previewLayout} preview/>:<AboutPublicView config={snapshot.config} stats={stats} about={{configured:snapshot.about_blocks.length>0,blocks:snapshot.about_blocks.filter(row=>row.visible)}}/>}<SiteFooterView config={snapshot.config} preview/></div>;
   const preview=renderPreview(draft,group,layout);
-  const history=<ol className={styles.history}>{draft.history.map(row=><li key={row.id}><strong>第 {row.revision} 版 · {{draft:"已保存草稿",published:"已发布",superseded:"已被新草稿替代",archived:"已归档"}[row.state]||row.state}</strong><p>{row.saved_by||"未记录编辑者"} · {new Date(row.saved_at).toLocaleString("zh-CN")}</p>{row.published_at?<p>{row.published_by||"管理员"} 发布于 {new Date(row.published_at).toLocaleString("zh-CN")}</p>:null}</li>)}{!draft.history.length?<li>暂无保存记录。</li>:null}</ol>;
+  const history=<><button onClick={()=>setHistoryOpen(true)}>完整版本历史与比较</button><ol className={styles.history}>{draft.history.map(row=><li key={row.id}><strong>第 {row.revision} 版 · {{draft:"已保存草稿",published:"已发布",superseded:"已被新草稿替代",archived:"已归档"}[row.state]||row.state}</strong><p>{row.saved_by||"未记录编辑者"} · {new Date(row.saved_at).toLocaleString("zh-CN")}</p>{row.published_at?<p>{row.published_by||"管理员"} 发布于 {new Date(row.published_at).toLocaleString("zh-CN")}</p>:null}</li>)}{!draft.history.length?<li>暂无保存记录。</li>:null}</ol></>;
   const detail=<><nav className={styles.tabs} aria-label="内容面板">{[["settings","内容设置"],["preview","页面预览"],["history","更新记录"]].map(([id,label])=><button key={id} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
     {tab==="preview"?<PreviewViewport>{preview}</PreviewViewport>:tab==="history"?history:group==="home"&&selected&&card?<fieldset disabled={locked} className={styles.fields}>
       {!card.available?<p role="alert" className={styles.warning}>来源已撤回或不可用。请更换来源或关闭首页显示后再发布。</p>:null}
@@ -77,7 +78,8 @@ function Workspace({home,stats,owner,fullPreview=false}:Props&{owner:string}){
       <label className={styles.toggle}><input type="checkbox" checked={selected.visible} onChange={event=>patch({visible:event.target.checked})}/>在本页显示</label><small>仅改变本页位置，发布后生效，不改变来源对象的发布状态。</small>
       <footer><button className={styles.remove} onClick={()=>{update(selection!.area,draft.home_layout[selection!.area]!.filter(row=>row.id!==selected.id));setSelection(null);setMobileOpen(false);}}>从首页移除</button><button onClick={()=>setConfirm("reset")} disabled={!editor.dirty}>取消修改</button><button className={styles.primary} disabled={!editor.dirty} onClick={()=>void editor.persist()}>保存本页草稿</button></footer>
     </fieldset>:<SiteTextFields draft={draft} setDraft={setDraft} active={textSection} busy={locked}/>}</>;
-  if(reviewOpen&&!fullPreview)return <SitePublicationReview owner={owner} editor={editor} preview={renderPreview} onBack={(section,slot)=>{setReviewOpen(false);if(!section)return;if(areas.includes(section as HomeArea)&&slot){setGroup("home");select(section as HomeArea,slot);}else{const key=section==="about-intro"?"about":section;const found=Object.entries(groups).find(([,sections])=>sections.includes(key));if(found){setGroup(found[0] as keyof typeof groups);setTextSection(key);setSelection(null);setTab("settings");setMobileOpen(true);}}}}/>;
+  if(historyOpen&&!fullPreview)return <SiteHistory owner={owner} editor={editor} preview={renderPreview} onBack={()=>setHistoryOpen(false)} onReview={()=>{setHistoryOpen(false);setReviewOpen(true);}}/>;
+  if(reviewOpen&&!fullPreview)return <SitePublicationReview owner={owner} editor={editor} onHistory={()=>{setReviewOpen(false);setHistoryOpen(true);}} preview={renderPreview} onBack={(section,slot)=>{setReviewOpen(false);if(!section)return;if(areas.includes(section as HomeArea)&&slot){setGroup("home");select(section as HomeArea,slot);}else{const key=section==="about-intro"?"about":section;const found=Object.entries(groups).find(([,sections])=>sections.includes(key));if(found){setGroup(found[0] as keyof typeof groups);setTextSection(key);setSelection(null);setTab("settings");setMobileOpen(true);}}}}/>;
   if(fullPreview)return <div className={styles.fullPreview}><p>已保存草稿预览 · 仅后台可见</p><nav className={styles.tabs}>{[["home","首页"],["about","关于与公共说明"]].map(([id,label])=><button key={id} onClick={()=>setGroup(id as keyof typeof groups)}>{label}</button>)}</nav>{preview}</div>;
   return <main className={styles.page}><div className={styles.toolbar}><span>内容 <ChevronRight size={12}/>页面编排 <ChevronRight size={12}/>首页与公共说明</span><div><small>{editor.dirty?"有未保存修改":draft.has_unpublished_changes?"已保存未发布":"当前发布版本"}</small><button disabled={locked} onClick={()=>setPreviewOpen(true)}>预览</button><button disabled={locked||!editor.dirty} onClick={()=>void editor.persist()}>保存草稿</button><button className={styles.primary} disabled={locked} onClick={()=>setReviewOpen(true)}>发布检查</button></div></div>
     <header className={styles.heading}><h1>首页编排、关于与公共说明</h1><p>管理读者看到的入口叙事与说明，从馆藏、专题、学者、主题中选择内容，调整顺序与导语。</p></header>
