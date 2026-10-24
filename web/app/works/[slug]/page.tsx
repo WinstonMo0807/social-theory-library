@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { WorkDetailView } from "@/components/work-detail-view";
 import { loadWork } from "@/lib/api/catalog.server";
+import { publicImageMetadata } from "@/lib/public-image-metadata";
 
 export async function generateMetadata({
   params,
@@ -11,7 +12,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const work = await loadWork(slug);
-  return { title: work?.title ?? "文献详情" };
+  return { title: work?.title ?? "文献详情", ...await publicImageMetadata(work?.shareImage, work?.shareImageAlt || work?.title || "") };
 }
 
 export default async function WorkDetailPage({

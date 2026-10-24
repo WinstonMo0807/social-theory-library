@@ -45030,6 +45030,16 @@
                     "width"
                 ]
             },
+            "MediaDisplayUseEnum": {
+                "enum": [
+                    "detail",
+                    "list",
+                    "mobile",
+                    "share"
+                ],
+                "type": "string",
+                "description": "* `detail` - detail\n* `list` - list\n* `mobile` - mobile\n* `share` - share"
+            },
             "MediaRendition": {
                 "type": "object",
                 "properties": {
@@ -45470,6 +45480,13 @@
                     },
                     "metadata": {
                         "$ref": "#/components/schemas/MediaRevisionMetadataRequest"
+                    },
+                    "display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        },
+                        "maxItems": 4
                     }
                 },
                 "required": [
@@ -45604,10 +45621,17 @@
                             }
                         ],
                         "nullable": true
+                    },
+                    "display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        }
                     }
                 },
                 "required": [
                     "created_at",
+                    "display_uses",
                     "height",
                     "id",
                     "media",
@@ -56958,6 +56982,12 @@
                     },
                     "credit": {
                         "type": "string"
+                    },
+                    "display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        }
                     },
                     "renditions": {
                         "type": "array",

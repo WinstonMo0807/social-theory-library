@@ -8,6 +8,7 @@ import { AddWorkToListButton } from "./add-work-to-list-button";
 import { SaveWorkButton } from "./save-work-button";
 import { SharedCitationButton } from "./shared-citation-overlay";
 import { WorkCitationPanel } from "./work-citation-panel";
+import { MediaPlacement } from "./media-placement";
 import { WorkDetailEvidence } from "./work-detail-evidence";
 import { BookCard, BookCover } from "./ui";
 import { Dialog } from "./ui/dialog";
@@ -42,6 +43,12 @@ function WorkDetailContent({ work, relatedWorks = [], preview, footer }: Props) 
   const [active, setActive] = useState("versions");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ versions: true });
   const [coverOpen, setCoverOpen] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const close = () => setCoverOpen(false);
+    media.addEventListener("change", close);
+    return () => media.removeEventListener("change", close);
+  }, []);
   const coverClose = useRef<HTMLButtonElement>(null);
   const version = work.version;
   const versions = work.versions?.length ? work.versions : version ? [version] : [];
@@ -74,7 +81,7 @@ function WorkDetailContent({ work, relatedWorks = [], preview, footer }: Props) 
       {preview ? <div className="admin-page-preview-banner" role="status"><ShieldCheck size={16} /><strong>草稿预览</strong><span>{preview.draftRevision ? `已保存草稿第 ${preview.draftRevision.revision} 版` : "当前编目草稿"}{preview.draftRevision?.hasConflict ? "，存在待处理冲突" : "，尚未向读者公开"}</span><Link href={preview.returnHref}>返回编辑</Link></div> : null}
       <nav className={`breadcrumbs ${styles.breadcrumbs}`} aria-label="当前位置">{preview ? <span>前台页面效果 / {work.title}</span> : <><Link href="/">首页</Link><span>›</span><Link href="/explore">探索</Link><span>›</span><span>{work.kind}</span><span>›</span><span aria-current="page">{work.title}</span></>}</nav>
       <section className={`work-hero ${styles.hero}`}>
-        <div className={styles.coverColumn}>{work.coverImage ? <BookCover work={work} size="large" /> : <div className={styles.noCover}><BookOpenText size={34} strokeWidth={1} /><span>暂无封面</span></div>}{work.coverImage ? <button className={styles.coverPreview} type="button" onClick={() => setCoverOpen(true)}><Eye size={14} />预览封面</button> : null}</div>
+        <div className={styles.coverColumn}>{work.coverImage ? <BookCover work={work} size="large" placement="detail" /> : <div className={styles.noCover}><BookOpenText size={34} strokeWidth={1} /><span>暂无封面</span></div>}{work.coverImage ? <MediaPlacement uses={work.coverDisplayUses} placement="detail"><button className={styles.coverPreview} type="button" onClick={() => setCoverOpen(true)}><Eye size={14} />预览封面</button></MediaPlacement> : null}</div>
         <div className={styles.identity}>
           <span className={styles.kind}>{work.kind}</span><h1>{work.title}</h1>
           {work.subtitle ? <p className={styles.subtitle}>{work.subtitle}</p> : null}

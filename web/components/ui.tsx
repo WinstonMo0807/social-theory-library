@@ -6,6 +6,7 @@ import { SaveWorkButton } from "./save-work-button";
 import { ResponsivePortraitImage } from "./responsive-portrait-image";
 import { SearchInput } from "./ui/controls";
 import { CollectionLink } from "./collection-link";
+import { MediaPlacement } from "./media-placement";
 
 export function ArchitecturalImage({ compact = false }: { compact?: boolean }) {
   return (
@@ -39,8 +40,10 @@ export function SectionHeading({
   );
 }
 
-export function BookCover({ work, size = "normal" }: { work: Work; size?: "small" | "normal" | "large" }) {
+export function BookCover({ work, size = "normal", placement = "list" }: { work: Work; size?: "small" | "normal" | "large"; placement?: "detail" | "list" }) {
+  const fallback = <div className={`book-cover ${work.cover} ${size}`} aria-label={`${work.title}文字封面`}><span>{work.originalTitle ?? work.title}</span><small>{work.author}</small></div>;
   return (
+    <MediaPlacement uses={work.coverDisplayUses} placement={placement} fallback={fallback}>
     <div className={`book-cover ${work.cover} ${size}${work.coverImage ? " has-image" : ""}`} aria-label={`${work.title}封面`}>
       {work.coverSources?.length ? (
         <picture>
@@ -60,6 +63,7 @@ export function BookCover({ work, size = "normal" }: { work: Work; size?: "small
         </>
       )}
     </div>
+    </MediaPlacement>
   );
 }
 

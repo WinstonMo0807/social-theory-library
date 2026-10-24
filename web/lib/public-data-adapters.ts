@@ -3,11 +3,13 @@ import type { ApiScholar } from "./api/people.types";
 import type { ApiTopic, LibraryTopic } from "./api/topics.types";
 import type { ApiWork } from "./api/public-catalog";
 import type { PublicCuratedClaimGroups, PublicKnowledgeNodeLink } from "./api/curation.types";
+import { mediaAllows } from "./media-usage";
 
 const coverStyles: Work["cover"][] = ["dark", "paper", "cream", "line"];
 
 export function adaptApiWork(value: ApiWork, index = 0): Work {
   const authorContributions = value.edition?.contributors.filter((row) => row.role === "author" && row.scope?.kind !== "chapter") ?? [];
+  const shareMedia = [value.cover_media, value.recommendation_media].find(media => media && mediaAllows(media.display_uses, "share"));
   return {
     id: value.edition?.readable_asset?.id ?? value.id,
     workId: value.id,
@@ -43,6 +45,9 @@ export function adaptApiWork(value: ApiWork, index = 0): Work {
     coverImage: value.cover || value.recommendation_image || undefined,
     coverSources: (value.cover ? value.cover_media : value.recommendation_media)?.renditions,
     coverAlt: (value.cover ? value.cover_media : value.recommendation_media)?.alt_text || undefined,
+    coverDisplayUses: (value.cover ? value.cover_media : value.recommendation_media)?.display_uses,
+    shareImage: shareMedia?.renditions.at(-1)?.url,
+    shareImageAlt: shareMedia?.alt_text || value.title,
     pages: value.edition?.readable_asset?.page_count ?? 0,
     language: value.language,
     authors: authorContributions.map((row) => ({

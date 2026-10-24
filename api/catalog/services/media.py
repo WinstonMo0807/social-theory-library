@@ -23,6 +23,8 @@ MEDIA_SOURCE_TYPES = MediaAsset.SourceType.choices
 RENDITION_KINDS = ("cover", "portrait", "hero", "card", "thumbnail")
 METADATA_FIELDS = ("source_type", "source_url", "source_label", "rights", "license", "credit", "alt_text", "focal_x", "focal_y")
 PUBLIC_METADATA_FIELDS = ("alt_text", "source_label", "source_url", "rights", "license", "credit")
+MEDIA_DISPLAY_USES = ("detail", "list", "mobile", "share")
+DEFAULT_MEDIA_DISPLAY_USES = ("detail", "list", "mobile")
 WORK_IMAGE_SLOTS = {
     "cover": {"field": "cover", "relation": "cover_rendition", "kind": "cover", "snapshot": "cover_media", "route": "cover"},
     "recommendation": {"field": "recommendation_image", "relation": "recommendation_rendition", "kind": "hero", "snapshot": "recommendation_media", "route": "recommendation-image"},
@@ -121,7 +123,7 @@ def normalize_media_transform(value):
 
 
 @transaction.atomic
-def build_rendition(media_id, *, width=640, kind="cover", transform=None, metadata_override=None):
+def build_rendition(media_id, *, width=640, kind="cover", transform=None, metadata_override=None, display_uses=None):
     if width not in RENDITION_WIDTHS or kind not in RENDITION_KINDS:
         raise MediaValidationError("不支持的衍生图尺寸或用途。")
     media = MediaAsset.objects.select_for_update().get(pk=media_id)
@@ -130,6 +132,11 @@ def build_rendition(media_id, *, width=640, kind="cover", transform=None, metada
         if set(metadata_override) - set(PUBLIC_METADATA_FIELDS) or any(not isinstance(v, str) for v in metadata_override.values()):
             raise MediaValidationError("图片修订只能保存公开出处与替代文字。")
         metadata.update(metadata_override)
+    if display_uses is not None:
+        if not isinstance(display_uses, list) or any(value not in MEDIA_DISPLAY_USES for value in display_uses) or len(set(display_uses)) != len(display_uses):
+            raise MediaValidationError("图片展示用途无效或重复。")
+        # This belongs to the immutable object selection, never the shared original.
+        metadata["display_uses"] = [value for value in MEDIA_DISPLAY_USES if value in display_uses]
     if transform is not None:
         transform = normalize_media_transform(transform)
         metadata["_transform"] = transform
@@ -188,6 +195,7 @@ def work_media_snapshot(work, *, slot="cover", primary=None):
         # Old local renditions without a captured statement stay blank until
         # explicitly reselected; do not invent historical attribution.
         **{name: primary.metadata_snapshot.get(name, "") for name in PUBLIC_METADATA_FIELDS},
+        "display_uses": primary.metadata_snapshot.get("display_uses", list(DEFAULT_MEDIA_DISPLAY_USES)),
         "renditions": [{"id": str(row.pk), "width": row.width, "height": row.height,
                          "url": f"/api/catalog/works/{work.pk}/{config['route']}/?rendition={row.pk}"} for row in sorted(by_width.values(), key=lambda row: row.width)],
     }
@@ -207,6 +215,7 @@ def media_rendition_variants(primary):
 def media_rendition_snapshot(primary, url_for):
     return {"media_id": str(primary.media_id), "primary_rendition_id": str(primary.pk),
             **{field: primary.metadata_snapshot.get(field, "") for field in PUBLIC_METADATA_FIELDS},
+            "display_uses": primary.metadata_snapshot.get("display_uses", list(DEFAULT_MEDIA_DISPLAY_USES)),
             "renditions": [{"id": str(row.pk), "width": row.width, "height": row.height, "url": url_for(row)} for row in media_rendition_variants(primary)]}
 
 

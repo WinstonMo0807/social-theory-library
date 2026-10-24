@@ -72,6 +72,9 @@ export type Work = {
   coverImage?: string;
   coverSources?: { url: string; width: number; height: number }[];
   coverAlt?: string;
+  coverDisplayUses?: import("./media-usage").MediaDisplayUse[];
+  shareImage?: string;
+  shareImageAlt?: string;
   pages: number;
   language?: string;
   authors?: { name: string; slug?: string | null }[];

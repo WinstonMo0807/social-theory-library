@@ -23,7 +23,7 @@ from catalog.media_views import MediaAssetSerializer
 from catalog.models import Edition, EditorialRevision, MediaAsset, MediaRendition, Work
 from catalog.services.covers import CoverCandidateUnavailable, prepare_cover_page
 from catalog.services.editorial_issues import EditConflict
-from catalog.services.media import (PUBLIC_METADATA_FIELDS, RENDITION_WIDTHS, WORK_IMAGE_SLOTS,
+from catalog.services.media import (PUBLIC_METADATA_FIELDS, RENDITION_WIDTHS, WORK_IMAGE_SLOTS, MEDIA_DISPLAY_USES, DEFAULT_MEDIA_DISPLAY_USES,
     build_rendition, ingest_image, normalize_media_transform, _select_prepared_work_image)
 from catalog.services.workspace_edits import workspace_edit_version
 from catalog.workspace_receipt_views import actor_for
@@ -66,11 +66,17 @@ class MediaWorkspaceCommandSerializer(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, required=False)
     transform = MediaTransformSerializer(required=False)
     metadata = MediaRevisionMetadataSerializer(required=False)
+    display_uses = serializers.ListField(child=serializers.ChoiceField(choices=MEDIA_DISPLAY_USES), max_length=4, required=False)
 
     def validate(self, value):
         fields = {"save": {"media_id", "transform", "metadata"}, "restore": {"rendition_id"}, "pdf_page": {"page"}, "clear": set()}[value["action"]]
-        if set(self.initial_data) != fields | {"request_id", "expected_version", "action", "slot"}:
+        expected = fields | {"request_id", "expected_version", "action", "slot"}
+        if value["action"] == "save" and "display_uses" in self.initial_data:
+            expected.add("display_uses")
+        if set(self.initial_data) != expected:
             raise serializers.ValidationError("操作参数不完整或含有其他操作的字段，请重新打开媒体编辑。")
+        if len(value.get("display_uses", [])) != len(set(value.get("display_uses", []))):
+            raise serializers.ValidationError("同一图片用途不能重复。")
         return value
 
 
@@ -97,6 +103,7 @@ class MediaWorkspaceRevisionSerializer(serializers.Serializer):
     media = MediaAssetSerializer()
     metadata = MediaRevisionMetadataSerializer()
     transform = MediaTransformSerializer(allow_null=True)
+    display_uses = serializers.ListField(child=serializers.ChoiceField(choices=MEDIA_DISPLAY_USES))
 
 
 class MediaWorkspaceHistorySerializer(serializers.Serializer):
@@ -154,6 +161,7 @@ def rendition_payload(row):
     return {"id": str(row.pk), "created_at": row.created_at, "width": row.width, "height": row.height,
             "url": f"/api/catalog/admin/media/renditions/{row.pk}/file/", "media": MediaAssetSerializer(row.media).data,
             "metadata": {field: row.metadata_snapshot.get(field, "") for field in PUBLIC_METADATA_FIELDS},
+            "display_uses": row.metadata_snapshot.get("display_uses", list(DEFAULT_MEDIA_DISPLAY_USES)),
             "transform": row.metadata_snapshot.get("_transform")}
 
 
@@ -230,7 +238,7 @@ class MediaWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView
                 if action == "save":
                     get_object_or_404(MediaAsset, pk=data["media_id"])
                     variants = {width: build_rendition(data["media_id"], width=width, kind=WORK_IMAGE_SLOTS[slot]["kind"],
-                        transform=data["transform"], metadata_override=data["metadata"]) for width in RENDITION_WIDTHS}
+                        transform=data["transform"], metadata_override=data["metadata"], display_uses=data.get("display_uses")) for width in RENDITION_WIDTHS}
                     primary = variants[640]
                 elif action == "restore":
                     primary = get_object_or_404(media_history(edition, slot), pk=data["rendition_id"])

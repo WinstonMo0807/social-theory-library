@@ -15,6 +15,7 @@ import {
   type ParallelSegment, type ParallelTerm, type ParallelVersion, type ParallelVersions,
 } from "@/lib/api/parallel-reader.client";
 import { usePublicSession } from "../public-session-provider";
+import { MediaPlacement } from "../media-placement";
 import { SiteHeader } from "../site-header";
 import { Dialog } from "../ui/dialog";
 import { ParallelColumn } from "./parallel-column";
@@ -288,7 +289,7 @@ function ParallelWorkspace({ assetId, initialPage, taskId, work, siteConfig, own
     <SiteHeader reader config={siteConfig} beforeLogout={canLeave} />
     <main className="parallel-main">
       <nav className="parallel-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><Link href="/explore">探索</Link><ChevronRight size={12} /><span>{manual ? "手动对齐与私人保存" : "原文与译本并读"}</span></nav>
-      <header className="parallel-heading"><div><h1>{manual ? "手动对齐与私人保存" : "原文与译本并读"}</h1><p>比较同一作品不同版本的术语和段落，保留各自的准确位置。</p></div><div className="parallel-book">{work?.coverImage ? <img src={normalizePublicResourceUrl(work.coverImage)} width={56} height={78} alt={`${work.title}封面`} /> : null}<div><strong>{work?.title || left?.title || "文献对照"}</strong><small>{work?.author || left?.authors.join(" · ")}</small><small>{work?.originalTitle || left?.original_title}</small></div></div><Link className="button secondary" href={`/reader/${assetId}?page=${left?.asset_id === assetId ? leftPage : initialPage}`}><ArrowLeft size={15} />返回单文献阅读</Link></header>
+      <header className="parallel-heading"><div><h1>{manual ? "手动对齐与私人保存" : "原文与译本并读"}</h1><p>比较同一作品不同版本的术语和段落，保留各自的准确位置。</p></div><div className="parallel-book">{work?.coverImage ? <MediaPlacement uses={work.coverDisplayUses}><img src={normalizePublicResourceUrl(work.coverImage)} width={56} height={78} alt={`${work.title}封面`} /></MediaPlacement> : null}<div><strong>{work?.title || left?.title || "文献对照"}</strong><small>{work?.author || left?.authors.join(" · ")}</small><small>{work?.originalTitle || left?.original_title}</small></div></div><Link className="button secondary" href={`/reader/${assetId}?page=${left?.asset_id === assetId ? leftPage : initialPage}`}><ArrowLeft size={15} />返回单文献阅读</Link></header>
       {notice ? <p className="parallel-notice" role="status"><Check size={15} />{notice}<button type="button" aria-label="关闭提示" onClick={() => setNotice("")}><X size={14} /></button></p> : null}
       {versions.loading ? <p role="status">正在读取可用版本…</p> : versions.error ? <p role="alert">{versions.error}<button type="button" onClick={versions.reload}>重新读取版本</button></p> : null}
       {versions.data?.truncated ? <p className="parallel-notice">当前显示部分已关联版本。可从文献详情选择另一个版本进入。</p> : null}

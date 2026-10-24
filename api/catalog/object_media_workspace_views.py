@@ -36,10 +36,13 @@ ACTION = "media.object_workspace.command"
 
 
 class ObjectMediaCommandSerializer(MediaWorkspaceCommandSerializer):
+    display_uses = None
     action = serializers.ChoiceField(choices=["save", "restore", "clear", "legacy"])
     slot = serializers.ChoiceField(choices=["portrait", "hero"])
 
     def validate(self, value):
+        if "display_uses" in self.initial_data:
+            raise serializers.ValidationError("此对象的独立展示用途尚未开放，请先保留当前用途。")
         if value["action"] == "legacy":
             if set(self.initial_data) != {"request_id", "expected_version", "action", "slot"}:
                 raise serializers.ValidationError("旧图仅从当前对象读取，不接受任意文件路径。")

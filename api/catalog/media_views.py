@@ -225,6 +225,7 @@ class PublicCoverMediaSerializer(serializers.Serializer):
     rights = serializers.CharField(allow_blank=True)
     license = serializers.CharField(allow_blank=True)
     credit = serializers.CharField(allow_blank=True)
+    display_uses = serializers.ListField(child=serializers.ChoiceField(choices=["detail", "list", "mobile", "share"]), required=False)
     renditions = PublicMediaRenditionSerializer(many=True)
 
 

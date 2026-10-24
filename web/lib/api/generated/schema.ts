@@ -11068,6 +11068,14 @@ export interface components {
             readonly renditions: components["schemas"]["MediaRendition"][];
             readonly references: unknown;
         };
+        /**
+         * @description * `detail` - detail
+         *     * `list` - list
+         *     * `mobile` - mobile
+         *     * `share` - share
+         * @enum {string}
+         */
+        MediaDisplayUseEnum: "detail" | "list" | "mobile" | "share";
         MediaRendition: {
             /** Format: uuid */
             readonly id: string;
@@ -11199,6 +11207,7 @@ export interface components {
             page?: number;
             transform?: components["schemas"]["MediaTransformRequest"];
             metadata?: components["schemas"]["MediaRevisionMetadataRequest"];
+            display_uses?: components["schemas"]["MediaDisplayUseEnum"][];
         };
         MediaWorkspaceHistory: {
             count: number;
@@ -11234,6 +11243,7 @@ export interface components {
             media: components["schemas"]["MediaAsset"];
             metadata: components["schemas"]["MediaRevisionMetadata"];
             transform: components["schemas"]["MediaTransform"] | null;
+            display_uses: components["schemas"]["MediaDisplayUseEnum"][];
         };
         MemoryContextInputRequest: {
             kind: components["schemas"]["ResearchMemoryContextKindEnum"];
@@ -14772,6 +14782,7 @@ export interface components {
             rights: string;
             license: string;
             credit: string;
+            display_uses?: components["schemas"]["MediaDisplayUseEnum"][];
             renditions: components["schemas"]["PublicMediaRendition"][];
         };
         PublicEditorialCard: {
