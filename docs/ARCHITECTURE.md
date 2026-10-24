@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 时间线出处选图
+
+原事件editorial_details保存固定媒体版本；TimelineEvidenceImage保护未发布直接草稿，EditorialRevisionMedia保护修改前后历史与变体。主要图片随事件发布，补充图片仅后台核对；公开文件要求当前approved事件的准确主要图片。0087只声明未执行。来源图片接线完成，重复事件归并与真实操作/像素仍待继续；见docs/stl4/TIMELINE_EDITOR_20261023.md。
+
 ## 2026-10-24 事件角色与版本责任分离
 
 原TimelineEventRelation补角色，原Edition/Contribution/PublisherAuthority供给版本责任。公开版只读明确出版版本的有效正式书目快照，章节责任不扩大、未发布元数据不外泄。新增只读24项分页接口，catalog0086仅声明未执行。角色源码接入，图片、归并与真实验收仍待完成；证据见docs/stl4/TIMELINE_EDITOR_20261023.md。

@@ -19787,8 +19787,7 @@ export interface components {
             end_year?: number | null;
             date_label?: string;
             orientation?: string;
-            /** Format: uri */
-            image?: string | null;
+            readonly image: string;
             readonly theory: components["schemas"]["TimelineNamedReference"] | null;
             readonly discipline: components["schemas"]["TimelineNamedReference"] | null;
             readonly subdiscipline: components["schemas"]["TimelineNamedReference"] | null;

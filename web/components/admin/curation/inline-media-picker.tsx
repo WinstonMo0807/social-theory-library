@@ -14,7 +14,7 @@ const fields = [["alt_text", "图片说明", 1000], ["source_label", "出处名�
 type Metadata = Record<(typeof fields)[number][0], string>;
 const metadataOf = (media: Media): Metadata => Object.fromEntries(fields.map(([key]) => [key, media[key] || ""])) as Metadata;
 
-export function InlineMediaPicker({ onSelect, selectedRenditionId, kind = "hero" }: { onSelect: (id: string, url: string) => void; selectedRenditionId?: string | null; kind?: "hero" | "portrait" }) {
+export function InlineMediaPicker({ onSelect, selectedRenditionId, kind = "hero", onDirtyChange, selectionMessage }: { onSelect: (id: string, url: string) => void; selectedRenditionId?: string | null; kind?: "hero" | "portrait"; onDirtyChange?: (dirty: boolean) => void; selectionMessage?: string }) {
   const user = useAdminSession(), owner = user ? String(user.id) : "";
   const selectLatest = useRef(onSelect);
   useEffect(() => { selectLatest.current = onSelect; }, [onSelect]);
@@ -23,6 +23,7 @@ export function InlineMediaPicker({ onSelect, selectedRenditionId, kind = "hero"
   const [data, setData] = useState<Page | null>(null), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [editing, setEditing] = useState<Media | null>(null), [metadata, setMetadata] = useState<Metadata | null>(null);
   const dirty = useUnsavedForm(metadata, editing ? metadataOf(editing) : null);
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   useEffect(() => {
     const controller = new AbortController(); lifetime.current = controller;
     const unsubscribe = subscribeToSessionChanges(() => { controller.abort(); setData(null); setEditing(null); setMetadata(null); setMessage("账户已变化，请重新打开素材。"); });
@@ -58,7 +59,7 @@ export function InlineMediaPicker({ onSelect, selectedRenditionId, kind = "hero"
     if (lifetime.current?.signal.aborted) return;
     if (root.current?.closest("fieldset[disabled]")) { setMessage("图片版本已生成。当前页面正在保存或核对，请完成后重新填入。"); return; }
     selectLatest.current(rendition.id, normalizePublicResourceUrl(rendition.url));
-    setMessage("已填入当前表单；保存草稿后保留，发布后才公开。已发布的图片版本保持原样。");
+    setMessage(selectionMessage || "已填入当前表单；保存草稿后保留，发布后才公开。已发布的图片版本保持原样。");
   }
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const body = new FormData(event.currentTarget);

@@ -6,10 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { PlacementSourcePicker } from "./placement-source-picker";
+import { TimelineEvidenceImage } from "./timeline-evidence-image";
 import styles from "./timeline-editor.module.css";
 
-export type TimelineSourceRecord = { id: string; kind: "book"|"article"|"archive"|"other"; citation: string; locator: string; quote: string; status: "adopted"|"disputed"|"related"; asset_id: string|null; page: number|null };
-export type TimelineEditorialDetails = { sources: TimelineSourceRecord[]; time_note: string; conflict_note: string; editor_note: string; confirmed: boolean; duplicate_reason: string };
+export type TimelineSourceRecord = { id: string; kind: "book"|"article"|"archive"|"other"; citation: string; locator: string; quote: string; status: "adopted"|"disputed"|"related"; asset_id: string|null; page: number|null; image_rendition_id?: string|null };
+export type TimelineEditorialDetails = { sources: TimelineSourceRecord[]; time_note: string; conflict_note: string; editor_note: string; confirmed: boolean; duplicate_reason: string; primary_image_rendition_id?: string|null };
 export const emptyTimelineDetails = (): TimelineEditorialDetails => ({ sources: [], time_note: "", conflict_note: "", editor_note: "", confirmed: false, duplicate_reason: "" });
 
 export function TimelineSupplementalSources({ owner, value, onChange }: { owner: string; value: TimelineEditorialDetails; onChange: (value: TimelineEditorialDetails) => void }) {
@@ -25,6 +26,7 @@ export function TimelineSupplementalSources({ owner, value, onChange }: { owner:
       <label>引用位置<input maxLength={240} value={row.locator} onChange={event => change(row.id,{locator:event.target.value})}/></label>
       <label>原文摘录<textarea rows={3} maxLength={4000} value={row.quote} onChange={event => change(row.id,{quote:event.target.value})}/></label>
       <label>核对结果<select value={row.status} onChange={event => change(row.id,{status:event.target.value as TimelineSourceRecord["status"]})}><option value="related">相关研究</option><option value="adopted">辅助采用</option><option value="disputed">存疑，保留分歧</option></select></label>
+      <TimelineEvidenceImage key={`${owner}:${row.id}`} owner={owner} value={row.image_rendition_id} onChange={image_rendition_id => change(row.id, { image_rendition_id })} />
       <div className={styles.controls}><button type="button" onClick={() => setPicking(picking === row.id ? "" : row.id)}>{picking === row.id ? "收起选取" : "从馆藏选取原文"}</button>{row.asset_id ? <button type="button" onClick={() => change(row.id,{asset_id:null,page:null})}>移除文件关联</button> : null}<button type="button" onClick={() => onChange({...value,confirmed:false,sources:value.sources.filter(item => item.id !== row.id)})}>移除这条出处</button></div>
       {row.asset_id ? <p>已关联原文文件 · PDF 第 {row.page} 页。文件身份随记录保存。</p> : null}
       {picking === row.id ? <PlacementSourcePicker owner={owner} kind="span" onChoose={({source}) => { change(row.id,{citation:source.title,quote:String(source.text||""),asset_id:source.asset_id||null,page:source.asset_id && typeof source.page_start === "number" ? source.page_start : null,locator:source.page_start ? `PDF 第 ${source.page_start} 页` : ""}); setPicking(""); }}/>:null}

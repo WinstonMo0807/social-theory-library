@@ -1389,6 +1389,9 @@ def _apply_topic_relations(target: Topic, patch: dict[str, Any], actor) -> None:
 
 
 def _apply_special_fields(target, patch: dict[str, Any], actor) -> None:
+    if isinstance(target, TheoryTimelineEvent) and "editorial_details" in patch:
+        from catalog.services.timeline_media import sync_evidence_images
+        sync_evidence_images(target)
     if isinstance(target, TheoryTimelineEvent) and "timeline_relations" in patch:
         from catalog.services.relation_editorial import apply_timeline_relations
         apply_timeline_relations(target, patch["timeline_relations"])
@@ -1575,6 +1578,9 @@ def create_editorial_revision(
     if isinstance(target, (KnowledgeNode, ReadingPath, Discipline, Subdiscipline, Topic)):
         from catalog.services.knowledge_media import protect_image_references
         protect_image_references(revision, target)
+    if isinstance(target, TheoryTimelineEvent):
+        from catalog.services.timeline_media import protect_evidence_images
+        protect_evidence_images(revision, target)
     return revision
 
 

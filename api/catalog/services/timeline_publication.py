@@ -263,6 +263,8 @@ def prepare_timeline_projections(events, context):
     events = [row for row in events if row.pk not in prepared]
     if not events:
         return
+    from catalog.services.timeline_media import prepare_primary_images
+    prepare_primary_images(events, context)
     work_ids, edition_ids, node_ids, person_ids = set(), set(), set(), set()
     for event in events:
         if event.subject_edition_id:
@@ -431,6 +433,10 @@ def event_projection(event, context):
     borrowed_portrait = next((row for row in scholars.values() if row["portrait_url"]), None)
     image_url = event.image.url if event.image else (subject["cover_url"] if subject else "") or (borrowed_portrait or {}).get("portrait_url", "")
     image_media = None if event.image else subject.get("cover_media") if subject and subject["cover_url"] else (borrowed_portrait or {}).get("portrait_media")
+    if (event.editorial_details or {}).get("primary_image_rendition_id"):
+        from catalog.services.timeline_media import primary_image_media
+        image_media = primary_image_media(event, context)
+        image_url = next((row["url"] for row in image_media["renditions"] if row["id"] == image_media["primary_rendition_id"]), "") if image_media else ""
     from catalog.timeline_participants import event_participants
     result = {
         "relations": list({(row["type"], row["id"], row["relation_type"]): row for row in targets}.values()),

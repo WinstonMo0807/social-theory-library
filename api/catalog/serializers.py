@@ -2135,11 +2135,17 @@ class TimelineWorkReferenceSerializer(serializers.Serializer):
 
 
 class TheoryTimelineEventSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
     theory = serializers.SerializerMethodField()
     discipline = serializers.SerializerMethodField()
     subdiscipline = serializers.SerializerMethodField()
     scholar = serializers.SerializerMethodField()
     work = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.CharField(allow_blank=True))
+    def get_image(self, obj):
+        from catalog.services.timeline_publication import event_projection
+        return event_projection(obj, self.context)["image_url"]
 
     class Meta:
         model = TheoryTimelineEvent
@@ -2674,6 +2680,8 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
         relations = validated_data.pop("normalized_relations", [])
         event = super().create(validated_data)
         self._sync_relations(event, relations)
+        from catalog.services.timeline_media import sync_evidence_images
+        sync_evidence_images(event)
         if event.review_status == RelationReviewStatus.APPROVED:
             from catalog.services.canonical_mutations import (
                 record_admin_canonical_change,
@@ -2698,6 +2706,8 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
         previous_status = instance.review_status
         relations = validated_data.pop("normalized_relations", None)
         event = super().update(instance, validated_data)
+        from catalog.services.timeline_media import sync_evidence_images
+        sync_evidence_images(event)
         if relations is not None:
             self._sync_relations(event, relations)
         if (

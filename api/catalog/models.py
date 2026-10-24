@@ -3891,6 +3891,17 @@ class EditorialRevisionMedia(UUIDTimeStampedModel):
         constraints = [models.UniqueConstraint(fields=["editorial_revision", "rendition"], name="unique_editorial_revision_media")]
 
 
+class TimelineEvidenceImage(UUIDTimeStampedModel):
+    """Protect the exact images selected by current, including unpublished, events."""
+
+    event = models.ForeignKey(TheoryTimelineEvent, on_delete=models.CASCADE, related_name="evidence_images")
+    source_key = models.CharField(max_length=36)
+    rendition = models.ForeignKey(MediaRendition, on_delete=models.PROTECT, related_name="timeline_evidence_references")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["event", "source_key"], name="unique_timeline_evidence_image")]
+
+
 class CatalogingSession(UUIDTimeStampedModel):
     """An editorial process, independent of file intake or public snapshots.
 

@@ -236,11 +236,11 @@ def media_rendition_variants(primary):
     return sorted(by_width.values(), key=lambda row: row.width)
 
 
-def media_rendition_snapshot(primary, url_for):
+def media_rendition_snapshot(primary, url_for, *, variants=None):
     return {"media_id": str(primary.media_id), "primary_rendition_id": str(primary.pk),
             **{field: primary.metadata_snapshot.get(field, "") for field in PUBLIC_METADATA_FIELDS},
             "display_uses": primary.metadata_snapshot.get("display_uses", list(DEFAULT_MEDIA_DISPLAY_USES)),
-            "renditions": [{"id": str(row.pk), "width": row.width, "height": row.height, "url": url_for(row)} for row in media_rendition_variants(primary)]}
+            "renditions": [{"id": str(row.pk), "width": row.width, "height": row.height, "url": url_for(row)} for row in (media_rendition_variants(primary) if variants is None else variants)]}
 
 
 def protect_editorial_renditions(revision, identifiers):
@@ -368,7 +368,8 @@ def media_reference_inventory(media_id, *, actor=None):
     for project in visible_projects(actor).filter(cover_rendition__media_id=media_id):
         references.append({"id": f"project:{project.pk}", "kind": "canonical", "label": project.title,
             "detail": "策划项目选图", "editor_url": f"/admin/recommendations?project={project.pk}", "public_url": ""})
-    target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline, "recommendation_issue": RecommendationIssue}
+    from catalog.models import TheoryTimelineEvent, TimelineEvidenceImage
+    target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline, "recommendation_issue": RecommendationIssue, "timeline_event": TheoryTimelineEvent}
     labels = {}
     for kind, model in target_models.items():
         ids = [row.editorial_revision.target_id for row in drafts if row.editorial_revision.target_type == kind]
@@ -383,6 +384,8 @@ def media_reference_inventory(media_id, *, actor=None):
         route = {"work": f"/admin/library/works/{target_id}", "scholar_profile": f"/admin/scholars/{target_id}", "knowledge_node": f"/admin/theories/{target_id}", "reading_path": f"/admin/reading-paths?path={target_id}", "discipline": f"/admin/disciplines?discipline={target_id}", "subdiscipline": f"/admin/subdisciplines?subdiscipline={target_id}"}.get(kind, "")
         if kind == "recommendation_issue":
             route = f"/admin/recommendations/issues/{target_id}"
+        elif kind == "timeline_event":
+            route = f"/admin/theories/timeline?event={target_id}"
         elif kind == "site_content":
             route = "/admin/about"
             labels[(kind, target_id)] = "网站与关于书库"
@@ -408,4 +411,10 @@ def media_reference_inventory(media_id, *, actor=None):
             public = target.editorial_status == "published"
             references.append({"id": f"{kind}:{target.pk}", "kind": "current_public" if public else "canonical", "label": target.name,
                                "detail": "学科页面图片", "editor_url": f"/admin/{kind}s?{kind}={target.pk}", "public_url": f"{public_prefix}{target.slug}" if public else ""})
+    for row in TimelineEvidenceImage.objects.filter(rendition__media_id=media_id).select_related("event").order_by("event_id", "source_key"):
+        public = row.source_key == "primary" and row.event.review_status == "approved"
+        references.append({"id": f"timeline:{row.pk}", "kind": "current_public" if public else "canonical",
+                           "label": row.event.title, "detail": "事件主要出处展示图片" if row.source_key == "primary" else "事件补充出处图片，仅编辑可见",
+                           "editor_url": f"/admin/theories/timeline?event={row.event_id}",
+                           "public_url": f"/theories/timeline?event={row.event_id}" if public else ""})
     return {"count": len(references), "results": references, "scope": "持久媒体选择、编辑修订与公开修订引用；旧未迁入媒体库的文件不在此范围", "reader_private_data": "not_read"}

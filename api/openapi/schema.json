@@ -75478,8 +75478,7 @@
                     },
                     "image": {
                         "type": "string",
-                        "format": "uri",
-                        "nullable": true
+                        "readOnly": true
                     },
                     "theory": {
                         "allOf": [
@@ -75545,6 +75544,7 @@
                     "discipline",
                     "event_type",
                     "id",
+                    "image",
                     "scholar",
                     "subdiscipline",
                     "theory",

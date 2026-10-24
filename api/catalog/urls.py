@@ -12,6 +12,7 @@ from catalog.timeline_editor_views import TimelineSaveReceiptView, TimelineSimil
 from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, TopicOrganizationPreviewView
 from catalog.topic_association_views import TopicAssociationChoicesView
 from catalog.timeline_participant_views import TimelineEditionParticipantsView
+from catalog.timeline_media_views import PublicTimelineImageView
 from catalog.scholar_work_views import ScholarWorkSelectionView
 from django.urls import path
 from .home_views import HomeView
@@ -692,6 +693,7 @@ urlpatterns = [
     ),
     path("theory-system/timeline/", NormalizedTimelineListView.as_view(), name="normalized-theory-timeline"),
     path("theory-system/timeline/<uuid:pk>/", NormalizedTimelineDetailView.as_view(), name="normalized-theory-timeline-detail"),
+    path("theory-system/timeline/<uuid:pk>/image/", PublicTimelineImageView.as_view(), name="timeline-public-image"),
     path("theory-system/graph/", LocalTheoryGraphView.as_view(), name="local-theory-graph"),
     path(
         "theory-system/evidence/<uuid:pk>/focus/",

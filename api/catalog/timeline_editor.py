@@ -40,7 +40,7 @@ def timeline_for_scholar(queryset, identifier):
 
 
 def validate_timeline_details(value, target=None):
-    allowed = {"sources", "time_note", "conflict_note", "editor_note", "confirmed", "duplicate_reason"}
+    allowed = {"sources", "time_note", "conflict_note", "editor_note", "confirmed", "duplicate_reason", "primary_image_rendition_id"}
     if not isinstance(value, dict) or set(value) - allowed:
         raise ValidationError("事件核对资料格式无效。")
     clean = {}
@@ -58,7 +58,7 @@ def validate_timeline_details(value, target=None):
         raise ValidationError("同一事件最多记录 20 条补充出处。")
     clean["sources"], seen = [], set()
     for row in rows:
-        if not isinstance(row, dict) or set(row) - {"id", "kind", "citation", "locator", "quote", "status", "asset_id", "page"}:
+        if not isinstance(row, dict) or set(row) - {"id", "kind", "citation", "locator", "quote", "status", "asset_id", "page", "image_rendition_id"}:
             raise ValidationError("补充出处字段无效。")
         try:
             identifier = str(UUID(str(row.get("id", ""))))
@@ -92,8 +92,11 @@ def validate_timeline_details(value, target=None):
             source["asset_id"], source["page"] = str(asset.pk), page
         elif page is not None:
             raise ValidationError("填写 PDF 页序前须选择对应文件。")
+        source["image_rendition_id"] = row.get("image_rendition_id")
         clean["sources"].append(source)
-    return clean
+    clean["primary_image_rendition_id"] = value.get("primary_image_rendition_id")
+    from catalog.services.timeline_media import validate_evidence_images
+    return validate_evidence_images(clean)
 
 
 def ensure_timeline_publication(target):
