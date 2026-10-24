@@ -13,7 +13,8 @@ from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.text import slugify
-from rest_framework import generics, status
+from rest_framework import generics, serializers, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError as APIValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
@@ -36,6 +37,7 @@ from .relation_editorial_views import StagedRelationEditorMixin
 
 from .models import (
     Asset,
+    Contribution,
     Discipline,
     CanonicalObjectRevision,
     EditorialRevision,
@@ -53,6 +55,7 @@ from .models import (
     PersonNodeRelation,
     PublicationState,
     ReadingPath,
+    ScholarProfile,
     Subdiscipline,
     RelationReviewStatus,
     TheoryReviewTask,
@@ -1122,17 +1125,31 @@ class AdminEvidenceDetailView(
         return {**super().get_serializer_context(), "include_unpublished_items": True}
 
 
-@extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("work", type=UUID), OpenApiParameter("file", type=UUID)]))
+class TheoryReviewPagination(PageNumberPagination):
+    page_size_query_param = "page_size"
+    max_page_size = 24
+
+    def get_page_size(self, request):
+        return serializers.IntegerField(min_value=1, max_value=24).run_validation(request.query_params.get("page_size", 24))
+
+
+@extend_schema_view(get=extend_schema(parameters=[
+    *[OpenApiParameter(name, type=UUID) for name in ("work", "file", "candidate_node", "scholar")],
+    OpenApiParameter("review_only", type=bool), OpenApiParameter("page_size", type=int),
+]))
 class AdminTheoryReviewTaskListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = TheoryReviewTaskSerializer
+    pagination_class = TheoryReviewPagination
 
     def get_queryset(self):
         queryset = TheoryReviewTask.objects.select_related(
             "work", "file", "candidate_node", "assigned_to"
         )
+        if getattr(self, "swagger_fake_view", False):
+            return queryset.none()
         params = self.request.query_params
-        for field in ("work", "file"):
+        for field in ("work", "file", "candidate_node"):
             value = params.get(field, "").strip()
             if value:
                 try:
@@ -1140,7 +1157,14 @@ class AdminTheoryReviewTaskListView(AdminPrivateResponseMixin, TheorySystemFeatu
                 except ValueError as exc:
                     raise APIValidationError({field: "材料来源编号无效，请从原处理任务重新打开。"}) from exc
                 queryset = queryset.filter(**{field: identifier})
-        for field in ("task_type", "status", "assigned_to", "candidate_node"):
+        if scholar_id := params.get("scholar", "").strip():
+            scholar_id = serializers.UUIDField().run_validation(scholar_id)
+            scholar = get_object_or_404(ScholarProfile, pk=scholar_id)
+            editions = Contribution.objects.filter(person_id=scholar.person_id, approved=True).values("edition_id")
+            queryset = queryset.filter(file__edition_id__in=editions, work_id=F("file__edition__work_id"))
+        if serializers.BooleanField().run_validation(params.get("review_only", False)):
+            queryset = queryset.filter(status__in=["pending", "needs_changes", "deferred", "insufficient_evidence"])
+        for field in ("task_type", "status", "assigned_to"):
             value = params.get(field, "").strip()
             if value:
                 queryset = queryset.filter(**{field: value})

@@ -13527,6 +13527,337 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-system/review-tasks/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_review_tasks_list",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "candidate_node",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "file",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "用于排序结果的字段。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "分页结果集中的页码。",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "review_only",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "scholar",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "搜索关键词。",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "work",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedTheoryReviewTaskList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_system_review_tasks_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TheoryReviewTaskRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TheoryReviewTaskRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TheoryReviewTaskRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TheoryReviewTask"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/review-tasks/{id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_review_tasks_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TheoryReviewTask"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_theory_system_review_tasks_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TheoryReviewTaskRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TheoryReviewTaskRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TheoryReviewTaskRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TheoryReviewTask"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_theory_system_review_tasks_partial_update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedTheoryReviewTaskRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedTheoryReviewTaskRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedTheoryReviewTaskRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TheoryReviewTask"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "catalog_admin_theory_system_review_tasks_destroy",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-timeline/": {
             "get": {
                 "operationId": "catalog_admin_theory_timeline_list",
@@ -53656,6 +53987,37 @@
                     }
                 }
             },
+            "PaginatedTheoryReviewTaskList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TheoryReviewTask"
+                        }
+                    }
+                }
+            },
             "PaginatedTheoryTimelineEventList": {
                 "type": "object",
                 "required": [
@@ -56001,6 +56363,65 @@
                 "properties": {
                     "research_personalization": {
                         "type": "boolean"
+                    }
+                }
+            },
+            "PatchedTheoryReviewTaskRequest": {
+                "type": "object",
+                "properties": {
+                    "task_type": {
+                        "$ref": "#/components/schemas/TheoryReviewTaskTaskTypeEnum"
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "candidate_node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "suggested_node_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "suggested_relation_type": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "evidence_pages": {},
+                    "evidence_text": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/TheoryReviewTaskStatusEnum"
+                    },
+                    "assigned_to": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "submitted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "reviewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "review_note": {
+                        "type": "string"
                     }
                 }
             },
@@ -74506,6 +74927,191 @@
                     "timeline_events",
                     "work_relations"
                 ]
+            },
+            "TheoryReviewTask": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "task_type": {
+                        "$ref": "#/components/schemas/TheoryReviewTaskTaskTypeEnum"
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "work_title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "file_page_count": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "candidate_node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "node_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "suggested_node_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "suggested_relation_type": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "evidence_pages": {},
+                    "evidence_text": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/TheoryReviewTaskStatusEnum"
+                    },
+                    "assigned_to": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "submitted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "reviewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "review_note": {
+                        "type": "string"
+                    },
+                    "viewer_href": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "file_page_count",
+                    "id",
+                    "node_name",
+                    "task_type",
+                    "updated_at",
+                    "viewer_href",
+                    "work_title"
+                ]
+            },
+            "TheoryReviewTaskRequest": {
+                "type": "object",
+                "properties": {
+                    "task_type": {
+                        "$ref": "#/components/schemas/TheoryReviewTaskTaskTypeEnum"
+                    },
+                    "work": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "candidate_node": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "suggested_node_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "suggested_relation_type": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "evidence_pages": {},
+                    "evidence_text": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/TheoryReviewTaskStatusEnum"
+                    },
+                    "assigned_to": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "submitted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "reviewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "review_note": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "task_type"
+                ]
+            },
+            "TheoryReviewTaskStatusEnum": {
+                "enum": [
+                    "pending",
+                    "needs_changes",
+                    "confirmed",
+                    "rejected",
+                    "deferred",
+                    "insufficient_evidence"
+                ],
+                "type": "string",
+                "description": "* `pending` - 待审核\n* `needs_changes` - 待修改\n* `confirmed` - 已确认\n* `rejected` - 已拒绝\n* `deferred` - 延后处理\n* `insufficient_evidence` - 证据不足"
+            },
+            "TheoryReviewTaskTaskTypeEnum": {
+                "enum": [
+                    "work_node",
+                    "node_relation",
+                    "new_node",
+                    "timeline"
+                ],
+                "type": "string",
+                "description": "* `work_node` - 文献与节点关系\n* `node_relation` - 节点关系\n* `new_node` - 建议新增节点\n* `timeline` - 时间轴事件"
             },
             "TheorySystemOverview": {
                 "type": "object",

@@ -1008,7 +1008,7 @@ const knowledgeRelationOptions = [
 export function TheoryRelationsAdmin() {
   const account = useEditorAccountKey();
   const search = useSearchParams();
-  return <TheoryRelationsEditor key={`${account}:${search.get("relation") || "list"}:${search.get("node") || "all"}:${search.get("review_work") || "all"}:${search.get("review_file") || "all"}`} requestedId={search.get("relation") || ""} />;
+  return <TheoryRelationsEditor key={`${account}:${search.get("relation") || "list"}:${search.get("node") || "all"}:${search.get("review_work") || "all"}:${search.get("review_file") || "all"}:${search.get("review_task") || "none"}`} requestedId={search.get("relation") || ""} />;
 }
 
 type InlineRelation = RelationSourceRequest & {nodeId:string;onGuardChange:(value:{dirty:boolean;pending:boolean;composing:boolean})=>void;onSaved:()=>void};
@@ -1022,6 +1022,8 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
   const location = useEditorListLocation();
   const sourceWork=location.search.get("review_work")||"",sourceFile=location.search.get("review_file")||"",sourceTask=location.search.get("processing_task")||"";
   const taskPage = adminPageNumber(location.search.get("review_page"));
+  const taskReference=location.search.get("review_task")||"",requestedTaskId=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(taskReference)?taskReference:"";
+  const taskOpened=useRef(false);
   const relationPage = adminPageNumber(location.search.get("relations_page"));
   const [editConflict, setEditConflict] = useState(false);
   const user=useAdminSession(),owner=String(user?.id||""),command=useScholarSave(owner,"knowledge_relation");
@@ -1062,6 +1064,14 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
     return params.toString();
   }, [taskStatus, taskFilter, taskPage, sourceWork, sourceFile]);
   const tasks = useAdminData<Page<ReviewTask>>(embedded?null:`/catalog/admin/theory-system/review-tasks/?${taskParams}`);
+  const requestedTask=useAdminData<ReviewTask>(!embedded&&requestedTaskId?`/catalog/admin/theory-system/review-tasks/${requestedTaskId}/`:null);
+  const taskMismatch=Boolean(requestedTask.data&&(sourceWork&&requestedTask.data.work!==sourceWork||sourceFile&&requestedTask.data.file!==sourceFile));
+  const openRequestedTask=useEffectEvent((task:ReviewTask)=>chooseTask(task));
+  useEffect(()=>{
+    if(!requestedTask.data||taskMismatch||taskOpened.current)return;
+    const row=requestedTask.data,timer=window.setTimeout(()=>{if(!taskOpened.current)openRequestedTask(row);},0);
+    return()=>window.clearTimeout(timer);
+  },[requestedTask.data,taskMismatch]);
   const nodes = useAdminData<Page<KnowledgeNode>>("/catalog/admin/theory-system/nodes/");
   const disciplines = useAdminData<Page<Discipline>>("/catalog/admin/disciplines/");
   const relationParams = new URLSearchParams({ page: String(relationPage) });
@@ -1078,6 +1088,8 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
   }, [requested.data]);
 
   function chooseTask(task: ReviewTask) {
+    if(composing.current||pendingAction)return;
+    taskOpened.current=true;
     setSelected(task);
     setCandidateNode(task.candidate_node ?? "");
     setRelationRole(workRelationOptions.some(([value]) => value === task.suggested_relation_type) ? task.suggested_relation_type : "general_mention");
@@ -1270,8 +1282,10 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
     <AdminFrame eyebrow="知识与关联" title="理论关系" description="先核对系统建议，或在下方手工编辑理论之间的关系。保存修改后，确认发布才会更新读者页面。">
       {command.recovery||knownSavedId||command.error?<section className="admin-panel" aria-label="关系保存恢复"><h2>核对原保存</h2><p>未知结果先查回；已完成但未读取的关系保留原编号，不能据此新建。</p>{command.error?<p role="alert">{command.error}</p>:null}{message?<p role="status">{message}</p>:null}{command.recovery?<><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("lookup")}>查回原请求</button><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("stop")}>停止未执行的保存</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("retry")}>重试同一请求</button>:null}</>:null}{knownSavedId?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("read")}>重新读取原关系</button>:null}</section>:null}
       <div inert={Boolean(command.recovery)||Boolean(pendingAction)||Boolean(knownSavedId)} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}>
-      <details hidden={Boolean(embedded)} className="theory-suggestion-section" open={Boolean(sourceWork || sourceFile || taskFilter || location.search.get("review_page") || location.search.get("review_status"))}>
+      <details hidden={Boolean(embedded)} className="theory-suggestion-section" open={Boolean(taskReference || sourceWork || sourceFile || taskFilter || location.search.get("review_page") || location.search.get("review_status"))}>
       <summary>系统建议{tasks.data ? `（当前筛选共 ${tasks.data.count} 条）` : ""}</summary>
+      {taskReference&&!requestedTaskId?<p role="alert">候选任务编号无效，请返回原材料入口。</p>:null}
+      {requestedTaskId?<><ErrorNotice message={requestedTask.error} retry={requestedTask.refresh}/>{requestedTask.loading?<p role="status">正在读取指定的原审核任务…</p>:null}{taskMismatch?<p role="alert">此任务不属于链接指定的材料，未自动选择。请返回原入口核对。</p>:null}</>:null}
       {sourceWork||sourceFile?<div className="theory-review-source" role="status"><span>已限定原处理材料的候选与证据{tasks.data?.results[0]?.work_title?` · ${tasks.data.results[0].work_title}`:""}。审核状态与搜索继续在此范围内筛选。</span>{sourceTask?<Link href={`/admin/processing?task_id=${encodeURIComponent(sourceTask)}&task_source=processing_job`}>返回处理任务</Link>:null}<button type="button" onClick={()=>location.update({review_work:null,review_file:null,processing_task:null,review_page:1})}>查看全部材料</button></div>:null}
       <div className="theory-review-layout">
         <section className="admin-panel theory-review-list">

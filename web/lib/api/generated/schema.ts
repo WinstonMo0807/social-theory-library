@@ -2774,6 +2774,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/review-tasks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_review_tasks_list"];
+        put?: never;
+        post: operations["catalog_admin_theory_system_review_tasks_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/review-tasks/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_review_tasks_retrieve"];
+        put: operations["catalog_admin_theory_system_review_tasks_update"];
+        post?: never;
+        delete: operations["catalog_admin_theory_system_review_tasks_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["catalog_admin_theory_system_review_tasks_partial_update"];
+        trace?: never;
+    };
     "/api/catalog/admin/theory-timeline/": {
         parameters: {
             query?: never;
@@ -13350,6 +13382,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["SubdisciplineList"][];
         };
+        PaginatedTheoryReviewTaskList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TheoryReviewTask"][];
+        };
         PaginatedTheoryTimelineEventList: {
             /** @example 123 */
             count: number;
@@ -14071,6 +14118,28 @@ export interface components {
         };
         PatchedResearchPreferenceInputRequest: {
             research_personalization?: boolean;
+        };
+        PatchedTheoryReviewTaskRequest: {
+            task_type?: components["schemas"]["TheoryReviewTaskTaskTypeEnum"];
+            /** Format: uuid */
+            work?: string | null;
+            /** Format: uuid */
+            file?: string | null;
+            /** Format: uuid */
+            candidate_node?: string | null;
+            suggested_node_name?: string;
+            suggested_relation_type?: string;
+            /** Format: double */
+            confidence?: number;
+            evidence_pages?: unknown;
+            evidence_text?: string;
+            status?: components["schemas"]["TheoryReviewTaskStatusEnum"];
+            assigned_to?: number | null;
+            /** Format: date-time */
+            submitted_at?: string | null;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            review_note?: string;
         };
         PatchedWorkFileRightsInputRequest: {
             /** Format: uuid */
@@ -19498,6 +19567,78 @@ export interface components {
             timeline_events: components["schemas"]["NormalizedTimelineEvent"][];
             work_relations: components["schemas"]["WorkNodeRelation"][];
         };
+        TheoryReviewTask: {
+            /** Format: uuid */
+            readonly id: string;
+            task_type: components["schemas"]["TheoryReviewTaskTaskTypeEnum"];
+            /** Format: uuid */
+            work?: string | null;
+            readonly work_title: string;
+            /** Format: uuid */
+            file?: string | null;
+            readonly file_page_count: number;
+            /** Format: uuid */
+            candidate_node?: string | null;
+            readonly node_name: string;
+            suggested_node_name?: string;
+            suggested_relation_type?: string;
+            /** Format: double */
+            confidence?: number;
+            evidence_pages?: unknown;
+            evidence_text?: string;
+            status?: components["schemas"]["TheoryReviewTaskStatusEnum"];
+            assigned_to?: number | null;
+            /** Format: date-time */
+            submitted_at?: string | null;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            review_note?: string;
+            readonly viewer_href: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        TheoryReviewTaskRequest: {
+            task_type: components["schemas"]["TheoryReviewTaskTaskTypeEnum"];
+            /** Format: uuid */
+            work?: string | null;
+            /** Format: uuid */
+            file?: string | null;
+            /** Format: uuid */
+            candidate_node?: string | null;
+            suggested_node_name?: string;
+            suggested_relation_type?: string;
+            /** Format: double */
+            confidence?: number;
+            evidence_pages?: unknown;
+            evidence_text?: string;
+            status?: components["schemas"]["TheoryReviewTaskStatusEnum"];
+            assigned_to?: number | null;
+            /** Format: date-time */
+            submitted_at?: string | null;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            review_note?: string;
+        };
+        /**
+         * @description * `pending` - 待审核
+         *     * `needs_changes` - 待修改
+         *     * `confirmed` - 已确认
+         *     * `rejected` - 已拒绝
+         *     * `deferred` - 延后处理
+         *     * `insufficient_evidence` - 证据不足
+         * @enum {string}
+         */
+        TheoryReviewTaskStatusEnum: "pending" | "needs_changes" | "confirmed" | "rejected" | "deferred" | "insufficient_evidence";
+        /**
+         * @description * `work_node` - 文献与节点关系
+         *     * `node_relation` - 节点关系
+         *     * `new_node` - 建议新增节点
+         *     * `timeline` - 时间轴事件
+         * @enum {string}
+         */
+        TheoryReviewTaskTaskTypeEnum: "work_node" | "node_relation" | "new_node" | "timeline";
         TheorySystemOverview: {
             disciplines: components["schemas"]["TheoryOverviewDiscipline"][];
             featured_nodes: components["schemas"]["KnowledgeNodeList"][];
@@ -27363,6 +27504,158 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScholarRelationReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_review_tasks_list: {
+        parameters: {
+            query?: {
+                candidate_node?: string;
+                file?: string;
+                /** @description 用于排序结果的字段。 */
+                ordering?: string;
+                /** @description 分页结果集中的页码。 */
+                page?: number;
+                page_size?: number;
+                review_only?: boolean;
+                scholar?: string;
+                /** @description 搜索关键词。 */
+                search?: string;
+                work?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTheoryReviewTaskList"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_review_tasks_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TheoryReviewTaskRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TheoryReviewTaskRequest"];
+                "multipart/form-data": components["schemas"]["TheoryReviewTaskRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TheoryReviewTask"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_review_tasks_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TheoryReviewTask"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_review_tasks_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TheoryReviewTaskRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TheoryReviewTaskRequest"];
+                "multipart/form-data": components["schemas"]["TheoryReviewTaskRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TheoryReviewTask"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_review_tasks_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_admin_theory_system_review_tasks_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTheoryReviewTaskRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTheoryReviewTaskRequest"];
+                "multipart/form-data": components["schemas"]["PatchedTheoryReviewTaskRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TheoryReviewTask"];
                 };
             };
         };

@@ -9,6 +9,7 @@ import type { components } from "@/lib/api/generated/schema";
 import { EntityPicker } from "@/components/admin/forms/workflow-fields";
 import { ScholarNodeLinkEditor } from "./scholar-links";
 import { ScholarRelationsEditor } from "./scholar-relations-editor";
+import { MaterialRelationCandidates } from "./material-relation-candidates";
 import shared from "./scholar-editor.module.css";
 import styles from "./node-relations.module.css";
 
@@ -103,7 +104,7 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
           {!data.count ? <p>当前范围没有关系。可调整筛选，或新建待核对记录。</p> : null}
           {data.count > 24 ? <nav className={shared.pagination} aria-label="节点关系分页"><button type="button" disabled={!data.previous} onClick={() => setPage(data.previous || 1)}>上一页</button><span>第 {page} 页 · 共 {data.count} 项</span><button type="button" disabled={!data.next} onClick={() => setPage(data.next || page)}>下一页</button></nav> : null}
         </>}
-        <RelationCandidates owner={owner} path={directoryPath} attempt={attempt} blocked={blocked} selected={selection} onSelect={selectRow}/>
+        <RelationCandidates centerKind={centerKind} centerId={nodeId} owner={owner} path={directoryPath} attempt={attempt} blocked={blocked} selected={selection} onSelect={selectRow}/>
       </div>
       <section ref={detail} tabIndex={-1} className={`${styles.detail} ${shared.nodeRelationDialog}`} aria-label="关系详情">
         <header><h3>关系详情</h3>{selection ? <button type="button" onClick={close}>收起详情</button> : null}</header>
@@ -120,18 +121,21 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
   </section>;
 }
 
-function RelationCandidates({owner,path,attempt,blocked,selected,onSelect}:{owner:string;path:string;attempt:number;blocked:boolean;selected:Selection|null;onSelect:(row:Row)=>void}) {
+function RelationCandidates({owner,path,attempt,blocked,selected,onSelect,centerKind,centerId}:{centerKind:"node"|"scholar";centerId:string;owner:string;path:string;attempt:number;blocked:boolean;selected:Selection|null;onSelect:(row:Row)=>void}) {
+  const [source,setSource]=useState<"materials"|"records">("materials");
   const [page,setPage]=useState(1),[data,setData]=useState<Page|null>(null),[error,setError]=useState(""),[retry,setRetry]=useState(0);
   useEffect(()=>{
+    if(source!=="records")return;
     const controller=new AbortController(),signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
     queueMicrotask(()=>{if(!controller.signal.aborted){setData(null);setError("");}});
     withPrivateOwner(owner,()=>apiRequest<Page>(`${path}?review_only=true&page_size=6&page=${page}`,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),signal)
       .then(value=>{if(!controller.signal.aborted)setData(value);}).catch(reason=>{if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:"候选关系暂不可读。");});
     return()=>controller.abort();
-  },[owner,path,attempt,page,retry]);
+  },[owner,path,attempt,page,retry,source]);
   return <section className={styles.candidates} aria-label="候选关系">
-    <header><h3>候选关系 <small>{data?.count??"…"}</small></h3><p>来自已保存草稿和待确认记录，核对原文与关系含义后再明确公开。</p></header>
-    {error?<p role="alert">{error}<button type="button" onClick={()=>{setPage(1);setRetry(value=>value+1);}}>从第一页重新读取</button></p>:!data?<p role="status">正在读取待核对关系…</p>:<>
+    <header><h3>候选关系 {source==="records"?<small>{data?.count??"…"}</small>:null}</h3><p>核对材料证据、关系含义与准确对象后，再明确公开。</p></header>
+    <nav className={styles.candidateSources} aria-label="候选来源"><button type="button" aria-pressed={source==="materials"} onClick={()=>setSource("materials")}>材料线索</button><button type="button" aria-pressed={source==="records"} onClick={()=>setSource("records")}>已保存待确认关系</button></nav>
+    {source==="materials"?<MaterialRelationCandidates key={attempt} owner={owner} centerKind={centerKind} centerId={centerId}/>:error?<p role="alert">{error}<button type="button" onClick={()=>{setPage(1);setRetry(value=>value+1);}}>从第一页重新读取</button></p>:!data?<p role="status">正在读取待核对关系…</p>:<>
       <ul className={styles.candidateRows}>{data.results.map(row=><li key={`${row.kind}:${row.id}`} data-selected={selected?.kind===row.kind&&selected.id===row.id}>
         <div><strong>{row.source_name} {row.direction==="undirected"?"—":row.direction==="bidirectional"?"↔":"→"} {row.target_name}</strong><p>{row.relation_label} · {statuses[row.status]||"待核对"}</p>
           <small>{row.evidence_source|| (row.has_source_anchor?"已有馆内原文，请核对准确版本。":"出处尚缺，请补齐后再公开。")}</small>

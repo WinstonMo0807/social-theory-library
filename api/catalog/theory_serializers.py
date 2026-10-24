@@ -1275,7 +1275,7 @@ class TheoryReviewTaskSerializer(serializers.ModelSerializer):
             "updated_at",
         )
 
-    def get_viewer_href(self, obj):
+    def get_viewer_href(self, obj) -> str | None:
         page = next(iter(obj.evidence_pages or []), 1)
         return f"/reader/{obj.file_id}?page={page}" if obj.file_id else None
 
