@@ -10,7 +10,6 @@ from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import F
-from django.urls import reverse
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -18,6 +17,7 @@ from catalog.models import Asset, CatalogPublicationRevision, Page
 from catalog.services.publication_eligibility import public_editions
 from catalog.services.public_feedback import safe_public_path
 from catalog.services.contribution_scope import whole_edition_contribution
+from catalog.services.media import snapshot_cover
 from .research import ResearchConflict, identifier
 from .source_models import SourceFollow, SourceFollowEvent
 
@@ -48,7 +48,7 @@ def resolve_public_source(raw="", *, scholar_profile_id=None, topic_id=None):
     path = safe_public_path(raw)
     base = canonical_path(path)
     result = {"path": path, "canonical_path": base, "status": "unavailable", "title": "来源当前不可用",
-        "authors": [], "cover_url": "", "source_type": "", "version_label": "", "location": "",
+        "authors": [], "cover_url": "", "cover_media": None, "source_type": "", "version_label": "", "location": "",
         "updated_at": None, "checked_at": timezone.now().isoformat(), "can_subscribe": False,
         "reader_url": "", "work_id": None, "edition_id": None, "asset_id": None,
         "catalog_revision_id": None, "document_revision_id": None,
@@ -82,7 +82,7 @@ def resolve_public_source(raw="", *, scholar_profile_id=None, topic_id=None):
         if summary:
             href = f"/scholars/{summary['slug']}"
             result.update(path=href, canonical_path=href, href=href, status="available", title=summary["name"],
-                cover_url=summary["portrait_url"] or "", source_type="公开学者档案", updated_at=summary["updated_at"],
+                cover_url=summary["portrait_url"] or "", cover_media=summary.get("portrait_media"), source_type="公开学者档案", updated_at=summary["updated_at"],
                 can_subscribe=True, scholar_profile_id=str(summary["profile_id"]), person_id=str(summary["person_id"]),
                 public_revision=summary["public_revision"], scope_notice=summary["scope_notice"], notice=summary["scope_notice"])
         return result
@@ -127,10 +127,7 @@ def resolve_public_source(raw="", *, scholar_profile_id=None, topic_id=None):
     if source_asset and readable and current.pk != source_asset.pk:
         status = "replaced"
     title = work.get("title") or "题名待补"
-    media = work.get("cover_media") or {}
-    cover = reverse("public-work-cover", kwargs={"work_id": edition.work_id}) if work.get("cover") or media else ""
-    if cover and media.get("primary_rendition_id"):
-        cover += f"?rendition={media['primary_rendition_id']}"
+    cover = snapshot_cover(edition)
     authors = [(row.get("person") or {}).get("preferred_name") or row.get("name", "")
                for row in snapshot.get("contributions", snapshot.get("contributors")) or []
                if isinstance(row, dict) and row.get("role") == "author" and whole_edition_contribution(row)]
@@ -142,7 +139,8 @@ def resolve_public_source(raw="", *, scholar_profile_id=None, topic_id=None):
             location = f"PDF 第 {page.group(1)} 页" + (f" · 印刷页 {page_row.printed_label}" if page_row.printed_label else "")
         else:
             location = "所选 PDF 页码当前无法核对"
-    result.update(status=status, title=title, authors=[value for value in authors if value], cover_url=cover,
+    result.update(status=status, title=title, authors=[value for value in authors if value],
+        cover_url=cover["cover_url"] or "", cover_media=cover["cover_media"],
         source_type="PDF 阅读文件" if current else "公开书目信息", version_label=edition_values.get("version_label") or "",
         location=location, updated_at=revision.activated_at.isoformat() if revision.activated_at else None,
         can_subscribe=True, reader_url=f"/reader/{current.pk}" if readable else "", work_id=str(edition.work_id),

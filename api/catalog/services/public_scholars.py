@@ -228,6 +228,7 @@ def scholar_follow_summary(profile_id):
         profile = _formal_profile(profile, published.materialized_preview)
     return {"profile_id": str(profile.pk), "person_id": str(profile.person_id), "slug": profile.slug,
         "name": profile.person.preferred_name, "portrait_url": PersonCompactSerializer().get_portrait(profile.person),
+        "portrait_media": PersonCompactSerializer().get_portrait_media(profile.person),
         "public_revision": revision["token"], "updated_at": revision["published_at"], "scope_notice": FOLLOW_NOTICE}
 
 

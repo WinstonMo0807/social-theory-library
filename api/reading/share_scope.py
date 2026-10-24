@@ -72,8 +72,8 @@ def material(row, kind, key, refs):
     return {"id": key, "version": digest(research.compact_reference(current)), "title": current.get("title") or "来源当前不可用",
         "text": quote[:2000], "available": current["source_status"] == "available", "truncated": len(quote) > 2000,
         "reference": {**research.compact_reference(current), "reader_url": current.get("reader_url"),
-            "printed_label": current.get("printed_label"), "citation": current.get("citation"), "cover_url": current.get("cover_url")},
-        "work": {"title": current.get("title"), "authors": current.get("authors", []), "year": current.get("publication_year"), "cover_url": current.get("cover_url")}}
+            "printed_label": current.get("printed_label"), "citation": current.get("citation"), "cover_url": current.get("cover_url"), "cover_media": current.get("cover_media")},
+        "work": {"title": current.get("title"), "authors": current.get("authors", []), "year": current.get("publication_year"), "cover_url": current.get("cover_url"), "cover_media": current.get("cover_media")}}
 
 
 def note(user, key, works, project=None, payload=None):
@@ -98,7 +98,7 @@ def note(user, key, works, project=None, payload=None):
     body = decrypt_private_text(row.body_ciphertext)
     if not body.strip():
         raise ValidationError("所选记录只有原文摘录，没有本人笔记。请在材料中分享公开原文。")
-    work = notebook.published_work(row.asset.edition.work_id)
+    work = notebook.published_work(row.asset.edition.work_id, edition_id=row.asset.edition_id)
     # A note is explicit authored content. Saved quotations and manuscript bytes
     # are never included in this projection, even if their source has withdrawn.
     return {"id": str(row.pk), "version": privacy.version(row), "title": work["title"], "text": body[:2000],

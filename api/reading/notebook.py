@@ -6,11 +6,11 @@ from uuid import NAMESPACE_URL, uuid5
 
 from django.db import transaction
 from django.db.models import CharField, Count, Value
-from django.urls import reverse
 from rest_framework.exceptions import NotFound, ValidationError
 
 from catalog.models import Edition
 from catalog.services.publication_eligibility import public_edition_q
+from catalog.services.media import snapshot_cover
 from . import privacy, research
 from .knowledge_models import KnowledgeSaveReceipt
 from .models import Annotation, Bookmark, ResearchProject
@@ -45,20 +45,17 @@ def owned(user, category, pk):
     return row
 
 
-def published_work(work_id):
-    edition = Edition.objects.filter(public_edition_q(), work_id=work_id, is_primary=True).select_related("active_catalog_revision").first()
+def published_work(work_id, *, edition_id=None):
+    editions = Edition.objects.filter(public_edition_q(), work_id=work_id)
+    edition = editions.filter(**({"pk": edition_id} if edition_id else {"is_primary": True})).select_related("active_catalog_revision").first()
     if edition is None:
-        return {"id": str(work_id), "title": "来源当前不可用", "authors": [], "year": None, "href": None, "cover_url": None}
+        return {"id": str(work_id), "title": "来源当前不可用", "authors": [], "year": None, "href": None, **snapshot_cover(None)}
     snapshot = edition.active_catalog_revision.snapshot or {}
     work, version = snapshot.get("work") or {}, snapshot.get("edition") or {}
-    media = work.get("cover_media") or {}
-    cover = reverse("public-work-cover", kwargs={"work_id": work_id}) if media or work.get("cover") else None
-    if cover and media.get("primary_rendition_id"):
-        cover += f"?rendition={media['primary_rendition_id']}"
     return {"id": str(work_id), "title": work.get("title") or "题名待补", "authors": [
         str(value.get("name") or (value.get("person") or {}).get("preferred_name") or "")
         for value in snapshot.get("contributions", []) if isinstance(value, dict) and value.get("role") == "author"],
-        "year": version.get("publication_year"), "href": f"/works/{work_id}", "cover_url": cover}
+        "year": version.get("publication_year"), "href": f"/works/{version.get('public_slug') or edition.pk}", **snapshot_cover(edition)}
 
 
 def record(user, category, row):
@@ -73,7 +70,7 @@ def record(user, category, row):
     tags = json.loads(decrypt_private_text(row.tags_ciphertext) or "[]") if is_note else []
     return {**privacy.target_of(row, category), "key": f"{category}:{row.pk}", "owner_id": str(user.pk),
         "kind": row.kind if is_note else "bookmark", "asset_id": str(row.asset_id), "page_id": str(row.page_id),
-        "pdf_page": row.page.index, "work": published_work(row.asset.edition.work_id),
+        "pdf_page": row.page.index, "work": published_work(row.asset.edition.work_id, edition_id=row.asset.edition_id),
         "body": decrypt_private_text(row.body_ciphertext) if is_note else "", "tags": tags,
         "label": "" if is_note else row.label, "saved_quote": row.quote if is_note else "",
         "source": source, "created_at": row.created_at, "updated_at": row.updated_at,

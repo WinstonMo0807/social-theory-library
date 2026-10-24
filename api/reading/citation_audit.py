@@ -1266,7 +1266,7 @@ def original_document(audit):
 
 def refresh_bibliography_sources(payload):
     """Rehydrate public metadata on read; private raw entries and human choices remain intact."""
-    from django.urls import reverse
+    from catalog.services.media import snapshot_cover
     entries = [*payload.get("bibliography", []),
         *(entry for report in payload.get("parse_history", []) for entry in report.get("bibliography", []))]
     ids = {candidate["edition_id"] for entry in entries for candidate in entry.get("candidates", [])}
@@ -1283,11 +1283,10 @@ def refresh_bibliography_sources(payload):
             if edition is None:
                 refreshed.append({"edition_id": candidate["edition_id"], "source_status": "source_unavailable",
                     "title": "该馆藏版本当前不可访问", "basis": candidate.get("basis", ""),
-                    "authors": [], "cover_url": None, "citation": "", "year": None, "version_label": ""})
+                    "authors": [], **snapshot_cover(None), "citation": "", "year": None, "version_label": ""})
                 continue
             snapshot = edition.active_catalog_revision.snapshot or {}
             work, values = snapshot.get("work") or {}, snapshot.get("edition") or {}
-            media = work.get("cover_media") or {}
             from catalog.services.contribution_projection import edition_author_projection
             authors = edition_author_projection(snapshot)["authors"]
             signals = _identity_signals(_bibliography_identity(entry), entry["raw"], snapshot)
@@ -1297,8 +1296,6 @@ def refresh_bibliography_sources(payload):
                 "identity_signals": signals,
                 "review_fields": [key for key, signal in signals.items() if signal["status"] in {"conflict", "needs_review"}],
                 "citation": format_gbt_7714_2025(edition, snapshot=snapshot),
-                "cover_url": (reverse("public-work-cover", kwargs={"work_id": edition.work_id})
-                    + (f"?rendition={media['primary_rendition_id']}" if media.get("primary_rendition_id") else ""))
-                    if media or work.get("cover") else None})
+                **snapshot_cover(edition)})
         entry["candidates"] = refreshed
         entry["selected_source_status"] = "available" if selected in editions else "source_unavailable" if selected else "not_selected"

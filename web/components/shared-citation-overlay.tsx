@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import { createRequestKey } from "../lib/request-key";
 import Link from "next/link";
@@ -381,7 +382,7 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
         {editingQuote ? <div className={styles.quoteEditor}><label>调整选文范围<textarea maxLength={20000} value={editedQuote} disabled={busy || unknown} onChange={event => setEditedQuote(event.target.value)} /></label><p className={styles.hint}>请保留原文文字。系统将核对来源中的唯一位置。</p><div className={styles.actions}><button disabled={busy || unknown} onClick={() => setEditingQuote(false)}>取消</button><button disabled={busy || unknown || !editedQuote.trim()} onClick={() => void run(editQuote)}>核对并应用</button></div></div> : <blockquote>{preview.reference.quote}</blockquote>}
         {preview.reference.anchors ? <p className={styles.hint}>跨页引文按完整来源保存；调整文字时请回到原文逐页选择。</p> : null}
       </section> : null}
-      {source ? <section><h3><span>2</span>来源信息</h3><div className={styles.source}>{source.cover_url ? <Image unoptimized width={68} height={96} src={source.cover_url} alt={`${source.title}封面`} /> : <div className={styles.noCover}>暂无封面</div>}<div><strong>{source.title}</strong><p>{source.authors.join("、")}</p><p>{[source.publisher, source.publication_year].filter(Boolean).join(" · ")}</p>{source.pdf_page ? <p>{source.printed_label ? `书页 ${source.printed_label} · ` : ""}PDF 第 {source.pdf_page} 页</p> : <p>书目引用，不包含具体页码。</p>}<Link href={source.reader_url || source.work_url}>查看详情</Link></div></div></section> : null}
+      {source ? <section><h3><span>2</span>来源信息</h3><div className={styles.source}>{source.cover_url ? <MediaPlacement uses={source.cover_media?.display_uses} fallback={<div className={styles.noCover}>暂无封面</div>}><Image unoptimized width={68} height={96} src={source.cover_url} alt={`${source.title}封面`} /></MediaPlacement> : <div className={styles.noCover}>暂无封面</div>}<div><strong>{source.title}</strong><p>{source.authors.join("、")}</p><p>{[source.publisher, source.publication_year].filter(Boolean).join(" · ")}</p>{source.pdf_page ? <p>{source.printed_label ? `书页 ${source.printed_label} · ` : ""}PDF 第 {source.pdf_page} 页</p> : <p>书目引用，不包含具体页码。</p>}<Link href={source.reader_url || source.work_url}>查看详情</Link></div></div></section> : null}
       <section><h3><span>3</span>加入与保存</h3>
         {ownerId ? <>
           <div className={styles.targetTabs} aria-label="保存目标">{(["research", "booklist"] as const).map(kind => <button key={kind} aria-pressed={target === kind} disabled={busy || unknown || Boolean(bookRecovery)} onClick={() => { setTarget(kind); setCreating(false); setUndo(null); }}>{kind === "research" ? "加入研究" : "加入书单"}</button>)}</div>

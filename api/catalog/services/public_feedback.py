@@ -115,7 +115,7 @@ def detail(row, *, history_page=1):
     from reading.source_follow import resolve_public_source
 
     source = resolve_public_source(row.path)
-    source = {key: source[key] for key in ("status", "canonical_path", "title", "authors", "cover_url", "source_type",
+    source = {key: source[key] for key in ("status", "canonical_path", "title", "authors", "cover_url", "cover_media", "source_type",
         "version_label", "location", "updated_at", "checked_at", "reader_url", "notice")}
     events = AuditEvent.objects.filter(action=ACTION, object_type="public_feedback", object_id=str(row.id)).order_by("-created_at", "-id")
     count = events.count()

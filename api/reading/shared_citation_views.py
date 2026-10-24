@@ -3,7 +3,6 @@ import json
 
 from django.contrib.auth.models import AnonymousUser
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -13,6 +12,7 @@ from rest_framework.views import APIView
 
 from catalog.models import Edition
 from catalog.services.citations import citation_bundle
+from catalog.services.media import snapshot_cover
 from catalog.services.publication_eligibility import active_catalog_snapshot, public_edition_q
 from . import research
 from .research_serializers import EvidenceReferenceInput
@@ -88,13 +88,11 @@ class PublicCitationPreviewView(APIView):
         printed = reference.get("printed_label") or "" if reference else ""
         page = reference.get("pdf_page") if reference else None
         label = printed or (str(page) if page else "")
-        cover = work.get("cover_media") or {}
-        cover_url = reverse("public-work-cover", kwargs={"work_id": str(edition.work_id)}) if cover or work.get("cover") else None
         source = {"edition_id": str(edition.id), "work_id": str(edition.work_id), "title": work.get("title") or "未题名",
             "authors": [str((row.get("person") or {}).get("preferred_name") or row.get("name") or "")
                 for row in snapshot.get("contributions", []) if isinstance(row, dict) and row.get("role") == "author"],
             "publication_year": edition_values.get("publication_year"), "publisher": edition_values.get("publisher") or "",
-            "cover_url": cover_url, "work_url": f"/works/{edition_values.get('public_slug') or edition.id}",
+            **snapshot_cover(edition), "work_url": f"/works/{edition_values.get('public_slug') or edition.id}",
             "reader_url": reference.get("reader_url") if reference else None,
             "pdf_page": page, "printed_label": printed, "source_status": "available"}
         response = Response({"source": source, "reference": reference, "citations": citation_bundle(edition, label, snapshot=snapshot)})

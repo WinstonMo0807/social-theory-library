@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -53,7 +54,7 @@ function SelectedEntry({ selection, filters, parentName, backHref, onRetry, pend
     <section className={styles.scholars} aria-label="相关学者">
       <h3>相关学者</h3>
       {entry.scholars.length ? entry.scholars.map(scholar => <Link href={scholar.href} key={scholar.id}>
-        {scholar.portrait_url ? <img src={scholar.portrait_url} alt="" loading="lazy" /> : <span className={styles.portraitEmpty} aria-hidden="true"><UserRound size={23} /></span>}
+        {scholar.portrait_url ? <MediaPlacement uses={scholar.portrait_media?.display_uses} fallback={<span className={styles.portraitEmpty} aria-hidden="true"><UserRound size={23} /></span>}><img src={scholar.portrait_url} alt="" loading="lazy" /></MediaPlacement> : <span className={styles.portraitEmpty} aria-hidden="true"><UserRound size={23} /></span>}
         <span><strong>{scholar.name}</strong>{scholar.original_name ? <small>{scholar.original_name}</small> : null}</span><ChevronRight size={17} />
       </Link>) : <p className={styles.missing}>尚无已确认并公开的学者关联。</p>}
     </section>

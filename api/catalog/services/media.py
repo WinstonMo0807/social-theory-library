@@ -31,6 +31,30 @@ WORK_IMAGE_SLOTS = {
 }
 
 
+def snapshot_cover(edition):
+    """Project an already-authorized active edition; never fall back to draft files."""
+    from urllib.parse import urlencode
+    from django.urls import reverse
+
+    revision = edition.active_catalog_revision if edition else None
+    snapshot = revision.snapshot if revision and isinstance(revision.snapshot, dict) else {}
+    work = snapshot.get("work") or {}
+    media = work.get("cover_media") or None
+    if not media and not work.get("cover"):
+        return {"cover_url": None, "cover_media": None}
+    path = reverse("public-work-cover", kwargs={"work_id": edition.work_id})
+
+    def url(rendition=None):
+        query = {"edition_id": str(edition.pk)}
+        if rendition:
+            query["rendition"] = str(rendition)
+        return f"{path}?{urlencode(query)}"
+
+    return {"cover_url": url(media.get("primary_rendition_id") if media else None),
+        "cover_media": {**media, "renditions": [{**row, "url": url(row["id"])}
+            for row in media.get("renditions", []) if row.get("id")]} if media else None}
+
+
 class MediaValidationError(ValueError):
     pass
 

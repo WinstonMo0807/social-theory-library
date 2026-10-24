@@ -111,15 +111,15 @@ def refresh_payload(user, payload):
             item["reference"] = {**research.compact_reference(reference),
                 "source_status": reference["source_status"], "reader_url": reference.get("reader_url")}
             item.update(source_status=reference["source_status"], href=reference.get("reader_url"),
-                reader_url=reference.get("reader_url"), cover_url=reference.get("cover_url"))
+                reader_url=reference.get("reader_url"), cover_url=reference.get("cover_url"), cover_media=reference.get("cover_media"))
             if reference["source_status"] == "available":
                 item.update(title=reference["title"], authors=reference.get("authors", []),
                     publication_year=reference.get("publication_year"))
         elif current and _source_identity(current) == _source_identity(item):
-            for key in ("source_status", "href", "reader_url", "cover_url", "authors", "publication_year", "substitutes"):
+            for key in ("source_status", "href", "reader_url", "cover_url", "cover_media", "authors", "publication_year", "substitutes"):
                 item[key] = deepcopy(current.get(key))
         else:
-            item.update(source_status="revision_changed" if current else "unavailable", href=None, reader_url=None, cover_url=None)
+            item.update(source_status="revision_changed" if current else "unavailable", href=None, reader_url=None, cover_url=None, cover_media=None)
         item["available"] = item.get("source_status") == "available"
         if not item["available"]:
             item["reader_url"] = None
@@ -127,7 +127,7 @@ def refresh_payload(user, payload):
     # withdrawn sources. History has no active links or embedded source excerpts.
     def redact_history(value):
         if isinstance(value, dict):
-            return {key: None if key in {"reader_url", "href", "cover_url"} else redact_history(child)
+            return {key: None if key in {"reader_url", "href", "cover_url", "cover_media"} else redact_history(child)
                 for key, child in value.items() if key not in {"quote", "reference", "model_suggestion"}}
         if isinstance(value, list):
             return [redact_history(child) for child in value]

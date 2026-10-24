@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from . import source_follow
 from .research_views import PrivateResponses
 from .source_models import SourceFollow
+from catalog.media_views import PublicCoverMediaSerializer
 
 OWNER = OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER, required=True)
 
@@ -23,6 +24,7 @@ class PublicSourceStatus(serializers.Serializer):
     title = serializers.CharField()
     authors = serializers.ListField(child=serializers.CharField())
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     source_type = serializers.CharField(allow_blank=True)
     version_label = serializers.CharField(allow_blank=True)
     location = serializers.CharField(allow_blank=True)

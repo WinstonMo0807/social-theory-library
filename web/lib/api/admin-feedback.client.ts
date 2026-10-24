@@ -1,3 +1,4 @@
+import type { components } from "./generated/schema";
 import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "../api";
 
 export const feedbackCategories = { content: "内容错误", function: "功能问题", usage: "使用咨询", suggestion: "改进建议", other: "其他", citation: "引用问题", accessibility: "无障碍" } as const;
@@ -15,7 +16,7 @@ export type AdminFeedbackDetail = AdminFeedbackSummary & {
   body: string; contact: string; path: string; consent_at: string | null; consent_version: string; note: string;
   handled_by: string; can_follow_up: boolean; history: FeedbackHistory;
   source: { status: "available" | "replaced" | "unavailable" | "page"; canonical_path: string; title: string; authors: string[];
-    cover_url: string; source_type: string; version_label: string; location: string; updated_at: string | null;
+    cover_url: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; source_type: string; version_label: string; location: string; updated_at: string | null;
     checked_at: string; reader_url: string; notice: string };
 };
 export type AdminFeedbackList = {

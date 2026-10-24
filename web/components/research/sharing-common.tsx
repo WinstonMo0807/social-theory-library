@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -55,6 +56,6 @@ export function SharedSummary({ value, showTitle = true }: { value: Pick<ShareCo
     const cover = typeof item.work?.cover_url === "string" ? item.work.cover_url : null;
     const reader = typeof item.reference?.reader_url === "string" ? item.reference.reader_url : null;
     const citation = typeof item.reference?.citation === "string" ? item.reference.citation : null;
-    return <article key={index}>{cover ? <Image unoptimized width={48} height={68} src={cover} alt="文献封面" /> : null}<div><strong>{item.title}</strong>{item.text ? <p>{item.text}</p> : <p className={styles.muted}>分享书目信息，原文请从书库访问。</p>}{item.truncated ? <small>只包含此处显示的前 2000 字。</small> : null}{item.tags?.length ? <small>{item.tags.join(" · ")}</small> : null}{citation ? <small>{citation}</small> : null}{reader ? <Link href={reader}>查看公开原文</Link> : typeof item.work?.href === "string" ? <Link href={item.work.href}>查看公开书目</Link> : null}</div></article>;
+    return <article key={index}>{cover ? <MediaPlacement uses={item.work?.cover_media?.display_uses} fallback={null}><Image unoptimized width={48} height={68} src={cover} alt="文献封面" /></MediaPlacement> : null}<div><strong>{item.title}</strong>{item.text ? <p>{item.text}</p> : <p className={styles.muted}>分享书目信息，原文请从书库访问。</p>}{item.truncated ? <small>只包含此处显示的前 2000 字。</small> : null}{item.tags?.length ? <small>{item.tags.join(" · ")}</small> : null}{citation ? <small>{citation}</small> : null}{reader ? <Link href={reader}>查看公开原文</Link> : typeof item.work?.href === "string" ? <Link href={item.work.href}>查看公开书目</Link> : null}</div></article>;
   })}</section> : null)}{value.message ? <section><h3>附言</h3><p>{value.message}</p></section> : null}<p className={styles.muted}>不包含：{value.excluded.join("、")}。</p></div>;
 }

@@ -8521,6 +8521,7 @@ export interface components {
             title: string;
             authors: string[];
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             source_type: string;
             version_label: string;
             location: string;
@@ -14727,6 +14728,7 @@ export interface components {
             birth_year: number | null;
             death_year: number | null;
             portrait_url: string;
+            portrait_media?: components["schemas"]["PublicCoverMedia"] | null;
             scholar_slug: string;
         };
         PublicConceptDetail: {
@@ -15097,6 +15099,7 @@ export interface components {
             title: string;
             authors: string[];
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             source_type: string;
             version_label: string;
             location: string;
@@ -16893,9 +16896,7 @@ export interface components {
             available: boolean;
             truncated?: boolean;
             tags?: string[];
-            work?: {
-                [key: string]: unknown;
-            };
+            work?: components["schemas"]["ShareWorkSummary"];
             reference?: {
                 [key: string]: unknown;
             } | null;
@@ -16939,9 +16940,7 @@ export interface components {
             available: boolean;
             truncated?: boolean;
             tags?: string[];
-            work?: {
-                [key: string]: unknown;
-            };
+            work?: components["schemas"]["ShareWorkSummary"];
             reference?: {
                 [key: string]: unknown;
             } | null;
@@ -17096,6 +17095,16 @@ export interface components {
             total_pages: number;
             owner_id: string;
             results: components["schemas"]["ShareSource"][];
+        };
+        ShareWorkSummary: {
+            /** Format: uuid */
+            id?: string;
+            title: string | null;
+            authors?: string[];
+            year?: number | null;
+            href?: string | null;
+            cover_url?: string | null;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
         };
         SiteConfig: {
             /** @default  */

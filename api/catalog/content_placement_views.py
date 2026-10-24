@@ -5,6 +5,7 @@ from django.db.models import Q, Case, When, Value, IntegerField, Exists, OuterRe
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
+from catalog.media_views import PublicCoverMediaSerializer
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -146,6 +147,7 @@ class PublicConceptAuthorSerializer(PlacementUsageAuthorSerializer):
     birth_year = serializers.IntegerField(allow_null=True)
     death_year = serializers.IntegerField(allow_null=True)
     portrait_url = serializers.CharField(allow_blank=True)
+    portrait_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     scholar_slug = serializers.CharField(allow_blank=True)
 
 

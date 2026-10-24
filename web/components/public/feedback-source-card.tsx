@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
@@ -28,7 +29,7 @@ export function usePublicSource(path: string) {
 export function FeedbackSourceCard({ path }: { path: string }) {
   const state = usePublicSource(path);
   return <div className={styles.related} aria-live="polite">
-    {state.source?.cover_url ? <img src={normalizePublicResourceUrl(state.source.cover_url)} alt="" width={42} height={60} /> : <FileText size={30} aria-hidden="true" />}
+    {state.source?.cover_url ? <MediaPlacement uses={state.source.cover_media?.display_uses} fallback={<FileText size={30} aria-hidden="true" />}><img src={normalizePublicResourceUrl(state.source.cover_url)} alt="" width={42} height={60} /></MediaPlacement> : <FileText size={30} aria-hidden="true" />}
     <div><strong>{state.source?.title || (state.loading ? "正在读取相关页面…" : "相关页面尚未核对")}</strong>
       {state.source ? <span>{[state.source.authors.join("、"), state.source.version_label, state.source.location, sourceStatusLabel[state.source.status]].filter(Boolean).join(" · ")}</span> : null}
       {state.error ? <span role="alert">{state.error}<button type="button" onClick={state.reload}>重新读取</button></span> : null}

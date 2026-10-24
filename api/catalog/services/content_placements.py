@@ -440,6 +440,8 @@ def _groups(value, items):
 
 def public_concept_detail(result, original_items):
     """Project confirmed uses from the existing ledger, without copying failed sources."""
+    from catalog.serializers import PersonCompactSerializer
+    portraits = PersonCompactSerializer()
     confirmed = [row for row in original_items if (row.get("concept_usage") or {}).get("review_status") == "confirmed"]
     profiles = {str(profile.person_id): profile for profile in public_scholar_queryset().filter(
         person_id__in=[row["concept_usage"].get("source_person_id") for row in confirmed
@@ -460,7 +462,8 @@ def public_concept_detail(result, original_items):
                                                   "attribution_note", "title", "explanatory_object", "period", "context")},
             "author": {**author, "original_name": person.original_name if person else "",
                        "birth_year": person.birth_year if person else None, "death_year": person.death_year if person else None,
-                       "portrait_url": person.portrait.url if person and person.portrait else "",
+                       "portrait_url": portraits.get_portrait(person) if person else "",
+                       "portrait_media": portraits.get_portrait_media(person) if person else None,
                        "scholar_slug": profile.slug if profile else ""},
             "source": {key: source.get(key) for key in ("id", "type", "title", "public_eligible", "work_id", "work_title", "edition_id", "edition_label",
                        "asset_id", "document_revision_id", "page_start", "page_end", "printed_label", "text", "reader_url")},

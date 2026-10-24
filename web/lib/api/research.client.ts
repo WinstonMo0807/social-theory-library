@@ -1,3 +1,4 @@
+import type { components } from "./generated/schema";
 import { apiRequest, apiStreamRequest, getServerSessionCredential } from "../api";
 import type { Paginated } from "./pagination";
 import type { DiscoveryFilters, DiscoveryPassage } from "./discovery.types";
@@ -17,6 +18,7 @@ export type ResolvedEvidence = EvidenceAnchor & ReaderGeometryBox & {
   quote?: string; citation?: string; authors?: string[]; locator_precision?: string;
   bbox?: number[]; start_offset?: number; end_offset?: number;
   coordinate_space?: { width: number; height: number; text_source: string; requires_reader_transform: boolean };
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   anchors?: ResolvedEvidence[];
 };
 export type QueryScope = { kind: "library" | "works" | "passages" | "filtered"; filters?: DiscoveryFilters; references?: EvidenceReference[]; allow_neighbors?: boolean };
@@ -48,7 +50,7 @@ export type PlanPolicy = {
 };
 export type PlanItem = {
   id: string; work_id: string; title?: string; status: "pending" | "reading" | "completed" | "skipped";
-  reference?: ResolvedEvidence | null; reader_url?: string | null; available?: boolean; cover_url?: string | null;
+  reference?: ResolvedEvidence | null; reader_url?: string | null; available?: boolean; cover_media?: components["schemas"]["PublicCoverMedia"] | null; cover_url?: string | null;
   authors?: string[]; publication_year?: number | null; stage?: string; reason?: string; learning_goal?: string;
   note?: string; estimated_minutes?: number | null; reading_scope?: string;
   difficulty?: { level: PlanLevel | null; basis?: string; notice?: string };
@@ -92,7 +94,7 @@ export type PrivateCitationReference = { source_id: string; source_generation: n
 export type AuditCandidate = {
   edition_id: string; work_id?: string; title: string; year?: number | null; version_label?: string; citation?: string;
   basis?: string; similarity?: number | null; review_fields?: string[]; source_status?: string;
-  cover_url?: string | null; authors?: string[];
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null; cover_url?: string | null; authors?: string[];
   identity_signals?: Record<string, { status: string; [key: string]: unknown }>;
 };
 export type AuditEntry = { id: string; label?: string; raw: string; doi?: string; location?: AuditLocation;

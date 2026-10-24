@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronRight, Clock3, Lightbulb, LockKeyhole, MoreHorizontal, Pencil, Save, SlidersHorizontal, X } from "lucide-react";
@@ -146,9 +147,9 @@ function SummaryBlock({ title, onEdit, disabled, children }: { title: string; on
   return <section><header><h3>{title}</h3><button onClick={onEdit} disabled={disabled}><Pencil size={11} />编辑</button></header>{children}</section>;
 }
 function PlanCover({ item }: { item: PlanItem }) {
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState("");
   // The API supplies the published edition's real cover; missing covers stay empty.
-  return item.cover_url && !failed ? <img className="stl4-plan-cover" src={normalizePublicResourceUrl(item.cover_url)} alt="" loading="lazy" onError={() => setFailed(true)} /> : <span className="stl4-plan-cover is-empty" aria-label="暂无封面"><BookOpen size={18} /></span>;
+  return item.cover_url && failed !== item.cover_url ? <MediaPlacement uses={item.cover_media?.display_uses} fallback={<span className="stl4-plan-cover is-empty" aria-label="暂无封面"><BookOpen size={18} /></span>}><img className="stl4-plan-cover" src={normalizePublicResourceUrl(item.cover_url)} alt="" loading="lazy" onError={() => setFailed(item.cover_url || "")} /></MediaPlacement> : <span className="stl4-plan-cover is-empty" aria-label="暂无封面"><BookOpen size={18} /></span>;
 }
 function PlanItemEditor({ publicCopy = false, ownerId, item, prerequisitesCount, busy, error, onSave, onClose }: { publicCopy?: boolean; ownerId: string; item: PlanItem; prerequisitesCount: number; busy: boolean; error: string; onSave: (data: PlanPatch) => void; onClose: () => void }) {
   const [note, setNote] = useState(item.note || "");

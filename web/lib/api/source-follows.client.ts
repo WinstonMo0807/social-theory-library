@@ -1,9 +1,10 @@
+import type { components } from "./generated/schema";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "../api";
 import { withPrivateOwner } from "./private-owner";
 
 export type PublicSourceStatus = {
   path: string; canonical_path: string; status: "available" | "replaced" | "unavailable" | "page";
-  title: string; authors: string[]; cover_url: string; source_type: string; version_label: string; location: string;
+  title: string; authors: string[]; cover_url: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; source_type: string; version_label: string; location: string;
   updated_at: string | null; checked_at: string; can_subscribe: boolean; reader_url: string; notice: string;
   work_id: string | null; edition_id: string | null; asset_id: string | null;
   catalog_revision_id: string | null; document_revision_id: string | null;

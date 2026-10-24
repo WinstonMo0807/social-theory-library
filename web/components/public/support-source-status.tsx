@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -42,7 +43,7 @@ export function SupportSourceStatus({ source }: { source: string }) {
 }
 
 export function SourceStatusSummary({ source }: { source: PublicSourceStatus }) {
-  return <div className={styles.summary}>{source.cover_url ? <img src={normalizePublicResourceUrl(source.cover_url)} alt={`${source.title}${source.scholar_profile_id ? "肖像" : "封面"}`} width={92} height={134} /> : <div className={styles.noCover}><FileText size={38} aria-hidden="true" /></div>}
+  return <div className={styles.summary}>{source.cover_url ? <MediaPlacement uses={source.cover_media?.display_uses} fallback={<div className={styles.noCover}><FileText size={38} aria-hidden="true" /></div>}><img src={normalizePublicResourceUrl(source.cover_url)} alt={`${source.title}${source.scholar_profile_id ? "肖像" : "封面"}`} width={92} height={134} /></MediaPlacement> : <div className={styles.noCover}><FileText size={38} aria-hidden="true" /></div>}
     <div><h3>{source.title}</h3>{source.authors.length ? <p>{source.authors.join("、")}</p> : null}<dl>
       <div><dt>来源类型</dt><dd>{source.source_type || "尚未核对"}{source.version_label ? ` · ${source.version_label}` : ""}</dd></div>
       <div><dt>来源状态</dt><dd data-state={source.status}>{sourceStatusLabel[source.status]}</dd></div>

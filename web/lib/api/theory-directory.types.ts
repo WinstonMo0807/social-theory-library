@@ -1,3 +1,4 @@
+import type { components } from "./generated/schema";
 export const theoryDirectoryKinds = [
   "theory_tradition", "subdiscipline", "concept", "debate", "research_problem",
 ] as const;
@@ -49,7 +50,7 @@ export type TheoryDirectorySelection = TheoryDirectoryReference & {
   foreign_name: string;
   summary: string;
   period_label: string;
-  scholars: { id: string; name: string; original_name: string; href: string; portrait_url: string }[];
+  scholars: { id: string; name: string; original_name: string; href: string; portrait_url: string; portrait_media?: components["schemas"]["PublicCoverMedia"] | null }[];
   concepts: { id: string; name: string; href: string }[];
   source_href: string | null;
   source_title: string;

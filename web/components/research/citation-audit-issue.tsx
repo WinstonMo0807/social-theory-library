@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
@@ -116,7 +117,7 @@ function Issue({ id, issueId, ownerId, retrySession }: { id: string; issueId: st
 }
 
 export function CandidateCard({ candidate, selected, disabled, onChoose }: { candidate: AuditCandidate; selected?: boolean; disabled: boolean; onChoose: () => void }) {
-  return <article className="stl4-audit-candidate" data-selected={selected || undefined}>{candidate.cover_url ? <Image src={normalizePublicResourceUrl(candidate.cover_url)} alt="" width={48} height={68} unoptimized /> : <BookOpen size={32} aria-hidden="true" />}<div><h4>{candidate.title}</h4><p>{candidate.authors?.join("、")}</p><small>{[candidate.year, candidate.version_label].filter(Boolean).join(" · ") || "出版信息待核对"}</small>{candidate.review_fields?.length ? <p>需要核对：{candidate.review_fields.map(field => ({ authors: "作者", year: "年份", language: "语言", translator: "译者", publisher: "出版者" }[field] || "版本信息")).join("、")}</p> : null}{Boolean(candidate.source_status && candidate.source_status !== "available") ? <p>该候选当前不可访问。</p> : <button disabled={disabled} onClick={onChoose}>{selected ? "已选版本 · 重新确认" : "选择此版本"}</button>}</div></article>;
+  return <article className="stl4-audit-candidate" data-selected={selected || undefined}>{candidate.cover_url ? <MediaPlacement uses={candidate.cover_media?.display_uses} fallback={<BookOpen size={32} aria-hidden="true" />}><Image src={normalizePublicResourceUrl(candidate.cover_url)} alt="" width={48} height={68} unoptimized /></MediaPlacement> : <BookOpen size={32} aria-hidden="true" />}<div><h4>{candidate.title}</h4><p>{candidate.authors?.join("、")}</p><small>{[candidate.year, candidate.version_label].filter(Boolean).join(" · ") || "出版信息待核对"}</small>{candidate.review_fields?.length ? <p>需要核对：{candidate.review_fields.map(field => ({ authors: "作者", year: "年份", language: "语言", translator: "译者", publisher: "出版者" }[field] || "版本信息")).join("、")}</p> : null}{Boolean(candidate.source_status && candidate.source_status !== "available") ? <p>该候选当前不可访问。</p> : <button disabled={disabled} onClick={onChoose}>{selected ? "已选版本 · 重新确认" : "选择此版本"}</button>}</div></article>;
 }
 
 function EditionSearch({ ownerId, disabled, onChoose }: { ownerId: string; disabled: boolean; onChoose: (candidate: AuditCandidate) => void }) {

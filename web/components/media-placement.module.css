@@ -1,9 +1,10 @@
 .contents { display: contents; }
-.mobile { display: none; }
 .graphicHidden, .graphicMobile { display: none; }
+@media (width > 760px) {
+  .mobile { display: none !important; }
+}
 @media (max-width: 760px) {
-  .desktop { display: none; }
-  .mobile { display: contents; }
+  .desktop { display: none !important; }
   .graphicDesktop { display: none; }
   .graphicMobile { display: inline; }
 }

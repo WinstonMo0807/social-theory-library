@@ -1,3 +1,4 @@
+import type { components } from "./generated/schema";
 import { apiRequest } from "../api";
 import type { EvidenceReference, ResolvedEvidence } from "./research.client";
 
@@ -10,7 +11,7 @@ export type CitationFormat = typeof citationFormats[number][0];
 export type SharedCitationPreview = {
   reference: ResolvedEvidence | null;
   source: { edition_id: string; work_id: string; title: string; authors: string[]; publication_year: number | null;
-    publisher: string; cover_url: string | null; work_url: string; reader_url: string | null; pdf_page: number | null; printed_label: string; source_status: "available" };
+    publisher: string; cover_url: string | null; cover_media?: components["schemas"]["PublicCoverMedia"] | null; work_url: string; reader_url: string | null; pdf_page: number | null; printed_label: string; source_status: "available" };
   citations: Record<Exclude<CitationFormat, "quote" | "csl">, string> & { csl: Record<string, unknown> };
 };
 export function previewSharedCitation(input: SharedCitationInput, signal?: AbortSignal) {

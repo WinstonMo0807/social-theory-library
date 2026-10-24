@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ExternalLink, Network, X } from "lucide-react";
@@ -79,7 +80,7 @@ export function TheoryUsageExplorer({ usages, unavailableCount = 0, initialCompa
     <div className={styles.usageGrid}>{visible.map(usage => <article className={`${styles.usageCard} ${selected.includes(usage.id) ? styles.selected : ""}`} key={usage.id} id={`usage-${usage.id}`}>
       <label className={styles.selectUsage}><input type="checkbox" checked={selected.includes(usage.id)} onChange={() => toggle(usage.id)} aria-label={`将${usage.author?.name || "本条"}的${label(usage)}加入比较`} /><span>{selected.includes(usage.id) ? "已选" : "加入比较"}</span></label>
       <button className={styles.usageSummary} type="button" onClick={() => setDetailId(usage.id)}>
-        {usage.author?.portrait_url ? <img src={usage.author.portrait_url} alt="" loading="lazy" /> : <span className={styles.portraitEmpty} aria-hidden="true"><BookOpen size={23} /></span>}
+        {usage.author?.portrait_url ? <MediaPlacement uses={usage.author.portrait_media?.display_uses}><img src={usage.author.portrait_url} alt="" loading="lazy" /></MediaPlacement> : <span className={styles.portraitEmpty} aria-hidden="true"><BookOpen size={23} /></span>}
         <span><strong>{usage.author?.name || "作者资料待补"}{usage.author && years(usage.author) ? <small>（{years(usage.author)}）</small> : null}</strong>{usage.author?.original_name ? <small>{usage.author.original_name}</small> : null}<b>{label(usage)}</b><span className={styles.usageMeaning}>{usage.interpretation || "查看原文与已确认的用法。"}</span>{usage.context ? <em>{usage.context}</em> : null}</span><ArrowRight size={16} />
       </button>
       <footer><button type="button" onClick={() => setDetailId(usage.id)}>查看用法细节<ArrowRight size={14} /></button><Link href={usage.source.reader_url} target="_blank" rel="noopener noreferrer">查看原文<ExternalLink size={13} /></Link></footer>
@@ -101,7 +102,7 @@ export function TheoryUsageExplorer({ usages, unavailableCount = 0, initialCompa
     </Dialog>
     <Dialog open={compareOpen && chosen.length === 2} onRequestClose={closeCompare} className={`${styles.dialog} ${styles.compareDialog}`} aria-labelledby="theory-compare-title">
       <header><button type="button" onClick={closeCompare}><ArrowLeft size={16} />返回条目</button><h2 id="theory-compare-title">用法对比（2）</h2><button type="button" onClick={closeCompare}>替换用法<X size={16} /></button></header>
-      <div className={styles.dialogBody}><div className={styles.compareTable} role="region" aria-label="两个用法的比较" tabIndex={0}><table><thead><tr><th scope="col">比较维度</th>{chosen.map(usage => <th scope="col" key={usage.id}>{usage.author?.portrait_url ? <img src={usage.author.portrait_url} alt="" /> : null}<strong>{usage.author?.name || "作者资料待补"}</strong>{usage.author ? <small>{years(usage.author)}</small> : null}</th>)}</tr></thead>
+      <div className={styles.dialogBody}><div className={styles.compareTable} role="region" aria-label="两个用法的比较" tabIndex={0}><table><thead><tr><th scope="col">比较维度</th>{chosen.map(usage => <th scope="col" key={usage.id}>{usage.author?.portrait_url ? <MediaPlacement uses={usage.author.portrait_media?.display_uses}><img src={usage.author.portrait_url} alt="" /></MediaPlacement> : null}<strong>{usage.author?.name || "作者资料待补"}</strong>{usage.author ? <small>{years(usage.author)}</small> : null}</th>)}</tr></thead>
         <tbody>{([
           ["用法标题", (usage: TheoryConceptUsage) => label(usage)],
           ["核心含义", (usage: TheoryConceptUsage) => usage.interpretation],

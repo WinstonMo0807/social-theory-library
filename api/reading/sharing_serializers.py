@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from catalog.media_views import PublicCoverMediaSerializer
 
 
 class GroupSummary(serializers.Serializer):
@@ -83,13 +84,23 @@ class ShareSourcesPage(PageOutput):
     results = ShareSource(many=True)
 
 
+class ShareWorkSummary(serializers.Serializer):
+    id = serializers.UUIDField(required=False)
+    title = serializers.CharField(allow_null=True)
+    authors = serializers.ListField(child=serializers.CharField(), required=False)
+    year = serializers.IntegerField(allow_null=True, required=False)
+    href = serializers.CharField(allow_null=True, required=False)
+    cover_url = serializers.CharField(allow_null=True, required=False)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
+
+
 class ShareContentItem(serializers.Serializer):
     title = serializers.CharField()
     text = serializers.CharField(allow_blank=True)
     available = serializers.BooleanField()
     truncated = serializers.BooleanField(required=False)
     tags = serializers.ListField(child=serializers.CharField(), required=False)
-    work = serializers.DictField(child=serializers.JSONField(), required=False)
+    work = ShareWorkSummary(required=False)
     reference = serializers.DictField(child=serializers.JSONField(), required=False, allow_null=True)
 
 

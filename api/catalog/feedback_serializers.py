@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from catalog.media_views import PublicCoverMediaSerializer
 
 from .models import PublicFeedback
 
@@ -101,6 +102,7 @@ class FeedbackSourceOutput(serializers.Serializer):
     title = serializers.CharField()
     authors = serializers.ListField(child=serializers.CharField())
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     source_type = serializers.CharField(allow_blank=True)
     version_label = serializers.CharField(allow_blank=True)
     location = serializers.CharField(allow_blank=True)

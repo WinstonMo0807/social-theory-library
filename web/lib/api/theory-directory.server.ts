@@ -28,7 +28,7 @@ export async function loadTheoryDirectorySelection(
       href: entry.href, foreign_name: entry.foreign_name,
       summary: entry.description || entry.research_object, period_label: entry.formation_period,
       scholars: entry.scholars.filter(item => item.href).map(item => ({
-        id: item.id, name: item.name, original_name: "", href: item.href, portrait_url: item.portrait_url,
+        id: item.id, name: item.name, original_name: "", href: item.href, portrait_url: item.portrait_url, portrait_media: item.portrait_media,
       })),
       concepts: entry.theories.filter(item => item.kind === "knowledge_node" && item.node_type === "concept").map(item => ({
         id: item.id, name: item.name, href: item.href,
@@ -75,7 +75,7 @@ export async function loadTheoryDirectorySelection(
     summary: node.definition || node.summary, period_label: node.period_label,
     scholars: node.representative_scholars.filter(item => item.scholar_slug).map(item => ({
       id: item.id, name: item.name, original_name: item.original_name,
-      href: `/scholars/${encodeURIComponent(item.scholar_slug)}`, portrait_url: item.portrait_url,
+      href: `/scholars/${encodeURIComponent(item.scholar_slug)}`, portrait_url: item.portrait_url, portrait_media: item.portrait_media,
     })),
     concepts: [...new Map(concepts.map(item => [item.id, item])).values()],
     source_href: source?.href || work?.reader_href || null,

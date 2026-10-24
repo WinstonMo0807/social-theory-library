@@ -36282,6 +36282,14 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "source_type": {
                         "type": "string"
                     },
@@ -56852,6 +56860,14 @@
                     "portrait_url": {
                         "type": "string"
                     },
+                    "portrait_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "scholar_slug": {
                         "type": "string"
                     }
@@ -58169,6 +58185,14 @@
                     },
                     "cover_url": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "source_type": {
                         "type": "string"
@@ -64122,8 +64146,7 @@
                         }
                     },
                     "work": {
-                        "type": "object",
-                        "additionalProperties": {}
+                        "$ref": "#/components/schemas/ShareWorkSummary"
                     },
                     "reference": {
                         "type": "object",
@@ -64281,8 +64304,7 @@
                         }
                     },
                     "work": {
-                        "type": "object",
-                        "additionalProperties": {}
+                        "$ref": "#/components/schemas/ShareWorkSummary"
                     },
                     "reference": {
                         "type": "object",
@@ -64905,6 +64927,48 @@
                     "page",
                     "results",
                     "total_pages"
+                ]
+            },
+            "ShareWorkSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "href": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "title"
                 ]
             },
             "SiteConfig": {

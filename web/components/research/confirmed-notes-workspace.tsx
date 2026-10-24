@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
@@ -118,7 +119,7 @@ function MemoryRow({ record, checked, disabled, onCheck, onInspect, onUsage }: {
   const sourceHref = first ? researchReaderHref(first) : undefined;
   return <article className={styles.row}>
     <input type="checkbox" aria-label={`选择笔记：${titleOf(record)}`} checked={checked} disabled={disabled} onChange={event => onCheck(event.target.checked)} />
-    <div className={styles.cover}>{summary?.cover_url ? <img src={summary.cover_url} alt="" loading="lazy" /> : <FileText size={26} aria-hidden="true" />}</div>
+    <div className={styles.cover}>{summary?.cover_url ? <MediaPlacement uses={summary.cover_media?.display_uses} fallback={<FileText size={26} aria-hidden="true" />}><img src={summary.cover_url} alt="" loading="lazy" /></MediaPlacement> : <FileText size={26} aria-hidden="true" />}</div>
     <div className={styles.copy}><span className={styles.badge}>{label}</span><button className={styles.titleButton} onClick={onInspect}>{titleOf(record)}</button><p>{record.data.body}</p><span className={styles.tag}>{kindNames[record.data.kind] || "个人笔记"}</span>{record.data.source_status === "unavailable" || record.data.source_status === "updated" ? <span className={styles.unavailable}>{record.data.source_status === "updated" ? "原文已更新" : "来源不可用"}</span> : null}</div>
     <div className={styles.source}><small>来源</small>{sourceHref ? <Link href={sourceHref}>{summary?.title || first?.title || "查看原文"}</Link> : <span>{summary?.title || first?.title || "本人笔记"}</span>}{summary || first?.source_status === "available" ? <p>{(summary?.authors || first?.authors)?.join("、")}{summary?.printed_label || first?.printed_label ? ` · 第 ${summary?.printed_label || first?.printed_label} 页` : first?.pdf_page ? ` · PDF 第 ${first.pdf_page} 页` : ""}</p> : null}<button className={styles.textButton} onClick={onInspect}><FileText size={12} />我的笔记</button><time dateTime={record.updated_at}>{dateLabel(record.updated_at)}</time></div>
     <div className={styles.rowActions}><span className={styles.confirmed}><Check size={12} />{record.state === "confirmed" ? "本人已确认" : record.state === "ignored" ? "暂不采纳" : "确认后可用"}</span><button className={styles.usage} role="switch" aria-checked={scopes.length > 0} onClick={onUsage} aria-label={`选择笔记使用范围：${titleOf(record)}`}><span aria-hidden="true" className={scopes.length ? styles.switchOn : styles.switchOff} /><span>{scopes.length ? `已用于 ${scopes.length} 个范围` : "用于当前研究与计划"}</span></button><small><LockKeyhole size={11} />仅本人可见</small></div>

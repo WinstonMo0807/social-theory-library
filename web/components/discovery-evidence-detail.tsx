@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import { BookOpen, ChevronLeft, ChevronRight, Copy, Quote } from "lucide-react";
 import { useRef, useState } from "react";
@@ -24,7 +25,7 @@ export function EvidenceBook({ item, compact = false, onSelect }: { item: Discov
   const book = item.bibliography;
   const cover = normalizePublicResourceUrl(book?.cover_url || "");
   return <div className={`${styles.evidenceBook} ${compact ? styles.compactBook : ""}`}>
-    {cover && failed !== cover ? <img src={cover} alt={`${item.work.title}封面`} onError={() => setFailed(cover)} loading="lazy" /> : <div className={styles.coverMissing} aria-label="暂无封面"><BookOpen size={22} /></div>}
+    {cover && failed !== cover ? <MediaPlacement uses={book?.cover_media?.display_uses} fallback={<div className={styles.coverMissing} aria-label="暂无封面"><BookOpen size={22} /></div>}><img src={cover} alt={`${item.work.title}封面`} onError={() => setFailed(cover)} loading="lazy" /></MediaPlacement> : <div className={styles.coverMissing} aria-label="暂无封面"><BookOpen size={22} /></div>}
     <div><h3>{onSelect ? <button type="button" className={styles.titleSelect} onClick={onSelect} aria-label={`查看证据摘要：${item.work.title}`}>{item.work.title}</button> : item.work.title}</h3>{book?.original_title && book.original_title !== item.work.title ? <p className={styles.originalTitle}>{book.original_title}</p> : null}
       <p>{item.authors?.join("、") || "责任者待核对"}</p>
       <p>{[book?.publisher, book?.publication_year, book?.language, book?.page_count ? `PDF ${book.page_count} 页` : ""].filter(Boolean).join(" · ") || "出版信息待补充"}</p>

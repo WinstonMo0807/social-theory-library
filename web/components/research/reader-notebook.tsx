@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
@@ -95,7 +96,7 @@ function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: st
           <div className={styles.sectionTitle}><h2>{labels[row.kind]}</h2>{row.source.source_status === "available" && row.source.reader_url ? <Link href={row.source.reader_url}>回到原文 →</Link> : null}</div>
           {row.saved_quote ? <blockquote>{row.saved_quote}<footer>保存时的原文摘录 · PDF 第 {row.pdf_page} 页</footer></blockquote> : <p className={styles.muted}>{row.label || "此处尚未保存摘录文字。"}</p>}
           {row.notice ? <p className={styles.notice}>{row.notice} 自己写下的内容仍可查看和编辑。</p> : null}
-          <div className={styles.sourceCard}>{row.work.cover_url ? <Image src={row.work.cover_url} alt={`${row.work.title}封面`} width={58} height={82} unoptimized /> : <BookOpen size={25} />}<div><h3>{row.work.title}</h3><p>{row.work.authors.join("、") || "作者待核对"}{row.work.year ? ` · ${row.work.year}` : ""}</p><small>PDF 第 {row.pdf_page} 页{row.source.printed_label ? ` · 书内页码 ${row.source.printed_label}` : ""}</small>{row.work.href ? <Link href={row.work.href}>查看作品信息 →</Link> : null}</div></div>
+          <div className={styles.sourceCard}>{row.work.cover_url ? <MediaPlacement uses={row.work.cover_media?.display_uses} fallback={<BookOpen size={25} />}><Image src={row.work.cover_url} alt={`${row.work.title}封面`} width={58} height={82} unoptimized /></MediaPlacement> : <BookOpen size={25} />}<div><h3>{row.work.title}</h3><p>{row.work.authors.join("、") || "作者待核对"}{row.work.year ? ` · ${row.work.year}` : ""}</p><small>PDF 第 {row.pdf_page} 页{row.source.printed_label ? ` · 书内页码 ${row.source.printed_label}` : ""}</small>{row.work.href ? <Link href={row.work.href}>查看作品信息 →</Link> : null}</div></div>
           <div className={styles.sectionTitle}><h2>{row.kind === "bookmark" ? "书签名称" : "我的笔记"}</h2><button onClick={() => { setAdding(false); setEditing(row); }}>编辑</button></div>
           <p className={styles.body}>{row.kind === "bookmark" ? row.label || "尚未命名" : row.body || "尚未写下自己的笔记。"}</p><div className={styles.tags}>{row.tags.map(tag => <span key={tag}>#{tag}</span>)}</div><small className={styles.muted}>最后编辑 · {date(row.updated_at)}</small>
           {row.kind === "bookmark" ? <button onClick={() => { setAdding(true); setEditing(row); }}>在此位置添加笔记</button> : null}

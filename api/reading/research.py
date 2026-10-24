@@ -8,16 +8,15 @@ import math
 import re
 from types import SimpleNamespace
 from uuid import UUID, uuid4
-from urllib.parse import urlencode
 
 from django.db import transaction
-from django.urls import reverse
 from django.utils import timezone
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from catalog.models import EvidenceSpan, Page
 from catalog.services.discovery_sources import source_queryset
 from catalog.services.discovery_sessions import normalize_filters, request_access
+from catalog.services.media import snapshot_cover
 
 from .models import (Annotation, LibraryConversation, PersonalReadingPlan, ResearchImportReceipt, ResearchMemory,
                      ResearchProject, ResearchTurn)
@@ -130,7 +129,7 @@ def resolve_reference(raw, user, *, strict=False):
                 "reference_id": reference_identity({"anchors": resolved}),
                 "source_status": "available" if available else "unavailable", "locator_precision": "multi_anchor",
                 "quote": "\n".join(item["quote"] for item in resolved) if available else "",
-                **{key: first.get(key) for key in ("title", "authors", "publication_year", "cover_url", "citation")},
+                **{key: first.get(key) for key in ("title", "authors", "publication_year", "cover_url", "cover_media", "citation")},
                 "reader_url": first.get("reader_url") if available else None}
     span_id = raw.get("evidence_span_id")
     stale = {"schema_version": 1, "source_kind": "catalog", "source_status": "unavailable",
@@ -188,12 +187,6 @@ def resolve_reference(raw, user, *, strict=False):
     from catalog.services.citations import format_gbt_7714_2025
     authors = [str((item.get("person") or {}).get("preferred_name") or item.get("name") or "")
                for item in snapshot.get("contributions", []) if isinstance(item, dict) and item.get("role") == "author"]
-    cover = (snapshot.get("work") or {}).get("cover_media") or {}
-    cover_params = {"edition_id": str(edition.pk)}
-    if cover.get("primary_rendition_id"):
-        cover_params["rendition"] = cover["primary_rendition_id"]
-    cover_url = (reverse("public-work-cover", kwargs={"work_id": str(edition.work_id)})
-        + "?" + urlencode(cover_params)) if cover or (snapshot.get("work") or {}).get("cover") else None
     return {"schema_version": 1, "source_kind": "catalog", "source_status": "available",
             "reference_id": reference_identity({"evidence_span_id": str(span.id) if span else None,
                 "asset_id": asset_id, "pdf_page": page_number, **selected_range}), **selected_range,
@@ -204,7 +197,7 @@ def resolve_reference(raw, user, *, strict=False):
             **structured_page_labels(page),
             "content_hash": digest, "title": (snapshot.get("work") or {}).get("title", ""),
             "authors": [value for value in authors if value],
-            "publication_year": (snapshot.get("edition") or {}).get("publication_year"), "cover_url": cover_url,
+            "publication_year": (snapshot.get("edition") or {}).get("publication_year"), **snapshot_cover(edition),
             "citation": format_gbt_7714_2025(edition, page.printed_label, snapshot=snapshot),
             "quote": source_text,
             "start_offset": (span.start_offset if span else 0) + selected_range.get("selection_start", 0),
@@ -863,13 +856,11 @@ def serialize_record(record, user, *, memory_context_rows=None):
             snapshot = edition.active_catalog_revision.snapshot if current_edition and item["available"] else {}
             snapshot = snapshot or {}
             work = snapshot.get("work") or {}
-            media = work.get("cover_media") or {}
             item["authors"] = [str(row.get("name") or (row.get("person") or {}).get("preferred_name") or "")
                 for row in (snapshot.get("contributions", snapshot.get("contributors")) or [])
                 if isinstance(row, dict) and row.get("role") == "author"]
             item["publication_year"] = (snapshot.get("edition") or {}).get("publication_year")
-            item["cover_url"] = (reverse("public-work-cover", kwargs={"work_id": item["work_id"]})
-                + (f"?rendition={media['primary_rendition_id']}" if media.get("primary_rendition_id") else "")) if media or work.get("cover") else None
+            item.update(snapshot_cover(edition if current_edition and item["available"] else None))
             if not item["available"]:
                 item["reader_url"] = None
                 item.pop("model_suggestion", None)
@@ -977,15 +968,13 @@ def memory_source_details(user, payload):
         if edition is not None:
             snapshot = edition.active_catalog_revision.snapshot or {}
             work, version = snapshot.get("work") or {}, snapshot.get("edition") or {}
-            media = work.get("cover_media") or {}
             summary.update(title=work.get("title", ""),
                 authors=[str(item.get("name") or (item.get("person") or {}).get("preferred_name") or "")
                     for item in snapshot.get("contributions", []) if isinstance(item, dict) and item.get("role") == "author"],
                 edition=version.get("version_label") or version.get("publisher") or "",
                 publication_year=version.get("publication_year"),
                 printed_label=current.get("printed_label") if status == "available" else None,
-                cover_url=(reverse("public-work-cover", kwargs={"work_id": edition.work_id})
-                    + (f"?rendition={media['primary_rendition_id']}" if media.get("primary_rendition_id") else "")) if media or work.get("cover") else None,
+                **snapshot_cover(edition),
                 current_reader_url=f"/reader/{edition.active_catalog_revision.reader_asset_id}?revision={edition.active_catalog_revision.document_revision_id}")
         summaries.append(summary)
     origin = payload.get("origin", {})
@@ -1006,7 +995,7 @@ def memory_source_details(user, payload):
                 created_at=note.created_at.isoformat(), updated_at=note.updated_at.isoformat())
             if summaries:
                 origin_note.update({key: value for key, value in summaries[0].items()
-                    if key in {"title", "authors", "edition", "publication_year", "cover_url", "printed_label"}})
+                    if key in {"title", "authors", "edition", "publication_year", "cover_url", "cover_media", "printed_label"}})
         if not statuses:
             statuses.append(origin_note["source_status"])
     source_status = ("unavailable" if "unavailable" in statuses else "updated" if "updated" in statuses
