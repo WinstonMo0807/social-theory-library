@@ -43,7 +43,7 @@ VERIFIED_NAMES = {
     "upload-workspace", "upload-workspace-receipt",
     "admin-site-review", "admin-site-history", "admin-site-restore", "admin-site-sources", "admin-site-receipt",
     "admin-recycle", "admin-recycle-detail",
-    "local-services", "local-service-check", "local-service-history",
+    "local-services", "local-service-check", "local-service-history", "local-service-receipt",
     "path-save-receipt", "path-editor-validation", "path-editor-preview",
     "path-route-list", "path-route-detail", "path-route-receipt",
     "timeline-save-receipt", "timeline-similar", "timeline-edition-participants",

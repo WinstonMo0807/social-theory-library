@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from catalog.editorial_read import AdminPrivateResponseMixin
 from common.permissions import CanViewSystemStatus
-from catalog.local_services import check_service, services_snapshot, PREFIX, STATUS_LABELS, observation_payload
+from catalog.local_services import check_service, check_receipt, services_snapshot, PREFIX, STATUS_LABELS, observation_payload
 from catalog.models import HealthCheckRun
 
 
@@ -103,6 +103,29 @@ class LocalServiceHistoryQuery(serializers.Serializer):
     service_id = serializers.RegexField(r"^[a-z][a-z0-9_-]{0,95}$", max_length=96, required=False)
     status = serializers.ChoiceField(choices=list(STATUS_LABELS), required=False)
     as_of = serializers.DateTimeField(required=False)
+
+
+class LocalServiceReceipt(serializers.Serializer):
+    request_id = serializers.UUIDField()
+    actor_id = serializers.CharField()
+    state = serializers.ChoiceField(choices=["applied","cancelled"])
+    observation = LocalServiceObservation(allow_null=True)
+
+
+class LocalServiceCancelInput(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+
+class LocalServiceReceiptView(AdminPrivateResponseMixin,APIView):
+    permission_classes = [CanViewSystemStatus]
+
+    @extend_schema(responses=LocalServiceReceipt)
+    def get(self,request,request_id):
+        return Response(LocalServiceReceipt(check_receipt(request,request_id)).data)
+
+    @extend_schema(request=LocalServiceCancelInput,responses=LocalServiceReceipt)
+    def post(self,request,request_id):
+        return Response(LocalServiceReceipt(check_receipt(request,request_id,cancel=True)).data)
 
 
 class LocalServiceHistoryPage(serializers.Serializer):

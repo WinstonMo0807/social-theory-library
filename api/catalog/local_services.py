@@ -14,13 +14,13 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q, OuterRef, Subquery
 from django.utils import timezone
-from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from accounts.models import User
 from common.capabilities import Capability, has_capability, capability_snapshot
 from catalog.models import HealthCheckRun, SiteSetting, ProviderCredentialSecret
 from catalog.services.query_lexicon.mutations import acquire_entity_lock
-from ingestion.models import ProcessingJob
+from ingestion.models import AuditEvent, ProcessingJob
 
 
 PREFIX = "local-services:"
@@ -232,14 +232,42 @@ def _check(definition):
     return "available", "服务检查已返回成功记录；实际文档处理与结果质量仍需单独验收。", {}
 
 
-@transaction.atomic
-def check_service(request, values):
+def locked_service_actor(request):
     if request.headers.get("X-Editor-Owner") != str(request.user.pk):
         raise PermissionDenied("请重新读取当前维护账户后操作。")
     actor = User.objects.select_for_update().filter(pk=request.user.pk, is_active=True).first()
     if not actor or actor.token_version != request.user.token_version or not has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
         raise PermissionDenied("账户会话或维护权限已变化。")
+    return actor
+
+
+def cancelled_check(identifier,actor):
+    event=AuditEvent.objects.filter(action="local-service.cancelled",request_id=str(identifier)).first()
+    if event and event.actor_id!=actor.pk:raise ServiceCheckConflict("此编号属于另一账户的服务检查。")
+    return event
+
+
+@transaction.atomic
+def check_receipt(request,identifier,*,cancel=False):
+    actor=locked_service_actor(request)
+    acquire_entity_lock("local_service_request",identifier)
+    if cancel and request.data!={"action":"cancel_pending"}:raise ValidationError("仅接受取消尚未执行的原服务检查。")
+    run=HealthCheckRun.objects.filter(pk=identifier).first()
+    if run:
+        if run.initiated_by_id!=actor.pk or not run.probe_key.startswith(PREFIX):raise ServiceCheckConflict("原编号不属于当前账户的服务检查。")
+        return {"request_id":str(identifier),"actor_id":str(actor.pk),"state":"applied","observation":observation_payload(run)}
+    event=cancelled_check(identifier,actor)
+    if not event:
+        if not cancel:raise NotFound("尚未查到原检查结果，请求可能仍在途。查回不重复调用服务，可稍后查回或取消尚未执行的请求。")
+        AuditEvent.objects.create(actor=actor,action="local-service.cancelled",object_type="LocalServiceCheck",object_id="",request_id=str(identifier),after={})
+    return {"request_id":str(identifier),"actor_id":str(actor.pk),"state":"cancelled","observation":None}
+
+
+@transaction.atomic
+def check_service(request, values):
+    actor=locked_service_actor(request)
     acquire_entity_lock("local_service_request", values["request_id"])
+    if cancelled_check(values["request_id"],actor):raise ServiceCheckConflict("原服务检查已取消，迟到请求不会再次调用服务。")
     old = HealthCheckRun.objects.filter(pk=values["request_id"]).first()
     if old:
         if old.initiated_by_id != actor.pk or old.probe_key != PREFIX + values["service_id"]:

@@ -1490,6 +1490,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/local-services/receipts/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_local_services_receipts_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_local_services_receipts_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/manual-catalog/": {
         parameters: {
             query?: never;
@@ -11929,6 +11945,9 @@ export interface components {
             can_configure: boolean;
             check_notice: string;
         };
+        LocalServiceCancelInputRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
         LocalServiceCheckInputRequest: {
             /** Format: uuid */
             request_id: string;
@@ -11971,6 +11990,13 @@ export interface components {
                 [key: string]: unknown;
             };
             configuration_version: string;
+        };
+        LocalServiceReceipt: {
+            /** Format: uuid */
+            request_id: string;
+            actor_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            observation: components["schemas"]["LocalServiceObservation"] | null;
         };
         LocalServicesSnapshot: {
             /** Format: date-time */
@@ -25109,6 +25135,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LocalServiceHistoryPage"];
+                };
+            };
+        };
+    };
+    catalog_admin_local_services_receipts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalServiceReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_local_services_receipts_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocalServiceCancelInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LocalServiceCancelInputRequest"];
+                "multipart/form-data": components["schemas"]["LocalServiceCancelInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalServiceReceipt"];
                 };
             };
         };

@@ -1,5 +1,7 @@
 "use client";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { LocalServiceHistory } from "./local-service-history";
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
@@ -12,6 +14,15 @@ import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import styles from "./local-services.module.css";
 import type { components } from "@/lib/api/generated/schema";
+
+type CheckCommand=components["schemas"]["LocalServiceCheckInputRequest"];
+type CheckReceipt=components["schemas"]["LocalServiceReceipt"];
+const pendingKey=(owner:string)=>`stl-service-check:${owner}`;
+function savedCheck(raw:string):CheckCommand{
+  const value=JSON.parse(raw) as CheckCommand;
+  if(!value||typeof value!=="object"||Object.keys(value).sort().join()!=="configuration_version,request_id,service_id"||! /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value.request_id)||! /^[a-z][a-z0-9_-]{0,95}$/.test(value.service_id)||! /^[a-f0-9]{64}$/.test(value.configuration_version))throw Error("上次检查编号记录不完整，请保留本页并核对检查历史。");
+  return value;
+}
 
 type Observation = components["schemas"]["LocalServiceObservation"];
 type Service = components["schemas"]["LocalService"];
@@ -35,15 +46,41 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
   const load=useCallback((url:string,signal:AbortSignal)=>apiRequest<Snapshot>(url,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
   const resource=usePersistentWorkspace<Snapshot>(path,owner,undefined,load);
   const [tab,setTab]=useState(initialService?"services":"overview"),[selected,setSelected]=useState(initialService),[checking,setChecking]=useState(""),[message,setMessage]=useState("");
-  const lifecycle=useRef<AbortController|null>(null),busy=useRef(false),stop=useRef(false),receipts=useRef(new Map<string,string>());
+  const lifecycle=useRef<AbortController|null>(null),busy=useRef(false),stop=useRef(false);
   useEffect(()=>{const controller=new AbortController();lifecycle.current=controller;return()=>controller.abort();},[]);
+  const [unknown,setUnknown]=useState<CheckCommand|null>(null),[ready,setReady]=useState(false),[recordError,setRecordError]=useState("");
+  const [reconciling,setReconciling]=useState(false),[cancelOpen,setCancelOpen]=useState(false);
+  const original=useRef<CheckCommand|null>(null);
+  const writeLocked=!!checking||!!unknown||!ready||reconciling;
+  useUnsavedForm(Boolean(unknown),false);
+  useEffect(()=>{let alive=true;queueMicrotask(()=>{if(!alive)return;try{const raw=sessionStorage.getItem(pendingKey(owner));if(raw){const value=savedCheck(raw);original.current=value;setUnknown(value);}setReady(true);}catch(reason){setRecordError(reason instanceof Error?reason.message:"无法读取上次检查编号。");}});return()=>{alive=false;};},[owner]);
+  function preserve(value:CheckCommand|null){if(value)sessionStorage.setItem(pendingKey(owner),JSON.stringify(value));else sessionStorage.removeItem(pendingKey(owner));original.current=value;setUnknown(value);}
+  async function readReceipt(cancel=false){
+    const value=original.current,controller=lifecycle.current;
+    if(!value||busy.current||!controller||controller.signal.aborted)return;
+    busy.current=true;setReconciling(true);setMessage("");
+    try{
+      const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(60000)]);
+      const receipt=await withPrivateOwner(owner,()=>apiRequest<CheckReceipt>(`${path}receipts/${value.request_id}/`,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner},...(cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{})},getServerSessionCredential()),signal);
+      if(controller.signal.aborted)return;
+      if(receipt.request_id!==value.request_id||receipt.actor_id!==owner)throw Error("回执与当前账户或原编号不一致，请保留记录。");
+      if(receipt.state==="applied"){
+        const result=receipt.observation;
+        if(!result||result.id!==value.request_id||result.service_id!==value.service_id||result.configuration_version!==value.configuration_version)throw Error("原检查回执与已确认配置不一致，请保留编号并核对历史。");
+        setMessage(`${cancel?"原检查已完成，取消不会撤销它。":"已查回原检查结果。"}${result.detail} 此结果对应原配置与检查时间。`);
+      }else if(receipt.state==="cancelled")setMessage("此编号尚未执行的检查已取消，迟到请求不会调用服务。");
+      else throw Error("原检查状态不能确认，请保留编号。");
+      preserve(null);setCancelOpen(false);resource.reload();
+    }catch(reason){if(!controller.signal.aborted)setMessage(reason instanceof Error?reason.message:"原检查尚未确认，请保留编号。");}
+    finally{if(!controller.signal.aborted){busy.current=false;setReconciling(false);}}
+  }
   const data=resource.data, services=data?.groups.flatMap(group=>group.services)||[];
   const current=selected?services.find(service=>service.id===selected):services[0];
   const group=data?.groups.find(value=>value.id===current?.group);
   const select=(service?:Service)=>{if(service){setSelected(service.id);setTab("services");}};
 
   async function check(items:Service[]) {
-    if(busy.current||!lifecycle.current||lifecycle.current.signal.aborted)return;
+    if(busy.current||writeLocked||original.current||!lifecycle.current||lifecycle.current.signal.aborted)return;
     const allowed=items.filter(service=>service.can_check);
     if(!allowed.length)return;
     const controller=lifecycle.current;
@@ -53,18 +90,20 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
         for(const service of allowed) {
           if(stop.current||controller.signal.aborted)break;
           setChecking(service.id);
-          const key=`${service.id}:${service.configuration_version}`;
-          const requestId=receipts.current.get(key)||createRequestKey();receipts.current.set(key,requestId);
+          const command:CheckCommand={request_id:createRequestKey(),service_id:service.id,configuration_version:service.configuration_version};
+          preserve(command);
           const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(60000)]);
-          await withPrivateOwner(owner,()=>apiRequest<Observation>(path+"check/",{method:"POST",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},
-            body:JSON.stringify({request_id:requestId,service_id:service.id,configuration_version:service.configuration_version})},getServerSessionCredential()),signal);
-          receipts.current.delete(key);
+          const result=await withPrivateOwner(owner,()=>apiRequest<Observation>(path+"check/",{method:"POST",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},
+            body:JSON.stringify(command)},getServerSessionCredential()),signal);
+          if(controller.signal.aborted)throw new DOMException("Session changed","AbortError");
+          if(result.id!==command.request_id||result.service_id!==command.service_id||result.configuration_version!==command.configuration_version)throw Error("检查回执与原编号或配置不一致，请查回原结果。");
+          preserve(null);
         }
         return load(path,AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]));
       });
       if(!controller.signal.aborted)setMessage(stop.current?"已停止后续检查，当前已发出的检查结果保留。":"检查记录已更新。模型与业务效果仍以正式验收为准。");
     } catch(reason) {
-      if(!controller.signal.aborted)setMessage((reason instanceof Error?reason.message:"检查暂未完成。")+" 可刷新最近检查记录；重试同一服务时会先核对本次请求。");
+      if(!controller.signal.aborted)setMessage((reason instanceof Error?reason.message:"检查暂未完成。")+" 如有未确认编号，请先查回或取消；不会自动再次调用服务。");
     } finally {if(!controller.signal.aborted){busy.current=false;setChecking("");}}
   }
 
@@ -75,12 +114,16 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
     <nav className={styles.tabs} aria-label="服务维护栏目">{tabs.map(item=><button key={item.id} aria-current={tab===item.id?"page":undefined} onClick={()=>setTab(item.id)}>{item.label}</button>)}</nav>
     {resource.error?<div className={styles.error} role="alert"><CircleAlert size={18}/><p>{resource.error}</p><button onClick={()=>resource.reload()}>重新读取</button></div>:null}
     {message?<p className={styles.message} role="status">{message}</p>:null}
+    {recordError?<p className={styles.error} role="alert">{recordError}</p>:null}
+    {unknown?<aside className={styles.notice}><CircleAlert size={18}/><div><strong>上次服务检查尚未确认</strong><p>服务标识 {unknown.service_id} · 请求编号 {unknown.request_id}</p><p>刷新后不会自动继续检查。查回只读取原结果；未查到仍可能在途，取消只阻止尚未执行的原请求。</p><div className={styles.actions}><button disabled={!!checking||reconciling} onClick={()=>void readReceipt()}>查回原结果</button><button disabled={!!checking||reconciling} onClick={()=>setCancelOpen(true)}>取消未执行请求</button></div></div></aside>:null}
+    <ConfirmDialog open={cancelOpen} title="取消尚未执行的服务检查" description="服务端会先查回原编号。已完成的检查保留原结果；尚未执行的检查将登记取消，迟到请求不会调用服务。" details={message?[message]:[]} confirmLabel={reconciling?"正在核对…":"取消未执行检查"} pending={reconciling} onCancel={()=>{if(!reconciling)setCancelOpen(false);}} onConfirm={()=>void readReceipt(true)}/>
+
     {data&&selected&&!current?<p className={styles.message} role="alert">原链接中的服务已不在当前配置中。请从服务列表重新选择，未自动改为检查其他服务。</p>:null}
     {resource.loading?<div className={styles.empty} role="status"><RefreshCw size={22}/><p>正在读取服务配置与已有检查记录</p></div>:null}
     {data?<>
       <section className={styles.metrics} aria-label="服务与任务概况">{[["services","配置服务"],["available","可使用"],["limited","受限"],["unavailable","不可用"],["waiting","等待任务"],["failed_24h","失败任务（近 24 小时）"]].map(([key,label])=><div key={key} data-tone={key==="available"?"ready":key==="limited"?"limited":key==="failed_24h"?"failed":undefined}><strong>{data.summary[key]??"—"}</strong><span>{label}</span></div>)}</section>
       {tab==="overview"?<>
-        <section className={styles.services}><header className={styles.sectionHeader}><div><h2>服务状态</h2><p>按能力查看真实配置及其最近检查记录。</p></div><div className={styles.actions}><button disabled={!!checking||resource.pending||!services.some(row=>row.can_check)} onClick={()=>void check(services)}><Play size={13}/>{checking?"检查进行中":"按权限检查全部服务"}</button>{checking?<button onClick={()=>{stop.current=true;setMessage("将在当前检查完成后停止后续检查。");}}>停止后续检查</button>:null}</div></header>
+        <section className={styles.services}><header className={styles.sectionHeader}><div><h2>服务状态</h2><p>按能力查看真实配置及其最近检查记录。</p></div><div className={styles.actions}><button disabled={writeLocked||resource.pending||!services.some(row=>row.can_check)} onClick={()=>void check(services)}><Play size={13}/>{checking?"检查进行中":"按权限检查全部服务"}</button>{checking?<button onClick={()=>{stop.current=true;setMessage("将在当前检查完成后停止后续检查。");}}>停止后续检查</button>:null}</div></header>
           <div className={styles.serviceTable}><div className={styles.tableHead}><span>能力</span><span>服务身份</span><span>状态</span><span>最近检查</span><span>任务积压</span><span>失败（24h）</span><span>受影响功能</span><span>操作</span></div>{data.groups.map(row=>{const Icon=icons[row.id as keyof typeof icons]||FileText;return <section className={styles.serviceRow} key={row.id}>
             <div className={styles.capability}><Icon size={21}/><div><strong>{row.label}</strong><small>{row.subtitle}</small></div></div>
             <div className={styles.identities}>{!row.services.length?<span>尚未配置此能力的服务</span>:null}{row.services.slice(0,2).map(service=><button key={service.id} onClick={()=>select(service)}><span>{service.name}</span><small>{service.scope}</small></button>)}{row.services.length>2?<button onClick={()=>select(row.services[0])}>另有 {row.services.length-2} 项配置</button>:null}</div>
@@ -88,11 +131,11 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
             <div className={styles.checkTime}>{date(row.services.map(service=>service.observation?.checked_at).filter((value):value is string=>!!value).sort().at(-1)||null)}</div>
             <span className={styles.queueCount} title={row.task_notice}>{row.tasks?.waiting??"—"}</span><span className={styles.failedCount} title={row.task_notice}>{row.tasks?.failed_24h??"—"}</span>
             <p className={styles.affected}>{row.affected_features.join("、")}</p>
-            <div className={styles.rowActions}><button disabled={!!checking||resource.pending||!row.services.some(service=>service.can_check)} onClick={()=>void check(row.services)}>检查</button><button disabled={!row.services.length} aria-label={`查看${row.label}详情`} onClick={()=>select(row.services[0])}><ChevronRight size={16}/></button></div>
+            <div className={styles.rowActions}><button disabled={writeLocked||resource.pending||!row.services.some(service=>service.can_check)} onClick={()=>void check(row.services)}>检查</button><button disabled={!row.services.length} aria-label={`查看${row.label}详情`} onClick={()=>select(row.services[0])}><ChevronRight size={16}/></button></div>
           </section>;})}</div>
         </section>
-        <div className={styles.bottom}><ServiceHistory data={data} services={services} showAll={()=>setTab("history")} compact/>{current?<ServiceDetails service={current} compact checking={checking} pending={resource.pending} onCheck={service=>void check([service])}/>:null}</div>
-      </>:tab==="history"?<LocalServiceHistory key={data.generated_at} owner={owner} services={services} asOf={data.generated_at}/>:tab==="services"?<div className={styles.serviceDetail}><aside aria-label="能力与服务">{data.groups.map(row=><section key={row.id}><h2>{row.label}</h2>{row.services.map(service=><button key={service.id} aria-current={current?.id===service.id?"true":undefined} onClick={()=>setSelected(service.id)}><span>{service.name}</span><span className={styles.status} data-tone={tone(service.status)}>{service.status_label}</span></button>)}</section>)}</aside><div>{current?<ServiceDetails service={current} checking={checking} pending={resource.pending} onCheck={service=>void check([service])}/>:null}{group?<p className={styles.hint}>受影响功能：{group.affected_features.join("、")}。同一能力下的配置分别记录，不会用其他服务的成功结果替代。</p>:null}</div></div>:<div className={styles.configuration}>{data.groups.map(row=><section className={styles.panel} key={row.id}><header><h2>{row.label}</h2><span>{row.services.length} 项配置</span></header>{row.services.map(service=><div className={styles.configurationRow} key={service.id}><div><strong>{service.name}</strong><p>{service.scope} · {service.status_label}</p></div>{service.can_configure?<Link href={service.config_url}>打开原配置 <ChevronRight size={14}/></Link>:<span>仅查看</span>}</div>)}</section>)}</div>}
+        <div className={styles.bottom}><ServiceHistory data={data} services={services} showAll={()=>setTab("history")} compact/>{current?<ServiceDetails service={current} compact checking={checking} pending={resource.pending||writeLocked} onCheck={service=>void check([service])}/>:null}</div>
+      </>:tab==="history"?<LocalServiceHistory key={data.generated_at} owner={owner} services={services} asOf={data.generated_at}/>:tab==="services"?<div className={styles.serviceDetail}><aside aria-label="能力与服务">{data.groups.map(row=><section key={row.id}><h2>{row.label}</h2>{row.services.map(service=><button key={service.id} aria-current={current?.id===service.id?"true":undefined} onClick={()=>setSelected(service.id)}><span>{service.name}</span><span className={styles.status} data-tone={tone(service.status)}>{service.status_label}</span></button>)}</section>)}</aside><div>{current?<ServiceDetails service={current} checking={checking} pending={resource.pending||writeLocked} onCheck={service=>void check([service])}/>:null}{group?<p className={styles.hint}>受影响功能：{group.affected_features.join("、")}。同一能力下的配置分别记录，不会用其他服务的成功结果替代。</p>:null}</div></div>:<div className={styles.configuration}>{data.groups.map(row=><section className={styles.panel} key={row.id}><header><h2>{row.label}</h2><span>{row.services.length} 项配置</span></header>{row.services.map(service=><div className={styles.configurationRow} key={service.id}><div><strong>{service.name}</strong><p>{service.scope} · {service.status_label}</p></div>{service.can_configure?<Link href={service.config_url}>打开原配置 <ChevronRight size={14}/></Link>:<span>仅查看</span>}</div>)}</section>)}</div>}
       <aside className={styles.notice}><CircleAlert size={18}/><strong>重要说明</strong><p>{data.notice}</p><Link href="/admin/processing/health">查看运行维护 <ChevronRight size={14}/></Link></aside>
       <p className={styles.hint}>任务统计来自现有处理队列；不展示读者私人任务内容。未检查、未启用和过期记录均不计为可用。</p>
     </>:null}

@@ -6703,6 +6703,102 @@
                 }
             }
         },
+        "/api/catalog/admin/local-services/receipts/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_local_services_receipts_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LocalServiceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_local_services_receipts_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LocalServiceCancelInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LocalServiceCancelInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LocalServiceCancelInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LocalServiceReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/manual-catalog/": {
             "get": {
                 "operationId": "catalog_admin_manual_catalog_retrieve",
@@ -49513,6 +49609,17 @@
                     "status_label"
                 ]
             },
+            "LocalServiceCancelInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
             "LocalServiceCheckInputRequest": {
                 "type": "object",
                 "properties": {
@@ -49669,6 +49776,35 @@
                     "latency_ms",
                     "service_id",
                     "status"
+                ]
+            },
+            "LocalServiceReceipt": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "observation": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LocalServiceObservation"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "observation",
+                    "request_id",
+                    "state"
                 ]
             },
             "LocalServicesSnapshot": {
