@@ -4158,6 +4158,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/distribution/storage/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["storage_command_receipt"];
+        put?: never;
+        post: operations["storage_command_cancel_pending"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingestion/items/{item_id}/confirmation/": {
         parameters: {
             query?: never;
@@ -19472,6 +19488,9 @@ export interface components {
             request_id: string;
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
+        StorageCancelInputRequest: {
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
+        };
         StorageCategory: {
             label: string;
             bytes: number | null;
@@ -19519,6 +19538,16 @@ export interface components {
             verification?: components["schemas"]["BackupVerificationOutput"];
             restore_plan?: components["schemas"]["RestorePlan"];
             schedule_saved?: boolean;
+        };
+        StorageCommandReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            /** Format: date-time */
+            created_at: string;
+            result: components["schemas"]["StorageCommandOutput"] | null;
+            legacy: boolean;
         };
         StorageFileType: {
             label: string;
@@ -30926,6 +30955,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageCommandOutput"];
+                };
+            };
+        };
+    };
+    storage_command_receipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageCommandReceipt"];
+                };
+            };
+        };
+    };
+    storage_command_cancel_pending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorageCancelInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StorageCancelInputRequest"];
+                "multipart/form-data": components["schemas"]["StorageCancelInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageCommandReceipt"];
                 };
             };
         };

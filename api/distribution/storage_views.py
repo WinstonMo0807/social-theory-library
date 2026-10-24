@@ -202,6 +202,19 @@ class StorageCommandOutput(serializers.Serializer):
     schedule_saved = serializers.BooleanField(required=False)
 
 
+class StorageCommandReceipt(serializers.Serializer):
+    actor_id = serializers.CharField()
+    request_id = serializers.UUIDField()
+    state = serializers.ChoiceField(choices=["applied", "cancelled"])
+    created_at = serializers.DateTimeField()
+    result = StorageCommandOutput(allow_null=True)
+    legacy = serializers.BooleanField()
+
+
+class StorageCancelInput(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["cancel_pending"])
+
+
 class StorageWorkspaceView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanViewSystemStatus]
 
@@ -232,3 +245,17 @@ class StorageBackupDetailView(AdminPrivateResponseMixin, APIView):
     @extend_schema(responses=BackupDetailOutput)
     def get(self, request, backup_id):
         return Response(backup_detail(backup_id))
+
+
+class StorageReceiptView(AdminPrivateResponseMixin, APIView):
+    permission_classes = [CanRunBackup]
+
+    @extend_schema(operation_id="storage_command_receipt", responses=StorageCommandReceipt)
+    def get(self, request, request_id):
+        from .storage_receipts import lookup
+        return Response(StorageCommandReceipt(lookup(request, request_id)).data)
+
+    @extend_schema(operation_id="storage_command_cancel_pending", request=StorageCancelInput, responses=StorageCommandReceipt)
+    def post(self, request, request_id):
+        from .storage_receipts import lookup
+        return Response(StorageCommandReceipt(lookup(request, request_id, cancel=True)).data)

@@ -1,6 +1,6 @@
 from django.urls import path
 from .reader_ocr_views import ReaderOCRStatusView
-from .storage_views import StorageWorkspaceView, StorageCommandView, StorageBackupDetailView
+from .storage_views import StorageWorkspaceView, StorageCommandView, StorageBackupDetailView, StorageReceiptView
 
 from .views import (
     AdminAssetPreviewView,
@@ -15,6 +15,7 @@ from .views import (
 urlpatterns = [
     path("storage/", StorageWorkspaceView.as_view(), name="storage-workspace"),
     path("storage/commands/", StorageCommandView.as_view(), name="storage-command"),
+    path("storage/commands/<uuid:request_id>/", StorageReceiptView.as_view(), name="storage-receipt"),
     path("storage/backups/<uuid:backup_id>/", StorageBackupDetailView.as_view(), name="storage-backup-detail"),
     path("assets/<uuid:asset_id>/ocr-status/", ReaderOCRStatusView.as_view(), name="reader-ocr-status"),
     path("admin/assets/<uuid:asset_id>/preview/", AdminAssetPreviewView.as_view(), name="admin-asset-preview"),

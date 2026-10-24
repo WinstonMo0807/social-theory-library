@@ -19,6 +19,7 @@ type Detail = components["schemas"]["BackupDetailOutput"];
 type Verification = components["schemas"]["BackupVerificationOutput"];
 type Command = components["schemas"]["StorageCommandInputRequest"];
 type Reply = components["schemas"]["StorageCommandOutput"];
+type Receipt = components["schemas"]["StorageCommandReceipt"];
 type Plan = components["schemas"]["RestorePlan"];
 type Schedule = components["schemas"]["BackupScheduleOutput"];
 type Intent = Omit<Command,"request_id">;
@@ -65,6 +66,7 @@ function Workspace({owner}:{owner:string}) {
   const [plan,setPlan]=useState<Plan|null>(null),[unresolved,setUnresolved]=useState<Command|null>(null);
   const [schedule,setSchedule]=useState<Schedule|null>(null),[closeBackup,setCloseBackup]=useState<Backup|null>(null);
   const [showLocations,setShowLocations]=useState(false),[showProtection,setShowProtection]=useState(false);
+  const [recovering,setRecovering]=useState(false),[confirmCancel,setConfirmCancel]=useState(false);
   const [ready,setReady]=useState(false), recoveryKey=`stl-storage-command:${owner}`;
   const query=`${base}?page=${page}&status=${tab==="failed"?"failed":status}`;
   const load=useCallback((path:string,signal:AbortSignal)=>apiRequest<Snapshot>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
@@ -77,8 +79,39 @@ function Workspace({owner}:{owner:string}) {
 
   function clearCommand(){sessionStorage.removeItem(recoveryKey);pending.current=null;setUnresolved(null);}
 
-  async function command(intent:Intent, retry=false) {
-    if(!ready||!data||busy.current||!lifecycle.current||lifecycle.current.signal.aborted||pending.current&&!retry)return;
+  function applyReply(reply:Reply, values:Command) {
+    if(reply.request_id!==values.request_id||reply.operation!==values.operation)throw Error("回执与原请求不一致，请保留编号并核对记录。");
+    clearCommand();setConfirmCancel(false);
+    if(reply.restore_plan){setPlan(reply.restore_plan);setTab("rehearsals");setMessage("演练准备清单已生成，尚未执行恢复。");}
+    else if(reply.schedule_saved){setSchedule(null);setMessage("备份计划已保存。实际执行结果将进入备份记录。");}
+    else if(reply.backup){setShowCreate(false);setCloseBackup(null);setSelected(reply.backup.id);setMessage(values.operation==="close_stalled_backup"?"超时备份记录已关闭，已有归档与原件保留。可在详情中重新发起备份。":"备份请求已登记；生成结果以任务记录为准。");}
+    else{setMessage(values.operation==="close_stalled_verification"?"超时记录已关闭，归档保留。可另行发起校验。":"校验请求已登记，不会解压或覆盖现有文件。");}
+  }
+
+  async function recover(cancel=false) {
+    const values=pending.current,controller=lifecycle.current;
+    if(!ready||busy.current||!controller||controller.signal.aborted||!values)return;
+    busy.current=true;setRecovering(true);setMessage("");
+    try {
+      const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
+      const receipt=await withPrivateOwner(owner,()=>apiRequest<Receipt>(`${base}commands/${values.request_id}/`,{
+        method:cancel?"POST":"GET",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},
+        ...(cancel?{body:JSON.stringify({action:"cancel_pending"})}:{})},getServerSessionCredential()),signal);
+      if(controller.signal.aborted)return;
+      if(receipt.request_id!==values.request_id||receipt.actor_id!==owner)throw Error("返回的记录不属于当前账户的原请求，请保留编号。");
+      if(receipt.state==="cancelled") {clearCommand();setConfirmCancel(false);setMessage("原请求已取消。迟到请求不会执行；已有任务、归档与计划保持原结果。");}
+      else if(receipt.result)applyReply(receipt.result,values);
+      else throw Error("回执缺少操作结果，请保留编号并继续核对。");
+      resource.reload();
+    } catch(reason) {
+      if(controller.signal.aborted)return;
+      // A missing/rejected lookup says nothing about an earlier in-flight write.
+      setMessage(reason instanceof Error?reason.message:"暂未查到结果，原请求编号仍保留。请稍后查询或取消尚未执行的请求。");
+    } finally {if(!controller.signal.aborted){busy.current=false;setRecovering(false);}}
+  }
+
+  async function command(intent:Intent) {
+    if(!ready||!data||busy.current||!lifecycle.current||lifecycle.current.signal.aborted||pending.current)return;
     const controller=lifecycle.current;
     const values=pending.current||{...intent,request_id:createRequestKey()};
     try{sessionStorage.setItem(recoveryKey,JSON.stringify(values));}catch{setMessage("浏览器不能保存原请求，尚未提交。请保留当前页面并恢复浏览器存储后重试。");return;}
@@ -92,12 +125,7 @@ function Workspace({owner}:{owner:string}) {
         return snapshot;
       });
       if(controller.signal.aborted||!result||!reply)return;
-      if(reply.request_id!==values.request_id||reply.operation!==values.operation)throw Error("回执与原请求不一致，请按原编号继续核对。");
-      clearCommand();
-      if(reply.restore_plan){setPlan(reply.restore_plan);setTab("rehearsals");setMessage("演练准备清单已生成，尚未执行恢复。");}
-      else if(reply.schedule_saved){setSchedule(null);setMessage("备份计划已保存。实际执行结果将进入备份记录。");}
-      else if(reply.backup){setShowCreate(false);setCloseBackup(null);setSelected(reply.backup.id);setMessage(values.operation==="close_stalled_backup"?"超时备份记录已关闭，已有归档与原件保留。可在详情中重新发起备份。":"备份请求已登记；生成结果以任务记录为准。");}
-      else{setMessage(values.operation==="close_stalled_verification"?"超时记录已关闭，归档保留。可另行发起校验。":"校验请求已登记，不会解压或覆盖现有文件。");}
+      applyReply(reply,values);
     } catch(reason) {
       if(controller.signal.aborted)return;
       if(reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,401,403,404,409,410,422].includes(reason.status)){try{clearCommand();}catch{setMessage("操作被拒绝，但原请求记录暂不能清除，请保留本页并恢复浏览器存储。");return;}}
@@ -111,9 +139,9 @@ function Workspace({owner}:{owner:string}) {
   const closeStalled=(row:Verification)=>void command({operation:"close_stalled_verification",backup_id:row.backup_id,expected_checksum:row.expected_checksum,verification_id:row.id});
 
   const commandFeedback=<>{message?<p className={styles.message} role="status">{message}</p>:null}
-    {unresolved&&!resource.pending?<div className={styles.notice}><CircleAlert size={18}/><p>上次操作尚未确认。已保留原请求编号和操作范围；继续时核对同一请求，尚未收到的请求会按原范围提交。</p><button type="button" disabled={!ready||!data||resource.pending} onClick={()=>void command(unresolved,true)}>按原编号核对并继续</button></div>:null}</>;
+    {unresolved&&!resource.pending?<div className={styles.notice} aria-busy={recovering}><CircleAlert size={18}/><p>上次操作尚未确认。原编号 {unresolved.request_id} 已保留。查询只读取结果；取消只拦住尚未登记的迟到请求，不能终止已登记的任务。</p><button type="button" disabled={!ready||recovering} onClick={()=>void recover()}>查回原请求</button><button type="button" disabled={!ready||recovering} onClick={()=>setConfirmCancel(true)}>取消未执行请求</button></div>:null}</>;
 
-  return <main className={styles.page} aria-busy={resource.loading||resource.pending}>
+  return <main className={styles.page} aria-busy={resource.loading||resource.pending||recovering}>
     <div className={styles.breadcrumb}><Link href="/admin">系统</Link><ChevronRight size={12}/><Link href="/admin/processing/status">运行维护</Link><ChevronRight size={12}/><span>存储、备份与恢复准备</span></div>
     <header className={styles.title}><div><h1>存储、备份与恢复准备</h1><p>管理原件、衍生文件和备份，知道恢复是否经过验证。</p></div><div className={styles.actions}><small>上次更新：{date(data?.checked_at)}</small><button onClick={()=>resource.reload()} disabled={resource.pending||resource.loading}><RefreshCw size={15}/>刷新</button><button className={styles.primary} onClick={()=>setShowCreate(true)} disabled={!data?.permissions.can_backup||disabled}><Database size={15}/>发起备份</button></div></header>
     {resource.error?<div className={styles.alert} role="alert"><CircleAlert size={18}/><p>{resource.error}</p><button onClick={()=>resource.reload()}>重新读取</button></div>:null}
@@ -136,6 +164,7 @@ function Workspace({owner}:{owner:string}) {
     {showCreate?<CreateBackup feedback={commandFeedback} disabled={disabled} onClose={()=>setShowCreate(false)} onCreate={include=>void command({operation:"create_backup",include_originals:include})}/>:null}
     {closeBackup?<Dialog open className={styles.dialog} onRequestClose={()=>setCloseBackup(null)} aria-labelledby="close-backup-title"><header><h2 id="close-backup-title">关闭这条超时备份记录？</h2><button type="button" aria-label="返回备份详情" onClick={()=>setCloseBackup(null)}><X size={18}/></button></header>{commandFeedback}<p>{date(closeBackup.created_at)} · {closeBackup.scope}</p><p>已超过配置的任务时限。关闭记录不会直接终止工作进程；旧任务再有响应时不能登记成功，并清理它本次尚未接受的临时归档。已有备份和原件保留。</p><p>任务若刚刚完成，系统会保留完成结果并要求重新读取。关闭后可明确重新发起一份备份。</p><footer><button type="button" onClick={()=>setCloseBackup(null)}>保留记录</button><button type="button" className={styles.primary} disabled={disabled} onClick={()=>void command({operation:"close_stalled_backup",backup_id:closeBackup.id,expected_version:closeBackup.version})}>确认关闭超时记录</button></footer></Dialog>:null}
     {schedule?<ScheduleEditor key={`${schedule.scope}:${schedule.version}`} feedback={commandFeedback} value={schedule} disabled={disabled} onClose={()=>setSchedule(null)} onSave={values=>void command(values)}/>:null}
+    {confirmCancel&&unresolved?<Dialog open className={styles.dialog} onRequestClose={()=>setConfirmCancel(false)} aria-labelledby="cancel-storage-title"><header><h2 id="cancel-storage-title">取消尚未执行的请求？</h2><button type="button" aria-label="返回维护页面" onClick={()=>setConfirmCancel(false)}><X size={18}/></button></header><p>系统会先核对原编号。如果已经登记，将返回原结果；如果尚未登记，将阻止这条迟到请求执行。此操作不能中止正在运行的备份或校验。</p><p role="status">{message}</p><footer><button type="button" onClick={()=>setConfirmCancel(false)}>继续等待</button><button type="button" className={styles.primary} disabled={!ready||recovering} onClick={()=>void recover(true)}>确认取消未执行请求</button></footer></Dialog>:null}
   </main>;
 }
 

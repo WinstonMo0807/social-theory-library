@@ -13,9 +13,8 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Case, When, Value, CharField, Sum, Count, OuterRef, Subquery
 from django.utils import timezone
-from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, NotFound, ValidationError
 
-from accounts.models import User
 from catalog.models import Asset
 from catalog.services.query_lexicon.mutations import acquire_entity_lock
 from common.capabilities import Capability, has_capability
@@ -202,15 +201,13 @@ def write_restore_report(report):
     return target.name
 
 
-@transaction.atomic
 def storage_command(request, values):
-    if request.headers.get("X-Editor-Owner") != str(request.user.pk):
-        raise PermissionDenied("请重新读取当前维护账户。")
-    actor = User.objects.select_for_update().filter(pk=request.user.pk, is_active=True).first()
-    if not actor or actor.token_version != request.user.token_version or not has_capability(actor, Capability.RUN_BACKUP):
-        raise PermissionDenied("账户会话或备份维护权限已变化。")
+    from .storage_receipts import execute
+    return execute(request, values, _apply_storage_command)
+
+
+def _apply_storage_command(actor, values):
     operation, identifier = values["operation"], values["request_id"]
-    acquire_entity_lock("backup_workspace_command", identifier)
     if operation == "close_stalled_backup":
         fingerprint = sha256(json.dumps(values, cls=DjangoJSONEncoder, sort_keys=True).encode()).hexdigest()
         receipt = AuditEvent.objects.filter(action="storage_backup_closed", request_id=str(identifier)).first()
