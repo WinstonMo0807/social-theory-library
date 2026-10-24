@@ -1,7 +1,8 @@
+import type { components } from "./generated/schema";
 import type { NormalizedKnowledgeRelation, NormalizedTimelineEvent, TheoryWorkCompact } from "./knowledge.types";
 
 export type TimelineTopic = { id: string; name: string; slug: string; href: string };
-export type TimelineAuthor = TimelineTopic & { person_id: string; portrait_url: string };
+export type TimelineAuthor = TimelineTopic & { person_id: string; portrait_url: string; portrait_media?: components["schemas"]["PublicCoverMedia"] | null };
 export type TimelineSource = {
   asset_id: string; edition_id: string; work_id: string; document_revision_id: string;
   title: string; edition_label: string; pdf_page: number; printed_page_label: string;

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MediaPlacement } from "@/components/media-placement";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Bookmark, ChevronDown, ListOrdered, Search, Tag, Users } from "lucide-react";
 import { apiRequest } from "@/lib/api";
@@ -22,7 +23,7 @@ export function ReadingPathList({ result, filters, error }: { result: ReadingPat
     {error ? <section className={styles.error} role="alert"><h2>阅读路径暂时无法读取</h2><p>{error}</p><button type="button" onClick={() => window.location.reload()}>重试读取</button></section> : result ? <>
       <div className={styles.listSummary}><strong>共 {result.count} 条阅读路径</strong><span>公共路径，任何人可浏览。</span></div>
       {result.results.length ? <div className={styles.pathList}>{result.results.map(path => <article className={styles.pathRow} key={path.id}>
-        <Link href={readingPathHref(path)} className={styles.pathImage} aria-label={`查看${path.title}`}>{path.cover_url ? <img src={path.cover_url} alt="" /> : <img src="/visual/stl4/reading-paths/detail-hero.webp" alt="" />}</Link>
+        <Link href={readingPathHref(path)} className={styles.pathImage} aria-label={`查看${path.title}`}>{path.cover_url ? <MediaPlacement uses={path.cover_media?.display_uses}><img src={path.cover_url} alt="" /></MediaPlacement> : <img src="/visual/stl4/reading-paths/detail-hero.webp" alt="" />}</Link>
         <div className={styles.pathCopy}><h2><Link href={readingPathHref(path)}>{path.title}</Link></h2>{path.introduction ? <p>{path.introduction}</p> : null}<div className={styles.tags}>{path.topics.map(topic => <Link href={readingPathsHref({}, { topic: topic.slug })} key={topic.id}>{topic.title}</Link>)}</div></div>
         <dl className={styles.pathMeta}><div><ListOrdered size={20} /><dt>{path.counts.stages} 个阶段</dt><dd>{path.estimated_reading || (path.estimated_weeks ? `约 ${path.estimated_weeks} 周` : "阅读时间尚未填写")}</dd></div><div><Users size={20} /><dt>{path.audience || pathDifficultyLabels[path.difficulty] || "读者基础尚未填写"}</dt><dd>{path.prerequisite || "先修要求尚未填写"}</dd></div></dl>
         <div className={styles.pathActions}><Link className={styles.primaryButton} href={readingPathHref(path)}>查看路径<ArrowRight size={15} /></Link><Link className={styles.outlineButton} href={`${readingPathHref(path)}?action=copy-plan`}><Bookmark size={15} />保存为我的计划</Link><small>登录后可保存</small></div>

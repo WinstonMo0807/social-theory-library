@@ -1,5 +1,6 @@
 import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
+import { publicMediaMetadata } from "@/lib/public-image-metadata";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ReadingPathPublicView } from "@/components/public/reading-path-public-view";
@@ -12,7 +13,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<ReadingP
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) || "";
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const [{ slug }, search] = await Promise.all([params, searchParams]);
-  try { const path = await loadPublicReadingPath(slug, first(search.revision)); return { title: path.title, description: path.introduction || "从问题和基础出发，按阶段阅读原典。" }; }
+  try { const path = await loadPublicReadingPath(slug, first(search.revision)); return { title: path.title, description: path.introduction || "从问题和基础出发，按阶段阅读原典。", ...await publicMediaMetadata(path.cover_media, path.title) }; }
   catch { return { title: "阅读路径" }; }
 }
 export default async function ReadingPathPage({ params, searchParams }: Props) {

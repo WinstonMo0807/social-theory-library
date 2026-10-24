@@ -165,6 +165,7 @@ def compact_work(work, request=None, *, include_unpublished=False, edition=None)
             "asset_id": str(asset.pk) if asset else None,
             "reader_href": reader_href,
             "detail_href": f"/works/{slug or edition.pk}",
+            "cover_media": work_data.get("cover_media"),
         }
     if not include_unpublished:
         return None
@@ -221,6 +222,7 @@ class CompactTheoryWorkSerializer(serializers.Serializer):
     year = serializers.IntegerField(allow_null=True)
     publisher = serializers.CharField(allow_blank=True)
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     edition_id = serializers.UUIDField(required=False)
     catalog_revision_id = serializers.UUIDField(required=False)
     document_revision_id = serializers.UUIDField(allow_null=True, required=False)
@@ -384,6 +386,7 @@ class PersonNodeSerializer(serializers.ModelSerializer):
     birth_year = serializers.IntegerField(source="person.birth_year", read_only=True)
     death_year = serializers.IntegerField(source="person.death_year", read_only=True)
     portrait_url = serializers.SerializerMethodField()
+    portrait_media = serializers.SerializerMethodField()
     scholar_slug = serializers.SerializerMethodField()
 
     class Meta:
@@ -395,6 +398,7 @@ class PersonNodeSerializer(serializers.ModelSerializer):
             "birth_year",
             "death_year",
             "portrait_url",
+            "portrait_media",
             "scholar_slug",
             "relation_label",
             "is_representative",
@@ -402,7 +406,13 @@ class PersonNodeSerializer(serializers.ModelSerializer):
         )
 
     def get_portrait_url(self, obj) -> str:
-        return _media_url(self.context.get("request"), obj.person.portrait)
+        from catalog.serializers import PersonCompactSerializer
+        return PersonCompactSerializer(context=self.context).get_portrait(obj.person)
+
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
+    def get_portrait_media(self, obj):
+        from catalog.serializers import PersonCompactSerializer
+        return PersonCompactSerializer(context=self.context).get_portrait_media(obj.person)
 
     def get_scholar_slug(self, obj) -> str:
         profile = getattr(obj.person, "scholar_profile", None)
@@ -1544,6 +1554,7 @@ class TimelineScholarSerializer(serializers.Serializer):
     slug = serializers.CharField()
     href = serializers.CharField()
     portrait_url = serializers.CharField(allow_blank=True)
+    portrait_media = PublicCoverMediaSerializer(allow_null=True, required=False)
 
 
 class TimelineTopicSerializer(serializers.Serializer):

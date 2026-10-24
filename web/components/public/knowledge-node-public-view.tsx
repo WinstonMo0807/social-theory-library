@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MediaPlacement } from "@/components/media-placement";
 import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, ExternalLink, Network, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { AskLibraryLink } from "@/components/ask-library-link";
@@ -78,7 +79,7 @@ export function KnowledgeNodePublicView({
             <AskLibraryLink context="theories" ids={[node.id]} label={`询问关于${node.canonical_name_zh}的馆藏`} />
           </div>
           <div className="theory-node-hero-side">
-            <TheoryBanner image={node.cover_url} media={node.cover_media} />
+            <TheoryBanner image={node.cover_url} media={node.cover_media} placement="detail" />
             <dl>
               {node.representative_scholars.length ? <><dt data-module-id="theory-scholars"><UsersRound size={17} />代表学者</dt><dd>{node.representative_scholars.map((person) => person.scholar_slug ? <Link href={`/scholars/${person.scholar_slug}`} key={person.id}>{person.name}</Link> : <span key={person.id}>{person.name}</span>)}</dd></> : null}
               {node.period_label ? <><dt><CalendarDays size={17} />形成时期</dt><dd>{node.period_label}</dd></> : null}
@@ -111,7 +112,7 @@ export function KnowledgeNodePublicView({
           })}</div>
         </section> : null}
 
-        {["overview", "concepts"].includes(section) && node.representative_scholars.length ? <section id="scholars" className="knowledge-section" data-edit-section="relations"><TheorySectionHeading title="代表学者"/><div className="knowledge-person-grid">{node.representative_scholars.map(person => <article key={person.id}>{person.portrait_url ? <img src={person.portrait_url} alt={person.name} loading="lazy"/> : null}<span>{person.scholar_slug ? <Link href={`/scholars/${person.scholar_slug}`}>{person.name}</Link> : <strong>{person.name}</strong>}<small>{[person.birth_year, person.death_year].filter(Boolean).join(" — ")}</small><p>{person.relation_label}</p></span></article>)}</div></section> : null}
+        {["overview", "concepts"].includes(section) && node.representative_scholars.length ? <section id="scholars" className="knowledge-section" data-edit-section="relations"><TheorySectionHeading title="代表学者"/><div className="knowledge-person-grid">{node.representative_scholars.map(person => <article key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses}><img src={person.portrait_url} alt={person.name} loading="lazy"/></MediaPlacement> : null}<span>{person.scholar_slug ? <Link href={`/scholars/${person.scholar_slug}`}>{person.name}</Link> : <strong>{person.name}</strong>}<small>{[person.birth_year, person.death_year].filter(Boolean).join(" — ")}</small><p>{person.relation_label}</p></span></article>)}</div></section> : null}
         {["overview", "works"].includes(section) && groupedWorks.length ? <section className="theory-node-works" data-module-id="theory-works" data-edit-section="works">
           <TheorySectionHeading title="馆藏文献" href={`/explore?theory=${encodeURIComponent(node.slug)}`} action={`查看全部 ${node.work_count} 部`} />
           {(section === "overview" ? groupedWorks.slice(0, 1) : groupedWorks).map(([role, relations]) => <article key={role}>{section !== "overview" ? <h3>{workRoleLabels[role] || role}</h3> : null}<div>{(section === "overview" ? relations.slice(0, 4) : relations).map((relation) => relation.work_data ? <WorkCompactCard key={relation.id} work={relation.work_data} /> : null)}</div></article>)}

@@ -1,5 +1,6 @@
 import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
+import { publicMediaMetadata } from "@/lib/public-image-metadata";
 import { notFound } from "next/navigation";
 import { DisciplinePublicView } from "@/components/public/discipline-public-view";
 import { SiteFooter } from "@/components/site-footer";
@@ -10,7 +11,7 @@ const allowedTypes = new Set(["theory_tradition", "subdiscipline", "debate"]);
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const payload = await loadTheoryDisciplinePage(slug);
-  return { title: payload?.discipline.name || "学科详情", description: payload?.discipline.description || "从学科浏览理论条目和馆藏。" };
+  return { title: payload?.discipline.name || "学科详情", description: payload?.discipline.description || "从学科浏览理论条目和馆藏。", ...await publicMediaMetadata(payload?.discipline.cover_media, payload?.discipline.name || "学科") };
 }
 
 export default async function TheoryDisciplinePage({

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MediaPlacement } from "@/components/media-placement";
 import { ArrowRight, BookOpen, ChevronDown, ExternalLink, FileText } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { AskLibraryLink } from "@/components/ask-library-link";
@@ -21,7 +22,7 @@ const sectionAlias: Record<string, string> = { concepts: "usages", timeline: "hi
 
 function WorkRow({ work, compact = false }: { work: TheoryWorkCompact; compact?: boolean }) {
   return <article className={`${styles.workRow} ${compact ? styles.compactWork : ""}`}>
-    {work.cover_url ? <img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /> : <span className={styles.workPlaceholder}><FileText size={25} /></span>}
+    {work.cover_url ? <MediaPlacement uses={work.cover_media?.display_uses} fallback={<span className={styles.workPlaceholder}><FileText size={25}/></span>}><img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /></MediaPlacement> : <span className={styles.workPlaceholder}><FileText size={25} /></span>}
     <div><h3>{work.detail_href ? <CollectionLink href={work.detail_href}>{work.title}</CollectionLink> : work.title}</h3>{work.subtitle ? <p>{work.subtitle}</p> : null}<small>{[work.author, work.year, work.publisher].filter(value => value !== "" && value !== null).join(" · ")}</small>
       {work.reader_href ? <CollectionLink className={styles.readLink} href={work.reader_href}>阅读原文<ExternalLink size={13} /></CollectionLink> : <><p className={styles.unavailable}>这一版本暂无可读取的原文。</p>{work.detail_href ? <CollectionLink className={styles.readLink} href={work.detail_href}>查看书目与其他版本<ArrowRight size={13} /></CollectionLink> : null}</>}
     </div>
@@ -62,7 +63,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
   // Decorative photograph extracted from the final PDF 49, not an example source document.
   const heroImage = node.cover_url || "/images/stl4/theory-detail-final-r2.webp";
   const heroMedia = node.cover_url && node.cover_media?.renditions.length
-    ? <ResponsiveMediaImage src={heroImage} sources={node.cover_media.renditions} alt={node.cover_media.alt_text || ""} sizes="(max-width: 700px) 100vw, 32vw" loading="eager" />
+    ? <MediaPlacement uses={node.cover_media.display_uses} placement="detail"><ResponsiveMediaImage src={heroImage} sources={node.cover_media.renditions} alt={node.cover_media.alt_text || ""} sizes="(max-width: 700px) 100vw, 32vw" loading="eager" /></MediaPlacement>
     : <img src={heroImage} alt="" />;
   const historySection = <section id="history" className={styles.section}><header className={styles.sectionHeading}><h2>形成与变化</h2><Link href={`${base}/timeline`}>查看完整脉络<ArrowRight size={15} /></Link></header><div className={styles.timeline}>{timeline.map(event => <article key={event.id}><time>{event.date_label || event.start_year || "时间待确认"}</time><h3><Link href={`/theories/events/${event.id}`}>{event.title}</Link></h3><p>{event.description}</p>{event.reader_href ? <Link href={event.reader_href} target="_blank" rel="noopener noreferrer">核对原文<ExternalLink size={13} /></Link> : null}</article>)}</div>{!timeline.length ? <p className={styles.empty}>尚无已确认并公开的相关事件。</p> : null}</section>;
   const scholarSection = <section className={styles.section} id="scholars"><header className={styles.sectionHeading}><h2>代表人物{tradition ? "与作品" : ""}</h2></header>
@@ -70,7 +71,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
       // Author and work must share a confirmed usage; list order is not an attribution.
       const source = usages.find(usage => usage.author?.id === person.id)?.source;
       const work = source ? works.find(item => item.id === source.work_id) : null;
-      return <article key={person.id}>{person.portrait_url ? <img src={person.portrait_url} alt={person.name} loading="lazy" /> : <div className={styles.personPlaceholder}><span>{person.name.slice(0, 1)}</span></div>}
+      return <article key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<div className={styles.personPlaceholder}><span>{person.name.slice(0,1)}</span></div>}><img src={person.portrait_url} alt={person.name} loading="lazy" /></MediaPlacement> : <div className={styles.personPlaceholder}><span>{person.name.slice(0, 1)}</span></div>}
         <div><h3>{person.scholar_slug ? <Link href={`/scholars/${person.scholar_slug}`}>{person.name}</Link> : person.name}</h3>{person.original_name ? <small>{person.original_name}</small> : null}<small>{[person.birth_year, person.death_year].filter(value => value !== null).join(" — ")}</small>{person.relation_label ? <p>{person.relation_label}</p> : null}{work ? <WorkRow work={work} compact /> : person.scholar_slug ? <Link className={styles.readLink} href={`/scholars/${person.scholar_slug}`}>查看人物与著作<ArrowRight size={14} /></Link> : null}</div>
       </article>;
     })}</div>{!node.representative_scholars.length ? <p className={styles.empty}>代表人物尚待确认。这里仅展示已有公开关联的学者。</p> : null}

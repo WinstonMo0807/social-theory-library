@@ -54,6 +54,7 @@ def scholar_card(profile):
         "id": str(profile.pk), "person_id": str(profile.person_id), "name": profile.person.preferred_name,
         "slug": profile.slug, "href": f"/scholars/{profile.slug}",
         "portrait_url": PersonCompactSerializer().get_portrait(profile.person),
+        "portrait_media": PersonCompactSerializer().get_portrait_media(profile.person),
     }
 
 

@@ -7388,6 +7388,7 @@ export interface components {
             year: number | null;
             publisher: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             /** Format: uuid */
             edition_id?: string;
             /** Format: uuid */
@@ -7682,6 +7683,7 @@ export interface components {
             readonly topic_count: number;
             readonly work_count: number;
             readonly scholar_count: number;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
         };
         DisciplineCompact: {
             /** Format: uuid */
@@ -7693,6 +7695,7 @@ export interface components {
             description?: string;
             /** Format: uri */
             hero_image?: string | null;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
         };
         DisciplineCompactRequest: {
             code: string;
@@ -8924,6 +8927,7 @@ export interface components {
             year: number | null;
             publisher: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             /** Format: uuid */
             edition_id?: string;
             /** Format: uuid */
@@ -11738,6 +11742,7 @@ export interface components {
             page?: number;
             transform?: components["schemas"]["MediaTransformRequest"];
             metadata?: components["schemas"]["MediaRevisionMetadataRequest"];
+            display_uses?: components["schemas"]["MediaDisplayUseEnum"][];
         };
         ObjectMediaReceipt: {
             owner_id: string;
@@ -12926,6 +12931,7 @@ export interface components {
             authors: string[];
             publication_year: number | null;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             href: string | null;
             reader_url: string | null;
             source_status: components["schemas"]["PathMaterialOutputSourceStatusEnum"];
@@ -13368,6 +13374,7 @@ export interface components {
             readonly birth_year: number;
             readonly death_year: number;
             readonly portrait_url: string;
+            readonly portrait_media: components["schemas"]["PublicCoverMedia"] | null;
             readonly scholar_slug: string;
             relation_label?: string;
             is_representative?: boolean;
@@ -15045,7 +15052,7 @@ export interface components {
                 [key: string]: number;
             };
             cover_url: string;
-            cover_media: unknown;
+            cover_media: components["schemas"]["PublicCoverMedia"] | null;
             primary_discipline_data: unknown;
             diff?: unknown;
             preview?: boolean;
@@ -15189,6 +15196,7 @@ export interface components {
             description: string;
             problem_statement: string;
             hero_image: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             tags: string[];
             matched_alias: string;
             parent: components["schemas"]["TopicLink"] | null;
@@ -15207,6 +15215,7 @@ export interface components {
             description: string;
             problem_statement: string;
             hero_image: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             tags: string[];
             matched_alias: string;
             parent: components["schemas"]["TopicLink"] | null;
@@ -16684,6 +16693,7 @@ export interface components {
             original_title: string;
             href: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             document_type: string;
             language: string;
             publication_year: number | null;
@@ -17489,6 +17499,7 @@ export interface components {
             readonly works_pagination: components["schemas"]["SubdisciplineWorksPagination"];
             readonly reading_paths: components["schemas"]["SubdisciplineReadingPath"][];
             readonly sources: components["schemas"]["SubdisciplineSource"][];
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
         };
         SubdisciplineCanonicalTarget: {
             /** Format: uuid */
@@ -17529,6 +17540,7 @@ export interface components {
             readonly featured: boolean;
             readonly href: string;
             readonly discipline: components["schemas"]["SubdisciplineDiscipline"] | null;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
         };
         SubdisciplineQuestion: {
             /** Format: uuid */
@@ -17561,6 +17573,7 @@ export interface components {
             confidence: number;
             approved: boolean;
             portrait_url: string;
+            portrait_media?: components["schemas"]["PublicCoverMedia"] | null;
             summary: string;
             relation_label: string;
             source_href: string | null;
@@ -17596,6 +17609,7 @@ export interface components {
             href: string;
             summary: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             canonical_target: components["schemas"]["SubdisciplineCanonicalTarget"] | null;
             legacy_identities: components["schemas"]["SubdisciplineLegacyIdentity"][];
         };
@@ -17608,6 +17622,7 @@ export interface components {
             relation_label: string;
             description: string;
             hero_image: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             source: string;
         };
         SubdisciplineWork: {
@@ -17622,6 +17637,7 @@ export interface components {
             year: number | null;
             publisher: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             /** Format: uuid */
             edition_id: string;
             /** Format: uuid */
@@ -17790,6 +17806,7 @@ export interface components {
             counts: {
                 [key: string]: number;
             };
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
         };
         TheoryRecent: {
             nodes: components["schemas"]["KnowledgeNodeList"][];
@@ -17983,6 +18000,7 @@ export interface components {
             slug: string;
             href: string;
             portrait_url: string;
+            portrait_media?: components["schemas"]["PublicCoverMedia"] | null;
         };
         TimelineSimilarInputRequest: {
             title?: string;
@@ -18024,6 +18042,7 @@ export interface components {
             year: number | null;
             publisher: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             /** Format: uuid */
             edition_id?: string;
             /** Format: uuid */
@@ -18413,6 +18432,7 @@ export interface components {
             original_title: string;
             href: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             document_type: string;
             language: string;
             publication_year: number | null;

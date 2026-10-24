@@ -1,5 +1,6 @@
 import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
+import { publicMediaMetadata } from "@/lib/public-image-metadata";
 import { notFound } from "next/navigation";
 import { ScholarPublicView } from "@/components/public/scholar-public-view";
 import { SiteFooter } from "@/components/site-footer";
@@ -9,7 +10,7 @@ import { ScholarLoadError } from "@/components/public/scholar-load-error";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  try { const data = await loadPublicScholar(slug); return { title: data?.person.preferred_name || "学者" }; } catch { return { title: "学者" }; }
+  try { const data = await loadPublicScholar(slug); return { title: data?.person.preferred_name || "学者", ...await publicMediaMetadata(data?.person.portrait_media, data?.person.preferred_name || "学者") }; } catch { return { title: "学者" }; }
 }
 export default async function ScholarDetailPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<ScholarSearchParams> }) {
   const { slug } = await params, query = await searchParams;

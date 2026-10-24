@@ -1,5 +1,6 @@
 """Topic public DTOs; canonical management continues using AdminTopicSerializer."""
 from rest_framework import serializers
+from catalog.media_views import PublicCoverMediaSerializer
 from catalog.scholar_serializers import PublicScholarCardSerializer, ScholarPageSerializer, ScholarRevisionSerializer, ScholarWorkSerializer
 from catalog.reading_path_serializers import PublicReadingPathSerializer
 from catalog.shared_curation_views import CurationItemSerializer
@@ -16,6 +17,7 @@ class PublicTopicCardSerializer(TopicLinkSerializer):
     description = serializers.CharField(allow_blank=True)
     problem_statement = serializers.CharField(allow_blank=True)
     hero_image = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     tags = serializers.ListField(child=serializers.CharField())
     matched_alias = serializers.CharField(allow_blank=True)
     parent = TopicLinkSerializer(allow_null=True)

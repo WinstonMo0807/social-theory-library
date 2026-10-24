@@ -32749,6 +32749,14 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "edition_id": {
                         "type": "string",
                         "format": "uuid"
@@ -33632,10 +33640,20 @@
                     "scholar_count": {
                         "type": "integer",
                         "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "code",
+                    "cover_media",
                     "id",
                     "name",
                     "scholar_count",
@@ -33679,10 +33697,20 @@
                         "type": "string",
                         "format": "uri",
                         "nullable": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "code",
+                    "cover_media",
                     "id",
                     "name",
                     "slug"
@@ -37623,6 +37651,14 @@
                     },
                     "cover_url": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "edition_id": {
                         "type": "string",
@@ -47421,6 +47457,13 @@
                     },
                     "metadata": {
                         "$ref": "#/components/schemas/MediaRevisionMetadataRequest"
+                    },
+                    "display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        },
+                        "maxItems": 4
                     }
                 },
                 "required": [
@@ -50867,6 +50910,14 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "href": {
                         "type": "string",
                         "nullable": true
@@ -52356,6 +52407,15 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "portrait_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "scholar_slug": {
                         "type": "string",
                         "readOnly": true
@@ -52380,6 +52440,7 @@
                     "id",
                     "name",
                     "original_name",
+                    "portrait_media",
                     "portrait_url",
                     "scholar_slug"
                 ]
@@ -57896,6 +57957,11 @@
                         "type": "string"
                     },
                     "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
                         "nullable": true
                     },
                     "primary_discipline_data": {
@@ -58421,6 +58487,14 @@
                     "hero_image": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "tags": {
                         "type": "array",
                         "items": {
@@ -58496,6 +58570,14 @@
                     },
                     "hero_image": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "tags": {
                         "type": "array",
@@ -63427,6 +63509,14 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "document_type": {
                         "type": "string"
                     },
@@ -66295,11 +66385,21 @@
                             "$ref": "#/components/schemas/SubdisciplineSource"
                         },
                         "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "children",
                     "core_works",
+                    "cover_media",
                     "discipline",
                     "featured",
                     "href",
@@ -66453,9 +66553,19 @@
                         ],
                         "nullable": true,
                         "readOnly": true
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
                     }
                 },
                 "required": [
+                    "cover_media",
                     "discipline",
                     "featured",
                     "href",
@@ -66561,6 +66671,14 @@
                     },
                     "portrait_url": {
                         "type": "string"
+                    },
+                    "portrait_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "summary": {
                         "type": "string"
@@ -66685,6 +66803,14 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "canonical_target": {
                         "allOf": [
                             {
@@ -66740,6 +66866,14 @@
                     "hero_image": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "source": {
                         "type": "string"
                     }
@@ -66789,6 +66923,14 @@
                     },
                     "cover_url": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "edition_id": {
                         "type": "string",
@@ -67375,11 +67517,21 @@
                             "type": "integer",
                             "minimum": 0
                         }
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "code",
                     "counts",
+                    "cover_media",
                     "id",
                     "name",
                     "slug"
@@ -68102,6 +68254,14 @@
                     },
                     "portrait_url": {
                         "type": "string"
+                    },
+                    "portrait_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -68245,6 +68405,14 @@
                     },
                     "cover_url": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "edition_id": {
                         "type": "string",
@@ -69598,6 +69766,14 @@
                     },
                     "cover_url": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "document_type": {
                         "type": "string"

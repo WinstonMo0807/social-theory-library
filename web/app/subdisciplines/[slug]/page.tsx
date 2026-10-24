@@ -1,5 +1,6 @@
 import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
+import { publicMediaMetadata } from "@/lib/public-image-metadata";
 import { notFound } from "next/navigation";
 import { SubdisciplinePublicView } from "@/components/public/subdiscipline-public-view";
 import { SiteFooter } from "@/components/site-footer";
@@ -7,7 +8,10 @@ import { loadSubdiscipline, SubdisciplineWorksPageError } from "@/lib/api/taxono
 import Link from "next/link";
 import styles from "@/components/public/subdiscipline.module.css";
 
-export const metadata: Metadata = { title: "子学科详情" };
+export async function generateMetadata({params}: {params: Promise<{slug: string}>}): Promise<Metadata> {
+  try { const item = await loadSubdiscipline((await params).slug); return {title: item?.name || "子学科详情", ...await publicMediaMetadata(item?.cover_media, item?.name || "子学科")}; }
+  catch { return {title: "子学科详情"}; }
+}
 
 export default async function SubdisciplinePage({ params, searchParams }: {
   params: Promise<{ slug: string }>;

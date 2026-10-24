@@ -32,7 +32,7 @@ def entity_link(row):
 
 
 def cover_url(row):
-    if getattr(row, "cover_rendition_id", None):
+    if getattr(row, "cover_rendition_id", None) or getattr(row, "hero_rendition_id", None):
         media = image_media(row)
         return next(item["url"] for item in media["renditions"]
                     if item["id"] == media["primary_rendition_id"])
@@ -77,7 +77,7 @@ def node_card(relation):
         "id": str(node.pk), "name": node.canonical_name_zh, "slug": node.slug,
         "role": relation.relation_role, "kind": "knowledge_node", "node_type": node.node_type,
         "href": f"/theories/nodes/{node.slug}", "summary": node.summary or node.definition,
-        "cover_url": cover_url(node), "source": relation.source,
+        "cover_url": cover_url(node), "cover_media": image_media(node), "source": relation.source,
         "canonical_target": node_target(node), "legacy_identities": [],
     }
 
@@ -165,7 +165,7 @@ def public_subdiscipline_data(obj, context):
     topics = [{
         "id": str(row.topic_id), "name": row.topic.name, "slug": row.topic.slug,
         "relation_label": row.relation_label, "description": row.topic.description,
-        "hero_image": row.topic.hero_image.url if row.topic.hero_image else "",
+        "hero_image": cover_url(row.topic), "cover_media": image_media(row.topic),
         "href": f"/topics/{row.topic.slug}", "source": "",
     } for row in obj.topic_relations.filter(
         review_status="approved", topic__editorial_status="published",
@@ -182,6 +182,7 @@ def public_subdiscipline_data(obj, context):
             "source_label": row.source, "reason": row.relation_label,
             "confidence": row.confidence, "approved": True,
             "portrait_url": PersonCompactSerializer(context=context).get_portrait(row.person),
+            "portrait_media": PersonCompactSerializer(context=context).get_portrait_media(row.person),
             "summary": profile.short_description or row.person.biography,
             "href": f"/scholars/{profile.slug}", "relation_label": row.relation_label,
             # This model has an editorial source note but no exact source FK.

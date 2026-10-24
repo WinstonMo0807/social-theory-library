@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
+import { MediaPlacement } from "@/components/media-placement";
 import { ArrowRight, BookOpen, FileText } from "lucide-react";
 import { CollectionLink } from "@/components/collection-link";
 import { AssetDownloadButton } from "@/components/asset-download-button";
@@ -67,7 +68,7 @@ export function TimelineEventDetails({ event, actionPath = "/theories/timeline",
         <h3>事件介绍</h3>
         {event.description ? <div className={styles.description}><p>{event.description}</p></div> : <p className={styles.muted}>尚无公开的事件介绍。</p>}
         <details className={styles.moreInfo}><summary>展开更多事件资料</summary>
-          {event.scholars.length ? <><h3>相关学者</h3><div className={styles.people}>{event.scholars.map(person => <Link href={person.href} key={person.id}>{person.portrait_url ? <img src={person.portrait_url} alt="" /> : null}<span>{person.name}</span></Link>)}</div></> : null}
+          {event.scholars.length ? <><h3>相关学者</h3><div className={styles.people}>{event.scholars.map(person => <Link href={person.href} key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses}><img src={person.portrait_url} alt="" /></MediaPlacement> : null}<span>{person.name}</span></Link>)}</div></> : null}
           {event.topics.length ? <><h3>相关主题</h3><div className={styles.chips}>{event.topics.map(topic => <Link href={topic.href} key={topic.id}>{topic.name}</Link>)}</div></> : null}
           {event.relations.length ? <><h3>涉及对象</h3><ul className={styles.objectList}>{event.relations.map((row, rowIndex) => <li key={`${row.type}-${row.id}-${rowIndex}`}>{row.href ? <Link href={row.href}>{row.name}<ArrowRight size={12} aria-hidden="true" /></Link> : <span>{row.name}</span>}{row.description ? <p>{row.description}</p> : null}</li>)}</ul></> : <p className={styles.muted}>没有可公开的关联对象。</p>}
           {event.source ? <><h3>来源说明</h3><p>{event.source}</p></> : null}

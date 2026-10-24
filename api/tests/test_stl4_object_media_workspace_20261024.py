@@ -25,7 +25,8 @@ def media_context(request,settings,tmp_path,api_client,admin_user):
     assert state.status_code==200,state.data
     body={"request_id":str(uuid4()),"expected_version":state.data["version"],"action":"save","slot":state.data["slot"],"media_id":str(media.pk),
         "transform":{"x":0.1,"y":0.1,"width":0.8,"height":0.8,"rotation":90},
-        "metadata":{"alt_text":"本次选图说明","source_label":"合成材料","source_url":"","rights":"","license":"","credit":""}}
+        "metadata":{"alt_text":"本次选图说明","source_label":"合成材料","source_url":"","rights":"","license":"","credit":""},
+        "display_uses":["detail","mobile"]}
     return kind,target,media,path,body
 
 
@@ -37,6 +38,7 @@ def test_crop_replay_and_history_restore_keep_original_and_public_choice(media_c
     assert AuditEvent.objects.filter(action="media.object_workspace.command",request_id=body["request_id"]).count()==1
     state=api_client.get(path).data
     assert state["current"]["metadata"]["alt_text"]=="本次选图说明"
+    assert state["current"]["display_uses"]==["detail","mobile"]
     assert state["history"]["count"]==1 and state["has_unpublished_changes"]
     revision_id=state["current"]["id"]
     media.refresh_from_db();assert media.alt_text=="原图说明"
@@ -49,6 +51,7 @@ def test_crop_replay_and_history_restore_keep_original_and_public_choice(media_c
     restored={"request_id":str(uuid4()),"expected_version":state["version"],"slot":body["slot"],"action":"restore","rendition_id":revision_id}
     assert api_client.post(path,restored,format="json").status_code==200
     assert api_client.get(path).data["current"]["id"]==revision_id
+    assert api_client.get(path).data["current"]["display_uses"]==["detail","mobile"]
     assert MediaRendition.objects.filter(media=media).count()==3
     assert EditorialRevision.objects.filter(target_type=kind,target_id=target.pk,status="draft").count()==1
 

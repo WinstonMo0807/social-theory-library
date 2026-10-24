@@ -1,13 +1,15 @@
+import type { components } from "./generated/schema";
+
 export type PathRevision = { id: string | null; token: string; number: number | null; published_at: string | null; change_note: string; legacy: boolean };
 export type PathLink = { id: string; slug: string; title: string; href: string };
-export type PathSubstitute = { work_id: string; edition_id: string; title: string; version_label: string; publication_year: number | null; authors: string[]; href: string; cover_url: string };
+export type PathSubstitute = { work_id: string; edition_id: string; title: string; version_label: string; publication_year: number | null; authors: string[]; href: string; cover_url: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null };
 export type PathMaterial = {
   learning_goal?:string;
   dependencies?: {title?:string;item_id:string;kind:"learning_order"|"theory_related";reason:string}[];
   id: string; stage_id: string; kind: "work" | "chapter" | "paper" | "node"; title: string;
   work_id: string | null; edition_id: string | null; node_id: string | null; asset_id: string | null; document_revision_id: string | null;
   chapter_title: string; page_start: number | null; page_end: number | null; printed_page_label: string;
-  version_label: string; authors: string[]; publication_year: number | null; cover_url: string; href: string | null; reader_url: string | null;
+  version_label: string; authors: string[]; publication_year: number | null; cover_url: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; href: string | null; reader_url: string | null;
   source_status: "available" | "no_fulltext" | "unavailable" | "withdrawn" | "revision_changed";
   source_notice?: string; acquisition_status?: string; reason: string; prerequisite: string;
   is_required: boolean; position: number; reading_order: number; substitutes: PathSubstitute[];
@@ -18,8 +20,8 @@ export type PublicReadingPath = {
   estimated_reading: string; estimated_weeks: number | null; prerequisite: string; curator_note: string;
   credits: { name: string; role: string }[]; topics: PathLink[]; learning_questions: string[]; related_debates: PathLink[];
   revision: PathRevision; latest_revision: PathRevision; is_current_revision: boolean; versions: PathRevision[]; versions_truncated: boolean; stages: PathStage[]; items: PathMaterial[];
-  counts: { stages: number; items: number; required: number; readable: number }; cover_url: string;
-  cover_media?: unknown; next_paths?: PathLink[]; diff?: PathVersionDiff;
+  counts: { stages: number; items: number; required: number; readable: number }; cover_url: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null;
+  next_paths?: PathLink[]; diff?: PathVersionDiff;
 };
 export type PathVersionDiff = { from_revision: PathRevision; to_revision: PathRevision } & Record<"added_items" | "removed_items" | "changed_items" | "added_stages" | "removed_stages" | "changed_stages", { id: string; title: string; source_status: string | null; change_note: string }[]>;
 export type ReadingPathPage = { count: number; next: string | null; previous: string | null; results: PublicReadingPath[] };

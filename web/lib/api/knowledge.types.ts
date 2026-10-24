@@ -9,6 +9,7 @@ export type TheoryDisciplineCompact = {
   slug: string;
   description: string;
   hero_image: string;
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
 };
 
 export type TheoryPersonLink = {
@@ -18,6 +19,7 @@ export type TheoryPersonLink = {
   birth_year: number | null;
   death_year: number | null;
   portrait_url: string;
+  portrait_media?: components["schemas"]["PublicCoverMedia"] | null;
   scholar_slug: string;
   relation_label: string;
   is_representative: boolean;
@@ -39,13 +41,13 @@ export type TheoryWorkCompact = {
   year: number | null;
   publisher: string;
   cover_url: string;
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   asset_id: string | null;
   reader_href: string | null;
   detail_href: string | null;
 };
 
 export type KnowledgeNodeListItem = {
-  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   id: string;
   node_type: "theory_tradition" | "subdiscipline" | "concept" | "debate" | "research_problem";
   canonical_name_zh: string;
@@ -65,6 +67,7 @@ export type KnowledgeNodeListItem = {
   relation_count: number;
   representative_scholars: TheoryPersonLink[];
   cover_url: string;
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   updated_at: string;
 };
 
@@ -131,7 +134,8 @@ export type TheoryConceptUsage = {
   term: string; language: string; usage_type: string; interpretation: string; attribution_note: string;
   title: string; explanatory_object: string; period: string; context: string;
   author: { id: string; name: string; original_name: string; birth_year: number | null; death_year: number | null;
-    portrait_url: string; scholar_slug: string } | null;
+    portrait_url: string;
+  portrait_media?: components["schemas"]["PublicCoverMedia"] | null; scholar_slug: string } | null;
   source: { id: string; work_id: string; work_title: string; edition_id: string; edition_label: string;
     asset_id: string; document_revision_id: string; page_start: number; page_end: number;
     printed_label: string; text: string; reader_url: string };

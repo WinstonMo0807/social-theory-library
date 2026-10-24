@@ -124,6 +124,7 @@ class ScholarWorkSerializer(serializers.Serializer):
     original_title = serializers.CharField(allow_blank=True)
     href = serializers.CharField()
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     document_type = serializers.CharField()
     language = serializers.CharField(allow_blank=True)
     publication_year = serializers.IntegerField(allow_null=True)

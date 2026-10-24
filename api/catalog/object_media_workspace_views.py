@@ -36,13 +36,10 @@ ACTION = "media.object_workspace.command"
 
 
 class ObjectMediaCommandSerializer(MediaWorkspaceCommandSerializer):
-    display_uses = None
     action = serializers.ChoiceField(choices=["save", "restore", "clear", "legacy"])
     slot = serializers.ChoiceField(choices=["portrait", "hero"])
 
     def validate(self, value):
-        if "display_uses" in self.initial_data:
-            raise serializers.ValidationError("此对象的独立展示用途尚未开放，请先保留当前用途。")
         if value["action"] == "legacy":
             if set(self.initial_data) != {"request_id", "expected_version", "action", "slot"}:
                 raise serializers.ValidationError("旧图仅从当前对象读取，不接受任意文件路径。")
@@ -175,7 +172,7 @@ class ObjectMediaWorkspaceView(ObjectMediaBase):
                 build_rendition(prepared.pk,width=320,kind="thumbnail")
             elif data["action"]=="save":
                 get_object_or_404(MediaAsset,pk=data["media_id"])
-                variants={width:build_rendition(data["media_id"],width=width,kind=kind,transform=data["transform"],metadata_override=data["metadata"]) for width in RENDITION_WIDTHS}
+                variants={width:build_rendition(data["media_id"],width=width,kind=kind,transform=data["transform"],metadata_override=data["metadata"],display_uses=data.get("display_uses")) for width in RENDITION_WIDTHS}
                 primary=variants[640]
             elif data["action"]=="restore":
                 primary=get_object_or_404(history_for(target,object_type,selected["rendition_id"]),pk=data["rendition_id"])

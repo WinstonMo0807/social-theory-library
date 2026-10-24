@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import type { components } from "./api/generated/schema";
+import { mediaAllows } from "./media-usage";
+
+export async function publicMediaMetadata(media: components["schemas"]["PublicCoverMedia"] | null | undefined, title: string) {
+  return publicImageMetadata(media && mediaAllows(media.display_uses, "share") ? media.renditions.at(-1)?.url : undefined, media?.alt_text || title);
+}
 
 /** Only an explicitly selected, published, same-origin rendition may be shared. */
 export async function publicImageMetadata(image: string | undefined, alt: string): Promise<Metadata> {
-  if (!image || !/^\/api\/catalog\/works\/[0-9a-f-]+\/(?:cover|recommendation-image)\/\?rendition=[0-9a-f-]+$/i.test(image)) {
+  if (!image || !/^\/api\/catalog\/(?:works\/[0-9a-f-]+\/(?:cover|recommendation-image)|people\/[0-9a-f-]+\/portrait|knowledge-media\/(?:knowledge_node|reading_path|discipline|subdiscipline|topic)\/[0-9a-f-]+\/file)\/\?rendition=[0-9a-f-]+$/i.test(image)) {
     return { openGraph: { images: [] }, twitter: { card: "summary", images: [] } };
   }
   const requestHeaders = await headers();

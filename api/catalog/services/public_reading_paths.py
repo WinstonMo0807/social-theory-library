@@ -137,7 +137,7 @@ def _projection(path, raw, selected, versions, *, request=None, preview=False, c
         snapshot = edition.active_catalog_revision.snapshot or {}
         work, data = snapshot.get("work") or {}, snapshot.get("edition") or {}
         cover = work.get("cover_media") or {}
-        return {"work_id": str(edition.work_id), "edition_id": str(edition.pk), "title": str(work.get("title") or "未题名材料"),
+        return {"work_id": str(edition.work_id), "edition_id": str(edition.pk), "cover_media": cover or None, "title": str(work.get("title") or "未题名材料"),
             "version_label": str(data.get("version_label") or ""), "publication_year": data.get("publication_year"),
             "authors": [str(row.get("name") or (row.get("person") or {}).get("preferred_name") or "") for row in snapshot.get("contributions", []) if isinstance(row, dict) and row.get("role") == "author" and whole_edition_contribution(row)],
             "href": f"/works/{data.get('public_slug') or edition.pk}",

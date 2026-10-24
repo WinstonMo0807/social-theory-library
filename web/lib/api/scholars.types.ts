@@ -37,7 +37,7 @@ export type ScholarChapter = {
 export type ScholarContributionScope = { kind: "edition" | "chapter"; status: "available" | "unavailable"; chapters: ScholarChapter[]; notice: string };
 export type ScholarWork = {
   id: string; edition_id: string; catalog_revision_id: string; title: string; original_title: string;
-  href: string; cover_url: string; document_type: string; language: string; publication_year: number | null;
+  href: string; cover_url: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; document_type: string; language: string; publication_year: number | null;
   version_label: string; roles: string[]; role_labels: string[];
   contributions: { person_id: string; name: string; role: string; role_label: string; scope: ScholarContributionScope }[];
   source_status: "available" | "no_fulltext"; reader_href: string; is_essential: boolean; is_recommended?: boolean; recommendation_reason?: string;

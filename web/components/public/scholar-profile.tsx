@@ -16,7 +16,7 @@ export function ScholarProfile({ data, preview = false, initialSection = "overvi
   const section = scholarSection(initialSection) || "overview", quote = data.featured_quote?.source;
   return <main className={styles.page} onClickCapture={preview ? event => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); } : undefined} onAuxClickCapture={preview ? event => event.preventDefault() : undefined}>
     <nav className={styles.breadcrumbs} aria-label="面包屑"><Link prefetch={false} href="/">首页</Link><span>›</span><Link prefetch={false} href="/scholars">学者</Link><span>›</span><span>{data.person.preferred_name}</span></nav>
-    <header className={styles.profileHero} data-module-id="scholar-identity" data-edit-section="identity"><div className={styles.profilePortrait}><ScholarImage scholar={data} eager /></div><div className={styles.profileCopy}>
+    <header className={styles.profileHero} data-module-id="scholar-identity" data-edit-section="identity"><div className={styles.profilePortrait}><ScholarImage scholar={data} eager placement="detail" /></div><div className={styles.profileCopy}>
       <h1>{data.person.preferred_name}</h1><p className={styles.identityLine}>{data.person.original_name ? <span>{data.person.original_name}</span> : null}<span>{scholarYears(data.person)}</span></p>{data.nationalities.length || data.occupations.length ? <p className={styles.identityDescription}>{[...data.nationalities, ...data.occupations].join(" · ")}</p> : null}
       {data.short_description ? <p className={styles.profileDescription}>{data.short_description}</p> : <p className={styles.profileDescription}>此学者的简介仍待补充，可从已收录的作品、问题与来源展开研究。</p>}
       {data.profile_state === "sparse" ? <span className={styles.sparseBadge}>资料仍待补充</span> : null}

@@ -1,5 +1,6 @@
 import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
+import { publicMediaMetadata } from "@/lib/public-image-metadata";
 import { notFound } from "next/navigation";
 import { KnowledgeNodePublicView } from "@/components/public/knowledge-node-public-view";
 import { SiteFooter } from "@/components/site-footer";
@@ -8,7 +9,7 @@ import { loadKnowledgeNode, loadNormalizedReadingPathsPage, loadNormalizedTheory
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const node = await loadKnowledgeNode(slug);
-  return { title: node?.canonical_name_zh || "理论条目", description: node?.summary || node?.definition || "理论条目详情" };
+  return { title: node?.canonical_name_zh || "理论条目", description: node?.summary || node?.definition || "理论条目详情", ...await publicMediaMetadata(node?.cover_media, node?.canonical_name_zh || "理论条目") };
 }
 
 export default async function KnowledgeNodePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ compare?: string | string[] }> }) {

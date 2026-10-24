@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { KnowledgeNodeListItem, NormalizedReadingPath, TheoryDisciplineCompact, TheoryWorkCompact } from "@/lib/api/knowledge.types";
 import { ArchitecturalImage } from "./ui";
+import { MediaPlacement } from "./media-placement";
 import { ResponsiveMediaImage } from "./responsive-media-image";
 import type { components } from "@/lib/api/generated/schema";
 import { CollectionLink } from "@/components/collection-link";
@@ -34,8 +35,8 @@ export const workRoleLabels: Record<string, string> = {
   general_mention: "一般提及",
 };
 
-export function TheoryBanner({ image, media }: { image?: string; media?: components["schemas"]["PublicCoverMedia"] | null }) {
-  if (image && media?.renditions.length) return <div className="theory-system-banner has-image" style={{ backgroundImage: "none" }}><div style={{ position: "absolute", inset: 0 }}><ResponsiveMediaImage src={image} sources={media.renditions} alt={media.alt_text || "页面配图"} sizes="(max-width: 760px) 90vw, 50vw" loading="eager" /></div></div>;
+export function TheoryBanner({ image, media, placement = "list" }: { image?: string; placement?: "list" | "detail"; media?: components["schemas"]["PublicCoverMedia"] | null }) {
+  if (image && media?.renditions.length) return <MediaPlacement uses={media.display_uses} placement={placement} fallback={<div className="theory-system-banner"><ArchitecturalImage compact /></div>}><div className="theory-system-banner has-image" style={{ backgroundImage: "none" }}><div style={{ position: "absolute", inset: 0 }}><ResponsiveMediaImage src={image} sources={media.renditions} alt={media.alt_text || "页面配图"} sizes="(max-width: 760px) 90vw, 50vw" loading="eager" /></div></div></MediaPlacement>;
   return image ? (
     <div className="theory-system-banner has-image" style={{ backgroundImage: `url("${image}")` }} />
   ) : (
@@ -74,7 +75,7 @@ export function DisciplineCard({
         <h2>{discipline.name}</h2>
         {discipline.description ? <p>{discipline.description}</p> : null}
       </div>
-      <TheoryBanner image={discipline.hero_image} />
+      <TheoryBanner image={discipline.hero_image} media={discipline.cover_media} />
       <footer>
         <TheoryStat value={counts.theory_traditions} label="理论传统" />
         <TheoryStat value={counts.subdisciplines} label="子学科" kind="layers" />
@@ -129,9 +130,9 @@ export function WorkCompactCard({ work, role }: { work: TheoryWorkCompact; role?
   const href = work.detail_href || work.reader_href || "/explore";
   return (
     <CollectionLink className="theory-work-compact" href={href}>
-      <span className={work.cover_url ? "work-cover has-image" : "work-cover"} style={work.cover_url ? { backgroundImage: `url("${work.cover_url}")` } : undefined}>
+      <MediaPlacement uses={work.cover_media?.display_uses} fallback={<span className="work-cover"><FileText size={24}/></span>}><span className={work.cover_url ? "work-cover has-image" : "work-cover"} style={work.cover_url ? { backgroundImage: `url("${work.cover_url}")` } : undefined}>
         {!work.cover_url ? <FileText size={24} /> : null}
-      </span>
+      </span></MediaPlacement>
       <span>
         {role ? <small>{role}</small> : null}
         <strong>{work.title}</strong>

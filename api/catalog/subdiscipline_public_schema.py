@@ -1,5 +1,6 @@
 """Typed public subdiscipline additions without changing catalog identities."""
 from rest_framework import serializers
+from catalog.media_views import PublicCoverMediaSerializer
 
 
 class SubdisciplineDisciplineSerializer(serializers.Serializer):
@@ -41,6 +42,7 @@ class SubdisciplineTheorySerializer(SubdisciplineLegacyIdentitySerializer):
     href = serializers.CharField()
     summary = serializers.CharField(allow_blank=True)
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     canonical_target = SubdisciplineCanonicalTargetSerializer(allow_null=True)
     legacy_identities = SubdisciplineLegacyIdentitySerializer(many=True)
 
@@ -49,6 +51,7 @@ class SubdisciplineTopicSerializer(SubdisciplineLinkSerializer):
     relation_label = serializers.CharField(allow_blank=True)
     description = serializers.CharField(allow_blank=True)
     hero_image = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     source = serializers.CharField(allow_blank=True)
 
 
@@ -59,6 +62,7 @@ class SubdisciplineScholarSerializer(SubdisciplineLinkSerializer):
     confidence = serializers.FloatField()
     approved = serializers.BooleanField()
     portrait_url = serializers.CharField(allow_blank=True)
+    portrait_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     summary = serializers.CharField(allow_blank=True)
     relation_label = serializers.CharField(allow_blank=True)
     source_href = serializers.CharField(allow_null=True)
@@ -98,6 +102,7 @@ class SubdisciplineWorkSerializer(serializers.Serializer):
     year = serializers.IntegerField(allow_null=True)
     publisher = serializers.CharField(allow_blank=True)
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     edition_id = serializers.UUIDField()
     catalog_revision_id = serializers.UUIDField()
     document_revision_id = serializers.UUIDField(allow_null=True)

@@ -1853,12 +1853,21 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
 
 
 class TaxonomyImageSerializerMixin:
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["cover_media"] = serializers.SerializerMethodField()
+        return fields
+
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
+    def get_cover_media(self, obj):
+        from catalog.services.knowledge_media import image_media
+        request = self.context.get("request")
+        return image_media(obj, private=bool(request and "/admin/" in request.path))
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.hero_rendition_id:
-            from catalog.services.knowledge_media import image_media
-            request = self.context.get("request")
-            media = image_media(instance, private=bool(request and "/admin/" in request.path))
+            media = data["cover_media"]
             data["hero_image"] = next(row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"])
         return data
 

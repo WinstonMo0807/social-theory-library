@@ -38,7 +38,7 @@ export function DisciplinePublicView({
             {discipline.description ? <p>{discipline.description}</p> : null}
             <TheorySearchForm action="/theories/directory" discipline={slug} />
           </div>
-          <TheoryBanner image={discipline.hero_image} />
+          <TheoryBanner image={discipline.hero_image} media={discipline.cover_media} placement="detail" />
         </section>
 
         <section className="theory-discipline-directory panel" data-edit-section="content">

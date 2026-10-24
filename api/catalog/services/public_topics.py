@@ -276,10 +276,15 @@ def _scholars(topic):
         Q(pk__in=_ids(curated.get("related_scholar_ids")))).distinct().order_by("public_name", "pk")
 
 
-def _image(topic, *, private=False):
+def _image_media(topic, *, private=False):
     from catalog.services.knowledge_media import image_media
     selection = getattr(topic, "_public_image_selection", None)
-    media = image_media(topic, selection=selection, private=private)
+    return image_media(topic, selection=selection, private=private)
+
+
+def _image(topic, *, private=False, media=None):
+    selection = getattr(topic, "_public_image_selection", None)
+    media = media if media is not None else _image_media(topic, private=private)
     if media:
         return next((row["url"] for row in media["renditions"] if row["id"] == media["primary_rendition_id"]), "")
     permitted = selection is None or selection.get("legacy_path") == topic.hero_image.name
@@ -293,8 +298,9 @@ def _cards(rows, tree=None, *, private=False, query=""):
         row = _formal(raw) if not getattr(raw, "_topic_preview", False) else raw
         editions = _editions(row)
         parent = topics.get(parents.get(str(row.pk)))
+        media = _image_media(row, private=private)
         output.append({**_link(row), "description": row.description, "problem_statement": row.problem_statement,
-            "hero_image": _image(row, private=private), "tags": _strings(row.key_concepts),
+            "hero_image": _image(row, private=private, media=media), "cover_media": media, "tags": _strings(row.key_concepts),
             "matched_alias": next((alias for alias in _strings(row.search_aliases) if query and alias.casefold() == query.casefold() and alias != row.name), ""),
             "parent": _link(parent) if parent else None, "work_count": row.public_work_count if not private and hasattr(row, "public_work_count") else editions.values("work_id").distinct().count(),
             "edition_count": row.public_edition_count if not private and hasattr(row, "public_edition_count") else editions.count(), "scholar_count": _scholars(row).count(),

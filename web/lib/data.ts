@@ -112,6 +112,7 @@ export type Scholar = {
   portrait?: string;
   portraitSources?: { id: string; width: number; height: number; url: string }[];
   portraitAlt?: string;
+  portraitDisplayUses?: import("./media-usage").MediaDisplayUse[];
   years: string;
   school: string;
   concerns: string[];

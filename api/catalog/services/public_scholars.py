@@ -356,7 +356,7 @@ def _work_rows(editions, profile):
             cover_url += f"&rendition={cover['primary_rendition_id']}"
         result.append({"id": str(edition.work_id), "edition_id": str(edition.pk), "catalog_revision_id": str(revision.pk),
             "title": str(work.get("title") or ""), "original_title": str(work.get("original_title") or ""),
-            "href": f"/works/{edition.public_slug}", "cover_url": cover_url, "document_type": work.get("document_type", ""),
+            "href": f"/works/{edition.public_slug}", "cover_url": cover_url, "cover_media": cover or None, "document_type": work.get("document_type", ""),
             "language": work.get("language", ""), "publication_year": version.get("publication_year"), "version_label": version.get("version_label", ""),
             "roles": roles, "role_labels": [labels.get(role, "其他贡献者") for role in roles], "contributions": contributions,
             "source_status": "available" if readable else "no_fulltext", "reader_href": f"/reader/{reader.pk}?revision={revision.document_revision_id}" if readable else "",

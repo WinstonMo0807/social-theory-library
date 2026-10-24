@@ -1,3 +1,4 @@
+import type { components } from "./generated/schema";
 // Existing public presentation contracts. Only schema-backed imports are generated.
 import type { Work, Scholar, TheorySchool } from "../data";
 import type { PublicKnowledgeNodeLink, PublicCuratedClaimGroups } from "./curation.types";
@@ -113,7 +114,7 @@ export type TopicPage<T> = ScholarPage<T>;
 export type TopicLink = { id: string; slug: string; name: string; href: string };
 export type TopicHierarchy = TopicLink & { parent_id: string | null; child_count: number; descendant_count: number; count: number };
 export type PublicTopicCard = TopicLink & {
-  description: string; problem_statement: string; hero_image: string; tags: string[]; matched_alias: string;
+  description: string; problem_statement: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; hero_image: string; tags: string[]; matched_alias: string;
   parent: TopicLink | null; work_count: number; edition_count: number; scholar_count: number;
   question_count: number; profile_state: "available" | "sparse";
 };

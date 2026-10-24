@@ -1,3 +1,4 @@
+import type { components } from "./generated/schema";
 // Existing public presentation contracts. Only schema-backed imports are generated.
 import type { ApiWork } from "./public-catalog";
 import type { TheoryWorkCompact } from "./knowledge.types";
@@ -11,6 +12,7 @@ export type Discipline = {
   description: string;
   introduction: string;
   hero_image: string;
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   sort_order: number;
   theory_count: number;
   subdiscipline_count: number;
@@ -44,6 +46,7 @@ export type SubdisciplineTheory = {
   href: string;
   summary: string;
   cover_url: string;
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   source: string;
   canonical_target: { id: string; slug: string; href: string } | null;
   legacy_identities: { id: string; name: string; slug: string; role: string; source: string }[];
@@ -56,6 +59,7 @@ export type Subdiscipline = {
   slug: string;
   description: string;
   hero_image: string;
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   discipline: Discipline | null;
   parent: { id: string; name: string; slug: string } | null;
   research_object: string;
@@ -71,14 +75,14 @@ export type Subdiscipline = {
   theories: SubdisciplineTheory[];
   topics: {
     id: string; name: string; slug: string; relation_label: string;
-    description: string; hero_image: string; href: string; source: string;
+    description: string; hero_image: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; href: string; source: string;
   }[];
   works: ApiWork[];
   works_pagination: { count: number; page: number; total_pages: number };
   core_works: (TheoryWorkCompact & { relation_label: string; source: string; evidence: SubdisciplineSource | null })[];
   scholars: {
     id: string; person_id: string; name: string; slug: string; source_label: string;
-    reason: string; confidence: number; approved: boolean; portrait_url: string;
+    reason: string; confidence: number; approved: boolean; portrait_url: string; portrait_media?: components["schemas"]["PublicCoverMedia"] | null;
     summary: string; href: string; relation_label: string; source_href: string | null;
   }[];
   reading_paths: { id: string; title: string; slug: string; href: string; introduction: string; relation_label: string }[];
@@ -86,5 +90,5 @@ export type Subdiscipline = {
 };
 
 export type SubdisciplineListItem = Pick<Subdiscipline,
-  "id" | "name" | "slug" | "description" | "hero_image" | "research_object" | "featured" | "href"
+  "id" | "name" | "slug" | "description" | "hero_image" | "cover_media" | "research_object" | "featured" | "href"
 > & { discipline: Pick<Discipline, "id" | "name" | "slug"> | null };

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { MediaPlacement } from "@/components/media-placement";
 import { ArrowRight, BookOpen, ExternalLink, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import type { loadSubdiscipline } from "@/lib/api/taxonomy.server";
@@ -50,7 +51,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
         </nav>
         <picture className={styles.detailHeroPhoto}>
           {!item.hero_image ? <source media="(max-width: 700px)" srcSet={`${photos}/detail-stairs-mobile.webp`} /> : null}
-          {item.hero_image ? <img src={item.hero_image} alt="" /> : <Image src={`${photos}/detail-stairs.webp`} width={681} height={182} alt="" priority unoptimized />}
+          {item.hero_image ? <MediaPlacement uses={item.cover_media?.display_uses} placement="detail"><img src={item.hero_image} alt="" /></MediaPlacement> : <Image src={`${photos}/detail-stairs.webp`} width={681} height={182} alt="" priority unoptimized />}
         </picture>
         <div className={styles.detailHeroCopy}><h1>{item.name}</h1><p>{item.description || item.research_object || "本条目的介绍尚未发布。"}</p></div>
       </header>
@@ -69,7 +70,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
           <h2 id="subdiscipline-theories-title">相关理论</h2>
           {theories.length ? <div className={styles.theories}>{theories.map((theory, index) => <article key={`${theory.kind}-${theory.id}`}>
             <div className={styles.relatedCard}>
-              <span className={styles.relatedPhoto} style={{ backgroundImage: `url("${theory.cover_url || `${photos}/${relatedPhotos[index % relatedPhotos.length]}.webp`}")` }} aria-hidden="true" />
+              <MediaPlacement uses={theory.cover_media?.display_uses} fallback={<span className={styles.relatedPhoto}/>}><span className={styles.relatedPhoto} style={{ backgroundImage: `url("${theory.cover_url || `${photos}/${relatedPhotos[index % relatedPhotos.length]}.webp`}")` }} aria-hidden="true" /></MediaPlacement>
               <div><h3>{theory.href ? <Link href={theory.href}>{theory.name}<ArrowRight size={16} aria-hidden="true" /></Link> : theory.name}</h3><p>{theory.summary || theory.role || "介绍尚未发布"}</p></div>
             </div>
             {theory.legacy_identities?.length ? <details className={styles.relationSource}><summary>查看关联记录</summary><ul>{theory.legacy_identities.map(legacy => <li key={legacy.id}>{legacy.name}{legacy.role ? ` · ${legacy.role}` : ""}{legacy.source ? <p>{legacy.source}</p> : null}</li>)}</ul></details> : null}
@@ -78,7 +79,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
         <section className={styles.section} id="scholars" aria-labelledby="subdiscipline-scholars-title" data-edit-section="scholars">
           <h2 id="subdiscipline-scholars-title">代表性学者</h2>
           {scholars.length ? <div className={styles.scholars}>{scholars.map(person => <article key={person.id}>
-            {person.portrait_url ? <img src={person.portrait_url} alt={person.name} loading="lazy" /> : <span className={styles.portraitPlaceholder} aria-label={`${person.name}暂无肖像`}>{person.name.slice(0, 1)}</span>}
+            {person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<span className={styles.portraitPlaceholder}>{person.name.slice(0,1)}</span>}><img src={person.portrait_url} alt={person.name} loading="lazy" /></MediaPlacement> : <span className={styles.portraitPlaceholder} aria-label={`${person.name}暂无肖像`}>{person.name.slice(0, 1)}</span>}
             <div><h3>{person.href ? <Link href={person.href}>{person.name}</Link> : person.name}</h3>
               {person.reason || person.relation_label || person.summary ? <p>{person.reason || person.relation_label || person.summary}</p> : null}
               {person.source_href ? <Link className={styles.sourceLink} href={person.source_href} target="_blank" rel="noopener noreferrer">查看来源<ArrowRight size={14} aria-hidden="true" /></Link>
@@ -94,7 +95,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
               ? `共 ${worksPage.count} 部文献 · 当前第 ${(worksPage.page - 1) * 48 + 1}—${Math.min(worksPage.count, (worksPage.page - 1) * 48 + works.length)} 部`
               : `共 ${worksPage.count} 部文献`}</p> : null}
             {works.length ? <div className={styles.works}>{works.map(work => <article key={work.edition_id || work.id}>
-              {work.cover_url ? <img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /> : <span className={styles.bookPlaceholder}><FileText size={25} aria-hidden="true" /><span>暂无封面</span></span>}
+              {work.cover_url ? <MediaPlacement uses={work.cover_media?.display_uses} fallback={<span className={styles.bookPlaceholder}><FileText size={25}/></span>}><img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /></MediaPlacement> : <span className={styles.bookPlaceholder}><FileText size={25} aria-hidden="true" /><span>暂无封面</span></span>}
               <div><h3>{work.detail_href ? <Link href={work.detail_href}>{work.title}</Link> : work.title}</h3><small>{[work.author, work.year, work.publisher].filter(value => value !== "" && value !== null).join(" · ") || "出版信息未提供"}</small>
                 {work.relation_label ? <p>{work.relation_label}</p> : null}
                 <div className={styles.workActions}>{work.detail_href ? <Link className={styles.primary} href={work.detail_href}>查看版本</Link> : null}{work.reader_href ? <Link href={work.reader_href} target="_blank" rel="noopener noreferrer">阅读原文</Link> : <span className={styles.unavailable}>这一版本暂无可读原文</span>}</div>
@@ -110,7 +111,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
           <section className={styles.section} id="topics" aria-labelledby="subdiscipline-topics-title" data-edit-section="topics">
             <h2 id="subdiscipline-topics-title">相关主题</h2>
             {topics.length ? <div className={styles.topics}>{topics.map((topic, index) => <article key={topic.id} className={styles.relatedCard}>
-              <span className={styles.relatedPhoto} style={{ backgroundImage: `url("${topic.hero_image || `${photos}/${index % 2 ? "featured-branches" : "card-street"}.webp`}")` }} aria-hidden="true" />
+              <MediaPlacement uses={topic.cover_media?.display_uses} fallback={<span className={styles.relatedPhoto}/>}><span className={styles.relatedPhoto} style={{ backgroundImage: `url("${topic.hero_image || `${photos}/${index % 2 ? "featured-branches" : "card-street"}.webp`}")` }} aria-hidden="true" /></MediaPlacement>
               <div><h3>{topic.href ? <Link href={topic.href}>{topic.name}<ArrowRight size={16} aria-hidden="true" /></Link> : topic.name}</h3><p>{topic.description || topic.relation_label || "介绍尚未发布"}</p></div>
             </article>)}</div> : <p className={styles.empty}>尚无已确认并公开的相关主题。</p>}
           </section>

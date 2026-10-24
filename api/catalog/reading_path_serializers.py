@@ -1,5 +1,6 @@
 """Public reading-path contract and bounded editorial metadata."""
 from rest_framework import serializers
+from catalog.media_views import PublicCoverMediaSerializer
 from drf_spectacular.utils import extend_schema_field
 
 
@@ -119,6 +120,7 @@ class PathMaterialOutput(serializers.Serializer):
     authors = serializers.ListField(child=serializers.CharField())
     publication_year = serializers.IntegerField(allow_null=True)
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     href = serializers.CharField(allow_null=True)
     reader_url = serializers.CharField(allow_null=True)
     source_status = serializers.ChoiceField(choices=["available", "no_fulltext", "unavailable", "withdrawn", "revision_changed"])
@@ -183,7 +185,7 @@ class PublicReadingPathSerializer(serializers.Serializer):
     items = PathMaterialOutput(many=True)
     counts = serializers.DictField(child=serializers.IntegerField())
     cover_url = serializers.CharField(allow_blank=True)
-    cover_media = serializers.JSONField(allow_null=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True)
     primary_discipline_data = serializers.JSONField(allow_null=True)
     diff = serializers.JSONField(required=False)
     preview = serializers.BooleanField(required=False)
