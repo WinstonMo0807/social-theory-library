@@ -43861,10 +43861,12 @@
                     "restore",
                     "purge",
                     "move",
-                    "delete"
+                    "delete",
+                    "topic_add",
+                    "topic_remove"
                 ],
                 "type": "string",
-                "description": "* `create` - create\n* `edit` - edit\n* `add` - add\n* `remove` - remove\n* `restore` - restore\n* `purge` - purge\n* `move` - move\n* `delete` - delete"
+                "description": "* `create` - create\n* `edit` - edit\n* `add` - add\n* `remove` - remove\n* `restore` - restore\n* `purge` - purge\n* `move` - move\n* `delete` - delete\n* `topic_add` - topic_add\n* `topic_remove` - topic_remove"
             },
             "ListCommandDirectionEnum": {
                 "enum": [
@@ -43916,6 +43918,10 @@
                         "maxItems": 12
                     },
                     "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "topic_id": {
                         "type": "string",
                         "format": "uuid"
                     },
@@ -44330,7 +44336,11 @@
                         "type": "string"
                     },
                     "href": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "selected": {
+                        "type": "boolean"
                     },
                     "description": {
                         "type": "string"
@@ -44357,6 +44367,7 @@
                     "id",
                     "portrait_media",
                     "portrait_url",
+                    "selected",
                     "source_count",
                     "title"
                 ]
@@ -44497,6 +44508,13 @@
                             "type": "string"
                         }
                     },
+                    "topic_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
                     "version": {
                         "type": "string"
                     },
@@ -44520,6 +44538,7 @@
                     "item_count",
                     "tags",
                     "title",
+                    "topic_ids",
                     "updated_at",
                     "version"
                 ]
@@ -62354,6 +62373,14 @@
                         },
                         "maxItems": 12
                     },
+                    "topic_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "readOnly": true
+                    },
                     "is_default": {
                         "type": "boolean"
                     },
@@ -62380,6 +62407,7 @@
                     "id",
                     "items",
                     "title",
+                    "topic_ids",
                     "updated_at"
                 ]
             },

@@ -253,7 +253,7 @@ def _export_item(user, category, row):
         return {**record(row, private=True), "issue_id": str(row.issue_id)}
     if category == "reading_lists":
         return {"id": str(row.pk), "title": row.title, "description": row.description, "created_at": row.created_at.isoformat(),
-            "goal": row.goal, "tags": row.tags,
+            "goal": row.goal, "tags": row.tags, "topic_ids": row.topic_ids,
             "items": [{"work_id": str(item.work_id), "order": item.order, "removed_at": item.removed_at.isoformat() if item.removed_at else None} for item in row.items.all()]}
     if category == "graph_views":
         from .graph_saves import record_output

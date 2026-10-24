@@ -433,6 +433,7 @@ class ReadingListItemSerializer(serializers.ModelSerializer):
 class ReadingListSerializer(OwnedSerializer):
     items = serializers.SerializerMethodField()
     tags = serializers.ListField(child=serializers.CharField(max_length=40), max_length=12, required=False)
+    topic_ids = serializers.ListField(child=serializers.UUIDField(), read_only=True)
 
     @extend_schema_field(ReadingListItemSerializer(many=True))
     def get_items(self, obj):
@@ -445,7 +446,7 @@ class ReadingListSerializer(OwnedSerializer):
 
     class Meta:
         model = ReadingList
-        fields = ("id", "title", "description", "goal", "tags", "is_default", "items", "created_at", "updated_at")
+        fields = ("id", "title", "description", "goal", "tags", "topic_ids", "is_default", "items", "created_at", "updated_at")
         read_only_fields = ("id", "created_at", "updated_at")
 
 

@@ -5,15 +5,15 @@ import type { EvidenceReference } from "./research.client";
 import type { components } from "./generated/schema";
 import type { NotebookRecord } from "./notebook.client";
 
-export type BooklistSummary = { id: string; title: string; description: string; goal: string; tags: string[]; version: string; created_at: string; updated_at: string; item_count: number };
+export type BooklistSummary = { id: string; title: string; description: string; goal: string; tags: string[]; topic_ids: string[]; version: string; created_at: string; updated_at: string; item_count: number };
 export type BooklistItem = { id: string; work_id: string; order: number; work: ApiWork | null; created_at: string; removed_at: string | null; expires_at: string | null; progress_ratio: number | null; reader_url: string | null };
 export type BooklistWorkspace = { owner_id: string; list: BooklistSummary; items: BooklistItem[]; count: number; page: number; total_pages: number; active_count: number; trash_count: number };
 export type BooklistDirectory = { owner_id: string; count: number; page: number; total_pages: number; results: BooklistSummary[] };
 export type BooklistRelatedSection = "plans" | "notes" | "topics" | "scholars";
-export type BooklistPublicLink = { id: string; title: string; href: string; description: string; source_count: number; portrait_url: string | null; portrait_media: components["schemas"]["PublicCoverMedia"] | null };
+export type BooklistPublicLink = { id: string; title: string; href: string | null; selected: boolean; description: string; source_count: number; portrait_url: string | null; portrait_media: components["schemas"]["PublicCoverMedia"] | null };
 export type BooklistRelated = { owner_id: string; list_id: string; version: string; section: BooklistRelatedSection; page: number; count: number; total_pages: number; notice: string;
   plans: { id: string; title: string; status: string; href: string; updated_at: string }[]; notes: NotebookRecord[]; topics: BooklistPublicLink[]; scholars: BooklistPublicLink[] };
-export type BooklistCommand = { list_id: string; request_id: string; expected_version: string; action: "create" | "edit" | "add" | "remove" | "restore" | "purge" | "move" | "delete"; title?: string; description?: string; goal?: string; tags?: string[]; work_id?: string; item_id?: string; item_ids?: string[]; direction?: -1 | 1 };
+export type BooklistCommand = { list_id: string; request_id: string; expected_version: string; action: "create" | "edit" | "add" | "remove" | "restore" | "purge" | "move" | "delete" | "topic_add" | "topic_remove"; title?: string; description?: string; goal?: string; tags?: string[]; work_id?: string; topic_id?: string; item_id?: string; item_ids?: string[]; direction?: -1 | 1 };
 export type BooklistResult = { owner_id: string; id: string; exists: boolean; receipt: { request_id: string } };
 export type CitationBooklistInput = { request_id: string; expected_version: string; edition_id: string; reference?: EvidenceReference; save_excerpt: boolean; note: string };
 export type CitationBooklistResult = { owner_id: string; list_id: string; request_id: string; exists: boolean; undone: boolean; note_ids: string[]; undo_token: string | null };

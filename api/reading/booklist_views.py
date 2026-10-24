@@ -23,6 +23,7 @@ class ListSummary(serializers.Serializer):
     description = serializers.CharField()
     goal = serializers.CharField()
     tags = serializers.ListField(child=serializers.CharField())
+    topic_ids = serializers.ListField(child=serializers.UUIDField())
     version = serializers.CharField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
@@ -79,7 +80,8 @@ class ListPublicLink(serializers.Serializer):
     from catalog.media_views import PublicCoverMediaSerializer
     id = serializers.UUIDField()
     title = serializers.CharField()
-    href = serializers.CharField()
+    href = serializers.CharField(allow_null=True)
+    selected = serializers.BooleanField()
     description = serializers.CharField(allow_blank=True)
     source_count = serializers.IntegerField()
     portrait_url = serializers.CharField(allow_null=True)
@@ -106,12 +108,13 @@ class ListCommand(serializers.Serializer):
     list_id = serializers.UUIDField()
     request_id = serializers.UUIDField()
     expected_version = serializers.CharField(max_length=100)
-    action = serializers.ChoiceField(choices=["create", "edit", "add", "remove", "restore", "purge", "move", "delete"])
+    action = serializers.ChoiceField(choices=["create", "edit", "add", "remove", "restore", "purge", "move", "delete", "topic_add", "topic_remove"])
     title = serializers.CharField(max_length=240, required=False)
     description = serializers.CharField(max_length=6000, allow_blank=True, required=False)
     goal = serializers.CharField(max_length=2000, allow_blank=True, required=False)
     tags = serializers.ListField(child=serializers.CharField(max_length=40), max_length=12, required=False)
     work_id = serializers.UUIDField(required=False)
+    topic_id = serializers.UUIDField(required=False)
     item_id = serializers.UUIDField(required=False)
     item_ids = serializers.ListField(child=serializers.UUIDField(), min_length=1, max_length=100, required=False)
     direction = serializers.ChoiceField(choices=[-1, 1], required=False)
@@ -124,7 +127,7 @@ class ListCommand(serializers.Serializer):
     def validate(self, data):
         fields = {"create": ("title", "description"), "edit": ("title", "description", "goal", "tags"),
             "add": ("work_id",), "move": ("item_id", "direction"), "remove": ("item_ids",),
-            "restore": ("item_ids",), "purge": ("item_ids",), "delete": ()}[data["action"]]
+            "restore": ("item_ids",), "purge": ("item_ids",), "delete": (), "topic_add": ("topic_id",), "topic_remove": ("topic_id",)}[data["action"]]
         if set(data) - {"list_id", "request_id", "expected_version", "action", *fields}:
             raise serializers.ValidationError("本操作包含无关字段。")
         required = ("title",) if data["action"] == "create" else () if data["action"] == "edit" else fields

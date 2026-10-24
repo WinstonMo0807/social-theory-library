@@ -85,6 +85,7 @@ class ReadingList(UUIDTimeStampedModel):
     goal = models.CharField(max_length=2000, blank=True)
     tags = models.JSONField(default=list, blank=True)
     origin_key = models.CharField(max_length=64, blank=True, db_index=True)
+    topic_ids = models.JSONField(default=list, blank=True)
 
 
 class ReadingListItem(UUIDTimeStampedModel):

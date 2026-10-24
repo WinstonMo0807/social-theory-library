@@ -10667,9 +10667,11 @@ export interface components {
          *     * `purge` - purge
          *     * `move` - move
          *     * `delete` - delete
+         *     * `topic_add` - topic_add
+         *     * `topic_remove` - topic_remove
          * @enum {string}
          */
-        ListCommandActionEnum: "create" | "edit" | "add" | "remove" | "restore" | "purge" | "move" | "delete";
+        ListCommandActionEnum: "create" | "edit" | "add" | "remove" | "restore" | "purge" | "move" | "delete" | "topic_add" | "topic_remove";
         /**
          * @description * `-1` - -1
          *     * `1` - 1
@@ -10689,6 +10691,8 @@ export interface components {
             tags?: string[];
             /** Format: uuid */
             work_id?: string;
+            /** Format: uuid */
+            topic_id?: string;
             /** Format: uuid */
             item_id?: string;
             item_ids?: string[];
@@ -10804,7 +10808,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             title: string;
-            href: string;
+            href: string | null;
+            selected: boolean;
             description: string;
             source_count: number;
             portrait_url: string | null;
@@ -10851,6 +10856,7 @@ export interface components {
             description: string;
             goal: string;
             tags: string[];
+            topic_ids: string[];
             version: string;
             /** Format: date-time */
             created_at: string;
@@ -16227,6 +16233,7 @@ export interface components {
             description?: string;
             goal?: string;
             tags?: string[];
+            readonly topic_ids: string[];
             is_default?: boolean;
             readonly items: components["schemas"]["ReadingListItem"][];
             /** Format: date-time */

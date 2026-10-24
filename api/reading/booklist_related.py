@@ -80,25 +80,31 @@ def source_counts(row):
 
 def public_links(row, section, page):
     topics, people, versions = source_counts(row)
+    selected = set(row.topic_ids) if section == "topics" else set()
     if section == "topics":
-        rows = [(str(pk), topics[str(pk)]) for pk in Topic.objects.filter(pk__in=topics, editorial_status="published").values_list("pk", flat=True)]
+        identifiers = {str(pk) for pk in Topic.objects.filter(pk__in=topics, editorial_status="published").values_list("pk", flat=True)} | selected
+        rows = [(pk, topics[pk]) for pk in identifiers]
     else:
         rows = [(str(pk), people[str(person)]) for pk, person in public_scholar_queryset().filter(person_id__in=people).values_list("pk", "person_id")]
-    rows.sort(key=lambda value: (-value[1], value[0]))
+    rows.sort(key=lambda value: (value[0] not in selected, -value[1], value[0]))
     start, stop = bounds(len(rows), page)
     output = []
     for pk, count in rows[start:stop]:
         current = topic_identity(pk) if section == "topics" else scholar_follow_summary(pk)
         if current is None:
+            if pk in selected:
+                output.append({"id": pk, "title": "主题当前不可用", "href": None, "selected": True,
+                    "description": "本人选择仍保留，可移除这条私人关联。", "source_count": 0, "portrait_url": None, "portrait_media": None})
+                continue
             raise research.ResearchConflict("公开关联内容已变化，请重新读取。")
-        output.append({"id": pk, "title": current["name"], "href": current.get("href") or f"/scholars/{current['slug']}",
+        output.append({"id": pk, "title": current["name"], "href": current.get("href") or f"/scholars/{current['slug']}", "selected": pk in selected,
             "description": current.get("description", ""), "source_count": count,
             "portrait_url": current.get("portrait_url"), "portrait_media": current.get("portrait_media")})
     current = booklists.public_editions().filter(work_id__in=row.items.filter(removed_at__isnull=True).values("work_id"))
     if versions != {str(pk): str(revision) for pk, revision in current.values_list("pk", "active_catalog_revision_id")}:
         raise research.ResearchConflict("书单公开版本在读取时已变化，请重新读取。")
     return {"count": len(rows), section: output,
-        "notice": "关联来自本书单当前公开主版本的正式主题或署名，按关联作品数量排列；不推断影响关系。"}
+        "notice": "本人主动关联的主题优先显示，只保存在私人书单中。其余来自当前公开主版本的正式主题或署名，按关联作品数量排列，不推断影响关系。"}
 
 
 def related(request, pk, query):

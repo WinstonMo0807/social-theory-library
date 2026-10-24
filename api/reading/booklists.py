@@ -52,7 +52,7 @@ def public_editions():
 
 def summary(row):
     return {"id": str(row.pk), "title": row.title, "description": row.description,
-        "goal": row.goal, "tags": row.tags, "version": version(row), "created_at": row.created_at,
+        "goal": row.goal, "tags": row.tags, "topic_ids": row.topic_ids, "version": version(row), "created_at": row.created_at,
         "updated_at": row.updated_at, "item_count": row.items.filter(removed_at__isnull=True).count()}
 
 
@@ -175,7 +175,7 @@ def command(user, data):
             raise NotFound("这份本人书单已不存在。")
         if data["expected_version"] != version(row):
             raise research.ResearchConflict("书单已在另一页面修改，请读取当前版本后重试。")
-        if verb in {"edit", "add", "restore", "move"}:
+        if verb in {"edit", "add", "restore", "move", "topic_add"}:
             privacy.require_retention(user, "saved_knowledge")
         if verb == "edit":
             preserve_origin(row)
@@ -185,6 +185,22 @@ def command(user, data):
             row.save()
         elif verb == "add":
             add_work(row, data["work_id"])
+        elif verb in {"topic_add", "topic_remove"}:
+            key = str(data["topic_id"])
+            values = list(row.topic_ids)
+            if verb == "topic_add":
+                from catalog.services.public_topics import topic_identity
+                if topic_identity(key) is None:
+                    raise ValidationError("这个主题当前未公开，请重新选择。")
+                if key not in values:
+                    if len(values) >= 12:
+                        raise ValidationError("一份私人书单最多主动关联12个主题，请先移除不需要的主题。")
+                    values.append(key)
+            else:
+                values = [value for value in values if value != key]
+            if values != row.topic_ids:
+                row.topic_ids = values
+                row.save(update_fields=["topic_ids", "updated_at"])
         elif verb in {"remove", "restore", "purge"}:
             ids = data["item_ids"]
             items = list(row.items.filter(pk__in=ids))
