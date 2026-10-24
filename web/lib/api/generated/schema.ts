@@ -7713,6 +7713,7 @@ export interface components {
         };
         DiscoveryBibliography: {
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             original_title: string;
             publication_year: number | null;
             publisher: string;
@@ -7854,6 +7855,7 @@ export interface components {
             url: string;
             excerpt: string;
             portrait_url?: string;
+            portrait_media?: components["schemas"]["PublicCoverMedia"] | null;
             match_basis: string[];
         };
         DiscoveryPassage: {
@@ -8794,6 +8796,7 @@ export interface components {
             href: string;
             summary: string;
             image_url: string;
+            image_media?: components["schemas"]["PublicCoverMedia"] | null;
             period_label: string;
             start_year: number | null;
             end_year: number | null;
@@ -11435,6 +11438,7 @@ export interface components {
             readonly subject_status: string;
             readonly subject_work: components["schemas"]["TimelineSubjectWork"] | null;
             readonly image_url: string;
+            readonly image_media: components["schemas"]["PublicCoverMedia"] | null;
             readonly scholars: components["schemas"]["TimelineScholar"][];
             readonly topics: components["schemas"]["TimelineTopic"][];
             readonly source_status: string;
@@ -11472,6 +11476,7 @@ export interface components {
             readonly subject_status: string;
             readonly subject_work: components["schemas"]["TimelineSubjectWork"] | null;
             readonly image_url: string;
+            readonly image_media: components["schemas"]["PublicCoverMedia"] | null;
             readonly scholars: components["schemas"]["TimelineScholar"][];
             readonly topics: components["schemas"]["TimelineTopic"][];
             readonly source_status: string;
@@ -19050,6 +19055,7 @@ export interface components {
             slug: string;
             summary: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
         };
         WorkRelatedJournal: {
             /** Format: uuid */
@@ -19057,6 +19063,7 @@ export interface components {
             slug: string;
             title: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
             edition: components["schemas"]["CatalogEdition"];
             contents: components["schemas"]["WorkIssueContents"][];
         };
@@ -19067,6 +19074,7 @@ export interface components {
             slug: string;
             introduction: string;
             cover_url: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
         };
         WorkRelatedScholar: {
             /** Format: uuid */
@@ -19084,6 +19092,7 @@ export interface components {
             summary: string;
             description: string;
             hero_image: string;
+            cover_media?: components["schemas"]["PublicCoverMedia"] | null;
         };
         WorkRelations: {
             scholars: components["schemas"]["WorkRelatedScholar"][];

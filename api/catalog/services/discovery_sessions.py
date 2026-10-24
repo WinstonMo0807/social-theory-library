@@ -961,7 +961,7 @@ def _public_row(row: dict) -> dict:
     # Projection diagnostics, access filters and ranking scores are never part
     # of a public card. Their existence must not expand the response contract.
     allowed = {"id", "title", "excerpt", "text", "url", "reader_url", "source_kind", "source_label",
-               "source_title", "recommendation_excerpt", "source_revision", "portrait_url", "kind",
+               "source_title", "recommendation_excerpt", "source_revision", "portrait_url", "portrait_media", "kind",
                "linked_work_ids", "match_basis", "pdf_page", "page_number", "printed_page", "asset_id",
                "edition_id", "work_id", "document_revision_id", "evidence_span_id", "passage_id",
                "work", "authors", "locator_precision", "context_reference", "deep_rank", "deep_score",

@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "./media-placement";
 
 import Link from "next/link";
 import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
@@ -390,8 +391,8 @@ export function DiscoveryPassageCard({ item, index, onContext }: { item: Discove
 
 export function DiscoveryEntityCard({ item }: { item: DiscoveryEntity }) {
   const href = internalHref(item.url);
-  const [portraitFailed, setPortraitFailed] = useState(false);
-  return <article className={styles.entityCard}>{item.portrait_url && !portraitFailed ? <img src={normalizePublicResourceUrl(item.portrait_url)} alt="" width={48} height={60} loading="lazy" onError={() => setPortraitFailed(true)} /> : null}<div><small>{kindLabels[item.kind] || "知识条目"}</small><h3>{href ? <CollectionLink href={href}>{item.title}<ArrowRight size={12} /></CollectionLink> : item.title}</h3>{item.excerpt ? <p>{item.excerpt}</p> : null}{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}</div></article>;
+  const [failedPortrait, setFailedPortrait] = useState("");
+  return <article className={styles.entityCard}>{item.portrait_url && failedPortrait !== item.portrait_url ? <MediaPlacement uses={item.portrait_media?.display_uses}><img src={normalizePublicResourceUrl(item.portrait_url)} alt="" width={48} height={60} loading="lazy" onError={() => setFailedPortrait(item.portrait_url || "")} /></MediaPlacement> : null}<div><small>{kindLabels[item.kind] || "知识条目"}</small><h3>{href ? <CollectionLink href={href}>{item.title}<ArrowRight size={12} /></CollectionLink> : item.title}</h3>{item.excerpt ? <p>{item.excerpt}</p> : null}{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}</div></article>;
 }
 
 export function DiscoveryCurationCard({ item, preview = false }: { item: DiscoveryCuration; preview?: boolean }) {

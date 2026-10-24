@@ -145,7 +145,7 @@ def edition_metadata_header(row, *, taxonomy=None):
         access_status=asset.access_status if asset else "public", url=f"/works/{public_slug}",
         publication_year=edition.get("publication_year"), document_type=work.get("document_type", "book"),
         work={"id": str(row.work_id), "title": work.get("title", ""), "slug": public_slug},
-        bibliography={"cover_url": cover_url, "original_title": work.get("original_title", ""),
+        bibliography={"cover_url": cover_url, "cover_media": cover or None, "original_title": work.get("original_title", ""),
             "publication_year": edition.get("publication_year"), "publisher": edition.get("publisher", ""),
             "language": work.get("language", ""), "page_count": asset.page_count if asset and asset.page_count else None,
             "version_label": edition.get("version_label", ""), "document_type": work.get("document_type", "")},
@@ -168,6 +168,7 @@ def iter_edition_metadata_headers(queryset):
 def source_header(kind, row, *, taxonomy=None):
     """A hash of published input, never an unbounded full-document read."""
     payload = {"source_type": kind, "source_id": str(row.pk), "scope_token": scope_token(kind, row)}
+    portrait_media = None
     if kind == "edition":
         rev = row.active_catalog_revision
         asset = rev.reader_asset
@@ -180,11 +181,14 @@ def source_header(kind, row, *, taxonomy=None):
     payload.update(channel="entities", access_status="public", aliases=[])
     if kind == "scholar":
         person = row.person
+        from catalog.serializers import PersonCompactSerializer
+        portrait_serializer = PersonCompactSerializer()
+        portrait_media = portrait_serializer.get_portrait_media(person)
         aliases = [person.original_name, *person.aliases]
         payload.update(title=person.preferred_name, source_kind="scholar", url=f"/scholars/{row.slug}",
             text="\n".join(filter(None, [person.preferred_name, text_values(aliases), row.short_description,
                                        person.biography, text_values(row.key_concerns)])), aliases=list(filter(None, aliases)),
-            portrait_url=(f"/api/catalog/people/{person.pk}/portrait/?rendition={person.portrait_rendition_id}" if person.portrait_rendition_id else person.portrait.url if person.portrait else ""))
+            portrait_url=portrait_serializer.get_portrait(person))
     elif kind == "node":
         aliases = [row.canonical_name_en, *[item.alias for item in row.aliases.all() if item.is_verified]]
         payload.update(title=row.canonical_name_zh, source_kind=row.node_type, url=f"/theories/nodes/{row.slug}", aliases=list(filter(None, aliases)),
@@ -247,6 +251,10 @@ def source_header(kind, row, *, taxonomy=None):
     # Updated/withdrawn source text must be excluded BEFORE either recall
     # channel. A source ID alone would let stale private text affect ranking.
     payload["scope_token"] = f"{kind}:{row.pk}:{payload['source_revision']}"
+    if kind == "scholar":
+        # Derived from the immutable rendition already identified by portrait_url.
+        # Hydrate this display field without invalidating unchanged search vectors/scopes.
+        payload["portrait_media"] = portrait_media
     return payload
 
 

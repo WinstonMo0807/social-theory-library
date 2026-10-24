@@ -27,11 +27,12 @@ export function TimelineEventDetails({ event, actionPath = "/theories/timeline",
   const source = event.evidence_source;
   const subjectMessage = event.subject_status === "unavailable" ? "事件版本当前不可用" : "未明确事件的出版版本";
   const feedbackHref = `/feedback?${new URLSearchParams({ category: "content", path: `/theories/events/${event.id}` })}`;
-  const cover = subject?.cover_url || event.image_url;
+  const cover = event.image_url || subject?.cover_url;
+  const coverMedia = event.image_url ? event.image_media : subject?.cover_media;
   const Heading = standalone ? "h1" : "h2";
   return <section className={`${styles.detail} ${standalone ? styles.standalone : ""}`} aria-label="所选事件详情">
     <header className={styles.detailHeader}>
-      <div className={styles.cover}>{cover ? <img src={cover} alt="" /> : <FileText size={34} strokeWidth={1} aria-hidden="true" />}</div>
+      <div className={styles.cover}>{cover ? <MediaPlacement uses={coverMedia?.display_uses} fallback={<FileText size={34} strokeWidth={1} aria-hidden="true"/>}><img src={cover} alt="" /></MediaPlacement> : <FileText size={34} strokeWidth={1} aria-hidden="true" />}</div>
       <div className={styles.detailIdentity}>
         <p className={styles.detailDate}>{timelineDate(event)}</p>
         <Heading>{event.title}</Heading>

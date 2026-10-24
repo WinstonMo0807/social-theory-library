@@ -1,10 +1,11 @@
+import type { components } from "./generated/schema";
 import type { TheoryWorkCompact } from "./knowledge.types";
 
 export type GraphKind = "knowledge_node" | "scholar" | "topic" | "subdiscipline";
 export type GraphMode = "graph" | "list" | "topics" | "scholars" | "works";
 export type GraphNode = {
   id: string; entity_id: string; kind: GraphKind; node_type: string; name: string; foreign_name: string;
-  slug: string; href: string; summary: string; image_url: string; period_label: string;
+  slug: string; href: string; summary: string; image_url: string; image_media?: components["schemas"]["PublicCoverMedia"] | null; period_label: string;
   start_year: number | null; end_year: number | null; is_center: boolean; depth: number;
 };
 export type GraphEvidence = {

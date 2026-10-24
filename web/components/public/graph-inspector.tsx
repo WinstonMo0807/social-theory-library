@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
 import { ArrowRight, BookOpen, X } from "lucide-react";
@@ -30,13 +31,13 @@ export function GraphInspector({ graph, node, edge, onNode, onEdge, onCenter, on
       <nav className={styles.detailTabs} aria-label="节点详情内容"><button type="button" aria-pressed={tab === "overview"} onClick={() => setTab("overview")}>概览</button><button type="button" aria-pressed={tab === "related"} onClick={() => setTab("related")}>相关内容</button></nav>
       <div className={styles.nodeTitle}><h3>{node.name}</h3><span>{graphNodeLabels[node.node_type] || graphKindLabels[node.kind]}</span></div>
       {tab === "overview" ? <>
-        {node.image_url ? <img className={`${styles.detailImage} ${node.kind === "scholar" ? styles.portrait : ""}`} src={node.image_url} alt="" /> : null}
+        {node.image_url ? <MediaPlacement uses={node.image_media?.display_uses}><img className={`${styles.detailImage} ${node.kind === "scholar" ? styles.portrait : ""}`} src={node.image_url} alt="" /></MediaPlacement> : null}
         {node.foreign_name ? <p className={styles.foreign}>{node.foreign_name}</p> : null}
         <p>{node.summary || "尚无已发布的条目简介。"}</p>{node.period_label ? <p className={styles.muted}>{node.period_label}</p> : null}
         <h3>直接关系 <small>{related.length}</small></h3>
         <ul className={styles.neighbors}>{related.map(row => { const other = graph.nodes.find(item => item.id === (row.source === node.id ? row.target : row.source)); return <li key={row.id}><button type="button" onClick={() => onEdge(row)}><strong>{other?.name}</strong><small>{row.relation_label}</small><ArrowRight size={13} /></button></li>; })}</ul>
         {!related.length ? <p className={styles.muted}>当前范围内没有已公开的直接关系。</p> : null}
-      </> : <><h3>相邻节点</h3><ul className={styles.neighbors}>{graph.nodes.filter(row => related.some(relation => relation.source === row.id || relation.target === row.id) && row.id !== node.id).map(row => <li key={row.id}><button type="button" onClick={() => onNode(row)}>{row.image_url && row.kind === "scholar" ? <img src={row.image_url} alt="" /> : <BookOpen size={18} />}<span><strong>{row.name}</strong><small>{graphNodeLabels[row.node_type] || graphKindLabels[row.kind]}</small></span><ArrowRight size={13} /></button></li>)}</ul>{!related.length ? <p className={styles.muted}>当前范围内没有相邻节点。</p> : null}</>}
+      </> : <><h3>相邻节点</h3><ul className={styles.neighbors}>{graph.nodes.filter(row => related.some(relation => relation.source === row.id || relation.target === row.id) && row.id !== node.id).map(row => <li key={row.id}><button type="button" onClick={() => onNode(row)}>{row.image_url && row.kind === "scholar" ? <MediaPlacement uses={row.image_media?.display_uses} fallback={<BookOpen size={18}/>}><img src={row.image_url} alt="" /></MediaPlacement> : <BookOpen size={18} />}<span><strong>{row.name}</strong><small>{graphNodeLabels[row.node_type] || graphKindLabels[row.kind]}</small></span><ArrowRight size={13} /></button></li>)}</ul>{!related.length ? <p className={styles.muted}>当前范围内没有相邻节点。</p> : null}</>}
       <div className={styles.detailActions}><Link className={styles.outlineButton} href={node.href}>查看完整条目<ArrowRight size={14} /></Link><button className={styles.primaryButton} type="button" disabled={disabled || node.is_center} onClick={() => onCenter(node)}>以此为中心展开</button></div>
     </> : <p className={styles.empty}>请选择一个节点或关系，查看公开资料与依据。</p>}
   </section>;

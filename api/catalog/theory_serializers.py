@@ -1600,6 +1600,7 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
     subject_status = serializers.SerializerMethodField()
     subject_work = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
+    image_media = serializers.SerializerMethodField()
     scholars = serializers.SerializerMethodField()
     topics = serializers.SerializerMethodField()
     source_status = serializers.SerializerMethodField()
@@ -1630,6 +1631,7 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
             "subject_status",
             "subject_work",
             "image_url",
+            "image_media",
             "scholars",
             "topics",
             "source_status",
@@ -1660,6 +1662,10 @@ class NormalizedTimelineEventSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj) -> str:
         return self._projection(obj)["image_url"]
+
+    @extend_schema_field(PublicCoverMediaSerializer(allow_null=True))
+    def get_image_media(self, obj):
+        return self._projection(obj).get("image_media")
 
     @extend_schema_field(TimelineScholarSerializer(many=True))
     def get_scholars(self, obj):

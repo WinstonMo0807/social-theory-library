@@ -1,6 +1,9 @@
 .contents { display: contents; }
 .mobile { display: none; }
+.graphicHidden, .graphicMobile { display: none; }
 @media (max-width: 760px) {
   .desktop { display: none; }
   .mobile { display: contents; }
+  .graphicDesktop { display: none; }
+  .graphicMobile { display: inline; }
 }

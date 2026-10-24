@@ -1,4 +1,5 @@
 "use client";
+import { mediaGraphicClass } from "@/components/media-placement";
 
 import { useEffect, useId, useMemo, useRef, useState, type PointerEvent } from "react";
 import { LocateFixed, Maximize, Minus, Plus } from "lucide-react";
@@ -83,7 +84,7 @@ export function GraphCanvas({ graph, selectedNode, selectedEdge, onNode, onEdge,
           const displayName = graph.nodes.length <= 24 || active || node.is_center;
           return <g key={node.id} className={`${styles.graphNode} ${node.is_center ? styles.centerNode : ""} ${active ? styles.activeNode : ""}`} data-kind={node.kind} role="button" tabIndex={0} aria-label={`查看${node.name}，${node.depth}层关系`} aria-pressed={active} onClick={() => onNode(node)} onKeyDown={event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); onNode(node); } }}>
             <circle cx={point.x} cy={point.y} r={point.radius} />
-            {node.image_url && node.kind === "scholar" ? <image href={node.image_url} x={point.x - point.radius} y={point.y - point.radius} width={point.radius * 2} height={point.radius * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${key}-${node.entity_id})`} /> : null}
+            {node.image_url && node.kind === "scholar" ? <image className={mediaGraphicClass(node.image_media?.display_uses)} href={node.image_url} x={point.x - point.radius} y={point.y - point.radius} width={point.radius * 2} height={point.radius * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${key}-${node.entity_id})`} /> : null}
             {displayName ? <text className={node.is_center && node.kind !== "scholar" ? styles.centerLabel : ""} x={point.x} y={node.is_center && node.kind !== "scholar" ? point.y + 5 : point.y + point.radius + 21} textAnchor="middle">{node.name.length > 10 ? `${node.name.slice(0, 9)}…` : node.name}</text> : null}
             <title>{node.name}{node.summary ? `：${node.summary}` : ""}</title>
           </g>;

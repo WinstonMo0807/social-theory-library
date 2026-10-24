@@ -167,6 +167,7 @@ def _key(kind, identifier):
 def node_payload(kind, row, *, center=False, depth=0):
     from catalog.serializers import PersonCompactSerializer
     from catalog.services.subdiscipline_publication import cover_url
+    from catalog.services.knowledge_media import image_media
 
     scholar = kind == "scholar"
     name = row.person.preferred_name if scholar else row.canonical_name_zh if kind == "knowledge_node" else row.name
@@ -178,6 +179,7 @@ def node_payload(kind, row, *, center=False, depth=0):
         "foreign_name": row.person.original_name if scholar else getattr(row, "canonical_name_en", getattr(row, "foreign_name", "")),
         "summary": row.short_description if scholar else (row.summary or row.definition) if kind == "knowledge_node" else row.description,
         "image_url": PersonCompactSerializer().get_portrait(row.person) if scholar else cover_url(row),
+        "image_media": PersonCompactSerializer().get_portrait_media(row.person) if scholar else image_media(row),
         "period_label": getattr(row, "period_label", getattr(row, "formation_period", "")),
         "start_year": row.person.birth_year if scholar else getattr(row, "start_year", None),
         "end_year": row.person.death_year if scholar else getattr(row, "end_year", None),

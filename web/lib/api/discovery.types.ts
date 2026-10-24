@@ -1,3 +1,4 @@
+import type { components } from "./generated/schema";
 export type DiscoveryStatus = "queued" | "running" | "partial" | "completed" | "failed" | "canceled";
 export type DiscoverySort = "relevance" | "year_desc" | "year_asc";
 export type DiscoveryDeepStatus = "baseline_ready" | "deep_queued" | "deep_running" | "completed" | "partial" | "unavailable" | "pending" | "queued" | "running" | "degraded" | "disabled" | "skipped" | "failed";
@@ -8,12 +9,12 @@ export type DiscoveryPassage = {
   asset_id: string; document_revision_id: string; evidence_span_id?: string; passage_id?: string; pdf_page: number; printed_page?: string;
   reader_url: string; context_reference?: string; source_kind: string; locator_precision: string; match_basis: string[];
   edition_id?: string; section_title?: string;
-  bibliography?: { cover_url: string; original_title: string; publication_year: number | null; publisher: string; language: string; page_count: number | null; version_label: string; document_type: string };
+  bibliography?: { cover_url: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; original_title: string; publication_year: number | null; publisher: string; language: string; page_count: number | null; version_label: string; document_type: string };
   attribution?: { status: string; label: string; notice: string };
   deep_rank?: number; deep_score?: number | null; deep_context?: { policy?: string; provider?: string; available?: boolean; before?: string; after?: string; blocks?: Array<Record<string, unknown>> };
 };
 export type DiscoveryEntity = {
-  id: string; kind: string; title: string; url: string; excerpt?: string; portrait_url?: string; match_basis: string[];
+  id: string; kind: string; title: string; url: string; excerpt?: string; portrait_url?: string; portrait_media?: components["schemas"]["PublicCoverMedia"] | null; match_basis: string[];
   is_new?: boolean;
 };
 export type DiscoveryCuration = {

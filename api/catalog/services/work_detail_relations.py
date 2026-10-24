@@ -7,6 +7,7 @@ from rest_framework import serializers
 from catalog.catalog_search_serializers import CatalogEditionSerializer, CatalogWorkSerializer
 from catalog.models import KnowledgeNode, ReadingPath, Topic, Work
 from catalog.serializers import PersonCompactSerializer
+from catalog.media_views import PublicCoverMediaSerializer
 from catalog.services.catalog_search import SnapshotArrayMatch
 from catalog.services.publication_eligibility import active_catalog_snapshot, public_editions
 from catalog.services.scoped_search import public_scholar_queryset
@@ -32,6 +33,7 @@ class WorkRelatedConceptSerializer(serializers.Serializer):
 class WorkRelatedTopicSerializer(WorkRelatedConceptSerializer):
     description = serializers.CharField()
     hero_image = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
 
 
 class WorkRelatedPathSerializer(serializers.Serializer):
@@ -40,6 +42,7 @@ class WorkRelatedPathSerializer(serializers.Serializer):
     slug = serializers.CharField()
     introduction = serializers.CharField()
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
 
 
 class WorkRelatedCurationSerializer(serializers.Serializer):
@@ -48,6 +51,7 @@ class WorkRelatedCurationSerializer(serializers.Serializer):
     slug = serializers.CharField()
     summary = serializers.CharField()
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
 
 
 class WorkIssueContentsSerializer(serializers.Serializer):
@@ -65,6 +69,7 @@ class WorkRelatedJournalSerializer(serializers.Serializer):
     slug = serializers.CharField()
     title = serializers.CharField()
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     edition = CatalogEditionSerializer()
     contents = WorkIssueContentsSerializer(many=True)
 
@@ -152,7 +157,7 @@ def _journal_issues(work, context):
         if cover and media.get("primary_rendition_id"):
             cover += f"&rendition={media['primary_rendition_id']}"
         result.append({"id": str(edition.work_id), "slug": data["public_slug"] or str(edition.pk),
-                       "title": values.get("title", ""), "cover_url": cover,
+                       "title": values.get("title", ""), "cover_url": cover, "cover_media": media or None,
                        "edition": data, "contents": contents})
     return result
 
@@ -206,13 +211,14 @@ def public_work_relations(work, edition, *, context=None):
     result["concepts"] = [{"id": str(row.pk), "name": row.canonical_name_zh, "slug": row.slug, "summary": row.summary} for row in concepts]
     topic_ids = {_uuid(row.get("id")) for row in knowledge.get("topics", [])} - {None}
     topics = Topic.objects.filter(pk__in=topic_ids, editorial_status="published").order_by("-curation_level", "id")[:LIMIT]
+    from catalog.services.public_topics import _image, _image_media
     result["topics"] = [{"id": str(row.pk), "name": row.name, "slug": row.slug, "summary": row.description,
-                         "description": row.description, "hero_image": row.hero_image.url if row.hero_image else ""} for row in topics]
+                         "description": row.description, "hero_image": _image(row), "cover_media": _image_media(row)} for row in topics]
     from catalog.theory_serializers import ReadingPathSerializer
     paths = ReadingPath.objects.filter(status="published", items__work=work).distinct().order_by("sort_order", "id")[:LIMIT]
     path_serializer = ReadingPathSerializer(context=context)
     result["reading_paths"] = [{"id": str(row.pk), "title": row.title, "slug": row.slug, "introduction": row.introduction,
-                                "cover_url": path_serializer.get_cover_url(row)} for row in paths]
+                                "cover_url": path_serializer.get_cover_url(row), "cover_media": path_serializer.get_cover_media(row)} for row in paths]
     result["works"] = _related_works(work, snapshot, context)
     result["journal_issues"] = _journal_issues(work, context) if (snapshot.get("work") or {}).get("document_type") == "journal_article" else []
     result["curations"] = _curations(work)

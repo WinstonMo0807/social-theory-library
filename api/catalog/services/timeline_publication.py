@@ -426,14 +426,16 @@ def event_projection(event, context):
             "pdf_page": event.evidence_page, "printed_page_label": event.evidence_printed_label,
             "quote": event.evidence_text, "reader_href": href,
         }
+    borrowed_portrait = next((row for row in scholars.values() if row["portrait_url"]), None)
+    image_url = event.image.url if event.image else (subject["cover_url"] if subject else "") or (borrowed_portrait or {}).get("portrait_url", "")
+    image_media = None if event.image else subject.get("cover_media") if subject and subject["cover_url"] else (borrowed_portrait or {}).get("portrait_media")
     result = {
         "relations": list({(row["type"], row["id"], row["relation_type"]): row for row in targets}.values()),
         "subject_edition": subject,
         "subject_status": "available" if subject else "unavailable" if selected else "unspecified",
         "subject_work": {key: work[key] for key in ("id", "title", "detail_href")} if work else None,
         "scholars": list(scholars.values()), "topics": topics,
-        "image_url": event.image.url if event.image else (subject["cover_url"] if subject else "")
-                     or next((row["portrait_url"] for row in scholars.values() if row["portrait_url"]), ""),
+        "image_url": image_url, "image_media": image_media,
         "source_status": "available" if evidence else "unavailable" if event.evidence_asset_id
                          else "citation_only" if event.source or event.evidence_text else "missing",
         "evidence_source": evidence,

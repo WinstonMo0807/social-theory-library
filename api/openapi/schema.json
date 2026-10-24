@@ -33779,6 +33779,14 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "original_title": {
                         "type": "string"
                     },
@@ -34211,6 +34219,14 @@
                     },
                     "portrait_url": {
                         "type": "string"
+                    },
+                    "portrait_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "match_basis": {
                         "type": "array",
@@ -37138,6 +37154,14 @@
                     },
                     "image_url": {
                         "type": "string"
+                    },
+                    "image_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "period_label": {
                         "type": "string"
@@ -46324,6 +46348,15 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "image_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "scholars": {
                         "type": "array",
                         "items": {
@@ -46378,6 +46411,7 @@
                     "event_type",
                     "evidence_source",
                     "id",
+                    "image_media",
                     "image_url",
                     "knowledge_relation_count",
                     "knowledge_relations",
@@ -46504,6 +46538,15 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "image_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "scholars": {
                         "type": "array",
                         "items": {
@@ -46536,6 +46579,7 @@
                     "event_type",
                     "evidence_source",
                     "id",
+                    "image_media",
                     "image_url",
                     "origin_kind",
                     "reader_href",
@@ -71791,6 +71835,14 @@
                     },
                     "cover_url": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -71816,6 +71868,14 @@
                     },
                     "cover_url": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "edition": {
                         "$ref": "#/components/schemas/CatalogEdition"
@@ -71854,6 +71914,14 @@
                     },
                     "cover_url": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -71916,6 +71984,14 @@
                     },
                     "hero_image": {
                         "type": "string"
+                    },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "required": [

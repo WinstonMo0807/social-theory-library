@@ -1,5 +1,6 @@
 """Public graph response contract; node identity is separate from display text."""
 from rest_framework import serializers
+from catalog.media_views import PublicCoverMediaSerializer
 
 from catalog.theory_serializers import CompactTheoryWorkSerializer
 
@@ -15,6 +16,7 @@ class GraphNodeSerializer(serializers.Serializer):
     href = serializers.CharField()
     summary = serializers.CharField(allow_blank=True)
     image_url = serializers.CharField(allow_blank=True)
+    image_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     period_label = serializers.CharField(allow_blank=True)
     start_year = serializers.IntegerField(allow_null=True)
     end_year = serializers.IntegerField(allow_null=True)

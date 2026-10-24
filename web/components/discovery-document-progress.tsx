@@ -1,4 +1,5 @@
 "use client";
+import { MediaPlacement } from "./media-placement";
 
 import Link from "next/link";
 import { BookOpen, CircleAlert, LockKeyhole, X } from "lucide-react";
@@ -35,7 +36,7 @@ export function DiscoveryDocumentProgress({ data, busy, onRemove, onView, onAdju
     {data.truncated ? <p role="status">当前仅列出前200个版本的状态。请缩小范围查看指定文献；检索结果仍来自完整允许范围。</p> : null}
     <div className={styles.documentTabs} role="group" aria-label="文献处理状态筛选">{tabs.map(value => <button type="button" key={value} aria-pressed={tab === value} onClick={() => { setTab(value); setLimit(4); }}>{value} <small>{data.items.filter(row => matches(row, value)).length}</small></button>)}</div>
     {!rows.length ? <p className={styles.help}>当前没有此状态的文献。</p> : rows.slice(0, limit).map(row => <article className={styles.documentRow} key={row.edition_id}>
-      <div className={styles.documentCover}>{row.bibliography?.cover_url ? <img src={normalizePublicResourceUrl(row.bibliography.cover_url)} alt="" loading="lazy" /> : <BookOpen size={25} aria-hidden="true" />}</div>
+      <div className={styles.documentCover}>{row.bibliography?.cover_url ? <MediaPlacement uses={row.bibliography.cover_media?.display_uses} fallback={<BookOpen size={25} aria-hidden="true"/>}><img src={normalizePublicResourceUrl(row.bibliography.cover_url)} alt="" loading="lazy" /></MediaPlacement> : <BookOpen size={25} aria-hidden="true" />}</div>
       <div><h4>{row.title}</h4><p>{[row.authors.join("、"), row.bibliography?.publication_year, row.bibliography?.version_label].filter(Boolean).join(" · ")}</p>
         <div className={styles.documentState} data-state={row.status}>{row.status === "unreadable" ? <LockKeyhole size={16} /> : ["failed", "changed"].includes(row.status) ? <CircleAlert size={16} /> : null}<strong>{labels[row.status]}</strong>{row.material_count ? <span>已获得 {row.material_count} 段原文</span> : null}</div>
         {row.status === "no_returned" ? <p>本轮有限候选中没有返回该版本的材料，可调整问题或筛选。此状态不判定相关性高低。</p> : null}

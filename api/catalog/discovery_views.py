@@ -1,6 +1,7 @@
 from django.utils.cache import patch_vary_headers
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
+from catalog.media_views import PublicCoverMediaSerializer
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -88,6 +89,7 @@ class DiscoveryWorkSerializer(serializers.Serializer):
 
 class DiscoveryBibliographySerializer(serializers.Serializer):
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     original_title = serializers.CharField(allow_blank=True)
     publication_year = serializers.IntegerField(allow_null=True)
     publisher = serializers.CharField(allow_blank=True)
@@ -138,6 +140,7 @@ class DiscoveryEntitySerializer(serializers.Serializer):
     url = serializers.CharField()
     excerpt = serializers.CharField()
     portrait_url = serializers.CharField(required=False)
+    portrait_media = PublicCoverMediaSerializer(allow_null=True, required=False)
     match_basis = serializers.ListField(child=serializers.CharField())
 
 
