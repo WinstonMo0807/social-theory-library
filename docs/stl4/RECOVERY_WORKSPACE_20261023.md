@@ -1,5 +1,15 @@
 # M28 回收、变更历史与恢复
 
+## 2026-10-24 M28历史馆藏恢复不再重新公开旧版本
+
+前置fbb2942。回查ActiveRecordManager确认，作品回收会连带隐藏其版本，但历史记录可能仍保存published及活动正式修订。补足原restore_object：解除本次回收标记与沿原withdraw_revision撤下旧公开版本处于同一事务。原PublicationEvent/CatalogPublicationRevision/KnowledgePublicationEvent记录完整撤回，保留原件、馆藏ID和不可变历史；单独回收的其他版本不恢复、不撤回其独立记录。单版本历史恢复同样沿原下架服务。权限不足时回收标记与撤回全部回滚。
+
+预览列出旧公开版本影响，版本令牌纳入准确ID/更新时间，缺少WITHDRAW_WORK时明确受阻。同时将原所属对象回收判断补全model_label，避免不同表恰好同UUID而误判所属作品/人物已删除。未更换发布架构或新增迁移。
+
+f5f5dd完成3 Python AST/编译与6 SQLite/PostgreSQL查询编译，禁连数据库，目标diff0。历史作品/版本公开修订不复活、下架权限回滚、跨模型同UUID父对象隔离验收定义已写，未运行测试、真实下架/恢复/发布、队列、浏览器、迁移或部署。原下架投递按撤回修订处理且旧投递不能重新发布的调用链已静态回查；运行并发仍待验收。
+
+管理大类自问：恢复历史父作品是否让旧版本直接可见；单独回收的版本是否被顺便恢复；普通编辑权限能否绕开下架权限；同UUID是否被误当同身份。源码保护已接，未据此宣称全站完成或公网就绪。继续批量恢复、PDF改名冲突、其他引用结构与全站队列；内网预览仍未启动。
+
 ## 2026-10-24 M28复用编排修订追溯作品与原文引用
 
 前置101d50c。关联依赖沿原三栏新增内容编排类型，复用placement_use_revisions与HasPlacementReference，不建平行引用表。作品、版本、知识条目和学者能查询原content_placement最新修订及最后登记公开修订；作品/版本另精确追溯edition引用、work引用中的edition_id，以及本版本Page/Asset所属span/passage。来源类型和真实ID一起匹配，跨表同UUID不当同一对象；大规模原文ID保留在SQL子查询，不展开无限列表。

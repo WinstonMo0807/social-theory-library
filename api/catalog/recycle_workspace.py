@@ -220,6 +220,12 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
     if obj and kind=="topic" and (obj.curation or {}).get("topic_merge"):
         blockers.append("已归并主题须从原归并记录处理。")
     public_children=[]
+    public_editions=[]
+    if obj and kind in {"work","edition"}:
+        from .services.recycle import published_restore_editions
+        public_editions=list(published_restore_editions(obj).order_by("pk").values("pk","updated_at"))
+        if public_editions and not has_capability(actor,Capability.WITHDRAW_WORK):
+            blockers.append("仍有关联版本保留旧公开状态，需要有下架权限的管理员恢复；恢复时先撤下旧版本，避免原馆藏直接重新公开。")
     if obj and kind=="person":
         from .services.recycle import published_person_profiles
         public_children=list(published_person_profiles(obj).order_by("pk").values("pk","updated_at"))
@@ -236,7 +242,7 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
     before=entry.before if entry and isinstance(entry.before,dict) else {}
     version=sha256(json.dumps({"kind":kind,"id":identifier,"object_updated":obj.updated_at if obj else None,
         "entry_updated":entry.updated_at if entry else None,"state":state,"dependencies":deps,"total":total,"blockers":blockers,
-        "files":storage["checks"],"public_children":public_children,"names":names["fingerprint"]},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
+        "files":storage["checks"],"public_children":public_children,"public_editions":public_editions,"names":names["fingerprint"]},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
     return {"kind":kind,"object_id":str(identifier),"entry_id":str(entry.pk) if entry else None,"title":title,"label":LABELS[kind],
         "record_state":state,"version":version,"destination":destination(kind,obj) if obj else DESTINATIONS[kind],"cover_url":cover_url(obj,kind),
         "created_at":obj.created_at if obj else None,"updated_at":obj.updated_at if obj else None,
@@ -244,7 +250,7 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
         "reason":str(before.get("_recycle_reason") or "原记录未保存操作原因"),"dependencies":deps,"dependency_count":total,
         "dependencies_limited":total>len(deps),"history":changes,"history_count":history_count,"names":{key:names[key] for key in ("count","results","limited")},"blockers":blockers,"can_restore":can_restore,
         "storage":{"state":storage["state"],"checked_at":storage["checked_at"],"total":storage["total"]},
-        "notice":"恢复原对象和保留的关联，保持未发布；不自动恢复其他已删除对象，不覆盖同名内容，不重启任务。"+(" 此人物的旧公开学者页将一并撤下，档案内容和历史修订保留，需另行审核发布。" if public_children else "")}
+        "notice":"恢复原对象和保留的关联，保持未发布；不自动恢复其他已删除对象，不覆盖同名内容，不重启任务。"+(" 此人物的旧公开学者页将一并撤下，档案内容和历史修订保留，需另行审核发布。" if public_children else "")+(f" {len(public_editions)}个旧公开版本将通过原下架流程撤下，文件、身份与版本历史保留，需要另行审核发布。" if public_editions else "")}
 
 
 def locked_recovery_actor(request):

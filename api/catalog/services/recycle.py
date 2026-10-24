@@ -21,6 +21,24 @@ def published_person_profiles(person):
     return ScholarProfile.all_objects.filter(person=person, editorial_status="published").exclude(pk__in=removed.values("object_id"))
 
 
+def published_restore_editions(obj):
+    if isinstance(obj,Edition):return Edition.all_objects.filter(pk=obj.pk,state="published")
+    if not isinstance(obj,Work):return Edition.all_objects.none()
+    removed=RecycleEntry.objects.filter(model_label="catalog.edition",restored_at__isnull=True)
+    return Edition.all_objects.filter(work=obj,state="published").exclude(pk__in=removed.values("object_id"))
+
+
+def withdraw_restored_editions(obj, *, actor):
+    editions=list(published_restore_editions(obj).select_for_update().order_by("pk"))
+    if not editions:return
+    if not has_capability(actor,Capability.WITHDRAW_WORK):
+        raise PermissionDenied("关联版本仍保留旧公开状态，需要有下架权限的管理员恢复，防止旧馆藏直接重新公开。")
+    from catalog.services.publication_commands import withdraw_revision
+    for edition in editions:
+        withdraw_revision(edition,actor=actor,reason="恢复历史回收对象时撤下旧公开版本，原身份、文件及历史保留")
+    if isinstance(obj,Edition):obj.refresh_from_db()
+
+
 def withdraw_person_profiles(person, *, actor):
     profiles = list(published_person_profiles(person).select_for_update())
     if not profiles:
@@ -170,10 +188,15 @@ def restore_object(entry_id, *, actor):
         if RecycleEntry.objects.filter(model_label="catalog.recommendationissue", object_id=obj.issue_id, restored_at__isnull=True).exists():
             raise ValidationError("请先恢复所属策划。")
     parent = getattr(obj, "work_id", None) if isinstance(obj, Edition) else getattr(obj, "person_id", None) if isinstance(obj, ScholarProfile) else None
-    if parent and RecycleEntry.objects.filter(object_id=parent, restored_at__isnull=True).exists():
+    parent_label="catalog.work" if isinstance(obj,Edition) else "catalog.person"
+    if parent and RecycleEntry.objects.filter(model_label=parent_label,object_id=parent, restored_at__isnull=True).exists():
         raise ValidationError("请先恢复所属作品或人物，再恢复本条记录。")
     entry.restored_at = timezone.now()
     entry.save(update_fields=["restored_at", "updated_at"])
+    # The parent/own marker and original withdrawal commit together. This also
+    # protects legacy rows whose recycle event did not withdraw public editions.
+    if isinstance(obj,(Work,Edition)):
+        withdraw_restored_editions(obj,actor=actor)
     if isinstance(obj, Person):
         # Parent and withdrawal commit together. Legacy deletions may have left
         # a published child hidden by the parent's recycle marker.
