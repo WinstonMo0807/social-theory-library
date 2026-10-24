@@ -44,6 +44,7 @@ VERIFIED_NAMES = {
     "local-services", "local-service-check",
     "path-save-receipt", "path-editor-validation",
     "timeline-save-receipt", "timeline-similar", "timeline-edition-participants",
+    "timeline-merge-preview", "timeline-merge", "timeline-merge-record", "timeline-merge-history", "timeline-merge-receipt",
     "theory-system-directory", "subdiscipline-list", "subdiscipline-detail",
     "topic-organization", "topic-save-receipt", "topic-organization-preview", "topic-association-choices",
     "topic-list", "topic-detail", "admin-topic-list", "admin-topic-detail",

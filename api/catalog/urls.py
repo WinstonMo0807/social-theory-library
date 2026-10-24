@@ -13,6 +13,7 @@ from catalog.topic_editor_views import TopicReceiptView, TopicOrganizationView, 
 from catalog.topic_association_views import TopicAssociationChoicesView
 from catalog.timeline_participant_views import TimelineEditionParticipantsView
 from catalog.timeline_media_views import PublicTimelineImageView
+from catalog.timeline_merge_views import TimelineMergePreviewView, TimelineMergeView, TimelineMergeRecordView, TimelineMergeHistoryView, TimelineMergeReceiptView
 from catalog.scholar_work_views import ScholarWorkSelectionView
 from django.urls import path
 from .home_views import HomeView
@@ -726,6 +727,11 @@ urlpatterns = [
     ),
     path("admin/theory-timeline/commands/<uuid:request_id>/", TimelineSaveReceiptView.as_view(), name="timeline-save-receipt"),
     path("admin/theory-timeline/similar/", TimelineSimilarView.as_view(), name="timeline-similar"),
+    path("admin/theory-timeline/merge-preview/", TimelineMergePreviewView.as_view(), name="timeline-merge-preview"),
+    path("admin/theory-timeline/merge/", TimelineMergeView.as_view(), name="timeline-merge"),
+    path("admin/theory-timeline/merges/commands/<uuid:request_id>/", TimelineMergeReceiptView.as_view(), name="timeline-merge-receipt"),
+    path("admin/theory-timeline/merges/<uuid:pk>/", TimelineMergeRecordView.as_view(), name="timeline-merge-record"),
+    path("admin/theory-timeline/<uuid:pk>/merges/", TimelineMergeHistoryView.as_view(), name="timeline-merge-history"),
     path("admin/theory-timeline/editions/<uuid:edition_id>/participants/", TimelineEditionParticipantsView.as_view(), name="timeline-edition-participants"),
     path("admin/theory-timeline/", AdminTheoryTimelineListView.as_view(), name="admin-theory-timeline-list"),
     path("admin/theory-timeline/<uuid:pk>/", AdminTheoryTimelineDetailView.as_view(), name="admin-theory-timeline-detail"),

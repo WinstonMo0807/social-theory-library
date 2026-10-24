@@ -14131,6 +14131,52 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-timeline/{id}/merges/": {
+            "get": {
+                "operationId": "timeline_merge_history_list",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MergeRows"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-timeline/commands/{request_id}/": {
             "get": {
                 "operationId": "catalog_admin_theory_timeline_commands_retrieve",
@@ -14265,6 +14311,294 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/TimelineEditionParticipants"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-timeline/merge/": {
+            "post": {
+                "operationId": "catalog_admin_theory_timeline_merge_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MergeInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MergeInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MergeInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineMergeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-timeline/merge-preview/": {
+            "post": {
+                "operationId": "catalog_admin_theory_timeline_merge_preview_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PairInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PairInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PairInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineMergePreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-timeline/merges/{id}/": {
+            "get": {
+                "operationId": "timeline_merge_record_read",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineMergeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_timeline_merges_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RollbackInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RollbackInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RollbackInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineMergeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-timeline/merges/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_timeline_merges_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineMergeReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_timeline_merges_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TimelineMergeReceipt"
                                 }
                             }
                         },
@@ -32602,6 +32936,12 @@
                         "format": "date-time",
                         "readOnly": true
                     },
+                    "merged_into": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "editorial_details": {},
                     "start_date": {
                         "type": "string",
@@ -32774,6 +33114,7 @@
                     "evidence_file",
                     "has_unpublished_changes",
                     "id",
+                    "merged_into",
                     "public_status",
                     "reviewed_at",
                     "reviewed_by",
@@ -51259,6 +51600,125 @@
                     "kind"
                 ]
             },
+            "MergeEventSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "event_type": {
+                        "type": "string"
+                    },
+                    "date_label": {
+                        "type": "string"
+                    },
+                    "start_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "end_year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "start_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "date_precision": {
+                        "type": "string"
+                    },
+                    "review_status": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "editor_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "date_label",
+                    "date_precision",
+                    "description",
+                    "editor_url",
+                    "end_date",
+                    "end_year",
+                    "event_type",
+                    "id",
+                    "review_status",
+                    "source",
+                    "start_date",
+                    "start_year",
+                    "title"
+                ]
+            },
+            "MergeInputRequest": {
+                "type": "object",
+                "properties": {
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "fingerprint",
+                    "source_id",
+                    "target_id"
+                ]
+            },
+            "MergeRows": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TimelineMergeHistoryRow"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "results"
+                ]
+            },
             "MetadataCandidate": {
                 "type": "object",
                 "properties": {
@@ -54202,6 +54662,23 @@
                         }
                     }
                 }
+            },
+            "PairInputRequest": {
+                "type": "object",
+                "properties": {
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "source_id",
+                    "target_id"
+                ]
             },
             "ParallelAlignmentInputRequest": {
                 "type": "object",
@@ -69685,6 +70162,23 @@
                     "public_access"
                 ]
             },
+            "RollbackInputRequest": {
+                "type": "object",
+                "properties": {
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "fingerprint"
+                ]
+            },
             "RotationEnum": {
                 "enum": [
                     0,
@@ -76025,6 +76519,191 @@
                     "work_id"
                 ]
             },
+            "TimelineMergeHistoryRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_title": {
+                        "type": "string"
+                    },
+                    "target_title": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "rolled_back_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "source",
+                    "source_title",
+                    "target",
+                    "target_title"
+                ]
+            },
+            "TimelineMergePreview": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "$ref": "#/components/schemas/MergeEventSummary"
+                    },
+                    "target": {
+                        "$ref": "#/components/schemas/MergeEventSummary"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "can_merge": {
+                        "type": "boolean"
+                    },
+                    "blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "source_count": {
+                        "type": "integer"
+                    },
+                    "relation_count": {
+                        "type": "integer"
+                    },
+                    "placement_count": {
+                        "type": "integer"
+                    },
+                    "will_be_public": {
+                        "type": "boolean"
+                    },
+                    "rule": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "blockers",
+                    "can_merge",
+                    "fingerprint",
+                    "placement_count",
+                    "relation_count",
+                    "rule",
+                    "source",
+                    "source_count",
+                    "target",
+                    "will_be_public"
+                ]
+            },
+            "TimelineMergeReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "timeline_merge_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_version": {
+                        "type": "string"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "request_id",
+                    "saved_version",
+                    "state",
+                    "timeline_merge_id"
+                ]
+            },
+            "TimelineMergeResult": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_title": {
+                        "type": "string"
+                    },
+                    "target_title": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "rolled_back_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "rollback": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TimelineRollbackState"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "save_receipt": {
+                        "$ref": "#/components/schemas/TimelineMergeReceipt"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "rollback",
+                    "source",
+                    "source_title",
+                    "target",
+                    "target_title"
+                ]
+            },
             "TimelineNamedReference": {
                 "type": "object",
                 "properties": {
@@ -76118,6 +76797,28 @@
                 ],
                 "type": "string",
                 "description": "* `event` - event\n* `edition` - edition"
+            },
+            "TimelineRollbackState": {
+                "type": "object",
+                "properties": {
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "can_rollback": {
+                        "type": "boolean"
+                    },
+                    "blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "blockers",
+                    "can_rollback",
+                    "fingerprint"
+                ]
             },
             "TimelineSaveReceipt": {
                 "type": "object",

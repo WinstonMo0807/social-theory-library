@@ -2657,6 +2657,7 @@ class PersonTopicRelation(UUIDTimeStampedModel):
 
 
 class TheoryTimelineEvent(UUIDTimeStampedModel):
+    merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="merged_sources")
     # Private editorial evidence; public serializers expose only the approved primary citation.
     editorial_details = models.JSONField(default=dict, blank=True)
     start_date = models.DateField(null=True, blank=True)
@@ -3900,6 +3901,49 @@ class TimelineEvidenceImage(UUIDTimeStampedModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["event", "source_key"], name="unique_timeline_evidence_image")]
+
+
+class TimelineMergeRecordQuerySet(models.QuerySet):
+    def bulk_create(self, objs, batch_size=None, ignore_conflicts=False, update_conflicts=False, update_fields=None, unique_fields=None):
+        if update_conflicts:
+            from django.core.exceptions import ValidationError
+            raise ValidationError("事件归并历史不可覆盖。")
+        return super().bulk_create(objs, batch_size=batch_size, ignore_conflicts=ignore_conflicts,
+                                   update_conflicts=False, update_fields=update_fields, unique_fields=unique_fields)
+
+    def update(self, **kwargs):
+        if set(kwargs) - {"rolled_back_at", "updated_at", "created_by", "created_by_id"}:
+            from django.core.exceptions import ValidationError
+            raise ValidationError("事件归并历史不可改写。")
+        return super().update(**kwargs)
+
+    def delete(self):
+        from django.core.exceptions import ValidationError
+        raise ValidationError("事件归并历史必须保留。")
+
+
+class TimelineMergeRecord(UUIDTimeStampedModel):
+    objects = TimelineMergeRecordQuerySet.as_manager()
+    source = models.ForeignKey(TheoryTimelineEvent, on_delete=models.PROTECT, related_name="outgoing_merges")
+    target = models.ForeignKey(TheoryTimelineEvent, on_delete=models.PROTECT, related_name="incoming_merges")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    request_fingerprint = models.CharField(max_length=64)
+    before = models.JSONField(default=dict)
+    rollback_fingerprint = models.CharField(max_length=64)
+    rolled_back_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=~models.Q(source=models.F("target")), name="timeline_merge_distinct_events")]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding and (kwargs.get("update_fields") is None or set(kwargs["update_fields"]) - {"rolled_back_at", "updated_at"}):
+            from django.core.exceptions import ValidationError
+            raise ValidationError("事件归并历史不可改写。")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        raise ValidationError("事件归并历史必须保留。")
 
 
 class CatalogingSession(UUIDTimeStampedModel):

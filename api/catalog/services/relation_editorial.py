@@ -17,6 +17,8 @@ def timeline_relations_snapshot(target):
 
 def validate_relation_patch(target, patch):
     from catalog.services.editorial_revision import EditorialRevisionError, _json_value
+    if isinstance(target, TheoryTimelineEvent) and target.merged_into_id:
+        raise EditorialRevisionError("此事件已归并，请编辑保留事件或先回退归并。")
     # Withdrawing an existing record must remain possible even when legacy
     # content cannot pass today's publication requirements. No content changes.
     if isinstance(target, TheoryTimelineEvent) and patch == {"review_status": "rejected"}:

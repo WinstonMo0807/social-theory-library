@@ -2601,7 +2601,7 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
             for field in TheoryTimelineEvent._meta.fields
         ) + ("relations", "evidence_file", "evidence_work_id", "evidence_edition_id",
              "edit_version", "editorial_revision", "public_status", "has_unpublished_changes")
-        read_only_fields = ("reviewed_by", "reviewed_at")
+        read_only_fields = ("reviewed_by", "reviewed_at", "merged_into")
 
     def validate_editorial_details(self, value):
         from catalog.timeline_editor import validate_timeline_details
@@ -2613,6 +2613,8 @@ class AdminTheoryTimelineEventSerializer(serializers.ModelSerializer):
         return admin_timeline_file(obj, self.context)
 
     def validate(self, attrs):
+        if self.instance and self.instance.merged_into_id:
+            raise serializers.ValidationError("此事件已归并，请编辑保留的事件，或先从归并记录回退。")
         from catalog.services.timeline_evidence import validate_timeline_file, validate_timeline_identity
         if attrs.get("review_status", getattr(self.instance, "review_status", "")) != "rejected":
             try:

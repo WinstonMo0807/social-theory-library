@@ -192,7 +192,8 @@ def scoped_events(params):
         )
     related = params.get("related_to", "").strip()
     if related:
-        origin = get_object_or_404(public_events(), pk=event_id(related, "related_to"))
+        from catalog.services.timeline_merge import resolved_event_id
+        origin = get_object_or_404(public_events(), pk=resolved_event_id(event_id(related, "related_to")))
         rows = rows.filter(related_query(origin)).exclude(pk=origin.pk)
     return rows.distinct(), sort, selections
 
@@ -211,7 +212,8 @@ def ordered(rows, sort):
 
 
 def focus_page(rows, focus, sort, page_size):
-    row = get_object_or_404(rows, pk=event_id(focus))
+    from catalog.services.timeline_merge import resolved_event_id
+    row = get_object_or_404(rows, pk=resolved_event_id(event_id(focus)))
     year_lookup = "timeline_sort_year__lt" if sort == "asc" else "timeline_sort_year__gt"
     before = Q(**{year_lookup: row.timeline_sort_year})
     tie = Q(timeline_sort_year=row.timeline_sort_year)

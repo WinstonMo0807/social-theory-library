@@ -105,7 +105,12 @@ def resolve_target(raw, *, public=False):
             rows = rows.filter(pk__in=public_scholar_queryset().values("person_id"))
         else:
             rows = rows.filter(**({"review_status": "approved"} if kind == "timeline" else {"status": "published"}))
-    row = get_object_or_404(rows, pk=key)
+    if kind == "timeline":
+        from catalog.services.timeline_merge import resolved_event_id
+        resolved_key = resolved_event_id(key)
+    else:
+        resolved_key = key
+    row = get_object_or_404(rows, pk=resolved_key)
     name = row.preferred_name if kind == "person" else row.title
     target = {"type": kind, "id": str(key)}
     source = {**target, "title": name}

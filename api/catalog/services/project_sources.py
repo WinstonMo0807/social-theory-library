@@ -51,6 +51,8 @@ def reference_states(references):
                 eligible = (public_scholar_queryset().filter(person_id__in=part).values_list("person_id", flat=True) if kind == "person" else
                     rows.filter(status="published").values_list("pk", flat=True) if kind in {"node", "reading_path"} else
                     rows.filter(review_status="approved").values_list("pk", flat=True) if kind == "timeline" else rows.values_list("pk", flat=True))
+                if kind == "timeline":
+                    eligible = rows.filter(Q(review_status="approved", merged_into__isnull=True) | Q(merged_into_id__in=TheoryTimelineEvent.objects.filter(review_status="approved", merged_into__isnull=True).values("pk"))).values_list("pk", flat=True)
             public[kind].update(map(str, eligible))
     results = []
     for ref in references:

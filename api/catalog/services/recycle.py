@@ -45,6 +45,8 @@ def recycle_object(obj, *, actor, kind, name, reason=""):
     from catalog.services.curation_projects import protect_related_object
     protect_related_object(obj, actor, lock=True)
     obj = type(obj).all_objects.select_for_update().get(pk=obj.pk)
+    if label == "catalog.theorytimelineevent" and (obj.outgoing_merges.exists() or obj.incoming_merges.exists()):
+        raise ValidationError("事件已有归并历史，请保留原身份并从归并记录核对，不能移入回收站。")
     entry = RecycleEntry.objects.filter(model_label=label, object_id=obj.pk).first()
     if entry and entry.restored_at is None:
         return entry
@@ -150,6 +152,8 @@ def restore_object(entry_id, *, actor):
     obj = model.all_objects.get(pk=entry.object_id)
     protect_related_object(obj, actor, lock=True)
     obj = model.all_objects.select_for_update().get(pk=entry.object_id)
+    if entry.model_label == "catalog.theorytimelineevent" and obj.merged_into_id:
+        raise ValidationError("已归并事件须从原归并记录回退，不能直接恢复。")
     # Same lock order as deletion: original object, then its ledger row.
     entry = RecycleEntry.objects.select_for_update().get(pk=entry_id)
     if entry.restored_at:
@@ -205,6 +209,8 @@ def restore_archived_object(kind, obj, *, actor):
     if not config or not config.status_field or kind == "theory-school":
         raise ValidationError("此对象不能通过通用归档恢复。")
     obj = config.model.objects.select_for_update().get(pk=obj.pk)
+    if obj._meta.label_lower == "catalog.theorytimelineevent" and obj.merged_into_id:
+        raise ValidationError("已归并事件须从原归并记录回退，不能直接恢复。")
     if kind == "topic" and (obj.curation or {}).get("topic_merge"):
         raise ValidationError("已归并主题须从原归并记录处理。")
     if getattr(obj, config.status_field) != config.archived_value:

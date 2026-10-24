@@ -114,7 +114,7 @@ def ensure_timeline_publication(target):
 
 
 def similar_timeline_events(data):
-    rows = TheoryTimelineEvent.objects.all()
+    rows = TheoryTimelineEvent.objects.filter(merged_into__isnull=True)
     subjects = Q()
     if data.get("work"):
         subjects |= Q(work_id=data["work"]) | Q(subject_edition__work_id=data["work"])

@@ -2876,6 +2876,22 @@ export interface paths {
         patch: operations["catalog_admin_theory_timeline_partial_update"];
         trace?: never;
     };
+    "/api/catalog/admin/theory-timeline/{id}/merges/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["timeline_merge_history_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/theory-timeline/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -2902,6 +2918,70 @@ export interface paths {
         get: operations["catalog_admin_theory_timeline_editions_participants_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-timeline/merge/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_theory_timeline_merge_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-timeline/merge-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_theory_timeline_merge_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-timeline/merges/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["timeline_merge_record_read"];
+        put?: never;
+        post: operations["catalog_admin_theory_timeline_merges_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-timeline/merges/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_timeline_merges_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_theory_timeline_merges_commands_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6877,6 +6957,8 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+            /** Format: uuid */
+            readonly merged_into: string | null;
             editorial_details?: unknown;
             /** Format: date */
             start_date?: string | null;
@@ -12490,6 +12572,38 @@ export interface components {
             id: string;
             expected_revision: number;
         };
+        MergeEventSummary: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            event_type: string;
+            date_label: string;
+            start_year: number | null;
+            end_year: number | null;
+            /** Format: date */
+            start_date: string | null;
+            /** Format: date */
+            end_date: string | null;
+            date_precision: string;
+            review_status: string;
+            source: string;
+            description: string;
+            editor_url: string;
+        };
+        MergeInputRequest: {
+            /** Format: uuid */
+            source_id: string;
+            /** Format: uuid */
+            target_id: string;
+            fingerprint: string;
+            confirmed: boolean;
+        };
+        MergeRows: {
+            count: number;
+            page: number;
+            pages: number;
+            results: components["schemas"]["TimelineMergeHistoryRow"][];
+        };
         MetadataCandidate: {
             /** Format: uuid */
             readonly id: string;
@@ -13495,6 +13609,12 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["WorkCard"][];
+        };
+        PairInputRequest: {
+            /** Format: uuid */
+            source_id: string;
+            /** Format: uuid */
+            target_id: string;
         };
         ParallelAlignmentInputRequest: {
             /** Format: uuid */
@@ -18157,6 +18277,10 @@ export interface components {
             private_access: string;
             assignable: boolean;
         };
+        RollbackInputRequest: {
+            fingerprint: string;
+            confirmed: boolean;
+        };
         /**
          * @description * `0` - 0
          *     * `90` - 90
@@ -19929,6 +20053,60 @@ export interface components {
             quote: string;
             reader_href: string;
         };
+        TimelineMergeHistoryRow: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            source: string;
+            /** Format: uuid */
+            target: string;
+            source_title: string;
+            target_title: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            rolled_back_at?: string | null;
+        };
+        TimelineMergePreview: {
+            source: components["schemas"]["MergeEventSummary"];
+            target: components["schemas"]["MergeEventSummary"];
+            fingerprint: string;
+            can_merge: boolean;
+            blockers: string[];
+            source_count: number;
+            relation_count: number;
+            placement_count: number;
+            will_be_public: boolean;
+            rule: string;
+        };
+        TimelineMergeReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            timeline_merge_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        TimelineMergeResult: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            source: string;
+            /** Format: uuid */
+            target: string;
+            source_title: string;
+            target_title: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            rolled_back_at?: string | null;
+            readonly rollback: components["schemas"]["TimelineRollbackState"];
+            save_receipt?: components["schemas"]["TimelineMergeReceipt"];
+        };
         TimelineNamedReference: {
             /** Format: uuid */
             id: string;
@@ -19964,6 +20142,11 @@ export interface components {
          * @enum {string}
          */
         TimelineParticipantSourceEnum: "event" | "edition";
+        TimelineRollbackState: {
+            fingerprint: string;
+            can_rollback: boolean;
+            blockers: string[];
+        };
         TimelineSaveReceipt: {
             actor_id: string;
             /** Format: uuid */
@@ -28026,6 +28209,29 @@ export interface operations {
             };
         };
     };
+    timeline_merge_history_list: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeRows"];
+                };
+            };
+        };
+    };
     catalog_admin_theory_timeline_commands_retrieve: {
         parameters: {
             query?: never;
@@ -28093,6 +28299,152 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TimelineEditionParticipants"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_merge_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MergeInputRequest"];
+                "multipart/form-data": components["schemas"]["MergeInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineMergeResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_merge_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PairInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PairInputRequest"];
+                "multipart/form-data": components["schemas"]["PairInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineMergePreview"];
+                };
+            };
+        };
+    };
+    timeline_merge_record_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineMergeResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_merges_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RollbackInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RollbackInputRequest"];
+                "multipart/form-data": components["schemas"]["RollbackInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineMergeResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_merges_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineMergeReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_timeline_merges_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineMergeReceipt"];
                 };
             };
         };

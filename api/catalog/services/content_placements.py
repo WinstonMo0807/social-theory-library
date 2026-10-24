@@ -77,7 +77,10 @@ def parent_object(page_type, page_id, *, public=False, lock=False, actor=None):
             rows = rows.filter(**{status_field: "approved" if page_type == "timeline_event" else "published"})
     if lock:
         rows = rows.select_for_update()
-    return get_object_or_404(rows, pk=shared_curation.identifier(page_id))
+    parent = get_object_or_404(rows, pk=shared_curation.identifier(page_id))
+    if page_type == "timeline_event" and parent.merged_into_id:
+        raise ValidationError("事件已归并，请打开保留事件的页面编排。")
+    return parent
 
 
 def target_id(page_type, page_id):

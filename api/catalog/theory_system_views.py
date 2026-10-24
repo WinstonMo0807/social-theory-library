@@ -612,7 +612,8 @@ class NormalizedTimelineDetailView(NormalizedTimelineListView):
     @extend_schema(operation_id="theory_system_timeline_detail", responses=NormalizedTimelineDetailSerializer)
     def get(self, request, pk):
         from django.shortcuts import get_object_or_404
-        return Response(self.get_serializer(get_object_or_404(self.get_queryset(), pk=pk)).data)
+        from catalog.services.timeline_merge import resolved_event_id
+        return Response(self.get_serializer(get_object_or_404(self.get_queryset(), pk=resolved_event_id(pk))).data)
 
 
 class LocalTheoryGraphView(TheorySystemFeatureMixin, APIView):

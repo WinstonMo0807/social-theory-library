@@ -8,6 +8,7 @@ import { nodeEditorialForSave, type NodeEditorialDetails, type NodeProseField } 
 import type { ScholarProse } from "@/lib/api/scholar-prose";
 import { TimelineSupplementalSources, TimelineSimilarCheck, emptyTimelineDetails, type TimelineEditorialDetails } from "./admin/knowledge/timeline-editor-details";
 import { TimelineEvidenceImage, timelineEvidenceImageUrl } from "./admin/knowledge/timeline-evidence-image";
+import { TimelineMergeWorkspace } from "./admin/knowledge/timeline-merge-workspace";
 import { TimelineParticipants } from "./admin/knowledge/timeline-participants";
 import timelineStyles from "./admin/knowledge/timeline-editor.module.css";
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
@@ -1383,6 +1384,7 @@ export type TimelineRelation = {
 };
 
 export type AdminTimelineEvent = {
+  merged_into?: string|null;
   start_date?: string|null;
   end_date?: string|null;
   editorial_details?: TimelineEditorialDetails;
@@ -1645,6 +1647,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
   const command=useScholarSave(owner,"timeline");
   const composing=useRef(false),[ime,setIme]=useState(false);
   const scopeScholarId=embedded?.scholarId||"";
+  const [mergeTarget,setMergeTarget]=useState(""),[mergeBusy,setMergeBusy]=useState(false);
   const canEdit=hasAdminCapability(session,"can_edit_draft_authority");
   const canCreate=hasAdminCapability(session,"can_create_authority");
   const previewRef=useRef<HTMLElement>(null);
@@ -1694,7 +1697,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
   const { pendingAction, startAction, finishAction } = useActionGuard();
   useUnsavedForm(Boolean(command.recovery)||Boolean(pendingAction),false);
   const notifyGuard=useEffectEvent((value:TimelineEditorGuard)=>embedded?.onGuardChange(value));
-  useEffect(()=>{notifyGuard({dirty:timelineDirty,pending:Boolean(pendingAction)||Boolean(command.recovery),composing:ime});},[timelineDirty,pendingAction,command.recovery,ime]);
+  useEffect(()=>{notifyGuard({dirty:timelineDirty,pending:Boolean(pendingAction)||Boolean(command.recovery)||mergeBusy,composing:ime});},[timelineDirty,pendingAction,command.recovery,ime,mergeBusy]);
   const [entityLabels, setEntityLabels] = useState<Record<string, string>>({});
 
   const params = useMemo(() => {
@@ -1726,7 +1729,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
   }, [requested.data, wrongNode]);
 
   function start(event?: TimelineEvent) {
-    if (composing.current || pendingAction || command.recovery || (timelineDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一个事件吗？"))) return;
+    if (composing.current || mergeBusy || pendingAction || command.recovery || (timelineDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一个事件吗？"))) return;
     if ((event?.id || "") !== requestedId) { location.update({ event: event?.id ?? null }); return; }
     setEditing(event ?? null);
     setSavedDraft(event ? timelineToDraft(event) : { ...initialDraft });
@@ -1738,7 +1741,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
 
   async function saveEvent(event: FormEvent) {
     event.preventDefault();event.stopPropagation();
-    if (composing.current || !canEdit || (!editing && !canCreate) || wrongNode || (nodeId && !selectedNode.data)) return;
+    if (composing.current || mergeBusy || editing?.merged_into || !canEdit || (!editing && !canCreate) || wrongNode || (nodeId && !selectedNode.data)) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = editing ? `save-timeline-event:${editing.id}` : "create-timeline-event";
@@ -1860,7 +1863,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
       {wrongNode ? <p role="alert">这个事件不属于当前理论。请返回事件所属理论，或从全部理论事件中查看。</p> : null}
       <p>同一事件可以关联多个理论，修改会影响所有关联理论。关联学者或馆藏用于说明事件涉及谁、哪部作品，不会自动替代学者生平或主题发展内容。</p>
       <div className={timelineStyles.workspace}><div className="timeline-admin-grid">
-        <div className={timelineStyles.toolbar}><small>{timelineDirty?"有未保存修改":editing?"已保存内容":"尚未保存"}{editing?.editorial_revision?" · 待发布修改":""}</small><div><button className="admin-outline-button" type="button" disabled={ime} onClick={showPreview}>预览</button><button className="admin-outline-button" type="submit" form="timeline-editor-form" disabled={ime||!canEdit||Boolean(pendingAction)||!command.ready||Boolean(command.recovery)}>保存草稿</button><button className="button" type="button" disabled={ime||!canPublish||timelineDirty||Boolean(pendingAction)||Boolean(command.recovery)||!editing?.editorial_revision} onClick={()=>void publishEvent()}>发布</button></div></div>
+        <div className={timelineStyles.toolbar}><small>{timelineDirty?"有未保存修改":editing?"已保存内容":"尚未保存"}{editing?.editorial_revision?" · 待发布修改":""}</small><div><button className="admin-outline-button" type="button" disabled={ime} onClick={showPreview}>预览</button><button className="admin-outline-button" type="submit" form="timeline-editor-form" disabled={ime||mergeBusy||Boolean(editing?.merged_into)||!canEdit||Boolean(pendingAction)||!command.ready||Boolean(command.recovery)}>保存草稿</button><button className="button" type="button" disabled={ime||mergeBusy||Boolean(editing?.merged_into)||!canPublish||timelineDirty||Boolean(pendingAction)||Boolean(command.recovery)||!editing?.editorial_revision} onClick={()=>void publishEvent()}>发布</button></div></div>
         {command.recovery?<div role="status"><p>原保存结果尚未确认，请先核对这次请求。</p><button type="button" onClick={()=>void recoverSave()}>查回原请求</button>{command.canRetry?<button type="submit" form="timeline-editor-form">重试原保存</button>:null}<button type="button" onClick={()=>void recoverSave(true)}>停止未完成请求</button></div>:null}{command.error?<p role="alert">{command.error}</p>:null}
         <details hidden={Boolean(embedded)} className={timelineStyles.directory}><summary>查找与切换事件 · {events.data?.count ?? "正在读取"}</summary>
         <section className="admin-panel normalized-timeline-list">
@@ -1884,10 +1887,12 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
         </section></details>
 
         <nav className={timelineStyles.mobileTabs} aria-label="时间线编辑栏目">{([["edit","编辑内容"],["sources","出处与证据"],["preview","时间线预览"]] as const).map(([key,label])=><button key={key} type="button" disabled={ime} aria-pressed={mobilePanel===key} aria-controls={`${panelId}-${key}`} onClick={()=>setMobilePanel(key)}>{label}</button>)}</nav>
+        {editing?.merged_into?<p role="status">此事件已归并，原记录及历史保留。<Link href={`/admin/theories/timeline?event=${editing.merged_into}`}>打开保留事件</Link>，或从归并记录核对回退。</p>:null}
+        {editing?<TimelineMergeWorkspace key={`${owner}:${editing.id}`} owner={owner} eventId={editing.id} targetId={mergeTarget} onTargetChange={setMergeTarget} onPendingChange={setMergeBusy} disabled={timelineDirty||Boolean(pendingAction)||Boolean(command.recovery)||ime} onChanged={()=>{opened.current=false;requested.refresh();events.refresh();relatedPreview.refresh();embedded?.onSaved();}}/>:null}
         <div className="timeline-focused-editor" data-mobile-panel={mobilePanel}><form id="timeline-editor-form" className="admin-panel timeline-event-editor" onSubmit={saveEvent} onInvalidCapture={revealInvalid}>
           <ErrorNotice message={requested.error} retry={requested.refresh} />
           {requestedId && !requested.data ? <p>正在读取所选事件。</p> : null}
-          <fieldset className="dedicated-editor-fields" disabled={!canEdit || (!editing && !canCreate) || !command.ready || Boolean(command.recovery) || Boolean(pendingAction) || Boolean(requestedId && !requested.data) || wrongNode || Boolean(nodeId && !selectedNode.data)}>
+          <fieldset className="dedicated-editor-fields" disabled={mergeBusy || Boolean(editing?.merged_into) || !canEdit || (!editing && !canCreate) || !command.ready || Boolean(command.recovery) || Boolean(pendingAction) || Boolean(requestedId && !requested.data) || wrongNode || Boolean(nodeId && !selectedNode.data)}>
           <header><div><h2>{editing ? "编辑事件" : "新建事件"}</h2><p>标题、时间、说明、关联理论和来源会用于公开时间线。证据原文用于复核；有有效阅读文件和页码时，读者可打开馆藏出处。</p></div>{editing ? <ActionButton type="button" state={pendingAction === `delete-timeline-event:${editing.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-timeline-event:${editing.id}`} onClick={() => void removeEvent()}><Trash2 size={14} />删除</ActionButton> : null}</header>
           <section id={`${panelId}-edit`} data-timeline-panel="edit" className={timelineStyles.column}><details open className={timelineStyles.group}><summary><h2>基本信息</h2></summary>
           <label><span>事件标题</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label>
@@ -1910,7 +1915,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
           <TimelineSubjectEdition key={`${editing?.id || "new"}:${draft.work}`} work={draft.work} value={draft.subject_edition} onChange={subject_edition => setDraft(current => ({ ...current, subject_edition }))} />
           <label><span>事件描述</span><textarea rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
           <TimelineParticipants owner={owner} editionId={draft.subject_edition} value={draft.participants} onChange={participants=>setDraft({...draft,participants})}/>
-          <TimelineSimilarCheck owner={owner} input={{title:draft.title,event_type:draft.event_type,start_year:draft.start_year?Number(draft.start_year):null,work:draft.work||null,scholar:draft.scholar||null,exclude:editing?.id||null}} reason={draft.editorial_details.duplicate_reason} onReason={value=>setDraft({...draft,editorial_details:{...draft.editorial_details,duplicate_reason:value}})}/>
+          <TimelineSimilarCheck owner={owner} onMerge={setMergeTarget} mergeDisabled={!editing||timelineDirty||Boolean(pendingAction)||Boolean(command.recovery)||ime} input={{title:draft.title,event_type:draft.event_type,start_year:draft.start_year?Number(draft.start_year):null,work:draft.work||null,scholar:draft.scholar||null,exclude:editing?.id||null}} reason={draft.editorial_details.duplicate_reason} onReason={value=>setDraft({...draft,editorial_details:{...draft.editorial_details,duplicate_reason:value}})}/>
           </details></section><section id={`${panelId}-sources`} data-timeline-panel="sources" className={timelineStyles.column}><details open className={timelineStyles.group}><summary><h2>出处与证据</h2></summary>
           <label><span>主要出处</span><input maxLength={1000} value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })} placeholder="书目、论文或馆藏来源" /></label>
           <TimelineEvidenceFields draft={draft} saved={editing} workName={entityLabels[draft.source_work] || editing?.evidence_file?.work_title || "已选择出处馆藏"} onLabels={(values) => setEntityLabels((current) => ({ ...current, ...pickerLabels(values) }))} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />

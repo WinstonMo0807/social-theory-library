@@ -289,6 +289,8 @@ class AdminEntityLifecycleView(AdminPrivateResponseMixin, APIView):
             )
 
         if action in {"archive", "restore"}:
+            if kind == "timeline-event" and obj.merged_into_id:
+                return Response({"detail": "此事件已归并，请从原归并记录核对回退。"}, status=409)
             if not config.status_field:
                 return Response({"detail": "请通过此内容的发布控制进行下架。"}, status=400)
             if not has_capability(request.user, Capability.PUBLISH_AUTHORITY):

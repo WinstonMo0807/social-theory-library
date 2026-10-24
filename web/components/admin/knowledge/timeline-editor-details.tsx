@@ -37,7 +37,7 @@ export function TimelineSupplementalSources({ owner, value, onChange }: { owner:
 
 type SimilarInput = { title:string; event_type:string; start_year:number|null; work:string|null; scholar:string|null; exclude:string|null };
 type SimilarResult = { count:number; truncated:boolean; results:{id:string;title:string;date_label:string;start_year:number|null;review_status:string}[] };
-export function TimelineSimilarCheck({ owner, input, reason, onReason }: { owner:string; input:SimilarInput; reason:string; onReason:(value:string)=>void }) {
+export function TimelineSimilarCheck({ owner, input, reason, onReason, onMerge, mergeDisabled }: { owner:string; input:SimilarInput; reason:string; onReason:(value:string)=>void; onMerge?:(id:string)=>void; mergeDisabled?:boolean }) {
   const [result,setResult]=useState<{key:string;data:SimilarResult}|null>(null), [error,setError]=useState(""),[busy,setBusy]=useState(false);
   const life=useRef<AbortController|null>(null);
   useEffect(()=>{const controller=new AbortController();life.current=controller;return()=>controller.abort();},[owner]);
@@ -51,6 +51,7 @@ export function TimelineSimilarCheck({ owner, input, reason, onReason }: { owner
   }
   return <section className={styles.similar}><header><h3>相似事件</h3><button type="button" disabled={busy} onClick={()=>void lookup()}>{busy?"正在读取…":"核对已有事件"}</button></header>
     <p>按关联对象、事件类型与相近年份查找，由编辑确认是否为同一事件。</p>{error?<p role="alert">{error}</p>:null}
-    {visible?<><p>{visible.count ? `找到 ${visible.count} 条可能相关的事件` : "没有符合当前条件的事件。"}{visible.truncated?"，先显示前 50 条。":""}</p><ul>{visible.results.map(row=><li key={row.id}><strong>{row.date_label||row.start_year||"时间待确认"} · {row.title}</strong><Link href={`/admin/theories/timeline?event=${row.id}`} target="_blank" rel="noopener noreferrer">打开原事件核对</Link></li>)}</ul>{visible.count?<label>保留为独立事件的说明<textarea rows={2} maxLength={2000} value={reason} onChange={event=>onReason(event.target.value)}/></label>:null}</>:null}
+    {onMerge && (!input.exclude || mergeDisabled)?<p>先保存当前事件，再读取归并影响。未保存的输入不参与归并。</p>:null}
+    {visible?<><p>{visible.count ? `找到 ${visible.count} 条可能相关的事件` : "没有符合当前条件的事件。"}{visible.truncated?"，先显示前 50 条。":""}</p><ul>{visible.results.map(row=><li key={row.id}><strong>{row.date_label||row.start_year||"时间待确认"} · {row.title}</strong><Link href={`/admin/theories/timeline?event=${row.id}`} target="_blank" rel="noopener noreferrer">打开原事件核对</Link>{onMerge?<button type="button" disabled={mergeDisabled || !input.exclude} onClick={()=>onMerge(row.id)}>查看归并影响</button>:null}</li>)}</ul>{visible.count?<label>保留为独立事件的说明<textarea rows={2} maxLength={2000} value={reason} onChange={event=>onReason(event.target.value)}/></label>:null}</>:null}
   </section>;
 }

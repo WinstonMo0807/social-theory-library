@@ -1,5 +1,9 @@
 # 当前问题
 
+## 2026-10-24 原时间线双对象归并
+
+原EditorialRevision及content_placements执行事件/页面编排的原子归并与回退，新增受保护的TimelineMergeRecord和merged_into，0088仅声明未执行。保留原身份与历史引用，旧公开链接经保留事件资格解析；回退拒绝后续编辑冲突。原账户权限/回执复用，未连接数据库、运行测试或执行真实归并；几何/并发/公开操作仍待验收。最终重置清单须包含新引用依赖预演，不在开发时清理。详见docs/stl4/TIMELINE_EDITOR_20261023.md。
+
 ## 2026-10-24 时间线出处选图
 
 原事件editorial_details保存固定媒体版本；TimelineEvidenceImage保护未发布直接草稿，EditorialRevisionMedia保护修改前后历史与变体。主要图片随事件发布，补充图片仅后台核对；公开文件要求当前approved事件的准确主要图片。0087只声明未执行。来源图片接线完成，重复事件归并与真实操作/像素仍待继续；见docs/stl4/TIMELINE_EDITOR_20261023.md。
