@@ -238,6 +238,8 @@ def _check(definition):
         return "not_configured", "服务当前配置不可用，请核对配置与允许的访问地址。", {}
     if result.reachable is False:
         return "offline", "服务检查未成功，请查看运行维护记录并核对服务状态。", {}
+    if key == "ocr" and result.functional is not True:
+        return "partial", "OCR 服务有响应，但尚未确认当前运行就绪。请在原解析设置中核对模型与缓存；历史任务不能替代当前状态。", {}
     if result.functional is False or result.productive is False:
         return "partial", "服务可连接，当前检查尚未确认完整产出。", {}
     return "available", "服务检查已返回成功记录；实际文档处理与结果质量仍需单独验收。", {}

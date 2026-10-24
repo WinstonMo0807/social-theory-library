@@ -1872,13 +1872,14 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
     const token = getServerSessionCredential();
     if (!token) return;
     await runSettingsAction(`test-ocr:${action}`, "正在测试 OCR 连通性……", "OCR 连通性测试失败。", async () => {
-      const result = await apiRequest<{ reachable: boolean; detail: string; target: string }>(
+      const result = await apiRequest<{ reachable: boolean; functional?: boolean; detail: string; target: string }>(
         "/catalog/admin/ocr-runtime/",
         { method: "POST", body: JSON.stringify({ action }) },
         token,
       );
       ocrResource.refresh();
-      return `${result.target === "nas" ? "NAS OCR" : "远程 OCR"} 测试结果：${result.reachable ? "可连接" : "不可用"}。${result.detail || ""}`;
+      const state = !result.reachable ? "不可连接" : result.target === "nas" ? (result.functional === true ? "当前运行已就绪" : "有响应，尚未就绪") : "可连接，解析效果待验收";
+      return `${result.target === "nas" ? "NAS OCR" : "远程 OCR"} 检查结果：${state}。${result.detail || ""}`;
     });
   }
 

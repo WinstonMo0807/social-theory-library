@@ -27,6 +27,7 @@ from ingestion.services.health import (
     cache_health,
     celery_broker_health,
     http_service_health,
+    ocr_service_health,
     worker_runtime_status,
 )
 from ingestion.services.indexing import _headers, _wait_task
@@ -90,20 +91,20 @@ def system_health_snapshot() -> dict:
     )
 
     ocr_config = ocr_runtime_config()
-    ocr_http = http_service_health(ocr_config["nas_url"], "/ready", timeout=5)
+    ocr_http = ocr_service_health(ocr_config["nas_url"])
     last_ocr = ProcessingJob.objects.filter(
         job_type=ProcessingJob.JobType.OCR,
     ).order_by("-created_at").first()
     ocr = _component(
         bool(ocr_config["nas_url"]),
-        ocr_http.get("reachable", False),
+        ocr_http.get("functional") is True,
         last_success=(
             last_ocr.finished_at
             if last_ocr and last_ocr.status == ProcessingJob.Status.SUCCEEDED
             else None
         ),
         last_error=(last_ocr.error_message if last_ocr else "")
-        or ("" if ocr_http.get("reachable") else str(ocr_http.get("detail") or "")),
+        or ("" if ocr_http.get("functional") is True else str(ocr_http.get("detail") or "")),
         detail=str(ocr_http.get("detail") or ""),
     )
 

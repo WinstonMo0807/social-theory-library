@@ -963,14 +963,14 @@ class OcrRuntimeSettingsView(APIView):
         return Response(current_ocr_runtime())
 
     def post(self, request):
-        from ingestion.services.health import http_service_health
+        from ingestion.services.health import http_service_health, ocr_service_health
 
         action = str(request.data.get("action") or "").strip()
         config = current_ocr_runtime()
         if action == "test_nas":
-            result = http_service_health(
+            result = ocr_service_health(
                 config["nas_url"],
-                "/ready?deep=true",
+                deep=True,
                 timeout=120,
             )
             return Response({"target": "nas", **result})

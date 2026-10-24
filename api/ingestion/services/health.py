@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import json
 import re
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from django.conf import settings
@@ -183,7 +183,7 @@ def worker_runtime_status(
 
 def http_service_health(url: str, path: str = "", *, timeout: int = 4, expected_json: dict | None = None) -> dict:
     if not url:
-        return {"configured": False, "reachable": True, "detail": "未配置"}
+        return {"configured": False, "reachable": False, "detail": "未配置", **({"functional": False} if expected_json is not None else {})}
     target = f"{url.rstrip('/')}{path}"
     try:
         request = Request(target, method="GET")
@@ -191,18 +191,38 @@ def http_service_health(url: str, path: str = "", *, timeout: int = 4, expected_
             reachable = 200 <= int(response.status) < 500
             functional = None
             if expected_json is not None:
-                payload = json.loads(response.read(65536))
-                functional = isinstance(payload, dict) and all(payload.get(key) == value for key, value in expected_json.items())
+                raw = response.read(65537)
+                try:
+                    payload = json.loads(raw) if len(raw) <= 65536 else None
+                except (ValueError, UnicodeError):
+                    payload = None
+                functional = 200 <= int(response.status) < 300 and isinstance(payload, dict) and all(
+                    type(payload.get(key)) is type(value) and payload.get(key) == value for key, value in expected_json.items()
+                )
         result = {"configured": True, "reachable": reachable, "detail": "可连接"}
         if expected_json is not None:
             result["functional"] = functional
+            result["detail"] = "服务就绪响应已核对。" if functional else "服务有响应，但未确认当前运行已就绪。"
         return result
+    except HTTPError as exc:
+        status = exc.code
+        exc.close()
+        return {"configured": True, "reachable": expected_json is not None,
+                "detail": f"服务返回 HTTP {status}，未通过就绪检查。",
+                **({"functional": False} if expected_json is not None else {})}
     except (OSError, URLError, ValueError) as exc:
         return {
             "configured": True,
             "reachable": False,
             "detail": safe_service_error(exc),
+            **({"functional": False} if expected_json is not None else {}),
         }
+
+
+def ocr_service_health(url: str, *, deep: bool = False, timeout: int = 5) -> dict:
+    """Normal checks only read current worker evidence; deep is an explicit action."""
+    return http_service_health(url, "/ready?deep=true" if deep else "/ready", timeout=timeout,
+                               expected_json={"available": True, "runtime_verified": True})
 
 
 def stored_queue_health():

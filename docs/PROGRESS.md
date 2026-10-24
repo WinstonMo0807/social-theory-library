@@ -1,8 +1,18 @@
 # 开发进度
 
+## 2026-10-25 M26 OCR当前就绪与历史任务分离
+
+前置dee6393。本段实际重读唯一PDF159、160能力详情与状态。原四个OCR检查入口统一复用ocr_service_health：普通检查只读/ready；原设置中明确深检查仍用/ready?deep=true，不自动加载模型。HTTP有响应与运行就绪分别返回reachable、functional，严格核对available=true及runtime_verified=true。HTTP503/409保留有响应而未就绪；异常JSON、过长响应、数字冒充布尔、安装记录或历史成功均不能形成当前就绪证据。不返回原响应正文、模型路径或凭据。
+
+原系统探针、旧健康快照、管线命令、OCR设置同步消费functional；M26展示有响应但未就绪，原设置分别提示连接/就绪，取消无依据的“近期成功”说法。复用原HealthCheckRun，不改OCR服务既有未提交源码、模型、任务或数据库。原OCR检查POST响应保留target/configured/reachable/detail，新增functional布尔；远程连接仍不宣称解析已验证，前端类型同步。普通GET不增加探测。
+
+e430c9完成7 Python AST/compile，cff5b9目标diff0；48a649→d2acc3目标ESLint/TypeScript noEmit0。只编写HTTP503、非JSON、类型、超大响应、历史任务与当前未就绪、显式深检查验收定义，未运行测试/真实HTTP/模型/管线命令/浏览器/迁移/部署。管理整类自问：服务回答503是否被误报掉线；旧任务成功是否把新进程变绿；普通查看是否触发模型。运行语义与实际视觉仍待正式验收。
+
+继续M26按原配置源编辑与并发保护，以及M27全站原队列；内网批注预览未启动，尚未达到公网切换前条件。
+
 ## 2026-10-25 M26实际设备与当前模型驻留
 
-前置75c268a。沿唯一PDF160–162服务能力区域，复用原推理health实际报告的backend/runtime_version/threads/batch_size。仅原onnxruntime-cpu标记CPU；未知后端不推测设备，无GPU/显存/余额示例值。模型身份持久记录经字段白名单、类型及长度限制，不返回原健康载荷、路径或额外配置。页面区分检查时的驻留状态和本次启动后的推理历史，明确保存记录不是实时占用。
+前置75c268a。沿唯一PDF158–160服务能力区域，复用原推理health实际报告的backend/runtime_version/threads/batch_size。仅原onnxruntime-cpu标记CPU；未知后端不推测设备，无GPU/显存/余额示例值。模型身份持久记录经字段白名单、类型及长度限制，不返回原健康载荷、路径或额外配置。页面区分检查时的驻留状态和本次启动后的推理历史，明确保存记录不是实时占用。
 
 修正原推理runtime.health：loaded由当前session和session_role共同决定，不再以历史loaded_roles集合冒充驻留；保留completed_roles历史，不改变模型、推理算法或检索第一方案。4份Python AST/compile与目标diff在fbbf77退出0；9a43dc→7bf848目标ESLint和TypeScript noEmit退出0。此前8695进程跨上下文已不可读取，未将其写成通过。身份白名单/设备来源/模型切换与释放验收定义已写，未运行测试、浏览器、模型、业务请求或部署。
 

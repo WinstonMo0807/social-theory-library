@@ -1,5 +1,15 @@
 # 当前问题
 
+## 2026-10-25 M26 OCR当前就绪与历史任务分离
+
+前置dee6393。本段实际重读唯一PDF159、160能力详情与状态。原四个OCR检查入口统一复用ocr_service_health：普通检查只读/ready；原设置中明确深检查仍用/ready?deep=true，不自动加载模型。HTTP有响应与运行就绪分别返回reachable、functional，严格核对available=true及runtime_verified=true。HTTP503/409保留有响应而未就绪；异常JSON、过长响应、数字冒充布尔、安装记录或历史成功均不能形成当前就绪证据。不返回原响应正文、模型路径或凭据。
+
+原系统探针、旧健康快照、管线命令、OCR设置同步消费functional；M26展示有响应但未就绪，原设置分别提示连接/就绪，取消无依据的“近期成功”说法。复用原HealthCheckRun，不改OCR服务既有未提交源码、模型、任务或数据库。原OCR检查POST响应保留target/configured/reachable/detail，新增functional布尔；远程连接仍不宣称解析已验证，前端类型同步。普通GET不增加探测。
+
+e430c9完成7 Python AST/compile，cff5b9目标diff0；48a649→d2acc3目标ESLint/TypeScript noEmit0。只编写HTTP503、非JSON、类型、超大响应、历史任务与当前未就绪、显式深检查验收定义，未运行测试/真实HTTP/模型/管线命令/浏览器/迁移/部署。管理整类自问：服务回答503是否被误报掉线；旧任务成功是否把新进程变绿；普通查看是否触发模型。运行语义与实际视觉仍待正式验收。
+
+继续M26按原配置源编辑与并发保护，以及M27全站原队列；内网批注预览未启动，尚未达到公网切换前条件。
+
 ## 2026-10-24 M28历史馆藏恢复不再重新公开旧版本
 
 前置fbb2942。回查ActiveRecordManager确认，作品回收会连带隐藏其版本，但历史记录可能仍保存published及活动正式修订。补足原restore_object：解除本次回收标记与沿原withdraw_revision撤下旧公开版本处于同一事务。原PublicationEvent/CatalogPublicationRevision/KnowledgePublicationEvent记录完整撤回，保留原件、馆藏ID和不可变历史；单独回收的其他版本不恢复、不撤回其独立记录。单版本历史恢复同样沿原下架服务。权限不足时回收标记与撤回全部回滚。

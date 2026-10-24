@@ -44,6 +44,7 @@ from ingestion.services.health import (
     celery_broker_health,
     celery_worker_control_status,
     http_service_health,
+    ocr_service_health,
     worker_heartbeat_status,
 )
 from ingestion.services.ocr_provider import ocr_runtime_config
@@ -192,8 +193,9 @@ def _ocr_probe() -> ProbeResult:
     configured = bool(config.get("nas_url"))
     if not configured:
         return ProbeResult(False, False, False, False, "PaddleOCR 服务未配置。", {"mode": config.get("mode")})
-    live = http_service_health(config["nas_url"], "/ready", timeout=5)
+    live = ocr_service_health(config["nas_url"])
     reachable = bool(live.get("reachable"))
+    functional = live.get("functional") is True
     latest = ProcessingJob.objects.filter(job_type=ProcessingJob.JobType.OCR).order_by("-created_at").first()
     last_success = ProcessingJob.objects.filter(
         job_type=ProcessingJob.JobType.OCR,
@@ -203,16 +205,18 @@ def _ocr_probe() -> ProbeResult:
     return ProbeResult(
         True,
         reachable,
-        reachable,
+        functional,
         productive if latest else None,
-        "OCR 服务可达并有成功任务。" if reachable and productive else "OCR 服务可达，尚无近期成功任务。" if reachable else "OCR 服务不可达。",
+        ("OCR 当前运行已就绪，另有历史成功任务。" if functional and productive else
+         "OCR 当前运行已就绪，尚无馆藏处理成功记录。" if functional else
+         "OCR 服务有响应，但当前运行尚未就绪；历史任务不代表当前可用。" if reachable else "OCR 服务不可达。"),
         {
             "live": live,
             "latest_job_id": str(latest.id) if latest else None,
             "latest_job_status": latest.status if latest else None,
             "last_success_at": last_success.finished_at if last_success else None,
         },
-        error_code="ocr_unreachable" if not reachable else "ocr_not_productive" if latest and not productive else "",
+        error_code="ocr_unreachable" if not reachable else "ocr_not_ready" if not functional else "ocr_not_productive" if latest and not productive else "",
     )
 
 
