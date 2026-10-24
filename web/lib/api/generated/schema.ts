@@ -10700,6 +10700,8 @@ export interface components {
             include_progress: boolean;
             /** @default false */
             include_notes: boolean;
+            /** @default false */
+            include_covers: boolean;
             item_ids?: string[];
         };
         ListItem: {

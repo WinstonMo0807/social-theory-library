@@ -1,7 +1,9 @@
 """Small, explicit owner downloads; no files, notes or progress become public."""
 import csv
 import io
+import json
 import unicodedata
+import time
 
 from django.http import HttpResponse
 from rest_framework.exceptions import ValidationError
@@ -50,6 +52,10 @@ def pdf_bytes(lines):
 
 
 def download(request, row, data):
+    deadline = time.monotonic() + 22
+    def bounded():
+        if time.monotonic() > deadline:
+            raise ValidationError("本次导出准备超时，请减少作品、笔记或封面后重试。")
     if booklists.version(row) != data["expected_version"]:
         raise research.ResearchConflict("书单已修改，请重新读取后导出。")
     items = row.items.filter(removed_at__isnull=True).select_related("work").order_by("order", "created_at", "id")
@@ -59,27 +65,38 @@ def download(request, row, data):
             raise research.ResearchConflict("所选作品已变化，请重新选择。")
     if items.count() > 200:
         raise ValidationError("一次最多导出200部作品，请分批选择；完整原始资料可到隐私与资料导出。")
-    records = []
+    records, editions, note_versions, progress_versions, note_sources = [], {}, {}, {}, {}
     for item in items:
+        bounded()
         edition = booklists.public_editions().filter(work_id=item.work_id).select_related("work", "active_catalog_revision").first()
+        editions[str(item.work_id)] = edition
         bundle = citation_bundle(edition, snapshot=edition.active_catalog_revision.snapshot) if edition else {}
         csl = bundle.get("csl") or {}
         record = {"id": str(item.work_id), "title": csl.get("title") or "来源暂不可用",
             "authors": [author.get("literal", "") for author in csl.get("author", [])], "publisher": csl.get("publisher", ""),
             "year": ((csl.get("issued") or {}).get("date-parts") or [[""]])[0][0], "doi": csl.get("DOI", ""),
             "journal": csl.get("container-title", ""), "type": csl.get("type", ""), "citation": bundle.get("gbt7714-2025", "来源暂不可用"),
+            "version": str((edition.active_catalog_revision.snapshot.get("edition") or {}).get("version_label") or "") if edition else "",
+            "isbn": str((edition.active_catalog_revision.snapshot.get("edition") or {}).get("isbn") or "") if edition else "",
             "added": item.created_at.isoformat(), "progress": "", "notes": ""}
         if data["include_progress"]:
-            current = booklists.project_item(request, item)
-            ratio = current["progress_ratio"]
+            current = booklists.readable_progress_for_user(request.user).filter(asset__edition__work_id=item.work_id).order_by("-updated_at", "-id").first() if edition else None
+            ratio = current.progress_ratio if current else None
+            if current:
+                progress_versions[str(current.pk)] = current.updated_at.isoformat()
             record["progress"] = f"{max(0, min(100, round(ratio * 100)))}%" if ratio is not None else "未记录"
         if data["include_notes"]:
-            notes = Annotation.objects.filter(user=request.user, asset__edition__work_id=item.work_id).order_by("created_at", "id")
-            if notes.count() > 200:
-                raise ValidationError("单部作品的笔记超过200条，请到隐私与资料导出完整笔记。")
+            notes = list(Annotation.objects.filter(user=request.user, asset__edition__work_id=item.work_id).select_related("page", "asset__edition").order_by("created_at", "id")[:201])
+            if len(notes) > 200 or len(note_versions) + len(notes) > 1000:
+                raise ValidationError("本次最多导出1000条笔记，单部作品最多200条；请减少选择或到隐私与资料导出完整笔记。")
             values = []
             for note in notes:
+                bounded()
                 exported = privacy.annotation_export(request.user, note)
+                if (exported.get("source") or {}).get("source_status") == "available":
+                    reference = research.compact_reference(exported["source"])
+                    note_sources[json.dumps(reference, sort_keys=True)] = reference
+                note_versions[str(note.pk)] = note.updated_at.isoformat()
                 values.append(f"第{note.page.index}页\n{exported.get('quote', '')}\n{exported.get('body_text') or ''}")
             record["notes"] = "\n\n".join(values)
         records.append(record)
@@ -88,7 +105,6 @@ def download(request, row, data):
     if booklists.version(booklists.owned(request.user, row.pk)) != data["expected_version"]:
         raise research.ResearchConflict("书单在准备导出时发生变化，请重新导出。")
     format_ = data["format"]
-    lines = [row.title, row.description, "私人书单 · 仅本次显式下载", ""]
     if format_ == "csv":
         output = io.StringIO(newline="")
         writer = csv.writer(output)
@@ -115,9 +131,24 @@ def download(request, row, data):
             chunks.append("\r\n".join(f"{key}  - {clean(value)}" for key, value in fields if value) + "\r\nER  -\r\n")
         body, mime = "\r\n".join(chunks).encode(), "application/x-research-info-systems; charset=utf-8"
     else:
-        for index, record in enumerate(records):
-            lines.extend([f"{index + 1}. {record['citation']}", record["progress"], record["notes"], ""])
-        body, mime = pdf_bytes(lines), "application/pdf"
+        from .booklist_pdf import render
+        body, mime = render(row.title, row.description, records, editions, include_covers=data.get("include_covers", False), deadline=deadline), "application/pdf"
+    bounded()
+    if booklists.version(booklists.owned(request.user, row.pk)) != data["expected_version"]:
+        raise research.ResearchConflict("书单在生成文件时发生变化，请重新导出。")
+    current = {str(work): (str(pk), str(revision)) for work, pk, revision in booklists.public_editions().filter(work_id__in=editions).values_list("work_id", "pk", "active_catalog_revision_id")}
+    captured = {work: (str(edition.pk), str(edition.active_catalog_revision_id)) for work, edition in editions.items() if edition}
+    if current != captured:
+        raise research.ResearchConflict("公开来源在生成文件时发生变化，请重新导出当前版本。")
+    if note_versions != {str(pk): updated.isoformat() for pk, updated in Annotation.objects.filter(user=request.user, pk__in=note_versions).values_list("pk", "updated_at")}:
+        raise research.ResearchConflict("所选笔记已修改或删除，请重新读取后导出。")
+    if progress_versions != {str(pk): updated.isoformat() for pk, updated in booklists.readable_progress_for_user(request.user).filter(pk__in=progress_versions).values_list("pk", "updated_at")}:
+        raise research.ResearchConflict("所选阅读记录已变化或不可访问，请重新读取后导出。")
+    for reference in note_sources.values():
+        bounded()
+        if research.resolve_reference(reference, request.user).get("source_status") != "available":
+            raise research.ResearchConflict("笔记引用的原文在生成文件时已变化或不可访问，请重新导出。")
+    bounded()
     response = HttpResponse(body, content_type=mime)
     response["Content-Disposition"] = f'attachment; filename="booklist-{row.pk}.{ "bib" if format_ == "bibtex" else format_ }"'
     response["X-Content-Type-Options"] = "nosniff"

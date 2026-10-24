@@ -144,12 +144,18 @@ class ListExport(serializers.Serializer):
     format = serializers.ChoiceField(choices=["pdf", "bibtex", "ris", "csv"])
     include_progress = serializers.BooleanField(default=False)
     include_notes = serializers.BooleanField(default=False)
+    include_covers = serializers.BooleanField(default=False)
     item_ids = serializers.ListField(child=serializers.UUIDField(), min_length=1, max_length=200, required=False)
 
     def validate_item_ids(self, values):
         if len(values) != len(set(values)):
             raise serializers.ValidationError("不要重复选择作品。")
         return values
+
+    def validate(self, data):
+        if data["include_covers"] and data["format"] != "pdf":
+            raise serializers.ValidationError({"include_covers": "封面仅能嵌入PDF导出。"})
+        return data
 
 
 class ListPlanPreviewInput(serializers.Serializer):

@@ -17,7 +17,7 @@ export function booklistRequest<T>(owner: string, path: string, options: Request
   return apiRequest<T>(path, { ...options, signal, cache: "no-store", headers: { ...options.headers, "X-Reader-Owner": owner } }, getServerSessionCredential(), false);
 }
 
-export async function downloadBooklist(owner: string, id: string, data: { expected_version: string; format: string; include_notes: boolean; include_progress: boolean; item_ids?: string[] }, signal: AbortSignal) {
+export async function downloadBooklist(owner: string, id: string, data: { expected_version: string; format: string; include_notes: boolean; include_progress: boolean; include_covers?:boolean; item_ids?: string[] }, signal: AbortSignal) {
   const blob = await withPrivateOwner(owner, async () => {
     const response = await apiStreamRequest(`/reading/lists/${id}/export/`, { method: "POST", headers: { "X-Reader-Owner": owner }, body: JSON.stringify(data), cache: "no-store", signal }, getServerSessionCredential(), false);
     if (!response.ok) {
@@ -26,7 +26,12 @@ export async function downloadBooklist(owner: string, id: string, data: { expect
       try { const value = JSON.parse(text); if (typeof value.detail === "string") detail = value.detail; } catch { /* No raw server response is inserted into the page. */ }
       throw new Error(detail);
     }
-    return response.blob();
+    const expected={pdf:"application/pdf",csv:"text/csv",bibtex:"application/x-bibtex",ris:"application/x-research-info-systems"}[data.format];
+    if(!expected||!response.headers.get("Content-Type")?.toLowerCase().includes(expected))throw new Error("下载响应不是所选文件格式，请重新核对后导出。");
+    const file=await response.blob();
+    if(!file.size||file.size>32*1024*1024)throw new Error("下载文件为空或超过32 MiB，请减少选择后重试。");
+    if(data.format==="pdf"&&await file.slice(0,5).text()!=="%PDF-")throw new Error("PDF内容未能确认，请重新导出。");
+    return file;
   }, signal);
   signal.throwIfAborted();
   const url = URL.createObjectURL(blob);

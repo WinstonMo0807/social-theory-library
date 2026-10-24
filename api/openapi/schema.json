@@ -43892,6 +43892,10 @@
                         "type": "boolean",
                         "default": false
                     },
+                    "include_covers": {
+                        "type": "boolean",
+                        "default": false
+                    },
                     "item_ids": {
                         "type": "array",
                         "items": {
