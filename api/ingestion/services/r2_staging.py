@@ -9,7 +9,9 @@ from __future__ import annotations
 from hashlib import sha256
 from pathlib import Path
 import math
+import os
 import re
+import stat
 import uuid
 from urllib.parse import urlparse
 
@@ -17,6 +19,8 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
+from django.core.exceptions import SuspiciousFileOperation
+from django.core.files.storage import FileSystemStorage
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -59,6 +63,10 @@ class R2RetryableError(R2StagingError):
 
 class R2StagingExpired(R2StagingError):
     error_code = "staging_object_expired"
+
+
+class R2CleanupBlocked(R2StagingError):
+    error_code = "r2_cleanup_original_unverified"
 
 
 def _error_code(exc: Exception) -> str:
@@ -777,6 +785,7 @@ def mark_r2_cleanup_ready(item: UploadItem) -> ProcessingJob | None:
         or item.status not in PIPELINE_READY_FOR_CLEANUP
         or not item.file
         or not item.asset_id
+        or item.staging_error_code == R2CleanupBlocked.error_code
     ):
         return None
     UploadItem.objects.filter(pk=item.pk).update(
@@ -787,51 +796,82 @@ def mark_r2_cleanup_ready(item: UploadItem) -> ProcessingJob | None:
     return queue_r2_staging_job(item, phase="cleanup")
 
 
-def cleanup_r2_staging_object(item_id) -> dict:
-    item = UploadItem.objects.select_related("batch").get(pk=item_id)
-    if item.staging_status == UploadItem.StagingStatus.CLEANED:
-        return {"id": str(item.id), "status": item.staging_status, "idempotent": True}
-    if item.staging_status != UploadItem.StagingStatus.CLEANUP_PENDING:
-        raise R2StagingError("该上传会话当前不需要清理 R2。")
+def verify_cleanup_original(item, asset):
+    """Only a complete, unchanged local ORIGINAL permits removing its staging copy."""
+    if (asset.kind != "original" or not asset.file or not re.fullmatch(r"[a-f0-9]{64}", item.sha256 or "")
+            or asset.sha256 != item.sha256 or item.byte_size < 5
+            or item.byte_size != item.staging_file_size or asset.byte_size != item.byte_size):
+        raise R2CleanupBlocked("永久原件与上传的身份或大小不一致，临时副本保留，请先核对原件。")
+    storage = asset.file.storage
+    if not isinstance(storage, FileSystemStorage):
+        raise R2CleanupBlocked("当前存储不能核对本地永久原件，临时副本保留。")
     try:
-        r2_client().delete_object(
-            Bucket=settings.R2_BUCKET,
-            Key=item.staging_object_key,
-        )
-    except Exception as exc:
-        UploadItem.objects.filter(pk=item.pk).update(
-            staging_status=UploadItem.StagingStatus.CLEANUP_PENDING,
-            staging_cleanup_attempts=models_f_increment("staging_cleanup_attempts"),
-            staging_error_code=_error_code(exc),
-            staging_error_message=_safe_error_message(exc),
-            updated_at=timezone.now(),
-        )
+        root = Path(storage.location).resolve(strict=True)
+        path = Path(storage.path(asset.file.name))
+        resolved = path.resolve(strict=True)
+        if root not in resolved.parents or path.is_symlink():
+            raise R2CleanupBlocked("永久原件路径不能安全核对，临时副本保留。")
+        for parent in path.parents:
+            if parent == root:
+                break
+            if parent.is_symlink():
+                raise R2CleanupBlocked("永久原件路径含链接，临时副本保留。")
+        digest, count = sha256(), 0
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        with os.fdopen(os.open(path, flags), "rb") as original:
+            before = os.fstat(original.fileno())
+            if not stat.S_ISREG(before.st_mode) or before.st_size != item.byte_size:
+                raise R2CleanupBlocked("永久原件文件或大小不正确，临时副本保留。")
+            while chunk := original.read(1024 * 1024):
+                count += len(chunk)
+                if count > item.byte_size:
+                    raise R2CleanupBlocked("核对期间原件变大，临时副本保留。")
+                digest.update(chunk)
+            identity = lambda value: (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+            if identity(before) != identity(os.fstat(original.fileno())) or identity(before) != identity(path.stat()):
+                raise R2CleanupBlocked("核对期间原件变化，临时副本保留。")
+        if count != item.byte_size or digest.hexdigest() != item.sha256:
+            raise R2CleanupBlocked("永久原件完整校验不匹配，临时副本保留。")
+    except R2CleanupBlocked:
         raise
-    with transaction.atomic():
-        locked = UploadItem.objects.select_for_update().get(pk=item.pk)
-        locked.staging_status = UploadItem.StagingStatus.CLEANED
-        locked.staging_cleanup_attempts += 1
-        locked.staging_cleanup_completed_at = timezone.now()
-        locked.staging_error_code = ""
-        locked.staging_error_message = ""
-        locked.save(
-            update_fields=[
-                "staging_status",
-                "staging_cleanup_attempts",
-                "staging_cleanup_completed_at",
-                "staging_error_code",
-                "staging_error_message",
-                "updated_at",
-            ]
-        )
-        AuditEvent.objects.create(
-            actor=locked.batch.created_by,
-            action="r2_staging_cleanup_completed",
-            object_type="UploadItem",
-            object_id=str(locked.id),
-            after={"permanent_file_preserved": True},
-        )
-        return {"id": str(locked.id), "status": locked.staging_status}
+    except (OSError, ValueError, RuntimeError, NotImplementedError, SuspiciousFileOperation) as exc:
+        raise R2CleanupBlocked("永久原件暂不能完整读取，临时副本保留，请核对存储挂载。") from exc
+
+
+def cleanup_r2_staging_object(item_id) -> dict:
+    from catalog.models import Asset
+    try:
+        # ponytail: serialize one upload through hash/delete; no extra cleanup queue.
+        # This keeps the linked original stable for the existing task's lifetime.
+        with transaction.atomic():
+            item = UploadItem.objects.select_for_update(of=("self",)).select_related("batch").get(pk=item_id)
+            if item.staging_status == UploadItem.StagingStatus.CLEANED:
+                return {"id": str(item.id), "status": item.staging_status, "idempotent": True}
+            if item.staging_status != UploadItem.StagingStatus.CLEANUP_PENDING:
+                raise R2StagingError("该上传会话当前不需要清理 R2。")
+            if (item.staging_backend != UploadItem.StagingBackend.R2 or item.status not in PIPELINE_READY_FOR_CLEANUP
+                    or not item.asset_id or item.staging_object_key != f"staging/{item.pk}.pdf"):
+                raise R2CleanupBlocked("上传归属、处理状态或临时对象身份已变化，临时副本保留。")
+            asset = Asset.objects.select_for_update().get(pk=item.asset_id)
+            verify_cleanup_original(item, asset)
+            r2_client().delete_object(Bucket=settings.R2_BUCKET, Key=item.staging_object_key)
+            item.staging_status = UploadItem.StagingStatus.CLEANED
+            item.staging_cleanup_attempts += 1
+            item.staging_cleanup_completed_at = timezone.now()
+            item.staging_error_code = ""
+            item.staging_error_message = ""
+            item.save(update_fields=["staging_status", "staging_cleanup_attempts", "staging_cleanup_completed_at",
+                "staging_error_code", "staging_error_message", "updated_at"])
+            AuditEvent.objects.create(actor=item.batch.created_by, action="r2_staging_cleanup_completed",
+                object_type="UploadItem", object_id=str(item.pk), after={"permanent_file_preserved": True,
+                    "original_asset_id": str(asset.pk), "original_sha256": asset.sha256,
+                    "original_bytes": asset.byte_size, "verification": "full_local_sha256"})
+            return {"id": str(item.id), "status": item.staging_status}
+    except Exception as exc:
+        UploadItem.objects.filter(pk=item_id, staging_status=UploadItem.StagingStatus.CLEANUP_PENDING).update(
+            staging_cleanup_attempts=models_f_increment("staging_cleanup_attempts"),
+            staging_error_code=_error_code(exc), staging_error_message=_safe_error_message(exc), updated_at=timezone.now())
+        raise
 
 
 def models_f_increment(field_name: str):
@@ -1027,7 +1067,7 @@ def recover_r2_staging_jobs(*, limit: int = 100) -> dict[str, int]:
         imported += 1
     cleanup_candidates = UploadItem.objects.select_related("batch").filter(
         staging_backend=UploadItem.StagingBackend.R2,
-    ).filter(
+    ).exclude(staging_error_code=R2CleanupBlocked.error_code).filter(
         Q(staging_status=UploadItem.StagingStatus.CLEANUP_PENDING)
         | Q(
             staging_status=UploadItem.StagingStatus.IMPORTED,

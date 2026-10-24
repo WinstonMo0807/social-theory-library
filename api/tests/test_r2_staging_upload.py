@@ -1,8 +1,10 @@
 from io import BytesIO
+from hashlib import sha256
 from unittest.mock import patch
 
 from botocore.exceptions import ClientError
 from django.db import IntegrityError, transaction
+from django.core.files.base import ContentFile
 import pytest
 
 from accounts.models import User
@@ -408,30 +410,39 @@ def test_import_failure_and_database_failure_keep_staging_object(
 def test_cleanup_failure_is_pending_then_retry_succeeds_and_is_idempotent(
     admin_user,
     r2_settings,
+    tmp_path,
 ):
+    r2_settings.MEDIA_ROOT = tmp_path
     fake = FakeR2Client()
     batch = create_batch(admin_user)
     work = Work.objects.create(document_type="book", title="R2 cleanup")
     edition = Edition.objects.create(work=work)
+    payload = b"%PDF-cleanup"
+    digest = sha256(payload).hexdigest()
     asset = Asset.objects.create(
         edition=edition,
         kind=Asset.Kind.ORIGINAL,
-        file="archive/r2-cleanup.pdf",
-        sha256="a" * 64,
+        sha256=digest,
+        byte_size=len(payload),
     )
+    asset.file.save("r2-cleanup.pdf", ContentFile(payload), save=True)
     item = UploadItem.objects.create(
         batch=batch,
         source_filename="cleanup.pdf",
         processing_token="cleanup-token-123",
         file="incoming/cleanup.pdf",
+        sha256=digest,
+        byte_size=len(payload),
+        staging_file_size=len(payload),
         asset=asset,
         status=UploadItem.Status.READY,
         staging_backend=UploadItem.StagingBackend.R2,
         staging_status=UploadItem.StagingStatus.CLEANUP_PENDING,
-        staging_object_key="staging/cleanup.pdf",
         staging_upload_id="cleanup-upload",
     )
-    fake.objects[item.staging_object_key] = b"%PDF-cleanup"
+    item.staging_object_key = f"staging/{item.pk}.pdf"
+    item.save(update_fields=["staging_object_key"])
+    fake.objects[item.staging_object_key] = payload
     fake.fail_delete = ClientError(
         {"Error": {"Code": "SlowDown"}, "ResponseMetadata": {"HTTPStatusCode": 503}},
         "DeleteObject",
