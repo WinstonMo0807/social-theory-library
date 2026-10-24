@@ -135,6 +135,8 @@ def decide_reading_path_candidate(
     if decision not in IntelligenceFeedback.Decision.values:
         raise ValueError("未知的候选决定。")
     locked = ReadingPathCandidate.objects.select_for_update().get(pk=candidate.pk)
+    if locked.evidence_pack_id and locked.evidence_pack.subject_type == "reading_path_arrangement":
+        raise ValueError("此候选属于已有路线，请在原阅读路径编辑页核对影响并采用，不能另建路线或绕过版本保护。")
     if locked.status != ReadingPathCandidate.Status.PENDING:
         raise ValueError("该 ReadingPathCandidate 已经有人工决定。")
     now = timezone.now()

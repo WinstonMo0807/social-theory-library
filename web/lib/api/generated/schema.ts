@@ -2652,6 +2652,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/reading-paths/{path_id}/routes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_path_route_candidates_list"];
+        put?: never;
+        post: operations["reading_path_route_candidates_command"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/reading-paths/{path_id}/routes/{candidate_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_path_route_candidate_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/theory-system/reading-paths/{id}/": {
         parameters: {
             query?: never;
@@ -2698,6 +2730,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["catalog_admin_theory_system_reading_paths_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/reading-paths/routes/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_reading_paths_routes_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_theory_system_reading_paths_routes_commands_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18331,6 +18379,84 @@ export interface components {
          * @enum {integer}
          */
         RotationEnum: 0 | 90 | 180 | 270;
+        RouteCandidateDetail: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            summary: string;
+            status: string;
+            /** Format: date-time */
+            created_at: string;
+            stages_count: number;
+            items_count: number;
+            method: string;
+            gaps: string[];
+            edit_version: string;
+            audience: string;
+            learning_goal: string;
+            review_note: string;
+            blockers: string[];
+            can_adopt: boolean;
+            candidate_version: string;
+            preview: components["schemas"]["PublicReadingPath"] | null;
+            moves: {
+                [key: string]: unknown;
+            }[];
+        };
+        RouteCandidatePage: {
+            count: number;
+            page: number;
+            total_pages: number;
+            results: components["schemas"]["RouteCandidateSummary"][];
+        };
+        RouteCandidateSummary: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            summary: string;
+            status: string;
+            /** Format: date-time */
+            created_at: string;
+            stages_count: number;
+            items_count: number;
+            method: string;
+            gaps: string[];
+            edit_version: string;
+            audience: string;
+            learning_goal: string;
+            review_note: string;
+        };
+        /**
+         * @description * `generate` - generate
+         *     * `adopt` - adopt
+         *     * `dismiss` - dismiss
+         * @enum {string}
+         */
+        RouteCommandInputOperationEnum: "generate" | "adopt" | "dismiss";
+        RouteCommandInputRequest: {
+            operation: components["schemas"]["RouteCommandInputOperationEnum"];
+            edit_version: string;
+            /** Format: uuid */
+            candidate_id?: string;
+            candidate_version?: string;
+        };
+        RouteCommandResult: {
+            /** Format: uuid */
+            path_id: string;
+            save_receipt: components["schemas"]["RouteReceipt"];
+        };
+        RouteReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            path_route_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
         SaveIssueListCommandRequest: {
             /** Format: uuid */
             request_id: string;
@@ -27577,6 +27703,76 @@ export interface operations {
             };
         };
     };
+    reading_path_route_candidates_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                path_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteCandidatePage"];
+                };
+            };
+        };
+    };
+    reading_path_route_candidates_command: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                path_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RouteCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["RouteCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteCommandResult"];
+                };
+            };
+        };
+    };
+    reading_path_route_candidate_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+                path_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteCandidateDetail"];
+                };
+            };
+        };
+    };
     catalog_admin_theory_system_reading_paths_retrieve: {
         parameters: {
             query?: never;
@@ -27741,6 +27937,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicReadingPath"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_routes_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_reading_paths_routes_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteReceipt"];
                 };
             };
         };

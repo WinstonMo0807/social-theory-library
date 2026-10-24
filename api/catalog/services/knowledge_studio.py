@@ -1725,6 +1725,15 @@ def _debate_candidate_payload(row: DebateCandidate) -> dict[str, Any]:
 
 
 def _reading_path_candidate_payload(row: ReadingPathCandidate) -> dict[str, Any]:
+    if row.evidence_pack_id and row.evidence_pack.subject_type == "reading_path_arrangement":
+        payload = attach_candidate_action_descriptors({"id": str(row.pk), "candidate_type": "reading_path_generation", "field_name": "stages",
+            "label": row.title, "proposed_value": _bounded_json(row.stages), "status": row.status, "source": "public-material-arrangement-v1",
+            "evidence": _bounded_json(row.evidence_pack.envelope_snapshot[:8]), "evidence_count": len(row.evidence_pack.envelope_snapshot),
+            "evidence_status": "evidence", "available_actions": ["inspect"], "decision_url": None, "conflicts": []})
+        payload["action_descriptors"].append({"key": "path_arrangement", "label": "打开原路线候选", "method": "NAVIGATE",
+            "endpoint": f"/admin/theories/reading-paths?path={row.evidence_pack.subject_id}&section=candidates", "payload": {},
+            "availability": {"available": True, "reason": ""}, "evidence_requirement": {"mode": "none", "minimum_count": 0, "satisfied": True}})
+        return payload
     evidence = _bounded_json(
         row.evidence_pack.envelope_snapshot[:8] if row.evidence_pack_id else []
     )

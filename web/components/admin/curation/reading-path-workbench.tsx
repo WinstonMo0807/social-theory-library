@@ -13,6 +13,7 @@ import { useActionGuard } from "@/lib/use-action-guard";
 import { ActionButton, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { EmptyState, PageHeader, StatusBadge } from "@/components/admin-ui";
 import { EntityPicker, RepeatableField } from "../forms/workflow-fields";
+import { PathRouteCandidates } from "./path-route-candidates";
 import { movePathMaterial, movePathStage } from "./path-stage-order";
 import { PathMaterialCards, PathStageIndex, type PathDrag } from "./path-material-cards";
 import { useReadingPathPreview } from "./use-reading-path-preview";
@@ -254,6 +255,7 @@ export function ReadingPathWorkbench() {
 function ReadingPathEditor({owner}:{owner:string}) {
   const session=useAdminSession(), canEdit=hasAdminCapability(session,"can_edit_draft_authority"),canCreate=hasAdminCapability(session,"can_create_authority");
   const command=useScholarSave(owner,"path");
+  const [routeBusy,setRouteBusy]=useState(false);
   const life=useRef<AbortController|null>(null);
   useEffect(()=>{const controller=new AbortController();life.current=controller;return()=>controller.abort();},[]);
   const apiRequest=useCallback(<T,>(path:string,options:RequestInit={},token:string|null=getServerSessionCredential())=>{
@@ -289,7 +291,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
   const [savedContent, setSavedContent] = useState(() => pathFormValue(emptyPath, [emptyStage(0)]));
   const dirty = useUnsavedForm(pathFormValue(draft, stages), savedContent);
   const dirtyRef = useRef(dirty);
-  useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
+  useEffect(() => { dirtyRef.current = dirty || routeBusy || Boolean(command.recovery); }, [dirty, routeBusy, command.recovery]);
   const prefills = useEditorialPrefills(editing?.id || "new-path", { stages }, (update) => setStages((current) => (
     typeof update === "function" ? update({ stages: current }) : update
   ).stages));
@@ -370,7 +372,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
   }, [requestedPath, apiRequest]);
 
   function start(path?: ReadingPathRow, saved = false) {
-    if (!saved && (command.recovery || pendingAction)) return;
+    if (!saved && (command.recovery || pendingAction || routeBusy)) return;
     if (!saved && dirty && !window.confirm("阅读路径还有未保存的安排。放弃填写并切换吗？")) return;
     prefills.clear();
     setEditing(path ?? null);
@@ -417,7 +419,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
     event?.preventDefault();
     if ((event?.nativeEvent as Event & { isComposing?: boolean })?.isComposing || composing.current) return false;
     const token = getServerSessionCredential();
-    if (!token || !canEdit || (!editing && !canCreate)) return false;
+    if (!token || !canEdit || routeBusy || (!editing && !canCreate)) return false;
     if (!draftOnly && draft.status === "published" && editing?.status !== "published" && !window.confirm("保存并公开这条阅读路径？确认后读者就能看到它。")) return false;
     const actionKey = "save-reading-path";
     if (!startAction(actionKey)) return false;
@@ -465,7 +467,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
   }
 
   async function removePath() {
-    if(command.recovery||!canEdit)return;
+    if(command.recovery||routeBusy||!canEdit)return;
     if (!editing || !window.confirm(`删除阅读路径“${editing.title}”吗？`)) return;
     const token = getServerSessionCredential();
     if (!token) return;
@@ -520,10 +522,10 @@ function ReadingPathEditor({owner}:{owner:string}) {
           {!loading && !paths.length ? <EmptyState compact title="尚无阅读路径" description="建立路径后，也可以从文献的编辑页面加入阅读内容。" /> : null}
           <AdminListPages data={collection} paging={paging} loading={loading} filters={{ q: query }} />
         </aside></details>
-        {command.recovery?<div role="status"><p>原保存结果尚未确认，请先查回。</p><button type="button" onClick={()=>void recoverSave()}>查回原请求</button>{command.canRetry?<button type="submit" form="reading-path-editor-form">重试原保存</button>:null}<button type="button" onClick={()=>void recoverSave(true)}>停止未完成请求</button></div>:null}{command.error?<p role="alert">{command.error}</p>:null}<KnowledgeVisualEditor readingPathPreview={pathPreview} objectType="reading_path" objectId={editing?.id} previewStageId={previewStage?.id || previewStage?.key || ""} onPreviewSelect={selectPreview} savedRecord={editing} onPublished={() => {void loadPaths();setEditConflict(true);setMessage("发布操作已提交，请打开最新阅读路径后继续编辑。");}} draft={{...draft, stages}} dirty={dirty||Boolean(command.recovery)} refreshKey={`${editing?.updated_at}:${imageRevision}`}>{requestedPath && openedPath !== requestedPath ? <p role="status">正在读取指定阅读路径，载入后即可编辑。</p> : null}<form onCompositionStart={()=>{composing.current=true;}} onCompositionEnd={()=>{composing.current=false;}} id="reading-path-editor-form" className="admin-panel reading-path-v280-editor" onSubmit={(event) => void save(event, true)} aria-busy={Boolean(requestedPath && openedPath !== requestedPath)}>
+        {command.recovery?<div role="status"><p>原保存结果尚未确认，请先查回。</p><button type="button" onClick={()=>void recoverSave()}>查回原请求</button>{command.canRetry?<button type="submit" form="reading-path-editor-form">重试原保存</button>:null}<button type="button" onClick={()=>void recoverSave(true)}>停止未完成请求</button></div>:null}{command.error?<p role="alert">{command.error}</p>:null}<KnowledgeVisualEditor readingPathCandidates={<PathRouteCandidates key={`${owner}:${editing?.id||"new"}`} owner={owner} pathId={editing?.id} version={editing?.edit_version||""} blocked={dirty||Boolean(command.recovery)||Boolean(pendingAction)||!canEdit} onPending={setRouteBusy} onApplied={async()=>{if(!editing)return;try{const value=normalizePath(await apiRequest(`/catalog/admin/theory-system/reading-paths/${editing.id}/`));start(value,true);await loadPaths();}catch(error){setEditConflict(true);throw error;}}}/>} readingPathPreview={pathPreview} objectType="reading_path" objectId={editing?.id} previewStageId={previewStage?.id || previewStage?.key || ""} onPreviewSelect={selectPreview} savedRecord={editing} onPublished={() => {void loadPaths();setEditConflict(true);setMessage("发布操作已提交，请打开最新阅读路径后继续编辑。");}} draft={{...draft, stages}} dirty={dirty||Boolean(command.recovery)||routeBusy} refreshKey={`${editing?.updated_at}:${imageRevision}`}>{requestedPath && openedPath !== requestedPath ? <p role="status">正在读取指定阅读路径，载入后即可编辑。</p> : null}<form onCompositionStart={()=>{composing.current=true;}} onCompositionEnd={()=>{composing.current=false;}} id="reading-path-editor-form" className="admin-panel reading-path-v280-editor" onSubmit={(event) => void save(event, true)} aria-busy={Boolean(requestedPath && openedPath !== requestedPath)}>
           <p>保存这条路径的说明、全部阶段、书目顺序和推荐理由，不跳转。已公开路径的修改需另行发布。</p>
           <EditorialPrefillNotice state={prefills} />
-          <fieldset disabled={!canEdit||(!editing&&!canCreate)||!command.ready||Boolean(command.recovery)||Boolean(requestedPath && openedPath !== requestedPath)} style={{ display: "contents" }}>
+          <fieldset disabled={!canEdit||(!editing&&!canCreate)||!command.ready||Boolean(command.recovery)||Boolean(requestedPath && openedPath !== requestedPath)||routeBusy} style={{ display: "contents" }}>
           <header><div><h2>{editing ? `编辑 ${editing.title}` : "新建阅读路径"}</h2><p>{stages.length} 个阶段 · {itemCount} 个项目</p></div>{editing ? <div><Link href={`/admin/preview/knowledge/reading_path/${editing.id}`} target="_blank">预览已保存内容 <ExternalLink size={12} /></Link><ActionButton type="button" state={pendingAction === `delete-reading-path:${editing.id}` ? "pending" : "idle"} disabled={Boolean(pendingAction) && pendingAction !== `delete-reading-path:${editing.id}`} aria-label="删除阅读路径" onClick={() => void removePath()}><Trash2 size={14} /></ActionButton></div> : null}</header>
           <div className="inline-fields"><label><span>标题</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label><label><span>固定链接</span><input required value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} /></label></div>
           <label><span>路径介绍</span><textarea rows={4} value={draft.introduction} onChange={(event) => setDraft({ ...draft, introduction: event.target.value })} /></label>

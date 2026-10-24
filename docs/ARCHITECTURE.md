@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-24 M24路线候选
+
+M24整条路线候选继续使用原ReadingPathCandidate/EvidencePack/IntelligenceFeedback。规则编排与主题关联选择有明确上限，无模型/新队列；主题拓展同时核对原批准关联与激活书目快照。采用通过原EditorialRevision只保存原路线草稿，旧通用候选入口不能另建。无新schema。
+
 ## 2026-10-24 M24编排与预览
 
 M24未保存预览沿原公开阅读路径投影，只读核对完整当前草稿与准确edit_version。只在界面内保留阶段/材料移动与删除关系输入，保存/发布仍走原路径命令和EditorialRevision；没有新数据库表或读者数据同步。

@@ -6,7 +6,7 @@ import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/a
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
 
 type Pending = { id: string; path: string; body: string; headers: Record<string, string>; method: string; uncertain?: boolean };
-type SaveKind = "scholar" | "topic" | "timeline" | "path" | "relation" | "node_link" | "topic_link" | "node" | "knowledge_relation" | "review" | "timeline_merge";
+type SaveKind = "scholar" | "topic" | "timeline" | "path" | "relation" | "node_link" | "topic_link" | "node" | "knowledge_relation" | "review" | "timeline_merge" | "path_route";
 type Receipt<K extends SaveKind> = { actor_id: string; request_id: string; saved_version: string; exists: boolean; state:"applied"|"cancelled" } & Record<`${K extends "review" ? "task" : K extends "node_link" | "topic_link" | "knowledge_relation" ? "relation" : K}_id`,string|null>;
 const key = (actor: string, kind: string) => `stl-${kind}-save:${actor}`;
 
@@ -50,7 +50,7 @@ export function useScholarSave<K extends SaveKind = "scholar">(actor: string, ki
     acting.current = true;
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(30000)]);
     try {
-      const result = await withPrivateOwner(actor, () => apiRequest<Receipt<K>>(`/catalog/admin/${kind === "topic" ? "topics" : kind === "timeline_merge" ? "theory-timeline/merges" : kind === "timeline" ? "theory-timeline" : kind === "path" ? "theory-system/reading-paths" : kind === "relation" ? "scholar-relations" : kind === "review" ? "theory-system/review-tasks" : kind === "knowledge_relation" ? "theory-system/relations" : kind === "node" ? "theory-system/nodes" : kind === "node_link" ? "scholar-links/node" : kind === "topic_link" ? "scholar-links/topic" : "scholars"}/commands/${recovery}/`, {
+      const result = await withPrivateOwner(actor, () => apiRequest<Receipt<K>>(`/catalog/admin/${kind === "topic" ? "topics" : kind === "timeline_merge" ? "theory-timeline/merges" : kind === "timeline" ? "theory-timeline" : kind === "path_route" ? "theory-system/reading-paths/routes" : kind === "path" ? "theory-system/reading-paths" : kind === "relation" ? "scholar-relations" : kind === "review" ? "theory-system/review-tasks" : kind === "knowledge_relation" ? "theory-system/relations" : kind === "node" ? "theory-system/nodes" : kind === "node_link" ? "scholar-links/node" : kind === "topic_link" ? "scholar-links/topic" : "scholars"}/commands/${recovery}/`, {
         cache: "no-store", signal, headers: { "X-Editor-Owner": actor },...(cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{}),
       }, getServerSessionCredential(), false), signal);
       if (result.actor_id !== actor || result.request_id !== recovery) throw Error("原请求回执不匹配。");
