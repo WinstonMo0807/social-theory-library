@@ -15,6 +15,7 @@ import { ScholarRelationNetwork } from "@/components/scholar-relation-network";
 import { relationArrow, scholarDirectionLabels, scholarRelationLabels, scholarRelationStatus, type ScholarRelation } from "@/lib/api/scholar-relations.types";
 import type { Paginated } from "@/lib/api/pagination";
 import { useScholarSave } from "./use-scholar-save";
+import { RelationSourcePicker } from "./relation-source-picker";
 
 export type ScholarRelationGuard = {dirty:boolean;pending:boolean;composing:boolean};
 type Props = {scholarId:string;initialRelationId?:string;embedded?:boolean;detailOnly?:boolean;onGuardChange?:(value:ScholarRelationGuard)=>void;onSaved?:()=>void};
@@ -66,10 +67,10 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnl
   function apply(row:ScholarRelation){loadedId.current=row.id;setDraft(row);setSaved(row);setSelectedId(row.id);setAttempt(value=>value+1);setConflict(false);rememberSelection(row.id);onSaved?.();}
   const live={...draft,id:draft.id||"current-input",source_name:draft.source_name||(draft.source_scholar===scholarId?profile?.preferred_name:"")||"第一位学者",target_name:draft.target_name||"第二位学者",has_unpublished_changes:dirty||draft.has_unpublished_changes};
   const rows=collection.results.filter(row=>row.id!==draft.id);if(draft.source_scholar&&draft.target_scholar)rows.push(live);
-  const validEndpoints=Boolean(draft.source_scholar&&draft.target_scholar&&draft.source_scholar!==draft.target_scholar),hasEvidence=Boolean(draft.summary.trim()&&draft.source.trim());
+  const validEndpoints=Boolean(draft.source_scholar&&draft.target_scholar&&draft.source_scholar!==draft.target_scholar),hasEvidence=Boolean(draft.summary.trim()&&(draft.source.trim()||draft.source_anchor));
   const editingReady=!loadingRecord&&(!selectedId||saved.id===selectedId);
   const locked=!canEdit||!command.ready||Boolean(command.recovery)||busy||!editingReady;
-  const canPublishSaved=Boolean(saved.id&&!dirty&&hasEvidence&&canPublish&&(saved.status!=="published"||saved.has_unpublished_changes));
+  const canPublishSaved=Boolean(saved.id&&!dirty&&hasEvidence&&(!saved.source_anchor||saved.source_material?.public_eligible)&&canPublish&&(saved.status!=="published"||saved.has_unpublished_changes));
   async function act(operation:"save"|"publish"|"archive"|"retry") {
     if(composing.current||!canEdit||!editingReady||!command.ready||command.recovery&&operation!=="retry")return;
     if(operation==="save"&&(!validEndpoints||!draft.id&&!canCreate))return;
@@ -79,7 +80,7 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnl
     if(!startAction(operation))return;
     setError("");setMessage("");setConflict(false);
     try {
-      const payload=operation==="save"?{source_scholar:draft.source_scholar,target_scholar:draft.target_scholar,relation_type:draft.relation_type,direction:draft.direction,summary:draft.summary,source:draft.source,...(draft.id?{edit_version:saved.edit_version}:{})}:{edit_version:saved.edit_version};
+      const payload=operation==="save"?{source_scholar:draft.source_scholar,target_scholar:draft.target_scholar,relation_type:draft.relation_type,direction:draft.direction,summary:draft.summary,source:draft.source,source_anchor:draft.source_anchor??null,...(draft.id?{edit_version:saved.edit_version}:{})}:{edit_version:saved.edit_version};
       const suffix=operation==="publish"||operation==="archive"?`${saved.id}/${operation}/`:draft.id?`${draft.id}/`:"";
       const row=await command.save<ScholarRelation>(`/catalog/admin/scholar-relations/${suffix}`,JSON.stringify(payload),{},operation==="save"&&draft.id?"PUT":"POST");
       apply(row);setMessage(operation==="retry"?"已查回原操作，当前保存版本已重新读取。":operation==="save"?"关系草稿已保存，公开关系保持原版本。":operation==="publish"?"已发布到两端学者页面。":"已撤下公开关系，内容与历史仍保留。");
@@ -106,6 +107,7 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnl
           <label>关系类型<select value={draft.relation_type} onChange={event=>setDraft({...draft,relation_type:event.target.value as ScholarRelation["relation_type"]})}>{Object.entries(scholarRelationLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
           <label>方向<select value={draft.direction} onChange={event=>setDraft({...draft,direction:event.target.value as ScholarRelation["direction"]})}>{Object.entries(scholarDirectionLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><p>{live.source_name} {relationArrow(draft.direction)} {live.target_name}</p>
           <label>关系说明<textarea rows={5} maxLength={6000} value={draft.summary} onChange={event=>setDraft({...draft,summary:event.target.value})}/></label><label>依据与来源<textarea rows={4} maxLength={6000} value={draft.source} onChange={event=>setDraft({...draft,source:event.target.value})}/></label>
+          <RelationSourcePicker key={selectedId||"new"} owner={owner} value={draft.source_anchor??null} saved={saved.source_anchor} material={saved.source_material} onChange={source_anchor=>setDraft(value=>({...value,source_anchor,source_material:null}))}/>
           {!hasEvidence?<p>说明或来源尚不完整，可以保存草稿，暂不发布。</p>:null}{draft.source_scholar&&draft.source_scholar===draft.target_scholar?<p role="alert">关系两端须选择不同学者。</p>:null}<button type="submit" className="button" disabled={!validEndpoints||!dirty||ime}>{pendingAction==="save"?"正在保存…":"保存关系草稿"}</button>
         </fieldset>
         <button type="button" className="button secondary" disabled={locked||ime||!canPublishSaved} onClick={()=>void act("publish")}>发布已保存关系</button>{canPublish&&saved.id&&saved.status==="published"?<button type="button" className="button secondary" disabled={locked||ime||dirty} onClick={()=>void act("archive")}>撤下公开关系</button>:null}{!canPublish?<p>当前账号没有正式发布权限。</p>:null}

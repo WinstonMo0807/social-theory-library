@@ -15,6 +15,7 @@ from catalog.services import shared_curation as service
 from catalog.services.scoped_search import public_scholar_queryset
 from common.permissions import IsKnowledgeEditor, CanPublishAuthority
 from catalog.scholar_relation_commands import ScholarRelationCommandMixin, ScholarRelationReceipt
+from catalog.relation_source_anchor import RelationAnchorInput, RelationAnchorMaterial
 
 
 class CurationSourceSerializer(serializers.Serializer):
@@ -71,6 +72,8 @@ class ScholarRelationSerializer(serializers.Serializer):
     direction = serializers.ChoiceField(choices=service.DIRECTIONS)
     summary = serializers.CharField(allow_blank=True)
     source = serializers.CharField(allow_blank=True)
+    source_anchor = RelationAnchorInput(required=False, allow_null=True)
+    source_material = RelationAnchorMaterial(read_only=True, allow_null=True)
     status = serializers.CharField(read_only=True)
     edit_version = serializers.CharField(required=False)
     has_unpublished_changes = serializers.BooleanField(read_only=True)
@@ -173,7 +176,7 @@ class AdminScholarRelationListView(ScholarRelationCommandMixin, EditorialErrorMi
         if request.query_params.get("scholar"):
             from catalog.scholar_relation_directory import relations_for_scholar
             rows = relations_for_scholar(rows, request.query_params["scholar"])
-        return Response(paged(request, rows.order_by("-updated_at", "pk"), service.relation_payload))
+        return Response(paged(request, rows.order_by("-updated_at", "pk"), lambda row: service.relation_payload(row, include_source=False)))
 
     @extend_schema(request=ScholarRelationSerializer, responses={201: ScholarRelationSerializer})
     def post(self, request):

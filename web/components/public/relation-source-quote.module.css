@@ -1,0 +1,5 @@
+.quote{margin:12px 0;padding:12px 16px;border-inline-start:2px solid var(--annotation,#b49661);background:var(--stl-surface-paper,#f7f4ee);overflow-wrap:anywhere}
+.quote blockquote{margin:0;white-space:pre-wrap;font-family:var(--font-serif,"Noto Serif SC",serif);line-height:1.8}
+.quote figcaption{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:12px;color:var(--stl-ink-muted,#79746b)}
+.quote a{color:inherit;text-decoration:underline;text-underline-offset:3px;min-height:32px;display:inline-flex;align-items:center}
+.quote a:focus-visible{outline:2px solid currentColor;outline-offset:3px}

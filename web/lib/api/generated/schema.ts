@@ -17699,6 +17699,25 @@ export interface components {
             quote: string;
             reader_href: string;
         };
+        RelationAnchorMaterialRequest: {
+            available: boolean;
+            public_eligible: boolean;
+            detail: string;
+            title: string;
+            edition_label: string;
+            /** Format: uuid */
+            work_id: string | null;
+            /** Format: uuid */
+            edition_id: string | null;
+            /** Format: uuid */
+            asset_id: string | null;
+            /** Format: uuid */
+            document_revision_id: string | null;
+            pdf_page: number | null;
+            printed_page_label: string;
+            quote: string;
+            reader_href: string;
+        };
         ReplayForkOutput: {
             owner_id: string;
             /** Format: uuid */
@@ -18109,6 +18128,8 @@ export interface components {
             direction: components["schemas"]["PublicGraphDirectionEnum"];
             summary: string;
             source: string;
+            source_anchor?: components["schemas"]["RelationAnchorInput"] | null;
+            readonly source_material: components["schemas"]["RelationAnchorMaterial"] | null;
             readonly status: string;
             edit_version?: string;
             readonly has_unpublished_changes: boolean;
@@ -18162,6 +18183,7 @@ export interface components {
             direction: components["schemas"]["PublicGraphDirectionEnum"];
             summary: string;
             source: string;
+            source_anchor?: components["schemas"]["RelationAnchorInputRequest"] | null;
             edit_version?: string;
         };
         ScholarRevision: {

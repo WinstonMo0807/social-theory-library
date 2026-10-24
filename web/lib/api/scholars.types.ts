@@ -48,6 +48,7 @@ export type ScholarKnowledge = ScholarLink & {
   source_count: number; scholar_count: number;
 };
 export type ScholarRelationRow = {
+  source_material?: components["schemas"]["RelationAnchorMaterial"] | null;
   id: string; source_scholar: string; target_scholar: string; source_name: string; target_name: string;
   source_slug: string; target_slug: string; relation_type: string; relation_label: string;
   direction: "directed" | "bidirectional" | "undirected"; summary: string; source: string; status: string;

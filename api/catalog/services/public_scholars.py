@@ -475,6 +475,7 @@ def _relation_rows(rows):
         if value:
             result.append({key: value.get(key, "") for key in ("id", "source_scholar", "target_scholar", "source_name", "target_name", "source_slug", "target_slug", "relation_type", "direction", "summary", "source", "status")})
             result[-1]["relation_label"] = RELATION_LABELS.get(value["relation_type"], value["relation_type"])
+            result[-1]["source_material"] = value.get("source_material")
     return result
 
 

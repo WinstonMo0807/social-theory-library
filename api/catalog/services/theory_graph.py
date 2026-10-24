@@ -231,7 +231,7 @@ def _edge_payload(spec, row):
         relation_type, direction, description, evidence_source = row.relation_type, row.direction, row.description, row.evidence_source
         label = row.get_relation_type_display()
     elif model is ScholarRelation:
-        payload = relation_payload(row, public=True)
+        payload = relation_payload(row, public=True, include_source=False)
         if not payload or payload["source_scholar"] != str(source.pk) or payload["target_scholar"] != str(target.pk):
             return None
         relation_type, direction = payload["relation_type"], payload["direction"]
@@ -295,6 +295,13 @@ def _attach_evidence(edges, request):
     people = [edge["entity_id"] for edge in edges if edge["model"] == "PersonNodeRelation"]
     links = {(model.__name__, str(row.pk)): row for model, ids in ((PersonNodeRelation, people), (KnowledgeRelation, identifiers))
              for row in model.objects.filter(pk__in=ids).only("pk", "evidence_span_id", "source_document_revision_id")}
+    scholars = [edge["entity_id"] for edge in edges if edge["model"] == "ScholarRelation"]
+    for row in ScholarRelation.objects.filter(pk__in=scholars, status="published", active_revision__status="published",
+            active_revision__target_type="scholar_relation", active_revision__target_id=F("pk")).select_related("active_revision"):
+        data = row.active_revision.materialized_preview
+        if all(str(data.get(f"{side}_scholar")) == str(getattr(row, f"{side}_scholar_id")) for side in ("source", "target")) and data.get("source_anchor") == {
+                "span_id": str(row.evidence_span_id), "document_revision_id": str(row.source_document_revision_id)}:
+            links[("ScholarRelation", str(row.pk))] = row
     anchors = {str(span.pk): span for span in public_anchor_rows().filter(pk__in=[row.evidence_span_id for row in links.values() if row.evidence_span_id])}
     for edge in edges:
         row = links.get((edge["model"], edge["entity_id"]))

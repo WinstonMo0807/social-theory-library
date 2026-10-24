@@ -171,18 +171,30 @@ def publish_curation(kind, key, expected, actor):
     return curation_payload(kind, key)
 
 
-def relation_payload(row, *, public=False):
+def relation_payload(row, *, public=False, include_source=True):
     revision = row.active_revision if public else revisions._latest("scholar_relation", row.pk)
     data = deepcopy(revision.materialized_preview) if revision else {}
     if public:
         from catalog.services.public_scholars import _base, _formal_profile
-        if not revision or revision.status != "published" or revision.target_type != "scholar_relation" or revision.target_id != row.pk or any(str(data.get(f"{side}_scholar")) != str(getattr(row, f"{side}_scholar_id")) for side in ("source", "target")):
+        if row.status != "published" or not revision or revision.status != "published" or revision.target_type != "scholar_relation" or revision.target_id != row.pk or any(str(data.get(f"{side}_scholar")) != str(getattr(row, f"{side}_scholar_id")) for side in ("source", "target")):
             return None
         people = {str(profile.pk): _formal_profile(profile, profile.public_snapshot or {}) for profile in _base().filter(pk__in=[data.get("source_scholar"), data.get("target_scholar")])}
     else:
         people = {str(person.pk): person for person in ScholarProfile.objects.select_related("person").filter(pk__in=[data.get("source_scholar"), data.get("target_scholar")])}
     if public and len(people) != 2:
         return None
+    reference = data.get("source_anchor")
+    material = None
+    if reference and include_source:
+        from catalog.relation_source_anchor import anchor_material, public_anchor_rows
+        # Public text must be pinned both in the published snapshot and original row.
+        matches = reference == {"span_id": str(row.evidence_span_id), "document_revision_id": str(row.source_document_revision_id)}
+        if not public or matches:
+            query = public_anchor_rows() if public else sources("span")
+            span = query.filter(pk=reference["span_id"]).first()
+            material = anchor_material(span, reference["document_revision_id"], public=public, eligible=True if public else None)
+    data["source_anchor"] = None if public else reference
+    data["source_material"] = material
     data.update(id=str(row.pk), status=row.status, source_name=people.get(data.get("source_scholar")).person.preferred_name if people.get(data.get("source_scholar")) else "",
                 target_name=people.get(data.get("target_scholar")).person.preferred_name if people.get(data.get("target_scholar")) else "")
     for side in ("source", "target"):
@@ -207,6 +219,14 @@ def save_relation(key, data, actor):
         raise ValidationError("关系类型或方向无效。")
     payload = {"source_scholar": str(source.pk), "target_scholar": str(target_row.pk), "relation_type": kind, "direction": direction,
                "summary": revisions._text(data.get("summary", ""), 6000), "source": revisions._text(data.get("source", ""), 6000)}
+    from catalog.relation_source_anchor import RelationAnchorInput, choose_anchor
+    latest = revisions._latest("scholar_relation", row.pk) if row else None
+    previous = (latest.materialized_preview or {}).get("source_anchor") if latest else None
+    selected = RelationAnchorInput(allow_null=True).run_validation(data.get("source_anchor", previous))
+    reference = {key: str(value) for key, value in selected.items()} if selected else None
+    if reference != previous:
+        choose_anchor(selected)
+    payload["source_anchor"] = reference
     if row is None:
         row = ScholarRelation.objects.create(source_scholar=source, target_scholar=target_row, relation_type=kind, direction=direction)
     revisions._save_revision("scholar_relation", row.pk, payload, actor)
@@ -221,10 +241,14 @@ def publish_relation(key, expected, actor):
     if not revision or revision.status != "draft":
         raise ValidationError("没有待发布的学者关系草稿。")
     payload = revision.materialized_preview
-    if not payload["summary"] or not payload["source"]:
+    if not payload["summary"] or not (payload["source"] or payload.get("source_anchor")):
         raise ValidationError("发布关系前须填写关系说明与来源。")
     if public_scholar_queryset().filter(pk__in=[payload["source_scholar"], payload["target_scholar"]]).count() != 2:
         raise ValidationError("关系两端的学者档案须先公开。")
+    from catalog.relation_source_anchor import RelationAnchorInput, choose_anchor, ensure_relation_anchor_publication
+    selected = RelationAnchorInput(allow_null=True).run_validation(payload.get("source_anchor"))
+    row.evidence_span, row.source_document_revision = choose_anchor(selected)
+    ensure_relation_anchor_publication(row)
     row.source_scholar_id, row.target_scholar_id = payload["source_scholar"], payload["target_scholar"]
     for key in ("relation_type", "direction", "summary", "source"):
         setattr(row, key, payload[key])

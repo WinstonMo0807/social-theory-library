@@ -68055,6 +68055,74 @@
                     "work_id"
                 ]
             },
+            "RelationAnchorMaterialRequest": {
+                "type": "object",
+                "properties": {
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "public_eligible": {
+                        "type": "boolean"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "edition_label": {
+                        "type": "string"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "edition_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "printed_page_label": {
+                        "type": "string"
+                    },
+                    "quote": {
+                        "type": "string"
+                    },
+                    "reader_href": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "available",
+                    "detail",
+                    "document_revision_id",
+                    "edition_id",
+                    "edition_label",
+                    "pdf_page",
+                    "printed_page_label",
+                    "public_eligible",
+                    "quote",
+                    "reader_href",
+                    "title",
+                    "work_id"
+                ]
+            },
             "ReplayForkOutput": {
                 "type": "object",
                 "properties": {
@@ -69409,6 +69477,23 @@
                     "source": {
                         "type": "string"
                     },
+                    "source_anchor": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorInput"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "source_material": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorMaterial"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "status": {
                         "type": "string",
                         "readOnly": true
@@ -69429,6 +69514,7 @@
                     "save_receipt",
                     "save_replayed",
                     "source",
+                    "source_material",
                     "source_name",
                     "source_scholar",
                     "source_slug",
@@ -69581,6 +69667,14 @@
                     },
                     "source": {
                         "type": "string"
+                    },
+                    "source_anchor": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RelationAnchorInputRequest"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "edit_version": {
                         "type": "string",

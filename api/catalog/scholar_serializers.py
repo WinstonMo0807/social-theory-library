@@ -149,6 +149,8 @@ class ScholarKnowledgeSerializer(ScholarLinkSerializer):
 
 
 class ScholarRelationRowSerializer(serializers.Serializer):
+    from catalog.relation_source_anchor import RelationAnchorMaterial
+    source_material = RelationAnchorMaterial(read_only=True, allow_null=True, required=False)
     id = serializers.UUIDField()
     source_scholar = serializers.UUIDField()
     target_scholar = serializers.UUIDField()

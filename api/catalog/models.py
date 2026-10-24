@@ -6417,11 +6417,15 @@ class ScholarRelation(UUIDTimeStampedModel):
     direction = models.CharField(max_length=20, default="directed")
     summary = models.TextField(blank=True)
     source = models.TextField(blank=True)
+    evidence_span = models.ForeignKey(EvidenceSpan, null=True, blank=True, on_delete=models.PROTECT, related_name="scholar_relations")
+    source_document_revision = models.ForeignKey(DocumentRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="scholar_relations")
     status = models.CharField(max_length=20, default="draft", db_index=True)
     active_revision = models.ForeignKey(EditorialRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="active_scholar_relations")
 
     class Meta:
-        constraints = [models.CheckConstraint(condition=~models.Q(source_scholar=models.F("target_scholar")), name="scholar_relation_distinct_ends")]
+        constraints = [models.CheckConstraint(condition=~models.Q(source_scholar=models.F("target_scholar")), name="scholar_relation_distinct_ends"),
+            models.CheckConstraint(condition=models.Q(evidence_span__isnull=True, source_document_revision__isnull=True)
+                | models.Q(evidence_span__isnull=False, source_document_revision__isnull=False), name="scholar_relation_source_pair")]
 
 
 class CurationProject(UUIDTimeStampedModel):

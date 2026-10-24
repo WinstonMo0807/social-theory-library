@@ -1,3 +1,5 @@
+import type { components } from "@/lib/api/generated/schema";
+
 export type ScholarRelation = {
   id: string;
   source_scholar: string;
@@ -10,6 +12,8 @@ export type ScholarRelation = {
   direction: "directed" | "bidirectional" | "undirected";
   summary: string;
   source: string;
+  source_anchor?: components["schemas"]["RelationAnchorInput"] | null;
+  source_material?: components["schemas"]["RelationAnchorMaterial"] | null;
   status: string;
   edit_version: string;
   has_unpublished_changes?: boolean;

@@ -87,13 +87,13 @@ class ScholarKnowledgeRelationDirectoryView(AdminPrivateResponseMixin, APIView):
                 "description": row.relation_label, "evidence_source": row.source, "has_source_anchor": bool(row.evidence_span_id),
                 "status": row.status, "has_unpublished_changes": False, "remains_in_draft": True}
         for row in ScholarRelation.objects.filter(pk__in=[item["pk"] for item in entries if item["directory_kind"] == "scholar"]).select_related("source_scholar__person", "target_scholar__person"):
-            data = relation_payload(row)
+            data = relation_payload(row, include_source=False)
             result[("scholar", str(row.pk))] = {"id": str(row.pk), "kind": "scholar", "scholar_id": str(scholar.pk),
                 "source_name": data.get("source_name") or row.source_scholar.person.preferred_name,
                 "target_name": data.get("target_name") or row.target_scholar.person.preferred_name,
                 "source_kind": "人物", "target_kind": "人物", "relation_type": data.get("relation_type", row.relation_type),
                 "relation_label": SCHOLAR_TYPES.get(data.get("relation_type", row.relation_type), "其他关系"), "direction": data.get("direction", row.direction),
-                "description": data.get("summary", row.summary), "evidence_source": data.get("source", row.source), "has_source_anchor": False,
+                "description": data.get("summary", row.summary), "evidence_source": data.get("source", row.source), "has_source_anchor": bool(data.get("source_anchor")),
                 "status": row.status, "has_unpublished_changes": data["has_unpublished_changes"],
                 "remains_in_draft": str(scholar.pk) in {str(data.get("source_scholar", row.source_scholar_id)), str(data.get("target_scholar", row.target_scholar_id))}}
         return Response(NodeRelationPage({"count": page.paginator.count, "next": page.next_page_number() if page.has_next() else None,
