@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import generics, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
@@ -335,15 +336,21 @@ class RecommendationListView(APIView):
         )
 
 
+class SiteAboutPagination(PageNumberPagination):
+    # The original site editor permits at most 100 blocks in one publication.
+    page_size = 100
+
+
 class AboutPageBlockListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = AboutPageBlockSerializer
+    pagination_class = SiteAboutPagination
     queryset = AboutPageBlock.objects.filter(visible=True).order_by("sort_order", "created_at")
 
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
         if isinstance(response.data, dict):
-            response.data["configured"] = AboutPageBlock.objects.exists()
+            response.data["configured"] = AboutPageBlock.objects.exclude(key__startswith="announcement-").exists()
         return response
 
 

@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, BookOpen, CircleHelp, MessageCircle, Search, Quote, Layers } from "lucide-react";
+import type { PublicSiteContent } from "@/lib/site-content";
+import { SiteAnnouncements, SitePublicExplanations } from "./site-public-copy";
 import type { SiteConfig } from "@/lib/site-config";
 import { supportFaqs, type SupportSection } from "@/lib/support-content";
 import { SupportHero, SupportNavigation } from "./support-hero";
 import { SupportCitationExample } from "./support-citation-example";
 
-export function SupportHub({ config, section = "guide", unavailable = false }: { config: SiteConfig; section?: SupportSection; unavailable?: boolean }) {
+export function SupportHub({ config, section = "guide", unavailable = false, about }: { about?:PublicSiteContent|null; config: SiteConfig; section?: SupportSection; unavailable?: boolean }) {
   return <div className="stl4-support-page"><SupportHero config={config} title="使用帮助与反馈" intro="了解书库的内容与使用方法，获取阅读与引用支持，与我们一起完善更开放的社会理论知识空间。" /><SupportNavigation current={section} />{unavailable ? <p className="stl4-support-status" role="status">网站配置暂时无法加载，以下使用说明仍可阅读。</p> : null}
-    {section === "guide" ? <SupportGuides /> : section === "faq" ? <SupportFaq /> : section === "content" ? <section className="stl4-support-section"><h2>内容说明</h2><div className="stl4-support-explanation-grid"><article><BookOpen /><h3>用途与内容组织</h3><p>按作品、出版版本、学者、主题与理论关系浏览已发布内容。馆藏与知识入口是否有内容，以当前公开数据为准。</p><Link href="/about">关于书库 <ArrowRight size={15} /></Link></article><article><Layers /><h3>原文与内容身份</h3><p>扫描页、识别文字、编者说明和机器候选各有用途。正式引用请核对原始页面；不要把导读或检索摘要当作作者原话。</p><Link href="/help/source">了解来源与版本 <ArrowRight size={15} /></Link></article></div></section> : section === "source" ? <section className="stl4-support-section"><h2>来源纠错</h2><p className="stl4-support-lead">发现书目信息、识别文字或页码问题时，提供能够核对的位置。</p><ol className="stl4-support-checks"><li>确认作品、出版版本与当前阅读文件。</li><li>记下 PDF 物理页；有印刷页码时一并说明。</li><li>关联公开阅读页面，描述实际内容与预期内容。</li></ol><div className="stl4-support-notice"><CircleHelp size={23} /><div><h3>来源暂时不可用？</h3><p>先在原文页面重新读取，按实际提示区分访问限制与临时错误。这里不会替未选择的来源判断状态。</p><Link href="/help/source">查看来源说明 <ArrowRight size={15} /></Link></div><Link className="stl4-support-primary" href="/feedback?category=content">提交来源纠错</Link></div></section> : section === "updates" ? <section className="stl4-support-section"><h2>公告与更新</h2><article className="stl4-support-update"><time dateTime="2026-10-18">2026 年 10 月 18 日</time><div><h3>使用帮助内容更新</h3><p>补充 PDF 与印刷页码、来源失效、私人资料边界和反馈提交说明。</p><Link href="/help/citation">阅读引用指南 <ArrowRight size={15} /></Link></div></article></section> : <SupportGuides />}
+    {section === "guide" ? <SupportGuides /> : section === "faq" ? <SupportFaq /> : section === "content" ? <SitePublicExplanations config={config} about={about}/> : section === "source" ? <section className="stl4-support-section"><h2>来源纠错</h2><p className="stl4-support-lead">发现书目信息、识别文字或页码问题时，提供能够核对的位置。</p><ol className="stl4-support-checks"><li>确认作品、出版版本与当前阅读文件。</li><li>记下 PDF 物理页；有印刷页码时一并说明。</li><li>关联公开阅读页面，描述实际内容与预期内容。</li></ol><div className="stl4-support-notice"><CircleHelp size={23} /><div><h3>来源暂时不可用？</h3><p>先在原文页面重新读取，按实际提示区分访问限制与临时错误。这里不会替未选择的来源判断状态。</p><Link href="/help/source">查看来源说明 <ArrowRight size={15} /></Link></div><Link className="stl4-support-primary" href="/feedback?category=content">提交来源纠错</Link></div></section> : section === "updates" ? <SiteAnnouncements about={about}/> : <SupportGuides />}
     <div className="stl4-support-feedback-callout"><div><h2>仍有问题？</h2><p>告诉我们遇到的具体情况。联系邮箱和相关页面均可选择不提供。</p></div><Link className="stl4-support-primary" href="/feedback"><MessageCircle size={18} />提交反馈 <ArrowRight size={16} /></Link></div>
   </div>;
 }

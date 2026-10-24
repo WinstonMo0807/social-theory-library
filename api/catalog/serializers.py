@@ -2323,6 +2323,21 @@ class RecommendationPolicySerializer(serializers.ModelSerializer):
 
 
 class AboutPageBlockSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        key = attrs.get("key", getattr(self.instance, "key", ""))
+        if key.startswith("announcement-"):
+            if len(attrs.get("body", getattr(self.instance, "body", ""))) > 30000:
+                raise serializers.ValidationError({"body": "一条公告最多30000字，请拆分过长内容。"})
+            if attrs.get("block_type", getattr(self.instance, "block_type", "")) != "notice":
+                raise serializers.ValidationError({"block_type": "公告请使用提示模块。"})
+            config = attrs.get("configuration", getattr(self.instance, "configuration", {}))
+            if not isinstance(config, dict) or set(config) - {"published_date"}:
+                raise serializers.ValidationError({"configuration": "公告仅保存所填写的公告日期。"})
+            if config.get("published_date"):
+                value = serializers.DateField().run_validation(config["published_date"])
+                attrs["configuration"] = {"published_date": value.isoformat()}
+        return attrs
+
     class Meta:
         model = AboutPageBlock
         fields = (

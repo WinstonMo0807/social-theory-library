@@ -61,7 +61,7 @@ export function PreviewViewport({ children, locateFields = true }: { children: R
       <button type="button" aria-pressed={width === 1120} onClick={() => setWidth(1120)}>桌面 · 1120</button>
       <button type="button" aria-pressed={width === 390} onClick={() => setWidth(390)}>移动 · 390</button>
       <button type="button" aria-pressed={!fitWidth} onClick={() => setFitWidth(value => !value)}>{fitWidth ? "放大至实际大小" : "适应预览栏"}</button>
-      <span>{Math.round(scale * 100)}% · {locateFields ? "点击页面内容定位字段" : "已保存页面预览"}</span>
+      <span>{Math.round(scale * 100)}% · {locateFields ? "点击页面内容定位字段" : "页面预览"}</span>
     </div>
     <div ref={canvasRef} className="fixed-preview-canvas">
       <div className="fixed-preview-stage" style={{ width: width * scale, height: height * scale }}>

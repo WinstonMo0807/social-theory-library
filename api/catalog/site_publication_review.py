@@ -47,6 +47,8 @@ def checks(payload):
                 media.append((str(slot["cover_rendition_id"]), AREA_LABELS[area], area, slot["id"]))
     for block in payload.get("about_blocks", []):
         key = block.get("key", "")
+        if key.startswith("announcement-") and block.get("visible") and (not str(block.get("title") or "").strip() or not str(block.get("body") or "").strip() or not block.get("configuration", {}).get("published_date")):
+            add("announcement_incomplete", "blocking", "公告信息未填完整", "请填写公告标题、正文与公告日期，或关闭显示后再发布。", key)
         if AboutPageBlock.all_objects.filter(key=key).exclude(pk__in=AboutPageBlock.objects.values("pk")).exists():
             add("recycled_block", "blocking", "草稿仍包含已回收模块", "请移除旧模块或从回收站明确恢复后再发布。", key)
         if block.get("visible") and not str(block.get("title") or "").strip() and not str(block.get("body") or "").strip():
@@ -77,7 +79,9 @@ def changes(before, after):
             if field in {"config.home_hero_rendition_id", "config.home_hero_image"}:
                 return "已选图片" if value else "未单独设置"
             if field.startswith("about_blocks.") and isinstance(value, dict):
-                return "\n".join(str(part) for part in (value.get("title"), value.get("body"), "显示" if value.get("visible") else "不显示", value.get("action_label"), value.get("action_href")) if part)
+                configuration = value.get("configuration")
+                date = configuration.get("published_date") if isinstance(configuration, dict) else None
+                return "\n".join(str(part) for part in (value.get("title"), f"公告日期：{date}" if date else "", value.get("body"), "显示" if value.get("visible") else "不显示", value.get("action_label"), value.get("action_href")) if part)
             return display(value)
         old_display, new_display = human(old), human(new)
         if old_display == new_display:
