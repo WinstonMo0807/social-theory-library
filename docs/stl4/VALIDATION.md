@@ -1,5 +1,10 @@
 # 验收记录
 
+## 2026-10-26 M11/M12分段双页标签与诊断定位
+
+60ea78五目标Python AST、目标PostCSS解析和diff0；初次2e9379→8af749 ESLint/TS0；补焦点后04b699→7b5843最终ESLint/TS noEmit0。所有新增验收定义未运行，无业务调用。
+
+
 ## 2026-10-26 M11原生书签题名与落点核对
 
 ec40e2：outline_bookmarks、document_outline及三份相关验收定义，共5目标AST解析，目标git diff --check退出0。未执行导入、数据库、测试、实际提取或浏览器。API形状未变化，不重复生成契约。

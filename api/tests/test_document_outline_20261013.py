@@ -90,7 +90,7 @@ def test_corrected_page_text_prevents_unverified_native_auto_activation(source):
     result = run_outline_job(job.pk, task_id=job.task_id)
     assert result.status == "succeeded"
     assert not asset.outline_revisions.filter(is_active=True).exists()
-    assert asset.outline_revisions.latest("revision").parser_version == "outline-v5"
+    assert asset.outline_revisions.latest("revision").parser_version == "outline-v6"
 
 
 def test_candidates_preserve_manual_calibration_and_restore_history(source, admin_user):

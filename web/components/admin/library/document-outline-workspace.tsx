@@ -15,6 +15,7 @@ import { isTaskRunning } from "@/lib/api/task-polling";
 import { Dialog } from "@/components/ui/dialog";
 import { downloadWorkFile } from "./work-file-preview";
 import { OutlinePdfPreview } from "./outline-pdf-preview";
+import { OutlineDiagnostics } from "./outline-diagnostics";
 import { editableOutline, moveOutlineSibling, orderOutline, outlineCommandNodes, outlineDescendants, outlineSourceLabels, outlineStatusLabels, type EditableOutlineNode } from "./outline-edit-state";
 import styles from "./document-outline.module.css";
 
@@ -51,6 +52,8 @@ function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: 
   const [message, setMessage] = useState("");
   const [reading, setReading] = useState(false);
   const [history, setHistory] = useState<OutlineState | null>(null);
+  const editorRef = useRef<HTMLElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const data = resource.data;
@@ -96,6 +99,14 @@ function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: 
     changeNodes(nodes.map(node => node.id === currentId ? { ...node, ...patch, calibration_status: "unverified" } : node));
   }
   function selectNode(node: EditableOutlineNode) { setSelectedId(node.id); if (node.pdf_page) setPreviewPage(node.pdf_page); setPane("edit"); }
+  function inspectNode(node: EditableOutlineNode) {
+    selectNode(node); setTab("calibration");
+    requestAnimationFrame(() => { if (alive.current) editorRef.current?.focus(); });
+  }
+  function inspectPage(page: number) {
+    setPreviewPage(page); setTab("calibration"); setPane("preview");
+    requestAnimationFrame(() => { if (alive.current) previewRef.current?.focus(); });
+  }
   function addNode(child = false) {
     const id = createRequestKey();
     const parent = child ? currentId || null : currentNode?.parent_id || null;
@@ -208,7 +219,7 @@ function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: 
           {!visible.length ? <p className={styles.empty}>{nodes.length ? "没有符合筛选的节点。" : "尚无可用目录。可重新提取候选或手工添加节点。"}</p> : null}
           {filtered.length > limit ? <button type="button" onClick={() => setLimit(value => value + 100)}>继续显示目录（剩余 {filtered.length - limit} 项）</button> : null}
         </section>
-        <section className={styles.editor} aria-label="节点详情"><header><h2>节点详情</h2><div><button type="button" aria-label="上移节点" disabled={!canEdit || busy || !currentNode} onClick={() => changeNodes(moveOutlineSibling(nodes, currentId, -1))}><ChevronUp size={14} /></button><button type="button" aria-label="下移节点" disabled={!canEdit || busy || !currentNode} onClick={() => changeNodes(moveOutlineSibling(nodes, currentId, 1))}><ChevronDown size={14} /></button></div></header>
+        <section ref={editorRef} tabIndex={-1} className={styles.editor} aria-label="节点详情"><header><h2>节点详情</h2><div><button type="button" aria-label="上移节点" disabled={!canEdit || busy || !currentNode} onClick={() => changeNodes(moveOutlineSibling(nodes, currentId, -1))}><ChevronUp size={14} /></button><button type="button" aria-label="下移节点" disabled={!canEdit || busy || !currentNode} onClick={() => changeNodes(moveOutlineSibling(nodes, currentId, 1))}><ChevronDown size={14} /></button></div></header>
           {currentNode ? <form onSubmit={event => { event.preventDefault(); void save(); }}><fieldset disabled={!canEdit || busy}>
             <label>标题<input required maxLength={600} value={currentNode.title} onChange={event => patchNode({ title: event.target.value })} /></label>
             <div className={styles.fields}><label>上级节点<select value={currentNode.parent_id || ""} onChange={event => patchNode({ parent_id: event.target.value || null })}><option value="">一级标题（根）</option>{nodes.filter(node => !descendants.has(node.id)).map(node => <option key={node.id} value={node.id}>{"　".repeat(Math.min(node.level - 1, 5))}{node.title}</option>)}</select></label>
@@ -223,14 +234,14 @@ function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: 
             <div className={styles.minorActions}><button type="button" onClick={() => addNode(true)}><Plus size={12} />新增子节点</button><button type="button" onClick={() => setConfirmation({ kind: "delete", id: currentId })}><Trash2 size={12} />移除此节点</button></div>
           </fieldset></form> : <p className={styles.empty}>选择一个目录节点，或手工添加目录。</p>}
         </section>
-        <div className={styles.previewColumn}>{asset?.preview_url ? <OutlinePdfPreview key={`${ownerId}:${asset.id}:${asset.sha256}`} asset={asset} ownerId={ownerId} page={previewPage} setPage={setPreviewPage} navigationTarget={currentNode?.pdf_page === previewPage ? outlinePosition(currentNode) || [0, 0] : undefined} /> : <p className={styles.empty}>当前文件尚无可用 PDF 预览。</p>}</div>
+        <div ref={previewRef} tabIndex={-1} aria-label="PDF 原稿预览" className={styles.previewColumn}>{asset?.preview_url ? <OutlinePdfPreview key={`${ownerId}:${asset.id}:${asset.sha256}`} asset={asset} ownerId={ownerId} page={previewPage} setPage={setPreviewPage} navigationTarget={currentNode?.pdf_page === previewPage ? outlinePosition(currentNode) || [0, 0] : undefined} /> : <p className={styles.empty}>当前文件尚无可用 PDF 预览。</p>}</div>
       </div>
     </> : null}
     {tab === "calibration" || tab === "candidates" ? <section className={styles.candidates} aria-label="候选来源对比"><header><div><h2>候选来源对比 <small>{currentNode?.title || "尚未选择节点"}</small></h2><p>不同来源分别保留。采用候选会填入编辑区，经确认保存后形成新修订。</p></div>{tab === "candidates" ? <select aria-label="选择要核对的目录节点" value={currentId} onChange={event => setSelectedId(event.target.value)}>{nodes.map(node => <option value={node.id} key={node.id}>{node.title}</option>)}</select> : null}</header>
       <div className={styles.tableScroll}><table><thead><tr><th>来源</th><th>标题</th><th>PDF 物理页</th><th>印刷页码</th><th>来源页</th><th>操作</th></tr></thead><tbody>{candidates.map((row, index) => <tr key={`${row.source}:${row.pdf_page}:${index}`}><td>{outlineSourceLabels[row.source] || row.source}</td><td>{row.title}</td><td>{row.pdf_page || "待定位"}</td><td>{row.printed_label || "—"}</td><td>{row.contents_page || "—"}</td><td><button type="button" disabled={!row.pdf_page} onClick={() => { if (row.pdf_page) { setPreviewPage(row.pdf_page); setTab("calibration"); setPane("preview"); } }}>查看</button><button type="button" disabled={!canEdit || busy} onClick={() => applyCandidate(row)}>填入节点</button></td></tr>)}</tbody></table></div>
       {(currentNode?.candidate_sources_count || 0) > candidates.length ? <p className={styles.caption}>该标题共有 {currentNode?.candidate_sources_count} 条来源观察，当前显示前 {candidates.length} 条。请结合目录树和原文核对同名章节。</p> : null}
       {!candidates.length ? <p className={styles.empty}>当前没有提取候选。扫描文件须先有可用文字，再提取目录；也可手工添加。</p> : null}
-      {revision?.diagnostics.length ? <ul className={styles.diagnostics}>{revision.diagnostics.map((item, index) => <li key={index}>{String(item.message || item.code || "目录需要进一步核对")}</li>)}</ul> : null}
+      {revision ? <OutlineDiagnostics key={revision.id} items={revision.diagnostics} nodes={nodes} currentId={currentId} pageCount={asset?.page_count || 0} onSelect={inspectNode} onPreview={inspectPage} /> : null}
     </section> : null}
     {tab === "history" ? <section className={styles.history}><header><h2>修订历史 <small>共 {historyData?.history_count || 0} 次</small></h2><button type="button" disabled={busy} onClick={() => void readHistoryPage(1)}>刷新历史</button></header>
       {historyData?.history.map(row => <article key={row.id}><div><h3>第 {row.revision} 次修订 <span>{originLabels[row.origin] || row.origin}</span>{row.is_active ? <em>读者使用中</em> : null}</h3><p>{row.node_count} 个节点 · {date(row.created_at)} · {row.reviewed ? "已审核" : "尚未采用"}</p></div><button type="button" disabled={busy} onClick={() => void viewHistory(row)}>查看此修订</button><button type="button" disabled={!canEdit || busy || dirty || row.is_active} onClick={() => setConfirmation({ kind: "restore", revision: row, expected: data.expected_revision })}>恢复此目录</button></article>)}

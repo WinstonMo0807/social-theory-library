@@ -19,14 +19,15 @@ from kombu.exceptions import OperationalError
 from catalog.models import Asset, DocumentOutlineRevision
 from catalog.services.text import sanitize_unicode
 from catalog.services.page_geometry import locator_geometry, native_geometry, validated_geometry
+from catalog.services.outline_labels import LABEL_ONLY, LABEL_RANGE, PRINTED_LABEL, OutlineLabels
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v5"
+PARSER_VERSION = "outline-v6"
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
-CONTENTS = re.compile(r"^(?:目\s*录|contents|table\s+of\s+contents)$", re.I)
-ENTRY = re.compile(r"^(?P<title>.+?)\s*(?:[.．·…_]{2,}|\s{2,}|\t)\s*(?P<label>\d{1,5}|[ivxlcdmIVXLCDM]{1,12})\s*$")
-TRAILING_PAGE = re.compile(r"^(?P<title>.+?\D)\s+(?P<label>\d{1,5}|[ivxlcdmIVXLCDM]{1,12})\s*$")
+CONTENTS = re.compile(r"^(?:目\s*[录錄]|contents|table\s+of\s+contents)$", re.I)
+ENTRY = re.compile(rf"^(?P<title>.+?)\s*(?:[.．·…_]{{2,}}|\s{{2,}}|\t)\s*(?P<label>{PRINTED_LABEL})\s*$")
+TRAILING_PAGE = re.compile(rf"^(?P<title>.+?\D)\s+(?P<label>{PRINTED_LABEL})\s*$")
 
 
 class OutlineConflict(ValueError):
@@ -182,11 +183,9 @@ def extract_outline(asset, path, *, progress=None):
                 diagnostics.append({"code": "invalid_bookmark", "node_id": node["id"], "message": "书签标题或落点需要校准。"})
     _parents(nodes)
 
-    pages = list(asset.pages.filter(index__gte=1, index__lte=asset.page_count).order_by("index").values("index", "printed_label", "text"))
-    labels, titles = defaultdict(list), defaultdict(list)
-    for page in pages:
-        if page["printed_label"]:
-            labels[str(page["printed_label"]).casefold()].append(page["index"])
+    pages = list(asset.pages.filter(index__gte=1, index__lte=asset.page_count).order_by("index").values("index", "printed_label", "label_segment", "text"))
+    labels = OutlineLabels(pages, (asset.validation_details or {}).get("page_mapping"))
+    titles = defaultdict(list)
     headings, contents_rows = [], []
     contents_pages = set()
     for processed, page in enumerate(pages, start=1):
@@ -206,7 +205,7 @@ def extract_outline(asset, path, *, progress=None):
                     title = _title(f"{pending} {match.group('title')}")
                     contents_rows.append((title, match.group("label"), page["index"]))
                     pending = ""
-                elif re.fullmatch(r"\d{1,5}|[ivxlcdmIVXLCDM]{1,12}", line) and pending:
+                elif LABEL_ONLY.fullmatch(line) and pending:
                     contents_rows.append((_title(pending), line, page["index"]))
                     pending = ""
                 elif not CONTENTS.match(_title(line)) and len(line) < 180:
@@ -277,10 +276,15 @@ def extract_outline(asset, path, *, progress=None):
         if progress and ordinal % 200 == 0:
             progress("match_contents", ordinal, len(contents_rows))
         title_matches = titles.get(_match_key(title), [])
-        label_pages = labels.get(label.casefold(), [])
+        label_observations = labels.observations(label)
+        label_pages = [row["pdf_page"] for row in label_observations]
+        missing_label = labels.has_missing_label(label)
+        unresolved_range = bool(LABEL_RANGE.fullmatch(label) and not label_pages)
         matches = [hit for hit in title_matches if (not label_pages or hit[0] in label_pages) and hit[0] >= last_page]
         target_pages = sorted({hit[0] for hit in matches})
-        if len(target_pages) == 1:
+        if missing_label or unresolved_range:
+            page, locator, status = None, {}, "needs_review"
+        elif len(target_pages) == 1:
             page = target_pages[0]
             locator = next((hit[1] for hit in matches if hit[1]), {})
             status = "matched"
@@ -298,6 +302,14 @@ def extract_outline(asset, path, *, progress=None):
                      level=level, locator=locator, contents_page=contents_page)
         node["parent_id"] = parent
         node["calibration_status"] = status
+        if missing_label or unresolved_range or len(label_pages) > 1 or any(row["spread"] for row in label_observations):
+            message = ("映射记录标有缺失印刷页，未猜测物理落点，请核对原稿。" if missing_label else
+                       "页码范围没有唯一且同段的实际端点，未推算落点。" if unresolved_range else
+                       "此标签对应多处物理页，保留分段观察，请核对具体章节。" if len(label_pages) > 1 else
+                       "标签来自双页扫描；保留整个实际物理页，不猜左右分区，请核对页内落点。")
+            diagnostics.append({"code": "contents_label_review", "node_id": counterpart["id"] if counterpart else node["id"],
+                                "message": f"{title}（{label}）：{message}", "observed_pages": label_pages[:20],
+                                "observed_page_count": len(label_pages), "label_observations": label_observations[:20]})
         if counterpart:
             counterpart.setdefault("candidate_sources", [_candidate(counterpart)]).append(_candidate(node))
             matched_native.add(counterpart["id"])

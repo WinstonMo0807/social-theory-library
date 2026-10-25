@@ -51,6 +51,33 @@ def _native_revision(source):
                                                   source_checksum=asset.sha256, nodes=nodes, diagnostics=diagnostics)
 
 
+def test_outline_reads_applied_spread_labels_and_prefixed_appendix(outline_source):
+    asset, _, path = outline_source
+    Page.objects.create(asset=asset, index=1, text="目錄\nChapter One .... 11\nChapter Two .... A-1")
+    Page.objects.create(asset=asset, index=2, printed_label="10–11", label_segment="body", text="Chapter One")
+    Page.objects.create(asset=asset, index=3, printed_label="A-1", label_segment="appendix", text="Chapter Two")
+    asset.validation_details = {"page_mapping": {"pages": [{"pdf_page": 2, "labels": ["10", "11"]}]}}
+    nodes, diagnostics = extract_outline(asset, path)
+    printed = [candidate for node in nodes for candidate in node.get("candidate_sources", []) if candidate["source"] == "printed_contents"]
+    assert {(row["printed_label"], row["pdf_page"]) for row in printed} >= {("11", 2), ("A-1", 3)}
+    problem = next(row for row in diagnostics if row["code"] == "contents_label_review")
+    assert problem["observed_pages"] == [2]
+    assert problem["label_observations"][0]["spread"] is True
+    assert problem["label_observations"][0]["label_segment"] == "body"
+
+
+def test_explicit_missing_label_does_not_fall_back_to_an_unrelated_title_page(outline_source):
+    asset, _, path = outline_source
+    Page.objects.create(asset=asset, index=1, text="Contents\nChapter Two .... 12")
+    Page.objects.create(asset=asset, index=2, printed_label="11", text="Chapter One")
+    Page.objects.create(asset=asset, index=3, printed_label="A-1", text="Chapter Two")
+    asset.validation_details = {"page_mapping": {"missing": [{"label": "12", "after_pdf_page": 2}]}}
+    nodes, diagnostics = extract_outline(asset, path)
+    candidate = next(row for row in nodes if row["source"] == "printed_contents")
+    assert candidate["pdf_page"] is None and candidate["calibration_status"] == "needs_review"
+    assert any(row["code"] == "contents_label_review" and row["node_id"] == candidate["id"] for row in diagnostics)
+
+
 def test_single_node_save_preserves_unreviewed_siblings_and_coordinates(outline_source, admin_user):
     asset, _, _ = outline_source
     base = _native_revision(outline_source)

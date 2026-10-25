@@ -90,6 +90,13 @@
 .candidates td:last-child { white-space: nowrap; }
 .workspace .candidates td button { font-size: 10px; min-height: 23px; margin-right: 6px; padding: 2px 6px; color: #88642d; }
 .diagnostics { padding-left: 18px; font-size: 11px; color: #85765e; line-height: 1.8; }
+.diagnosticPanel { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; }
+.diagnosticPanel > header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.diagnosticPanel > header label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.diagnostics li { padding: 7px 0; overflow-wrap: anywhere; }
+.diagnostics li > p { margin: 0 0 5px; }
+.diagnosticActions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.workspace .diagnosticActions button { font-size: 10px; min-height: 28px; padding: 3px 7px; }
 .history { background: #fff; border: 1px solid var(--line); padding: 18px; }
 .history article { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line); padding: 16px 0; }
 .history article > div { flex: 1; }
