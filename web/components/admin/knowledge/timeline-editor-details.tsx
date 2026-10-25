@@ -15,11 +15,24 @@ export const emptyTimelineDetails = (): TimelineEditorialDetails => ({ sources: 
 
 export function TimelineSupplementalSources({ owner, value, onChange }: { owner: string; value: TimelineEditorialDetails; onChange: (value: TimelineEditorialDetails) => void }) {
   const [picking, setPicking] = useState("");
+  const [expanded, setExpanded] = useState(() => new Set(value.sources.filter(row => !row.citation).map(row => row.id)));
+  function addSource() {
+    const id = createRequestKey();
+    setExpanded(current => new Set([...current, id]));
+    onChange({ ...value, confirmed: false, sources: [...value.sources, { id, kind: "book", citation: "", locator: "", quote: "", status: "related", asset_id: null, page: null }] });
+  }
   const change = (id: string, patch: Partial<TimelineSourceRecord>) => onChange({ ...value, confirmed: false, sources: value.sources.map(row => row.id === id ? { ...row, ...patch } : row) });
   return <section className={styles.sources} aria-label="补充出处与来源分歧">
-    <header><h3>补充出处</h3><button type="button" disabled={value.sources.length >= 20} onClick={() => onChange({ ...value, confirmed:false, sources:[...value.sources,{id:createRequestKey(),kind:"book",citation:"",locator:"",quote:"",status:"related",asset_id:null,page:null}] })}>＋ 添加证据</button></header>
+    <header><h3>补充出处</h3><button type="button" disabled={value.sources.length >= 20} onClick={addSource}>＋ 添加证据</button></header>
     {!value.sources.length ? <p>可添加相关研究或不同记载，保留各自出处。</p> : null}
-    {value.sources.map((row,index) => <details key={row.id} open={row.id === picking || !row.citation} className={styles.source}>
+    {value.sources.map((row,index) => <details key={row.id} open={expanded.has(row.id)} onToggle={event => {
+      const open = event.currentTarget.open;
+      setExpanded(current => {
+        if (current.has(row.id) === open) return current;
+        const next = new Set(current); if (open) next.add(row.id); else next.delete(row.id); return next;
+      });
+      if (!open) setPicking(current => current === row.id ? "" : current);
+    }} className={styles.source}>
       <summary>证据 {index + 2} · {row.status === "disputed" ? "存疑" : row.status === "adopted" ? "辅助采用" : "相关研究"} · {row.citation || "待填写出处"}</summary>
       <label>来源类型<select value={row.kind} onChange={event => change(row.id,{kind:event.target.value as TimelineSourceRecord["kind"]})}><option value="book">图书</option><option value="article">论文</option><option value="archive">档案</option><option value="other">其他出处</option></select></label>
       <label>书目或来源信息<textarea required rows={2} maxLength={1000} value={row.citation} onChange={event => change(row.id,{citation:event.target.value})}/></label>
