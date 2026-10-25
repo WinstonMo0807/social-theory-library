@@ -1940,6 +1940,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/provider-secrets/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Owner-only compatibility inventory; bound secrets use their atomic editor. */
+        get: operations["catalog_admin_provider_secrets_retrieve"];
+        put?: never;
+        /** @description Owner-only compatibility inventory; bound secrets use their atomic editor. */
+        post: operations["catalog_admin_provider_secrets_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Owner-only compatibility inventory; bound secrets use their atomic editor. */
+        patch: operations["catalog_admin_provider_secrets_partial_update"];
+        trace?: never;
+    };
     "/api/catalog/admin/public-feedback/": {
         parameters: {
             query?: never;
@@ -8754,6 +8773,48 @@ export interface components {
             workbench_url: string;
             canonical_write_deferred: boolean;
         };
+        CredentialBinding: {
+            kind: string;
+            key: string;
+            url: string;
+        };
+        CredentialCommandInputRequest: {
+            expected_version: string;
+            action: components["schemas"]["ProviderCredentialOperationEnum"];
+            alias: string;
+            purpose?: components["schemas"]["PurposeEnum"];
+            provider_key?: string;
+            secret?: string;
+            /** @default false */
+            confirm_delete: boolean;
+        };
+        CredentialRecord: {
+            alias: string;
+            purpose: string;
+            provider_key: string;
+            configured: boolean;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            last_tested_at: string | null;
+            last_test_status: string;
+            last_test_message: string;
+            secret_values_exposed: boolean;
+            bindings: components["schemas"]["CredentialBinding"][];
+            can_edit_here: boolean;
+        };
+        CredentialSnapshot: {
+            configuration_version: string;
+            secrets: components["schemas"]["CredentialRecord"][];
+            summary: {
+                [key: string]: number;
+            };
+            page: number;
+            pages: number;
+            page_size: number;
+            has_next: boolean;
+            secret_values_exposed: boolean;
+        };
         /**
          * @description * `environment` - environment
          *     * `saved` - saved
@@ -14660,6 +14721,9 @@ export interface components {
             page?: string;
             label?: string;
         };
+        PatchedCredentialVersionInputRequest: {
+            expected_version?: string;
+        };
         PatchedFeedbackUpdateInputRequest: {
             /** Format: uuid */
             request_id?: string;
@@ -17543,6 +17607,12 @@ export interface components {
             source_revision_id: string;
             status: string;
         };
+        /**
+         * @description * `research_source` - research_source
+         *     * `ai_runtime` - ai_runtime
+         * @enum {string}
+         */
+        PurposeEnum: "research_source" | "ai_runtime";
         QueryScopeInputRequest: {
             /** @default library */
             kind: components["schemas"]["ResearchScopeKindEnum"];
@@ -26614,6 +26684,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthorityReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_provider_secrets_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialSnapshot"];
+                };
+            };
+        };
+    };
+    catalog_admin_provider_secrets_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CredentialCommandInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CredentialCommandInputRequest"];
+                "multipart/form-data": components["schemas"]["CredentialCommandInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialSnapshot"];
+                };
+            };
+        };
+    };
+    catalog_admin_provider_secrets_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCredentialVersionInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCredentialVersionInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCredentialVersionInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialSnapshot"];
                 };
             };
         };

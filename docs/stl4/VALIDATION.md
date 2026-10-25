@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 M26旧凭据边界
+
+M26旧凭据：33e9c6为6 Python AST/compile、3条SQLite SQL编译及目标diff0；6035a2为契约0错误10既有警告/418路径；dfc34e→ab7a22 TypeScript noEmit0。新旧验收定义均未运行，无真实凭据/API/数据库、测试、浏览器、迁移或部署；PG驱动受本机应用控制限制。
+
 ## 2026-10-25 M26模型配置
 
 M26模型：1f40c8禁数据库契约0错误10既有警告/417路径；3e737c为9 Python AST/compile及4条SQLite SQL编译；a282f1为2份旧Python验收定义和JS定义语法检查0。8f9f64→b895b4目标ESLint/TypeScript noEmit0，a64409目标及暂存diff0。验收定义均未运行，无数据库连接、模型调用、迁移、浏览器或部署；PG驱动受Windows应用控制限制。

@@ -8827,6 +8827,137 @@
                 }
             }
         },
+        "/api/catalog/admin/provider-secrets/": {
+            "get": {
+                "operationId": "catalog_admin_provider_secrets_retrieve",
+                "description": "Owner-only compatibility inventory; bound secrets use their atomic editor.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CredentialSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_provider_secrets_create",
+                "description": "Owner-only compatibility inventory; bound secrets use their atomic editor.",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CredentialCommandInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CredentialCommandInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CredentialCommandInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CredentialSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_provider_secrets_partial_update",
+                "description": "Owner-only compatibility inventory; bound secrets use their atomic editor.",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCredentialVersionInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCredentialVersionInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCredentialVersionInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CredentialSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/public-feedback/": {
             "get": {
                 "operationId": "catalog_admin_public_feedback_list",
@@ -39397,6 +39528,168 @@
                     "workbench_url"
                 ]
             },
+            "CredentialBinding": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string"
+                    },
+                    "key": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "key",
+                    "kind",
+                    "url"
+                ]
+            },
+            "CredentialCommandInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/ProviderCredentialOperationEnum"
+                    },
+                    "alias": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                    },
+                    "purpose": {
+                        "$ref": "#/components/schemas/PurposeEnum"
+                    },
+                    "provider_key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-z][a-z0-9_-]{0,119}$"
+                    },
+                    "secret": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1,
+                        "maxLength": 16384
+                    },
+                    "confirm_delete": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "action",
+                    "alias",
+                    "expected_version"
+                ]
+            },
+            "CredentialRecord": {
+                "type": "object",
+                "properties": {
+                    "alias": {
+                        "type": "string"
+                    },
+                    "purpose": {
+                        "type": "string"
+                    },
+                    "provider_key": {
+                        "type": "string"
+                    },
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "last_tested_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_test_status": {
+                        "type": "string"
+                    },
+                    "last_test_message": {
+                        "type": "string"
+                    },
+                    "secret_values_exposed": {
+                        "type": "boolean"
+                    },
+                    "bindings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CredentialBinding"
+                        }
+                    },
+                    "can_edit_here": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "alias",
+                    "bindings",
+                    "can_edit_here",
+                    "configured",
+                    "last_test_message",
+                    "last_test_status",
+                    "last_tested_at",
+                    "provider_key",
+                    "purpose",
+                    "secret_values_exposed",
+                    "updated_at"
+                ]
+            },
+            "CredentialSnapshot": {
+                "type": "object",
+                "properties": {
+                    "configuration_version": {
+                        "type": "string"
+                    },
+                    "secrets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CredentialRecord"
+                        }
+                    },
+                    "summary": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "has_next": {
+                        "type": "boolean"
+                    },
+                    "secret_values_exposed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "configuration_version",
+                    "has_next",
+                    "page",
+                    "page_size",
+                    "pages",
+                    "secret_values_exposed",
+                    "secrets",
+                    "summary"
+                ]
+            },
             "CredentialStorageEnum": {
                 "enum": [
                     "environment",
@@ -58741,6 +59034,16 @@
                     }
                 }
             },
+            "PatchedCredentialVersionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    }
+                }
+            },
             "PatchedFeedbackUpdateInputRequest": {
                 "type": "object",
                 "properties": {
@@ -68521,6 +68824,14 @@
                     "source_revision_id",
                     "status"
                 ]
+            },
+            "PurposeEnum": {
+                "enum": [
+                    "research_source",
+                    "ai_runtime"
+                ],
+                "type": "string",
+                "description": "* `research_source` - research_source\n* `ai_runtime` - ai_runtime"
             },
             "QueryScopeInputRequest": {
                 "type": "object",

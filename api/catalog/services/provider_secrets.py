@@ -62,21 +62,34 @@ def serialize_provider_secret(row: ProviderCredentialSecret) -> dict:
         "configured": bool(row.ciphertext),
         "updated_at": row.updated_at,
         "last_tested_at": row.last_tested_at,
-        "last_test_status": row.last_test_status,
-        "last_test_message": row.last_test_message,
+        "last_test_status": row.last_test_status if row.last_test_status in {'healthy','degraded','failed','unavailable','not_configured','disabled','unknown'} else '',
+        "last_test_message": "",  # Historic upstream text is not a safe credential status field.
         "secret_values_exposed": False,
     }
 
 
-def provider_secret_registry_payload() -> dict:
-    rows = [serialize_provider_secret(row) for row in ProviderCredentialSecret.objects.all()]
+def provider_secret_registry_payload(*, page=1) -> dict:
+    from django.core.paginator import Paginator, InvalidPage
+    from django.db.models import Count
+    queryset = ProviderCredentialSecret.objects.order_by('alias', 'pk')
+    paginator = Paginator(queryset, 50)
+    try:
+        current = paginator.page(page)
+    except InvalidPage as exc:
+        raise ProviderSecretError('invalid_page', '凭据记录页码无效，请重新读取第一页。') from exc
+    rows = [serialize_provider_secret(row) for row in current.object_list]
+    counts = {row['purpose']: row['total'] for row in queryset.order_by().values('purpose').annotate(total=Count('pk'))}
     return {
         "secrets": rows,
         "summary": {
-            "configured": len(rows),
-            "research_source": sum(row["purpose"] == "research_source" for row in rows),
-            "ai_runtime": sum(row["purpose"] == "ai_runtime" for row in rows),
+            "configured": sum(counts.values()),
+            "research_source": counts.get('research_source', 0),
+            "ai_runtime": counts.get('ai_runtime', 0),
         },
+        "page": current.number,
+        "pages": paginator.num_pages,
+        "page_size": 50,
+        "has_next": current.has_next(),
         "secret_values_exposed": False,
     }
 

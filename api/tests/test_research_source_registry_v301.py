@@ -221,6 +221,7 @@ def test_owner_can_store_encrypted_provider_credential_without_readback(
         "/api/catalog/admin/provider-secrets/",
         {
             "action": "set",
+            "expected_version": api_client.get("/api/catalog/admin/provider-secrets/").data["configuration_version"],
             "alias": "openalex-owner",
             "purpose": "research_source",
             "provider_key": "openalex",
@@ -268,6 +269,7 @@ def test_research_source_test_records_safe_credential_result_without_changing_se
         "/api/catalog/admin/provider-secrets/",
         {
             "action": "set",
+            "expected_version": api_client.get("/api/catalog/admin/provider-secrets/").data["configuration_version"],
             "alias": "openalex-health",
             "purpose": "research_source",
             "provider_key": "openalex",
