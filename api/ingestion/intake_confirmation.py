@@ -35,9 +35,10 @@ ACTIVE = {"received", "validating", "deduplicating", "extracting", "ocr", "metad
 def actor_for(request, lock=False):
     if request.headers.get("X-Editor-Owner") != str(request.user.pk):
         raise PermissionDenied("登录账户已变化，请重新打开收件确认。")
-    if not lock:
-        return request.user
-    actor = get_object_or_404(get_user_model().objects.select_for_update(), pk=request.user.pk, is_active=True)
+    actors = get_user_model().objects.all()
+    if lock:
+        actors = actors.select_for_update()
+    actor = get_object_or_404(actors, pk=request.user.pk, is_active=True)
     if actor.token_version != request.user.token_version or not has_capability(actor, Capability.EDIT_METADATA):
         raise PermissionDenied("当前会话不能继续编目操作。")
     return actor
@@ -64,13 +65,19 @@ def edition_version(edition):
     return f"{edition.updated_at.isoformat()}:{edition.work.updated_at.isoformat()}"
 
 
-def candidates(item, query="", work_id=None):
+def candidates(item, query="", work_id=None, scope="all"):
     metadata = item.recognized_metadata or {}
     title = str(metadata.get("title") or (item.edition.work.title if item.edition_id else "")).strip()
     if work_id:
         condition = Q(work_id=work_id)
+        if query:
+            condition &= Q(work__title__icontains=query) | Q(contributions__person__preferred_name__icontains=query) | Q(isbn__icontains=query) | Q(doi__icontains=query)
     elif query:
         condition = Q(work__title__icontains=query) | Q(contributions__person__preferred_name__icontains=query) | Q(isbn__icontains=query) | Q(doi__icontains=query)
+    elif scope == "same":
+        condition = Q(work__normalized_title=title.casefold()) | Q(work__title__iexact=title) if title else Q(pk__in=[])
+    elif scope == "duplicate":
+        condition = Q(assets__kind="original", assets__sha256=item.sha256) if item.sha256 else Q(pk__in=[])
     else:
         ids = item.entity_resolution_candidates.filter(target_type="work", candidate_entity_type="work").values_list("candidate_entity_id", flat=True)
         # IDs from resolution records are strings; do not cast unchecked legacy values to UUID in SQL.
@@ -84,7 +91,13 @@ def candidates(item, query="", work_id=None):
         if metadata.get("isbn"): condition |= Q(isbn__iexact=normalize_isbn(metadata["isbn"])) | Q(isbn__iexact=str(metadata["isbn"]))
         if metadata.get("doi"): condition |= Q(doi__iexact=normalize_doi(metadata["doi"]))
         if item.sha256: condition |= Q(assets__sha256=item.sha256, assets__kind="original")
-    return Edition.objects.filter(condition).select_related("work").prefetch_related("contributions__person").distinct().annotate(
+    rows = Edition.objects.filter(condition)
+    if scope == "duplicate":
+        rows = rows.filter(assets__kind="original", assets__sha256=item.sha256) if item.sha256 else rows.none()
+    elif scope == "same":
+        # Work.save stores casefold + trim; this is a title filter, never an identity decision.
+        rows = rows.filter(Q(work__normalized_title=title.casefold()) | Q(work__title__iexact=title)) if title else rows.none()
+    return rows.select_related("work").prefetch_related("contributions__person").distinct().annotate(
         intake_priority=Case(When(pk=item.edition_id, then=Value(0)), When(work__title__iexact=title, then=Value(1)), default=Value(2), output_field=IntegerField())
     ).order_by("intake_priority", "-updated_at", "pk")
 
@@ -112,6 +125,8 @@ class IntakeQuerySerializer(serializers.Serializer):
     q = serializers.CharField(max_length=160, required=False, allow_blank=True)
     work = serializers.UUIDField(required=False)
     page = serializers.IntegerField(min_value=1, required=False, default=1)
+    scope = serializers.ChoiceField(choices=["all", "same", "duplicate"], required=False, default="all")
+    selected = serializers.UUIDField(required=False)
 
 
 class IntakeChoiceSerializer(serializers.Serializer):
@@ -131,6 +146,26 @@ class IntakeCommandSerializer(serializers.Serializer):
     confirm = serializers.BooleanField(required=False, default=False)
 
 
+class IntakeCandidateSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    work_id = serializers.UUIDField()
+    version = serializers.CharField()
+    title = serializers.CharField()
+    document_type = serializers.ChoiceField(choices=DocumentType.choices)
+    authors = serializers.ListField(child=serializers.CharField())
+    year = serializers.IntegerField(allow_null=True)
+    publisher = serializers.CharField(allow_blank=True)
+    language = serializers.CharField(allow_blank=True)
+    version_label = serializers.CharField(allow_blank=True)
+    isbn = serializers.CharField(allow_blank=True)
+    doi = serializers.CharField(allow_blank=True)
+    state = serializers.CharField()
+    exact_duplicate = serializers.BooleanField()
+    reasons = serializers.ListField(child=serializers.CharField())
+    cover_url = serializers.CharField(allow_blank=True)
+    edit_url = serializers.CharField()
+
+
 class IntakeWorkspaceSerializer(serializers.Serializer):
     owner_id = serializers.CharField()
     version = serializers.CharField()
@@ -138,7 +173,10 @@ class IntakeWorkspaceSerializer(serializers.Serializer):
     batch_id = serializers.UUIDField()
     preview_url = serializers.CharField()
     draft = IntakeChoiceSerializer(allow_null=True)
-    candidates = serializers.ListField(child=serializers.JSONField())
+    candidates = IntakeCandidateSerializer(many=True)
+    selected_candidate = IntakeCandidateSerializer(allow_null=True)
+    scope = serializers.ChoiceField(choices=["all", "same", "duplicate"])
+    match_title = serializers.CharField(allow_blank=True)
     count = serializers.IntegerField()
     page = serializers.IntegerField()
     pages = serializers.IntegerField()
@@ -149,6 +187,7 @@ class IntakeWorkspaceSerializer(serializers.Serializer):
 
 class IntakeReceiptSerializer(serializers.Serializer):
     owner_id = serializers.CharField()
+    item_id = serializers.UUIDField()
     request_id = serializers.UUIDField()
     state = serializers.ChoiceField(choices=["applied", "cancelled"])
     next_url = serializers.CharField(allow_blank=True)
@@ -156,6 +195,7 @@ class IntakeReceiptSerializer(serializers.Serializer):
 
 def receipt(event):
     return {"owner_id": str(event.actor_id), "request_id": event.request_id,
+            "item_id": event.object_id,
             "state": "cancelled" if event.after.get("cancelled") else "applied", "next_url": event.after.get("next_url", "")}
 
 
@@ -173,19 +213,30 @@ class IntakeConfirmationView(EditorialErrorMixin, AdminPrivateResponseMixin, API
         item = get_object_or_404(item_rows().prefetch_related("metadata_candidates", "edition__contributions__person"), pk=item_id)
         query = IntakeQuerySerializer(data=request.query_params); query.is_valid(raise_exception=True)
         params = query.validated_data
-        pages = Paginator(candidates(item, params.get("q", ""), params.get("work")), 16)
+        pages = Paginator(candidates(item, params.get("q", ""), params.get("work"), params["scope"]), 16)
         page = pages.get_page(params["page"])
         duplicate_ids = set(Asset.objects.filter(kind="original", sha256=item.sha256).values_list("edition_id", flat=True)) if item.sha256 else set()
         saved = latest(item, actor)
+        draft = saved.after.get("choice") if saved else None
+        selected_candidate = None
+        selected_id = params.get("selected") or (draft.get("edition_id") if draft else None)
+        if selected_id:
+            # A saved selection is independent of search/tab/page; never pick a different edition.
+            selected = Edition.objects.select_related("work").prefetch_related("contributions__person").filter(pk=selected_id).first()
+            if selected:
+                selected_candidate = candidate_row(selected, item, duplicate_ids)
         identity = (item.preflight_summary or {}).get("intake_identity") or {}
-        return Response({"owner_id": str(actor.pk), "version": version(item),
+        payload = {"owner_id": str(actor.pk), "version": version(item),
             "item": UploadWorkspaceItemSerializer(item, context={"request": request}).data,
             "batch_id": str(item.batch_id), "preview_url": f"/api/ingestion/items/{item.pk}/preview/" if item.file else "",
-            "draft": saved.after.get("choice") if saved else None,
+            "draft": draft, "selected_candidate": selected_candidate, "scope": params["scope"],
+            "match_title": str((item.recognized_metadata or {}).get("title") or (item.edition.work.title if item.edition_id else "")).strip(),
             "candidates": [candidate_row(row, item, duplicate_ids) for row in page],
             "count": pages.count, "page": page.number, "pages": pages.num_pages,
             "busy": item.status in ACTIVE or item.dispatch_status in {"pending", "queued", "running"},
-            "confirmed": bool(identity.get("confirmed")), "next_url": identity.get("next_url", "")})
+            "confirmed": bool(identity.get("confirmed")), "next_url": identity.get("next_url", "")}
+        actor_for(request)
+        return Response(payload)
 
     @extend_schema(request=IntakeCommandSerializer, responses=IntakeReceiptSerializer)
     @transaction.atomic
@@ -298,7 +349,9 @@ class IntakeReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView)
     @extend_schema(responses=IntakeReceiptSerializer)
     def get(self, request, item_id, request_id):
         actor = actor_for(request)
-        return Response(receipt(get_object_or_404(AuditEvent, actor=actor, action=ACTION, object_id=str(item_id), request_id=str(request_id))))
+        result = receipt(get_object_or_404(AuditEvent, actor=actor, action=ACTION, object_id=str(item_id), request_id=str(request_id)))
+        actor_for(request)
+        return Response(result)
 
     @extend_schema(request=IntakeReceiptCancelSerializer, responses=IntakeReceiptSerializer)
     @transaction.atomic

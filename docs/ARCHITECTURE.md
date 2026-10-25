@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 M03候选范围与恢复
+
+M03原收件接口增加分页前scope筛选和独立selected_candidate投影，沿同一Work/Edition/Asset/AuditEvent。保存选择版本不自动更新，回执补当前收件身份；无模型、迁移或合并变更。
+
 ## 2026-10-25 M08策划图片用途
 
 策划材料新增只读cover_display_uses：新稿绑定所选公开版本，旧稿读原MediaRendition用途，关联计划读明确关联版本；沿原文章快照与图片接口，不迁移历史数据。响应重算封面地址及可用版本标识，撤下来源不能保留缓存可用值。

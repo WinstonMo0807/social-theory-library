@@ -10812,6 +10812,27 @@ export interface components {
             };
             can_edit_authority: boolean;
         };
+        IntakeCandidate: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            work_id: string;
+            version: string;
+            title: string;
+            document_type: components["schemas"]["DocumentTypeEnum"];
+            authors: string[];
+            year: number | null;
+            publisher: string;
+            language: string;
+            version_label: string;
+            isbn: string;
+            doi: string;
+            state: string;
+            exact_duplicate: boolean;
+            reasons: string[];
+            cover_url: string;
+            edit_url: string;
+        };
         IntakeChoice: {
             mode: components["schemas"]["CatalogIdentityModeEnum"];
             /** Format: uuid */
@@ -10851,6 +10872,8 @@ export interface components {
         IntakeReceipt: {
             owner_id: string;
             /** Format: uuid */
+            item_id: string;
+            /** Format: uuid */
             request_id: string;
             state: components["schemas"]["EditorialSaveReceiptStateEnum"];
             next_url: string;
@@ -10866,7 +10889,10 @@ export interface components {
             batch_id: string;
             preview_url: string;
             draft: components["schemas"]["IntakeChoice"] | null;
-            candidates: unknown[];
+            candidates: components["schemas"]["IntakeCandidate"][];
+            selected_candidate: components["schemas"]["IntakeCandidate"] | null;
+            scope: components["schemas"]["IntakeWorkspaceScopeEnum"];
+            match_title: string;
             count: number;
             page: number;
             pages: number;
@@ -10874,6 +10900,13 @@ export interface components {
             confirmed: boolean;
             next_url: string;
         };
+        /**
+         * @description * `all` - all
+         *     * `same` - same
+         *     * `duplicate` - duplicate
+         * @enum {string}
+         */
+        IntakeWorkspaceScopeEnum: "all" | "same" | "duplicate";
         InvitationOutput: {
             actor_id: string;
             user_id: number;
@@ -32275,6 +32308,13 @@ export interface operations {
             query?: {
                 page?: number;
                 q?: string;
+                /**
+                 * @description * `all` - all
+                 *     * `same` - same
+                 *     * `duplicate` - duplicate
+                 */
+                scope?: "all" | "same" | "duplicate";
+                selected?: string;
                 work?: string;
             };
             header?: never;

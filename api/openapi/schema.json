@@ -20822,6 +20822,29 @@
                     },
                     {
                         "in": "query",
+                        "name": "scope",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "same",
+                                "duplicate"
+                            ],
+                            "type": "string",
+                            "default": "all",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `same` - same\n* `duplicate` - duplicate"
+                    },
+                    {
+                        "in": "query",
+                        "name": "selected",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "work",
                         "schema": {
                             "type": "string",
@@ -46320,6 +46343,90 @@
                     "terms"
                 ]
             },
+            "IntakeCandidate": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "work_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentTypeEnum"
+                    },
+                    "authors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "year": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "version_label": {
+                        "type": "string"
+                    },
+                    "isbn": {
+                        "type": "string"
+                    },
+                    "doi": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "exact_duplicate": {
+                        "type": "boolean"
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "edit_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authors",
+                    "cover_url",
+                    "document_type",
+                    "doi",
+                    "edit_url",
+                    "exact_duplicate",
+                    "id",
+                    "isbn",
+                    "language",
+                    "publisher",
+                    "reasons",
+                    "state",
+                    "title",
+                    "version",
+                    "version_label",
+                    "work_id",
+                    "year"
+                ]
+            },
             "IntakeChoice": {
                 "type": "object",
                 "properties": {
@@ -46430,6 +46537,10 @@
                     "owner_id": {
                         "type": "string"
                     },
+                    "item_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
                     "request_id": {
                         "type": "string",
                         "format": "uuid"
@@ -46442,6 +46553,7 @@
                     }
                 },
                 "required": [
+                    "item_id",
                     "next_url",
                     "owner_id",
                     "request_id",
@@ -46488,7 +46600,23 @@
                     },
                     "candidates": {
                         "type": "array",
-                        "items": {}
+                        "items": {
+                            "$ref": "#/components/schemas/IntakeCandidate"
+                        }
+                    },
+                    "selected_candidate": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/IntakeCandidate"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/IntakeWorkspaceScopeEnum"
+                    },
+                    "match_title": {
+                        "type": "string"
                     },
                     "count": {
                         "type": "integer"
@@ -46517,13 +46645,25 @@
                     "count",
                     "draft",
                     "item",
+                    "match_title",
                     "next_url",
                     "owner_id",
                     "page",
                     "pages",
                     "preview_url",
+                    "scope",
+                    "selected_candidate",
                     "version"
                 ]
+            },
+            "IntakeWorkspaceScopeEnum": {
+                "enum": [
+                    "all",
+                    "same",
+                    "duplicate"
+                ],
+                "type": "string",
+                "description": "* `all` - all\n* `same` - same\n* `duplicate` - duplicate"
             },
             "InvitationOutput": {
                 "type": "object",

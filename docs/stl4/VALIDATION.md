@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 M03候选范围与恢复
+
+M03候选范围：fd702f两AST/compile、四SQLite SQL编译及diff0；eed75d禁数据库契约0错误10既有警告，fe8b25生成418路径；9b84b7→94fa40目标ESLint/TypeScript noEmit0。八组用例只编写，没有测试、浏览器、实际文件或数据库操作、迁移、部署。
+
 ## 2026-10-25 R18关联布局
 
 R18关联布局：8f3cef为225节点CSS解析和目标diff0；0222d4→891a26目标ESLint及TypeScript noEmit0。实际读取PDF73、74，不等于实现页面对照；没有测试、浏览器或部署。
