@@ -31,7 +31,7 @@ async function setup(page: Page) {
     state: {
       work: { id: workId, title: "合成版本工作台", updated_at: stamp, cover_url: "", authors: [], document_type: "book", original_publication_year: null },
       editions: [{ id: editionId, label: "合成出版版本", version_label: "合成出版版本", publication_year: 2024, publisher: "合成机构", language: "zh",
-        is_primary: true, state: "published", original_count: 21, reader_count: 21, current_reader_asset_id: file(1).id }],
+        is_primary: true, state: "published", cover_url: "", contributors: [], searchable: false, original_count: 21, reader_count: 21, current_reader_asset_id: file(1).id }],
       selected_edition_id: editionId,
       inspected_file: null,
       edition: { id: editionId, updated_at: stamp, active_revision_id: id(3), current_reader_asset_id: file(1).id, public_reader_asset_id: file(1).id,
