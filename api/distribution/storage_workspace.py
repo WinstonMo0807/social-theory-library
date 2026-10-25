@@ -20,6 +20,7 @@ from catalog.services.query_lexicon.mutations import acquire_entity_lock
 from common.capabilities import Capability, has_capability
 from ingestion.models import AuditEvent
 from .models import BackupJob, BackupVerification, BackupSchedule
+from .index_backup import index_backup_configured
 
 
 class StorageConflict(APIException):
@@ -41,7 +42,8 @@ def file_statistics():
 
 
 def schedule_payload(scope, row=None):
-    return {"scope": scope, "label": {"database":"数据库与文件清单", "originals":"数据库、清单与原件", "incremental":"数据库与增量原件"}[scope],
+    return {"scope": scope, "label": {"database":"数据库与文件清单", "originals":"数据库、清单与原件", "incremental":"数据库与增量原件", "indexes":"检索索引"}[scope],
+        "include_indexes": scope == 'indexes' or bool(row and row.include_indexes),
         "base_backup_id": str(row.incremental_base_id) if row and row.incremental_base_id else None,
         "base_checksum": row.incremental_base.checksum if row and row.incremental_base_id else "",
         "enabled": bool(row and row.enabled), "interval_hours": row.interval_hours if row else 24,
@@ -77,6 +79,7 @@ def verification_payload(row):
         "expected_checksum": row.expected_checksum, "started_at": row.started_at, "completed_at": row.completed_at,
         "created_at": row.created_at, "error_message": row.error_message,
         "database_verified": bool(report.get("database_verified")),
+        "index_verified": report.get('index_verified') is True,
         "originals_verified": int(report.get("originals_verified") or 0), "detail": str(report.get("detail") or ""),
         "restore_verified": False}
 
@@ -86,17 +89,25 @@ def backup_payload(row, *, latest=None):
     database_metadata = manifest.get('database_metadata')
     catalog_snapshot = isinstance(database_metadata, dict) and database_metadata.get('catalog_inventory_snapshot') is True
     base = manifest.get('incremental_base')
+    export = manifest.get('search_index_export')
+    index_task = export.get('task_uid') if isinstance(export, dict) else None
+    scope = "完整数据库与增量原件（依赖全量基准）" if row.incremental_base_id else "数据库、文件清单与原件" if row.include_originals else "数据库与文件清单"
+    scope = '检索索引（独立导出）' if row.index_only else scope + ('及检索索引' if row.include_indexes else '')
     size = manifest.get("archive_bytes")
     duration = (row.completed_at - row.started_at).total_seconds() if row.completed_at and row.started_at else None
     error = "备份未完成，现有归档及原件保留。请核对备份目录、数据库备份工具与后台任务。" if row.status == "failed" else ""
     stalled = backup_stalled(row)
     return {"id": str(row.pk), "status": row.status, "status_label": "执行状态待核对" if stalled else row.get_status_display(),
         "stalled": stalled, "version": row.updated_at.isoformat(),
-        "include_originals": row.include_originals, "scope": "完整数据库与增量原件（依赖全量基准）" if row.incremental_base_id else "数据库、文件清单与原件" if row.include_originals else "数据库与文件清单",
+        "include_originals": row.include_originals, "scope": scope,
+        "include_indexes": row.include_indexes, "index_only": row.index_only,
+        "index_task_uid": index_task if type(index_task) is int else None,
+        "index_export_unknown": bool(export) and type(index_task) is not int,
+        "index_detail": ('包含同一检索实例的全部索引、文档与设置。索引导出与数据库不共享事务快照，恢复需隔离核对公开/私人边界及索引代次；不包含本地模型文件。' if row.include_indexes else ''),
         "incremental_base_id": str(row.incremental_base_id) if row.incremental_base_id else None,
         "incremental_base_checksum": base.get('archive_sha256','') if isinstance(base,dict) else '',
         "can_seed_incremental": bool(row.status=='completed' and row.include_originals and not row.incremental_base_id and latest and latest.status=='completed' and latest.expected_checksum==row.checksum),
-        "consistency_detail": ("此归档记录数据库、馆藏文件清单与迁移记录来自同一快照；原件按该清单的哈希复制，恢复仍须隔离核对。" if catalog_snapshot else
+        "consistency_detail": ('此为独立索引归档，不含数据库及原件。' if row.index_only else "此归档记录数据库、馆藏文件清单与迁移记录来自同一快照；原件按该清单的哈希复制，恢复仍须隔离核对。" if catalog_snapshot else
                                "此记录尚未提供数据库与馆藏清单共享快照的证据。旧备份不会自动升级此标记，须在隔离恢复时核对。"),
         "archive_name": Path(row.archive_path).name if row.archive_path else "尚未生成归档", "location": "配置的 NAS 备份目录",
         "archive_bytes": size if isinstance(size, int) and size >= 0 else None,
@@ -162,8 +173,9 @@ def storage_snapshot(actor, *, page=1, status="", as_of=None):
             {"label": "数据库与索引", "bytes": None}, {"label": "系统与其他", "bytes": None}],
         "file_statistics_notice": "分类数值来自登记的馆藏文件；不包含未登记缓存、模型、数据库或索引，不能代替所在卷实际占用。",
         "schedule": {"configured": any(row.enabled for row in schedules.values()),
-            "detail": "定时计划通过原任务服务执行。增量原件始终依赖指定的全量基准，数据库仍为完整快照；独立索引备份尚待接入。任务状态与归档校验分别核对。",
-            "plans": [schedule_payload(scope, schedules.get(scope)) for scope in ("database", "originals", "incremental")]},
+            "detail": "原任务服务执行数据库、全量或增量原件、独立索引计划。索引备份需同一实例导出目录的只读挂载；配置存在不代表运行可用。索引与数据库快照的时点分别核对。",
+            "plans": [schedule_payload(scope, schedules.get(scope)) for scope in ("originals", "incremental", "database", "indexes")]},
+        "index_backup_configured": index_backup_configured(),
         "backups": {"count": count, "page": page, "page_size": 20, "as_of": as_of, "results": [backup_payload(row, latest=latest.get(row.pk)) for row in page_rows]},
         "verifications": [verification_payload(row) for row in BackupVerification.objects.order_by("-created_at", "-id")[:30]],
         "rehearsals": rehearsals, "rehearsals_limited": reports_limited,
@@ -256,6 +268,9 @@ def _apply_storage_command(actor, values):
         if values["enabled"] and (values.get("first_run_at") is None or values["first_run_at"] <= timezone.now()):
             raise ValidationError("启用计划时，请明确选择未来的首次执行时间。")
         row = row or BackupSchedule(scope=scope)
+        row.include_indexes = scope == 'indexes' or values.get('include_indexes', False)
+        if values['enabled'] and row.include_indexes and not index_backup_configured():
+            raise ValidationError('同一索引实例的导出共享目录尚未配置，无法启用索引备份计划。')
         if scope == 'incremental' and values.get('base_backup_id') and (values['enabled'] or values['base_backup_id'] != row.incremental_base_id):
             from .incremental_backup import require_base
             from .backup_integrity import BackupIntegrityError
@@ -270,6 +285,10 @@ def _apply_storage_command(actor, values):
         row.next_run_at = values.get("first_run_at") if row.enabled else None
         row.configured_by = actor
         row.last_error = ""
+        if row.enabled and row.last_job_id and BackupJob.objects.filter(pk=row.last_job_id, status='failed', include_indexes=True).exists():
+            # Explicit schedule save acknowledges the old failure. Its job and
+            # remote receipt remain in history; beat itself never retries it.
+            row.last_job = None
         row.save()
         AuditEvent.objects.create(actor=actor, action="storage_schedule_saved", object_type="BackupSchedule", object_id=str(row.pk), request_id=str(identifier),
             after={"fingerprint": fingerprint, "scope": scope, "enabled": row.enabled, "interval_hours": row.interval_hours, "next_run_at": row.next_run_at.isoformat() if row.next_run_at else None})
@@ -281,16 +300,19 @@ def _apply_storage_command(actor, values):
             raise StorageConflict("请求编号已用于归档校验。")
         existing = BackupJob.objects.filter(pk=identifier).first()
         if existing:
-            if existing.requested_by_id != actor.pk or existing.include_originals != values["include_originals"] or existing.incremental_base_id != values.get('base_backup_id'):
+            if existing.requested_by_id != actor.pk or existing.include_originals != values["include_originals"] or existing.incremental_base_id != values.get('base_backup_id') or existing.include_indexes != values.get('include_indexes', False) or existing.index_only != values.get('index_only', False):
                 raise StorageConflict("请求编号已用于不同的备份。")
             return {"request_id": str(identifier), "operation": operation, "backup": backup_payload(existing)}
         destination = settings.NAS_BACKUP_ROOT.resolve()
         if not destination.is_dir():
             raise ValidationError("配置的备份目录尚不可用，请先核对存储挂载。")
         source_id = values.get("retry_from_id")
+        source = None
+        if values.get('include_indexes') and not index_backup_configured():
+            raise ValidationError('索引备份导出共享目录尚未配置。现有数据库与原件备份仍可使用。')
         if source_id:
             source = BackupJob.objects.filter(pk=source_id, status="failed").first()
-            if source is None or source.include_originals != values["include_originals"] or source.incremental_base_id != values.get('base_backup_id'):
+            if source is None or source.include_originals != values["include_originals"] or source.incremental_base_id != values.get('base_backup_id') or source.include_indexes != values.get('include_indexes', False) or source.index_only != values.get('index_only', False):
                 raise StorageConflict("原备份状态或范围已变化，请重新读取失败记录。")
         base = None
         manifest = {}
@@ -302,9 +324,15 @@ def _apply_storage_command(actor, values):
             except BackupIntegrityError as error:
                 raise ValidationError(str(error)) from error
             manifest = {'incremental_base':base_identity(base)}
-        job = BackupJob.objects.create(pk=identifier, requested_by=actor, destination_path=str(destination), include_originals=values["include_originals"], incremental_base=base, manifest=manifest)
+        if source and source.include_indexes and isinstance(source.manifest, dict) and source.manifest.get('search_index_export'):
+            export = source.manifest['search_index_export']
+            if not isinstance(export, dict) or type(export.get('task_uid')) is not int:
+                raise StorageConflict('原索引导出响应未知。请核对远端任务；不能自动重发。明确需要另一次导出时，从发起备份新建任务。')
+            manifest['search_index_export'] = export
+        job = BackupJob.objects.create(pk=identifier, requested_by=actor, destination_path=str(destination), include_originals=values["include_originals"], incremental_base=base, manifest=manifest,
+            include_indexes=values.get('include_indexes', False), index_only=values.get('index_only', False))
         AuditEvent.objects.create(actor=actor, action="storage_backup_requested", object_type="BackupJob", object_id=str(job.pk), request_id=str(identifier),
-            after={"include_originals": job.include_originals, "retry_from_id": str(source_id) if source_id else None, **manifest})
+            after={"include_originals": job.include_originals, "include_indexes": job.include_indexes, "index_only": job.index_only, "retry_from_id": str(source_id) if source_id else None, **manifest})
         from .storage_tasks import enqueue_authorized_backup
         transaction.on_commit(lambda: enqueue_authorized_backup(job.pk))
         return {"request_id": str(identifier), "operation": operation, "backup": backup_payload(job)}
@@ -357,9 +385,16 @@ def _apply_storage_command(actor, values):
     return {"request_id": str(identifier), "operation": "restore_plan", "restore_plan": {
         "backup_id": str(backup.pk), "archive_name": Path(backup.archive_path).name, "archive_sha256": backup.checksum,
         "integrity_verified_at": verified.completed_at if verified else None, "restore_executed": False,
-        "ready_for_rehearsal": bool(verified), "target": "空白隔离 PostgreSQL 数据库",
-        "command": "rehearse_database_restore", "report_option": "--write-report",
-        "requirements": ([f"这是增量原件归档，必须同时保留完整基准 {backup.incremental_base_id}；两份归档均需校验。恢复仅提取本归档清单列明的原件，不能把基准中的已删旧文件全部重新公开。数据库使用本次归档的完整快照。"] if backup.incremental_base_id else []) + ["先完成归档、数据库文件和所包含原件的校验。", "目标必须为空白隔离数据库，名称明确含 rehearsal/restore/test 等标记，并逐字确认数据库名。",
-            "命令的 --expected-sha256 必须填写本清单的 archive_sha256；使用 --write-report 保存签名演练记录。",
-            "沿既有命令检查 PostgreSQL 客户端与服务器版本；不把当前生产库作为目标。", "导入完成后核对账号、文件、索引及实际业务；导入成功本身不能代表整站恢复完成。",
-            "生产恢复或不可逆清理须另行提交具体影响与回退方案，并取得最终确认。"]}}
+        "ready_for_rehearsal": bool(verified), "target": "全新隔离 Meilisearch 实例" if backup.index_only else "空白隔离 PostgreSQL 数据库",
+        "command": "meilisearch --import-dump <隔离目录/search-index.dump>" if backup.index_only else "rehearse_database_restore", "report_option": "" if backup.index_only else "--write-report",
+        "requirements": ([f"这是增量原件归档，必须同时保留完整基准 {backup.incremental_base_id}；恢复仅提取本次清单列明的原件，不把基准已删旧文件全部重新公开。"] if backup.incremental_base_id else []) +
+            (["先校验归档与索引导出文件；仅在全新隔离实例导入，不指向活动索引目录。",
+              "保留源Meilisearch版本；不得向更旧版本导入。模型、运行凭据与网络配置不由此归档恢复。",
+              "索引包含实例全部文档与设置。导入可能恢复旧任务，隔离环境须阻断对生产API、Provider和私有数据服务的访问。",
+              "核对索引代次、应用映射、公开撤回状态与私人数据授权后才能考虑接入；不直接切换当前实例。",
+              "索引校验不产生数据库恢复签名报告；索引导入与查询验收仍须独立登记。"] if backup.include_indexes else []) +
+            ([] if backup.index_only else ["先完成归档、数据库文件和所包含原件的校验。",
+              "目标必须为空白隔离数据库，名称明确含rehearsal/restore/test等标记，并逐字确认数据库名。",
+              "rehearse_database_restore的--expected-sha256填写本清单archive_sha256；使用--write-report保存签名演练记录。",
+              "沿既有命令检查PostgreSQL客户端与服务器版本；索引与数据库不共享事务时点，导入成功不代表整站恢复。", "导入后核对账号、文件、索引映射与业务。"])+
+            ["生产恢复或不可逆清理须另行提交具体影响与回退方案，并取得最终确认。"]}}

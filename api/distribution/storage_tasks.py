@@ -115,6 +115,12 @@ def dispatch_due_backups():
                 continue
             if plan.last_job_id and BackupJob.objects.filter(pk=plan.last_job_id, status__in=["queued", "running"]).exists():
                 continue
+            if plan.last_job_id and BackupJob.objects.filter(pk=plan.last_job_id, status='failed', include_indexes=True).exists():
+                plan.enabled = False
+                plan.next_run_at = None
+                plan.last_error = '上次索引备份未完成，计划已暂停，避免重复远端导出。请核对上次任务后明确重新启用。'
+                plan.save(update_fields=['enabled', 'next_run_at', 'last_error', 'updated_at'])
+                continue
             root = settings.NAS_BACKUP_ROOT.resolve()
             if not root.is_dir():
                 plan.last_error = "备份目录暂不可用，本次未创建备份；一小时后重新核对。"
@@ -122,6 +128,14 @@ def dispatch_due_backups():
                 plan.save(update_fields=["last_error", "next_run_at", "updated_at"])
                 continue
             base, manifest = None, {}
+            with_indexes = plan.scope == 'indexes' or plan.include_indexes
+            if with_indexes:
+                from .index_backup import index_backup_configured
+                if not index_backup_configured():
+                    plan.last_error = '索引导出共享目录未配置，计划未执行。'
+                    plan.next_run_at = timezone.now() + timedelta(hours=1)
+                    plan.save(update_fields=['last_error', 'next_run_at', 'updated_at'])
+                    continue
             if plan.scope == 'incremental':
                 from .incremental_backup import require_base, base_identity
                 try:
@@ -132,7 +146,8 @@ def dispatch_due_backups():
                     plan.save(update_fields=['last_error','next_run_at','updated_at'])
                     continue
                 manifest = {'incremental_base':base_identity(base)}
-            job = BackupJob.objects.create(requested_by=actor, destination_path=str(root), include_originals=plan.scope in {"originals", "incremental"}, incremental_base=base, manifest=manifest)
+            job = BackupJob.objects.create(requested_by=actor, destination_path=str(root), include_originals=plan.scope in {"originals", "incremental"}, incremental_base=base, manifest=manifest,
+                include_indexes=with_indexes, index_only=plan.scope == 'indexes')
             plan.last_job = job
             plan.next_run_at = timezone.now() + timedelta(hours=plan.interval_hours)
             plan.last_error = ""

@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 M27检索索引备份
+
+M27索引：63dcbe/b2e523为12 Python AST/compile、YAML解析、distribution声明比对、2条SQLite SQL编译和最终diff0；禁连数据库OpenAPI0错误10既有警告/414路径。1d3be8→292275目标ESLint/TypeScript noEmit0。test_stl4_index_backup_20261025.py只编写未执行。无真实API、导出、备份、恢复、浏览器、迁移、部署；PG驱动受本机应用控制限制。
+
 ## 2026-10-24 M09结果导出静态记录
 
 `.venv/Scripts/python.exe tmp/stl4-processing-export-static-20261024.py`及契约脚本：4ad753→37d365退出0，3 AST、主动阻止数据库连接的OpenAPI0错误10旧警告、333路径类型生成与PostCSS。`tsc --noEmit --incremental false` c3f867→b82f81退出0；processing-workspace/processing-result-export ESLint 4e49e5退出0；新增用例AST与git diff --check bbcf12退出0。

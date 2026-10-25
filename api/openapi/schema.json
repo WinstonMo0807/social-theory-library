@@ -36407,6 +36407,22 @@
             "BackupOutput": {
                 "type": "object",
                 "properties": {
+                    "include_indexes": {
+                        "type": "boolean"
+                    },
+                    "index_only": {
+                        "type": "boolean"
+                    },
+                    "index_detail": {
+                        "type": "string"
+                    },
+                    "index_task_uid": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "index_export_unknown": {
+                        "type": "boolean"
+                    },
                     "incremental_base_id": {
                         "type": "string",
                         "format": "uuid",
@@ -36498,7 +36514,12 @@
                     "duration_seconds",
                     "error_message",
                     "id",
+                    "include_indexes",
                     "include_originals",
+                    "index_detail",
+                    "index_export_unknown",
+                    "index_only",
+                    "index_task_uid",
                     "location",
                     "restore_status",
                     "scope",
@@ -36544,6 +36565,9 @@
             "BackupScheduleOutput": {
                 "type": "object",
                 "properties": {
+                    "include_indexes": {
+                        "type": "boolean"
+                    },
                     "base_backup_id": {
                         "type": "string",
                         "format": "uuid",
@@ -36588,6 +36612,7 @@
                     "base_backup_id",
                     "base_checksum",
                     "enabled",
+                    "include_indexes",
                     "interval_hours",
                     "label",
                     "last_error",
@@ -36601,6 +36626,9 @@
             "BackupVerificationOutput": {
                 "type": "object",
                 "properties": {
+                    "index_verified": {
+                        "type": "boolean"
+                    },
                     "id": {
                         "type": "string",
                         "format": "uuid"
@@ -76131,6 +76159,12 @@
                     "include_originals": {
                         "type": "boolean"
                     },
+                    "include_indexes": {
+                        "type": "boolean"
+                    },
+                    "index_only": {
+                        "type": "boolean"
+                    },
                     "retry_from_id": {
                         "type": "string",
                         "format": "uuid"
@@ -76213,10 +76247,11 @@
                 "enum": [
                     "database",
                     "originals",
-                    "incremental"
+                    "incremental",
+                    "indexes"
                 ],
                 "type": "string",
-                "description": "* `database` - database\n* `originals` - originals\n* `incremental` - incremental"
+                "description": "* `database` - database\n* `originals` - originals\n* `incremental` - incremental\n* `indexes` - indexes"
             },
             "StorageCommandOutput": {
                 "type": "object",
@@ -76406,6 +76441,9 @@
             "StorageSnapshot": {
                 "type": "object",
                 "properties": {
+                    "index_backup_configured": {
+                        "type": "boolean"
+                    },
                     "checked_at": {
                         "type": "string",
                         "format": "date-time"
@@ -76482,6 +76520,7 @@
                     "cleanup",
                     "file_statistics_notice",
                     "file_types",
+                    "index_backup_configured",
                     "locations",
                     "permissions",
                     "rehearsals",

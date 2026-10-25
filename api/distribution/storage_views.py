@@ -14,13 +14,15 @@ class StorageCommandInput(serializers.Serializer):
     operation = serializers.ChoiceField(choices=["create_backup", "verify_archive", "restore_plan", "close_stalled_verification", "save_schedule", "close_stalled_backup", "save_retention", "scan_cleanup", "queue_cleanup", "cancel_cleanup"])
     request_id = serializers.UUIDField()
     include_originals = serializers.BooleanField(required=False)
+    include_indexes = serializers.BooleanField(required=False)
+    index_only = serializers.BooleanField(required=False)
     retry_from_id = serializers.UUIDField(required=False)
     base_backup_id = serializers.UUIDField(required=False, allow_null=True)
     expected_base_checksum = serializers.RegexField(r"^[a-f0-9]{64}$", required=False)
     backup_id = serializers.UUIDField(required=False)
     expected_checksum = serializers.RegexField(r"^[a-f0-9]{64}$", required=False)
     verification_id = serializers.UUIDField(required=False)
-    scope = serializers.ChoiceField(choices=["database", "originals", "incremental"], required=False)
+    scope = serializers.ChoiceField(choices=["database", "originals", "incremental", "indexes"], required=False)
     enabled = serializers.BooleanField(required=False)
     interval_hours = serializers.IntegerField(min_value=6, max_value=720, required=False)
     first_run_at = serializers.DateTimeField(required=False, allow_null=True)
@@ -49,7 +51,7 @@ class StorageCommandInput(serializers.Serializer):
             return attrs
         if attrs["operation"] == "save_schedule":
             required = {"operation", "request_id", "scope", "enabled", "interval_hours", "expected_version"}
-            allowed = required | {"first_run_at", "base_backup_id", "expected_base_checksum"}
+            allowed = required | {"first_run_at", "base_backup_id", "expected_base_checksum", "include_indexes"}
             if required - set(attrs) or set(attrs) - allowed:
                 raise serializers.ValidationError("字段与备份计划操作不匹配。")
             if attrs['scope'] == 'incremental' and attrs['enabled'] and (not attrs.get('base_backup_id') or not attrs.get('expected_base_checksum')):
@@ -62,16 +64,19 @@ class StorageCommandInput(serializers.Serializer):
         required = {"operation", "request_id"} | ({"include_originals"} if attrs["operation"] == "create_backup" else {"backup_id", "expected_checksum"})
         if attrs["operation"] == "close_stalled_verification":
             required.add("verification_id")
-        allowed = required | ({"retry_from_id", "base_backup_id", "expected_base_checksum"} if attrs["operation"] == "create_backup" else set())
+        allowed = required | ({"retry_from_id", "base_backup_id", "expected_base_checksum", "include_indexes", "index_only"} if attrs["operation"] == "create_backup" else set())
         if required - set(attrs) or set(attrs) - allowed:
             raise serializers.ValidationError("字段与本次操作不匹配。")
         if attrs['operation'] == 'create_backup':
+            if attrs.get('index_only') and (not attrs.get('include_indexes') or attrs['include_originals'] or attrs.get('base_backup_id')):
+                raise serializers.ValidationError('独立索引备份仅包含索引，不包含数据库或原件。')
             if bool(attrs.get('base_backup_id')) != bool(attrs.get('expected_base_checksum')) or attrs.get('base_backup_id') and not attrs['include_originals']:
                 raise serializers.ValidationError('增量备份须包含原件，并提供完整基准及其归档身份。')
         return attrs
 
 
 class BackupVerificationOutput(serializers.Serializer):
+    index_verified = serializers.BooleanField(required=False)
     id = serializers.UUIDField()
     backup_id = serializers.UUIDField()
     status = serializers.CharField()
@@ -89,6 +94,11 @@ class BackupVerificationOutput(serializers.Serializer):
 
 
 class BackupOutput(serializers.Serializer):
+    include_indexes = serializers.BooleanField()
+    index_only = serializers.BooleanField()
+    index_detail = serializers.CharField(allow_blank=True)
+    index_task_uid = serializers.IntegerField(allow_null=True)
+    index_export_unknown = serializers.BooleanField()
     incremental_base_id = serializers.UUIDField(allow_null=True, required=False)
     incremental_base_checksum = serializers.CharField(allow_blank=True, required=False)
     can_seed_incremental = serializers.BooleanField(required=False)
@@ -159,6 +169,7 @@ class RetentionRule(serializers.Serializer):
 
 
 class BackupScheduleOutput(serializers.Serializer):
+    include_indexes = serializers.BooleanField()
     base_backup_id = serializers.UUIDField(allow_null=True)
     base_checksum = serializers.CharField(allow_blank=True)
     scope = serializers.CharField()
@@ -195,6 +206,7 @@ class StorageRetentionPolicy(serializers.Serializer):
 
 
 class StorageSnapshot(serializers.Serializer):
+    index_backup_configured = serializers.BooleanField()
     checked_at = serializers.DateTimeField()
     permissions = serializers.DictField(child=serializers.BooleanField())
     locations = StorageLocation(many=True)
@@ -229,7 +241,7 @@ class RestorePlan(serializers.Serializer):
     ready_for_rehearsal = serializers.BooleanField()
     target = serializers.CharField()
     command = serializers.CharField()
-    report_option = serializers.CharField()
+    report_option = serializers.CharField(allow_blank=True)
     requirements = serializers.ListField(child=serializers.CharField())
 
 

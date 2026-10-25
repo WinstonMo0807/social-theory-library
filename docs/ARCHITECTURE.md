@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 M27检索索引备份
+
+原备份支持Meilisearch独立导出或同归档保存。使用原实例POST /dumps与任务回执，读取只读共享导出目录；不读取/复制活动数据库目录。schema3包含独立索引SHA/版本/范围，数据库与索引不宣称共享事务时点。distribution0006及可选Compose叠加配置未应用，见docs/stl4/INDEX_BACKUP_20261025.md。
+
 ## 2026-10-25 M27增量原件
 
 原BackupJob/BackupSchedule新增固定全量基准保护性关联，distribution0005未应用。schema2增量归档包含完整数据库与变化原件，引用仅一份schema1完整原件归档；创建和完整性校验均重新核对基准文件。没有独立数据库增量链或第二套备份服务，原schema1保持兼容。

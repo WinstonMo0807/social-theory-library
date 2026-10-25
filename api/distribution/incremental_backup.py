@@ -17,7 +17,7 @@ def verified_base_manifest(base):
     if base.incremental_base_id or not base.include_originals or base.status != 'completed':
         raise BackupIntegrityError('增量备份只引用一份完整原件基准，不串联其他增量归档。')
     _, manifest = verify_archive(base, base.checksum, return_manifest=True)
-    if manifest.get('schema') != 1 or manifest.get('incremental_base'):
+    if manifest.get('schema') not in {1, 3} or manifest.get('index_only') or manifest.get('incremental_base'):
         raise BackupIntegrityError('基准备份不是完整的独立原件归档。')
     return {item['relative_path']: item for item in manifest['assets'] if item.get('kind') == 'original'}
 

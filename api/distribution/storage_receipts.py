@@ -59,6 +59,7 @@ def legacy_receipt(actor, identifier, values=None):
         if values:
             base = job.manifest.get('incremental_base', {}) if isinstance(job.manifest, dict) else {}
             valid = (values.get("include_originals") == job.include_originals and str(values.get("retry_from_id") or "") == str(after.get("retry_from_id") or "")
+                     and values.get('include_indexes', False) == job.include_indexes and values.get('index_only', False) == job.index_only
                      and str(values.get('base_backup_id') or '') == str(job.incremental_base_id or '')
                      and (values.get('expected_base_checksum') or '') == (base.get('archive_sha256','') if isinstance(base,dict) else ''))
     elif check and not job and not event:

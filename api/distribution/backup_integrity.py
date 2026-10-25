@@ -70,19 +70,39 @@ def verify_archive(backup, expected_checksum, *, return_manifest=False):
                     while chunk := stream.read(1024 * 1024):
                         digest.update(chunk)
             hashes[name], sizes[name] = digest.hexdigest(), member.size
-    if not isinstance(manifest, dict) or type(manifest.get("schema")) is not int or manifest["schema"] not in {1, 2}:
+    if not isinstance(manifest, dict) or type(manifest.get("schema")) is not int or manifest["schema"] not in {1, 2, 3}:
         raise BackupIntegrityError("备份清单缺失或版本不受支持。")
-    database = _name(manifest.get("database"))
-    if "/" in database or database == "manifest.json" or hashes.get(database) != manifest.get("database_sha256"):
-        raise BackupIntegrityError("数据库备份文件未通过独立校验。")
-    if sizes.get(database) != manifest.get("database_bytes"):
-        raise BackupIntegrityError("数据库备份文件大小与清单不一致。")
+    index_only = getattr(backup, 'index_only', False)
+    with_index = getattr(backup, 'include_indexes', False)
+    if with_index is not (manifest['schema'] == 3):
+        raise BackupIntegrityError('任务与归档的索引范围不一致。')
+    expected = {'manifest.json'}
+    if not index_only:
+        database = _name(manifest.get("database"))
+        if "/" in database or database == "manifest.json" or hashes.get(database) != manifest.get("database_sha256"):
+            raise BackupIntegrityError("数据库备份文件未通过独立校验。")
+        if sizes.get(database) != manifest.get("database_bytes"):
+            raise BackupIntegrityError("数据库备份文件大小与清单不一致。")
+        expected.add(database)
+    elif manifest.get('database') or backup.include_originals or backup.incremental_base_id:
+        raise BackupIntegrityError('独立索引归档不应包含数据库或原件。')
+    if with_index:
+        index = manifest.get('search_index')
+        if manifest.get('index_only') is not index_only or not isinstance(index, dict) or index.get('engine') != 'meilisearch' or index.get('filename') != 'search-index.dump':
+            raise BackupIntegrityError('索引备份清单未明确登记其范围。')
+        if not re.fullmatch(r'[0-9a-f]{64}', str(index.get('sha256') or '')) or type(index.get('byte_size')) is not int or index['byte_size'] <= 0 or hashes.get('search-index.dump') != index['sha256'] or sizes.get('search-index.dump') != index['byte_size']:
+            raise BackupIntegrityError('索引导出文件未通过独立哈希和大小校验。')
+        if not re.fullmatch(r'[0-9A-Za-z.+_-]{1,64}', str(index.get('version') or '')) or index.get('scope') != 'all-instance-indexes' or index.get('database_snapshot_shared') is not False:
+            raise BackupIntegrityError('索引版本与独立快照范围未明确登记。')
+        expected.add('search-index.dump')
     assets = manifest.get("assets")
     if not isinstance(assets, list) or len(assets) > 100000 or manifest.get("include_originals") is not backup.include_originals:
         raise BackupIntegrityError("原件清单不完整或备份范围不一致。")
-    expected = {database, "manifest.json"}
+    if index_only and assets:
+        raise BackupIntegrityError('独立索引归档不应登记馆藏文件。')
     base_originals = {}
-    if manifest['schema'] == 2:
+    incremental = manifest['schema'] == 2 or manifest['schema'] == 3 and bool(manifest.get('incremental_base'))
+    if incremental:
         from .incremental_backup import require_base, verified_base_manifest, base_identity
         if not backup.incremental_base_id or not backup.include_originals:
             raise BackupIntegrityError('增量归档缺少登记的完整基准备份。')
@@ -105,14 +125,14 @@ def verify_archive(backup, expected_checksum, *, return_manifest=False):
             if name in original_paths:
                 raise BackupIntegrityError('原件清单包含重复路径。')
             original_paths.add(name)
-            if manifest['schema'] == 2 and asset.get('backup_storage') == 'base':
+            if incremental and asset.get('backup_storage') == 'base':
                 from .incremental_backup import matches_base
                 if not matches_base(asset, base_originals):
                     raise BackupIntegrityError('基准备份无法提供当前清单所需的原件。')
                 original_count += 1
                 reused_count += 1
                 continue
-            if manifest['schema'] == 2 and asset.get('backup_storage') != 'archive':
+            if incremental and asset.get('backup_storage') != 'archive':
                 raise BackupIntegrityError('增量原件来源未明确登记。')
             if name in expected or hashes.get(name) != asset.get("sha256"):
                 raise BackupIntegrityError("原件备份缺失、重复或校验不一致。")
@@ -126,8 +146,9 @@ def verify_archive(backup, expected_checksum, *, return_manifest=False):
     if (before.st_ino, before.st_size, before.st_mtime_ns) != (after.st_ino, after.st_size, after.st_mtime_ns):
         raise BackupIntegrityError("归档在校验期间发生变化，请重新校验。")
     result = {"archive_sha256": expected_checksum, "archive_bytes": before.st_size,
-        "database_verified": True, "database_bytes": sizes[database],
+        "database_verified": not index_only, "database_bytes": sizes[database] if not index_only else 0,
+        "index_verified": with_index,
         "originals_included": backup.include_originals, "originals_verified": original_count,
         "base_originals_verified": reused_count,
-        "restore_verified": False, "detail": ("增量归档与完整基准均已校验；恢复原件需同时保留两份归档。尚未执行恢复。" if manifest['schema'] == 2 else "归档、数据库文件及所包含原件的校验已完成；尚未执行恢复演练。")}
+        "restore_verified": False, "detail": ("归档及索引导出文件哈希已校验；不代表隔离索引导入或检索可用。" if with_index else '') + ("增量归档与完整基准均已校验；恢复原件需同时保留两份归档。尚未执行恢复。" if incremental else "归档所登记文件校验已完成；尚未执行恢复演练。")}
     return (result, manifest) if return_manifest else result

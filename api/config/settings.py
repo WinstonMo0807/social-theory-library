@@ -568,6 +568,9 @@ INGESTION_TASK_LOCK_SECONDS = max(
 
 MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
 MEILISEARCH_MASTER_KEY = os.getenv("MEILISEARCH_MASTER_KEY", "")
+# Read-only shared directory containing completed dumps from the same instance.
+# Empty disables index backups; it is never inferred from an active index volume.
+MEILISEARCH_DUMP_ROOT = os.getenv("MEILISEARCH_DUMP_ROOT", "")
 # Evaluation commands are deliberately inert unless all three values are set.
 # The service-level guard also requires PostgreSQL plus an evaluation-shaped
 # database name, host and Meilisearch endpoint before it permits any write.

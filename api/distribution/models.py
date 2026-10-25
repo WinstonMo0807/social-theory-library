@@ -73,6 +73,8 @@ class BackupJob(UUIDTimeStampedModel):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED)
     destination_path = models.CharField(max_length=1000)
     include_originals = models.BooleanField(default=False)
+    include_indexes = models.BooleanField(default=False)
+    index_only = models.BooleanField(default=False)
     incremental_base = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='incremental_backups')
     archive_path = models.CharField(max_length=1000, blank=True)
     manifest = models.JSONField(default=dict, blank=True)
@@ -80,6 +82,9 @@ class BackupJob(UUIDTimeStampedModel):
     error_message = models.TextField(blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=(models.Q(index_only=False) | models.Q(include_indexes=True, include_originals=False, incremental_base__isnull=True)), name='backup_index_only_scope')]
 
 
 class BackupVerification(UUIDTimeStampedModel):
@@ -96,7 +101,8 @@ class BackupVerification(UUIDTimeStampedModel):
 
 class BackupSchedule(UUIDTimeStampedModel):
     """Explicit opt-in schedules over the existing backup job service."""
-    scope = models.CharField(max_length=20, unique=True, choices=[("database", "数据库与清单"), ("originals", "数据库、清单与原件"), ("incremental", "数据库与增量原件")])
+    scope = models.CharField(max_length=20, unique=True, choices=[("database", "数据库与清单"), ("originals", "数据库、清单与原件"), ("incremental", "数据库与增量原件"), ("indexes", "检索索引")])
+    include_indexes = models.BooleanField(default=False)
     incremental_base = models.ForeignKey(BackupJob, null=True, blank=True, on_delete=models.PROTECT, related_name='incremental_schedules')
     enabled = models.BooleanField(default=False)
     interval_hours = models.PositiveIntegerField(default=24)

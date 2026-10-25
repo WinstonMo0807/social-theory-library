@@ -120,7 +120,9 @@ def create_backup_archive(self, job_id):
                 base = require_base(job.incremental_base_id, expected_base['archive_sha256'])
                 base_originals = verified_base_manifest(base)
                 _require_backup_delivery(job)
-            database, migration_heads, assets = capture_backup_snapshot(staging)
+            database, migration_heads, assets = (None, [], []) if job.index_only else capture_backup_snapshot(staging)
+            if job.include_indexes and len(assets) > 99997:
+                raise RuntimeError('馆藏与索引备份超出单次归档文件数上限。')
             _require_backup_delivery(job)
             storage = Asset._meta.get_field("file").storage
             for record in assets:
@@ -145,18 +147,21 @@ def create_backup_archive(self, job_id):
                     if (not record["sha256"] or _sha256(target) != record["sha256"]
                             or (record["byte_size"] and target.stat().st_size != record["byte_size"])):
                         raise RuntimeError(f"原始文件 {identifier} 的备份副本校验失败，源文件保留。")
+            index = None
+            if job.include_indexes:
+                from .index_backup import capture_search_index
+                index = capture_search_index(job, staging, lambda: _require_backup_delivery(job))
+            database_fields = ({'database': database.filename, 'database_sha256': database.sha256,
+                'database_bytes': database.byte_size, 'database_metadata': database.metadata, 'migration_heads': migration_heads} if database else {})
             manifest = {
-                "schema": 2 if base else 1,
+                "schema": 3 if index else 2 if base else 1,
                 **({'incremental_base': base_identity(base)} if base else {}),
                 "created_at": backup_created_at.isoformat(),
-                "database": database.filename,
-                "database_sha256": database.sha256,
-                "database_bytes": database.byte_size,
-                "database_metadata": database.metadata,
-                "migration_heads": migration_heads,
+                **database_fields,
+                **({'index_only': job.index_only, 'search_index': index} if index else {}),
                 "include_originals": job.include_originals,
                 "assets": assets,
-                "restore_note": "恢复前需校验归档哈希，并在维护窗口内导入数据库。",
+                "restore_note": "先校验归档，再按清单在空白隔离环境分别恢复；不得直接覆盖生产数据或索引。",
             }
             manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
             if len(manifest_bytes) > 16 * 1024**2:
@@ -182,11 +187,8 @@ def create_backup_archive(self, job_id):
             **({'incremental_base': base_identity(base), 'base_original_count': sum(asset.get('backup_storage') == 'base' for asset in assets)} if base else {}),
             "archive_bytes": archive.stat().st_size,
             "archive_sha256": job.checksum,
-            "database": database.filename,
-            "database_sha256": database.sha256,
-            "database_bytes": database.byte_size,
-            "database_metadata": database.metadata,
-            "migration_heads": migration_heads,
+            **database_fields,
+            **({'index_only': job.index_only, 'search_index': index, 'search_index_export': job.manifest.get('search_index_export')} if index else {}),
         }
         job.completed_at = timezone.now()
         accepted = BackupJob.objects.filter(pk=job.pk, status=BackupJob.Status.RUNNING, started_at=job.started_at).update(

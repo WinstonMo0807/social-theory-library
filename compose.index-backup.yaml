@@ -1,0 +1,23 @@
+# Opt-in overlay for the existing all-in-one deployment, not a second index.
+# Apply only after mount identity, permissions and rollback have been reviewed.
+services:
+  meilisearch:
+    environment:
+      MEILI_DUMP_DIR: /stl-index-dumps
+    volumes:
+      - ${NAS_HOST_ROOT:?Set NAS_HOST_ROOT}/backups/search-exports:/stl-index-dumps
+  api:
+    environment:
+      MEILISEARCH_DUMP_ROOT: /stl-index-dumps
+    volumes:
+      - ${NAS_HOST_ROOT:?Set NAS_HOST_ROOT}/backups/search-exports:/stl-index-dumps:ro
+  worker:
+    environment:
+      MEILISEARCH_DUMP_ROOT: /stl-index-dumps
+    volumes:
+      - ${NAS_HOST_ROOT:?Set NAS_HOST_ROOT}/backups/search-exports:/stl-index-dumps:ro
+  beat:
+    environment:
+      MEILISEARCH_DUMP_ROOT: /stl-index-dumps
+    volumes:
+      - ${NAS_HOST_ROOT:?Set NAS_HOST_ROOT}/backups/search-exports:/stl-index-dumps:ro

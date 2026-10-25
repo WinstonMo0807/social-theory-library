@@ -7931,6 +7931,11 @@ export interface components {
          */
         BackupJobStatusEnum: "queued" | "running" | "completed" | "failed";
         BackupOutput: {
+            include_indexes: boolean;
+            index_only: boolean;
+            index_detail: string;
+            index_task_uid: number | null;
+            index_export_unknown: boolean;
             /** Format: uuid */
             incremental_base_id?: string | null;
             incremental_base_checksum?: string;
@@ -7968,6 +7973,7 @@ export interface components {
             results: components["schemas"]["BackupOutput"][];
         };
         BackupScheduleOutput: {
+            include_indexes: boolean;
             /** Format: uuid */
             base_backup_id: string | null;
             base_checksum: string;
@@ -7984,6 +7990,7 @@ export interface components {
             last_error: string;
         };
         BackupVerificationOutput: {
+            index_verified?: boolean;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -19841,6 +19848,8 @@ export interface components {
             /** Format: uuid */
             request_id: string;
             include_originals?: boolean;
+            include_indexes?: boolean;
+            index_only?: boolean;
             /** Format: uuid */
             retry_from_id?: string;
             /** Format: uuid */
@@ -19867,9 +19876,10 @@ export interface components {
          * @description * `database` - database
          *     * `originals` - originals
          *     * `incremental` - incremental
+         *     * `indexes` - indexes
          * @enum {string}
          */
-        StorageCommandInputScopeEnum: "database" | "originals" | "incremental";
+        StorageCommandInputScopeEnum: "database" | "originals" | "incremental" | "indexes";
         StorageCommandOutput: {
             /** Format: uuid */
             request_id: string;
@@ -19921,6 +19931,7 @@ export interface components {
             plans: components["schemas"]["BackupScheduleOutput"][];
         };
         StorageSnapshot: {
+            index_backup_configured: boolean;
             /** Format: date-time */
             checked_at: string;
             permissions: {
