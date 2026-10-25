@@ -75567,10 +75567,11 @@
                     "add",
                     "remove",
                     "undo",
-                    "reorder"
+                    "reorder",
+                    "apply"
                 ],
                 "type": "string",
-                "description": "* `add` - add\n* `remove` - remove\n* `undo` - undo\n* `reorder` - reorder"
+                "description": "* `add` - add\n* `remove` - remove\n* `undo` - undo\n* `reorder` - reorder\n* `apply` - apply"
             },
             "SelectionInputRequest": {
                 "type": "object",
@@ -75617,6 +75618,21 @@
                         "items": {
                             "type": "string",
                             "minLength": 1
+                        },
+                        "maxItems": 400
+                    },
+                    "additions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceReferenceInputRequest"
+                        }
+                    },
+                    "removals": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 240
                         },
                         "maxItems": 400
                     }

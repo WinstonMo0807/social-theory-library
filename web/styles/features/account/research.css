@@ -305,3 +305,10 @@
   .stl4-comparison-mobile button { display: inline-flex; align-items: center; gap: 6px; padding: 9px 11px; border: 1px solid var(--night-line, #d8d2c7); background: var(--night-white, #fff); color: var(--night-ink, #4f4a44); font: 11px/1.5 var(--sans); }
   .stl4-comparison-mobile button:disabled { opacity: .5; }
 }
+.stl4-research-selection-draft { grid-column: 1 / -1; padding: 0.8rem 1rem; border-bottom: 1px solid var(--night-line, #ded8cd); }
+.stl4-research-selection-draft ul { display: grid; gap: 0.5rem; padding-inline-start: 1.2rem; max-height: 18rem; overflow: auto; }
+.stl4-research-selection-draft li { overflow-wrap: anywhere; }
+.stl4-research-selection-draft li button { margin-inline-start: 0.8rem; }
+.stl4-research-selection-draft button { border: 1px solid var(--night-line, #ded8cc); padding: 7px 10px; background: var(--night-white, #fff); color: inherit; font: inherit; cursor: pointer; }
+.stl4-research-selection-draft button:disabled { opacity: .55; cursor: not-allowed; }
+.stl4-research-selection-draft > .stl4-research-source-notice { margin-inline: 0; }

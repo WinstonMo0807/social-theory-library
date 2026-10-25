@@ -50,10 +50,17 @@ class SelectionInput(RevisionInput):
     request_id = serializers.UUIDField(required=False, help_text="未知响应重试沿用原标识；旧客户端可省略。")
     note = serializers.CharField(max_length=200, required=False, allow_blank=True)
     notes = serializers.DictField(child=serializers.CharField(max_length=200, allow_blank=True), required=False)
-    action = serializers.ChoiceField(choices=["add", "remove", "undo", "reorder"])
+    action = serializers.ChoiceField(choices=["add", "remove", "undo", "reorder", "apply"])
     references = EvidenceReferenceInput(many=True, required=False)
     reference_id = serializers.CharField(required=False)
     order = serializers.ListField(child=serializers.CharField(), max_length=400, required=False)
+    additions = EvidenceReferenceInput(many=True, required=False)
+    removals = serializers.ListField(child=serializers.CharField(max_length=240), max_length=400, required=False)
+
+    def validate(self, attrs):
+        if attrs["action"] == "apply" and (not attrs.get("request_id") or not attrs.get("expected_owner_id")):
+            raise serializers.ValidationError("整批同步需要原请求标识与账户标识。")
+        return attrs
 
 
 class ComparisonCellInput(serializers.Serializer):

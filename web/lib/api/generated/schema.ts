@@ -19644,9 +19644,10 @@ export interface components {
          *     * `remove` - remove
          *     * `undo` - undo
          *     * `reorder` - reorder
+         *     * `apply` - apply
          * @enum {string}
          */
-        SelectionInputActionEnum: "add" | "remove" | "undo" | "reorder";
+        SelectionInputActionEnum: "add" | "remove" | "undo" | "reorder" | "apply";
         SelectionInputRequest: {
             expected_revision: number;
             expected_owner_id?: number;
@@ -19663,6 +19664,8 @@ export interface components {
             references?: components["schemas"]["EvidenceReferenceInputRequest"][];
             reference_id?: string;
             order?: string[];
+            additions?: components["schemas"]["EvidenceReferenceInputRequest"][];
+            removals?: string[];
         };
         ServiceDetail: {
             label: string;

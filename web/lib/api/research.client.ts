@@ -34,7 +34,7 @@ export type ResearchRecord<T = Record<string, unknown>> = {
 export type ComparisonCell = { dimension: string; column_id?: string; author?: string; reference_ids?: string[]; note?: string; evidence_status?: "selected" | "partial" | "unavailable" | "missing" };
 export type ProjectData = {
   title: string; question: string; notes?: string; scope: QueryScope; selections: ResolvedEvidence[];
-  selection_notes?: Record<string, string>;
+  selection_notes?: Record<string, string>; selection_receipts?: string[];
   comparison?: { dimensions: string[]; cells: ComparisonCell[] }; layout?: Record<string, unknown>; last_turn_id?: string;
 };
 export type Statement = { proposition: string; subject?: string; predicate?: string; object?: string; polarity?: "positive" | "negative" | "mixed" | "uncertain"; modality?: string; qualifiers?: string[]; temporal_scope?: unknown; geographic_scope?: unknown; population_scope?: unknown };
@@ -174,7 +174,11 @@ export function importLocalResearch(data: LocalResearchImport, ownerId?: string,
   });
 }
 export function readResearchProjectForOwner(id: string, ownerId: string) {
-  return withPrivateOwner(ownerId, () => privateRequest<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), { headers: { "X-Reader-Owner": ownerId } }));
+  return withPrivateOwner(ownerId, async () => {
+    const record = await privateRequest<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), { headers: { "X-Reader-Owner": ownerId } });
+    if (record.id !== id) throw new Error("读取到的研究身份无法核对，原输入仍保留。");
+    return record;
+  });
 }
 export function updateResearchProject(id: string, data: Revision & Partial<Pick<ProjectData, "title" | "question" | "notes" | "scope" | "layout">> & { archived?: boolean }, ownerId?: string) {
   if (ownerId) return withPrivateOwner(ownerId, () => privateRequest<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), { method: "PATCH", body: JSON.stringify(data), headers: { "X-Reader-Owner": ownerId } }));
@@ -183,6 +187,11 @@ export function updateResearchProject(id: string, data: Revision & Partial<Pick<
 export function changeResearchSelection(id: string, data: Revision & { expected_owner_id?: number; request_id?: string; note?: string; notes?: Record<string, string>; action: "add" | "remove" | "undo" | "reorder"; references?: EvidenceReference[]; reference_id?: string; order?: string[] }) {
   return apiRequest<ResearchRecord<ProjectData>>(`${researchRecordPath("research-projects", id)}selections/`, { method: "POST", body: JSON.stringify(data),
     signal: AbortSignal.timeout(30000), cache: "no-store" }, getServerSessionCredential(), false);
+}
+export function applyResearchSelectionDraft(id: string, data: Revision & NewRequest & { additions: EvidenceReference[]; removals: string[] }, ownerId: string) {
+  return withPrivateOwner(ownerId, () => privateRequest<ResearchRecord<ProjectData>>(`${researchRecordPath("research-projects", id)}selections/`, {
+    method: "POST", headers: { "X-Reader-Owner": ownerId }, body: JSON.stringify({ ...data, action: "apply", expected_owner_id: Number(ownerId) }),
+  }));
 }
 export function saveResearchComparison(id: string, data: Revision & { dimensions: string[]; cells: ComparisonCell[] }) {
   return write<ResearchRecord<ProjectData>>(`${researchRecordPath("research-projects", id)}comparison/`, data);

@@ -423,7 +423,7 @@ def change_selection(user, pk, data):
     project = owned(ResearchProject, user, pk, lock=True)
     payload = unpack(project)
     request_id = identifier(data["request_id"], "request_id") if data.get("request_id") else None
-    fingerprint = request_fingerprint(data, ("action", "references", "reference_id", "order", "note", "notes"))
+    fingerprint = request_fingerprint(data, ("action", "references", "reference_id", "order", "note", "notes", "additions", "removals"))
     if request_id:
         previous = next((row for row in payload.get("selection_requests", []) if row["id"] == request_id), None)
         if previous:
@@ -433,7 +433,29 @@ def change_selection(user, pk, data):
     expect(project, data.get("expected_revision"))
     selected = payload.setdefault("selections", [])
     action = data.get("action")
-    if action == "add":
+    if action == "apply":
+        if not request_id or data.get("expected_owner_id") != user.pk:
+            raise ValidationError({"request_id": "整批同步需要原请求标识与账户标识。"})
+        # Validate the complete intent before changing membership or saving a receipt.
+        additions = references(data.get("additions", []), user)
+        removals = bounded_list(data.get("removals", []), "removals")
+        if not additions and not removals or len(additions) + len(removals) > MAX_REFS:
+            raise ValidationError({"selections": "每批需要 1 至 400 项修改。"})
+        if any(not isinstance(key, str) or not key or len(key) > 240 for key in removals) or len(set(removals)) != len(removals):
+            raise ValidationError({"removals": "移除身份无效或重复。"})
+        existing_ids = {reference_identity(row) for row in selected}
+        addition_ids = {reference_identity(row) for row in additions}
+        removal_ids = set(removals)
+        if removal_ids - existing_ids or addition_ids & removal_ids:
+            raise ResearchConflict("选材已经变化或同一材料既加入又移除，请保留整批修改并核对最新选材。")
+        removed = [{"position": index, "reference": row} for index, row in enumerate(selected) if reference_identity(row) in removal_ids]
+        kept = [row for row in selected if reference_identity(row) not in removal_ids]
+        kept_ids = {reference_identity(row) for row in kept}
+        merged = [*kept, *(row for row in additions if reference_identity(row) not in kept_ids)]
+        bounded_list(merged, "selections")
+        payload["selections"] = merged
+        payload["removed_selections"] = [*payload.get("removed_selections", []), *removed][-50:]
+    elif action == "add":
         new_refs = references(data.get("references", []), user)
         seen = {reference_identity(row) for row in selected}
         added = [row for row in new_refs if reference_identity(row) not in seen]
@@ -476,7 +498,7 @@ def change_selection(user, pk, data):
             raise ValidationError({"order": "必须恰好包含全部选材，每项一次。"})
         payload["selections"] = [by_id[key] for key in order]
     else:
-        raise ValidationError({"action": "支持 add/remove/undo/reorder。"})
+        raise ValidationError({"action": "支持 add/remove/undo/reorder/apply。"})
     if request_id:
         payload["selection_requests"] = [*payload.get("selection_requests", []), {"id": request_id, "fingerprint": fingerprint}][-100:]
     retained_ids = {reference_identity(row) for row in payload.get("selections", [])}
@@ -769,7 +791,9 @@ def serialize_record(record, user, *, memory_context_rows=None):
     payload.pop("version_children", None)
     payload.pop("text_units", None)
     payload.pop("analysis_requests", None)
-    payload.pop("selection_requests", None)
+    selection_requests = payload.pop("selection_requests", [])
+    if isinstance(record, ResearchProject):
+        payload["selection_receipts"] = [row["id"] for row in selection_requests][-100:]
     if "ocr_units" in payload:
         payload["ocr_units"] = {key: {name: value for name, value in unit.items() if name not in {"text", "blocks"}}
                                 for key, unit in payload["ocr_units"].items()}
