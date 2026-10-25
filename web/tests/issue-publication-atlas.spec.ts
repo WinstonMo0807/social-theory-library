@@ -3,7 +3,7 @@ import type {IssueDraft} from "../components/admin/curation/use-issue-draft";
 import type {IssuePublicationReviewData} from "../components/admin/curation/issue-publication-review";
 
 const issue="71111111-1111-4111-8111-111111111111",block="72222222-2222-4222-8222-222222222222";
-async function setup(page:Page,options:{blocked?:boolean;failed?:boolean;media?:boolean}={}) {
+async function setup(page:Page,options:{blocked?:boolean;failed?:boolean;media?:boolean;frameFailure?:boolean;frameVersion?:string}={}) {
   let value:IssueDraft={id:issue,slug:"publish-review-fixture",title:"隔离发布验收文章",introduction:"验收导语",issue_label:"",public_byline:"",cover_url:"",display_from:null,published_at:null,edit_version:"v1",has_unpublished_changes:true,body_blocks:[{id:block,type:"paragraph",text:"人工稿件保留"}],items:[]};
   const commands:Record<string,unknown>[]=[],writes:Record<string,unknown>[]=[];
   const mediaWrites:Record<string,unknown>[]=[],renditionWrites:Record<string,unknown>[]=[];
@@ -18,7 +18,12 @@ async function setup(page:Page,options:{blocked?:boolean;failed?:boolean;media?:
     if(url.pathname===`/api/catalog/admin/media/${mediaId}/`){if(req.method()==="PATCH"){mediaWrites.push(req.postDataJSON());media={...media,...req.postDataJSON(),updated_at:"2026-10-22T01:01:00Z"};}return route.fulfill({json:media});}
     if(url.pathname===`/api/catalog/admin/media/${mediaId}/renditions/`){renditionWrites.push(req.postDataJSON());return route.fulfill({json:{id:newImage,url:`/api/catalog/admin/media/renditions/${newImage}/file/`}});}
     if(url.pathname===`/api/catalog/admin/recommendation-issues/${issue}/`){if(req.method()==="PUT"){writes.push(req.postDataJSON());value={...value,...req.postDataJSON(),edit_version:"v2"};}return route.fulfill({json:value});}
-    if(url.pathname.endsWith(`/${issue}/preview/`))return route.fulfill({json:url.searchParams.get("review")==="true"?projection():value});
+    if(url.pathname.endsWith(`/${issue}/preview/`)){
+      if(req.frame().parentFrame()&&options.frameFailure)return route.fulfill({status:503,json:{detail:"合成预览读取失败"}});
+      const data=projection();
+      if(req.frame().parentFrame()&&options.frameVersion)data.edit_version=options.frameVersion;
+      return route.fulfill({json:url.searchParams.get("review")==="true"?data:value});
+    }
     if(url.pathname.endsWith(`/${issue}/publish/`)){commands.push(req.postDataJSON());if(options.failed)return route.fulfill({status:400,json:{detail:"来源已撤回，发布阻断"}});value={...value,has_unpublished_changes:false,published_at:"2026-10-22T02:01:00Z"};return route.fulfill({json:value});}
     if(url.pathname.endsWith("/presence/"))return route.fulfill({json:{participants:[],checked_at:"2026-10-22T00:00:00Z",expires_after_seconds:90,shared:true,notice:""}});
     if(url.pathname.endsWith("/work-notices/"))return route.fulfill({json:{count:0,results:[],checked_at:"2026-10-22T00:00:00Z"}});
@@ -81,4 +86,15 @@ test("discarding unsaved publication changes requires an explicit choice and wri
   await page.getByRole("button",{name:"返回编辑",exact:true}).click();
   await expect(page.getByRole("textbox",{name:"标题",exact:true})).toHaveValue("隔离发布验收文章");
   expect(state.writes).toHaveLength(0);expect(state.commands).toHaveLength(0);
+});
+
+// Defined for unified acceptance only; no browser checks run during implementation.
+for(const mismatch of [false,true])test(`article publish stays disabled for ${mismatch?"another saved version":"failed frame loading"}`,async({page})=>{
+  const state=await setup(page,mismatch?{frameVersion:"v2"}:{frameFailure:true});
+  await expect(page.getByText("页面预览读取失败、账户或保存版本已变化。请重新检查后发布。",{exact:true})).toBeVisible();
+  await page.evaluate(({issue})=>window.postMessage({type:"stl:issue-publication-preview",owner:"1",issueId:issue,version:"v1",state:"ready"},location.origin),{issue});
+  await expect(page.getByRole("button",{name:"确认发布",exact:true})).toBeDisabled();
+  await page.getByRole("button",{name:"发布设置",exact:true}).click();
+  await expect(page.getByRole("button",{name:"确认发布",exact:true})).toBeDisabled();
+  expect(state.commands).toHaveLength(0);
 });
