@@ -211,6 +211,9 @@
 .stl4-comparison-inline-actions button:disabled { opacity: .55; cursor: not-allowed; }
 .stl4-comparison-search-results a { color: var(--night-gold, #7f633e); text-underline-offset: 3px; }
 .stl4-comparison-search-results :is(button, select, summary, a):focus-visible { outline: 2px solid var(--night-gold, #9b7c45); outline-offset: 3px; }
+.stl4-comparison-translations select { width: 100%; padding: 10px; border: 1px solid var(--night-line, #ded8cc); background: var(--night-white, white); color: inherit; }
+.stl4-comparison-translations blockquote { margin: 16px 0; padding: 14px; max-height: 240px; overflow: auto; border-left: 2px solid var(--night-gold, #b3894b); background: var(--night-paper, #f7f4ee); font: 14px/1.9 var(--serif); white-space: pre-wrap; }
+.stl4-comparison-translations footer { flex-wrap: wrap; }
 .stl4-comparison-selected { min-width: 0; padding: 18px 14px; border-right: 1px solid var(--night-line, #e5e1d9); }
 .stl4-comparison-selected > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 15px; }
 .stl4-comparison-selected h2 { margin: 0; font: 600 15px/1.6 var(--serif); }

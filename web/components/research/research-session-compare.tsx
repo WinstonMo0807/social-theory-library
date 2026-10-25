@@ -13,6 +13,7 @@ import { comparisonCellColumn, comparisonColumns, type ComparisonColumn } from "
 import { researchEvidenceKey, researchReaderHref } from "@/lib/api/research-evidence";
 import { useResearchProject } from "./use-research-project";
 import { ResearchCenterNav } from "./research-center-nav";
+import { ResearchComparisonTranslations } from "./research-comparison-translations";
 import { ResearchComparisonActivity, ResearchComparisonSearch, type ComparisonSearchTarget } from "./research-comparison-search";
 
 type Editor = { dimension: string; column: ComparisonColumn; original: string | null; note: string; ids: string[]; initialNote: string; initialIds: string[]; revision: number };
@@ -161,8 +162,9 @@ function ColumnHeading({column}:{column:ComparisonColumn}) {
   return <span className="stl4-comparison-document">{url&&failed!==url?<MediaPlacement uses={reference?.cover_media?.display_uses} fallback={fallback}><img src={url} alt="" className="stl4-comparison-cover" loading="lazy" onError={()=>setFailed(url)}/></MediaPlacement>:fallback}<span><strong>{column.title}</strong><small>{column.authors||"作者信息待补充"}{reference?.publication_year!=null?` · ${reference.publication_year}`:""}</small><small>{column.references.length?`${column.references.length} 条选材`:"保留的历史比较"}</small></span></span>;
 }
 function SourceLocation({reference}:{reference?:ResolvedEvidence}) {
+  const [translations,setTranslations]=useState(false);
   if(!reference||reference.source_status!=="available")return <p className="stl4-comparison-unavailable">来源暂不可用，原引用身份保留；不会改用其他版本。</p>;
   const href=researchReaderHref(reference);
-  return <div className="stl4-comparison-location">{reference.citation?<p>{reference.citation}</p>:null}<small>{locationLabel(reference)}</small>{href?<Link href={href} target="_blank" rel="noreferrer">打开原文{(reference.anchors?.length||0)>1?"（起始位置）":""} →</Link>:<p>原文定位待核对</p>}</div>;
+  return <div className="stl4-comparison-location">{reference.citation?<p>{reference.citation}</p>:null}<small>{locationLabel(reference)}</small>{href?<Link href={href} target="_blank" rel="noreferrer">打开原文{(reference.anchors?.length||0)>1?"（起始位置）":""} →</Link>:<p>原文定位待核对</p>}<button type="button" onClick={()=>setTranslations(true)}>译本与版本差异</button>{translations?<ResearchComparisonTranslations reference={reference} onClose={()=>setTranslations(false)}/>:null}</div>;
 }
 function Frame({ children }: { children: ReactNode }) { return <div className="stl4-research-page"><div className="stl4-research-detail-shell">{children}</div></div>; }

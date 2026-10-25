@@ -3,6 +3,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search, X } from "lucide-react";
 import type { ParallelSegment, ParallelSegments, ParallelVersion } from "@/lib/api/parallel-reader.client";
+import { parallelFocusMatches } from "@/lib/api/parallel-navigation";
 import { sameParallelSegment } from "@/lib/api/parallel-reader.client";
 import type { ResolvedEvidence } from "@/lib/api/research.client";
 import { useParallelResource } from "./use-parallel-resource";
@@ -41,12 +42,12 @@ export function ParallelColumn({ side, version, page, segmentId, selectedReferen
   useEffect(() => { reportReady(ready); }, [ready]);
   const actualOffset = resource.data?.offset ?? requestedOffset ?? 0;
   const activeSegment = resource.data?.segments.find(row => row.id === segmentId || sameParallelSegment(row.reference, selectedReference));
-  const focusedSegment = resource.data?.segments.find(row => row.id === focusId || row.reference.evidence_span_id === focusId);
+  const focusedSegment = resource.data?.segments.find(row => parallelFocusMatches(row, focusId || ""));
   const activeId = activeSegment?.id;
   useEffect(() => {
-    if (!resource.data?.segments.length || activeSegment) return;
+    if (!resource.data?.segments.length || activeSegment || focusId && !focusedSegment) return;
     select(focusedSegment || resource.data.segments[0]);
-  }, [resource.data, activeSegment, focusedSegment]);
+  }, [resource.data, activeSegment, focusedSegment, focusId]);
   useEffect(() => {
     if (!activeId || !panel.current) return;
     const row = Array.from(panel.current.querySelectorAll<HTMLElement>("[data-segment]"))
@@ -66,7 +67,7 @@ export function ParallelColumn({ side, version, page, segmentId, selectedReferen
       <button type="button" aria-label={`${side === "left" ? "左" : "右"}侧下一页`} disabled={!version?.asset_id || page >= (version.total_pages || 1)} onClick={() => go(page + 1)}><ChevronRight size={16} /></button>
       <label className="parallel-text-size"><span className="sr-only">正文大小</span><select value={fontSize} onChange={event => setFontSize(Number(event.target.value))}><option value={15}>小</option><option value={17}>标准</option><option value={20}>大</option><option value={23}>更大</option></select></label>
       <button type="button" disabled={!version?.document_revision_id} aria-expanded={searchOpen} aria-label={`在${side === "left" ? "左" : "右"}侧版本中搜索`} onClick={() => setSearchOpen(value => !value)}><Search size={14} /></button>
-      {version?.asset_id ? <a href={`/reader/${version.asset_id}?page=${page}`} target="_blank" rel="noreferrer" aria-label={`在新标签页打开${side === "left" ? "左" : "右"}侧PDF原文`}><ExternalLink size={15} /></a> : null}
+      {version?.asset_id ? <a href={`/reader/${encodeURIComponent(version.asset_id)}?${new URLSearchParams({ page: String(page), ...(version.document_revision_id ? { revision: version.document_revision_id } : {}) })}`} target="_blank" rel="noreferrer" aria-label={`在新标签页打开${side === "left" ? "左" : "右"}侧PDF原文`}><ExternalLink size={15} /></a> : null}
     </div>
     {searchOpen ? <div className="parallel-column-search"><form onSubmit={event => { event.preventDefault(); search.jumpToFirstSearchMatch(); }}><label><span className="sr-only">书内关键词</span><input autoFocus value={search.query} onChange={event => search.setQuery(event.target.value)} placeholder="在此版本中搜索" maxLength={200} /></label><button type="submit" disabled={!search.searchMatches.length}>定位</button><button type="button" aria-label="关闭版本搜索" onClick={() => { search.setQuery(""); setSearchOpen(false); }}><X size={15} /></button></form>{search.searchLoading ? <p role="status">正在查找…</p> : search.searchError ? <p role="alert">{search.searchError}<button type="button" onClick={search.retrySearch}>重试</button></p> : search.query.trim() ? <><p>{search.searchMatches.length ? `当前返回 ${search.searchMatches.length} 个匹配页（最多 100 页）` : "没有找到匹配页。"}</p><ul>{search.searchMatches.map((match, index) => <li key={match.page_id}><button type="button" onClick={() => search.jumpToSearchMatch(index)}><strong>PDF 第 {match.page_index} 页</strong><span>{match.snippet}</span></button></li>)}</ul></> : null}</div> : null}
     {resource.data?.segments.length ? <label className="parallel-segment-select"><span className="sr-only">当前页段落定位</span><select value={activeSegment?.id || ""} onChange={event => { const row = resource.data?.segments.find(item => item.id === event.target.value); if (row) onSelect(row); }}><option value="">选择当前页段落</option>{resource.data.segments.map(row => <option key={row.id} value={row.id}>{row.label}</option>)}</select></label> : null}
@@ -83,6 +84,7 @@ export function ParallelColumn({ side, version, page, segmentId, selectedReferen
         : resource.loading ? <div role="status" className="parallel-empty">正在读取 PDF 第 {page} 页…<button type="button" onClick={resource.stop}>停止读取</button></div>
           : resource.error || resource.stopped ? <div role="alert" className="parallel-empty"><p>{resource.error || "已停止读取，原文位置保留。"}</p><button type="button" onClick={resource.reload}><RefreshCw size={14} />重新读取</button></div>
             : resource.data ? <>
+              {focusId && !focusedSegment && !activeSegment ? <p className="parallel-source-notice" role="status">原定位没有对应到当前返回的段落。请核对本页并明确选择，不会自动改用第一段。</p> : null}
               {resource.data.notice ? <p className="parallel-source-notice">{resource.data.notice}</p> : null}
               {!resource.data.segments.length ? <div className="parallel-empty"><strong>{resource.data.state === "text_unavailable" ? "此页尚无可用文字" : "此页没有可选正文"}</strong><p>可以打开原 PDF 阅读，或定位到其他页面。</p></div> : resource.data.segments.map(segment => <button type="button" key={segment.id} data-segment={segment.id} className={`parallel-segment ${activeSegment?.id === segment.id ? "is-selected" : ""}`} aria-pressed={activeSegment?.id === segment.id} onClick={() => onSelect(segment)}>
                 <span className="parallel-segment-number">{segment.label}</span><span lang={version.language || undefined}>{segment.text}{segment.text_truncated ? <small className="parallel-source-notice">此处显示部分正文，完整段落请打开原 PDF。</small> : null}</span>

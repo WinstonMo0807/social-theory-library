@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 R06/R08准确版本对照
+
+R06版本差异复用公开parallel/versions和原私人parallel-tasks。Reader并读URL新增right_asset/right_revision，原revision/focus传入两侧选择保护；源修订失效时需显式重选，不建新版本关系。
+
 ## 2026-10-25 R06补充检索
 
 R06复用ResearchTurn.return_context标记比较缺口，原retry继承该上下文。读者明确选择检索范围，结果不会自动写入comparison。没有新模型或迁移。
