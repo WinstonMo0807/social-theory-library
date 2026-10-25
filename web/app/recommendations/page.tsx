@@ -10,5 +10,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<Edi
   let data: EditorialDirectory | null = null, error = "";
   try { data = await loadEditorialDirectory(params); }
   catch (reason) { error = reason instanceof ServerApiError && reason.status === 400 ? "筛选条件无效，请检查年份范围或重置筛选。" : "专题文章暂时无法读取。当前筛选已保留，请重试。"; }
-  return <><EditorialDirectoryView key={JSON.stringify(params)} data={data} params={params} error={error} /><SiteFooter /></>;
+  return <><EditorialDirectoryView key={JSON.stringify(params)} data={data} params={params} error={error} /><SiteFooter reference="editorial" /></>;
 }

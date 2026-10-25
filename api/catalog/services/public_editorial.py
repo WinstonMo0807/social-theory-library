@@ -110,7 +110,7 @@ def public_directory(params=None):
     # Facets read only small metadata from effective public versions, never draft text.
     facets, topic_ids = {"curators": [], "years": [], "kinds": [{"id": key, "label": name} for key, name in KINDS.items()]}, set()
     names, years = set(), set()
-    for metadata, name, date in rows.values_list("public_snapshot__article_metadata", "public_byline", "effective_display_from").iterator(chunk_size=100):
+    for metadata, name, date in rows.values_list(KeyTransform("article_metadata", "public_snapshot"), "public_byline", "effective_display_from").iterator(chunk_size=100):
         topic_ids.update((metadata or {}).get("topic_ids", []))
         if name:
             names.add(name)
@@ -205,7 +205,7 @@ def published_media_usage(rendition_id):
         (Q(public_snapshot__article_metadata__curator_portrait_id=key) & ~Q(public_byline=""))).exists():
         return True
     return any(block.get("type") == "image" and block.get("image_rendition_id") == key
-        for blocks in rows.filter(public_snapshot__body_blocks__icontains=key).values_list("public_snapshot__body_blocks", flat=True)
+        for blocks in rows.filter(public_snapshot__body_blocks__icontains=key).values_list(KeyTransform("body_blocks", "public_snapshot"), flat=True)
         for block in blocks)
 
 

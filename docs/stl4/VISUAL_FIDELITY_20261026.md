@@ -179,3 +179,13 @@ VISUAL-15证据：实际/theories/graph截图before-graph-r14-desktop-20261026.p
 整类自问：读者能否保留筛选、是否把示例主题冒充真实数据、私人收藏是否公开、详情补充操作是否丢失？原GET查询/公开投影/owner服务保留；补充操作收进既有更多资料，并未删去。当前公开主题0，不造假数据。有数据详情/关系/私人写入B待验收，原字体/精确状态仍A。截图中确认标题字重偏轻、查看全部箭头独占行，已加局部字重与inline-flex，随r20发布。
 
 编译1d70ad→12bba9退出0；1889文件41909720字节，SHA256 62c3816ba22b2f47fcb17763e21a727b9869ab4e1a497cc1bbbb26e24cb6c3f8。NAS e52fa3→2976a6→b5ae79退出0，Web r19 06d4ecd85426，API r9保持，恢复点.env.before-topics-r19。after-topics-r19-desktop/mobile、after-topic-directory-r19-desktop/mobile-20261026.png在原tmp目录。无测试、业务写入、模型、迁移或公网操作，不称整组通过。
+
+## VISUAL-19 特别策划（PDF73–78）与EDITORIAL-API-01
+
+实际读取六张原图，74/76/78优先。before-editorial-r19-desktop显示窄纸底、旧通用品牌、裁断横幅及目录读取失败。最小修改EditorialDirectory/RecommendationIssueView/CSS、SiteHeader/RouteTransition/对应页脚。13个原PDF裁片和78两块纯照片区域组成SVG（排除叠在照片上的参考标题文字）；真实文章封面/署名/材料仍来自发布数据，装饰横幅只在未指定文章封面时使用，指定封面失败保留明确缺图。
+
+文章三栏、主文末操作与手机固定目录/引用/研究/评论恢复；引用与加入研究复用原精确来源选择，不新增保存服务。整类自问覆盖普通读者的文章→来源→返回、缺图/未公开原文、无署名、私人书单、排期替换。原权限/修订身份/原文版本检查保留，无业务操作，不称通过。
+
+目录正常GET触发public_editorial.py:113 FieldError Cannot resolve keyword public_snapshot，trace来自PublicIssueListView.get。JSON注解的values_list改显式KeyTransform；同文件published_media_usage读取正文块使用同修正，原published过滤不变。API r10更新后实际浏览器目录从错误恢复为真实0文章，未用假空态掩盖故障。后续真实有数据筛选/媒体授权仍B待验收。
+
+编译08071d→78320f退出0；1921文件44273765字节，SHA256 1ea9d84a09157249a04730015c525f87a79cd6c8c61e5ae16fd23715c7a6e1a9。NAS ae8fbe→8f7b60→ebf72c→081503→8273d8退出0；Web r20 0c4a6c9d20b1、API r10 a79b2b97f68d。恢复点.env.before-editorial-r20。after-editorial-r20-desktop/mobile-20261026.png保存在原tmp。截图空态图标偏左与桌面横幅偏高已局部修源码，待r21。原字体/有数据状态未关闭；无测试、模型、业务写入、迁移或公网操作。

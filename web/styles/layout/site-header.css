@@ -282,3 +282,22 @@ body:has(.work-detail[data-work-kind="article"]) .brand-work-variants [data-bran
  .brand-reference-lockup[data-brand-variant="topic-profile"]{width:165px}
  .site-header[data-stl-topic] .header-actions{gap:8px}
 }
+
+/* PDF74/76/78: published article/exhibition state selects its original lockup. */
+.site-header[data-stl-editorial]{min-height:64px;padding:10px 3.8%;gap:26px}
+.brand-reference-lockup[data-brand-variant="editorial-directory"]{width:224px}
+.brand-editorial-variants{display:flex;align-items:center}
+.brand-editorial-variants .brand-reference-lockup{display:none}
+.brand-editorial-variants [data-brand-variant="editorial-article"]{display:block;width:195px}
+.brand-editorial-variants [data-brand-variant="editorial-exhibition"]{width:219px}
+.brand-editorial-variants [data-brand-variant="editorial-exhibit"]{width:218px}
+body:has([data-editorial-kind="exhibition"]) .brand-editorial-variants [data-brand-variant="editorial-article"],body:has([data-editorial-kind="exhibit"]) .brand-editorial-variants [data-brand-variant="editorial-article"]{display:none}
+body:has([data-editorial-kind="exhibition"]) .brand-editorial-variants [data-brand-variant="editorial-exhibition"],body:has([data-editorial-kind="exhibit"]) .brand-editorial-variants [data-brand-variant="editorial-exhibit"]{display:block}
+.site-header[data-stl-editorial] .desktop-nav a.active{color:#97733d}
+.site-header[data-stl-editorial] .desktop-nav a.active::after{background:#97733d}
+@media(max-width:760px){
+ .site-header[data-stl-editorial]{min-height:62px;padding:12px 16px;gap:12px}
+ .site-header[data-stl-editorial] .header-actions{gap:8px}
+ .brand-reference-lockup[data-brand-variant="editorial-directory"],.brand-editorial-variants [data-brand-variant="editorial-article"]{width:190px}
+ .brand-editorial-variants [data-brand-variant="editorial-exhibition"],.brand-editorial-variants [data-brand-variant="editorial-exhibit"]{width:120px}
+}

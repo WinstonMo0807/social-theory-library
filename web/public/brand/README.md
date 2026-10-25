@@ -202,3 +202,23 @@ PDF68 hub, PDF69 directory and PDF71 latest overlapping detail state. Original b
 | visual/stl4/topics/directory-hero-final-r2.png | 69 | 508,148,866,358 |
 | visual/stl4/topics/detail-hero-final-r2.png | 71 | 530,72,1207,387 |
 | visual/stl4/topics/detail-hero-mobile-final-r2.png | 71 | 1262,196,1485,285 |
+
+## Editorial PDF73–78
+
+74 directory, 76 article and 78 exhibition/latest states. Original fragments from the sole final PDF. Runtime article covers, portraits and materials still use real published content. Decorative header fallback is separate from a missing published cover.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-editorial-directory-desktop-final-r2.png | 74 | 85,47,260,76 |
+| brand/stl-lockup-editorial-directory-mobile-final-r2.png | 74 | 1198,47,1363,76 |
+| brand/stl-lockup-editorial-article-desktop-final-r2.png | 76 | 76,62,232,98 |
+| brand/stl-lockup-editorial-article-mobile-final-r2.png | 76 | 1218,64,1377,93 |
+| brand/stl-lockup-editorial-exhibition-desktop-final-r2.png | 78 | 45,74,191,105 |
+| brand/stl-lockup-editorial-exhibition-mobile-final-r2.png | 78 | 1281,75,1366,102 |
+| brand/stl-lockup-editorial-exhibit-desktop-final-r2.png | 78 | 737,74,882,104 |
+| brand/stl-lockup-editorial-exhibit-mobile-final-r2.png | 78 | 1281,75,1366,102 |
+| brand/stl-footer-editorial-final-r2.png | 73 | 83,953,370,982 |
+| visual/stl4/editorial/directory-hero-final-r2.png | 74 | 542,84,1146,362 |
+| visual/stl4/editorial/article-hero-final-r2.png | 76 | 520,102,1184,346 |
+| visual/stl4/editorial/article-hero-mobile-final-r2.png | 76 | 1219,134,1489,217 |
+| visual/stl4/editorial/exhibition-hero-final-r2.svg | 78 | 346,110,688,207 + 512,207,688,282; original photo regions excluding text |

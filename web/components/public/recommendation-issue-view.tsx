@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, List, MessageSquare, Quote, Share2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, FolderPlus, List, MessageSquare, Quote, Share2, X } from "lucide-react";
 import type { RecommendationIssue, IssueItem, IssueBlock, IssueResolvedSource } from "@/lib/api/recommendation-issues.types";
 import { SaveIssueList } from "@/components/save-issue-list";
 import { Dialog } from "@/components/ui/dialog";
@@ -63,8 +63,8 @@ export function RecommendationIssueView({ issue, preview = false, selectedExhibi
     try { const url = new URL(base, window.location.origin).href; if (navigator.share) await navigator.share({title:issue.title,url}); else { await navigator.clipboard.writeText(url); setNotice("文章链接已复制。"); } }
     catch (reason) { if (!(reason instanceof DOMException && reason.name === "AbortError")) setNotice("未能分享链接，可以复制浏览器地址。"); }
   }
-  const toolbar = <><button type="button" onClick={() => setCitations(true)}><Quote size={15} />引用 · 加入研究</button><button type="button" onClick={() => void share()}><Share2 size={15} />分享</button>{!preview ? <a href="#article-comments"><MessageSquare size={15}/>评论{commentCount!==null?`（${commentCount}）`:""}</a> : null}</>;
-  return <article className={styles.article}>
+  const toolbar = <><button type="button" onClick={() => setCitations(true)}><Quote size={15} />引用</button><button type="button" className={styles.researchAction} onClick={() => setCitations(true)}><FolderPlus size={15} />加入研究</button><button type="button" onClick={() => void share()}><Share2 size={15} />分享</button>{!preview ? <a href="#article-comments"><MessageSquare size={15}/>评论{commentCount!==null?`（${commentCount}）`:""}</a> : null}</>;
+  return <article className={styles.article} data-editorial-kind={selected ? "exhibit" : isExhibition ? "exhibition" : "article"}>
     <nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/recommendations">特别策划</Link><span>›</span><span>{issue.title}</span></nav>
     {selected ? <section className={styles.exhibitReading}><Link href={base}><ArrowLeft size={15} /> 返回展项</Link><h1>{selected.title}</h1>
       {selected.item?.authors ? <p>{selected.item.authors}</p> : null}{selected.item?.note ? <p>{selected.item.note}</p> : null}
@@ -72,21 +72,21 @@ export function RecommendationIssueView({ issue, preview = false, selectedExhibi
       {selected.block?.type === "image" ? <IssueBlockView block={selected.block} /> : selected.source?.asset_id && selected.source.document_revision_id ? <EditorialReader source={selected.source} returnTo={`${base}?exhibit=${encodeURIComponent(selected.id)}`} /> : selected.source ? <EditorialSourceContent key={selected.id} source={selected.source} /> : <section className={styles.empty}><h2>这份原文暂不可用</h2><p>可以返回展项阅读策划说明，或查看其他已公开的材料。</p><Link href={base}>阅读策划导读</Link></section>}
     </section> : <>
       {selectedExhibit ? <p role="status">原展项已不在当前公开版本中，以下为现有展项。</p> : null}
-      <header className={styles.articleHero} data-edit-section="identity"><div className={styles.articleHeroMedia} data-edit-section="cover"><EditorialImage key={issue.cover_url} src={issue.cover_url} className={styles.articleHeroImage} /></div><div className={styles.articleHeroCopy}>
+      <header className={styles.articleHero} data-edit-section="identity"><div className={styles.articleHeroMedia} data-edit-section="cover">{issue.cover_url ? <EditorialImage key={issue.cover_url} src={issue.cover_url} className={styles.articleHeroImage} /> : <picture>{!isExhibition ? <source media="(max-width:760px)" srcSet="/visual/stl4/editorial/article-hero-mobile-final-r2.png" /> : null}<img className={styles.articleHeroImage} src={`/visual/stl4/editorial/${isExhibition ? "exhibition-hero-final-r2.svg" : "article-hero-final-r2.png"}`} alt="" /></picture>}</div><div className={styles.articleHeroCopy}>
         <p className={styles.articleLabel}>{issue.issue_label || (isExhibition ? "原文微展览" : "专题文章")}</p><h1>{issue.title || (preview ? "填写文章标题" : "")}</h1><p className={styles.articleIntro}>{issue.introduction}</p>
         <EditorialByline curator={issue.curator || {name:issue.public_byline,role:"",affiliation:"",portrait_url:""}} date={issue.published_at} />{issue.reading_minutes ? <small title="按正文长度粗略估计，不含原文材料阅读">约 {issue.reading_minutes} 分钟阅读</small> : null}
       </div></header>
-      <div className={styles.articleToolbar}>{toolbar}{notice ? <span role="status">{notice}</span> : null}</div>
+      <div className={styles.articleTopActions}>{toolbar}{notice ? <span role="status">{notice}</span> : null}</div>
       <div className={`${styles.articleLayout} ${isExhibition ? styles.exhibition : ""}`}>
-        <aside className={styles.toc}><div className={styles.desktopToc}><h2>{isExhibition ? "展项目录" : "文章目录"}</h2>{toc}</div><details className={styles.mobileToc}><summary>{isExhibition ? "展项目录" : "文章目录"}</summary>{toc}</details></aside>
-        <div className={styles.prose} id="article-body" data-edit-section="body">{isExhibition ? <ExhibitionBody issue={issue} rows={exhibitRows} base={base}/> : issue.body_blocks.map((block,index) => <section key={block.id || index} id={anchor(block,index)} className={heading(block) ? styles.proseHeading : ""}><IssueBlockView block={block} /></section>)}{!issue.body_blocks.length ? <p>本期以相关材料为阅读入口。</p> : null}
+        <aside className={styles.toc} id="article-toc"><div className={styles.desktopToc}><h2>{isExhibition ? "展项目录" : "文章目录"}</h2>{toc}</div><details className={styles.mobileToc}><summary>{isExhibition ? "展项目录" : "文章目录"}</summary>{toc}</details></aside>
+        <div className={styles.prose} id="article-body" data-edit-section="body">{isExhibition ? <ExhibitionBody issue={issue} rows={exhibitRows} base={base}/> : issue.body_blocks.map((block,index) => <section key={block.id || index} id={anchor(block,index)} className={heading(block) ? styles.proseHeading : ""}><IssueBlockView block={block} /></section>)}{!issue.body_blocks.length ? <p>本期以相关材料为阅读入口。</p> : null}<div className={styles.articleToolbar}>{toolbar}{notice ? <span role="status">{notice}</span> : null}</div>
         </div>
         {!isExhibition ? <aside className={styles.materials} data-edit-section="items"><header><h2>相关材料</h2><a href="#article-materials">查看全部 <ArrowRight size={14} /></a></header>{issue.items.slice(0,3).map(item => <IssueItemCard key={item.id} item={item} />)}{!issue.items.length ? <p>尚未编入独立书目，可从正文的原文入口继续阅读。</p> : null}</aside> : null}
       </div>
       {!isExhibition && issue.items.length ? <section id="article-materials" className={styles.allMaterials}><h2>全部相关材料</h2><div>{issue.items.map(item => <IssueItemCard key={item.id} item={item} />)}</div></section> : null}
       {!preview && issue.items.length ? <SaveIssueList slug={issue.slug} revisionId={issue.public_revision_id} /> : null}{issue.related ? <EditorialRelated related={issue.related} /> : null}
       {!preview && issue.public_revision_id ? <ArticleComments issueId={issue.id} revisionId={issue.public_revision_id} slug={issue.slug} onCount={setCommentCount}/> : null}
-      <nav className={styles.mobileArticleActions} aria-label="文章操作"><a href="#article-body"><List size={17} />正文</a>{toolbar}</nav>
+      <nav className={styles.mobileArticleActions} aria-label="文章操作"><a href="#article-toc"><List size={17} />目录</a><button type="button" onClick={() => setCitations(true)}><Quote size={17} />引用</button><button type="button" className={styles.researchAction} onClick={() => setCitations(true)}><Quote size={17} />加研究</button>{!preview ? <a href="#article-comments"><MessageSquare size={17} />评论{commentCount!==null?`（${commentCount}）`:""}</a> : null}</nav>
     </>}
     <Dialog open={citations} onRequestClose={() => setCitations(false)} className={styles.materialDialog} aria-label="选择引用或研究材料"><header><h2>选择原文材料</h2><button aria-label="关闭材料选择" onClick={() => setCitations(false)}><X size={18} /></button></header><p>选择准确原文后，可引用、加入研究或在完整阅读器中记录笔记。</p>{materials.length ? materials.map((source,index) => <p key={`${source.type}:${source.id}:${index}`}><EditorialSource source={source} /></p>) : <p>本篇暂无已核验的正文来源。可以从相关书目进入原文。</p>}</Dialog>
   </article>;
