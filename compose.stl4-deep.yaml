@@ -1,0 +1,10 @@
+# Explicit optional model bundle. Layer after compose.discovery.yaml; no new
+# service, exposed port or replacement of the first-screen E5/mMARCO bundle.
+services:
+  discovery-inference:
+    environment:
+      DEEP_INFERENCE_ENABLED: "1"
+      DEEP_INFERENCE_MODEL_ROOT: /models/stl4-deep
+      DEEP_INFERENCE_GENERATION: ${STL_DEEP_RETRIEVAL_GENERATION:?Set the prepared bundle generation}
+    volumes:
+      - ${STL_DEEP_MODEL_ROOT:?Set the verified deep bundle directory}:/models/stl4-deep:ro

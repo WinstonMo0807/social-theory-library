@@ -106,14 +106,20 @@ def chunk_text(text: str, title: str = "", max_tokens: int = 320, overlap_tokens
 
 def embed_texts(texts: list[str], kind: str = "passage", expected_artifact: str = "", *,
                 expected_dimensions: int | None = None,
+                deep_generation: str = "", titles: list[str] | None = None,
                 transport: httpx.BaseTransport | None = None) -> dict:
     if expected_dimensions is None:
         expected_dimensions = int(getattr(settings, "DISCOVERY_EMBEDDING_DIMENSIONS", 384))
     if not 1 <= expected_dimensions <= 4096:
         raise DiscoveryInferenceError("invalid_response", "向量维度配置不在允许范围内。")
-    result = _call("/embed", {"texts": texts, "kind": kind, "expected_artifact": expected_artifact},
+    payload = {"texts": texts, "kind": kind, "expected_artifact": expected_artifact}
+    if deep_generation:
+        payload.update(generation=deep_generation, titles=titles)
+    result = _call("/deep-embed" if deep_generation else "/embed", payload,
                    **({"transport": transport} if transport is not None else {}))
     _identity(result, expected_artifact)
+    if deep_generation and (result.get("generation") != deep_generation or result.get("model") != "google/embeddinggemma-2"):
+        raise DiscoveryInferenceError("artifact_mismatch", "深度向量响应不属于当前模型代次。")
     vectors = result.get("vectors")
     if (result.get("dimensions") != expected_dimensions or not isinstance(vectors, list) or len(vectors) != len(texts)
             or result.get("truncated") != [False] * len(texts)):

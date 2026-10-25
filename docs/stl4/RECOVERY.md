@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-26 当前优先：真实前端视觉修正
+
+用户已授权浏览器直接对照内网和唯一PDF，并指出当前实际前端差异很大；不要继续声称视觉只差验收。先读CURRENT_PROGRESS顶部。原图10/208及当前citation截图已保存于tmp/pdfs/stl4-citation-20261018。品牌旧scope、中文隐藏和错误SVG是明确A。下一步修改共用品牌/页头和引文体检，再对照运行页面。当前预览未更新DEEP新镜像；API r5/Discovery r2已构建，prepare_deep_preview.py尚未运行，勿重复创建.env备份或重建副本。深度源码和制品说明见DEEP_RUNTIME.md。
+
 ## 2026-10-26 从已运行内网候选继续
 
 先查最新Git和CUTOVER_CANDIDATE_20261026.md，不重复构建、克隆或迁移已经运行的预览。项目stl4-preview-20261026-r1位于NAS /volume2/library/stl-previews/20261026-r1，入口192.168.5.6:18084/admin/visual-review，13服务已启动、账号副本保留。API使用r3镜像；r1旧迁移冲突/r2漏提示词的制备记录保留，不能恢复到失败候选。

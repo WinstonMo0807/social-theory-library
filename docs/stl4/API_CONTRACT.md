@@ -520,6 +520,8 @@ PDF18继续使用现有公开会话、GET /explore?q=、/account?section=setting
 
 ## 观点检索深度阶段
 
+2026-10-26补充：内部推理`POST /deep-embed`接收texts/kind/expected_artifact/generation及逐项titles，返回768维归一化向量和实际模型/代次，不走E5的`/embed`。现有来源索引作业同步独立EG2投影，记录baseline_generation；读取只取当前基础代次并执行原文/权限验证。公开Discovery响应结构不变，无新增公开路由或账户权限。
+
 `POST /api/catalog/discovery-search/` 与其状态读取接口继续返回同一 Discovery 会话。首屏 `passages` 使用当前已稳定的 QueryLexicon、稀疏/向量融合、mMARCO 初排和来源校验；启用 `STL_DEEP_RETRIEVAL_ENABLED` 后，后台在同一 `generation` 中追加深度阶段，并在首屏完成交接时换发一个受同一代次约束的深度 `task_id`，避免旧 worker 回写。
 
 - `task_progress.deep` 返回 `baseline_ready`、`deep_queued`、`deep_running`、`completed`、`partial` 或 `unavailable`；旧 worker 状态会在序列化边界映射到这些公开状态。

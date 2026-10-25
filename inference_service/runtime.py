@@ -16,6 +16,10 @@ import numpy as np
 import onnxruntime as ort
 from opencc import OpenCC
 from tokenizers import Tokenizer
+if __package__:
+    from .artifact_identity import deep_artifact_id
+else:
+    from artifact_identity import deep_artifact_id
 
 
 DEFAULT_NORMALIZATION = "stl-t2s-dehyphen-nfkc-v1"
@@ -161,12 +165,13 @@ class Runtime:
             if self.deep_generation and generation != self.deep_generation:
                 raise ValueError("configured deep generation mismatch")
             verified = {}
-            roles = {"reranker": ("deep_reranker", "reranker"), "context": ("context", "conv_memory")}
-            expected_models = {"reranker": "BAAI/bge-reranker-v2-m3",
+            roles = {"reranker": ("deep_reranker", "reranker"), "context": ("context", "conv_memory"),
+                     "embedding": ("embedding",)}
+            expected_models = {"embedding": "google/embeddinggemma-2", "reranker": "BAAI/bge-reranker-v2-m3",
                                "context": "Purdy0228/ConvMemory-v2-Evidence-Reranker"}
             for role, aliases in roles.items():
                 key = next((name for name in aliases if name in models), None)
-                if key is None and role == "context":
+                if key is None and role in {"context", "embedding"}:
                     continue
                 spec = models[key]
                 pinned = lock["models"][key]
@@ -175,7 +180,7 @@ class Runtime:
                 for field in ("repo_id", "revision", "directory", "model_file", "tokenizer_file", "precision", "max_tokens", "artifact_id"):
                     if spec.get(field) != pinned.get(field):
                         raise ValueError("deep lock mismatch")
-                if not spec.get("precision") or not 128 <= int(spec.get("max_tokens", 256)) <= 512:
+                if not spec.get("precision") or not 128 <= int(spec.get("max_tokens", 256)) <= (8192 if role == "embedding" else 512):
                     raise ValueError("deep token budget or precision missing")
                 folder = bundle_path(self.deep_root, spec.get("directory", key))
                 files = {item["path"]: item for item in spec["files"]}
@@ -339,6 +344,41 @@ class Runtime:
                 "runtime_id": self.deep_runtime_id, "precision": spec["precision"],
                 "max_tokens": spec["max_tokens"], "batch_size": 1, "threads": 1}
 
+    def deep_embed(self, texts: list[str], kind: str, expected: str, generation: str, titles=None) -> dict:
+        """Use the existing EG2 export, including its mean pooling and L2 output."""
+        if self.deep_error or "embedding" not in self.deep_models:
+            raise InferenceError("deep_unavailable", "深度向量模型尚未准备，已保留首屏结果。")
+        spec = self.deep_models["embedding"]
+        if not expected or expected != spec["artifact_id"]:
+            raise InferenceError("artifact_mismatch", "深度向量模型与索引制品不一致。", 409)
+        if not generation or generation != self.deep_generation:
+            raise InferenceError("generation_mismatch", "深度向量模型与索引代次不一致。", 409)
+        tokenizer, session = self._deep_runner("embedding")
+        tokenizer.no_truncation()
+        vectors, counts = [], []
+        deadline = time.monotonic() + self.seconds
+        for index, text in enumerate(texts):
+            # Same prompts as the inherited prepare_encoder_probe.py. E5's
+            # query:/passage: prefix and token-hidden pooling do not apply.
+            normalized = self.normalize(text)
+            title = self.normalize(titles[index]) if titles else ""
+            prepared = ("task: search result | query: " + normalized if kind == "query" else
+                        "title: " + (title or "none") + " | text: " + normalized)
+            encoded = tokenizer.encode(prepared)
+            if len(encoded.ids) > spec["max_tokens"]:
+                raise InferenceError("input_too_long", "深度编码文字超过模型上限，请按原文分段。", 422)
+            values = {"input_ids": encoded.ids, "attention_mask": encoded.attention_mask,
+                      "token_type_ids": encoded.type_ids}
+            feeds = {item.name: np.asarray([values[item.name]], dtype=np.int64) for item in session.get_inputs()}
+            output = self._deep_forward(session, feeds, deadline, "embedding")
+            if output.shape != (1, 768) or not .995 < float(np.square(output).sum()) < 1.005:
+                raise InferenceError("invalid_output", "EG2导出必须返回768维归一化向量。")
+            vectors.append(output[0].tolist())
+            counts.append(len(encoded.ids))
+        self.completed_roles.add("deep:embedding")
+        return {**self.deep_identity("embedding"), "dimensions": 768, "vectors": vectors,
+                "token_counts": counts, "truncated": [False] * len(texts)}
+
     def _deep_runner(self, role: str):
         key = f"deep:{role}"
         if self.session_role == key and self.session is not None:
@@ -365,7 +405,10 @@ class Runtime:
             tokenizer.no_padding()
             # Same pair tokenizer, longest_first truncation, scalar logit,
             # CPU provider and BASIC graph optimization as run_ort_reranker.py.
-            tokenizer.enable_truncation(max_length=spec["max_tokens"], strategy="longest_first")
+            if role == "embedding":
+                tokenizer.no_truncation()
+            else:
+                tokenizer.enable_truncation(max_length=spec["max_tokens"], strategy="longest_first")
             session = ort.InferenceSession(str(bundle_path(folder, spec.get("model_file", "model.onnx"))),
                                            sess_options=options, providers=["CPUExecutionProvider"])
             if not {item.name for item in session.get_inputs()}.issubset({"input_ids", "attention_mask", "token_type_ids"}):
@@ -377,6 +420,30 @@ class Runtime:
         self.session, self.session_role = session, key
         self.loaded_roles.add(key)
         return tokenizer, session
+
+    def _deep_forward(self, session, feeds: dict, deadline: float, role: str):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            self.completed_roles.discard(f"deep:{role}")
+            raise InferenceError("inference_timeout", "深度推理达到时间上限，已保留即时结果。", 504)
+        options = ort.RunOptions()
+        timer = threading.Timer(remaining, lambda: setattr(options, "terminate", True))
+        timer.daemon = True
+        timer.start()
+        try:
+            output = np.asarray(session.run([session.get_outputs()[0].name], feeds, options)[0])
+            if not np.isfinite(output).all():
+                raise InferenceError("invalid_output", "深度模型返回无效数值。")
+            return output
+        except Exception as exc:
+            self.completed_roles.discard(f"deep:{role}")
+            if isinstance(exc, InferenceError):
+                raise
+            timed_out = time.monotonic() >= deadline
+            raise InferenceError("inference_timeout" if timed_out else "inference_failed",
+                                 "深度推理未完成，已保留即时结果。", 504 if timed_out else 503) from exc
+        finally:
+            timer.cancel()
 
     def _deep_scores(self, role: str, query: str, documents: list[str]) -> list[dict]:
         deadline = time.monotonic() + self.seconds
@@ -395,27 +462,10 @@ class Runtime:
             values = {"input_ids": encoded.ids, "attention_mask": encoded.attention_mask,
                       "token_type_ids": encoded.type_ids}
             feeds = {item.name: np.asarray([values[item.name]], dtype=np.int64) for item in session.get_inputs()}
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
+            output = self._deep_forward(session, feeds, deadline, role)
+            if output.size != 1:
                 self.completed_roles.discard(f"deep:{role}")
-                raise InferenceError("inference_timeout", "深度推理达到时间上限，已保留即时结果。", 504)
-            options = ort.RunOptions()
-            timer = threading.Timer(remaining, lambda: setattr(options, "terminate", True))
-            timer.daemon = True
-            timer.start()
-            try:
-                output = np.asarray(session.run([session.get_outputs()[0].name], feeds, options)[0])
-                if output.size != 1 or not np.isfinite(output).all():
-                    raise InferenceError("invalid_output", "深度模型输出不符合单候选分数契约。")
-            except Exception as exc:
-                self.completed_roles.discard(f"deep:{role}")
-                if isinstance(exc, InferenceError):
-                    raise
-                timed_out = time.monotonic() >= deadline
-                raise InferenceError("inference_timeout" if timed_out else "inference_failed",
-                                     "深度推理未完成，已保留即时结果。", 504 if timed_out else 503) from exc
-            finally:
-                timer.cancel()
+                raise InferenceError("invalid_output", "深度模型输出不符合单候选分数契约。")
             results.append({"index": index, "relevance_score": float(output.reshape(-1)[0]),
                             "token_count": len(encoded.ids), "truncated": len(encoded.ids) < len(full.ids),
                             "query_truncated": sum(value == 0 for value in encoded.sequence_ids) < original_query_tokens,
@@ -681,16 +731,6 @@ def bundle_path(root: Path, relative: str) -> Path:
     path = (root / relative).resolve()
     path.relative_to(root.resolve())
     return path
-
-
-def deep_artifact_id(role: str, spec: dict, *, pipeline: str, runtime_id: str) -> str:
-    identity = {"role": role, "repo": spec["repo_id"], "revision": spec["revision"],
-                "files": {item["path"]: item["sha256"] for item in spec["files"]},
-                "model_file": spec.get("model_file", "model.onnx"),
-                "tokenizer_file": spec.get("tokenizer_file", "tokenizer.json"),
-                "precision": spec["precision"], "max_tokens": int(spec.get("max_tokens", 256)),
-                "pipeline": pipeline, "runtime": runtime_id, "truncation": "longest_first"}
-    return "stl4-deep-" + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
 def artifact_id(role: str, spec: dict, *, pipeline: str = DEFAULT_PIPELINE,

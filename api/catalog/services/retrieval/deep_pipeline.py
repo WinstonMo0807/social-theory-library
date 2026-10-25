@@ -22,6 +22,7 @@ from django.conf import settings
 from catalog.services.discovery_inference import DiscoveryInferenceError, embed_texts
 from catalog.services.discovery_projection import (
     DiscoveryIndexError,
+    active_generation,
     current_scopes,
     meili,
     validate_discovery_results,
@@ -153,13 +154,18 @@ def _eg2_candidates(
     """Read an explicitly configured EG2 index; never touch the active index."""
 
     warnings: list[dict] = []
-    if not index_uid or not embedding_artifact:
+    generation = str(getattr(settings, "STL_DEEP_RETRIEVAL_GENERATION", "")).strip()
+    if not index_uid or not embedding_artifact or not generation:
         return [], {"status": "disabled", "index_uid": "", "artifact": ""}, warnings
     if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", index_uid):
         warnings.append(_warning("deep_index_not_allowlisted", "深度索引标识未通过隔离配置校验。"))
         return [], {"status": "degraded", "index_uid": "", "artifact": embedding_artifact}, warnings
     try:
         base = _deep_meili_filter(filters, access_statuses)
+        baseline_generation = active_generation()
+        if baseline_generation is None:
+            return [], {"status": "skipped", "reason": "no_active_source_index"}, warnings
+        base["filter"].append(f"baseline_generation = {json.dumps(str(baseline_generation.pk))}")
         sparse_response = meili(
             "POST", f"/indexes/{index_uid}/search", {**base, "q": query}
         )
@@ -168,6 +174,7 @@ def _eg2_candidates(
             kind="query",
             expected_artifact=embedding_artifact,
             expected_dimensions=dimensions,
+            deep_generation=generation,
         )["vectors"][0]
         dense_response = meili(
             "POST",

@@ -86,7 +86,7 @@ def wait_index_task(payload, timeout=120):
     raise DiscoveryIndexError("write_timeout", "索引写入尚未完成，请在处理中心重试。")
 
 
-def ensure_index(generation):
+def ensure_index(generation, *, extra_filterable=()):
     # Index creation is idempotent. The unique name never addresses an old index.
     try:
         meili("GET", f"/indexes/{generation.uid}")
@@ -96,7 +96,7 @@ def ensure_index(generation):
         wait_index_task(meili("POST", "/indexes", {"uid": generation.uid, "primaryKey": "id"}))
     desired = {"searchableAttributes": ["title", "aliases", "authors", "normalized_text"],
         "displayedAttributes": ["*"],
-        "filterableAttributes": ["id", "channel", "source_type", "source_id", "source_revision", "scope_token", "access_status", "input_hash", "language"],
+        "filterableAttributes": ["id", "channel", "source_type", "source_id", "source_revision", "scope_token", "access_status", "input_hash", "language", *extra_filterable],
         "pagination": {"maxTotalHits": 10000},
         "embedders": {"discovery": {"source": "userProvided", "dimensions": int(generation.dimensions or 384)}}}
     wait_index_task(meili("PATCH", f"/indexes/{generation.uid}/settings", desired))
@@ -276,6 +276,9 @@ def remove_source(generation, kind, source_id, *, keep_revision=None):
     filters = [f"source_type = {json.dumps(kind)}", f"source_id = {json.dumps(str(source_id))}"]
     if keep_revision:
         filters.append(f"source_revision != {json.dumps(keep_revision)}")
+    if getattr(settings, "STL_DEEP_RETRIEVAL_ENABLED", False):
+        from catalog.services.retrieval.deep_index import remove_source as remove_deep_source
+        remove_deep_source([*filters, f"baseline_generation = {json.dumps(str(generation.pk))}"])
     while True:
         # The canonical row may already have cascaded its SQL projections.
         # Enumerate the external source too, so orphaned Meili IDs cannot block
@@ -310,6 +313,7 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
     identifier = uuid5(generation.pk, f"{header['source_type']}:{header['source_id']}:{header['source_revision']}:{unit['unit_id']}:{child['start']}:{child['end']}")
     existing = DiscoveryDocument.objects.filter(pk=identifier, vector_ready=True, keyword_ready=True).first()
     if existing and (header["channel"] != "passages" or existing.payload.get("responsibility_projection") == 1):
+        _write_deep_projection(job, existing)
         return
     _guard_job(job, stats={**job.stats, "active_unit": {"unit_id": unit["unit_id"], "pdf_page": unit["metadata"].get("pdf_page"),
         "start_offset": child["start"], "end_offset": child["end"]}})
@@ -358,6 +362,23 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
         if not _is_current(job, generation, header):
             raise DiscoveryIndexError("superseded", "资料或任务已更新，旧写入不会标记为完成。")
         DiscoveryDocument.objects.filter(pk=document.pk).update(keyword_ready=True, vector_ready=True, indexed_at=timezone.now())
+    document.keyword_ready = True
+    _write_deep_projection(job, document)
+
+
+def _write_deep_projection(job, document):
+    if not getattr(settings, "STL_DEEP_RETRIEVAL_ENABLED", False):
+        return
+    from catalog.services.retrieval.deep_index import project_document
+    try:
+        project_document(document)
+    except (DiscoveryIndexError, DiscoveryInferenceError) as exc:
+        # Optional deep model failure cannot discard a completed E5 write.
+        # Keep an actionable receipt; discovery_deep_index resumes by input hash.
+        logger.warning("Deep projection pending for document %s: %s", document.pk, exc.code)
+        _guard_job(job, stats={**job.stats, "deep_index_pending": {
+            "document_id": str(document.pk), "code": exc.code,
+            "message": "基础索引已保留，深度投影待补写。"}})
 
 
 def process_source(job, generation):

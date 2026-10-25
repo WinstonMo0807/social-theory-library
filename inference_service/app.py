@@ -78,6 +78,17 @@ class EmbedRequest(TextBatch):
     expected_artifact: str = Field(default="", max_length=100)
 
 
+class DeepEmbedRequest(EmbedRequest):
+    generation: str = Field(min_length=1, max_length=160)
+    titles: list[str] | None = Field(default=None, max_length=64)
+
+    @model_validator(mode="after")
+    def matching_titles(self):
+        if self.titles is not None and (len(self.titles) != len(self.texts) or any(len(title) > 2000 for title in self.titles)):
+            raise ValueError("题名须与文本逐项对应且不超过2000字符")
+        return self
+
+
 class ChunkRequest(BaseModel):
     text: str = Field(max_length=100_000)
     title: str = Field(default="", max_length=2000)
@@ -172,6 +183,12 @@ def chunk(request: ChunkRequest):
 @app.post("/embed")
 def embed(request: EmbedRequest):
     return serialized(lambda: runtime.embed(request.texts, request.kind, request.expected_artifact))
+
+
+@app.post("/deep-embed")
+def deep_embed(request: DeepEmbedRequest):
+    return serialized(lambda: runtime.deep_embed(request.texts, request.kind, request.expected_artifact,
+                                                request.generation, request.titles))
 
 
 @app.post("/rerank")
