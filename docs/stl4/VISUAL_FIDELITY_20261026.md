@@ -189,3 +189,9 @@ VISUAL-15证据：实际/theories/graph截图before-graph-r14-desktop-20261026.p
 目录正常GET触发public_editorial.py:113 FieldError Cannot resolve keyword public_snapshot，trace来自PublicIssueListView.get。JSON注解的values_list改显式KeyTransform；同文件published_media_usage读取正文块使用同修正，原published过滤不变。API r10更新后实际浏览器目录从错误恢复为真实0文章，未用假空态掩盖故障。后续真实有数据筛选/媒体授权仍B待验收。
 
 编译08071d→78320f退出0；1921文件44273765字节，SHA256 1ea9d84a09157249a04730015c525f87a79cd6c8c61e5ae16fd23715c7a6e1a9。NAS ae8fbe→8f7b60→ebf72c→081503→8273d8退出0；Web r20 0c4a6c9d20b1、API r10 a79b2b97f68d。恢复点.env.before-editorial-r20。after-editorial-r20-desktop/mobile-20261026.png保存在原tmp。截图空态图标偏左与桌面横幅偏高已局部修源码，待r21。原字体/有数据状态未关闭；无测试、模型、业务写入、迁移或公网操作。
+
+## VISUAL-20 管理外框、今日工作（PDF80/81）
+
+before-admin-r19-desktop实际旧品牌/纸底/标题/顶栏差异。浏览器CSS规则显示editorial-v2覆盖管理外框，移出旧scope；AdminShell原权限/本人上下文/准确返回链保留，原图80桌面手机品牌、81空态插图接入，不把PDF设备框当页面。状态移至标题资料旁，主要工作按钮及时间在右，手机保持同一工作链接；原副搜索隐藏，顶部统一搜索可用。组内自问普通管理员空库能否开始、权限项是否可见、工作提醒是否真实、原任务入口是否准确，原接口/能力保护保持，未实际创建或提交工作。
+
+编译4b8ff8→bf5865退出0；1929文件44374410字节，SHA256 d54837ea7215f9786ceea81ae0a91211aa80d352b15eb5226e0babf8752473a4。NAS37287b→4195fd退出0，Web r21 d652f13d7815，API r10保持，恢复点.env.before-admin-r21。重启后首次502，日志ready后刷新恢复。after-admin-r21-desktop/mobile-20261026.png保存。实际仍有后置.admin-shell重设205px变量与纸底，已将根选择器限定为.admin-shell.stl4-admin-shell，同手机滚动条修正待r22。字体/真实任务行/受限权限B未验收；无测试/业务写入/模型/迁移/公网切换。

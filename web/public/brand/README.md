@@ -222,3 +222,13 @@ PDF68 hub, PDF69 directory and PDF71 latest overlapping detail state. Original b
 | visual/stl4/editorial/article-hero-final-r2.png | 76 | 520,102,1184,346 |
 | visual/stl4/editorial/article-hero-mobile-final-r2.png | 76 | 1219,134,1489,217 |
 | visual/stl4/editorial/exhibition-hero-final-r2.svg | 78 | 346,110,688,207 + 512,207,688,282; original photo regions excluding text |
+
+## Administration PDF80/81
+
+Original desktop/mobile lockups and empty-state book illustration from the final PDF. All counts and task rows remain live.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-admin-desktop-final-r2.png | 80 | 50,35,255,87 |
+| brand/stl-lockup-admin-mobile-final-r2.png | 80 | 1279,85,1374,121 |
+| visual/stl4/admin/today-empty-final-r2.png | 81 | 293,772,364,829 |

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Boxes, ChartNoAxesCombined, CircleDot, ChevronDown, LayoutDashboard, ListTodo, Menu, RefreshCw, Search, Sparkles, Upload, Users, X, LockKeyhole, CircleHelp, MoreHorizontal } from "lucide-react";
+import { Archive, ChartColumn, ClipboardCheck, ClipboardList, FileCheck2, FileText, Settings, UserRound, ChevronDown, Menu, RefreshCw, Search, X, LockKeyhole, CircleHelp, MoreHorizontal } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
@@ -14,20 +14,20 @@ import { AdminWorkNotices } from "./admin/admin-work-notices";
 
 const navigationGroups = [
   { label: "工作", entries: [
-    { href: "/admin", title: "今日工作", Icon: LayoutDashboard, paths: ["/admin", "/admin/search"], children: [] },
-    { href: "/admin/uploads", title: "收件与编目", Icon: Upload, paths: ["/admin/uploads", "/admin/intake", "/admin/cataloging", "/admin/review"], children: [["/admin/uploads", "上传与收件"], ["/admin/review", "待办与复核"], ["/admin/cataloging/new", "手工编目"]] },
-    { href: "/admin/library", title: "馆藏目录", Icon: BookOpen, paths: ["/admin/library"], children: [] },
-    { href: "/admin/processing", title: "文件与处理", Icon: ListTodo, paths: ["/admin/processing"], children: [["/admin/processing?surface=documents", "OCR 与文档"], ["/admin/processing?surface=workers", "后台任务"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"]] },
+    { href: "/admin", title: "今日工作", Icon: ClipboardCheck, paths: ["/admin", "/admin/search"], children: [] },
+    { href: "/admin/uploads", title: "收件与编目", Icon: ClipboardList, paths: ["/admin/uploads", "/admin/intake", "/admin/cataloging", "/admin/review"], children: [["/admin/uploads", "上传与收件"], ["/admin/review", "待办与复核"], ["/admin/cataloging/new", "手工编目"]] },
+    { href: "/admin/library", title: "馆藏目录", Icon: FileCheck2, paths: ["/admin/library"], children: [] },
+    { href: "/admin/processing", title: "文件与处理", Icon: ClipboardCheck, paths: ["/admin/processing"], children: [["/admin/processing?surface=documents", "OCR 与文档"], ["/admin/processing?surface=workers", "后台任务"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"]] },
   ] },
   { label: "内容", entries: [
-    { href: "/admin/recommendations", title: "特别策划", Icon: Sparkles, paths: ["/admin/recommendations"], children: [["/admin/recommendations", "策划文章"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
-    { href: "/admin/content", title: "页面编排", Icon: Boxes, paths: ["/admin/content", "/admin/about", "/admin/media"], children: [["/admin/content", "内容编排"], ["/admin/about", "网站与关于书库"], ["/admin/media", "图片库"]] },
-    { href: "/admin/theories", title: "学者与知识", Icon: CircleDot, paths: ["/admin/theories", "/admin/scholars", "/admin/topics", "/admin/people", "/admin/reading-paths", "/admin/disciplines", "/admin/subdisciplines"], children: [["/admin/scholars", "学者"], ["/admin/theories", "理论流派"], ["/admin/topics", "主题"], ["/admin/theories/disciplines", "学科"], ["/admin/theories/subdisciplines", "子学科"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/reading-paths", "阅读路径"], ["/admin/scholars/people", "人物查重"]] },
-    { href: "/admin/publication", title: "发布台", Icon: BookOpen, paths: ["/admin/publication"], children: [] },
+    { href: "/admin/recommendations", title: "特别策划", Icon: FileText, paths: ["/admin/recommendations"], children: [["/admin/recommendations", "策划文章"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
+    { href: "/admin/content", title: "页面编排", Icon: ChartColumn, paths: ["/admin/content", "/admin/about", "/admin/media"], children: [["/admin/content", "内容编排"], ["/admin/about", "网站与关于书库"], ["/admin/media", "图片库"]] },
+    { href: "/admin/theories", title: "学者与知识", Icon: ClipboardCheck, paths: ["/admin/theories", "/admin/scholars", "/admin/topics", "/admin/people", "/admin/reading-paths", "/admin/disciplines", "/admin/subdisciplines"], children: [["/admin/scholars", "学者"], ["/admin/theories", "理论流派"], ["/admin/topics", "主题"], ["/admin/theories/disciplines", "学科"], ["/admin/theories/subdisciplines", "子学科"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/reading-paths", "阅读路径"], ["/admin/scholars/people", "人物查重"]] },
+    { href: "/admin/publication", title: "发布台", Icon: Archive, paths: ["/admin/publication"], children: [] },
   ] },
   { label: "系统", entries: [
-    { href: "/admin/users", title: "账户与权限", Icon: Users, paths: ["/admin/users"], children: [] },
-    { href: "/admin/processing/status", title: "运行维护", Icon: ChartNoAxesCombined, paths: ["/admin/processing/status", "/admin/processing/health", "/admin/processing/settings", "/admin/status", "/admin/system-health", "/admin/storage", "/admin/backups", "/admin/analytics", "/admin/recycle", "/admin/settings", "/admin/distribution", "/admin/query-lexicon", "/admin/semantic-index", "/admin/support"], children: [["/admin/processing/status", "运行检查"], ["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "审计与统计"], ["/admin/settings", "模型与服务"], ["/admin/distribution", "分发设置"], ["/admin/recycle", "回收站"], ["/admin/support/feedback", "反馈处理"], ["/admin/support/parallel-calibrations", "公共校准"]] },
+    { href: "/admin/users", title: "账户与权限", Icon: UserRound, paths: ["/admin/users"], children: [] },
+    { href: "/admin/processing/status", title: "运行维护", Icon: Settings, paths: ["/admin/processing/status", "/admin/processing/health", "/admin/processing/settings", "/admin/status", "/admin/system-health", "/admin/storage", "/admin/backups", "/admin/analytics", "/admin/recycle", "/admin/settings", "/admin/distribution", "/admin/query-lexicon", "/admin/semantic-index", "/admin/support"], children: [["/admin/processing/status", "运行检查"], ["/admin/storage", "文件存储"], ["/admin/backups", "备份与恢复"], ["/admin/analytics", "审计与统计"], ["/admin/settings", "模型与服务"], ["/admin/distribution", "分发设置"], ["/admin/recycle", "回收站"], ["/admin/support/feedback", "反馈处理"], ["/admin/support/parallel-calibrations", "公共校准"]] },
   ] },
 ] as const;
 
@@ -213,7 +213,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         aria-hidden={compactNavigation && !open}
         inert={compactNavigation && !open}
       >
-        <Link className="admin-logo" href="/" prefetch={false}><Wordmark /></Link>
+        <Link className="admin-logo" href="/" prefetch={false}><Wordmark reference="admin" /></Link>
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
         <nav aria-label="管理工作区">
           {navigationGroups.map(group => <section className="stl4-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.entries.map(entry => {
@@ -225,7 +225,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </div>;
           })}</section>)}
         </nav>
-        <footer><Link className="stl4-admin-help" href="/help"><CircleHelp size={17} />帮助</Link><Link className="admin-back-public" href="/" prefetch={false}>← <span>返回前台</span></Link><span className="admin-version">{ADMIN_VERSION_LABEL}</span></footer>
+        <footer><Link className="stl4-admin-help" href="/help"><CircleHelp size={17} />帮助</Link><span className="sr-only">{ADMIN_VERSION_LABEL}</span></footer>
       </aside> : null}
       <div className="admin-main" inert={compactNavigation && open}>
         {!focusMode ? <header className="admin-topbar">
@@ -238,7 +238,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-controls="admin-navigation"
             onClick={() => setOpen(true)}
           ><Menu size={20} /></button>
-          <Link className="stl4-mobile-brand" href="/admin" aria-label="管理首页"><Wordmark /></Link><span className="sr-only">{scope.title}</span>
+          <Link className="stl4-mobile-brand" href="/admin" aria-label="管理首页"><Wordmark reference="admin" /></Link><span className="sr-only">{scope.title}</span>
           <button className="stl4-mobile-search-toggle" type="button" aria-label="打开后台搜索" aria-controls="admin-global-search" aria-expanded={searchOpen} onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
           <form action="/admin/search" id="admin-global-search" className={`stl4-admin-search ${searchOpen ? "is-open" : ""}`} key={pathname === "/admin/search" ? searchParams.get("q") || "" : pathname}>
             <label><Search size={15} /><input type="search" name="q" defaultValue={pathname === "/admin/search" ? searchParams.get("q") || "" : ""} maxLength={200} placeholder="搜索书名、作者、主题、任务编号…" aria-label="搜索后台书名、作者、主题或任务编号" /></label>
