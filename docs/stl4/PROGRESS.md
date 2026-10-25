@@ -1,5 +1,10 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-26 明确状态与内网预览
+
+按用户新约束实行A/B/C/D；206范围内视图为B待验收，3排除，旧状态保留历史。PREVIEW-01修复仅预览Edge同源嵌入；PREVIEW-02专用NAS目录和Compose已准备，Web构建退出0，API镜像仍在准备。细节见DELIVERY_CLOSURE_20261026.md及VISUAL_REVIEW_PREVIEW_20261024.md；未测试或部署生产。
+
+
 ## 2026-10-26 M08引用修复与收尾分类
 
 补Topic媒体引用及正式快照区分，显示实际登记范围。AST/禁连DB查询编译、目标ESLint/TS noEmit均退出0；无测试、浏览器、迁移或部署。模块细节见MEDIA_WORKSPACE_20261023.md。M30三行按D010纠正为排除；源码实现、缺陷、待验收分别记录，旧待办不重复开发。后续边界见DELIVERY_CLOSURE_20261026.md。

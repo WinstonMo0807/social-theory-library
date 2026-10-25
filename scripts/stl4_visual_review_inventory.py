@@ -19,7 +19,8 @@ shared = {"R34-sub04": ("/", "web/components/site-header.tsx"),
           "R34-sub03": ("/account/sharing/new", "web/components/research/share-composer.tsx")}
 result, missing = [], []
 for row in rows:
-    item = {key: row[key] for key in ("page", "id", "module", "title", "route", "implementation_status", "visual_gaps")}
+    item = {key: row[key] for key in ("page", "id", "module", "title", "route", "implementation_status", "visual_gaps",
+                                    "implementation_evidence", "unverified_scope", "must_fix_ids")}
     path = re.sub(r"\{([^}]+)\}", r"[\1]", row["route"].split("；")[0].split("及")[0])
     if row["id"].startswith("M30-"):
         item.update(start_path="", route_kind="excluded", route_files=[], implementation_status="按D010排除，本轮不开展检索质量评审")

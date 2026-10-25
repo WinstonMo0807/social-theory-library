@@ -1,0 +1,84 @@
+# Private, disposable acceptance environment. Use only with compose.yaml in a
+# separate source directory and project; never layer onto the live project.
+name: stl4-preview
+
+x-preview-data: &preview-data !override
+  - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/archive:/data/archive
+  - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/public:/data/public
+  - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/private:/data/private
+  - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/incoming:/data/incoming
+  - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/backups:/data/backups
+  - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/models:/models
+
+x-preview-api: &preview-api
+  PUBLIC_DEPLOYMENT_MODE: "false"
+  STL_VISUAL_REVIEW_ENABLED: "true"
+  STL_VISUAL_ATLAS_PATH: /reference/final-r2.pdf
+  DJANGO_X_FRAME_OPTIONS: SAMEORIGIN
+  DJANGO_SECURE_COOKIES: "false"
+  DJANGO_SECURE_SSL_REDIRECT: "false"
+  # Preview actions must not send mail to real readers.
+  EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+
+services:
+  postgres:
+    mem_limit: 256m
+    memswap_limit: 256m
+  redis:
+    mem_limit: 128m
+    memswap_limit: 128m
+  meilisearch:
+    volumes: !override
+      - meilisearch_data:/meili_data
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/models:/meili_data/models:ro
+    mem_limit: 384m
+    memswap_limit: 384m
+  api:
+    environment: *preview-api
+    # Startup does not migrate any database. Initialize the isolated preview
+    # database explicitly before starting API/workers.
+    command: gunicorn --config python:config.gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120
+    ports: !reset []
+    volumes: !override
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/archive:/data/archive
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/public:/data/public
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/private:/data/private
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/incoming:/data/incoming
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/backups:/data/backups
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/models:/models:ro
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/reference/final-r2.pdf:/reference/final-r2.pdf:ro
+    mem_limit: 512m
+    memswap_limit: 512m
+  worker:
+    environment: *preview-api
+    volumes: *preview-data
+    profiles: [tasks]
+    mem_limit: 512m
+    memswap_limit: 512m
+  ingestion-worker:
+    environment: *preview-api
+    volumes: *preview-data
+    profiles: [tasks]
+    mem_limit: 512m
+    memswap_limit: 512m
+  beat:
+    profiles: [scheduled-tasks]
+  paddleocr:
+    volumes: !override
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/ocr-models:/models
+  grobid:
+    ports: !reset []
+  web:
+    ports: !reset []
+    mem_limit: 768m
+    memswap_limit: 768m
+  edge:
+    environment:
+      LAN_HOST: ${STL_PREVIEW_BIND_IP:-127.0.0.1}
+      LAN_PROXY_TOKEN: ${LAN_PROXY_TOKEN:?Generate a private preview token}
+    ports: !override
+      - ${STL_PREVIEW_BIND_IP:-127.0.0.1}:${STL_PREVIEW_PORT:-18084}:80
+    volumes: !override
+      - ./deploy/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/nginx/40-stl4-preview-frames.sh:/docker-entrypoint.d/40-stl4-preview-frames.sh:ro
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/public:/data/public:ro

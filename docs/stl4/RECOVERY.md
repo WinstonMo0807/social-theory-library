@@ -1,5 +1,10 @@
 # 中断恢复最短路径
 
+## 2026-10-26 继续专用内网预览
+
+规则按AGENTS顶部A/B/C/D；查DELIVERY_CLOSURE_20261026.md和VISUAL_REVIEW_PREVIEW_20261024.md。当前在NAS /volume2/library/stl-previews/20261026-r1 准备镜像；独立项目名stl4-preview-20261026-r1，绝不能换成生产social-science-library。Web本机构建已完成，运行包已传；先查看evidence/api-build.log及新镜像，再继续隔离数据/服务启动，不重新排查全站。源码含原未提交成果，生产保持。
+
+
 ## 2026-10-26 收尾入口
 
 先核对本次M08引用及收尾分类检查点，阅读DELIVERY_CLOSURE_20261026.md；原未提交成果保留。当前继续既有内网批注预览启动依赖，不重新逐条执行历史记录里的旧待办。M30三视图按D010排除；111部分接入不是111页待开发。没有运行测试、浏览器、迁移或部署。

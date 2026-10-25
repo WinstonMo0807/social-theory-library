@@ -1,5 +1,16 @@
 # Social Theory Library 当前进度
 
+## 2026-10-26 A/B/C/D收尾与真实内网预览准备
+
+前置7de4f88d。用户新约束已写入AGENTS，206范围内视图按既有实现/源码映射列B待验收，M30三项排除；原标签保留历史。真实缺陷按文件、触发、影响、最小范围登记；具体已实现单元关闭D。细节见docs/stl4/DELIVERY_CLOSURE_20261026.md，不再以部分接入作为唯一状态。
+
+PREVIEW-01确证原Edge的DENY与同站iframe交互预览冲突，新增仅预览挂载的SAMEORIGIN脚本；原公网配置保持。独立compose.stl4-preview.yaml禁API/Web直出、固定私网入口、关闭自动迁移并使用专用存储。NAS静态Compose解析已确认新项目、无生产挂载及自动迁移，未修改生产。
+
+PREVIEW-02已准备独立/volume2/library/stl-previews/20261026-r1。源码1776文件保留工作区现有未提交实现，冻结归档SHA256 8e0f865ffbece8306de5e02140701f58e9a6e3567a3a520fed3a64cc9771ce80；最终PDF只读单独放入reference。使用既有10月24日离线安全依赖，Windows Web内网预览构建642b89→61e339退出0，未执行测试。API镜像构建与Node/Nginx镜像准备进行中；尚无已启动预览URL。
+
+NAS只读确认线上仍3.0.9.1、4个账号、0馆藏作品；没有写生产库、重启线上或切换公网。静态记录：80e94b YAML解析及209路径映射，8ec3c1隔离Compose解析。下一步完成镜像、隔离预览数据准备与启动；正式验收、模型实际可用性和全站像素效果仍B。
+
+
 ## 2026-10-26 M08引用修复与收尾范围纠偏
 
 前置907db192。M08补Topic已登记引用，按既有正式快照区分公开图片和当前选图，界面明确清单范围；唯一PDF102–105已实际读取。0a7fc8目标AST/4条禁连DB查询编译/diff0，0666f9→51f71a目标ESLint/TS noEmit0。无测试、浏览器、业务请求、迁移或部署。细节见docs/stl4/MEDIA_WORKSPACE_20261023.md。
