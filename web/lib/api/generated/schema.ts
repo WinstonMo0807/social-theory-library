@@ -6260,6 +6260,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/research-projects/{id}/comparison-draft/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        post: operations["reading_research_projects_comparison_draft_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/research-projects/{id}/export/": {
         parameters: {
             query?: never;
@@ -8741,6 +8758,13 @@ export interface components {
             author?: string;
             reference_ids?: string[];
             note?: string;
+        };
+        ComparisonDraftInputRequest: {
+            expected_revision: number;
+            /** Format: uuid */
+            request_id: string;
+            dimension: string;
+            reference_ids: string[];
         };
         ComparisonInputRequest: {
             expected_revision: number;
@@ -36997,6 +37021,34 @@ export interface operations {
         };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateRecord"];
+                };
+            };
+        };
+    };
+    reading_research_projects_comparison_draft_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标识此 research project 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComparisonDraftInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ComparisonDraftInputRequest"];
+                "multipart/form-data": components["schemas"]["ComparisonDraftInputRequest"];
+            };
+        };
+        responses: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

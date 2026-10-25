@@ -30636,6 +30636,67 @@
                 }
             }
         },
+        "/api/reading/research-projects/{id}/comparison-draft/": {
+            "post": {
+                "operationId": "reading_research_projects_comparison_draft_create",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 research project 的 UUID 字符串。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ComparisonDraftInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ComparisonDraftInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ComparisonDraftInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PrivateRecord"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/research-projects/{id}/export/": {
             "get": {
                 "operationId": "reading_research_projects_export_retrieve",
@@ -39547,6 +39608,40 @@
                 },
                 "required": [
                     "dimension"
+                ]
+            },
+            "ComparisonDraftInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_revision": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "dimension": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    },
+                    "reference_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 180
+                        },
+                        "maxItems": 20,
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "dimension",
+                    "expected_revision",
+                    "reference_ids",
+                    "request_id"
                 ]
             },
             "ComparisonInputRequest": {

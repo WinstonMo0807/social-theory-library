@@ -70,6 +70,12 @@ class ComparisonInput(RevisionInput):
     cells = ComparisonCellInput(many=True)
 
 
+class ComparisonDraftInput(RevisionInput):
+    request_id = serializers.UUIDField()
+    dimension = serializers.CharField(max_length=160)
+    reference_ids = serializers.ListField(child=serializers.CharField(max_length=180), min_length=1, max_length=20)
+
+
 class StatementInput(serializers.Serializer):
     proposition = serializers.CharField(max_length=1200)
     subject = serializers.CharField(required=False, allow_blank=True)

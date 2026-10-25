@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 R06本地比较草稿
+
+comparison-draft复用加密ResearchTurn并从原collect_research_turn分支处理；原任务租约恢复/取消generation生效。generate_local只用本地传输。模型候选与ResearchProject.comparison人工笔记分开，未新增表或迁移。
+
 ## 2026-10-25 R06/R08准确版本对照
 
 R06版本差异复用公开parallel/versions和原私人parallel-tasks。Reader并读URL新增right_asset/right_revision，原revision/focus传入两侧选择保护；源修订失效时需显式重选，不建新版本关系。

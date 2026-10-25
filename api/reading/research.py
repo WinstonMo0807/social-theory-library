@@ -787,6 +787,9 @@ def serialize_record(record, user, *, memory_context_rows=None):
                                        else "partial" if readable else "unavailable")
     if isinstance(payload.get("scope"), dict):
         payload["scope"] = {**payload["scope"], "references": [resolve_reference(ref, user) for ref in payload["scope"].get("references", [])]}
+    if "comparison_draft" in payload:
+        from .research_comparison import project_draft
+        project_draft(payload)
     for row in payload.get("analysis", []):
         current = resolve_reference(row["reference"], user)
         row["reference"] = current

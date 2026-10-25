@@ -183,6 +183,14 @@ export function changeResearchSelection(id: string, data: Revision & { expected_
 export function saveResearchComparison(id: string, data: Revision & { dimensions: string[]; cells: ComparisonCell[] }) {
   return write<ResearchRecord<ProjectData>>(`${researchRecordPath("research-projects", id)}comparison/`, data);
 }
+export type ComparisonDraft = {
+  dimension: string; reference_ids: string[]; input_revision: number; notice: string;
+  source_status: "available" | "unavailable"; generated_at?: string; missing_columns?: number;
+  rows: Array<{ column_id: string; reference_ids: string[]; note: string; evidence_state: "candidate" | "insufficient" | "source_unavailable" }>;
+};
+export function generateResearchComparison(id: string, data: Revision & NewRequest & { dimension: string; reference_ids: string[] }) {
+  return write<ResearchRecord<TurnData & { comparison_draft: ComparisonDraft }>>(`${researchRecordPath("research-projects", id)}comparison-draft/`, data);
+}
 export function listResearchTurns(projectId: string, page = 1, signal?: AbortSignal) {
   return privateRequest<Paginated<ResearchRecord<TurnData>>>(`${researchRecordPath("research-projects", projectId)}turns/?page=${page}`, { signal });
 }

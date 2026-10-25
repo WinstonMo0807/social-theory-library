@@ -58,6 +58,10 @@ def collect_research_turn(turn_id, generation, task_id):
     try:
         user = turn.project.user
         payload = unpack(turn)
+        if "comparison_draft" in payload:
+            from .research_comparison import process_draft
+            process_draft(turn, generation, task_id)
+            return
         warnings = []
         if payload["scope"]["kind"] == "passages":
             refs = payload["scope"]["references"]

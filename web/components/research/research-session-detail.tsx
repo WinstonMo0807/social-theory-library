@@ -93,7 +93,7 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
     if (!record) return;
     void run(() => changeResearchSelection(record.id, { expected_revision: record.revision, action: remove ? "remove" : "add", ...(remove ? { reference_id: researchEvidenceKey(ref) } : { references: [researchEvidenceReference(ref)] }) }), remove ? "已从当前选材移除。" : "已加入选材，来源身份和版本已重新核对。");
   }
-  const statusText = isTaskRunning(activeStatus) ? "正在核对来源与页码，已有材料仍可阅读。" : activeStatus === "partial" ? "部分检索已完成，可保留现有材料并重试。" : activeStatus === "failed" ? "本轮未完成，问题与材料已保留。" : ["canceled", "cancelled"].includes(activeStatus) ? "本轮已取消，原有轮次与选材继续保留。" : current ? "可以继续核对来源、选择材料或提出后续问题。" : "提交问题后开始第一轮研究。";
+  const statusText = current?.data.return_context?.kind === "comparison_draft" ? "本轮为比较草稿生成。可在证据比较中查看草稿，已有选材和本人笔记保留。" : isTaskRunning(activeStatus) ? "正在核对来源与页码，已有材料仍可阅读。" : activeStatus === "partial" ? "部分检索已完成，可保留现有材料并重试。" : activeStatus === "failed" ? "本轮未完成，问题与材料已保留。" : ["canceled", "cancelled"].includes(activeStatus) ? "本轮已取消，原有轮次与选材继续保留。" : current ? "可以继续核对来源、选择材料或提出后续问题。" : "提交问题后开始第一轮研究。";
   return <Frame>
     <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><Link href="/account/research">我的研究</Link><span>/</span><strong>持续研究</strong></nav>
     <header className="stl4-research-heading stl4-research-workspace-heading"><h1>持续研究工作区</h1><p>{record.data.title || record.data.question || "未命名研究"}</p><span className="stl4-research-privacy">仅本人可见 · 问题、选材和比较记录保存在此会话</span></header>

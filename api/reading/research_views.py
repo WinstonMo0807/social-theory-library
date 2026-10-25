@@ -23,7 +23,7 @@ from .citation_audit import audit_capabilities, audit_versions, create_audit, or
 from .citation_sources import paginated_units
 from .research_serializers import CitationSourceCreateInput, CitationSourceCommandInput, CitationTextUnitsOutput
 from .models import (CitationAudit, PersonalReadingPlan, ResearchMemory, ResearchProject, ResearchTurn)
-from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, AuditVersionInput, AuditVersionsOutput, CitationOCROutput, ComparisonInput,
+from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, AuditVersionInput, AuditVersionsOutput, CitationOCROutput, ComparisonDraftInput, ComparisonInput,
     MemoryCreateInput, MemoryListInput, MemorySearchInput, MemoryUpdateInput, MemoryUsageInput, PlanCreateInput, PlanUpdateInput,
     PlanCommandInput, PlanDeleteInput, ProjectCreateInput, ProjectImportInput, ProjectUpdateInput, ResearchAccountOutput, ResearchPreferenceInput, RevisionInput, SelectionInput, TurnCreateInput,
     SubclaimsInput, TurnExpandInput, TurnListInput, TurnRetryInput)
@@ -169,6 +169,13 @@ class ResearchProjectViewSet(DirectoryActions, ReplayActions, PrivateRecordViewS
     def comparison(self, request, pk=None):
         return Response(research.serialize_record(research.save_comparison(request.user, pk, command(request, ComparisonInput)), request.user))
 
+    @extend_schema(request=ComparisonDraftInput, responses={202: PrivateRecordSerializer})
+    @action(detail=True, methods=["post"], url_path="comparison-draft")
+    def comparison_draft(self, request, pk=None):
+        from .research_comparison import start_draft
+        turn = start_draft(request, pk, command(request, ComparisonDraftInput))
+        return Response(research.serialize_record(turn, request.user), status=202)
+
     @extend_schema(methods=["GET"], parameters=[TurnListInput], responses=PrivateRecordSerializer(many=True))
     @extend_schema(request=TurnCreateInput, methods=["POST"], responses={202: PrivateRecordSerializer})
     @action(detail=True, methods=["get", "post"])
@@ -232,6 +239,12 @@ class ResearchTurnViewSet(PrivateRecordViewSet):
             raise research.ResearchConflict("本轮仍在进行。")
         data = dict(command(request, TurnRetryInput))
         previous = research.unpack(turn)
+        if "comparison_draft" in previous:
+            from .research_comparison import start_draft
+            draft = previous["comparison_draft"]
+            new_turn = start_draft(request, turn.project_id, {**data, "dimension": draft["dimension"],
+                "reference_ids": draft["reference_ids"]}, parent_id=str(turn.id))
+            return Response(research.serialize_record(new_turn, request.user), status=202)
         data.update(parent_id=str(turn.id), question=previous["question"], scope=previous["scope"],
                     mode=previous["mode"], statement=previous["statement"], expand_from_parent=True,
                     return_context=previous.get("return_context", {}))
