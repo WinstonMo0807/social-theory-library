@@ -31,6 +31,7 @@ from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutpu
 
 class PrivateRecordSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
+    request_id = serializers.UUIDField(read_only=True, required=False)
     revision = serializers.IntegerField(read_only=True)
     data = serializers.JSONField(read_only=True)
     status = serializers.CharField(read_only=True, required=False)
@@ -189,6 +190,8 @@ class ResearchProjectViewSet(DirectoryActions, ReplayActions, PrivateRecordViewS
         mode = filters.validated_data.get("mode", "all")
         newest = filters.validated_data.get("order") == "newest"
         rows = project.turns.order_by("-created_at" if newest else "created_at", "-id" if newest else "id")
+        if filters.validated_data.get("request_id"):
+            rows = rows.filter(request_id=filters.validated_data["request_id"])
         if mode != "all":
             # Mode is part of the existing encrypted payload; inspect only this owner's project.
             rows = [row for row in rows.iterator(chunk_size=100) if research.unpack(row).get("mode", "search") == mode]

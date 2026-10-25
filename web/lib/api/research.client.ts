@@ -25,7 +25,7 @@ export type ResolvedEvidence = EvidenceAnchor & ReaderGeometryBox & {
 export type QueryScope = { kind: "library" | "works" | "passages" | "filtered"; filters?: DiscoveryFilters; references?: EvidenceReference[]; allow_neighbors?: boolean };
 export type ResearchCollection = "research-projects" | "research-turns" | "citation-audits" | "reading-plans" | "research-memories";
 export type ResearchRecord<T = Record<string, unknown>> = {
-  id: string; revision: number; data: T; created_at: string; updated_at: string;
+  id: string; revision: number; data: T; created_at: string; updated_at: string; request_id?: string;
   status?: string; state?: string; enhancement_status?: string; archived?: boolean; generation?: number;
   error_code?: string; poll_after_ms?: number | null; completed_units?: number; total_units?: number;
   project_id?: string | null; parent_id?: string | null; conversation_id?: string | null; discovery_session_id?: string | null;
@@ -193,6 +193,23 @@ export function generateResearchComparison(id: string, data: Revision & NewReque
 }
 export function listResearchTurns(projectId: string, page = 1, signal?: AbortSignal) {
   return privateRequest<Paginated<ResearchRecord<TurnData>>>(`${researchRecordPath("research-projects", projectId)}turns/?page=${page}`, { signal });
+}
+export type ResearchTurnCommand = {
+  projectId: string; expandTurnId?: string;
+  data: Revision & NewRequest & { question: string; scope: QueryScope; parent_id?: string; mode: "search" };
+};
+export async function sendResearchTurnCommand(command: ResearchTurnCommand, ownerId: string) {
+  const path = command.expandTurnId ? `${researchRecordPath("research-turns", command.expandTurnId)}expand/` : `${researchRecordPath("research-projects", command.projectId)}turns/`;
+  return withPrivateOwner(ownerId, () => privateRequest<ResearchRecord<TurnData>>(path, {
+    method: "POST", body: JSON.stringify(command.data), headers: { "X-Reader-Owner": ownerId },
+  }));
+}
+export async function lookupResearchTurnRequest(projectId: string, requestId: string, ownerId: string) {
+  return withPrivateOwner(ownerId, async () => {
+    const page = await privateRequest<Paginated<ResearchRecord<TurnData>>>(`${researchRecordPath("research-projects", projectId)}turns/?request_id=${encodeURIComponent(requestId)}`, { headers: { "X-Reader-Owner": ownerId } });
+    if (page.results.length > 1 || page.next || page.results.some(row => row.request_id !== requestId || row.project_id !== projectId)) throw new Error("原请求回执身份无法核对，请保留输入后重试查回。");
+    return page.results[0] || null;
+  });
 }
 export function startResearchTurn(id: string, data: Revision & NewRequest & { question: string; parent_id?: string; scope?: QueryScope; mode?: "search" | "counterargument"; statement?: Statement; subclaims?: Array<Statement & { id: string }>; active_subclaim_id?: string | null; return_context?: Record<string, unknown> }) {
   return write<ResearchRecord<TurnData>>(`${researchRecordPath("research-projects", id)}turns/`, data);

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 R05回执
+
+本人研究原turns列表支持request_id过滤，回执返回原request_id；前端固定提交体并双向核对账户，复用原幂等请求及任务。无新表/迁移。
+
 ## 2026-10-25 R05授权暂存
 
 R05暂存复用标签页sessionStorage，stl:research-input:v1账户/研究隔离；默认关闭，仅输入文字与范围枚举。会话退出/重新登录清理，服务器研究仍沿原加密对象，无新后端服务。

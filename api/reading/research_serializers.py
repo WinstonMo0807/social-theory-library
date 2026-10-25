@@ -114,6 +114,7 @@ class TurnRetryInput(RevisionInput):
 
 
 class TurnListInput(serializers.Serializer):
+    request_id = serializers.UUIDField(required=False, help_text="仅查回当前本人研究内的原请求。")
     mode = serializers.ChoiceField(choices=["all", "search", "counterargument"], required=False)
     order = serializers.ChoiceField(choices=["oldest", "newest"], required=False)
 

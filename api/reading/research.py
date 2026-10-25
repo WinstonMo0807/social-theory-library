@@ -810,7 +810,7 @@ def serialize_record(record, user, *, memory_context_rows=None):
     if hasattr(record, "finished_at"):
         output["finished_at"] = record.finished_at.isoformat() if record.finished_at else None
     if isinstance(record, ResearchTurn):
-        output.update(project_id=str(record.project_id), parent_id=str(record.parent_id) if record.parent_id else None,
+        output.update(project_id=str(record.project_id), request_id=str(record.request_id), parent_id=str(record.parent_id) if record.parent_id else None,
                       discovery_session_id=str(record.discovery_session_id) if record.discovery_session_id else None)
     elif hasattr(record, "project_id"):
         output["project_id"] = str(record.project_id) if record.project_id else None

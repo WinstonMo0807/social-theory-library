@@ -13079,6 +13079,8 @@ export interface components {
         MemorySearchResult: {
             /** Format: uuid */
             readonly id: string;
+            /** Format: uuid */
+            readonly request_id: string;
             readonly revision: number;
             readonly data: unknown;
             readonly status: string;
@@ -16141,6 +16143,8 @@ export interface components {
         PrivateRecord: {
             /** Format: uuid */
             readonly id: string;
+            /** Format: uuid */
+            readonly request_id: string;
             readonly revision: number;
             readonly data: unknown;
             readonly status: string;
@@ -16170,6 +16174,8 @@ export interface components {
         PrivateRecordExport: {
             /** Format: uuid */
             readonly id: string;
+            /** Format: uuid */
+            readonly request_id: string;
             readonly revision: number;
             readonly data: unknown;
             readonly status: string;
@@ -37264,6 +37270,8 @@ export interface operations {
                 ordering?: string;
                 /** @description 分页结果集中的页码。 */
                 page?: number;
+                /** @description 仅查回当前本人研究内的原请求。 */
+                request_id?: string;
                 /** @description 搜索关键词。 */
                 search?: string;
             };

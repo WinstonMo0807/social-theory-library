@@ -20,6 +20,12 @@ export function researchScopeLabel(scope?: QueryScope): string {
   return "全馆可访问文献";
 }
 
+/** Resolved scope responses may contain quotations; commands retain only the original identities. */
+export function researchScopeInput(scope: QueryScope): QueryScope {
+  return { kind: scope.kind, filters: scope.filters || {}, allow_neighbors: Boolean(scope.allow_neighbors),
+    ...(scope.references ? { references: scope.references.map(ref => researchEvidenceReference(ref as ResolvedEvidence)) } : {}) };
+}
+
 export function researchReaderHref(reference: ResolvedEvidence, context?: { projectId?: string; turnId?: string; returnTo?: string }): string {
   const url = reference.reader_url || "";
   return reference.source_status === "available" ? readerContextHref(url, { ...context, ...(context?.projectId || context?.turnId ? { referenceId: reference.reference_id } : {}) }) : "";

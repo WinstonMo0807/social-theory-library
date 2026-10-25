@@ -31184,6 +31184,15 @@
                         }
                     },
                     {
+                        "in": "query",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "仅查回当前本人研究内的原请求。"
+                    },
+                    {
                         "name": "search",
                         "required": false,
                         "in": "query",
@@ -54127,6 +54136,11 @@
                         "format": "uuid",
                         "readOnly": true
                     },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
                     "revision": {
                         "type": "integer",
                         "readOnly": true
@@ -54232,6 +54246,7 @@
                     "parent_id",
                     "poll_after_ms",
                     "project_id",
+                    "request_id",
                     "revision",
                     "state",
                     "status",
@@ -63710,6 +63725,11 @@
                         "format": "uuid",
                         "readOnly": true
                     },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
                     "revision": {
                         "type": "integer",
                         "readOnly": true
@@ -63810,6 +63830,7 @@
                     "parent_id",
                     "poll_after_ms",
                     "project_id",
+                    "request_id",
                     "revision",
                     "state",
                     "status",
@@ -63821,6 +63842,11 @@
                 "type": "object",
                 "properties": {
                     "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "request_id": {
                         "type": "string",
                         "format": "uuid",
                         "readOnly": true
@@ -63936,6 +63962,7 @@
                     "parent_id",
                     "poll_after_ms",
                     "project_id",
+                    "request_id",
                     "revision",
                     "schema_version",
                     "state",
