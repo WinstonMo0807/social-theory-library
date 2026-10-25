@@ -31,3 +31,11 @@
 :root[data-theme="dark"] .site-footer--reference img { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
 @media (max-width:1000px) { .site-footer--reference { flex-wrap: wrap; }.site-footer--reference p { white-space: normal; }.site-footer--reference nav { flex-wrap: wrap; } }
 @media (max-width:720px) { .site-footer.site-footer--reference { display: none; } }
+
+.site-footer.site-footer--catalog { min-height:65px; padding:14px 30px; border-top:1px solid var(--night-line,#e5e9ed); }
+.site-footer--catalog > a { padding:0; border:0; }
+.site-footer--catalog img { width:250px; height:auto; }
+
+.site-footer--opinion > a { padding:0; border:0; }
+.site-footer--opinion p { font-size:12px; letter-spacing:.14em; }
+.site-footer--opinion p small { display:block; font-size:9px; letter-spacing:.2em; line-height:1.8; }

@@ -36,6 +36,11 @@
 .brand-reference-lockup[data-brand-variant="about"] { width: 195px; }
 .brand-reference-lockup[data-brand-variant="support"] { width: 222px; }
 .brand-reference-lockup[data-brand-variant="article"] { width: 191px; }
+.brand-reference-lockup[data-brand-variant="explore"] { width: 264px; }
+.site-header[data-stl-explore="landing"] { min-height: 74px; padding-block: 7px; color: var(--night-ink,#111); }
+.site-header[data-stl-explore="landing"] .header-search span { display: none; }
+.site-header[data-stl-explore="landing"] .header-search svg { width: 26px; height: 26px; }
+.site-header[data-stl-explore="landing"] .desktop-nav a.active::after { background: #c48026; }
 .site-header[data-stl-support] { padding-inline: 4.4%; gap: 28px; min-height: 68px; }
 .site-header[data-stl-support="about"] { min-height: 80px; padding-block: 9px; padding-inline: 3.5%; }
 .site-header[data-stl-support="article"] { min-height: 60px; padding-block: 7px; }
@@ -128,5 +133,21 @@
   .brand-reference-lockup[data-brand-variant="about"] { width: 171px; }
   .brand-reference-lockup[data-brand-variant="support"] { width: 150px; }
   .brand-reference-lockup[data-brand-variant="article"] { width: 185px; }
+  .brand-reference-lockup[data-brand-variant="explore"] { width: 201px; }
 }
 @media (min-width:761px) { .site-header[data-stl-account=true] .reader-account-menu-toggle { display:none; } }
+
+/* The catalog shell uses the final replacement on PDF24. */
+.brand-reference-lockup[data-brand-variant="catalog"] { width:293px; }
+.site-header[data-stl-explore="catalog"] { min-height:60px; padding-block:7px; }
+@media (max-width:700px) {
+ .brand-reference-lockup[data-brand-variant="catalog"] { width:152px; }
+ .site-header[data-stl-explore="catalog"] { min-height:84px; }
+}
+
+.brand-reference-lockup[data-brand-variant="opinion"] { width:116px; }
+.site-header[data-stl-explore="opinion"] { min-height:58px; padding-block:9px; }
+@media (max-width:700px) {
+ .brand-reference-lockup[data-brand-variant="opinion"] { width:110px; }
+ .site-header[data-stl-explore="opinion"] { min-height:66px; }
+}

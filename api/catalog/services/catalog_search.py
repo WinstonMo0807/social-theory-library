@@ -177,7 +177,7 @@ def _facets(rows):
             for row in rows.exclude(**{f"{field}__isnull": True}).exclude(**{field: ""}).values(field).annotate(count=Count("work_id", distinct=True)).order_by("-count", field)]
     years = [{"year": row["catalog_year"], "count": row["count"]} for row in rows.filter(catalog_year__gte=1, catalog_year__lte=9999)
         .values("catalog_year").annotate(count=Count("work_id", distinct=True)).order_by("catalog_year")]
-    return {"document_types": scalar("catalog_type", dict(DocumentType.choices)), "languages": scalar("catalog_language", LANGUAGES),
+    return {"total": _count(rows), "document_types": scalar("catalog_type", dict(DocumentType.choices)), "languages": scalar("catalog_language", LANGUAGES),
         "authors": _array_facets(rows, "author"), "topics": _array_facets(rows, "topic"),
         "theories": _array_facets(rows, "theory"), "concepts": _array_facets(rows, "concept"),
         "years": [{"value": key, "label": YEAR_LABELS.get(key, key.replace("-", "—")), "count": _count(rows.filter(catalog_year__range=limits))} for key, limits in YEARS.items()],

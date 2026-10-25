@@ -1,5 +1,9 @@
 # 当前问题
 
+## 2026-10-26 探索实际差异收敛
+
+CATALOG-UI-01已关闭D，实际馆藏页恢复且显示真实0结果。VISUAL-06入口修正已显示；VISUAL-07馆藏主图在r7显示，页脚旧scope覆盖已定位并修入待部署r8；VISUAL-08观点品牌/标题/输入和手机四选项正在同步。按PDF24主壳与25–27高级状态、28主图与29账户状态处理；不重做搜索算法、不把未操作的业务状态当新增故障。详见stl4/VISUAL_FIDELITY_20261026.md。
+
 ## 2026-10-26 R33视觉与馆藏页真实载入故障
 
 VISUAL-05已修正支持组品牌/图片/默认文案/排版并更新Web r5/API r6；当前字体及整页全部状态未验收，不关闭整站视觉A。VISUAL-06为PDF23与实际探索入口的字号/背景/搜索按钮换行；CATALOG-UI-01为/explore/original运行报错，客户端CatalogSearchWorkspace直接导入服务端SiteFooter；移回服务端页面即可，不删除server-request保护。详见stl4/VISUAL_FIDELITY_20261026.md。

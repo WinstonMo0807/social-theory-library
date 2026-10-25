@@ -581,3 +581,7 @@ GET /api/catalog/admin/search/ 使用TodayWorkPage投影，q≤200、kind(catalo
 2026-10-24 首页HomeCard增加可选curator，来源仅有效发布快照中的public_byline/article_metadata，遵循原匿名清空规则；预览atlas附start_path/route_kind/route_files，仅表示实际路由导航依据。路径总数336不变。
 
 2026-10-24 目录source_locator增加geometry_status，验证后的normalized_position直接用于显示页定位。outline-v3自动任务needs_review与批量筛选覆盖无诊断的未复核修订；无新增路由或数据库迁移，路径仍336。
+
+## 2026-10-26 馆藏主图范围数量
+
+GET /catalog/search/?scope=catalog 的 facets 新增 total（整数），含义是仅应用当前关键词/检索字段、尚未应用右侧其他过滤的去重公开作品数。取自同一 _facets(base) 的 COUNT DISTINCT work_id，不相加各版本/类型计数。前端 CatalogSearchPayload 可选读取以兼容上一版API；页面结果数量继续取pagination.total。无新端点、身份变化或migration。未运行接口测试。

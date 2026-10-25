@@ -8,7 +8,7 @@ export type CatalogSearchWork = ApiWork & {
 };
 export type CatalogSearchPayload = Omit<SearchPayload, "works" | "facets"> & {
   works: CatalogSearchWork[];
-  facets: SearchPayload["facets"] & { year_histogram: Array<{ year: number; count: number }> };
+  facets: SearchPayload["facets"] & { total?: number; year_histogram: Array<{ year: number; count: number }> };
 };
 export const catalogFilters = ["match", "document_type", "author", "language", "year", "year_min", "year_max", "theory", "topic", "concept", "access"] as const;
 export const defaultCatalogMatches = ["title", "author", "keyword", "abstract"];

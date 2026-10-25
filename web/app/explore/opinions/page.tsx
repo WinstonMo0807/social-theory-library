@@ -24,6 +24,6 @@ export default async function OpinionSearchPage({ searchParams }: {
   }
   return <>
     <OpinionSearchEntry key={JSON.stringify(filters)} initialFilters={filters} />
-    <SiteFooter />
+    <SiteFooter reference="opinion" />
   </>;
 }

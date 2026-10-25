@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, FileText } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, ChevronRight, FileText, MoreHorizontal } from "lucide-react";
 import type { CatalogSearchWork } from "@/lib/api/catalog-search.client";
 import { adaptApiWork } from "@/lib/public-data-adapters";
 import { BookCover } from "./ui";
@@ -25,23 +25,23 @@ export function CatalogResultCard({ row }: { row: CatalogSearchWork }) {
     <div className="stl4-catalog-result-main">
       <Link href={`/works/${work.slug}`} className="stl4-catalog-cover" aria-label={`查看${row.title}`}><BookCover work={work} size="small" /></Link>
       <div className="stl4-catalog-result-copy">
-        <p className="stl4-catalog-result-tags"><span>{work.kind}</span>{editions.length > 1 ? <span>作品整合 · {editions.length} 个版本</span> : null}</p>
-        <h3><Link href={`/works/${work.slug}`}>{row.title}</Link></h3>
+        <div className="stl4-catalog-result-heading"><h3><Link href={`/works/${work.slug}`}>{row.title}</Link></h3><p className="stl4-catalog-result-tags"><span>{editions.length > 1 ? "作品聚合" : work.kind}</span></p></div>
         <p>{authors.length ? `${authors.join("、")} 著` : "作者信息待补充"}{translators.length ? ` · ${translators.join("、")} 译` : ""}</p>
         <p>{row.document_type === "journal_article" ? journal : publication}</p>
         {row.abstract ? <details className="stl4-catalog-abstract"><summary><span>{row.abstract}</span></summary><p>{row.abstract}</p></details> : null}
         <span className={`stl4-catalog-availability ${anyReadable ? "is-readable" : ""}`}>{anyReadable ? "可在线阅读" : "仅书目信息"}</span>
+        <Link className="stl4-catalog-detail-link" href={`/works/${work.slug}`}><ChevronRight size={14} />查看{editions.length > 1 ? "作品" : "文献"}详情<ArrowRight size={14} /></Link>
       </div>
       <aside className="stl4-catalog-publication" aria-label="出版信息">
         <p className="stl4-catalog-publication-label">{row.document_type === "journal_article" ? "发表信息" : "出版信息"}</p>
         {editions.length > 1 ? <div className="stl4-catalog-version-previews">{editions.slice(0, 2).map(version => <div key={version.id}>
           <span>{[version.version_label, version.publisher, version.publication_year].filter(Boolean).join(" · ") || "版本信息待补充"}</span>
-          {version.readable_asset ? <div><Link href={`/reader/${version.readable_asset.id}`}><FileText size={13} />阅读</Link><AssetDownloadButton assetId={version.readable_asset.id} /></div> : <small>仅书目信息</small>}
+          {version.readable_asset ? <div><Link href={`/reader/${version.readable_asset.id}`}><BookOpen size={15} />阅读</Link><AssetDownloadButton assetId={version.readable_asset.id} /></div> : <small>仅书目信息</small>}
         </div>)}</div> : <p>{row.document_type === "journal_article" ? journal : publication || "出版信息待补充"}</p>}
         <div className="stl4-catalog-result-actions">
         {editions.length < 2 && edition?.readable_asset ? <><Link className="stl4-catalog-read" href={`/reader/${edition.readable_asset.id}`}>在线阅读</Link><AssetDownloadButton assetId={edition.readable_asset.id} /></> : null}
-        <SaveWorkButton workId={row.id} /><AddWorkToListButton workId={row.id} title={row.title} />
-        {edition ? <SharedCitationButton editionId={edition.id}>引用</SharedCitationButton> : null}
+        <SaveWorkButton workId={row.id} />
+        <details className="stl4-catalog-more"><summary aria-label="更多文献操作"><MoreHorizontal size={20} /></summary><div><AddWorkToListButton workId={row.id} title={row.title} />{edition ? <SharedCitationButton editionId={edition.id}>引用</SharedCitationButton> : null}</div></details>
         </div>
       </aside>
     </div>
@@ -63,6 +63,6 @@ export function CatalogResultCard({ row }: { row: CatalogSearchWork }) {
         })}
       </div>
       <Link className="stl4-catalog-version-detail" href={`/works/${work.slug}`}>查看作品详情 →</Link>
-    </details> : <div className="stl4-catalog-single-actions"><Link href={`/works/${work.slug}`}>查看书目</Link>{work.readerHref ? <Link href={work.readerHref}>在线阅读 →</Link> : null}</div>}
+    </details> : null}
   </article>;
 }

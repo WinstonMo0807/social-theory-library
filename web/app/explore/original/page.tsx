@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import ExplorePage from "../page";
 import { CatalogSearchWorkspace } from "@/components/catalog-search-workspace";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = { title: "原文检索" };
 
@@ -13,5 +14,5 @@ export default async function OriginalSearchPage({ searchParams }: { searchParam
   if (params.type && params.type !== "catalog") return <ExplorePage searchParams={Promise.resolve({ ...params, mode: "exact" })} />;
   const query = new URLSearchParams();
   for (const [name, values] of Object.entries(params)) for (const value of Array.isArray(values) ? values : values ? [values] : []) query.append(name, value);
-  return <CatalogSearchWorkspace queryString={query.toString()} />;
+  return <><CatalogSearchWorkspace queryString={query.toString()} /><SiteFooter reference="catalog" /></>;
 }

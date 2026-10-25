@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
-import { SiteFooter } from "@/components/site-footer";
 
 const entries = [
   {
@@ -33,9 +32,9 @@ export function ExploreLanding() {
             <h1 id="explore-title">在原典与论争之间</h1>
             <p>从经典文献到当代争论，在文本、观点与问题之间自由穿行，发现社会理论的思想脉络与现实回响。</p>
             <form className="stl4-explore-search" action="/explore/original" method="get">
-              <Search size={17} strokeWidth={1.7} aria-hidden="true" />
+              <Search size={23} strokeWidth={1.7} aria-hidden="true" />
               <label className="sr-only" htmlFor="explore-query">搜索书名、作者、概念或主题</label>
-              <input id="explore-query" name="q" type="search" placeholder="搜索书名、作者、概念、主题……" />
+              <input id="explore-query" name="q" type="search" placeholder="搜索书名、作者、概念、主题..." />
               <button type="submit">搜索</button>
             </form>
           </div>
@@ -52,14 +51,13 @@ export function ExploreLanding() {
                 <span className="stl4-explore-entry-body">
                   <strong>{entry.title}</strong>
                   <span>{entry.description}</span>
-                  <ArrowRight size={18} strokeWidth={1.5} aria-hidden="true" />
+                  <ArrowRight size={25} strokeWidth={1.5} aria-hidden="true" />
                 </span>
               </Link>
             ))}
           </div>
         </section>
       </div>
-      <SiteFooter />
     </>
   );
 }

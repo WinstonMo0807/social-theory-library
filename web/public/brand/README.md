@@ -45,3 +45,18 @@ Illustrations under `../editorial/`, all 2× PDF clips:
 The last two are instructional illustration fragments. The search form and chapter selection above them remain native interactive HTML; the book page is an illustration, not a published library record. The help citation example uses explicit author/year/title placeholders and identifies itself as an example in copied/exported output. No page is substituted with a full screenshot.
 
 Citation illustration backplates: `stl4-support-citation-stage-final-r2.png` is PDF15 rectangle `161,631,903,841`; `stl4-support-citation-card-final-r2.png` is PDF13 rectangle `840,520,1184,702`. The original sample panel is covered by the corresponding live HTML citation format/page/copy/export panel. These remain instructional samples, never catalog records.
+
+## Explore, catalog and opinion entry (PDF23,24,28)
+
+| Asset | Page | Native rectangle |
+| --- | --- | --- |
+| stl-lockup-explore-desktop-final-r2.png | 23 | 80,12,344,71 |
+| stl-lockup-explore-mobile-final-r2.png | 23 | 1340,18,1542,65 |
+| stl-lockup-catalog-desktop-final-r2.png | 24 | 77,8,370,52 |
+| stl-lockup-catalog-mobile-final-r2.png | 24 | 1233,43,1385,110 |
+| stl-lockup-opinion-desktop-final-r2.png | 28 | 80,18,196,56 |
+| stl-lockup-opinion-mobile-final-r2.png | 28 | 1274,60,1373,91 |
+| ../editorial/stl4-catalog-hero-top-final-r2.png | 24 | 520,60,1180,243 |
+| ../editorial/stl4-catalog-hero-bottom-final-r2.png | 24 | 670,243,1180,302 |
+
+All are 2× clips of the PDF. The catalog illustration is split at the search-control boundary so neither search buttons nor text are burned into the artwork. The live search form and opinion link remain HTML. The main shell follows replacement PDF24; advanced fields, multiversion expansion and state behavior inherit PDF25–27. PDF28 supplies opinion layout; PDF29 explicitly supplies the 500-character counter and account history state. Its saved-history description follows the actual opted-in account behavior instead of falsely claiming that server-retained records exist only on the device.

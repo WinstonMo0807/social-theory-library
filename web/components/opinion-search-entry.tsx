@@ -15,7 +15,7 @@ const scopes = [
   { key: "all", title: "全部文献", detail: "在本馆所有收录文献中检索", icon: BookOpen },
   { key: "topic", title: "特定主题", detail: "限定在指定主题的相关文献", icon: FileText },
   { key: "scholar", title: "特定学者", detail: "限定在指定学者的文献", icon: UserRound },
-  { key: "work", title: "特定文献", detail: "仅在指定的文献中检索", icon: Layers },
+  { key: "work", title: "特定文献", detail: "仅在指定的文献或书目中检索", icon: Layers },
 ] as const;
 const exampleQuestions = ["算法如何影响社会分层？", "平台经济是否创造了新的劳动形式？", "技术进步会带来更大的社会公平吗？"];
 const initialScope = (filters: DiscoveryFilters): OpinionScope => (["work", "scholar", "topic"] as const).find(kind => scopeKeys[kind].some(key => filters[key]?.length)) || "all";
@@ -56,7 +56,7 @@ export function OpinionSearchEntry({ initialFilters = {} }: { initialFilters?: D
     <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><Link href="/explore">探索</Link><ChevronRight size={12} /><span>观点检索</span></nav>
     <header className={styles.header}><h1>观点检索：问题起点</h1><p>用你自己的话提出问题，发现来自经典文献的思想、论证与不同视角。</p></header>
     <form className={styles.queryForm} onSubmit={submit} action="/explore/evidence">
-      <div className={styles.queryBox}><label className="sr-only" htmlFor="opinion-question">你的研究问题</label><textarea ref={field} id="opinion-question" name="q" value={query} onChange={event => { setQuery(event.target.value); setMessage(""); }} maxLength={500} rows={2} placeholder="请输入你的问题…" aria-describedby="opinion-count" />
+      <div className={styles.queryBox}><label className="sr-only" htmlFor="opinion-question">你的研究问题</label><textarea ref={field} id="opinion-question" name="q" value={query} onChange={event => { setQuery(event.target.value); setMessage(""); }} maxLength={500} rows={1} placeholder="请输入你的问题…" aria-describedby="opinion-count" />
         {query ? <button type="button" className={styles.clear} aria-label="清除问题" onClick={() => { setQuery(""); field.current?.focus(); }}><X size={15} /></button> : null}<span className={styles.counter} id="opinion-count" aria-live="polite">{query.length}/500</span></div>
       <button type="submit" className={styles.searchButton} disabled={!ready || pending}><Search size={22} />{pending ? "正在进入检索…" : "检索原文"}</button>
     </form>
@@ -74,7 +74,7 @@ export function OpinionSearchEntry({ initialFilters = {} }: { initialFilters?: D
       {inheritedGroups.length ? <div className={styles.inherited}><p>保留入口指定的范围，检索时按当前公开资料核对。修改一种范围会保留其他限制。</p><div className={styles.chips}>{inheritedGroups.map(item => <button type="button" key={item.key} onClick={() => openPicker(item.key)}>已限定{item.title.replace("特定", "")} · 修改</button>)}</div></div> : null}
       {Object.keys(extras).length ? <p className={styles.quiet}>本次还保留了入口附带的 {Object.keys(extras).length} 组筛选条件，结果页可继续调整。</p> : null}
     </section>
-    <section className={styles.examples} aria-labelledby="opinion-examples-title"><header><h2 id="opinion-examples-title">试试这些问题</h2><p>以下是提问示例，可以使用或修改后检索。</p></header><div>{exampleQuestions.map(example => <button type="button" key={example} onClick={() => { setQuery(example); setMessage(""); field.current?.focus(); }}><Search size={17} /><span>{example}</span><ArrowRight size={17} /></button>)}</div></section>
+    <section className={styles.examples} aria-labelledby="opinion-examples-title"><header><h2 id="opinion-examples-title">试试这些问题</h2><p>你可以直接使用以下示例，或修改后检索。</p></header><div>{exampleQuestions.map(example => <button type="button" key={example} onClick={() => { setQuery(example); setMessage(""); field.current?.focus(); }}><Search size={17} /><span>{example}</span><ArrowRight size={17} /></button>)}</div></section>
     <RecentResearch />
     <Dialog open={picker} onRequestClose={() => setPicker(false)} className={styles.scopeDialog} aria-labelledby="scope-dialog-title"><header><h2 id="scope-dialog-title">选择检索范围</h2><button type="button" aria-label="关闭范围选择" onClick={() => setPicker(false)}><X size={20} /></button></header>
       <div className={styles.dialogScopes}>{scopes.map(item => <label key={item.key}><item.icon size={22} /><span><strong>{item.title}</strong><small>{item.detail}</small></span><input type="radio" name="scope-choice" value={item.key} checked={draftScope === item.key} onChange={() => { setDraftScope(item.key); setDraftSelected(item.key === scope ? selected : []); }} /></label>)}</div>

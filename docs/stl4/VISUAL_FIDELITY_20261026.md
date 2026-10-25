@@ -54,3 +54,17 @@ R33内网更新记录：NAS b9549e→da22d1成功构建API r6 `57c1db0af199` / W
 VISUAL-06：PDF23与实际/explore的英雄标题/入口卡片字体及高度明显偏小、底色错误、搜索按钮被压成两行。文件为explore/editorial-landing.css与SiteHeader，既有插图已经从PDF23提取，不必再重做检索功能。
 
 CATALOG-UI-01：2026-10-26浏览器访问/explore/original直接呈现全页载入失败，控制台明确Error: Server API transport cannot run in the browser，入口为catalog-search-workspace客户端chunk。源码CatalogSearchWorkspace第11行导入SiteFooter，第129行调用，后者导入site.server→server-request。本次只需将SiteFooter放回服务端app/explore/original/page.tsx；检索API、守卫、账户与权限不改。已遍历同一SiteFooter直接调用链，只有这一个use-client文件违反边界；不把其他未验收页面推定有同样故障。
+
+## 探索组 r6/r7 与观点入口的直接修正
+
+CATALOG-UI-01已关闭开发项D：r6浏览器实际显示馆藏真实0结果，服务端页脚回到original/page.tsx；未更改server-request保护。VISUAL-06：PDF23桌面主标题60px、搜索按钮不换行、三卡156px图+185px正文和原图STL品牌已实际显示。保留夜间按钮这一已获用户批准的增补。截图after-explore-r6-20261026.png、before-catalog-r6-20261026.png位于原tmp证据目录。
+
+VISUAL-07 A证据：PDF24/26与r6实际馆藏截图；stl4-exact.css仍是纸色横幅、14px介绍、黑色按钮和窄小结果文字；查询和观点入口上下排列；默认筛选为字段勾选而非馆藏范围；卡片标签/版次操作与主图不符。r7恢复最终24主壳，保留25–27高级字段/多选类型/展开版本能力；控制沿用catalogParams/readCatalogSearch，API catalog_search._facets只增加COUNT DISTINCT作品total，避免用版次数求和。空库不添加虚假书/统计。普通读者默认可进馆藏，手机的筛选仍先选择再应用，次级入口/版本下载均保留。未操作有馆藏的业务状态。
+
+r7实际查看：/explore/original载入，显示全部馆藏(0)与0结果，横排搜索、独立原图品牌和白色内容已出现。页脚computed style仍rgb(238,234,226)，来源明确为[data-ui-scope="explore-frozen"] .site-footer覆盖新规则；r8将仅这三条已重做探索路由切换stl4作用域，保留旧全局探索路由。
+
+VISUAL-08 A证据：PDF28与实际opinion入口；标题44px偏小，输入区约94px而非65px，品牌误用208，手机CSS直接隐藏四项范围卡并只显示一个下拉。r8恢复28品牌、54px标题、65px输入、四张范围卡与相应页脚，保留29范围选择底部弹层和原账户历史API。PDF28主图300字符/本机历史与PDF29状态图500字符/登录后保存有冲突：采用29明确状态规格500与本人显式开启账户历史，不虚称云端记录仅在本机。未改历史存储/默认关闭/owner校验，也未执行输入提交。
+
+构建：Web r6本机60ccad→e4a0b2退出0，包18c807d53e6ad58f126d2e8519242a880f73aa8006f53fd6cdcab9f2e0dd80d3，NAS b89433→67398a完成。Web r7本机6d857d→7a7f48退出0，包c6bdc702acd78c8f0c434f2413ee16a785d93b2cdcea0f54b98ae2c3dc41b836；NAS62f62f→3030a0完成，Web `8cea9f46792c` / API `36667a3509da`。备份.env.before-web-r6、.env.before-catalog-r7均只留NAS。无schema、生产或重置操作。Web r8正在本机构建，不能提前写已部署。
+
+Web r8更新：本机e636f6→768717退出0；包34d10dba515bc7d8b2755915a58eb82e187de87424aaa1f12a02b0c9f39d098c；NAS d03ace→87f0d4完成，仅Web。PDF28对应/opinions桌面及390×844手机已实际查看，四种范围卡恢复，输入框约65px，未触发检索；账号真实关闭历史保存且空记录。/original手机scrollWidth375、innerWidth390（15px滚动条），无横向溢出，页脚display:none。截图after-opinions-r8-desktop/mobile、after-catalog-r8-mobile均在原tmp目录。r8之后仅说明文字12px与旧无效色值清理待下一包。
