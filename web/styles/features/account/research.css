@@ -218,6 +218,10 @@
 .stl4-research-source-notice { margin: 12px 20px; padding: 14px; border: 1px solid var(--night-line, #d8c9b2); background: var(--night-paper, #f7f1e7); color: var(--night-ink, #5d4e38); font: 12px/1.8 var(--sans); }
 .stl4-research-source-notice p { margin: 6px 0 12px; }
 .stl4-research-source-notice a { margin-left: 14px; color: inherit; text-underline-offset: 3px; }
+.stl4-research-prompt-recovery { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--night-line, #e5e1d9); font: 11px/1.8 var(--sans); color: var(--night-muted, #777168); }
+.stl4-research-prompt-recovery > label { display: flex; align-items: center; gap: 8px; }
+.stl4-research-prompt-recovery > p { margin: 7px 0 0; }
+.stl4-research-prompt-recovery .stl4-research-notes-copy { max-height: 180px; overflow: auto; margin: 10px 0; padding: 12px; background: var(--night-paper, #f7f4ee); }
 .stl4-research-pane-switch button { padding: 12px 4px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--night-muted, #777168); cursor: pointer; font: 12px/1.7 var(--sans); }
 .stl4-research-pane-switch button:is(:first-child, :nth-child(3)) { display: none; }
 .stl4-research-pane-switch button[aria-pressed=true] { color: var(--night-gold, #8a683d); border-bottom-color: var(--night-gold, #b3894b); }

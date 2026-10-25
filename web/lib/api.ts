@@ -79,11 +79,11 @@ function clearLegacyStoredTokens() {
   for (const key of LEGACY_SESSION_KEYS) removeStorage(key);
 }
 
-function clearTabEditorialDrafts() {
+function clearTabPrivateDrafts(researchOnly = false) {
   if (typeof window === "undefined") return;
   try {
     for (const key of Object.keys(window.sessionStorage)) {
-      if (key.startsWith("stl:issue-draft:v1:")) window.sessionStorage.removeItem(key);
+      if (key.startsWith("stl:research-input:v1:") || !researchOnly && key.startsWith("stl:issue-draft:v1:")) window.sessionStorage.removeItem(key);
     }
   } catch {
     // A disabled browser store must not prevent logout.
@@ -96,7 +96,7 @@ export function clearStoredSession() {
     || LEGACY_SESSION_KEYS.some((key) => readStorage(key)),
   );
   clearLegacyStoredTokens();
-  clearTabEditorialDrafts();
+  clearTabPrivateDrafts();
   removeStorage(SESSION_HINT_KEY);
   removeStorage(REFRESH_REVISION_KEY);
   if (hadStoredSession && typeof window !== "undefined") {
@@ -111,6 +111,7 @@ export function markSessionActive() {
 
 /** Explicit sign-in clears old account views even when the hint was already set. */
 export function announceAuthenticatedSession() {
+  clearTabPrivateDrafts(true);
   markSessionActive();
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
 }
@@ -119,7 +120,7 @@ export function subscribeToSessionChanges(listener: () => void) {
   if (typeof window === "undefined") return () => undefined;
   const handleStorage = (event: StorageEvent) => {
     if (event.key !== null && event.key !== SESSION_HINT_KEY) return;
-    if (!event.newValue) clearTabEditorialDrafts();
+    if (!event.newValue) clearTabPrivateDrafts();
     listener();
   };
   const handleSameTabChange = () => listener();

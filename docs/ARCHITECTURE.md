@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 R05授权暂存
+
+R05暂存复用标签页sessionStorage，stl:research-input:v1账户/研究隔离；默认关闭，仅输入文字与范围枚举。会话退出/重新登录清理，服务器研究仍沿原加密对象，无新后端服务。
+
 ## 2026-10-25 R06本地比较草稿
 
 comparison-draft复用加密ResearchTurn并从原collect_research_turn分支处理；原任务租约恢复/取消generation生效。generate_local只用本地传输。模型候选与ResearchProject.comparison人工笔记分开，未新增表或迁移。
