@@ -173,7 +173,11 @@ export function importLocalResearch(data: LocalResearchImport, ownerId?: string,
     method: "POST", body: JSON.stringify(data), signal, ...(ownerId ? { headers: { "X-Reader-Owner": ownerId } } : {}),
   });
 }
-export function updateResearchProject(id: string, data: Revision & Partial<Pick<ProjectData, "title" | "question" | "notes" | "scope" | "layout">> & { archived?: boolean }) {
+export function readResearchProjectForOwner(id: string, ownerId: string) {
+  return withPrivateOwner(ownerId, () => privateRequest<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), { headers: { "X-Reader-Owner": ownerId } }));
+}
+export function updateResearchProject(id: string, data: Revision & Partial<Pick<ProjectData, "title" | "question" | "notes" | "scope" | "layout">> & { archived?: boolean }, ownerId?: string) {
+  if (ownerId) return withPrivateOwner(ownerId, () => privateRequest<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), { method: "PATCH", body: JSON.stringify(data), headers: { "X-Reader-Owner": ownerId } }));
   return write<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), data, "PATCH");
 }
 export function changeResearchSelection(id: string, data: Revision & { expected_owner_id?: number; request_id?: string; note?: string; notes?: Record<string, string>; action: "add" | "remove" | "undo" | "reorder"; references?: EvidenceReference[]; reference_id?: string; order?: string[] }) {
