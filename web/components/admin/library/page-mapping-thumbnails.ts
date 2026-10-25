@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import type { PDFDocumentLoadingTask, RenderTask } from "pdfjs-dist/types/src/display/api";
 
 /** Eight visible pages share one bounded thumbnail document; no library files are uploaded. */
-export function useMappingThumbnails(url: string, indexes: string): { images: Record<number, string>; error: string } {
+export function useMappingThumbnails(url: string, indexes: string, withCredentials = false): { images: Record<number, string>; error: string } {
   const [result, setResult] = useState<{ key: string; images: Record<number, string>; error: string } | null>(null);
-  const key = `${url}:${indexes}`;
+  const key = `${url}:${indexes}:${withCredentials}`;
   useEffect(() => {
     if (!url || !indexes) return;
     let alive = true, loading: PDFDocumentLoadingTask | null = null, rendering: RenderTask | null = null;
@@ -14,7 +14,7 @@ export function useMappingThumbnails(url: string, indexes: string): { images: Re
       const pdfjs = await import("pdfjs-dist");
       if (!alive) return;
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.js";
-      loading = pdfjs.getDocument({ url, withCredentials: false, disableStream: true, disableAutoFetch: true, cMapUrl: "/pdfjs/cmaps/", cMapPacked: true, standardFontDataUrl: "/pdfjs/standard_fonts/", wasmUrl: "/pdfjs/wasm/" });
+      loading = pdfjs.getDocument({ url, withCredentials, disableStream: true, disableAutoFetch: true, cMapUrl: "/pdfjs/cmaps/", cMapPacked: true, standardFontDataUrl: "/pdfjs/standard_fonts/", wasmUrl: "/pdfjs/wasm/" });
       const document = await loading.promise;
       const images: Record<number, string> = {};
       for (const index of indexes.split(",").map(Number).slice(0, 8)) {
@@ -35,6 +35,6 @@ export function useMappingThumbnails(url: string, indexes: string): { images: Re
     }
     void load().catch((reason: unknown) => { if (alive) setResult({ key, images: {}, error: reason instanceof Error ? reason.message : "缩略图暂时不可用，请查看右侧原稿。" }); });
     return () => { alive = false; rendering?.cancel(); void loading?.destroy(); };
-  }, [url, indexes, key]);
+  }, [url, indexes, key, withCredentials]);
   return result?.key === key && url ? result : { images: {}, error: "" };
 }

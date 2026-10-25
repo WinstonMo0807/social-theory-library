@@ -9,14 +9,18 @@ import type { WorkFile } from "@/lib/api/work-files.types";
 import { PdfCanvas } from "@/components/pdf-canvas";
 import { Dialog } from "@/components/ui/dialog";
 import styles from "./work-files.module.css";
+import { useMappingThumbnails } from "./page-mapping-thumbnails";
 
-export function WorkFilePdf({ url, privateFile = false, initialPage=1 }: { url: string; privateFile?: boolean; initialPage?:number }) {
+export function WorkFilePdf({ url, privateFile = false, initialPage=1, atlasIntake=false }: { url: string; privateFile?: boolean; initialPage?:number; atlasIntake?:boolean }) {
   const [page, setPage] = useState(Number.isSafeInteger(initialPage)&&initialPage>0?initialPage:1), [pages, setPages] = useState(0), [zoom, setZoom] = useState(1);
   const loaded=useCallback((count:number)=>{setPages(count);setPage(value=>Math.max(1,Math.min(value,count)));},[]);
-  return <div className={styles.pdf}>
+  const firstThumbnail = Math.floor((page-1)/4)*4+1;
+  const thumbnailPages = atlasIntake ? Array.from({length:Math.min(4,Math.max(0,pages-firstThumbnail+1))},(_,i)=>firstThumbnail+i) : [];
+  const thumbnails = useMappingThumbnails(atlasIntake ? url : "",thumbnailPages.join(","),privateFile);
+  return <div className={styles.pdf} data-atlas-intake={atlasIntake}>
     <div className={styles.pdfToolbar}><button aria-label="上一页" disabled={page <= 1} onClick={() => setPage(value => value - 1)}><ChevronLeft size={14} /></button><label>PDF 页<input aria-label="PDF 页码" type="number" min={1} max={pages || 1} value={page} onChange={event => setPage(Math.max(1, Math.min(Math.trunc(Number(event.target.value)) || 1, pages || 1)))} /></label><span>/ {pages || "—"}</span><button aria-label="下一页" disabled={!pages || page >= pages} onClick={() => setPage(value => value + 1)}><ChevronRight size={14} /></button><button aria-label="缩小原稿" disabled={zoom <= .5} onClick={() => setZoom(value => Math.max(.5, value - .25))}><Minus size={14} /></button><span>{Math.round(zoom * 100)}%</span><button aria-label="放大原稿" disabled={zoom >= 2} onClick={() => setZoom(value => Math.min(2, value + .25))}><Plus size={14} /></button></div>
     {pages>0&&initialPage>pages?<p role="alert">来源标记的页码超出此文件范围，已显示末页，请重新核对原文位置。</p>:null}
-    <div className={styles.pdfStage}><PdfCanvas url={url} page={page} zoom={zoom * 100} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={loaded} withCredentials={privateFile} /></div>
+    <div className={styles.pdfBody}>{atlasIntake ? <nav className={styles.pdfThumbnails} aria-label="原件页面缩略图">{thumbnailPages.map(index=><button key={index} type="button" aria-label={`查看 PDF 第 ${index} 页`} aria-current={page===index?"page":undefined} onClick={()=>setPage(index)}>{thumbnails.images[index]?<img src={thumbnails.images[index]} alt=""/>:<span className={styles.thumbnailPlaceholder}>第 {index} 页</span>}<span>{index}</span></button>)}{thumbnails.error?<p role="status">缩略图未能载入，仍可用页码查看原件。</p>:null}</nav>:null}<div className={styles.pdfStage}><PdfCanvas url={url} page={page} zoom={zoom * 100} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={loaded} withCredentials={privateFile} /></div></div>
   </div>;
 }
 

@@ -243,3 +243,14 @@ Original lockups and decorative document/book icons. PDF84 latest list states ta
 | brand/stl-lockup-admin-upload-mobile-final-r2.png | 82 | 1321,63,1438,97 |
 | visual/stl4/admin/upload-documents-final-r2.png | 82 | 302,233,379,310 |
 | visual/stl4/admin/upload-manual-final-r2.png | 82 | 289,913,329,952 |
+
+## Intake confirmation PDF85–87
+
+Original brand and file/type illustrations from PDF86. Covers and page thumbnails remain actual catalogue/file data.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-admin-intake-desktop-final-r2.png | 86 | 31,9,218,60 |
+| brand/stl-lockup-admin-intake-mobile-final-r2.png | 86 | 1335,70,1484,100 |
+| visual/stl4/admin/intake-pdf-final-r2.png | 86 | 280,231,311,271 |
+| visual/stl4/admin/intake-book-final-r2.png | 86 | 817,267,856,310 |
