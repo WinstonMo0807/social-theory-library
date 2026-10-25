@@ -94,10 +94,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const editorRoute = /^\/admin\/library\/works\/[^/]+$/.test(pathname);
   const filesRoute = /^\/admin\/library\/works\/[^/]+\/files$/.test(pathname);
   const mediaRoute = pathname === "/admin/media";
+  const outlineRoute = /^\/admin\/library\/assets\/[^/]+\/outline$/.test(pathname);
   const ocrRoute = /^\/admin\/library\/assets\/[^/]+\/ocr$/.test(pathname);
   const processingRoute = pathname === "/admin/processing" && (!searchParams.get("surface") || ["documents","overview"].includes(searchParams.get("surface")!));
-  const compactWorkHeader = uploadRoute || intakeRoute || filesRoute || mediaRoute || ocrRoute;
-  const brandReference = ocrRoute ? "admin-ocr" : processingRoute ? "admin-processing" : mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
+  const compactWorkHeader = uploadRoute || intakeRoute || filesRoute || mediaRoute || ocrRoute || outlineRoute;
+  const brandReference = outlineRoute ? "admin-outline" : ocrRoute ? "admin-ocr" : processingRoute ? "admin-processing" : mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
   const returnHref = safeAdminHref(searchParams.get("return_to"), "");
   const curationReturn = returnHref && new URL(returnHref, "https://admin.invalid");
   const returnToCuration = curationReturn && curationReturn.pathname === "/admin/review" && curationReturn.searchParams.get("workspace") === "curation";
@@ -212,7 +213,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
   return (
     <AdminSessionContext.Provider value={user}>
-    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={ocrRoute ? "ocr" : processingRoute ? "processing" : mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
+    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={outlineRoute ? "outline" : ocrRoute ? "ocr" : processingRoute ? "processing" : mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
       {!focusMode ? <aside
         ref={sidebarRef}
         id="admin-navigation"
@@ -227,7 +228,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
         <nav aria-label="管理工作区">
           {navigationGroups.map(group => <section className="stl4-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.entries.map(entry => {
-            const active = (ocrRoute ? "/admin/processing" : navigationHref(pathname)) === entry.href;
+            const active = (ocrRoute || outlineRoute ? "/admin/processing" : navigationHref(pathname)) === entry.href;
             const allowed = canViewRoute(entry.href);
             return <div className="admin-nav-section" key={entry.href}>
               {allowed ? <Link className={`admin-nav-primary ${active ? "active" : ""}`} aria-current={active ? "page" : undefined} href={entry.href} prefetch={false} onClick={closeNavigation}><entry.Icon size={17} /><span>{entry.title}</span>{active && entry.children.length ? <ChevronDown size={13} /> : null}</Link> : <span className="stl4-nav-locked" aria-disabled="true"><entry.Icon size={17} /><span>{entry.title}</span><LockKeyhole size={12} /></span>}
@@ -260,7 +261,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </header> : null}
         <div className="admin-content" key={String(user.id)}>{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{returnToToday ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回今日工作</Link> : null}{returnToSearch ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回搜索结果</Link> : null}{canViewRoute(pathname) ? children : <section className="stl4-admin-denied" role="alert"><LockKeyhole size={28} /><h1>当前账户没有此项管理权限</h1><p>你可以返回今日工作，继续处理有权访问的条目。</p><Link href="/admin">返回今日工作</Link><Link href="/feedback?category=usage">申请权限</Link></section>}</div>
       </div>
-      <nav className="stl4-admin-mobile-nav" aria-label="移动端管理导航" inert={compactNavigation && open}>{navigationGroups[0].entries.map(entry => canViewRoute(entry.href) ? <Link href={entry.href} key={entry.href} prefetch={false} aria-current={(ocrRoute ? "/admin/processing" : navigationHref(pathname)) === entry.href ? "page" : undefined}><entry.Icon size={19} /><span>{entry.title}</span></Link> : <span key={entry.href} aria-disabled="true"><LockKeyhole size={17} /><span>{entry.title}</span></span>)}<button type="button" onClick={() => setOpen(true)} aria-controls="admin-navigation" aria-expanded={open}><MoreHorizontal size={20} /><span>更多</span></button></nav>
+      <nav className="stl4-admin-mobile-nav" aria-label="移动端管理导航" inert={compactNavigation && open}>{navigationGroups[0].entries.map(entry => canViewRoute(entry.href) ? <Link href={entry.href} key={entry.href} prefetch={false} aria-current={(ocrRoute || outlineRoute ? "/admin/processing" : navigationHref(pathname)) === entry.href ? "page" : undefined}><entry.Icon size={19} /><span>{entry.title}</span></Link> : <span key={entry.href} aria-disabled="true"><LockKeyhole size={17} /><span>{entry.title}</span></span>)}<button type="button" onClick={() => setOpen(true)} aria-controls="admin-navigation" aria-expanded={open}><MoreHorizontal size={20} /><span>更多</span></button></nav>
     </div>
     </AdminSessionContext.Provider>
   );

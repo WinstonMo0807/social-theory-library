@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Maximize2, Minus, Plus } from "lucide-react";
 import { apiBlob, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { PdfCanvas } from "@/components/pdf-canvas";
@@ -18,6 +18,8 @@ export function OutlinePdfPreview({ asset, ownerId, page, setPage, navigationTar
   const [zoom, setZoom] = useState(100);
   const [actualPages, setActualPages] = useState(0);
   const [pageInput, setPageInput] = useState<string | null>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  const [displayError, setDisplayError] = useState("");
   const key = `${ownerId}:${asset.id}:${asset.sha256}`;
   const url = file?.key === key ? file.url : "";
   const total = actualPages || asset.page_count;
@@ -37,7 +39,7 @@ export function OutlinePdfPreview({ asset, ownerId, page, setPage, navigationTar
     return () => { alive = false; unsubscribe(); if (objectUrl) URL.revokeObjectURL(objectUrl); onFileReady?.(""); };
   }, [ownerId, asset.preview_url, key, attempt, onFileReady]);
   if(loadOnly)return error?<div className={styles.notice} role="alert"><p>{error}</p><button type="button" onClick={()=>{setError("");setAttempt(value=>value+1);}}>重新读取 PDF 缩略图</button></div>:null;
-  return <section className={styles.preview} data-preview-layout={layout} aria-label="对应页面预览">
+  return <section ref={previewRef} className={styles.preview} data-preview-layout={layout} aria-label="对应页面预览">
     <header><h2>{layout==="ocr"?"页面图像":"对应页面预览"}</h2><span>PDF 第 {page} 页 / 共 {total || "—"} 页</span></header>
     <div className={styles.pdfToolbar} data-pdf-toolbar>
       {layout!=="ocr"?<><button type="button" aria-label="上一页" disabled={page <= 1} onClick={() => jump(page - 1)}><ChevronLeft size={15} /></button>
@@ -48,7 +50,9 @@ export function OutlinePdfPreview({ asset, ownerId, page, setPage, navigationTar
       <button type="button" aria-label="缩小页面" disabled={zoom <= 60} onClick={() => setZoom(value => value - 20)}><Minus size={14} /></button>
       <button type="button" aria-label="恢复页面缩放" onClick={() => setZoom(100)}>{zoom}%</button>
       <button type="button" aria-label="放大页面" disabled={zoom >= 200} onClick={() => setZoom(value => value + 20)}><Plus size={14} /></button>
+      {layout!=="ocr"?<button type="button" aria-label="全屏预览" onClick={()=>{setDisplayError("");if(!previewRef.current?.requestFullscreen){setDisplayError("当前浏览器不支持全屏，可使用上方缩放查看页面。");return;}void (document.fullscreenElement?document.exitFullscreen():previewRef.current.requestFullscreen()).catch(()=>setDisplayError("当前浏览器无法打开全屏，可使用上方缩放查看页面。"));}}><Maximize2 size={14}/></button>:null}
     </div>
+    {displayError?<p className={styles.caption} role="status">{displayError}</p>:null}
     {error ? <div className={styles.notice} role="alert"><p>{error}</p><button type="button" onClick={() => { setError(""); setAttempt(value => value + 1); }}>重新读取 PDF</button></div> : !url ? <p role="status" className={styles.notice}>正在读取当前文件……</p> :
       page > total && total > 0 ? <p role="alert" className={styles.notice}>所选页超出实际 PDF 页数，请校准节点。</p> :
         <div className={styles.canvas} data-pdf-canvas><PdfCanvas key={url} url={url} page={page} zoom={zoom} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={onLoad} navigationTarget={navigationTarget} /></div>}

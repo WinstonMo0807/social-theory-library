@@ -35,7 +35,7 @@ function Workspace({ assetId, ownerId, canEdit, canPublish }: { assetId: string;
   const [pageMode,setPageMode] = useState(params.has("pdf_page")?"compare":"overview"), [pageInput,setPageInput] = useState<string|null>(null);
   const editorRef=useRef<HTMLTextAreaElement>(null);
   const [page, setPage] = useState(Number.isSafeInteger(initialPage) && initialPage > 0 ? initialPage : 1), [listPage, setListPage] = useState(1), [historyPage, setHistoryPage] = useState(1);
-  const [filter, setFilter] = useState(["all", "issues", ...Object.keys(names)].includes(params.get("status") || "") ? params.get("status")! : "all"), [tab, setTab] = useState(params.get("view") === "issues" ? "issues" : "pages");
+  const [filter, setFilter] = useState(["all", "issues", ...Object.keys(names)].includes(params.get("status") || "") ? params.get("status")! : params.get("view")==="issues"?"issues":"all"), [tab, setTab] = useState(params.get("view") === "issues" ? "issues" : "pages");
   const [options, setOptions] = useState<OCROptions>({ languages: ["ch", "en", "chinese_cht"], layout: true, quality_threshold: .75, detect_spreads: true, detect_garbled: true, skip_reviewed: true });
   const query = new URLSearchParams({ pdf_page: String(page), list_page: String(listPage), status: filter, history_page: String(historyPage), quality_threshold: String(options.quality_threshold), detect_spreads: String(options.detect_spreads), detect_garbled: String(options.detect_garbled) });
   const resource = usePersistentWorkspace<OCRWorkspace>(`${ocrWorkspacePath(assetId)}?${query}`, ownerId, poll);

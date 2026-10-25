@@ -1,5 +1,7 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+2026-10-26当前：Web r31fix `97d23811e254`、API r13 `cd535d9368d5`。恢复点.env.before-outline-r31（Web r30/API13）。未公网切换。
+
 2026-10-26当前：Web r30 `e4fb18c4b037`、API r13 `cd535d9368d5`。恢复点.env.before-ocr-r30（Web r29fix/API13）。r29初版/r12已知有错，不作恢复目标；未公网切换。
 
 2026-10-26当前：Web r29fix `852fde4ff8ee`、API r13 `cd535d9368d5`。恢复点.env.before-processing-r29fix/.env.before-processing-api-r13。r29初版/r12查询修复均已被后续替代；未公网切换。
