@@ -136,11 +136,15 @@ def state(work_id, actor, *, edition_id=None, page=1, impact_page=1, history_pag
     generatable = {str(row.asset_id) for row in tasks if can_edit and row.status == "ready"
         and workspace_file(row).get("generate_reader") is False
         and workspace_file(row).get("extension") in readable_formats and str(row.asset_id) not in generated}
-    author_names = list(Contribution.objects.filter(edition__work=work, role="author").order_by("order", "person__preferred_name")
-                        .values_list("person__preferred_name", flat=True))
+    contributions = list(Contribution.objects.filter(edition__work=work).select_related("person").order_by("order", "person__preferred_name"))
+    author_names = [row.person.preferred_name for row in contributions if row.role == "author"]
+    contributors = {}
+    for row in contributions:
+        contributors.setdefault(str(row.edition_id), []).append({"name": row.person.preferred_name, "role": row.role, "role_label": row.get_role_display()})
     rights_asset = active or next((row for row in assets if row.kind == "original"), None)
     from .publication_eligibility import active_catalog_snapshot
-    public_cover = next(((active_catalog_snapshot(row).get("work") or {}) for row in editions if row.is_primary), {})
+    edition_covers = {str(row.pk): (active_catalog_snapshot(row).get("work") or {}) for row in editions if row.state == "published"}
+    public_cover = next((edition_covers.get(str(row.pk), {}) for row in editions if row.is_primary), {})
     revisions = selected.catalog_revisions.order_by("-revision") if selected else CatalogPublicationRevision.objects.none()
     history = page_rows(revisions, history_page, lambda row: {"id": str(row.pk), "revision": row.revision,
         "title": row.snapshot.get("work", {}).get("title", ""), "status": row.status, "activated_at": row.activated_at,
@@ -153,7 +157,10 @@ def state(work_id, actor, *, edition_id=None, page=1, impact_page=1, history_pag
         "original_publication_year": work.first_publication_date.year if work.first_publication_date else None},
         "editions": [{"id": str(row.pk), "label": " · ".join(str(value) for value in (row.version_label, row.publication_year, row.publisher) if value) or "出版信息待补",
             "version_label": row.version_label, "publication_year": row.publication_year, "publisher": row.publisher,
-            "language": work.language, "is_primary": row.is_primary, "state": row.state,
+            "language": edition_covers.get(str(row.pk), {}).get("language", work.language), "is_primary": row.is_primary, "state": row.state,
+            "cover_url": f"/api/catalog/works/{work.pk}/cover/?edition_id={row.pk}" if any(edition_covers.get(str(row.pk), {}).get(key) for key in ("cover", "cover_media")) else "",
+            "contributors": contributors.get(str(row.pk), []),
+            "searchable": bool(row.state == "published" and row.search_indexed_at and row.fulltext_ready_at),
             "original_count": counts.get((str(row.pk), "original"), 0), "reader_count": counts.get((str(row.pk), "normalized"), 0),
             "current_reader_asset_id": str(selected_reader(row).pk) if selected_reader(row) else None} for row in editions],
         "selected_edition_id": str(selected.pk) if selected else None,

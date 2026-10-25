@@ -53,6 +53,12 @@ class WorkFileOutput(serializers.Serializer):
     access_status = serializers.CharField()
 
 
+class WorkEditionContributorOutput(serializers.Serializer):
+    name = serializers.CharField(allow_blank=True)
+    role = serializers.CharField()
+    role_label = serializers.CharField()
+
+
 class WorkEditionOutput(serializers.Serializer):
     id = serializers.UUIDField()
     label = serializers.CharField()
@@ -62,6 +68,9 @@ class WorkEditionOutput(serializers.Serializer):
     language = serializers.CharField(allow_blank=True)
     is_primary = serializers.BooleanField()
     state = serializers.CharField()
+    cover_url = serializers.CharField(allow_blank=True)
+    contributors = WorkEditionContributorOutput(many=True)
+    searchable = serializers.BooleanField()
     original_count = serializers.IntegerField()
     reader_count = serializers.IntegerField()
     current_reader_asset_id = serializers.UUIDField(allow_null=True)

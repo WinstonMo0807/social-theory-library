@@ -272,3 +272,7 @@ Original PDF92 lockups. Publication, field locks and conflict decisions retain t
 | --- | --- | --- |
 | brand/stl-lockup-admin-editor-desktop-final-r2.png | 92 | 40,23,235,71 |
 | brand/stl-lockup-admin-editor-mobile-final-r2.png | 92 | 1330,48,1435,83 |
+
+## Version and file workspace, final PDF page 95
+
+The original brand and document icon are extracted from the final PDF, without redrawing. Native image crop coordinates: desktop brand (31,10,226,59); mobile brand (1372,90,1472,122); document icon (940,411,965,442). Files: stl-lockup-admin-files-desktop-final-r2.png, stl-lockup-admin-files-mobile-final-r2.png, visual/stl4/admin/files-document-final-r2.png. Book covers and sample titles are not used as production data.

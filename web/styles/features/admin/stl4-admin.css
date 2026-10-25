@@ -118,22 +118,22 @@
 }
 
 /* PDF82–84 uploads use a compact header and their own mobile action bar. */
-.admin-shell.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]){--stl-container-admin-sidebar:clamp(228px,19vw,274px)}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-logo,.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-topbar{min-height:80px}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-logo{padding-inline:26px}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .brand-reference-lockup:is([data-brand-variant="admin-upload"],[data-brand-variant="admin-intake"],[data-brand-variant="admin-manual"],[data-brand-variant="admin-editor"]){display:block;width:100%;max-width:224px}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-topbar>.stl4-admin-search{margin-left:auto;margin-right:0;width:min(450px,60%)}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .stl4-search-submit{display:none}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-topbar>form>label{border-right:1px solid var(--stl4-admin-line);min-height:38px;border-radius:3px}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-content{padding:18px 30px 0}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-nav-children{display:none}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-sidebar nav a{min-height:45px}
+.admin-shell.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]){--stl-container-admin-sidebar:clamp(228px,19vw,274px)}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-logo,.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-topbar{min-height:80px}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-logo{padding-inline:26px}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .brand-reference-lockup:is([data-brand-variant="admin-upload"],[data-brand-variant="admin-intake"],[data-brand-variant="admin-manual"],[data-brand-variant="admin-editor"],[data-brand-variant="admin-files"]){display:block;width:100%;max-width:224px}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-topbar>.stl4-admin-search{margin-left:auto;margin-right:0;width:min(450px,60%)}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .stl4-search-submit{display:none}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-topbar>form>label{border-right:1px solid var(--stl4-admin-line);min-height:38px;border-radius:3px}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-content{padding:18px 30px 0}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-nav-children{display:none}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-sidebar nav a{min-height:45px}
 @media(max-width:900px){
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-topbar{min-height:65px}
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .admin-content{padding:15px 16px 90px}
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .stl4-admin-mobile-nav,.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .stl4-mobile-search-toggle{display:none}
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .stl4-mobile-brand{max-width:140px}
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"]) .stl4-mobile-brand .brand-reference-lockup{width:130px}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-topbar{min-height:65px}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .admin-content{padding:15px 16px 90px}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .stl4-admin-mobile-nav,.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .stl4-mobile-search-toggle{display:none}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .stl4-mobile-brand{max-width:140px}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"],[data-admin-surface="editor"],[data-admin-surface="files"]) .stl4-mobile-brand .brand-reference-lockup{width:130px}
 }
 
 .admin-shell.stl4-admin-shell[data-admin-surface="intake"]{--stl-container-admin-sidebar:clamp(220px,18.6vw,270px)}
@@ -154,3 +154,7 @@
 .stl4-admin-shell[data-admin-surface="editor"] .admin-logo{padding-inline:22px}
 .stl4-admin-shell[data-admin-surface="editor"] .admin-topbar>.stl4-admin-search{width:min(350px,45%)}
 @media(max-width:900px){.stl4-admin-shell[data-admin-surface="editor"] .admin-content{padding:14px 15px 95px}.stl4-admin-shell[data-admin-surface="editor"] .stl4-mobile-brand .brand-reference-lockup{width:111px}}
+
+.admin-shell.stl4-admin-shell[data-admin-surface="files"]{--stl-container-admin-sidebar:clamp(210px,19vw,275px)}
+.stl4-admin-shell[data-admin-surface="files"] .admin-logo,.stl4-admin-shell[data-admin-surface="files"] .admin-topbar{min-height:65px}.stl4-admin-shell[data-admin-surface="files"] .admin-content{padding:17px 24px 35px}.stl4-admin-shell[data-admin-surface="files"] .admin-topbar>.stl4-admin-search{width:min(340px,45%)}
+@media(max-width:900px){.stl4-admin-shell[data-admin-surface="files"] .admin-content{padding:14px 16px 90px}.stl4-admin-shell[data-admin-surface="files"] .stl4-mobile-brand .brand-reference-lockup{width:99px}.stl4-admin-shell[data-admin-surface="files"] .stl4-mobile-search-toggle{display:grid}}
