@@ -26,8 +26,6 @@ from .public_response_serializers import ReaderFocusSerializer
 
 from common.capabilities import Capability, has_capability
 from common.permissions import (
-    CanMergeAuthority,
-    CanRunSystemRecovery,
     IsKnowledgeEditor,
     IsKnowledgeReviewer,
 )
@@ -48,7 +46,6 @@ from .models import (
     KnowledgeNodeDiscipline,
     KnowledgeNodeSubdiscipline,
     KnowledgeNodeTopic,
-    KnowledgeNodeMergeRecord,
     KnowledgeNodeVersion,
     KnowledgeRelation,
     KnowledgeRelationVersion,
@@ -66,10 +63,7 @@ from .models import (
     WorkNodeRelation,
 )
 from .services.knowledge_nodes import (
-    merge_nodes,
-    merge_preview,
     record_node_version,
-    rollback_merge,
 )
 from .services.scoped_search import SearchContext, SearchService
 from .services.publication_eligibility import active_catalog_snapshot, public_editions
@@ -83,7 +77,6 @@ from .theory_serializers import (
     EvidenceSnippetSerializer,
     KnowledgeNodeDetailSerializer,
     KnowledgeNodeListSerializer,
-    KnowledgeNodeMergeRecordSerializer,
     KnowledgeNodeVersionSerializer,
     KnowledgeRelationSerializer,
     KnowledgeRelationVersionSerializer,
@@ -894,47 +887,6 @@ class AdminKnowledgeNodeVersionListView(AdminPrivateResponseMixin, TheorySystemF
         return KnowledgeNodeVersion.objects.filter(node_id=self.kwargs["pk"]).select_related(
             "created_by"
         )
-
-
-class AdminKnowledgeNodeMergePreviewView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
-    permission_classes = [CanMergeAuthority]
-
-    def get(self, request, pk):
-        source = get_object_or_404(KnowledgeNode, pk=pk)
-        return Response({"source": str(source.id), "affected": merge_preview(source)})
-
-
-class AdminKnowledgeNodeMergeView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
-    permission_classes = [CanMergeAuthority]
-
-    def post(self, request, pk):
-        target_id = request.data.get("target_node")
-        if not target_id:
-            return Response({"target_node": ["请选择合并目标。"]}, status=400)
-        try:
-            record = merge_nodes(
-                pk,
-                target_id,
-                actor=request.user,
-                change_note=request.data.get("change_note", ""),
-            )
-        except (KnowledgeNode.DoesNotExist, ValueError) as exc:
-            return Response({"detail": str(exc)}, status=400)
-        return Response(
-            KnowledgeNodeMergeRecordSerializer(record, context={"request": request}).data,
-            status=201,
-        )
-
-
-class AdminKnowledgeNodeMergeRollbackView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
-    permission_classes = [CanRunSystemRecovery]
-
-    def post(self, request, record_id):
-        try:
-            record = rollback_merge(record_id, actor=request.user)
-        except (KnowledgeNodeMergeRecord.DoesNotExist, ValueError) as exc:
-            return Response({"detail": str(exc)}, status=400)
-        return Response(KnowledgeNodeMergeRecordSerializer(record).data)
 
 
 @extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("node", str, description="当前正式或草稿关联的节点编号。")]))

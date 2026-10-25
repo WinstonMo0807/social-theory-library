@@ -27,12 +27,14 @@ def merge_scope_queries(source_id, target_id):
     return rows
 
 
-def merge_scope_fingerprint(source_id, target_id):
+def merge_scope_fingerprint(source_id, target_id, *, lock=True):
     # ponytail: bounded original graph snapshot, no second history store. Large
     # merges need an explicit staged recovery workflow instead of an unsafe truncation.
     snapshots = {}
     for name, rows in sorted(merge_scope_queries(source_id, target_id).items()):
-        values = list(rows.select_for_update().order_by("pk").values()[:5001])
+        if lock:
+            rows = rows.select_for_update()
+        values = list(rows.order_by("pk").values()[:5001])
         if len(values) > 5000:
             raise ValueError("相关记录超过单次安全回退范围，请先缩小合并范围；本次没有改写数据。")
         snapshots[name] = [digest(row) for row in values]

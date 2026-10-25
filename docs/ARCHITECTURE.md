@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-26 M21合并影响确认、原请求恢复和回退入口
+
+现有节点合并/回退路由改由knowledge_merge_commands包装原knowledge_nodes事务；原范围指纹用于确认前核对，AuditEvent登记请求与停止回执，KnowledgeNodeMergeRecord继续保存业务记录与回退。新增原节点历史/本人请求读取，无新表或迁移。前端沿原保存回执hook，原文/文章引用不自动改绑。
+
+
 ## 2026-10-26 DOCX分页预览的账户绑定与撤销复核
 
 原CitationAudit派生预览全部前端请求携带X-Reader-Owner，禁自动刷新重发；生成/取消复用privacy.command_owner在账户锁内复核停用和token_version。无新表、迁移或并行服务。原隔离转换服务和加密派生字段保留，未运行转换或部署。

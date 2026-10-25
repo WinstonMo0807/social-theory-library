@@ -1,3 +1,4 @@
+from catalog.knowledge_merge_views import AdminKnowledgeNodeMergePreviewView, AdminKnowledgeNodeMergeRollbackView, AdminKnowledgeNodeMergeView, NodeMergeHistoryView, NodeMergeReceiptView
 from catalog.theory_review_commands import TheoryReviewReceiptView
 from catalog.site_publication_review import SiteReviewView
 from catalog.site_history import SiteHistoryView, SiteRestoreView
@@ -242,9 +243,6 @@ from .theory_system_views import (
     AdminEvidenceListView,
     AdminKnowledgeNodeDetailView,
     AdminKnowledgeNodeListView,
-    AdminKnowledgeNodeMergePreviewView,
-    AdminKnowledgeNodeMergeRollbackView,
-    AdminKnowledgeNodeMergeView,
     AdminKnowledgeNodeVersionListView,
     AdminKnowledgeRelationDetailView as AdminNormalizedRelationDetailView,
     AdminKnowledgeRelationListView as AdminNormalizedRelationListView,
@@ -302,6 +300,8 @@ urlpatterns = [
     path("admin/evidence-curation/<str:object_type>/<uuid:object_id>/publish/", PublishEvidenceCurationView.as_view(), name="admin-evidence-curation-publish"),
     path("evidence-curation/<str:object_type>/<uuid:object_id>/", PublicEvidenceCurationView.as_view(), name="public-evidence-curation"),
     path("admin/scholar-relations/", AdminScholarRelationListView.as_view(), name="admin-scholar-relation-list"),
+    path("admin/theory-system/nodes/<uuid:pk>/merges/", NodeMergeHistoryView.as_view(), name="node-merge-history"),
+    path("admin/theory-system/merges/commands/<uuid:request_id>/", NodeMergeReceiptView.as_view(), name="node-merge-receipt"),
     path("admin/theory-system/nodes/commands/<uuid:request_id>/", NodeSaveReceiptView.as_view(), name="node-save-receipt"),
     path("admin/theory-system/relations/commands/<uuid:request_id>/", KnowledgeRelationReceiptView.as_view(), name="knowledge-relation-receipt"),
     path("admin/scholars/<uuid:scholar_id>/links/<str:kind>/", ScholarLinkView.as_view(), name="scholar-link-list"),

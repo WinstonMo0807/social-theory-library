@@ -8,6 +8,7 @@ import { nodeEditorialForSave, type NodeEditorialDetails, type NodeProseField } 
 import type { ScholarProse } from "@/lib/api/scholar-prose";
 import { TimelineSupplementalSources, TimelineSimilarCheck, emptyTimelineDetails, type TimelineEditorialDetails } from "./admin/knowledge/timeline-editor-details";
 import { TimelineEvidenceImage, timelineEvidenceImageUrl } from "./admin/knowledge/timeline-evidence-image";
+import { NodeMergeWorkspace } from "./admin/knowledge/node-merge-workspace";
 import { TimelineMergeWorkspace } from "./admin/knowledge/timeline-merge-workspace";
 import { TimelineParticipants } from "./admin/knowledge/timeline-participants";
 import timelineStyles from "./admin/knowledge/timeline-editor.module.css";
@@ -25,7 +26,6 @@ import {
   Clock3,
   ExternalLink,
   FileText,
-  GitMerge,
   History,
   Pencil,
   Plus,
@@ -444,7 +444,6 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   useUnsavedForm(Boolean(command.recovery) || Boolean(pendingAction) || Boolean(knownSavedId), false);
   const [entityLabels, setEntityLabels] = useState<Record<string, string>>({});
   const [versions, setVersions] = useState<Array<{ id: string; version_number: number; change_note: string; created_by_name: string; created_at: string }> | null>(null);
-  const [mergeTarget, setMergeTarget] = useState("");
   const [pendingRevision, setPendingRevision] = useState<EditorialRevisionSummary | null>(null);
 
   const params = useMemo(() => {
@@ -492,7 +491,6 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       setDraft(nodeToDraft(mapped));
       setMessage("已通过旧版映射打开理论或概念资料。后续只需在本页维护。");
       setVersions(null);
-      setMergeTarget("");
       setLegacyOpened(true);
     });
     return () => {
@@ -511,7 +509,6 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       setDraft(nodeToDraft(node));
       setMessage("已从 知识管理 打开这个理论或概念资料。");
       setVersions(null);
-      setMergeTarget("");
       setPendingRevision(node.editorial_revision ?? null);
       setRequestedNodeOpened(true);
     });
@@ -532,7 +529,6 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     setMessageState("idle");
     setEntityLabels({});
     setVersions(null);
-    setMergeTarget("");
     setPendingRevision(node?.editorial_revision ?? null);
     return true;
   }
@@ -639,7 +635,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     setEditing(saved); setDraft(nodeToDraft(saved)); setNodeType(saved.node_type);
     setPendingRevision(saved.editorial_revision ?? null); setKnownSavedId("");
     setRequestedNodeOpened(true); setLegacyOpened(true); prefills.clear();
-    setVersions(null); setMergeTarget(""); setEditConflict(false); nodes.refresh(); allNodes.refresh();
+    setVersions(null); setEditConflict(false); nodes.refresh(); allNodes.refresh();
   }
   async function recoverNode(mode: "lookup" | "stop" | "retry" | "read") {
     if (composing.current || !startAction("recover-node")) return;
@@ -732,35 +728,12 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     }
   }
 
-  async function mergeNode() {
-    if (!editing || !mergeTarget || composing.current || command.recovery || knownSavedId || nodeDirty || relationGuard.current.dirty || relationGuard.current.pending) return;
-    const target = allNodes.data?.results.find((item) => item.id === mergeTarget);
-    const token = getServerSessionCredential();
-    if (!token) return;
-    const actionKey = "merge-theory-node";
-    if (!startAction(actionKey)) return;
-    setMessage("正在计算合并影响……");
-    setMessageState("pending");
-    try {
-      const preview = await apiRequest<{ affected: Record<string, number> }>(`/catalog/admin/theory-system/nodes/${editing.id}/merge-preview/`, {}, token);
-      const impact = Object.entries(preview.affected).map(([key, value]) => `${key} ${value}`).join("、");
-      if (!window.confirm(`将“${editing.canonical_name_zh}”合并到“${target?.canonical_name_zh || "保留的理论或概念"}”？\n受影响范围 ${impact || "已计算"}`)) {
-        setMessage("已取消理论或概念合并。");
-        setMessageState("idle");
-        return;
-      }
-      await apiRequest(`/catalog/admin/theory-system/nodes/${editing.id}/merge/`, { method: "POST", body: JSON.stringify({ target_node: mergeTarget, change_note: "后台人工合并" }) }, token);
-      setMessage("理论或概念已在事务中合并，合并记录可供管理员回滚。");
-      setMessageState("success");
-      setEditing(null);
-      nodes.refresh();
-      allNodes.refresh();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "合并失败");
-      setMessageState("error");
-    } finally {
-      finishAction(actionKey);
-    }
+  async function reloadMergedNode() {
+    if (!editing) return;
+    const current = await apiRequest<KnowledgeNode>(`/catalog/admin/theory-system/nodes/${editing.id}/`, { cache: "no-store" }, getServerSessionCredential());
+    if (!mounted.current) return;
+    setEditing(current); setDraft(nodeToDraft(current)); setPendingRevision(current.editorial_revision ?? null);
+    setEditConflict(false); nodes.refresh(); allNodes.refresh(); requestedNode.refresh();
   }
 
   const visibleNodes = nodes.data?.results ?? [];
@@ -906,7 +879,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
           {editing ? <div className="theory-node-secondary-actions"><ActionButton type="button" state={pendingAction === "load-node-versions" ? "pending" : "idle"} pendingLabel="读取中" disabled={Boolean(pendingAction) && pendingAction !== "load-node-versions"} onClick={() => void loadVersions()}><History size={14} />历史版本</ActionButton></div> : null}
           {versions ? <section className="theory-version-list"><header><strong>历史版本</strong><button type="button" aria-label="关闭历史版本" onClick={() => setVersions(null)}><X size={14} /></button></header>{versions.map((version) => <article key={version.id}><strong>第 {version.version_number} 版</strong><span>{version.change_note || "内容更新"}</span><small>{version.created_by_name || "系统"} · {asDate(version.created_at)}</small></article>)}</section> : null}
           {pendingRevision?.status === "draft" ? <section className="theory-editorial-revision"><div><strong>待发布编辑草稿</strong><p>第 {pendingRevision.revision} 版修改 {pendingRevision.changed_fields.join("、")}。当前公开页仍使用正式内容。</p></div><KnowledgePublishEntry disabled={Boolean(pendingAction) || pendingRevision.has_conflict || nodeDirty} onFallback={() => void publishRevision()}/></section> : null}
-          {editing ? <section className="theory-merge-box"><strong><GitMerge size={15} />合并重复理论或概念</strong><p>合并前会计算文献、关系、学者、时间轴和阅读路径的影响。</p><div><ResearchEntityPicker label="选择保留的保留的理论或概念" endpoint="/catalog/admin/theory-system/nodes/" entityType="knowledge_node" step="maintenance_theory_nodes" field="merge_target" values={onePickerValue(mergeTarget, nodeName(mergeTarget))} onChange={(next) => { const selected = next.at(-1); if (selected?.id === editing.id || selected?.status === "archived") return; setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setMergeTarget(selected?.id ?? ""); }} /><ActionButton type="button" state={pendingAction === "merge-theory-node" ? "pending" : "idle"} pendingLabel="正在计算影响" disabled={!mergeTarget || (Boolean(pendingAction) && pendingAction !== "merge-theory-node")} onClick={() => void mergeNode()}>预览并合并</ActionButton></div></section> : null}
+          {editing ? <div data-editor-section="impact"><NodeMergeWorkspace key={`${owner}:${editing.id}`} owner={owner} nodeId={editing.id} disabled={nodeDirty || Boolean(command.recovery) || Boolean(knownSavedId) || Boolean(pendingAction)} onChanged={reloadMergedNode}/></div> : null}
           {editing ? <EntityLifecycleActions kind="knowledge-node" id={editing.id} name={editing.canonical_name_zh} status={draft.status} previewHref={`/theories/nodes/${editing.slug}`} onChanged={(snapshot) => { setDraft((current) => ({ ...current, status: snapshot.status })); setEditing((current) => current ? { ...current, status: snapshot.status } : current); nodes.refresh(); allNodes.refresh(); }} onDeleted={() => { setEditing(null); setDraft({ ...emptyNodeDraft, node_type: nodeType, primary_discipline: disciplines.data?.results[0]?.id ?? "" }); nodes.refresh(); allNodes.refresh(); }} /> : null}
           <div className="theory-editor-footer"><ActionButton className="button" state={pendingAction === "save-theory-node" ? "pending" : "idle"} pendingLabel="正在保存本页资料" disabled={Boolean(pendingAction) && pendingAction !== "save-theory-node"} type="submit"><Save size={15} />{"保存本页草稿"}</ActionButton></div>
           {message ? <AsyncStatus state={messageState} message={message} /> : null}

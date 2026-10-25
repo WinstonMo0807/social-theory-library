@@ -2663,6 +2663,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/theory-system/merges/{record_id}/rollback/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_merges_rollback_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_theory_system_merges_rollback_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/merges/commands/{request_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_merges_commands_retrieve"];
+        put?: never;
+        post: operations["catalog_admin_theory_system_merges_commands_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/theory-system/nodes/": {
         parameters: {
             query?: never;
@@ -2716,6 +2748,54 @@ export interface paths {
         head?: never;
         /** @description Opt-in only on protected Admin views, never public catalog views. */
         patch: operations["catalog_admin_theory_system_nodes_partial_update"];
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/nodes/{id}/merge/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["catalog_admin_theory_system_nodes_merge_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/nodes/{id}/merge-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_nodes_merge_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/theory-system/nodes/{id}/merges/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_theory_system_nodes_merges_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/catalog/admin/theory-system/nodes/{id}/versions/": {
@@ -11598,6 +11678,23 @@ export interface components {
             /** Format: int64 */
             sort_order?: number;
         };
+        KnowledgeNodeMergeRecord: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            source_node: string;
+            readonly source_name: string;
+            /** Format: uuid */
+            target_node: string;
+            readonly target_name: string;
+            affected_counts?: unknown;
+            merged_by?: number | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            rolled_back_at?: string | null;
+            rolled_back_by?: number | null;
+        };
         KnowledgeNodeSubdiscipline: {
             /** Format: uuid */
             readonly id: string;
@@ -13252,6 +13349,71 @@ export interface components {
             internal_note: string;
             prose: components["schemas"]["NodeProseRequest"];
         };
+        NodeMergeInputRequest: {
+            /** Format: uuid */
+            target_node: string;
+            fingerprint: string;
+            confirmed: boolean;
+            /** @default  */
+            change_note: string;
+        };
+        NodeMergePreview: {
+            source: components["schemas"]["NodeMergeSummary"];
+            target: components["schemas"]["NodeMergeSummary"];
+            fingerprint: string;
+            can_merge: boolean;
+            affected: {
+                [key: string]: number;
+            };
+            blockers: string[];
+            rule: string;
+        };
+        NodeMergeReceipt: {
+            actor_id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: uuid */
+            node_merge_id: string | null;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            saved_version: string;
+            exists: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        NodeMergeResult: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            source_node: string;
+            readonly source_name: string;
+            /** Format: uuid */
+            target_node: string;
+            readonly target_name: string;
+            affected_counts?: unknown;
+            merged_by?: number | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            rolled_back_at?: string | null;
+            rolled_back_by?: number | null;
+            readonly rollback: components["schemas"]["NodeRollbackState"];
+            save_receipt?: components["schemas"]["NodeMergeReceipt"];
+        };
+        NodeMergeRows: {
+            count: number;
+            page: number;
+            pages: number;
+            results: components["schemas"]["KnowledgeNodeMergeRecord"][];
+        };
+        NodeMergeSummary: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            name_en: string;
+            node_type: string;
+            status: string;
+            editor_url: string;
+        };
         NodeProse: {
             summary?: components["schemas"]["NodeProseText"];
             definition?: components["schemas"]["NodeProseText"];
@@ -13309,6 +13471,15 @@ export interface components {
         NodeRelationTypeOption: {
             value: string;
             label: string;
+        };
+        NodeRollbackInputRequest: {
+            fingerprint: string;
+            confirmed: boolean;
+        };
+        NodeRollbackState: {
+            fingerprint: string;
+            can_rollback: boolean;
+            blockers: string[];
         };
         NodeSaveReceipt: {
             actor_id: string;
@@ -28758,6 +28929,102 @@ export interface operations {
             };
         };
     };
+    catalog_admin_theory_system_merges_rollback_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeMergeResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_merges_rollback_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NodeRollbackInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NodeRollbackInputRequest"];
+                "multipart/form-data": components["schemas"]["NodeRollbackInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeMergeResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_merges_commands_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeMergeReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_merges_commands_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PendingSaveStopRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PendingSaveStopRequest"];
+                "multipart/form-data": components["schemas"]["PendingSaveStopRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeMergeReceipt"];
+                };
+            };
+        };
+    };
     catalog_admin_theory_system_nodes_list: {
         parameters: {
             query?: {
@@ -28970,6 +29237,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminKnowledgeNode"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_merge_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NodeMergeInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NodeMergeInputRequest"];
+                "multipart/form-data": components["schemas"]["NodeMergeInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeMergeResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_merge_preview_retrieve: {
+        parameters: {
+            query: {
+                target_node: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeMergePreview"];
+                };
+            };
+        };
+    };
+    catalog_admin_theory_system_nodes_merges_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeMergeRows"];
                 };
             };
         };

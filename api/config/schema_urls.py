@@ -27,6 +27,7 @@ VERIFIED_NAMES = {
     "content-placement-uses",
     "admin-theory-review-task-list", "admin-theory-review-task-detail",
     "admin-theory-review-task-action", "theory-review-receipt",
+    "admin-knowledge-node-merge-preview", "admin-knowledge-node-merge", "admin-knowledge-node-merge-rollback", "node-merge-history", "node-merge-receipt",
     "admin-knowledge-node-list", "admin-knowledge-node-detail", "admin-knowledge-node-versions",
     "admin-normalized-relation-list", "admin-normalized-relation-detail", "admin-normalized-relation-versions",
     "admin-visual-review", "admin-visual-review-receipt", "admin-visual-review-reference",

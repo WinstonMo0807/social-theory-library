@@ -12869,6 +12869,198 @@
                 }
             }
         },
+        "/api/catalog/admin/theory-system/merges/{record_id}/rollback/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_merges_rollback_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "record_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeMergeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_system_merges_rollback_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "record_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NodeRollbackInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NodeRollbackInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NodeRollbackInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeMergeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/merges/commands/{request_id}/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_merges_commands_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeMergeReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_theory_system_merges_commands_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PendingSaveStopRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeMergeReceipt"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/theory-system/nodes/": {
             "get": {
                 "operationId": "catalog_admin_theory_system_nodes_list",
@@ -13311,6 +13503,159 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/nodes/{id}/merge/": {
+            "post": {
+                "operationId": "catalog_admin_theory_system_nodes_merge_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NodeMergeInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NodeMergeInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NodeMergeInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeMergeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/nodes/{id}/merge-preview/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_nodes_merge_preview_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "target_node",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeMergePreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/admin/theory-system/nodes/{id}/merges/": {
+            "get": {
+                "operationId": "catalog_admin_theory_system_nodes_merges_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NodeMergeRows"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -49069,6 +49414,59 @@
                     "slug"
                 ]
             },
+            "KnowledgeNodeMergeRecord": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "affected_counts": {},
+                    "merged_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "rolled_back_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "rolled_back_by": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "source_name",
+                    "source_node",
+                    "target_name",
+                    "target_node"
+                ]
+            },
             "KnowledgeNodeSubdiscipline": {
                 "type": "object",
                 "properties": {
@@ -54766,6 +55164,236 @@
                     "prose"
                 ]
             },
+            "NodeMergeInputRequest": {
+                "type": "object",
+                "properties": {
+                    "target_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    },
+                    "change_note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "fingerprint",
+                    "target_node"
+                ]
+            },
+            "NodeMergePreview": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "$ref": "#/components/schemas/NodeMergeSummary"
+                    },
+                    "target": {
+                        "$ref": "#/components/schemas/NodeMergeSummary"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "can_merge": {
+                        "type": "boolean"
+                    },
+                    "affected": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "rule": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "affected",
+                    "blockers",
+                    "can_merge",
+                    "fingerprint",
+                    "rule",
+                    "source",
+                    "target"
+                ]
+            },
+            "NodeMergeReceipt": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "node_merge_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "saved_version": {
+                        "type": "string"
+                    },
+                    "exists": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "actor_id",
+                    "created_at",
+                    "exists",
+                    "node_merge_id",
+                    "request_id",
+                    "saved_version",
+                    "state"
+                ]
+            },
+            "NodeMergeResult": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "source_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target_node": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "target_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "affected_counts": {},
+                    "merged_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "rolled_back_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "rolled_back_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "rollback": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/NodeRollbackState"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "save_receipt": {
+                        "$ref": "#/components/schemas/NodeMergeReceipt"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "rollback",
+                    "source_name",
+                    "source_node",
+                    "target_name",
+                    "target_node"
+                ]
+            },
+            "NodeMergeRows": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/KnowledgeNodeMergeRecord"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "pages",
+                    "results"
+                ]
+            },
+            "NodeMergeSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "name_en": {
+                        "type": "string"
+                    },
+                    "node_type": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "editor_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "editor_url",
+                    "id",
+                    "name",
+                    "name_en",
+                    "node_type",
+                    "status"
+                ]
+            },
             "NodeProse": {
                 "type": "object",
                 "properties": {
@@ -54969,6 +55597,45 @@
                 "required": [
                     "label",
                     "value"
+                ]
+            },
+            "NodeRollbackInputRequest": {
+                "type": "object",
+                "properties": {
+                    "fingerprint": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "confirmed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "confirmed",
+                    "fingerprint"
+                ]
+            },
+            "NodeRollbackState": {
+                "type": "object",
+                "properties": {
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "can_rollback": {
+                        "type": "boolean"
+                    },
+                    "blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "blockers",
+                    "can_rollback",
+                    "fingerprint"
                 ]
             },
             "NodeSaveReceipt": {
