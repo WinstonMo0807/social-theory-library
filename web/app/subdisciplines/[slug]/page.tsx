@@ -42,5 +42,5 @@ export default async function SubdisciplinePage({ params, searchParams }: {
   }
   if (!item) notFound();
 
-  return <SubdisciplinePublicView item={item} footer={<><PublishedPlacements type="subdiscipline" id={item.id}/><SiteFooter /></>} />;
+  return <SubdisciplinePublicView item={item} footer={<PublishedPlacements type="subdiscipline" id={item.id}/>} />;
 }

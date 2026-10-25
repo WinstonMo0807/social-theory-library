@@ -37,6 +37,18 @@
 .brand-reference-lockup[data-brand-variant="support"] { width: 222px; }
 .brand-reference-lockup[data-brand-variant="article"] { width: 191px; }
 .brand-reference-lockup[data-brand-variant="explore"] { width: 264px; }
+.brand-reference-lockup[data-brand-variant="theory-overview"] { width:241px; }
+.site-header[data-stl-theory="overview"] { min-height:74px; padding:9px 4%; color:var(--night-ink,#111); }
+.site-header[data-stl-theory="overview"] .desktop-nav { font-size:17px; }
+.site-header[data-stl-theory="overview"] .desktop-nav a.active::after { background:#c48026; }
+.site-header[data-stl-theory="overview"] .header-search svg { width:24px; height:24px; }
+.brand-reference-lockup[data-brand-variant="subdisciplines"] { width:245px; }
+.brand-reference-lockup[data-brand-variant="subdiscipline-detail"] { width:204px; }
+.site-header[data-stl-theory^="subdiscipline"] { min-height:74px; padding:9px 3.5%; color:var(--night-ink,#111); }
+.site-header[data-stl-theory^="subdiscipline"] .desktop-nav { font-size:17px; }
+.site-header[data-stl-theory^="subdiscipline"] .desktop-nav a.active::after { background:#c48026; }
+.site-header[data-stl-theory^="subdiscipline"] .header-search span { display:none; }
+.site-header[data-stl-theory^="subdiscipline"] .header-search svg { width:25px; height:25px; }
 .site-header[data-stl-explore="landing"] { min-height: 74px; padding-block: 7px; color: var(--night-ink,#111); }
 .site-header[data-stl-explore="landing"] .header-search span { display: none; }
 .site-header[data-stl-explore="landing"] .header-search svg { width: 26px; height: 26px; }
@@ -134,6 +146,12 @@
   .brand-reference-lockup[data-brand-variant="support"] { width: 150px; }
   .brand-reference-lockup[data-brand-variant="article"] { width: 185px; }
   .brand-reference-lockup[data-brand-variant="explore"] { width: 201px; }
+  .brand-reference-lockup[data-brand-variant="theory-overview"] { width:206px; }
+  .site-header[data-stl-theory="overview"] { min-height:70px; padding:10px 18px; }
+  .brand-reference-lockup[data-brand-variant="subdisciplines"] { width:200px; }
+  .brand-reference-lockup[data-brand-variant="subdiscipline-detail"] { width:152px; }
+  .site-header[data-stl-theory^="subdiscipline"] { min-height:70px; padding:10px 18px; }
+  .site-header[data-stl-theory="subdiscipline-detail"] { min-height:60px; }
 }
 @media (min-width:761px) { .site-header[data-stl-account=true] .reader-account-menu-toggle { display:none; } }
 

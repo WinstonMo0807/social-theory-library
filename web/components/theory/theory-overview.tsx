@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
-import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
 import { loadTheorySystemNodesPage, loadTheorySystemOverview } from "@/lib/api/knowledge.server";
 import { searchPage } from "@/lib/search-context";
@@ -102,6 +101,5 @@ export async function TheoryOverviewPage({ searchParams, actionPath = "/theory-s
         </nav>
       </div>
     </div>
-    <SiteFooter />
   </>;
 }

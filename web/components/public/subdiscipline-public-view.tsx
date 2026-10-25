@@ -9,7 +9,7 @@ import styles from "./subdiscipline.module.css";
 
 type SubdisciplinePayload = NonNullable<Awaited<ReturnType<typeof loadSubdiscipline>>>;
 const photos = "/visual/stl4/subdisciplines";
-const relatedPhotos = ["featured-shelves", "card-books", "featured-branches"];
+const relatedPhotos = ["related-columns-final-r2.png", "related-street-final-r2.png", "related-shelves-final-r2.png"];
 
 function SourceExcerpt({ source }: { source: SubdisciplineSource }) {
   return <blockquote className={styles.sourceExcerpt}>
@@ -70,7 +70,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
           <h2 id="subdiscipline-theories-title">相关理论</h2>
           {theories.length ? <div className={styles.theories}>{theories.map((theory, index) => <article key={`${theory.kind}-${theory.id}`}>
             <div className={styles.relatedCard}>
-              <MediaPlacement uses={theory.cover_media?.display_uses} fallback={<span className={styles.relatedPhoto}/>}><span className={styles.relatedPhoto} style={{ backgroundImage: `url("${theory.cover_url || `${photos}/${relatedPhotos[index % relatedPhotos.length]}.webp`}")` }} aria-hidden="true" /></MediaPlacement>
+              <MediaPlacement uses={theory.cover_media?.display_uses} fallback={<span className={styles.relatedPhoto}/>}><span className={styles.relatedPhoto} style={{ backgroundImage: `url("${theory.cover_url || `${photos}/${relatedPhotos[index % relatedPhotos.length]}`}")` }} aria-hidden="true" /></MediaPlacement>
               <div><h3>{theory.href ? <Link href={theory.href}>{theory.name}<ArrowRight size={16} aria-hidden="true" /></Link> : theory.name}</h3><p>{theory.summary || theory.role || "介绍尚未发布"}</p></div>
             </div>
             {theory.legacy_identities?.length ? <details className={styles.relationSource}><summary>查看关联记录</summary><ul>{theory.legacy_identities.map(legacy => <li key={legacy.id}>{legacy.name}{legacy.role ? ` · ${legacy.role}` : ""}{legacy.source ? <p>{legacy.source}</p> : null}</li>)}</ul></details> : null}
@@ -111,7 +111,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
           <section className={styles.section} id="topics" aria-labelledby="subdiscipline-topics-title" data-edit-section="topics">
             <h2 id="subdiscipline-topics-title">相关主题</h2>
             {topics.length ? <div className={styles.topics}>{topics.map((topic, index) => <article key={topic.id} className={styles.relatedCard}>
-              <MediaPlacement uses={topic.cover_media?.display_uses} fallback={<span className={styles.relatedPhoto}/>}><span className={styles.relatedPhoto} style={{ backgroundImage: `url("${topic.hero_image || `${photos}/${index % 2 ? "featured-branches" : "card-street"}.webp`}")` }} aria-hidden="true" /></MediaPlacement>
+              <MediaPlacement uses={topic.cover_media?.display_uses} fallback={<span className={styles.relatedPhoto}/>}><span className={styles.relatedPhoto} style={{ backgroundImage: `url("${topic.hero_image || `${photos}/${index % 2 ? "topic-street-final-r2.png" : "topic-room-final-r2.png"}`}")` }} aria-hidden="true" /></MediaPlacement>
               <div><h3>{topic.href ? <Link href={topic.href}>{topic.name}<ArrowRight size={16} aria-hidden="true" /></Link> : topic.name}</h3><p>{topic.description || topic.relation_label || "介绍尚未发布"}</p></div>
             </article>)}</div> : <p className={styles.empty}>尚无已确认并公开的相关主题。</p>}
           </section>

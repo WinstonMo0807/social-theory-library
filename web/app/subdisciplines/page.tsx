@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
-import { SiteFooter } from "@/components/site-footer";
 import { ScopedSearchPagination } from "@/components/scoped-search";
 import { loadSubdisciplinePage } from "@/lib/api/taxonomy.server";
 import type { SubdisciplineListItem } from "@/lib/api/taxonomy.types";
@@ -85,6 +84,5 @@ export default async function SubdisciplineDirectory({ searchParams }: { searchP
         </section>
       </div>
     </div>
-    <SiteFooter />
   </>;
 }

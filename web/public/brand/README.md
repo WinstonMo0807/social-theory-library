@@ -99,3 +99,21 @@ All 2× clips come from the sole final PDF. Assets contain brand fragments only;
 | footer-parallel | 41 | 892,958,1186,979 |
 
 Header names use `stl-lockup-{suffix}-final-r2.png`; footer uses `stl-footer-parallel-final-r2.png`. No whole-page screenshot replaces application UI.
+
+## Theory overview and subdisciplines (PDF45,50,51)
+
+2× crops from the sole final PDF. Native coordinates; only artwork fragments, no interactive text or controls. The former hero/card images are also retained from these PDF pages.
+
+| Asset | Page | Rectangle |
+| --- | --- | --- |
+| stl-lockup-theory-overview-desktop-final-r2.png | 45 | 73,11,314,65 |
+| stl-lockup-theory-overview-mobile-final-r2.png | 45 | 1340,15,1546,62 |
+| brand/stl-lockup-subdisciplines-desktop-final-r2.png | 50 | 71,12,316,67 |
+| brand/stl-lockup-subdisciplines-mobile-final-r2.png | 50 | 1342,18,1542,65 |
+| brand/stl-lockup-subdiscipline-detail-desktop-final-r2.png | 51 | 76,12,280,65 |
+| brand/stl-lockup-subdiscipline-detail-mobile-final-r2.png | 51 | 1354,14,1506,53 |
+| visual/stl4/subdisciplines/related-columns-final-r2.png | 51 | 83,523,185,593 |
+| visual/stl4/subdisciplines/related-street-final-r2.png | 51 | 482,524,584,593 |
+| visual/stl4/subdisciplines/related-shelves-final-r2.png | 51 | 882,524,987,593 |
+| visual/stl4/subdisciplines/topic-room-final-r2.png | 51 | 845,803,974,836 |
+| visual/stl4/subdisciplines/topic-street-final-r2.png | 51 | 845,851,974,886 |

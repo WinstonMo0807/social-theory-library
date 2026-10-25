@@ -121,3 +121,13 @@ VISUAL-11部署：NAS68ca7b→9f271d退出0，Web r12 c52c2124ad41；API r9和�
 本机19edd8→6db865编译退出0；1734文件/31205323字节包SHA256 a2cee6aa5eaf8779ef563eabe8467bc0b51a647031b9cb5e6caa263478e935fa。NAS3c6012→e437cd退出0；sudo只读inspect确认Web r13 3c1810b6c241df134501b4ed14b4b585b29c79caf95e11b580ae15f5bf17e221，API r9不变。备份.env.before-parallel-r13留NAS；不提交、不输出凭据。未测试/迁移/模型调用/公网切换。
 
 VISUAL-13下一项证据：before-theory-r12-desktop-20261026.png及DOM测量显示/theory-schools正文650.8px，父flex宽1264.8px。theory-overview.module.css的.page只有max-width没有width，造成收缩；SiteHeader仍使用208品牌，与PDF45不符。现有理论数据为空，保留真实空态；不添加PDF示例记录。
+
+## VISUAL-13 理论与子学科总览、子学科详情（PDF45/50/51）
+
+只读实际/theory-schools与/subdisciplines均呈窄栏，前者1264.8px父容器下正文650.8px。根因是两CSS模块.page只有max-width/margin-auto而无width，父RouteTransition为flex；品牌仍为208。已加width:100%，对应路由退出editorial-v2，按原图恢复品牌、黑色标题、横幅渐变/搜索比例。51相关理论与主题装饰原图位置明确，替换不对应的旧通用书架/花枝片段；真实封面/人物资料仍优先API，不复制示例人物入库。45/50/51主视图无通用页脚，目录及正常详情移除额外通用栏，发布编排及错误恢复入口保留。
+
+两总览已实际显示完整宽度与各自品牌；桌面/手机截图见原tmp目录after-theory-r14-*与after-subdisciplines-r14-*。theory h1实际600 58px/68.44px Noto Serif SC字体链，颜色rgb(16,16,15)；字体原程序未取得，不称字体一致。当前真实0数据，B包括所有有数据卡片/详情/分页和来源操作。空库短页底部外层纸底仍可见，下一包填足白色画布，不虚构卡片补高度。
+
+按理论整组自问：普通读者是否能找到搜索、进入子学科与理论传统、空结果能否分清尚未发布和载入失败、来源是否指向真实版本？原搜索/分页、独立失败提示和来源身份链保留，仅只读查看未提交搜索。51原文/私人/后台发布功能无变更，不重复开发或用样例冒充运行证据。
+
+编译999653→09d143退出0；1762文件/31529753字节包SHA256 2bf6ef71a7159b780fb29ee1a0438c7ff5de9106a4e6a915f3a8b6789d157af6；NAS2d5868→4117fe退出0，Web r14 8fcaae75e65a，API r9不变，.env.before-theory-r14保留。无测试/模型/数据迁移/业务写入/公网切换。
