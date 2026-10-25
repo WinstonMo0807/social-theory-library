@@ -65,13 +65,17 @@ class ShareSelectionInput(StrictInput):
     page = serializers.IntegerField(min_value=1, max_value=10000, default=1)
 
 
-class SharePreviewInput(StrictInput):
+class ShareIncludedSourceInput(StrictInput):
     source_kind = serializers.ChoiceField(choices=["research", "booklist"])
     source_id = serializers.UUIDField()
     expected_version = serializers.CharField(max_length=100)
     questions = serializers.ListField(child=serializers.CharField(max_length=200), max_length=20, default=list)
     materials = serializers.ListField(child=serializers.CharField(max_length=200), max_length=20, default=list)
     notes = serializers.ListField(child=serializers.CharField(max_length=200), max_length=20, default=list)
+
+
+class SharePreviewInput(ShareIncludedSourceInput):
+    additional_sources = ShareIncludedSourceInput(many=True, max_length=4, required=False)
     destination = serializers.ChoiceField(choices=["group", "public", "proposal"])
     group_id = serializers.UUIDField(required=False)
     group_revision = serializers.IntegerField(min_value=1, required=False)
@@ -80,6 +84,7 @@ class SharePreviewInput(StrictInput):
     expires_days = serializers.IntegerField(min_value=1, max_value=365, default=30)
 
     def validate(self, data):
+        share_scope.source_specs(data)
         for key in (*share_scope.SECTIONS, "member_ids"):
             values = data.get(key, [])
             if len(values) != len(set(values)):
@@ -208,7 +213,7 @@ class ShareSourcesView(SharingPrivateView):
         model = ResearchProject if query["source_kind"] == "research" else ReadingList
         rows = model.objects.filter(user=request.user).order_by("-updated_at", "-id")
         return Response({"owner_id": str(request.user.pk), **page(rows, query["page"], lambda row:
-            share_scope.description(row, query["source_kind"], research.unpack(row) if query["source_kind"] == "research" else {}))})
+            share_scope.directory_source(row, query["source_kind"]))})
 
 
 class SharePreviewView(SharingPrivateView):

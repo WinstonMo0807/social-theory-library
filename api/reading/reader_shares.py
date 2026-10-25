@@ -48,13 +48,17 @@ def permitted(row, user):
 
 def brief(row, user):
     owner = row.user_id == user.pk
+    count = 1 + len(research.unpack(row).get('specification', {}).get('additional_sources', []))
     title = "研究内容摘要" if row.source_kind == "research" else "书单内容摘要"
     if owner:
         model = ResearchProject if row.source_kind == "research" else ReadingList
         source = model.objects.filter(user=user, pk=row.source_id).first()
         if source:
             title = research.unpack(source).get("title", title) if row.source_kind == "research" else source.title
+    if count > 1:
+        title = f'{title} 等 {count} 个对象' if owner else f'{count} 个研究与书单的内容摘要'
     return {"id": str(row.pk), "revision": row.revision, "source_kind": row.source_kind, "source_id": str(row.source_id) if row.user_id == user.pk else None,
+        "source_count":count,
         "title": title, "request_id": str(row.request_id) if owner else None,
         "destination": row.destination, "created_at": row.created_at, "expires_at": row.expires_at,
         "revoked": bool(row.revoked_at), "is_owner": row.user_id == user.pk, "review_state": row.review_state}
@@ -90,21 +94,18 @@ def create(user, data):
         raise ValidationError("最多保留1000项有效分享，请先整理已有分享。")
     if data["destination"] == "group":
         reader_groups.group_for(user, data["group_id"], lock=True)
-    model = ResearchProject if data["source_kind"] == "research" else ReadingList
-    if not model.objects.select_for_update().filter(user=user, pk=data["source_id"]).first():
-        raise NotFound("原研究或书单已不存在。")
+    share_scope.lock_sources(user,data)
     projected, bindings = share_scope.preview(user, data)
     if projected["preview_hash"] != data["preview_hash"]:
         raise research.ResearchConflict("所选内容、来源或接收范围已变化，请重新预览后确认。")
-    specification = {name: data[name] for name in ("source_kind", "source_id", "expected_version", "questions", "materials", "notes", "message")}
-    specification["source_id"] = str(specification["source_id"])
+    specification = share_scope.specification(data)
     token = secrets.token_urlsafe(32) if data["destination"] == "public" else ""
     row = ReaderShare.objects.create(user=user, request_id=data["request_id"], source_kind=data["source_kind"], source_id=data["source_id"],
         destination=data["destination"], group_id=data.get("group_id"), expires_at=timezone.now() + timedelta(days=data["expires_days"]),
         token_hash=sha256(token.encode()).hexdigest() if token else "", token_ciphertext=encrypt_private_text(token) if token else b"",
         data_ciphertext=research.pack({"request_fingerprint": fingerprint, "specification": specification, "bindings": bindings,
             "recipient_bindings": projected["destination"]["members"], "sender_binding": projected["destination"].get("sender_binding"),
-            "content_hash": share_scope.digest({key: projected[key] for key in ("source", "sections", "message", "excluded")})}))
+            "content_hash": share_scope.digest(share_scope.content_fields(projected))}))
     # Check again after persistence; revisions can also change through workers.
     current, current_bindings = share_scope.content(user, specification)
     if current_bindings != bindings or share_scope.digest(current) != research.unpack(row)["content_hash"]:
@@ -145,6 +146,8 @@ def read(row, user=None, token=None):
     # Receiver output deliberately omits owner IDs, group rosters, source private
     # route IDs and all request receipts. It contains only the approved summary.
     projected["source"] = {key: projected["source"][key] for key in ("kind", "title")}
+    if 'sources' in projected:
+        projected['sources'] = [{key:item[key] for key in ('kind','title')} for item in projected['sources']]
     for section in share_scope.SECTIONS:
         projected["sections"][section] = [{key: value for key, value in item.items() if key not in {"id", "version"}}
             for item in projected["sections"][section]]

@@ -75330,6 +75330,9 @@
                         "format": "uuid",
                         "nullable": true
                     },
+                    "source_count": {
+                        "type": "integer"
+                    },
                     "destination": {
                         "$ref": "#/components/schemas/ReaderShareDestinationEnum"
                     },
@@ -75361,6 +75364,7 @@
                     "review_state",
                     "revision",
                     "revoked",
+                    "source_count",
                     "source_id",
                     "source_kind",
                     "title"
@@ -75394,6 +75398,12 @@
                         "type": "object",
                         "additionalProperties": {},
                         "nullable": true
+                    },
+                    "origin_kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "origin_title": {
+                        "type": "string"
                     },
                     "id": {
                         "type": "string"
@@ -75489,6 +75499,12 @@
                     "source": {
                         "$ref": "#/components/schemas/ShareSourceTitle"
                     },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareSourceTitle"
+                        }
+                    },
                     "sections": {
                         "$ref": "#/components/schemas/ShareContentSections"
                     },
@@ -75552,6 +75568,12 @@
                         "type": "object",
                         "additionalProperties": {},
                         "nullable": true
+                    },
+                    "origin_kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "origin_title": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -75629,6 +75651,12 @@
                             "maxLength": 200
                         },
                         "maxItems": 20
+                    },
+                    "additional_sources": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareIncludedSourceInputRequest"
+                        }
                     },
                     "destination": {
                         "$ref": "#/components/schemas/ReaderShareDestinationEnum"
@@ -75763,6 +75791,92 @@
                     "page",
                     "results",
                     "total_pages"
+                ]
+            },
+            "ShareDirectorySource": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "material_count": {
+                        "type": "integer"
+                    },
+                    "first_material": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ShareWorkSummary"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "first_material",
+                    "id",
+                    "kind",
+                    "material_count",
+                    "title",
+                    "version"
+                ]
+            },
+            "ShareIncludedSourceInputRequest": {
+                "type": "object",
+                "properties": {
+                    "source_kind": {
+                        "$ref": "#/components/schemas/ReaderShareSourceKindEnum"
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    },
+                    "materials": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    },
+                    "notes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "maxItems": 20
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "source_id",
+                    "source_kind"
                 ]
             },
             "ShareNotice": {
@@ -75911,6 +76025,12 @@
                         },
                         "maxItems": 20
                     },
+                    "additional_sources": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareIncludedSourceInputRequest"
+                        }
+                    },
                     "destination": {
                         "$ref": "#/components/schemas/ReaderShareDestinationEnum"
                     },
@@ -75959,6 +76079,12 @@
                     },
                     "source": {
                         "$ref": "#/components/schemas/ShareSource"
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareSource"
+                        }
                     },
                     "sections": {
                         "$ref": "#/components/schemas/ShareCandidateSections"
@@ -76188,7 +76314,7 @@
                     "results": {
                         "type": "array",
                         "items": {
-                            "$ref": "#/components/schemas/ShareSource"
+                            "$ref": "#/components/schemas/ShareDirectorySource"
                         }
                     }
                 },

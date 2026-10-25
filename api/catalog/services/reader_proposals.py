@@ -14,7 +14,6 @@ from catalog.services.publication_eligibility import public_edition_q
 from common.capabilities import Capability, has_capability
 from ingestion.models import AuditEvent
 from reading import reader_shares, research, share_scope
-from reading.models import ReadingList, ResearchProject
 from reading.sharing_models import ReaderShare
 
 ACTION = "recommendation_issue.reader_proposal"
@@ -29,8 +28,10 @@ def grant(actor, proposal_id, *, lock=False):
     if lock:
         # Match the original source -> grant order without locking a different
         # author's User row after the editor's command lock.
-        model = ReadingList if row.source_kind == "booklist" else ResearchProject
-        get_object_or_404(model.objects.select_for_update(), pk=row.source_id, user_id=row.user_id)
+        specification = research.unpack(row).get('specification')
+        if not isinstance(specification,dict):
+            raise EditConflict('原提案已撤回或缺少可核对的选择范围。')
+        share_scope.lock_sources(row.user,specification)
         row = get_object_or_404(ReaderShare.objects.select_for_update(), pk=row.pk, destination="proposal")
     return row
 
@@ -48,7 +49,7 @@ def projection(row, actor):
         edition_id = reference.get("edition_id")
         editions = Edition.objects.filter(public_edition_q(), work_id=work_id)
         edition = editions.filter(**({"pk": edition_id} if edition_id else {"is_primary": True})).select_related("active_catalog_revision").first()
-        if edition is None or (row.source_kind == "research" and not edition_id):
+        if edition is None or (selected.get('origin_kind',row.source_kind) == "research" and not edition_id):
             raise EditConflict("提案中的公开版本已变化，请返回原提案重新核对。")
         if edition.pk in seen:
             continue

@@ -11,6 +11,37 @@ from .models import Annotation, ReadingList, ResearchProject, ResearchTurn
 from .services import decrypt_private_text
 
 SECTIONS = ("questions", "materials", "notes")
+SOURCE_FIELDS = ('source_kind', 'source_id', 'expected_version', *SECTIONS)
+
+
+def source_specs(data):
+    specs = [{key:data[key] for key in SOURCE_FIELDS}, *data.get('additional_sources', [])]
+    identities = [(item['source_kind'], str(item['source_id'])) for item in specs]
+    if len(specs) > 5 or len(identities) != len(set(identities)):
+        raise ValidationError('一次最多组合5个本人研究或书单，同一对象不能重复。')
+    if any(sum(len(item[section]) for item in specs) > 20 for section in SECTIONS):
+        raise ValidationError('跨对象合计每类最多选择20项，请缩小本次分享范围。')
+    return specs
+
+
+def lock_sources(user, data):
+    for spec in sorted(source_specs(data), key=lambda item:(item['source_kind'], str(item['source_id']))):
+        model = ResearchProject if spec['source_kind'] == 'research' else ReadingList
+        if model.objects.select_for_update().filter(user=user,pk=spec['source_id']).first() is None:
+            raise NotFound('所选本人研究或书单已不存在。')
+
+
+def specification(data):
+    # Retain the original single-source encoding, so existing hashes and receipts stay valid.
+    values = {key:data[key] for key in (*SOURCE_FIELDS, 'message')}
+    values['source_id'] = str(values['source_id'])
+    if data.get('additional_sources'):
+        values['additional_sources'] = [{**item,'source_id':str(item['source_id'])} for item in source_specs(data)[1:]]
+    return values
+
+
+def content_fields(value):
+    return {key:value[key] for key in ('source','sections','message','excluded','sources') if key in value}
 
 
 def digest(value):
@@ -41,6 +72,23 @@ def source(user, kind, pk, expected=None):
 def description(row, kind, payload):
     return {"id": str(row.pk), "kind": kind, "title": payload.get("title", "未命名研究") if kind == "research" else row.title,
         "version": privacy.version(row)}
+
+
+def directory_source(row, kind):
+    """Owner-only card metadata; never changes the original signed share projection."""
+    payload = research.unpack(row) if kind == 'research' else {}
+    if kind == 'research':
+        refs = payload.get('selections', [])
+        count = len(refs)
+        first = material(row, kind, research.reference_identity(refs[0]), refs) if refs else None
+        work = first['work'] if first and first['available'] else None
+    else:
+        items = row.items.filter(removed_at__isnull=True).order_by('order', 'created_at', 'id')
+        count, first = items.count(), items.first()
+        work = notebook.published_work(first.work_id) if first else None
+        if work and not work['href']:
+            work = None
+    return {**description(row, kind, payload), 'material_count':count, 'first_material':work}
 
 
 def question(row, key, payload):
@@ -156,7 +204,7 @@ def candidates(user, data):
         "page": page, "count": count, "total_pages": max(1, (count + 19) // 20), "results": values}
 
 
-def content(user, data):
+def single_content(user, data):
     row, payload, refs, works = source(user, data["source_kind"], data["source_id"], data["expected_version"])
     selected, bindings = {}, {}
     for section in SECTIONS:
@@ -176,6 +224,25 @@ def content(user, data):
     source(user, data["source_kind"], row.pk, privacy.version(row))
     return {"source": description(row, data["source_kind"], payload), "sections": selected,
         "message": data.get("message", ""), "excluded": ["私人正文", "PDF原件", "未选中的笔记", "账户资料", "学术记忆授权"]}, bindings
+
+
+def content(user, data):
+    specs = source_specs(data)
+    if len(specs) == 1:
+        return single_content(user, data)
+    projections = [single_content(user, spec) for spec in specs]
+    sources = [value['source'] for value,_ in projections]
+    sections = {section:[] for section in SECTIONS}
+    for projected,_ in projections:
+        for section in SECTIONS:
+            sections[section].extend({**item,'origin_kind':projected['source']['kind'],'origin_title':projected['source']['title']}
+                for item in projected['sections'][section])
+    # A later source lookup must not let a change to an earlier source escape the final check.
+    for spec in specs:
+        source(user,spec['source_kind'],spec['source_id'],spec['expected_version'])
+    result = {**projections[0][0], 'source':{**sources[0],'title':f'选定的 {len(sources)} 个研究与书单'},
+        'sources':sources,'sections':sections,'message':data.get('message','')}
+    return result, {'sources':[{'source':projected['source'],'sections':binding} for projected,binding in projections]}
 
 
 def preview(user, data):

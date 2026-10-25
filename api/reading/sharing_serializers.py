@@ -79,11 +79,6 @@ class ShareSource(ShareSourceTitle):
     version = serializers.CharField()
 
 
-class ShareSourcesPage(PageOutput):
-    owner_id = serializers.CharField()
-    results = ShareSource(many=True)
-
-
 class ShareWorkSummary(serializers.Serializer):
     id = serializers.UUIDField(required=False)
     title = serializers.CharField(allow_null=True)
@@ -94,6 +89,16 @@ class ShareWorkSummary(serializers.Serializer):
     cover_media = PublicCoverMediaSerializer(allow_null=True, required=False)
 
 
+class ShareDirectorySource(ShareSource):
+    material_count = serializers.IntegerField()
+    first_material = ShareWorkSummary(allow_null=True)
+
+
+class ShareSourcesPage(PageOutput):
+    owner_id = serializers.CharField()
+    results = ShareDirectorySource(many=True)
+
+
 class ShareContentItem(serializers.Serializer):
     title = serializers.CharField()
     text = serializers.CharField(allow_blank=True)
@@ -102,6 +107,8 @@ class ShareContentItem(serializers.Serializer):
     tags = serializers.ListField(child=serializers.CharField(), required=False)
     work = ShareWorkSummary(required=False)
     reference = serializers.DictField(child=serializers.JSONField(), required=False, allow_null=True)
+    origin_kind = serializers.ChoiceField(choices=['research','booklist'],required=False)
+    origin_title = serializers.CharField(required=False)
 
 
 class ShareCandidateItem(ShareContentItem):
@@ -144,6 +151,7 @@ class ShareDestination(serializers.Serializer):
 class SharePreviewOutput(serializers.Serializer):
     owner_id = serializers.CharField()
     source = ShareSource()
+    sources = ShareSource(many=True,required=False)
     sections = ShareCandidateSections()
     message = serializers.CharField(allow_blank=True)
     excluded = serializers.ListField(child=serializers.CharField())
@@ -159,6 +167,7 @@ class ShareBrief(serializers.Serializer):
     request_id = serializers.UUIDField(allow_null=True)
     source_kind = serializers.ChoiceField(choices=["research", "booklist"])
     source_id = serializers.UUIDField(allow_null=True)
+    source_count = serializers.IntegerField()
     destination = serializers.ChoiceField(choices=["group", "public", "proposal"])
     created_at = serializers.DateTimeField()
     expires_at = serializers.DateTimeField()
@@ -190,6 +199,7 @@ class ShareContent(serializers.Serializer):
     id = serializers.UUIDField()
     revision = serializers.IntegerField()
     source = ShareSourceTitle()
+    sources = ShareSourceTitle(many=True,required=False)
     sections = ShareContentSections()
     message = serializers.CharField(allow_blank=True)
     excluded = serializers.ListField(child=serializers.CharField())

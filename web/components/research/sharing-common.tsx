@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
-import { sectionLabels, type ShareContent, type SharePreview } from "@/lib/api/sharing.client";
+import { sectionLabels, type ShareContent, type SharePreview, type ShareWorkSummary } from "@/lib/api/sharing.client";
 import { ResearchCenterNav } from "./research-center-nav";
 import styles from "./sharing.module.css";
 
@@ -51,11 +51,16 @@ export function SharingPagination({ page, total, disabled, onPage }: { page: num
   return <nav className={styles.pagination} aria-label="分页"><button disabled={disabled || page <= 1} onClick={() => onPage(page - 1)}>上一页</button><span>{page}/{total}</span><button disabled={disabled || page >= total} onClick={() => onPage(page + 1)}>下一页</button></nav>;
 }
 
+export function SharingCover({work}:{work?:ShareWorkSummary|null}){
+  const [failed,setFailed]=useState("");
+  const cover=work?.cover_url||"",fallback=<span className={styles.coverBlank} aria-label="暂无可显示封面">暂无封面</span>;
+  return cover&&failed!==cover?<MediaPlacement uses={work?.cover_media?.display_uses} fallback={fallback}><Image unoptimized width={48} height={68} src={cover} alt="文献封面" onError={()=>setFailed(cover)}/></MediaPlacement>:fallback;
+}
+
 export function SharedSummary({ value, showTitle = true }: { value: Pick<ShareContent | SharePreview, "source" | "sections" | "message" | "excluded">; showTitle?: boolean }) {
   return <div className={styles.summary}>{showTitle ? <h2>{value.source.title}</h2> : null}{(Object.keys(sectionLabels) as Array<keyof typeof sectionLabels>).map(section => value.sections[section].length ? <section key={section}><h3>{sectionLabels[section]} <small>{value.sections[section].length} 项</small></h3>{value.sections[section].map((item, index) => {
-    const cover = typeof item.work?.cover_url === "string" ? item.work.cover_url : null;
     const reader = typeof item.reference?.reader_url === "string" ? item.reference.reader_url : null;
     const citation = typeof item.reference?.citation === "string" ? item.reference.citation : null;
-    return <article key={index}>{cover ? <MediaPlacement uses={item.work?.cover_media?.display_uses} fallback={null}><Image unoptimized width={48} height={68} src={cover} alt="文献封面" /></MediaPlacement> : null}<div><strong>{item.title}</strong>{item.text ? <p>{item.text}</p> : <p className={styles.muted}>分享书目信息，原文请从书库访问。</p>}{item.truncated ? <small>只包含此处显示的前 2000 字。</small> : null}{item.tags?.length ? <small>{item.tags.join(" · ")}</small> : null}{citation ? <small>{citation}</small> : null}{reader ? <Link href={reader}>查看公开原文</Link> : typeof item.work?.href === "string" ? <Link href={item.work.href}>查看公开书目</Link> : null}</div></article>;
+    return <article key={index}>{item.work?<SharingCover work={item.work}/>:null}<div><strong>{item.title}</strong>{item.origin_title?<small>来自：{item.origin_title}</small>:null}{item.text ? <p>{item.text}</p> : <p className={styles.muted}>分享书目信息，原文请从书库访问。</p>}{item.truncated ? <small>只包含此处显示的前 2000 字。</small> : null}{item.tags?.length ? <small>{item.tags.join(" · ")}</small> : null}{citation ? <small>{citation}</small> : null}{reader ? <Link href={reader}>查看公开原文</Link> : typeof item.work?.href === "string" ? <Link href={item.work.href}>查看公开书目</Link> : null}</div></article>;
   })}</section> : null)}{value.message ? <section><h3>附言</h3><p>{value.message}</p></section> : null}<p className={styles.muted}>不包含：{value.excluded.join("、")}。</p></div>;
 }

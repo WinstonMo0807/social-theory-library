@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 R34多对象组合
+
+R34组合分享仍使用原ReaderShare，加密specification容纳最多4个additional_sources；所有来源及选中项独立版本绑定，原单对象内容摘要兼容。来源目录的首条公开书目摘要不加入签名范围。原文章提案接手按每条材料的origin_kind核对版本且复用原来源锁，隐私导出/撤回覆盖整个组合，不新增模型。
+
 ## 2026-10-25 R34未知提交停止
 
 R34未知分享停止复用原KnowledgeSaveReceipt和privacy.command_owner，同一账户锁串行化创建与停止；已建立返回原授权，未建立保留最少取消回执，不新增表。原权限/加密选择/撤回和成员边界继续，跨对象范围下一段接续。

@@ -9,12 +9,15 @@ import { ConfirmDialog } from "../confirm-dialog";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { sharingRequest, shareLink, sectionLabels, type ShareSection, type ShareSelection, type SharePreview,
-  type SharePreviewInput, type ShareCreateInput, type ShareReceipt, type ShareRecoveryResult, type GroupDirectory, type GroupDetail, type ShareNotifyResult } from "@/lib/api/sharing.client";
-import { SharingAccount, SharingPagination, SharedSummary, useSharingAction } from "./sharing-common";
+  type SharePreviewInput, type ShareCreateInput, type ShareReceipt, type ShareRecoveryResult, type GroupDirectory, type GroupDetail, type ShareNotifyResult, type ShareSourcesPage } from "@/lib/api/sharing.client";
+import { SharingAccount, SharingPagination, SharingCover, SharedSummary, useSharingAction } from "./sharing-common";
 import styles from "./sharing.module.css";
 
 type SourceKind = "research" | "booklist";
-type SourcePage = { count: number; total_pages: number; results: Array<{ id: string; title: string; version: string }> };
+type SourcePage = ShareSourcesPage;
+type Selections=Record<ShareSection,string[]>;
+type ChosenSource={kind:SourceKind;id:string;title:string;version:string;values:Selections};
+const emptySelections=():Selections=>({questions:[],materials:[],notes:[]});
 type Prepared = { input: SharePreviewInput; output: SharePreview };
 
 export function ShareComposer({ sourceId = "", sourceKind = "research" }: { sourceId?: string; sourceKind?: SourceKind }) {
@@ -24,7 +27,10 @@ export function ShareComposer({ sourceId = "", sourceKind = "research" }: { sour
 function Composer({ owner, initialId, initialKind }: { owner: string; initialId: string; initialKind: SourceKind }) {
   const [kind, setKind] = useState<SourceKind>(initialKind), [id, setId] = useState(initialId), [sourcePage, setSourcePage] = useState(1);
   const [section, setSection] = useState<ShareSection>("materials"), [page, setPage] = useState(1), [phase, setPhase] = useState(1);
-  const [selected, setSelected] = useState<Record<ShareSection, string[]>>({ questions: [], materials: [], notes: [] });
+  const [objects,setObjects]=useState<ChosenSource[]>(()=>initialId?[{kind:initialKind,id:initialId,title:"从原位置选入的对象",version:"",values:emptySelections()}]:[]);
+  const activeObject=objects.find(row=>row.kind===kind&&row.id===id);
+  const selected=activeObject?.values||emptySelections();
+  const sourceVersion=String(activeObject?.version||"");
   const [destination, setDestination] = useState<"public" | "proposal" | "campus" | "team" | "">("");
   const [groupId, setGroupId] = useState(""), [groupPage, setGroupPage] = useState(1), [members, setMembers] = useState<string[]>([]);
   const [message, setMessage] = useState(""), [expires, setExpires] = useState(30), [prepared, setPrepared] = useState<Prepared | null>(null), [confirmed, setConfirmed] = useState(false);
@@ -36,17 +42,19 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
   const loadSources = useCallback((path: string, signal: AbortSignal) => sharingRequest<SourcePage>(owner, path, { signal }), [owner]);
   const sources = usePersistentWorkspace<SourcePage>(`/reading/shares/sources/?source_kind=${kind}&page=${sourcePage}`, owner, undefined, loadSources);
   const loadChoices = useCallback((_: string, signal: AbortSignal) => sharingRequest<ShareSelection>(owner, "/reading/shares/selection/", {
-    method: "POST", signal, body: JSON.stringify({ source_kind: kind, source_id: id, section, page }) }), [owner, kind, id, section, page]);
-  const choices = usePersistentWorkspace<ShareSelection>(id ? `share-selection:${kind}:${id}:${section}:${page}` : "", owner, undefined, loadChoices);
+    method: "POST", signal, body: JSON.stringify({ source_kind: kind, source_id: id, section, page, ...(sourceVersion?{expected_version:sourceVersion}:{}) }) }), [owner, kind, id, section, page, sourceVersion]);
+  const choices = usePersistentWorkspace<ShareSelection>(id ? `share-selection:${kind}:${id}:${section}:${page}:${sourceVersion}` : "", owner, undefined, loadChoices);
   const data = choices.error ? null : choices.data;
   const loadGroups = useCallback((path: string, signal: AbortSignal) => sharingRequest<GroupDirectory>(owner, path, { signal }), [owner]);
   const groups = usePersistentWorkspace<GroupDirectory>(destination === "campus" || destination === "team" ? `/reading/groups/?page=${groupPage}&kind=${destination}` : "", owner, undefined, loadGroups);
   const loadGroup = useCallback((path: string, signal: AbortSignal) => sharingRequest<GroupDetail>(owner, path, { signal }), [owner]);
   const group = usePersistentWorkspace<GroupDetail>(groupId ? `/reading/groups/${groupId}/` : "", owner, undefined, loadGroup);
   const groupData = group.error ? null : group.data;
-  const selectedCount = selected.questions.length + selected.materials.length + selected.notes.length;
+  const totals={questions:0,materials:0,notes:0};
+  objects.forEach(object=>(Object.keys(totals) as ShareSection[]).forEach(key=>{totals[key]+=object.values[key].length;}));
+  const selectedCount=totals.questions+totals.materials+totals.notes;
   const blocked = action.busy || Boolean(recovery) || Boolean(receipt) || !storageReady || !!storageError;
-  useUnsavedForm(Boolean(recovery)||(!receipt&&(selectedCount>0||!!message)),false);
+  useUnsavedForm(Boolean(recovery)||(!receipt&&(objects.length>0||!!message)),false);
   useEffect(() => {
     const restore = () => {
       try {
@@ -64,15 +72,35 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
     setRecovery(value);
   }
   function invalidate() { setPrepared(null); setConfirmed(false); }
-  function chooseSource(nextKind: SourceKind, nextId = "") {
-    setKind(nextKind); setId(nextId); setPage(1); setSelected({ questions: [], materials: [], notes: [] }); invalidate();
+  function chooseSource(nextKind:SourceKind,nextId=""){
+    setKind(nextKind);setId(nextId);setPage(1);
   }
-  function input(): SharePreviewInput | null {
-    if (!data || data.source.id !== id) return null;
-    return { source_kind: kind, source_id: id, expected_version: data.source.version, ...selected,
-      destination: destination === "campus" || destination === "team" ? "group" : destination || "public",
-      ...(destination === "campus" || destination === "team" ? { group_id: groupId, group_revision: groupData?.group.revision, member_ids: members } : {}),
-      message, expires_days: expires };
+  function toggleSource(row:{id:string;title:string;version:string},checked:boolean){
+    if(blocked)return;
+    if(checked&&objects.length>=5){setActionMessage("一次最多组合5个对象，请先移除不需要的对象。");return;}
+    setObjects(value=>checked?(value.some(item=>item.kind===kind&&item.id===row.id)||value.length>=5?value:[...value,{...row,kind,values:emptySelections()}]):value.filter(item=>item.kind!==kind||item.id!==row.id));
+    if(checked)chooseSource(kind,row.id);
+    invalidate();
+  }
+  function removeSource(object:ChosenSource){
+    setObjects(value=>value.filter(row=>row.kind!==object.kind||row.id!==object.id));invalidate();
+  }
+  function setSelected(update:(value:Selections)=>Selections){
+    if(!data||blocked)return;
+    if(!activeObject&&objects.length>=5){setActionMessage("一次最多选择5个对象，请先移除一个。");return;}
+    setObjects(value=>{
+      const old=value.find(row=>row.kind===kind&&row.id===id);
+      const original=old?.values||emptySelections();
+      const next={kind,id,title:data.source.title,version:old?.version||data.source.version,values:update({questions:[...original.questions],materials:[...original.materials],notes:[...original.notes]})};
+      return old?value.map(row=>row===old?next:row):[...value,next];
+    });invalidate();
+  }
+  function input():SharePreviewInput|null{
+    if(!objects.length||objects.some(row=>!row.version||!Object.values(row.values).some(values=>values.length)))return null;
+    const scopes=objects.map(row=>({source_kind:row.kind,source_id:row.id,expected_version:row.version,...row.values}));
+    return {...scopes[0],...(scopes.length>1?{additional_sources:scopes.slice(1)}:{}),
+      destination:destination==="campus"||destination==="team"?"group":destination||"public",
+      ...(destination==="campus"||destination==="team"?{group_id:groupId,group_revision:groupData?.group.revision,member_ids:members}:{}),message,expires_days:expires};
   }
   const currentInput = input();
   const ready = Boolean(prepared && currentInput && JSON.stringify(currentInput) === JSON.stringify(prepared.input) && destination);
@@ -133,20 +161,21 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
     <div className={styles.steps} data-phase={phase}>
       <section className={styles.step}><h2><span>1</span>选择当前研究或书单对象</h2><div className={styles.stepBody}>
         <div className={styles.tabs}>{(["research", "booklist"] as const).map(value => <button key={value} aria-pressed={kind === value} disabled={blocked} onClick={() => { chooseSource(value); setSourcePage(1); }}>{value === "research" ? "我的研究" : "我的书单"}</button>)}</div>
-        {sources.error ? <p role="alert">{sources.error}<button onClick={sources.reload}>重新读取</button></p> : sources.data ? <><div className={styles.objectList}>{sources.data.results.map(row => <button key={row.id} aria-pressed={id === row.id} disabled={blocked} onClick={() => chooseSource(kind, row.id)}><strong>{row.title}</strong><small>仅本人 · 明确选择后才会加入预览</small></button>)}</div>{!sources.data.results.length ? <p className={styles.muted}>没有可选择的{kind === "research" ? "研究" : "书单"}。</p> : null}<SharingPagination page={sourcePage} total={sources.data.total_pages} disabled={blocked} onPage={setSourcePage} /></> : <p role="status">正在读取本人对象…</p>}
-        {data ? <p className={styles.muted}>当前选择：{data.source.title}</p> : null}
+        {sources.error ? <p role="alert">{sources.error}<button onClick={sources.reload}>重新读取</button></p> : sources.data ? <><div className={styles.objectList}>{sources.data.results.map(row=>{const chosen=objects.some(item=>item.kind===kind&&item.id===row.id);return <div className={styles.sourceRow} key={row.id}><input type="checkbox" aria-label={`选择${row.title}`} checked={chosen} disabled={blocked||!chosen&&objects.length>=5} onChange={event=>toggleSource(row,event.target.checked)}/><button type="button" aria-pressed={id===row.id} disabled={blocked} onClick={()=>chooseSource(kind,row.id)}><SharingCover work={row.first_material}/><span><strong>{row.title}</strong>{row.first_material?<small>首条选材：{row.first_material.title}{row.first_material.authors?.length?` · ${row.first_material.authors.join("、")}`:""}{row.first_material.year?` · ${row.first_material.year} 年`:""}</small>:<small>{row.material_count?"首条选材当前无公开书目信息":"尚未添加选材"}</small>}<small>共 {row.material_count} 条选材</small><small>{chosen?"已加入范围 · 查看并勾选具体内容":"查看内容 · 不会自动分享"}</small></span></button></div>;})}</div>{!sources.data.results.length ? <p className={styles.muted}>没有可选择的{kind === "research" ? "研究" : "书单"}。</p> : null}<SharingPagination page={sourcePage} total={sources.data.total_pages} disabled={blocked} onPage={setSourcePage} /></> : <p role="status">正在读取本人对象…</p>}
+        {data?<p className={styles.muted}>当前查看：{data.source.title}</p>:null}
+        {objects.length?<><p className={styles.muted}>已选 {objects.length}/5 个对象。每类内容跨对象合计最多20项；每个对象至少勾选一项才能预览。</p><ul className={styles.scopeList}>{objects.map(object=><li key={`${object.kind}:${object.id}`}><button type="button" disabled={blocked} onClick={()=>chooseSource(object.kind,object.id)}>{object.title} · {Object.values(object.values).reduce((sum,items)=>sum+items.length,0)} 项</button><button type="button" disabled={blocked} onClick={()=>removeSource(object)}>移除</button></li>)}</ul></>:null}
       </div></section>
       <section className={styles.step}><h2><span>2</span>选择要包含的内容项</h2><div className={styles.stepBody}>
-        <div className={styles.tabs}>{(Object.keys(sectionLabels) as ShareSection[]).map(key => <button key={key} aria-pressed={section === key} disabled={blocked} onClick={() => { setSection(key); setPage(1); }}>{sectionLabels[key]} {selected[key].length || ""}</button>)}</div>
-        {!id ? <p className={styles.muted}>先选择一个本人研究或书单。</p> : choices.error ? <p role="alert">{choices.error}<button onClick={choices.reload}>重新读取</button></p> : !data ? <p role="status">正在读取可选内容…</p> : <>
-          {data.results.map(row => <label className={styles.choice} key={row.id}><input type="checkbox" checked={selected[section].includes(row.id)} disabled={blocked || !row.available || selected[section].length >= 20 && !selected[section].includes(row.id)} onChange={event => { const checked = event.target.checked; setSelected(value => ({ ...value, [section]: checked ? [...value[section], row.id] : value[section].filter(key => key !== row.id) })); invalidate(); }} /><span><strong>{row.title}</strong>{row.text ? <p>{row.text}</p> : null}<small>{row.available ? row.truncated ? "只分享预览显示的前 2000 字" : "只包含本项明确选择的内容" : "当前不可分享"}</small></span></label>)}
+        <div className={styles.tabs}>{(Object.keys(sectionLabels) as ShareSection[]).map(key => <button key={key} aria-pressed={section === key} disabled={blocked} onClick={() => { setSection(key); setPage(1); }}>{sectionLabels[key]} {totals[key] || ""}</button>)}</div>
+        {!id ? <p className={styles.muted}>先选择一个本人研究或书单。</p> : choices.error ? <p role="alert">{choices.error}<button onClick={choices.reload}>重新读取</button>{activeObject?<button disabled={blocked} onClick={()=>removeSource(activeObject)}>清除此对象选择，再重新读取</button>:null}</p> : !data ? <p role="status">正在读取可选内容…</p> : <>
+          {data.results.map(row => <label className={styles.choice} key={row.id}><input type="checkbox" checked={selected[section].includes(row.id)} disabled={blocked || !row.available || (totals[section]>=20||!activeObject&&objects.length>=5) && !selected[section].includes(row.id)} onChange={event => { const checked = event.target.checked; setSelected(value => ({ ...value, [section]: checked ? [...value[section], row.id] : value[section].filter(key => key !== row.id) })); invalidate(); }} /><span><strong>{row.title}</strong>{row.text ? <p>{row.text}</p> : null}<small>{row.available ? row.truncated ? "只分享预览显示的前 2000 字" : "只包含本项明确选择的内容" : "当前不可分享"}</small></span></label>)}
           {!data.results.length ? <p className={styles.muted}>当前对象没有此类内容。</p> : null}
           <SharingPagination page={page} total={data.total_pages} disabled={blocked} onPage={setPage} />
-          {selected[section].length ? <button disabled={blocked} onClick={() => { setSelected(value => ({ ...value, [section]: [] })); invalidate(); }}>清空本类选择</button> : null}
+          {selected[section].length ? <button disabled={blocked} onClick={() => { setSelected(value => ({ ...value, [section]: [] })); invalidate(); }}>清空此对象本类选择</button> : null}
         </>}
         <div className={styles.excluded}><div><input type="checkbox" disabled checked={false} readOnly />私人正文 · 不包含</div><div><input type="checkbox" disabled checked={false} readOnly />PDF 原件 · 不包含</div><p>本人笔记需逐项勾选。未选中的内容不会分享。</p></div>
       </div></section>
-      <section className={styles.step}><h2><span>3</span>预览将公开或提交的内容</h2><div className={styles.stepBody}><div className={styles.summaryBox}>{prepared ? <SharedSummary value={prepared.output} /> : <p className={styles.muted}>已选择 {selectedCount} 项。生成预览后，请逐项核对实际文字和来源。</p>}</div><button disabled={blocked || !data || !selectedCount} onClick={() => preview()}>生成或更新预览</button></div></section>
+      <section className={styles.step}><h2><span>3</span>预览将公开或提交的内容</h2><div className={styles.stepBody}><div className={styles.summaryBox}>{prepared ? <SharedSummary value={prepared.output} /> : <p className={styles.muted}>已选择 {selectedCount} 项。生成预览后，请逐项核对实际文字和来源。</p>}</div><button disabled={blocked || !currentInput || !selectedCount} onClick={() => preview()}>生成或更新预览</button></div></section>
       <section className={styles.step}><h2><span>4</span>选择目的地或接收范围</h2><div className={styles.stepBody}>
         <div className={styles.destinations}>{([
           ["campus", "学术小组", "仅本次明确选择的成员可见"], ["team", "合作研究团队", "仅本次明确选择的成员可见"],
@@ -161,8 +190,8 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
         <div className={styles.destinationFields}><label>附言（可选）<textarea value={message} maxLength={200} disabled={blocked} onChange={event => { setMessage(event.target.value); invalidate(); }} /><small>{message.length}/200</small></label><label>分享有效期<select value={expires} disabled={blocked} onChange={event => { setExpires(Number(event.target.value)); invalidate(); }}>{[7, 30, 90, 365].map(days => <option key={days} value={days}>{days} 天</option>)}</select></label></div>
       </div></section>
       <section className={styles.step}><h2><span>5</span>确认并提交</h2><div className={styles.stepBody}>
-        <dl className={styles.confirmation}><div><dt>对象</dt><dd>{data?.source.title || "尚未选择"}</dd></div><div><dt>包含内容</dt><dd>{(Object.keys(sectionLabels) as ShareSection[]).map(key => `${sectionLabels[key]} ${selected[key].length} 项`).join(" · ")}</dd></div><div><dt>不包含</dt><dd>私人正文、PDF 原件、未选中的笔记</dd></div><div><dt>目的地</dt><dd>{destination ? prepared?.output.destination.title || "请更新预览核对" : "尚未选择"}</dd></div><div><dt>有效期</dt><dd>{expires} 天</dd></div></dl>
-        {!ready ? <><p className={styles.muted}>请选择目的地，并更新预览核对当前内容。</p><button disabled={blocked || !destination || !selectedCount || !data} onClick={() => preview(4)}>更新预览并核对</button></> : null}
+        <dl className={styles.confirmation}><div><dt>对象</dt><dd>{objects.length?objects.map(object=>object.title).join("、"):"尚未选择"}</dd></div><div><dt>包含内容</dt><dd>{(Object.keys(sectionLabels) as ShareSection[]).map(key => `${sectionLabels[key]} ${totals[key]} 项`).join(" · ")}</dd></div><div><dt>不包含</dt><dd>私人正文、PDF 原件、未选中的笔记</dd></div><div><dt>目的地</dt><dd>{destination ? prepared?.output.destination.title || "请更新预览核对" : "尚未选择"}</dd></div><div><dt>有效期</dt><dd>{expires} 天</dd></div></dl>
+        {!ready ? <><p className={styles.muted}>请选择目的地，并更新预览核对当前内容。</p><button disabled={blocked || !destination || !selectedCount || !currentInput} onClick={() => preview(4)}>更新预览并核对</button></> : null}
         <label className={styles.check}><input type="checkbox" checked={confirmed} disabled={blocked || !ready} onChange={event => setConfirmed(event.target.checked)} />我已核对以上内容，并同意仅分享所选内容。</label>
         <div className={styles.actions}><Link href="/account/sharing">取消</Link><button className={styles.primary} disabled={blocked || !ready || !confirmed} onClick={() => send()}>确认提交</button></div>
       </div></section>
@@ -171,11 +200,11 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
           {receipt.token ? <button disabled={action.busy} onClick={copyLink}><Copy size={15} />复制分享链接</button> : null}
           {receipt.share.destination === "group" && !receipt.share.revoked ? <button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareNotifyResult>(owner, `/reading/shares/${receipt.share.id}/`, { method: "POST", signal, body: JSON.stringify({ action: "notify", expected_revision: receipt.share.revision }) }), value => setActionMessage(`${value.message} 新增 ${value.created} 条，共 ${value.total} 位接收者已有通知。`))}><Mail size={15} />发送站内通知</button> : null}
           <Link href={`/account/sharing/${receipt.share.id}`}>查看内容与授权</Link><Link href="/account/sharing">查看提交记录</Link>
-          {receipt.share.source_id ? <Link href={receipt.share.source_kind === "research" ? `/account/research/${receipt.share.source_id}` : `/account/collections/${receipt.share.source_id}`}>返回原位置</Link> : null}
+          {receipt.share.source_id ? <Link href={receipt.share.source_kind === "research" ? `/account/research/${receipt.share.source_id}` : `/account/collections/${receipt.share.source_id}`}>{receipt.share.source_count>1?"返回首个原对象":"返回原位置"}</Link> : null}
         </div></> : <p className={styles.muted}>确认提交后，这里显示真实回执、链接与后续操作。</p>}
         {manual ? <label className={styles.manual}>手动复制分享链接<textarea readOnly value={manual} onFocus={event => event.currentTarget.select()} /></label> : null}
       </div></section>
     </div>
-    <div className={styles.mobileNext}>{phase > 1 ? <button disabled={action.busy} onClick={() => setPhase(value => value - 1)}>上一步</button> : null}{phase < 4 ? <button className={styles.primary} disabled={blocked || phase === 1 && (!data || !selectedCount)} onClick={() => phase === 1 ? preview(2) : phase === 3 ? preview(4) : setPhase(value => value + 1)}>{phase === 1 ? "下一步：预览内容" : phase === 2 ? "下一步：选择目的地" : "下一步：确认范围"}</button> : null}</div>
+    <div className={styles.mobileNext}>{phase > 1 ? <button disabled={action.busy} onClick={() => setPhase(value => value - 1)}>上一步</button> : null}{phase < 4 ? <button className={styles.primary} disabled={blocked || phase === 1 && (!currentInput || !selectedCount)} onClick={() => phase === 1 ? preview(2) : phase === 3 ? preview(4) : setPhase(value => value + 1)}>{phase === 1 ? "下一步：预览内容" : phase === 2 ? "下一步：选择目的地" : "下一步：确认范围"}</button> : null}</div>
   </>;
 }

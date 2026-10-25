@@ -19607,6 +19607,7 @@ export interface components {
             source_kind: components["schemas"]["ReaderShareSourceKindEnum"];
             /** Format: uuid */
             source_id: string | null;
+            source_count: number;
             destination: components["schemas"]["ReaderShareDestinationEnum"];
             /** Format: date-time */
             created_at: string;
@@ -19626,6 +19627,8 @@ export interface components {
             reference?: {
                 [key: string]: unknown;
             } | null;
+            origin_kind?: components["schemas"]["ReaderShareSourceKindEnum"];
+            origin_title?: string;
             id: string;
             version: string;
         };
@@ -19652,6 +19655,7 @@ export interface components {
             id: string;
             revision: number;
             source: components["schemas"]["ShareSourceTitle"];
+            sources?: components["schemas"]["ShareSourceTitle"][];
             sections: components["schemas"]["ShareContentSections"];
             message: string;
             excluded: string[];
@@ -19670,6 +19674,8 @@ export interface components {
             reference?: {
                 [key: string]: unknown;
             } | null;
+            origin_kind?: components["schemas"]["ReaderShareSourceKindEnum"];
+            origin_title?: string;
         };
         ShareContentSections: {
             questions: components["schemas"]["ShareContentItem"][];
@@ -19684,6 +19690,7 @@ export interface components {
             questions?: string[];
             materials?: string[];
             notes?: string[];
+            additional_sources?: components["schemas"]["ShareIncludedSourceInputRequest"][];
             destination: components["schemas"]["ReaderShareDestinationEnum"];
             /** Format: uuid */
             group_id?: string;
@@ -19717,6 +19724,24 @@ export interface components {
             total_pages: number;
             owner_id: string;
             results: components["schemas"]["ShareBrief"][];
+        };
+        ShareDirectorySource: {
+            kind: components["schemas"]["ReaderShareSourceKindEnum"];
+            title: string;
+            /** Format: uuid */
+            id: string;
+            version: string;
+            material_count: number;
+            first_material: components["schemas"]["ShareWorkSummary"] | null;
+        };
+        ShareIncludedSourceInputRequest: {
+            source_kind: components["schemas"]["ReaderShareSourceKindEnum"];
+            /** Format: uuid */
+            source_id: string;
+            expected_version: string;
+            questions?: string[];
+            materials?: string[];
+            notes?: string[];
         };
         ShareNotice: {
             /** Format: uuid */
@@ -19755,6 +19780,7 @@ export interface components {
             questions?: string[];
             materials?: string[];
             notes?: string[];
+            additional_sources?: components["schemas"]["ShareIncludedSourceInputRequest"][];
             destination: components["schemas"]["ReaderShareDestinationEnum"];
             /** Format: uuid */
             group_id?: string;
@@ -19768,6 +19794,7 @@ export interface components {
         SharePreviewOutput: {
             owner_id: string;
             source: components["schemas"]["ShareSource"];
+            sources?: components["schemas"]["ShareSource"][];
             sections: components["schemas"]["ShareCandidateSections"];
             message: string;
             excluded: string[];
@@ -19827,7 +19854,7 @@ export interface components {
             count: number;
             total_pages: number;
             owner_id: string;
-            results: components["schemas"]["ShareSource"][];
+            results: components["schemas"]["ShareDirectorySource"][];
         };
         ShareStopInputRequest: {
             /** Format: uuid */
