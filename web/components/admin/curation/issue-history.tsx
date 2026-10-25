@@ -9,9 +9,9 @@ import styles from "./issue-editor.module.css";
 
 type Revision={id:string;revision:number;status:string;created_at:string;created_by:string;note:string;is_current:boolean;block_count:number};
 type Page={count:number;next:string|null;previous:string|null;results:Revision[]};
-export function IssueHistory({issueId,onClose,onRestore,canRestore,request}:{issueId:string;onClose:()=>void;onRestore:(value:IssueDraft)=>void;canRestore:boolean;request:<T>(url:string,init?:RequestInit)=>Promise<T>}) {
+export function IssueHistory({issueId,onClose,onRestore,canRestore,request,initialRevision=""}:{issueId:string;onClose:()=>void;onRestore:(value:IssueDraft)=>void;canRestore:boolean;request:<T>(url:string,init?:RequestInit)=>Promise<T>;initialRevision?:string}) {
   const [page,setPage]=useState(1),[attempt,setAttempt]=useState(0),[data,setData]=useState<Page|null>(null),[error,setError]=useState("");
-  const [selected,setSelected]=useState(""),[revision,setRevision]=useState<IssueDraft|null>(null),[detailError,setDetailError]=useState("");
+  const [selected,setSelected]=useState(initialRevision),[revision,setRevision]=useState<IssueDraft|null>(null),[detailError,setDetailError]=useState("");
   useEffect(()=>{
     let active=true;queueMicrotask(()=>{if(active){setData(null);setError("");}});
     void request<Page>(`/catalog/admin/recommendation-issues/${issueId}/history/?page=${page}`).then(value=>{if(active)setData(value);}).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:"历史读取失败。");});

@@ -65,11 +65,16 @@ export function RecommendationIssueEditor({ issueId, fullPreview = false }: { is
 }
 function IssueEditorSession({ issueId, fullPreview }: { issueId: string; fullPreview: boolean }) {
   const params=useSearchParams();
+  const [historyRevision,setHistoryRevision]=useState(()=>{
+    const value=params.get("history")||"";
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)?value:"";
+  });
   const user = useAdminSession();
   const editor=useIssueDraft(issueId,user ? String(user.id) : "",false);
   const {draft,dirty,busy,initialError,message,conflict,update}=editor;
   const [active,setActive]=useState("body"),[selected,setSelected]=useState(0),[selectedBlock,setSelectedBlock]=useState(()=>params.get("block")||"");
-  const [pane,setPane]=useState("preview"),[mobile,setMobile]=useState("edit"),[history,setHistory]=useState(false),[suggestions,setSuggestions]=useState(false);
+  const [pane,setPane]=useState("preview"),[mobile,setMobile]=useState("edit"),[history,setHistory]=useState(Boolean(historyRevision)),[suggestions,setSuggestions]=useState(false);
+  function closeHistory(){setHistory(false);setHistoryRevision("");}
   const [publicationReview,setPublicationReview]=useState(fullPreview);
   const [materials,setMaterials]=useState(()=>params.get("tab")==="selection"),[assistantPending,setAssistantPending]=useState(false),[assistantReviewDirty,setAssistantReviewDirty]=useState(false);
   const [assistantRecoveryReady,setAssistantRecoveryReady]=useState(false);
@@ -102,7 +107,7 @@ function IssueEditorSession({ issueId, fullPreview }: { issueId: string; fullPre
     if(row.block_id)focusBlock(row.block_id);
     if(row.item_id){const index=draft!.items.findIndex(item=>item.id===row.item_id);if(index>=0)setSelected(index);}
   }
-  if(publicationReview)return <><IssuePublicationReview editor={editor} onLocate={locatePublication} onBack={()=>setPublicationReview(false)} onHistory={()=>setHistory(true)}/>{history?<IssueHistory issueId={issueId} request={editor.request} onClose={()=>setHistory(false)} canRestore={canEdit&&!editor.disabled&&!dirty&&!conflict} onRestore={value=>{editor.restoreHistory(value);setPublicationReview(false);}}/>:null}</>;
+  if(publicationReview)return <><IssuePublicationReview editor={editor} onLocate={locatePublication} onBack={()=>setPublicationReview(false)} onHistory={()=>setHistory(true)}/>{history?<IssueHistory issueId={issueId} initialRevision={historyRevision} request={editor.request} onClose={closeHistory} canRestore={canEdit&&!editor.disabled&&!dirty&&!conflict} onRestore={value=>{editor.restoreHistory(value);setPublicationReview(false);}}/>:null}</>;
   const previewMode=mobile==="structure" ? "structure" : pane;
   return <div className={styles.editor} onCompositionStartCapture={()=>editor.setComposing(true)} onCompositionEndCapture={()=>editor.setComposing(false)}>
     <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/admin/recommendations">策划项目</Link><span>›</span>{draft.project_id?<><Link href={`/admin/recommendations?project=${draft.project_id}`}>{draft.project_title||"所属项目"}</Link><span>›</span></>:null}<span>{draft.title}</span></nav>
@@ -128,7 +133,7 @@ function IssueEditorSession({ issueId, fullPreview }: { issueId: string; fullPre
     {canEdit?<div className={styles.supportActions}><button type="button" disabled={assistantPending||editor.disabled||conflict||editor.composing} onClick={()=>setMaterials(true)}>策划选材与智能助手</button><button type="button" disabled={assistantPending||editor.composing} aria-expanded={suggestions} onClick={()=>setSuggestions(value=>!value)}>智能材料建议</button></div>:null}
     {suggestions&&canEdit?<IssueSuggestions issueId={issueId} version={draft.edit_version} blocks={draft.body_blocks} disabled={assistantPending||editor.disabled||conflict||editor.composing} request={editor.request} onClose={()=>setSuggestions(false)} onInsert={block=>{update({body_blocks:[...draft.body_blocks,block]});if(!materials)focusBlock(block.id!);}}/>:null}
     <IssueCollaboration issueId={issueId} version={draft.edit_version} editing={canEdit&&dirty} request={editor.request} onHistory={()=>{if(!editor.composing)setHistory(true);}}/>
-    {history?<IssueHistory issueId={issueId} request={editor.request} onClose={()=>setHistory(false)} canRestore={canEdit&&!assistantPending&&!editor.disabled&&!dirty&&!conflict} onRestore={editor.restoreHistory}/>:null}
+    {history?<IssueHistory issueId={issueId} initialRevision={historyRevision} request={editor.request} onClose={closeHistory} canRestore={canEdit&&!assistantPending&&!editor.disabled&&!dirty&&!conflict} onRestore={editor.restoreHistory}/>:null}
     {canPublish && user ? <ArticleCommentReview key={String(user.id)} issueId={issueId} owner={String(user.id)} /> : null}
   </div>;
 }

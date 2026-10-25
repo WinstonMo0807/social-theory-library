@@ -74,6 +74,7 @@ def placement_use_revisions(kind, identifier, page_rows, *, matches=None):
 
 class PlacementUseQuery(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, default=1)
+    scope = serializers.ChoiceField(choices=['placements', 'articles'], default='placements')
 
 
 class PlacementUseItem(serializers.Serializer):
@@ -93,13 +94,49 @@ class PlacementUseRow(serializers.Serializer):
     is_published = serializers.BooleanField()
     edit_url = serializers.CharField()
     items = PlacementUseItem(many=True)
+    revision_note = serializers.CharField(required=False)
 
 
 class PlacementUsePage(serializers.Serializer):
+    scope = serializers.ChoiceField(choices=['placements', 'articles'])
     count = serializers.IntegerField()
     next = serializers.IntegerField(allow_null=True)
     previous = serializers.IntegerField(allow_null=True)
     results = PlacementUseRow(many=True)
+
+
+def article_uses(source, actor, number):
+    from catalog.recycle_issue_references import issue_references
+    placements.authorize(actor, 'issue')
+    rows = issue_references(source, actor, include_recycled=False)
+    try:
+        page = Paginator(rows, 12).page(number)
+    except EmptyPage:
+        raise NotFound('文章引用范围已变化，请返回第一页重新读取。') from None
+    revisions = list(page)
+    if len(revisions) != min(12, max(0, page.paginator.count-(number-1)*12)):
+        raise NotFound('文章引用或权限刚刚变化，请重新读取。')
+    parents = {row.pk:row for row in visible_issues(actor).filter(pk__in=[row.target_id for row in revisions])}
+    result = []
+    for revision in revisions:
+        parent = parents.get(revision.target_id)
+        if parent is None:
+            raise NotFound('文章所属项目或权限已变化，请重新读取引用范围。')
+        labels = []
+        if revision.pk == revision.latest_id: labels.append('最新已保存修订')
+        if revision.pk == revision.active_id: labels.append('登记公开修订')
+        if revision.pk == revision.scheduled_id: labels.append('登记排期修订')
+        result.append({'page_type':'issue', 'page_id':str(parent.pk), 'page_label':'文章正文', 'title':parent.title,
+            'revision_id':str(revision.pk), 'revision':revision.revision, 'is_latest':revision.pk==revision.latest_id,
+            'is_published':revision.pk==revision.active_id, 'revision_note':'、'.join(labels), 'items':[],
+            'edit_url':f'/admin/recommendations/issues/{parent.pk}?history={revision.pk}'})
+    # A project becoming private or a reference being replaced must not expose
+    # a previously selected row. This is a read, not an automatic migration.
+    if set(rows.filter(pk__in=[row.pk for row in revisions]).values_list('pk', flat=True)) != {row.pk for row in revisions}:
+        raise NotFound('文章引用或权限刚刚变化，请重新读取。')
+    return {'scope':'articles', 'count':page.paginator.count,
+        'next':page.next_page_number() if page.has_next() else None,
+        'previous':page.previous_page_number() if page.has_previous() else None, 'results':result}
 
 
 class PlacementUsesView(AdminPrivateResponseMixin, APIView):
@@ -113,6 +150,8 @@ class PlacementUsesView(AdminPrivateResponseMixin, APIView):
         source = placements.parent_object(source_type, source_id, actor=request.user)
         query = PlacementUseQuery(data=request.query_params)
         query.is_valid(raise_exception=True)
+        if query.validated_data['scope'] == 'articles':
+            return Response(PlacementUsePage(article_uses(source, request.user, query.validated_data['page'])).data)
         try:
             page = Paginator(placement_use_revisions(source_type, source.pk, allowed_pages(request.user)), 12).page(query.validated_data["page"])
         except EmptyPage:
@@ -132,5 +171,5 @@ class PlacementUsesView(AdminPrivateResponseMixin, APIView):
             result.append({"page_type": data["page_type"], "page_id": str(parent.pk), "page_label": PAGE_LABELS[data["page_type"]], "title": placements._title(parent),
                 "revision_id": str(revision.pk), "revision": revision.revision, "is_latest": revision.pk == revision.latest_id,
                 "is_published": revision.pk == revision.published_id, "edit_url": f"/admin/content/{data['page_type']}/{parent.pk}?revision={revision.pk}", "items": items})
-        return Response(PlacementUsePage({"count": page.paginator.count, "next": page.next_page_number() if page.has_next() else None,
+        return Response(PlacementUsePage({"scope":"placements", "count": page.paginator.count, "next": page.next_page_number() if page.has_next() else None,
             "previous": page.previous_page_number() if page.has_previous() else None, "results": result}).data)

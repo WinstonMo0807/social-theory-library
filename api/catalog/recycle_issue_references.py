@@ -53,7 +53,7 @@ class HasIssueReference(Func):
         return f"EXISTS(SELECT 1 FROM ({rows}) issue_ref WHERE issue_ref.kind={kind} AND {compare})",[*params*copies,*kp,*ip]
 
 
-def issue_references(obj,actor):
+def issue_references(obj,actor,*,include_recycled=True):
     from .services.curation_projects import visible_issues
     kinds={"catalog.work":"work","catalog.edition":"edition","catalog.knowledgenode":"node","catalog.person":"person",
         "catalog.scholarprofile":"person","catalog.theorytimelineevent":"timeline","catalog.readingpath":"reading_path"}
@@ -68,7 +68,7 @@ def issue_references(obj,actor):
         match|=Q(HasIssueReference(snapshot,Value("edition"),keys(editions),many=True))
         match|=Q(HasIssueReference(snapshot,Value("work"),keys(editions),field="edition_id",many=True))
         match|=Q(HasIssueReference(snapshot,Value("span"),keys(EvidenceSpan.objects.filter(page__asset__edition_id__in=editions.values("pk"))),many=True))
-    pages=visible_issues(actor,include_recycled=True)
+    pages=visible_issues(actor,include_recycled=include_recycled)
     latest=EditorialRevision.objects.filter(target_type="recommendation_issue",target_id=OuterRef("target_id")).order_by("-revision")
     rows=EditorialRevision.objects.filter(target_type="recommendation_issue",target_id__in=pages.values("pk")).annotate(
         latest_id=Subquery(latest.values("pk")[:1]),

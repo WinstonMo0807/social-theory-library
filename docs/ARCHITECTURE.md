@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 M21文章正文引用
+
+M21文章正文反向引用复用M28 issue_references，原uses端点scope=articles，最新/active/scheduled修订和原项目可见性在SQL内过滤，12份分页。影响栏只返回题名/修订状态和原历史入口，不复制正文或建立引用表；普通范围排除回收文章，回收查询默认行为保持。
+
 ## 2026-10-25 R34多对象组合
 
 R34组合分享仍使用原ReaderShare，加密specification容纳最多4个additional_sources；所有来源及选中项独立版本绑定，原单对象内容摘要兼容。来源目录的首条公开书目摘要不加入签名范围。原文章提案接手按每条材料的origin_kind核对版本且复用原来源锁，隐私导出/撤回覆盖整个组合，不新增模型。

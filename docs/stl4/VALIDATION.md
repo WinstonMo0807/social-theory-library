@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 M21文章正文引用
+
+M21文章引用：912960三Python AST/compile、四SQLite SQL编译及diff0；5fd8dc契约0错误10既有警告，8e9d80同步418路径；f5c5c3→0192c4 ESLint/TypeScript noEmit0。七组验收定义未执行；无数据库、实际文章操作、测试、浏览器、迁移或部署。
+
 ## 2026-10-25 R34多对象组合
 
 R34组合：cb5c45为6 Python AST/compile、4 SQLite SQL编译、CSS解析及目标diff0；70a2de契约0错误10既有警告，14aaf8同步418路径；a2e5f1→326601 ESLint/TypeScript noEmit0。新增验收定义未运行，无数据库、真实分享、通知、测试、浏览器、迁移或部署。

@@ -15783,11 +15783,18 @@ export interface components {
             group: string;
         };
         PlacementUsePage: {
+            scope: components["schemas"]["PlacementUsePageScopeEnum"];
             count: number;
             next: number | null;
             previous: number | null;
             results: components["schemas"]["PlacementUseRow"][];
         };
+        /**
+         * @description * `placements` - placements
+         *     * `articles` - articles
+         * @enum {string}
+         */
+        PlacementUsePageScopeEnum: "placements" | "articles";
         PlacementUseRow: {
             page_type: string;
             /** Format: uuid */
@@ -15801,6 +15808,7 @@ export interface components {
             is_published: boolean;
             edit_url: string;
             items: components["schemas"]["PlacementUseItem"][];
+            revision_note?: string;
         };
         /**
          * @description * `cancel` - cancel
@@ -23652,6 +23660,11 @@ export interface operations {
         parameters: {
             query?: {
                 page?: number;
+                /**
+                 * @description * `placements` - placements
+                 *     * `articles` - articles
+                 */
+                scope?: "placements" | "articles";
             };
             header?: never;
             path: {

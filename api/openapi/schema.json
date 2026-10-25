@@ -2412,6 +2412,20 @@
                         }
                     },
                     {
+                        "in": "query",
+                        "name": "scope",
+                        "schema": {
+                            "enum": [
+                                "placements",
+                                "articles"
+                            ],
+                            "type": "string",
+                            "default": "placements",
+                            "minLength": 1
+                        },
+                        "description": "* `placements` - placements\n* `articles` - articles"
+                    },
+                    {
                         "in": "path",
                         "name": "source_id",
                         "schema": {
@@ -62546,6 +62560,9 @@
             "PlacementUsePage": {
                 "type": "object",
                 "properties": {
+                    "scope": {
+                        "$ref": "#/components/schemas/PlacementUsePageScopeEnum"
+                    },
                     "count": {
                         "type": "integer"
                     },
@@ -62568,8 +62585,17 @@
                     "count",
                     "next",
                     "previous",
-                    "results"
+                    "results",
+                    "scope"
                 ]
+            },
+            "PlacementUsePageScopeEnum": {
+                "enum": [
+                    "placements",
+                    "articles"
+                ],
+                "type": "string",
+                "description": "* `placements` - placements\n* `articles` - articles"
             },
             "PlacementUseRow": {
                 "type": "object",
@@ -62608,6 +62634,9 @@
                         "items": {
                             "$ref": "#/components/schemas/PlacementUseItem"
                         }
+                    },
+                    "revision_note": {
+                        "type": "string"
                     }
                 },
                 "required": [
