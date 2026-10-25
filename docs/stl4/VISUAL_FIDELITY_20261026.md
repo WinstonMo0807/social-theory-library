@@ -36,3 +36,21 @@ f06d2a→2e82fc前端构建完成，76e935→ffdcb2镜像构建完成，de295f�
 仍未关闭整页视觉A：字体原程序未确认；账号标题/操作的纵向对齐、空库完整呈现及其他页面的品牌变体继续核对。缺少真实稿件/馆藏的状态未操作，不伪造示例数据。这里只关闭已证实并已显示的局部差异，不宣称全站或整类验收通过。
 
 按用户此前指定的grill-me方式，继续沿已采用的[grilling作者规则](https://raw.githubusercontent.com/mattpocock/skills/main/skills/productivity/grilling/SKILL.md)按整类自问。当前读者类已核对的事实为：普通读者能找到创建、搜索和资料入口；空任务数量为真实0；新样式不删除权限保护或原请求恢复控件。业务成功与全部状态未操作，仍保留B，不转化为新防御开发项。
+
+## VISUAL-05：关于、帮助和反馈（R33，PDF13–17）
+
+A的证据：实际/about使用208横排品牌、错误的旧stl4-reading-room插图；SupportHero把首页图强行用于所有支持页；support.css的270px最小高度和自然图片比例实际撑到约324px，而PDF14横幅约212px；AboutPublicView通过site-config读取的默认正文被改写。PDF13/14/15/16品牌各有排法；RouteTransition仍给支持页套editorial-v2，覆盖颜色和标题字重。直接涉及SiteHeader、SupportHero、support.css、SiteFooterView和前后端site-config默认值。
+
+最小修复范围：支持类路由退出旧视觉scope；按各图提取品牌、桌面/手机书桌和指南插图片段；恢复关于两列卡片、移动端图标标题/整行正文、各自页脚、帮助文章的三步+纠错提示；真实帮助搜索、引用示例、FAQ和反馈原状态/命令保留。关于的三段默认正文按PDF14恢复，已发布SiteSetting/AboutPageBlock不被脚本改写。PDF16的通常3工作日回复文案属于用户指定产品文案，不是本次测得的实际服务时效；成功状态仍只由真实回执触发。
+
+按整类自问：访客是否能找回帮助首页、是否会把指南示例当馆藏、能否不填邮箱提交、关联来源是否仍排除私人页面、错误/未知回执是否保留？源码确认原公开搜索入口、示例输出标记、可选邮箱、safeFeedbackPath和固定请求重试仍在。视觉操作只浏览，不提交任何反馈或示例复制/导出，也未声称业务验收通过。
+
+本机Web r4预览构建42f76b→b5461b退出0；1637文件制备包SHA256 12c427d445b4992212c3bb01271d2f2119289538b07a478a454df711d9e4d4fa。NAS镜像构建正在进行；API r6只替换catalog/site_config.py，无schema、权限或数据库迁移。原API r5/Web r3与.env恢复点保留。
+
+R33内网更新记录：NAS b9549e→da22d1成功构建API r6 `57c1db0af199` / Web r4 `96130ba6e2c4`；931e12→11a15e实际更新。Web启动前一次502，启动日志就绪后刷新正常。/about显示新正文且品牌/插图正常；测得横幅212.69px、高度56px/700的h1，默认正文18px/29.7px；移动布局无横向溢出。帮助/文章/反馈已只读查看，卡片高度、引用背景及手机反馈精简正文再修入Web r5：dd778f→30e6df本机构建0；包2947f6b817750df1d1cbb0b5ad974f298117f8c00310e4c183f0f2754983c6ed；7eef83→4ebb25构建部署0，镜像`0fdefd11deb0`。保留.env.before-visual-r4和.env.before-web-r5，均NAS私有不可提交。
+
+## 探索组下一项的具体证据
+
+VISUAL-06：PDF23与实际/explore的英雄标题/入口卡片字体及高度明显偏小、底色错误、搜索按钮被压成两行。文件为explore/editorial-landing.css与SiteHeader，既有插图已经从PDF23提取，不必再重做检索功能。
+
+CATALOG-UI-01：2026-10-26浏览器访问/explore/original直接呈现全页载入失败，控制台明确Error: Server API transport cannot run in the browser，入口为catalog-search-workspace客户端chunk。源码CatalogSearchWorkspace第11行导入SiteFooter，第129行调用，后者导入site.server→server-request。本次只需将SiteFooter放回服务端app/explore/original/page.tsx；检索API、守卫、账户与权限不改。已遍历同一SiteFooter直接调用链，只有这一个use-client文件违反边界；不把其他未验收页面推定有同样故障。

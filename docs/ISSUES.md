@@ -1,5 +1,9 @@
 # 当前问题
 
+## 2026-10-26 R33视觉与馆藏页真实载入故障
+
+VISUAL-05已修正支持组品牌/图片/默认文案/排版并更新Web r5/API r6；当前字体及整页全部状态未验收，不关闭整站视觉A。VISUAL-06为PDF23与实际探索入口的字号/背景/搜索按钮换行；CATALOG-UI-01为/explore/original运行报错，客户端CatalogSearchWorkspace直接导入服务端SiteFooter；移回服务端页面即可，不删除server-request保护。详见stl4/VISUAL_FIDELITY_20261026.md。
+
 ## 2026-10-26 真实视觉差异
 
 用户已允许浏览器与唯一PDF直接对照，确认VISUAL-01–04品牌、旧样式覆盖、首页资产和读者中心排版差异。r2/r3已部署局部修正；整页视觉仍A，不能被206个B实现记录覆盖。证据与剩余范围见stl4/VISUAL_FIDELITY_20261026.md；未提交业务表单或运行测试。

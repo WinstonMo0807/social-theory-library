@@ -1,5 +1,13 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-26 R33关于、帮助与反馈已更新内网
+
+前置f8fcf54e。仅按最终PDF13–17提取各自品牌、桌面/手机书桌及指南插图片段；支持类退出旧scope，恢复标题、卡片、步骤、引用示例和页脚，关于默认正文前后端同步。原已发布配置、账户、反馈命令/权限和请求恢复保留。内网当前API r6（57c1db0af199）、Discovery r2、Web r5（0fdefd11deb0），未迁移/重置/切换公网。
+
+浏览器只读实际查看/about、/help、/help/citation、/feedback桌面和/about、/feedback手机；引用背景与卡片高度随后补入r5，须直接查看该补充。本机构建42f76b→b5461b、dd778f→30e6df均0，NAS b9549e→da22d1、7eef83→4ebb25完成；无测试/业务表单。字体原文件仍未取得，不宣称像素级全部一致。详见VISUAL_FIDELITY_20261026.md。
+
+下一项为探索组：PDF23与实际/explore确证标题/卡片字号偏小、底色和搜索按钮换行；/explore/original实际触发Server API transport cannot run in the browser，定位CatalogSearchWorkspace直接导入服务端SiteFooter。只修复这条已证实调用链并继续PDF视觉，不重新测评检索质量。
+
 ## 2026-10-26 直接按最终PDF修正实际前端
 
 用户确认全部资产版权并要求完整复刻，已授权只读浏览器对照。当前内网是实际开发版本，尚不符合终稿；不能把206个B表述为视觉完成。PDF10/14/183/185/208与实际首页、读者中心、引文体检已直接查看，具体A及资产来源见docs/stl4/VISUAL_FIDELITY_20261026.md（子目录记录按同名文件定位）。

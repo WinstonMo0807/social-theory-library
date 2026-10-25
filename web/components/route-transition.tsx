@@ -13,7 +13,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
   const pendingTimerRef = useRef<number | null>(null);
   const readerRoute = pathname.startsWith("/reader/");
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
-  const atlasRoute = pathname === "/" || pathname === "/account" || pathname === "/account/citation-audits";
+  const atlasRoute = pathname === "/" || pathname === "/account" || pathname === "/account/citation-audits" || pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback";
   const routeKey = `${pathname}?${searchParams.toString()}`;
 
   const clearPendingNavigation = useCallback(() => {

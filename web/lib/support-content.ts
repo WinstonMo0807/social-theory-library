@@ -23,10 +23,10 @@ export const helpArticles: Record<string, HelpArticle> = {
     { id: "notes", title: "保存私人记录", body: "登录后可以保存阅读进度、书签、划线和笔记。公开访问原文不需要获得你的私人笔记权限。" },
   ] },
   citation: { title: "查找原文与引用", intro: "从检索结果回到原文，再复制所需格式。", steps: [
-    { id: "open", title: "打开原文", body: "在搜索结果或书目信息页，点击阅读进入图书正文。先确认当前作品和出版版本。" },
-    { id: "pages", title: "核对页码", body: "在阅读页面确认当前 PDF 页码与纸本页码。没有可靠映射时，应保留 PDF 页序并回看扫描页，不能猜测纸本页码。" },
-    { id: "copy", title: "复制引用", body: "点击 Reader 中的引用按钮，选择格式，核对书目信息和页码后复制。当前支持 APA、MLA、Chicago、Harvard 与 GB/T 7714；实际引用以当前可访问版本返回的信息为准。" },
-    { id: "mismatch", title: "如遇页码不符", body: "先核对文件版本与 PDF 页序。双页扫描还需确认引文位于哪一侧。仍不一致时提交来源纠错，附上公开阅读页面和 PDF 页码。" },
+    { id: "open", title: "打开原文", body: "在搜索结果或书目信息页，点击“阅读”进入图书的正文页面。" },
+    { id: "pages", title: "核对页码", body: "在阅读页面底部或右上角，确认当前的 PDF 页码与纸本页码，确保引用位置准确。" },
+    { id: "copy", title: "复制引用", body: "点击“引用”按钮，选择所需的引用格式，核对书目信息与页码，点击“复制”即可。" },
+    { id: "mismatch", title: "如遇页码不符", body: "请核对版本或提交纠错。" },
   ] },
   account: { title: "账户与隐私", intro: "公开阅读与私人研究资料有明确的访问边界。", steps: [
     { id: "public", title: "访客阅读", body: "公开访客可以检索、阅读、下载、复制和引用当前可访问的公开资料。某一文件不可用时，以该来源的实际状态为准。" },

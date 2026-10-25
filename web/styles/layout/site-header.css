@@ -31,6 +31,18 @@
 .site-header[data-stl-home="true"] { min-height: 60px; padding-block: 8px; }
 .site-header[data-stl-home="true"] .brand-reference-type { width: 192px; height: 38px; }
 .site-header[data-stl-home="true"] .brand-mark { width: 54px; height: 40px; }
+.brand-reference-lockup { display: block; mix-blend-mode: multiply; }
+.brand-reference-lockup img { display: block; width: 100%; height: auto; }
+.brand-reference-lockup[data-brand-variant="about"] { width: 195px; }
+.brand-reference-lockup[data-brand-variant="support"] { width: 222px; }
+.brand-reference-lockup[data-brand-variant="article"] { width: 191px; }
+.site-header[data-stl-support] { padding-inline: 4.4%; gap: 28px; min-height: 68px; }
+.site-header[data-stl-support="about"] { min-height: 80px; padding-block: 9px; padding-inline: 3.5%; }
+.site-header[data-stl-support="article"] { min-height: 60px; padding-block: 7px; }
+.site-header[data-stl-support] .desktop-nav { gap: clamp(22px,2.6vw,34px); justify-content: flex-end; }
+.site-header[data-stl-support] .desktop-nav a.active { color: var(--night-gold,#af671c); }
+.site-header[data-stl-support] .desktop-nav a.active::after { background: currentColor; }
+.site-header[data-stl-account="true"] { min-height: 60px; padding-block: 7px; }
 
 .logo-link {
   width: fit-content;
@@ -102,6 +114,7 @@
 .site-header[data-ui-scope="stl4"] .menu-button { display: inline-flex; }
 .site-header[data-ui-scope="stl4"] .header-return span { display: none; }
 :root[data-theme="dark"] .brand-mark, :root[data-theme="dark"] .brand-reference-type { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
+:root[data-theme="dark"] .brand-reference-lockup { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
 @media (max-width: 1120px) {
   .site-header[data-ui-scope="stl4"] { grid-template-columns: 1fr auto; gap: 20px; }
   .site-header[data-ui-scope="stl4"] .desktop-nav { display: none; }
@@ -112,5 +125,8 @@
   .site-header[data-ui-scope="stl4"] .brand-reference-type { width: 75px; height: 55px; }
   .site-header[data-ui-scope="stl4"] .header-search span { display: none; }
   .site-header[data-ui-scope="stl4"] .header-actions { gap: 4px; }
+  .brand-reference-lockup[data-brand-variant="about"] { width: 171px; }
+  .brand-reference-lockup[data-brand-variant="support"] { width: 150px; }
+  .brand-reference-lockup[data-brand-variant="article"] { width: 185px; }
 }
 @media (min-width:761px) { .site-header[data-stl-account=true] .reader-account-menu-toggle { display:none; } }

@@ -35,7 +35,8 @@ export function LibraryMark({ className = "" }: { className?: string }) {
     src="/brand/stl-mark-final-r2.png" width={61} height={45} unoptimized />;
 }
 
-export function Wordmark({ config = defaultSiteConfig, home = false }: { config?: SiteConfig; home?: boolean }) {
+export function Wordmark({ config = defaultSiteConfig, home = false, reference }: { config?: SiteConfig; home?: boolean; reference?: "about" | "support" | "article" }) {
+  if (reference) return <picture className="brand-reference-lockup" data-brand-variant={reference}><source media="(max-width: 700px)" srcSet={`/brand/stl-lockup-${reference}-mobile-final-r2.png`} /><Image src={`/brand/stl-lockup-${reference}-desktop-final-r2.png`} alt={config.site_name} width={reference === "about" ? 195 : reference === "support" ? 222 : 191} height={reference === "about" ? 60 : reference === "support" ? 42 : 44} unoptimized /></picture>;
   return (
     <span className="brand-lockup" aria-label={config.site_name}>
       <LibraryMark />
@@ -72,10 +73,12 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
     ["/recommendations", "特别策划"],
   ] as const;
   const readerCenterRoute = pathname === "/account" && !preview;
+  const supportRoute = pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback";
+  const brandReference = pathname === "/about" ? "about" : pathname.startsWith("/help/") ? "article" : supportRoute ? "support" : undefined;
   const headerNavigation = readerCenterRoute ? [
     ["/account/research", "我的研究"], ["/account/notes", "笔记"], ["/account/plans", "阅读计划"],
     ["/account/collections", "书单"], ["/account/citation-audits", "引文体检"], ["/account/confirmed-notes", "已确认笔记"],
-  ] : navigation;
+  ] : supportRoute ? [...navigation, ["/about", "关于"]] : navigation;
 
   useEffect(() => {
     document.body.classList.toggle("menu-open", open);
@@ -116,15 +119,16 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-edit-section={preview ? "brand" : undefined}
       data-stl-home={pathname === "/" || preview ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : undefined}
+      data-stl-support={brandReference}
       className="site-header"
       data-ui-scope="stl4"
     >
       <Link className="logo-link" href="/" prefetch={false}>
-        <Wordmark config={config} home={pathname === "/" || preview} />
+        <Wordmark config={config} home={pathname === "/" || preview} reference={brandReference} />
       </Link>
       <nav className="desktop-nav" aria-label="主导航">
         {headerNavigation.map(([href, label]) => {
-          const active = href.includes("?") ? `${pathname}?${searchParams}` === href : isActive(href);
+          const active = href === "/about" && supportRoute ? true : href.includes("?") ? `${pathname}?${searchParams}` === href : isActive(href);
           return (
             <Link
               aria-current={active ? "page" : undefined}
