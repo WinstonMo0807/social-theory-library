@@ -28,6 +28,10 @@ from ingestion.models import AuditEvent, SourceRecord
 pytestmark = pytest.mark.django_db
 
 
+def registry_version(client):
+    return client.get("/api/catalog/admin/research-sources/").data["configuration_version"]
+
+
 @pytest.mark.parametrize(
     ("payload", "content_type", "expected_format", "expected_title"),
     [
@@ -127,6 +131,7 @@ def test_registry_endpoint_is_secret_safe_and_tracks_recent_provider_success(
         status=SourceRecord.Status.SUCCEEDED,
     )
     api_client.force_authenticate(admin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(admin_user.pk))
 
     response = api_client.get("/api/catalog/admin/research-sources/")
 
@@ -135,8 +140,8 @@ def test_registry_endpoint_is_secret_safe_and_tracks_recent_provider_success(
     viaf = next(row for row in response.data["adapters"] if row["key"] == "viaf")
     assert viaf["enabled"] is True
     assert viaf["last_success_at"] is not None
-    assert "credential_alias" not in viaf
-    assert "endpoint_alias" not in viaf
+    assert viaf["credential_alias"] == ""
+    assert viaf["endpoint_alias"] == ""
     assert response.data["permissions"] == {
         "can_edit": True,
         "can_test": True,
@@ -151,15 +156,16 @@ def test_administrator_can_disable_provider_but_cannot_change_sensitive_alias(
 ):
     settings.METADATA_PROVIDER_ENABLED = "crossref,openlibrary"
     api_client.force_authenticate(admin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(admin_user.pk))
 
     disabled = api_client.put(
         "/api/catalog/admin/research-sources/",
-        {"adapters": [{"key": "crossref", "enabled": False}]},
+        {"expected_version": registry_version(api_client), "adapters": [{"key": "crossref", "enabled": False}]},
         format="json",
     )
     forbidden = api_client.put(
         "/api/catalog/admin/research-sources/",
-        {"adapters": [{"key": "crossref", "credential_alias": "private-crossref"}]},
+        {"expected_version": registry_version(api_client), "adapters": [{"key": "crossref", "credential_alias": "private-crossref"}]},
         format="json",
     )
 
@@ -171,17 +177,19 @@ def test_administrator_can_disable_provider_but_cannot_change_sensitive_alias(
     assert AuditEvent.objects.filter(action="research_source_registry_update").count() == 1
 
 
-def test_owner_can_store_alias_reference_without_api_disclosure(
+def test_owner_can_edit_alias_without_disclosing_endpoint_or_secret(
     api_client,
     superadmin_user,
     monkeypatch,
 ):
     monkeypatch.setenv("RESEARCH_SOURCE_ENDPOINT_NCPSSD_PUBLIC", "https://example.org/ncpssd")
     api_client.force_authenticate(superadmin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(superadmin_user.pk))
 
     response = api_client.put(
         "/api/catalog/admin/research-sources/",
         {
+            "expected_version": registry_version(api_client),
             "adapters": [
                 {
                     "key": "ncp_ssd",
@@ -197,7 +205,7 @@ def test_owner_can_store_alias_reference_without_api_disclosure(
     source = next(row for row in response.data["adapters"] if row["key"] == "ncp_ssd")
     assert source["endpoint_alias_set"] is True
     assert source["endpoint_configured"] is True
-    assert "ncpssd-public" not in str(response.data)
+    assert source["endpoint_alias"] == "ncpssd-public"
     assert "https://example.org/ncpssd" not in str(response.data)
     assert response.data["permissions"]["can_edit_sensitive_aliases"] is True
 
@@ -207,6 +215,7 @@ def test_owner_can_store_encrypted_provider_credential_without_readback(
     superadmin_user,
 ):
     api_client.force_authenticate(superadmin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(superadmin_user.pk))
 
     stored = api_client.post(
         "/api/catalog/admin/provider-secrets/",
@@ -222,6 +231,7 @@ def test_owner_can_store_encrypted_provider_credential_without_readback(
     configured = api_client.put(
         "/api/catalog/admin/research-sources/",
         {
+            "expected_version": registry_version(api_client),
             "adapters": [
                 {
                     "key": "openalex",
@@ -243,7 +253,7 @@ def test_owner_can_store_encrypted_provider_credential_without_readback(
     assert configured.status_code == 200
     openalex = next(row for row in configured.data["adapters"] if row["key"] == "openalex")
     assert openalex["credential_configured"] is True
-    assert "openalex-owner" not in str(configured.data)
+    assert openalex["credential_alias"] == "openalex-owner"
     assert "owner-only-provider-secret" not in str(configured.data)
 
 
@@ -253,6 +263,7 @@ def test_research_source_test_records_safe_credential_result_without_changing_se
     monkeypatch,
 ):
     api_client.force_authenticate(superadmin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(superadmin_user.pk))
     stored = api_client.post(
         "/api/catalog/admin/provider-secrets/",
         {
@@ -267,6 +278,7 @@ def test_research_source_test_records_safe_credential_result_without_changing_se
     configured = api_client.put(
         "/api/catalog/admin/research-sources/",
         {
+            "expected_version": registry_version(api_client),
             "adapters": [
                 {
                     "key": "openalex",
@@ -295,7 +307,7 @@ def test_research_source_test_records_safe_credential_result_without_changing_se
 
     tested = api_client.post(
         "/api/catalog/admin/research-sources/",
-        {"action": "test", "source_key": "openalex"},
+        {"action": "test", "source_key": "openalex", "expected_version": registry_version(api_client)},
         format="json",
     )
     registry = api_client.get("/api/catalog/admin/research-sources/")
@@ -314,12 +326,13 @@ def test_research_source_test_records_safe_credential_result_without_changing_se
     assert openalex["credential_last_tested_at"] == row.last_tested_at
     assert openalex["credential_last_test_status"] == "healthy"
     assert openalex["credential_last_test_message"] == ""
-    assert "openalex-health" not in str(registry.data)
+    assert openalex["credential_alias"] == "openalex-health"
     assert "health-test-secret" not in str(registry.data)
 
 
 def test_administrator_cannot_manage_provider_secret_values(api_client, admin_user):
     api_client.force_authenticate(admin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(admin_user.pk))
 
     response = api_client.post(
         "/api/catalog/admin/provider-secrets/",
@@ -348,10 +361,12 @@ def test_searxng_endpoint_alias_is_consumed_without_returning_its_value(
     monkeypatch.setenv("RESEARCH_SOURCE_ENDPOINT_LOCAL_SEARCH", "https://search.example")
     settings.FIELD_ENRICHMENT_SEARCH_ALLOWED_HOSTS = "search.example"
     api_client.force_authenticate(superadmin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(superadmin_user.pk))
 
     response = api_client.put(
         "/api/catalog/admin/research-sources/",
         {
+            "expected_version": registry_version(api_client),
             "adapters": [
                 {
                     "key": "searxng",
@@ -374,10 +389,11 @@ def test_owner_cannot_assign_unused_alias_to_fixed_public_source(
     superadmin_user,
 ):
     api_client.force_authenticate(superadmin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(superadmin_user.pk))
 
     response = api_client.put(
         "/api/catalog/admin/research-sources/",
-        {"adapters": [{"key": "viaf", "endpoint_alias": "unused-endpoint"}]},
+        {"expected_version": registry_version(api_client), "adapters": [{"key": "viaf", "endpoint_alias": "unused-endpoint"}]},
         format="json",
     )
 
@@ -423,10 +439,11 @@ def test_processing_diagnostics_exposes_worker_backlog_and_source_status(setting
 
 def test_registry_rejects_plaintext_secret_fields(api_client, superadmin_user):
     api_client.force_authenticate(superadmin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(superadmin_user.pk))
 
     response = api_client.put(
         "/api/catalog/admin/research-sources/",
-        {"adapters": [{"key": "openalex", "enabled": True, "api_key": "must-not-store"}]},
+        {"expected_version": registry_version(api_client), "adapters": [{"key": "openalex", "enabled": True, "api_key": "must-not-store"}]},
         format="json",
     )
 

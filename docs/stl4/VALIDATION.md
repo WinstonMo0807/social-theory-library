@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 M26来源配置
+
+M26来源：e5929f为8 Python AST/compile、4条SQLite SQL编译及目标diff0；2a7b69契约0错误10既有警告/415路径；9f639a→153931 ESLint/TypeScript noEmit0。两份来源验收定义只编写/更新未运行。无真实DB、API、凭据写入、迁移、浏览器、部署；PG驱动受Windows应用控制限制。
+
 ## 2026-10-25 M27检索索引备份
 
 M27索引：63dcbe/b2e523为12 Python AST/compile、YAML解析、distribution声明比对、2条SQLite SQL编译和最终diff0；禁连数据库OpenAPI0错误10既有警告/414路径。1d3be8→292275目标ESLint/TypeScript noEmit0。test_stl4_index_backup_20261025.py只编写未执行。无真实API、导出、备份、恢复、浏览器、迁移、部署；PG驱动受本机应用控制限制。

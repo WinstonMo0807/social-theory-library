@@ -10888,6 +10888,171 @@
                 }
             }
         },
+        "/api/catalog/admin/research-sources/": {
+            "get": {
+                "operationId": "catalog_admin_research_sources_retrieve",
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResearchSourceSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_admin_research_sources_create",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceProbeInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceProbeInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceProbeInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResearchSourceProbeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "catalog_admin_research_sources_update",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceRegistryInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceRegistryInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceRegistryInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResearchSourceSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_admin_research_sources_partial_update",
+                "tags": [
+                    "catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedSourceFenceInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedSourceFenceInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedSourceFenceInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResearchSourceSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/scholar-links/{kind}/commands/{request_id}/": {
             "get": {
                 "operationId": "catalog_admin_scholar_links_commands_retrieve",
@@ -58506,6 +58671,16 @@
                     }
                 }
             },
+            "PatchedSourceFenceInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    }
+                }
+            },
             "PatchedWorkFileRightsInputRequest": {
                 "type": "object",
                 "properties": {
@@ -71819,6 +71994,255 @@
                 "type": "string",
                 "description": "* `library` - library\n* `works` - works\n* `passages` - passages\n* `filtered` - filtered"
             },
+            "ResearchSourceKeyEnum": {
+                "enum": [
+                    "wikidata",
+                    "viaf",
+                    "loc",
+                    "openalex",
+                    "crossref",
+                    "openlibrary",
+                    "google_books",
+                    "searxng",
+                    "safe_web_fetcher",
+                    "grobid",
+                    "ncp_ssd",
+                    "nlb_singapore",
+                    "union_catalog_z3950",
+                    "cnki",
+                    "vip",
+                    "wanfang"
+                ],
+                "type": "string",
+                "description": "* `wikidata` - wikidata\n* `viaf` - viaf\n* `loc` - loc\n* `openalex` - openalex\n* `crossref` - crossref\n* `openlibrary` - openlibrary\n* `google_books` - google_books\n* `searxng` - searxng\n* `safe_web_fetcher` - safe_web_fetcher\n* `grobid` - grobid\n* `ncp_ssd` - ncp_ssd\n* `nlb_singapore` - nlb_singapore\n* `union_catalog_z3950` - union_catalog_z3950\n* `cnki` - cnki\n* `vip` - vip\n* `wanfang` - wanfang"
+            },
+            "ResearchSourceOutput": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "purpose": {
+                        "type": "string"
+                    },
+                    "affected_features": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "metadata_formats": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "execution_mode": {
+                        "type": "string"
+                    },
+                    "usage_policy": {
+                        "type": "string"
+                    },
+                    "configuration_requirements": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "configured_by": {
+                        "type": "string"
+                    },
+                    "endpoint_configured": {
+                        "type": "boolean"
+                    },
+                    "credential_configured": {
+                        "type": "boolean"
+                    },
+                    "endpoint_alias_set": {
+                        "type": "boolean"
+                    },
+                    "credential_alias_set": {
+                        "type": "boolean"
+                    },
+                    "endpoint_alias_supported": {
+                        "type": "boolean"
+                    },
+                    "credential_alias_supported": {
+                        "type": "boolean"
+                    },
+                    "endpoint_alias": {
+                        "type": "string"
+                    },
+                    "credential_alias": {
+                        "type": "string"
+                    },
+                    "credential_alias_options": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "more_credential_aliases": {
+                        "type": "boolean"
+                    },
+                    "credential_managed_here": {
+                        "type": "boolean"
+                    },
+                    "credential_updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "credential_last_tested_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "credential_last_test_status": {
+                        "type": "string"
+                    },
+                    "credential_last_test_message": {
+                        "type": "string"
+                    },
+                    "last_success_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_failure_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_error_code": {
+                        "type": "string"
+                    },
+                    "last_error_category": {
+                        "type": "string"
+                    },
+                    "secret_values_exposed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "affected_features",
+                    "category",
+                    "configuration_requirements",
+                    "configured_by",
+                    "credential_alias",
+                    "credential_alias_options",
+                    "credential_alias_set",
+                    "credential_alias_supported",
+                    "credential_configured",
+                    "credential_last_test_message",
+                    "credential_last_test_status",
+                    "credential_last_tested_at",
+                    "credential_managed_here",
+                    "credential_updated_at",
+                    "enabled",
+                    "endpoint_alias",
+                    "endpoint_alias_set",
+                    "endpoint_alias_supported",
+                    "endpoint_configured",
+                    "execution_mode",
+                    "key",
+                    "label",
+                    "last_error_category",
+                    "last_error_code",
+                    "last_failure_at",
+                    "last_success_at",
+                    "metadata_formats",
+                    "more_credential_aliases",
+                    "purpose",
+                    "secret_values_exposed",
+                    "status",
+                    "usage_policy"
+                ]
+            },
+            "ResearchSourceProbeResult": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "functional": {
+                        "type": "boolean"
+                    },
+                    "productive": {
+                        "type": "boolean"
+                    },
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "functional",
+                    "key",
+                    "productive",
+                    "status"
+                ]
+            },
+            "ResearchSourceSnapshot": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "type": "string"
+                    },
+                    "configuration_version": {
+                        "type": "string"
+                    },
+                    "generated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "adapters": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ResearchSourceOutput"
+                        }
+                    },
+                    "summary": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "permissions": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "boolean"
+                        }
+                    },
+                    "secret_values_exposed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "adapters",
+                    "configuration_version",
+                    "generated_at",
+                    "permissions",
+                    "secret_values_exposed",
+                    "summary",
+                    "version"
+                ]
+            },
             "RestoreHistoryPage": {
                 "type": "object",
                 "properties": {
@@ -75754,6 +76178,44 @@
                     "action"
                 ]
             },
+            "SourceAdapterInputRequest": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "$ref": "#/components/schemas/ResearchSourceKeyEnum"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "endpoint_alias": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^(?:[a-z][a-z0-9_-]{0,63})?$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "credential_alias": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^(?:[a-z][a-z0-9_-]{0,63})?$"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "key"
+                ]
+            },
             "SourceCommandOutput": {
                 "type": "object",
                 "properties": {
@@ -75797,6 +76259,45 @@
                     "applied_revision",
                     "deleted",
                     "request_id"
+                ]
+            },
+            "SourceCredentialInputActionEnum": {
+                "enum": [
+                    "set",
+                    "delete"
+                ],
+                "type": "string",
+                "description": "* `set` - set\n* `delete` - delete"
+            },
+            "SourceCredentialInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/SourceCredentialInputActionEnum"
+                    },
+                    "source_key": {
+                        "$ref": "#/components/schemas/ResearchSourceKeyEnum"
+                    },
+                    "alias": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                    },
+                    "secret": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1,
+                        "maxLength": 16384
+                    },
+                    "confirm_delete": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "action",
+                    "alias",
+                    "source_key"
                 ]
             },
             "SourceEventOutput": {
@@ -76025,6 +76526,57 @@
                     "page",
                     "page_size",
                     "results"
+                ]
+            },
+            "SourceProbeInputActionEnum": {
+                "enum": [
+                    "test"
+                ],
+                "type": "string",
+                "description": "* `test` - test"
+            },
+            "SourceProbeInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/SourceProbeInputActionEnum"
+                    },
+                    "source_key": {
+                        "$ref": "#/components/schemas/ResearchSourceKeyEnum"
+                    }
+                },
+                "required": [
+                    "action",
+                    "expected_version",
+                    "source_key"
+                ]
+            },
+            "SourceRegistryInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "adapters": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SourceAdapterInputRequest"
+                        }
+                    },
+                    "credential": {
+                        "$ref": "#/components/schemas/SourceCredentialInputRequest"
+                    }
+                },
+                "required": [
+                    "adapters",
+                    "expected_version"
                 ]
             },
             "StatementInputRequest": {

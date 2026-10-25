@@ -2308,6 +2308,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/research-sources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_research_sources_retrieve"];
+        put: operations["catalog_admin_research_sources_update"];
+        post: operations["catalog_admin_research_sources_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["catalog_admin_research_sources_partial_update"];
+        trace?: never;
+    };
     "/api/catalog/admin/scholar-links/{kind}/commands/{request_id}/": {
         parameters: {
             query?: never;
@@ -14655,6 +14671,9 @@ export interface components {
         PatchedResearchPreferenceInputRequest: {
             research_personalization?: boolean;
         };
+        PatchedSourceFenceInputRequest: {
+            expected_version?: string;
+        };
         PatchedWorkFileRightsInputRequest: {
             /** Format: uuid */
             request_key?: string;
@@ -18641,6 +18660,85 @@ export interface components {
          * @enum {string}
          */
         ResearchScopeKindEnum: "library" | "works" | "passages" | "filtered";
+        /**
+         * @description * `wikidata` - wikidata
+         *     * `viaf` - viaf
+         *     * `loc` - loc
+         *     * `openalex` - openalex
+         *     * `crossref` - crossref
+         *     * `openlibrary` - openlibrary
+         *     * `google_books` - google_books
+         *     * `searxng` - searxng
+         *     * `safe_web_fetcher` - safe_web_fetcher
+         *     * `grobid` - grobid
+         *     * `ncp_ssd` - ncp_ssd
+         *     * `nlb_singapore` - nlb_singapore
+         *     * `union_catalog_z3950` - union_catalog_z3950
+         *     * `cnki` - cnki
+         *     * `vip` - vip
+         *     * `wanfang` - wanfang
+         * @enum {string}
+         */
+        ResearchSourceKeyEnum: "wikidata" | "viaf" | "loc" | "openalex" | "crossref" | "openlibrary" | "google_books" | "searxng" | "safe_web_fetcher" | "grobid" | "ncp_ssd" | "nlb_singapore" | "union_catalog_z3950" | "cnki" | "vip" | "wanfang";
+        ResearchSourceOutput: {
+            key: string;
+            label: string;
+            category: string;
+            purpose: string;
+            affected_features: string[];
+            metadata_formats: string[];
+            execution_mode: string;
+            usage_policy: string;
+            configuration_requirements: string[];
+            enabled: boolean;
+            status: string;
+            configured_by: string;
+            endpoint_configured: boolean;
+            credential_configured: boolean;
+            endpoint_alias_set: boolean;
+            credential_alias_set: boolean;
+            endpoint_alias_supported: boolean;
+            credential_alias_supported: boolean;
+            endpoint_alias: string;
+            credential_alias: string;
+            credential_alias_options: string[];
+            more_credential_aliases: boolean;
+            credential_managed_here: boolean;
+            /** Format: date-time */
+            credential_updated_at: string | null;
+            /** Format: date-time */
+            credential_last_tested_at: string | null;
+            credential_last_test_status: string;
+            credential_last_test_message: string;
+            /** Format: date-time */
+            last_success_at: string | null;
+            /** Format: date-time */
+            last_failure_at: string | null;
+            last_error_code: string;
+            last_error_category: string;
+            secret_values_exposed: boolean;
+        };
+        ResearchSourceProbeResult: {
+            key: string;
+            status: string;
+            functional: boolean;
+            productive: boolean;
+            detail: string;
+        };
+        ResearchSourceSnapshot: {
+            version: string;
+            configuration_version: string;
+            /** Format: date-time */
+            generated_at: string;
+            adapters: components["schemas"]["ResearchSourceOutput"][];
+            summary: {
+                [key: string]: number;
+            };
+            permissions: {
+                [key: string]: boolean;
+            };
+            secret_values_exposed: boolean;
+        };
         RestoreHistoryPage: {
             /** Format: date-time */
             as_of: string;
@@ -19713,6 +19811,12 @@ export interface components {
         SiteStopRequest: {
             action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
+        SourceAdapterInputRequest: {
+            key: components["schemas"]["ResearchSourceKeyEnum"];
+            enabled?: boolean;
+            endpoint_alias?: string;
+            credential_alias?: string;
+        };
         SourceCommandOutput: {
             owner_id: string;
             record: components["schemas"]["SourceFollowOutput"] | null;
@@ -19723,6 +19827,20 @@ export interface components {
             request_id: string;
             applied_revision: number;
             deleted: boolean;
+        };
+        /**
+         * @description * `set` - set
+         *     * `delete` - delete
+         * @enum {string}
+         */
+        SourceCredentialInputActionEnum: "set" | "delete";
+        SourceCredentialInputRequest: {
+            action: components["schemas"]["SourceCredentialInputActionEnum"];
+            source_key: components["schemas"]["ResearchSourceKeyEnum"];
+            alias: string;
+            secret?: string;
+            /** @default false */
+            confirm_delete: boolean;
         };
         SourceEventOutput: {
             /** Format: uuid */
@@ -19798,6 +19916,21 @@ export interface components {
             page: number;
             page_size: number;
             results: components["schemas"]["SourceEventOutput"][];
+        };
+        /**
+         * @description * `test` - test
+         * @enum {string}
+         */
+        SourceProbeInputActionEnum: "test";
+        SourceProbeInputRequest: {
+            expected_version: string;
+            action: components["schemas"]["SourceProbeInputActionEnum"];
+            source_key: components["schemas"]["ResearchSourceKeyEnum"];
+        };
+        SourceRegistryInputRequest: {
+            expected_version: string;
+            adapters: components["schemas"]["SourceAdapterInputRequest"][];
+            credential?: components["schemas"]["SourceCredentialInputRequest"];
         };
         StatementInputRequest: {
             proposition: string;
@@ -27244,6 +27377,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecoveryReceipt"];
+                };
+            };
+        };
+    };
+    catalog_admin_research_sources_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchSourceSnapshot"];
+                };
+            };
+        };
+    };
+    catalog_admin_research_sources_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceRegistryInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SourceRegistryInputRequest"];
+                "multipart/form-data": components["schemas"]["SourceRegistryInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchSourceSnapshot"];
+                };
+            };
+        };
+    };
+    catalog_admin_research_sources_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceProbeInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SourceProbeInputRequest"];
+                "multipart/form-data": components["schemas"]["SourceProbeInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchSourceProbeResult"];
+                };
+            };
+        };
+    };
+    catalog_admin_research_sources_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSourceFenceInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSourceFenceInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedSourceFenceInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchSourceSnapshot"];
                 };
             };
         };

@@ -91,6 +91,8 @@ def set_provider_secret(
     actor,
     request_id: str = "",
 ) -> ProviderCredentialSecret:
+    from catalog.services.query_lexicon.mutations import acquire_entity_lock
+    acquire_entity_lock('provider_configuration', 'research_source_registry')
     normalized = normalize_secret_alias(alias)
     if purpose not in ProviderCredentialSecret.Purpose.values:
         raise ProviderSecretError("invalid_purpose", "Provider credential 用途无效。")
@@ -131,6 +133,8 @@ def set_provider_secret(
 
 @transaction.atomic
 def delete_provider_secret(*, alias: object, actor, request_id: str = "") -> bool:
+    from catalog.services.query_lexicon.mutations import acquire_entity_lock
+    acquire_entity_lock('provider_configuration', 'research_source_registry')
     normalized = normalize_secret_alias(alias)
     row = ProviderCredentialSecret.objects.select_for_update().filter(alias=normalized).first()
     if row is None:

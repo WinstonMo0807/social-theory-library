@@ -314,6 +314,7 @@ SOURCE_SPECS = (
 )
 
 SOURCE_SPEC_BY_KEY = {row.key: row for row in SOURCE_SPECS}
+SOURCE_KEY_CHOICES = tuple(SOURCE_SPEC_BY_KEY)
 
 
 def _setting_values(name: str) -> set[str]:
@@ -918,8 +919,12 @@ def update_research_source_registry(
 ) -> dict[str, Any]:
     if not isinstance(updates, list) or not 1 <= len(updates) <= len(SOURCE_SPECS):
         raise ResearchSourceError("invalid_document", "adapters 必须是有界配置列表。")
+    from catalog.services.query_lexicon.mutations import acquire_entity_lock
+    acquire_entity_lock('provider_configuration', REGISTRY_SETTING_KEY)
+    list(SiteSetting.objects.select_for_update().filter(key=REGISTRY_SETTING_KEY))
     before_document = _stored_document()
     adapters = dict(before_document.get("adapters") or {})
+    seen = set()
     for value in updates:
         if not isinstance(value, dict):
             raise ResearchSourceError("invalid_document", "每个 adapter 配置必须是对象。")
@@ -929,8 +934,13 @@ def update_research_source_registry(
         key = str(value.get("key") or "").strip().casefold()
         if key not in SOURCE_SPEC_BY_KEY:
             raise ResearchSourceError("source_unknown", "Research Source Adapter 不存在。")
+        if key in seen or set(value) - {'key', 'enabled', 'endpoint_alias', 'credential_alias'}:
+            raise ResearchSourceError('invalid_document', '来源不能重复，且只能提交当前可编辑字段。')
+        seen.add(key)
         current = dict(adapters.get(key) or {})
         if "enabled" in value:
+            if type(value['enabled']) is not bool:
+                raise ResearchSourceError('invalid_document', '来源启用状态必须为布尔值。')
             current["enabled"] = bool(value["enabled"])
         alias_fields = {"endpoint_alias", "credential_alias"}.intersection(value)
         if alias_fields and not allow_sensitive_aliases:
@@ -946,6 +956,10 @@ def update_research_source_registry(
             raise ResearchSourceError("alias_not_supported", "该 Research Source 不支持 credential alias。")
         for field_name in alias_fields:
             current[field_name] = _validated_alias(value.get(field_name), field_name=field_name)
+        if 'credential_alias' in alias_fields and current['credential_alias']:
+            credential = ProviderCredentialSecret.objects.filter(alias=current['credential_alias']).first()
+            if credential and (credential.purpose != 'research_source' or credential.provider_key != key):
+                raise ResearchSourceError('alias_scope', '此凭据别名属于另一用途或来源，请为当前来源使用独立别名。')
         adapters[key] = current
     document = {
         "version": REGISTRY_VERSION,
