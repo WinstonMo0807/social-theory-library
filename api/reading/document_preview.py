@@ -9,7 +9,6 @@ from uuid import uuid4
 
 from celery import shared_task
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -71,7 +70,8 @@ def status(audit):
 
 @transaction.atomic
 def command(user, pk, purpose, data):
-    get_user_model().objects.select_for_update().get(pk=user.pk)
+    from .privacy import command_owner
+    user = command_owner(user)
     audit = owned(CitationAudit, user, pk, lock=True)
     if audit.purpose != purpose:
         raise NotFound("私人记录类型不符。")

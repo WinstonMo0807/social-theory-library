@@ -238,3 +238,26 @@ def test_document_does_not_trust_a_stale_owner_filtered_snapshot(reader_user):
     CitationAudit.objects.filter(pk=audit.pk).update(generation=audit.generation + 1)
     with pytest.raises(research.ResearchConflict):
         preview.document(audit, state["generation"])
+
+
+@pytest.mark.parametrize("change", [{"is_active": False}, {"token_version": 17}])
+def test_preview_command_rechecks_account_after_obtaining_lock(reader_user, change):
+    from django.contrib.auth import get_user_model
+    from rest_framework.exceptions import PermissionDenied
+    audit, _ = audit_for(reader_user)
+    get_user_model().objects.filter(pk=reader_user.pk).update(**change)
+    with pytest.raises(PermissionDenied):
+        preview.command(reader_user, audit.pk, "manuscript", command(audit))
+    audit.refresh_from_db()
+    assert not audit.preview_state and not audit.preview_ciphertext
+
+
+@pytest.mark.parametrize("purpose,path", [("manuscript", "citation-audits"), ("private_source", "citation-sources")])
+def test_preview_routes_reject_a_different_expected_owner(api_client, reader_user, admin_user, purpose, path):
+    audit, _ = audit_for(reader_user, purpose)
+    api_client.force_authenticate(reader_user)
+    url = f"/api/reading/{path}/{audit.pk}/preview/"
+    headers = {"HTTP_X_READER_OWNER": str(admin_user.pk)}
+    assert api_client.get(url, **headers).status_code == 403
+    assert api_client.post(url, command(audit), format="json", **headers).status_code == 403
+    assert api_client.get(url + "file/?generation=1", **headers).status_code == 403

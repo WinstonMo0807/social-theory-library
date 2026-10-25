@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { PdfCanvas } from "@/components/pdf-canvas";
 import { subscribeToSessionChanges } from "@/lib/api";
-import { citationPreviewPath, commandCitationPreview, readCitationPreviewPdf, type CitationPreviewKind, type CitationPreviewStatus } from "@/lib/api/citation-preview.client";
+import { citationPreviewPath, commandCitationPreview, readCitationPreviewPdf, readCitationPreviewStatus, type CitationPreviewKind, type CitationPreviewStatus } from "@/lib/api/citation-preview.client";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 
@@ -11,32 +11,33 @@ import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 export function CitationDocxPreview({ id, ownerId, kind, sourceGeneration, fallback }: {
   id: string; ownerId: string; kind: CitationPreviewKind; sourceGeneration: number; fallback: ReactNode;
 }) {
-  const preview = usePersistentWorkspace<CitationPreviewStatus>(citationPreviewPath(kind, id), ownerId, data => data.poll_after_ms);
+  const load = useCallback((_path: string, signal: AbortSignal) => readCitationPreviewStatus(ownerId, kind, id, signal), [ownerId, kind, id]);
+  const preview = usePersistentWorkspace<CitationPreviewStatus>(citationPreviewPath(kind, id), ownerId, data => data.poll_after_ms, load);
   const [file, setFile] = useState<{ key: string; url: string } | null>(null), [error, setError] = useState("");
   const [page, setPage] = useState(1), [zoom, setZoom] = useState(100), [attempt, setAttempt] = useState(0);
   const [loadedPages, setLoadedPages] = useState(0);
   const autoStarted = useRef("");
   const data = preview.data;
   const current = Boolean(data && data.audit_id === id && data.source_generation === sourceGeneration);
-  const key = current && data?.status === "completed" ? `${id}:${sourceGeneration}:${data.content_hash}:${data.preview_generation}` : "";
+  const key = current && data?.status === "completed" ? `${ownerId}:${kind}:${id}:${sourceGeneration}:${data.content_hash}:${data.preview_generation}` : "";
   const url = key && file?.key === key ? file.url : "";
   const active = data?.status === "queued" || data?.status === "running";
   const previewGeneration = data?.preview_generation;
   const pageCount = loadedPages || data?.page_count || 0;
   const { mutate } = preview;
   useEffect(() => {
-    if (!current || !data?.enabled || !["not_generated", "source_changed"].includes(data.status) || autoStarted.current === `${id}:${sourceGeneration}`) return;
-    autoStarted.current = `${id}:${sourceGeneration}`;
+    if (!current || !data?.enabled || !["not_generated", "source_changed"].includes(data.status) || autoStarted.current === `${ownerId}:${kind}:${id}:${sourceGeneration}`) return;
+    autoStarted.current = `${ownerId}:${kind}:${id}:${sourceGeneration}`;
     const body = { action: "generate" as const, expected_preview_revision: data.preview_revision, source_generation: sourceGeneration };
-    void mutate(JSON.stringify(body), (_latest, request_id) => commandCitationPreview(kind, id, { ...body, request_id })).catch(() => {});
-  }, [current, data, sourceGeneration, id, kind, mutate]);
+    void mutate(JSON.stringify(body), (_latest, request_id) => commandCitationPreview(ownerId, kind, id, { ...body, request_id })).catch(() => {});
+  }, [current, data, sourceGeneration, id, kind, ownerId, mutate]);
   useEffect(() => {
     if (!key || !previewGeneration) return;
     let alive = true, objectUrl = "";
     const request = new AbortController();
     const clear = () => { alive = false; request.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); setFile(null); };
     const off = subscribeToSessionChanges(clear);
-    void withPrivateOwner(ownerId, () => readCitationPreviewPdf(kind, id, previewGeneration, request.signal), request.signal).then(blob => {
+    void withPrivateOwner(ownerId, () => readCitationPreviewPdf(ownerId, kind, id, previewGeneration, request.signal), request.signal).then(blob => {
       if (!alive) return;
       objectUrl = URL.createObjectURL(blob); setFile({ key, url: objectUrl }); setPage(1); setLoadedPages(0); setError("");
     }).catch(reason => { if (alive) setError(reason instanceof Error ? reason.message : "分页预览读取失败，解析文字仍可查看。"); });
@@ -45,7 +46,7 @@ export function CitationDocxPreview({ id, ownerId, kind, sourceGeneration, fallb
   async function command(action: "generate" | "cancel") {
     if (!current || !data || preview.pending) return;
     const body = { action, expected_preview_revision: data.preview_revision, source_generation: sourceGeneration };
-    try { await mutate(JSON.stringify(body), (_latest, request_id) => commandCitationPreview(kind, id, { ...body, request_id })); }
+    try { await mutate(JSON.stringify(body), (_latest, request_id) => commandCitationPreview(ownerId, kind, id, { ...body, request_id })); }
     catch { /* Workspace retains the explicit conflict and current version. */ }
   }
   return <div className="stl4-audit-docx-preview" aria-label="DOCX 分页预览">

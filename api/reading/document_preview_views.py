@@ -48,11 +48,11 @@ class CitationPreviewView(PrivateResponses, APIView):
             raise NotFound("私人稿件不存在或不可访问。")
         return record
 
-    @extend_schema(responses=PreviewStatus)
+    @extend_schema(parameters=[OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER)], responses=PreviewStatus)
     def get(self, request, pk):
         return Response(document_preview.status(self.record(request.user, pk)))
 
-    @extend_schema(request=PreviewCommand, responses={202: PreviewStatus})
+    @extend_schema(parameters=[OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER)], request=PreviewCommand, responses={202: PreviewStatus})
     def post(self, request, pk):
         schema = PreviewCommand(data=request.data)
         schema.is_valid(raise_exception=True)
@@ -62,7 +62,7 @@ class CitationPreviewView(PrivateResponses, APIView):
 
 
 class CitationPreviewFileView(CitationPreviewView):
-    @extend_schema(parameters=[OpenApiParameter("generation", int, required=True)], responses={(200, "application/pdf"): OpenApiTypes.BINARY})
+    @extend_schema(parameters=[OpenApiParameter("generation", int, required=True), OpenApiParameter("X-Reader-Owner", str, location=OpenApiParameter.HEADER)], responses={(200, "application/pdf"): OpenApiTypes.BINARY})
     def get(self, request, pk):
         schema = serializers.IntegerField(min_value=1)
         generation = schema.run_validation(request.query_params.get("generation"))

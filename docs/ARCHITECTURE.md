@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-26 DOCX分页预览的账户绑定与撤销复核
+
+原CitationAudit派生预览全部前端请求携带X-Reader-Owner，禁自动刷新重发；生成/取消复用privacy.command_owner在账户锁内复核停用和token_version。无新表、迁移或并行服务。原隔离转换服务和加密派生字段保留，未运行转换或部署。
+
+
 ## 2026-10-26 中断页分页
 
 处理工作区增加failed-pages/<task_id>只读分页，重用failed_ocr_pages与task_version，限制OCR任务和VIEW_SYSTEM_STATUS；前端按原任务身份/版本保存页序选择并沿原重试POST，不增模型或任务实现。

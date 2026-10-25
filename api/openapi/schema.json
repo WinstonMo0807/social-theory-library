@@ -23477,6 +23477,13 @@
                 "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "in": "path",
                         "name": "id",
                         "schema": {
@@ -23514,6 +23521,13 @@
                 "operationId": "reading_citation_audits_preview_create",
                 "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     {
                         "in": "path",
                         "name": "id",
@@ -23574,6 +23588,13 @@
                 "operationId": "reading_citation_audits_preview_file_retrieve",
                 "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     {
                         "in": "query",
                         "name": "generation",
@@ -24144,6 +24165,13 @@
                 "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
                     {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "in": "path",
                         "name": "id",
                         "schema": {
@@ -24181,6 +24209,13 @@
                 "operationId": "reading_citation_sources_preview_create",
                 "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     {
                         "in": "path",
                         "name": "id",
@@ -24241,6 +24276,13 @@
                 "operationId": "reading_citation_sources_preview_file_retrieve",
                 "description": "Compatibility name used by the existing owner-scoped workspaces.",
                 "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     {
                         "in": "query",
                         "name": "generation",

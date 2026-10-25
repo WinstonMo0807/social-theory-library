@@ -19,6 +19,7 @@ async function previewFixture(page: Page) {
     if (path === `/api/reading/citation-audits/${id}/manuscript/`) return response({ audit_id: id, manuscript_revision: 1, generation: 1, revision: 1, status: "completed", count: 1, page: 1, next_page: null,
       units: [{ id: "synthetic-unit", index: 0, text: "真实位置的合成解析文字", location: { part: "word/document.xml", paragraph: 7, start: 0, end: 13 } }] });
     if (path === `/api/reading/citation-audits/${id}/preview/`) {
+      expect(request.headers()["x-reader-owner"]).toBe("1");
       if (request.method() === "POST") {
         const body = request.postDataJSON(); state.requests.push(body);
         if (state.conflict) { state.preview.preview_revision += 1; return response({ detail: "合成预览修订冲突" }, 409); }

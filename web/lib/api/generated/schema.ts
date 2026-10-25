@@ -33651,7 +33651,9 @@ export interface operations {
     reading_citation_audits_preview_retrieve: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Reader-Owner"?: string;
+            };
             path: {
                 id: string;
             };
@@ -33672,7 +33674,9 @@ export interface operations {
     reading_citation_audits_preview_create: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Reader-Owner"?: string;
+            };
             path: {
                 id: string;
             };
@@ -33701,7 +33705,9 @@ export interface operations {
             query: {
                 generation: number;
             };
-            header?: never;
+            header?: {
+                "X-Reader-Owner"?: string;
+            };
             path: {
                 id: string;
             };
@@ -34000,7 +34006,9 @@ export interface operations {
     reading_citation_sources_preview_retrieve: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Reader-Owner"?: string;
+            };
             path: {
                 id: string;
             };
@@ -34021,7 +34029,9 @@ export interface operations {
     reading_citation_sources_preview_create: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Reader-Owner"?: string;
+            };
             path: {
                 id: string;
             };
@@ -34050,7 +34060,9 @@ export interface operations {
             query: {
                 generation: number;
             };
-            header?: never;
+            header?: {
+                "X-Reader-Owner"?: string;
+            };
             path: {
                 id: string;
             };
