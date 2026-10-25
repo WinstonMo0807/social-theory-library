@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import closing
 from pathlib import Path
 import hashlib
 import os
 import re
-import shutil
+import sqlite3
 import subprocess
+import time
 
 from django.db import connection
 from django.db.migrations.loader import MigrationLoader
@@ -192,20 +194,36 @@ def _postgres_connection_arguments(configuration: dict) -> list[str]:
     ]
 
 
-def create_database_dump(destination: Path, database_connection=connection) -> DatabaseDumpResult:
+def create_database_dump(destination: Path, database_connection=connection, *, snapshot: str | None = None) -> DatabaseDumpResult:
     engine = str(database_connection.settings_dict.get("ENGINE") or "")
     if engine.endswith("sqlite3"):
+        if snapshot is not None:
+            raise DatabaseBackupError("PostgreSQL snapshot cannot be used for SQLite.")
         source = Path(database_connection.settings_dict["NAME"]).resolve()
         target = destination / "database.sqlite3"
-        shutil.copy2(source, target)
+        if not source.is_file():
+            raise DatabaseBackupError("SQLite backup requires an existing file database.")
+        # Copying only the live main file omits committed WAL pages. SQLite's
+        # backup API produces one consistent image while readers/writers continue.
+        started = time.monotonic()
+        def progress(status, remaining, total):
+            if time.monotonic() - started > 3600:
+                raise DatabaseBackupError("SQLite backup exceeded its one-hour limit.")
+        with target.open('xb'):
+            pass
+        with closing(sqlite3.connect(source.as_uri() + '?mode=ro', uri=True, timeout=5)) as original, \
+             closing(sqlite3.connect(str(target), timeout=5)) as output:
+            original.backup(output, pages=256, progress=progress, sleep=.1)
         return DatabaseDumpResult(
             filename=target.name,
             byte_size=target.stat().st_size,
             sha256=file_sha256(target),
-            metadata={"engine": "sqlite3"},
+            metadata={"engine": "sqlite3", "snapshot_scope": "sqlite-online-backup"},
         )
     if not engine.endswith("postgresql"):
         raise DatabaseBackupError(f"暂不支持备份数据库引擎：{engine}")
+    if snapshot is not None and (not isinstance(snapshot, str) or not re.fullmatch(r'[0-9A-Fa-f-]{1,128}', snapshot)):
+        raise DatabaseBackupError("Invalid exported PostgreSQL snapshot identity.")
 
     runtime = inspect_postgres_backup_runtime(database_connection)
     configuration = database_connection.settings_dict
@@ -217,6 +235,7 @@ def create_database_dump(destination: Path, database_connection=connection) -> D
         "--no-owner",
         "--file",
         str(target),
+        *(["--snapshot", snapshot] if snapshot is not None else []),
         *_postgres_connection_arguments(configuration),
         str(configuration.get("NAME") or ""),
     ]
@@ -253,6 +272,7 @@ def create_database_dump(destination: Path, database_connection=connection) -> D
         sha256=checksum,
         metadata={
             "engine": "postgresql",
+            "snapshot_scope": "shared-exported-snapshot" if snapshot is not None else "pg-dump-internal-snapshot",
             **runtime,
         },
     )
@@ -307,9 +327,9 @@ def restore_database_dump(
     return runtime
 
 
-def applied_migration_heads(database_connection=connection) -> list[str]:
-    loader = MigrationLoader(database_connection, ignore_no_migrations=True)
-    applied = set(loader.applied_migrations)
+def applied_migration_heads(database_connection=connection, *, applied_migrations=None) -> list[str]:
+    loader = MigrationLoader(database_connection if applied_migrations is None else None, ignore_no_migrations=True)
+    applied = set(loader.applied_migrations if applied_migrations is None else applied_migrations)
     heads = []
     for node in sorted(applied):
         graph_node = loader.graph.node_map.get(node)

@@ -7931,6 +7931,7 @@ export interface components {
          */
         BackupJobStatusEnum: "queued" | "running" | "completed" | "failed";
         BackupOutput: {
+            consistency_detail?: string;
             /** Format: uuid */
             id: string;
             status: string;

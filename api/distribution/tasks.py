@@ -13,11 +13,10 @@ from catalog.models import Asset
 
 from .models import BackupJob, CloudObject
 from .database_backup import (
-    applied_migration_heads,
-    create_database_dump,
     file_sha256,
     redact_backup_error,
 )
+from .backup_snapshot import capture_backup_snapshot
 from .services import sync_asset_to_cloud
 
 
@@ -111,36 +110,27 @@ def create_backup_archive(self, job_id):
         with tempfile.TemporaryDirectory(prefix="library-backup-", dir=destination) as temporary:
             staging = Path(temporary)
             _require_backup_delivery(job)
-            database = create_database_dump(staging)
+            database, migration_heads, assets = capture_backup_snapshot(staging)
             _require_backup_delivery(job)
-            migration_heads = applied_migration_heads()
-            assets = []
-            for asset in Asset.objects.select_related("edition__work").all().iterator(chunk_size=200):
+            storage = Asset._meta.get_field("file").storage
+            for record in assets:
                 _require_backup_delivery(job)
-                source = Path(asset.file.path)
-                record = {
-                    "id": str(asset.id),
-                    "edition_id": str(asset.edition_id),
-                    "title": asset.edition.work.title,
-                    "kind": asset.kind,
-                    "relative_path": asset.file.name,
-                    "sha256": asset.sha256,
-                    "byte_size": asset.byte_size,
-                    "exists": source.exists(),
-                }
-                assets.append(record)
-                if job.include_originals and asset.kind == Asset.Kind.ORIGINAL:
+                source = Path(storage.path(record["relative_path"]))
+                record["exists"] = source.exists()
+                if job.include_originals and record["kind"] == Asset.Kind.ORIGINAL:
+                    identifier = record["id"]
                     if not source.is_file():
-                        raise RuntimeError(f"原始文件 {asset.id} 不存在，未生成不完整备份。")
+                        raise RuntimeError(f"原始文件 {identifier} 不存在，未生成不完整备份。")
                     original_root = (staging / "originals").resolve()
-                    target = (original_root / asset.file.name).resolve()
+                    target = (original_root / record["relative_path"]).resolve()
                     if original_root not in target.parents:
-                        raise RuntimeError(f"原始文件 {asset.id} 的备份相对路径无效。")
+                        raise RuntimeError(f"原始文件 {identifier} 的备份相对路径无效。")
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(source, target)
-                    if (not asset.sha256 or _sha256(target) != asset.sha256
-                            or (asset.byte_size and target.stat().st_size != asset.byte_size)):
-                        raise RuntimeError(f"原始文件 {asset.id} 的备份副本校验失败，源文件保留。")
+                    with source.open("rb") as original, target.open("xb") as output:
+                        shutil.copyfileobj(original, output, length=1024 * 1024)
+                    if (not record["sha256"] or _sha256(target) != record["sha256"]
+                            or (record["byte_size"] and target.stat().st_size != record["byte_size"])):
+                        raise RuntimeError(f"原始文件 {identifier} 的备份副本校验失败，源文件保留。")
             manifest = {
                 "schema": 1,
                 "created_at": backup_created_at.isoformat(),
@@ -153,10 +143,10 @@ def create_backup_archive(self, job_id):
                 "assets": assets,
                 "restore_note": "恢复前需校验归档哈希，并在维护窗口内导入数据库。",
             }
-            (staging / "manifest.json").write_text(
-                json.dumps(manifest, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
+            if len(manifest_bytes) > 16 * 1024**2:
+                raise RuntimeError("备份清单超出原归档校验器上限，未生成无法完整校验的备份。")
+            (staging / "manifest.json").write_bytes(manifest_bytes)
             with archive.open("xb") as archive_output:
                 owns_archive = True
                 with tarfile.open(fileobj=archive_output, mode="w:gz") as tar:

@@ -1,5 +1,17 @@
 # 中断恢复最短路径
 
+## 2026-10-25 M27数据库与原件清单同一快照
+
+前置09c3220。回查原备份调用链发现数据库导出后另读实时Asset与迁移记录，并发入库会让二者不在同一时间点。现复用原备份任务，PostgreSQL在独立只读REPEATABLE READ事务导出快照，原pg_dump通过--snapshot读取同一快照；馆藏清单与迁移记录在同一事务读取，结束后才复制原件/更新任务。使用原Asset基础管理器覆盖历史记录，清单ID、文件名、SHA与大小均来自快照；复制原件仍逐份比对该SHA，缺失/变化失败保留原件，原迟到结果保护继续生效。
+
+SQLite兼容路径改用标准backup API，避免仅复制数据库主文件漏掉已提交WAL页；清单与迁移记录直接从生成的只读数据库副本读取，不再补读实时数据。原件目标用独占创建避免重名覆盖，旧大小0未知值仍沿SHA核对。清单条数与16MiB大小受原校验器上限约束，超限明确失败，不产生被静默截断的备份。无需新表/迁移或更换备份队列。
+
+新归档完成后记录catalog_inventory_snapshot，详情只展示原记录的共享快照范围；旧归档没有该标记时明确待隔离核对，不伪造新证据。该标记不证明外部搜索索引、派生文件或整站恢复已通过。原PostgreSQL导出仍有一小时时限，快照期间会保留数据库旧版本，真实NAS资源与并发仍待验收。
+
+2f98f2禁连数据库契约0错误/10既有警告，414路径类型同步；ec0af7执行tmp/stl4-backup-snapshot-static-20261025.py完成6 Python AST/compile、1条SQLite清单SQL编译和目标diff0。PostgreSQL驱动仍因Windows应用控制不可加载，本段未声称其编译/运行通过。b71893→54711d目标ESLint与TypeScript noEmit0。WAL已提交内容、导出快照参数、事务内清单/迁移读取与超限失败定义已编写，未执行测试、数据库连接、pg_dump、真实文件复制、备份、恢复、浏览器或部署。
+
+依据原技术栈核对[PostgreSQL16 pg_dump快照参数](https://www.postgresql.org/docs/16/app-pgdump.html)、[快照同步函数](https://www.postgresql.org/docs/16/functions-admin.html#FUNCTIONS-SNAPSHOT-SYNCHRONIZATION)与[Python SQLite backup](https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.backup)。管理整类自问：边上传边备份是否漏原件；历史文件是否被默认过滤；旧备份是否假称新能力；清单过大会否生成不可校验归档。源码闭环已接，正式运行仍待。继续增量/独立索引备份及全站原队列，内网预览未启动，未到公网切换前条件。
+
 ## 2026-10-25 M27签名恢复报告全目录分页
 
 前置6945f9c。本段实际重读唯一PDF162备份历史与恢复准备。原restore_reports先取任意500文件再显示50条，旧报告可能不可达；改为原签名文件目录游标分页，总列表和单归档详情共用RestoreHistory。每页只打开20份候选报告，扫描目录名称用有界堆选取下一窗口；不新建报告数据库或执行恢复。原摘要读取最近50文件窗口，明确范围与受限状态，不能用空窗口断言无演练。按归档SHA过滤仍能继续经过不匹配/损坏文件窗口，导出仅本页。

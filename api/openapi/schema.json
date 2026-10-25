@@ -36407,6 +36407,9 @@
             "BackupOutput": {
                 "type": "object",
                 "properties": {
+                    "consistency_detail": {
+                        "type": "string"
+                    },
                     "id": {
                         "type": "string",
                         "format": "uuid"

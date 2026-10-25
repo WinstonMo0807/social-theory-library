@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 原备份共享快照
+
+PostgreSQL原备份任务在只读REPEATABLE READ事务导出快照给pg_dump，Asset清单及迁移记录同事务读取；复制原件与任务状态写入在事务结束后进行。SQLite使用在线backup副本并从副本读取清单。保留原任务、归档格式和恢复命令，新增元数据仅描述本次快照范围。未执行迁移、备份或生产操作，外部索引与增量能力仍为单独待办。
+
 ## 2026-10-25 OCR配置并发保护
 
 原ocr-runtime接口与SiteSetting复用，视图移入catalog/ocr_runtime_settings.py并保留views导入兼容。PUT使用配置指纹、用户/设置行锁与实体锁；PATCH仅推进旧版本以阻止迟到保存，已完成的新值不撤回。M26与处理设置共享OcrRuntimeEditor，不存客户端配置副本，按账户只保存未确认版本指纹。无新模型或迁移。运行事务与部署仍待验收。

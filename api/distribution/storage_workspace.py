@@ -81,6 +81,8 @@ def verification_payload(row):
 
 def backup_payload(row, *, latest=None):
     manifest = row.manifest if isinstance(row.manifest, dict) else {}
+    database_metadata = manifest.get('database_metadata')
+    catalog_snapshot = isinstance(database_metadata, dict) and database_metadata.get('catalog_inventory_snapshot') is True
     size = manifest.get("archive_bytes")
     duration = (row.completed_at - row.started_at).total_seconds() if row.completed_at and row.started_at else None
     error = "备份未完成，现有归档及原件保留。请核对备份目录、数据库备份工具与后台任务。" if row.status == "failed" else ""
@@ -88,6 +90,8 @@ def backup_payload(row, *, latest=None):
     return {"id": str(row.pk), "status": row.status, "status_label": "执行状态待核对" if stalled else row.get_status_display(),
         "stalled": stalled, "version": row.updated_at.isoformat(),
         "include_originals": row.include_originals, "scope": "数据库、文件清单与原件" if row.include_originals else "数据库与文件清单",
+        "consistency_detail": ("此归档记录数据库、馆藏文件清单与迁移记录来自同一快照；原件按该清单的哈希复制，恢复仍须隔离核对。" if catalog_snapshot else
+                               "此记录尚未提供数据库与馆藏清单共享快照的证据。旧备份不会自动升级此标记，须在隔离恢复时核对。"),
         "archive_name": Path(row.archive_path).name if row.archive_path else "尚未生成归档", "location": "配置的 NAS 备份目录",
         "archive_bytes": size if isinstance(size, int) and size >= 0 else None,
         "checksum": row.checksum, "duration_seconds": max(0, round(duration)) if duration is not None else None,

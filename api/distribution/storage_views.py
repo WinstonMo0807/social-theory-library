@@ -78,6 +78,7 @@ class BackupVerificationOutput(serializers.Serializer):
 
 
 class BackupOutput(serializers.Serializer):
+    consistency_detail = serializers.CharField(required=False)
     id = serializers.UUIDField()
     status = serializers.CharField()
     status_label = serializers.CharField()
