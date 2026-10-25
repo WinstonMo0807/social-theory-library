@@ -9,6 +9,7 @@ export function supportSection(value: string | undefined): SupportSection {
 }
 export type HelpArticle = { title: string; intro: string; steps: { id: string; title: string; body: string }[] };
 export const helpArticles: Record<string, HelpArticle> = {
+  terms: { title: "使用条款", intro: "开放原则、资源来源与使用边界。", steps: [] },
   search: { title: "搜索资料", intro: "从书名、作者、概念或问题开始，逐步回到可核对的来源。", steps: [
     { id: "query", title: "输入检索内容", body: "在搜索框输入书名、作者、概念或你记得的原文。先用明确词语检索，再根据结果调整范围。热门搜索来自公开汇总，不代表馆藏一定覆盖该问题。" },
     { id: "scope", title: "选择结果范围", body: "探索页分别提供馆藏、观点、原文证据与提问入口。需要找一本书时先看馆藏；需要比较论述时查看观点或原文证据。" },

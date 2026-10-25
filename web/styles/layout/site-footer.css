@@ -19,3 +19,6 @@
   margin: 0;
   text-align: right;
 }
+
+.site-footer.site-footer--audit { display: flex; justify-content: center; min-height: 46px; width: 100%; padding: 12px 18px; border: 0; background: var(--night-white, #fff); color: var(--night-muted, #5a6b88); font: 12px/1.5 var(--serif); }
+.site-footer.site-footer--audit nav { justify-content: center; flex-wrap: wrap; gap: 12px 26px; }

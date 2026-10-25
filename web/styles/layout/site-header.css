@@ -1,20 +1,36 @@
-/* Shared brand primitives retained when retiring the obsolete global design-v2 overrides. */
-.brand-lockup { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: var(--night-ink, #24221f); }
-.brand-mark { flex: 0 0 auto; width: 34px; height: 28px; color: currentColor; overflow: visible; }
+/* Final PDF 10 / 208. Brand artwork is extracted from the user's final PDF. */
+.brand-lockup { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: var(--night-ink, #071d37); }
+.brand-mark { flex: 0 0 auto; width: 34px; height: auto; object-fit: contain; mix-blend-mode: multiply; }
+.brand-type { display: flex; flex-direction: column; gap: 3px; }
+.brand-name { display: block; font: 14px/1.2 var(--serif); letter-spacing: .08em; }
+.brand-reference-type { display: none; }
 .reader-logo .reader-brand-lockup { display: inline-flex; align-items: center; gap: 9px; }
 .reader-logo .reader-brand-lockup .brand-mark { width: 30px; height: 24px; }
 .reader-logo .reader-brand-lockup .brand-lockup { display: contents; }
 
-.site-header {
+.site-header[data-ui-scope="stl4"] {
   position: relative;
   z-index: var(--stl-z-header);
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  min-height: var(--header-height);
-  padding: 15px var(--stl-space-7) 10px;
-  background: var(--paper);
+  gap: 34px;
+  min-height: 70px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 11px 4.4%;
+  background: var(--night-white, #fff);
+  color: var(--night-ink, #071d37);
+  border-bottom: 1px solid var(--night-line, #efefed);
 }
+.site-header[data-ui-scope="stl4"] .brand-mark { width: 61px; height: 45px; }
+.site-header[data-ui-scope="stl4"] .brand-lockup { gap: 6px; }
+.site-header[data-ui-scope="stl4"] .brand-reference-type { display: block; width: 259px; height: 45px; mix-blend-mode: multiply; }
+.site-header[data-ui-scope="stl4"] .brand-reference-type img { display: block; width: 100%; height: 100%; }
+.site-header[data-ui-scope="stl4"] .brand-type > :is(.wordmark,.brand-name) { display: none; }
+.site-header[data-stl-home="true"] { min-height: 60px; padding-block: 8px; }
+.site-header[data-stl-home="true"] .brand-reference-type { width: 192px; height: 38px; }
+.site-header[data-stl-home="true"] .brand-mark { width: 54px; height: 40px; }
 
 .logo-link {
   width: fit-content;
@@ -24,17 +40,19 @@
   display: inline-flex;
   flex-direction: column;
   font-size: calc(16px + var(--font-bump));
-  font-weight: 850;
-  letter-spacing: -0.07em;
-  line-height: 0.82;
+  font-family: Georgia, var(--serif);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .desktop-nav {
   display: flex;
   align-items: center;
-  gap: 38px;
-  font-size: calc(var(--stl-type-body) + var(--font-bump));
-  font-weight: var(--stl-type-weight-strong);
+  gap: clamp(18px, 2.6vw, 34px);
+  justify-content: center;
+  white-space: nowrap;
+  font: 15px/1.5 var(--serif);
 }
 
 .desktop-nav a {
@@ -65,7 +83,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--stl-space-7);
+  gap: 20px;
 }
 
 .header-search,
@@ -77,6 +95,22 @@
 }
 
 .header-search {
-  font-size: calc(var(--stl-type-body) + var(--font-bump));
+  white-space: nowrap;
+  font: 15px/1.5 var(--serif);
+}
+.site-header[data-ui-scope="stl4"] :is(.menu-button,.theme-toggle,.header-search) { color: inherit; }
+.site-header[data-ui-scope="stl4"] .menu-button { display: inline-flex; }
+.site-header[data-ui-scope="stl4"] .header-return span { display: none; }
+:root[data-theme="dark"] .brand-mark, :root[data-theme="dark"] .brand-reference-type { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
+@media (max-width: 1120px) {
+  .site-header[data-ui-scope="stl4"] { grid-template-columns: 1fr auto; gap: 20px; }
+  .site-header[data-ui-scope="stl4"] .desktop-nav { display: none; }
+}
+@media (max-width: 700px) {
+  .site-header[data-ui-scope="stl4"] { min-height: 76px; padding: 9px 18px; gap: 10px; }
+  .site-header[data-ui-scope="stl4"] .brand-mark { width: 54px; height: 40px; }
+  .site-header[data-ui-scope="stl4"] .brand-reference-type { width: 75px; height: 55px; }
+  .site-header[data-ui-scope="stl4"] .header-search span { display: none; }
+  .site-header[data-ui-scope="stl4"] .header-actions { gap: 4px; }
 }
 @media (min-width:761px) { .site-header[data-stl-account=true] .reader-account-menu-toggle { display:none; } }

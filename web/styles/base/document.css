@@ -37,6 +37,9 @@ html[data-font-family="serif"] {
   position: absolute;
 }
 
+.route-content-transition[data-ui-scope="stl4"] { display: flex; flex-direction: column; min-height: calc(100svh - 70px); }
+.route-content-transition[data-ui-scope="stl4"] > .site-footer { margin-top: auto; }
+
 * {
   box-sizing: border-box;
 }

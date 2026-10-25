@@ -1,5 +1,10 @@
 # 中断恢复最短路径
 
+## 2026-10-26 第二批视觉修正进行中
+
+先读VISUAL_FIDELITY_20261026.md。当前已运行API r5/Discovery r2/Web r3，首次prepare_deep_preview.py已执行，不能重跑。品牌、首页插图和引文表单第一批已真实显示；旧外层scope覆盖及页脚、ReaderCenter修正已构建并部署r3，实际查看了标题颜色、字重和ReaderCenter空库状态。上文快照之后恢复不能重新打包r2覆盖新源码。账号与批注数据保持，不重建副本，不运行测试或公网操作。
+
+
 ## 2026-10-26 当前优先：真实前端视觉修正
 
 用户已授权浏览器直接对照内网和唯一PDF，并指出当前实际前端差异很大；不要继续声称视觉只差验收。先读CURRENT_PROGRESS顶部。原图10/208及当前citation截图已保存于tmp/pdfs/stl4-citation-20261018。品牌旧scope、中文隐藏和错误SVG是明确A。下一步修改共用品牌/页头和引文体检，再对照运行页面。当前预览未更新DEEP新镜像；API r5/Discovery r2已构建，prepare_deep_preview.py尚未运行，勿重复创建.env备份或重建副本。深度源码和制品说明见DEEP_RUNTIME.md。

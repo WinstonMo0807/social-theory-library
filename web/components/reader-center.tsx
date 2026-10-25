@@ -7,6 +7,8 @@ import {
   ArrowRight,
   Bookmark,
   BookOpen,
+  CalendarDays,
+  ChevronRight,
   Clock3,
   Download,
   FileText,
@@ -16,6 +18,7 @@ import {
   LogOut,
   LockKeyhole,
   Mail,
+  Plus,
   RefreshCw,
   Settings,
   StickyNote,
@@ -490,19 +493,19 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   return (
     <div className="reader-center">
       <div className="account-content">
+        <nav className="reader-center-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><span>读者中心</span></nav>
         <header className="reader-center-heading">
-          <div><p className="eyebrow">读者中心</p><h1>读者中心 <small className="reader-center-private"><LockKeyhole size={13} />仅本人可见</small></h1><p>继续阅读，整理笔记与研究。</p></div>
+          <div><h1>读者中心 <small className="reader-center-private"><LockKeyhole size={15} />仅本人可见</small></h1><p>继续阅读，整理笔记与研究。</p></div>
           <div className="reader-center-heading-actions">
             <div className="reader-center-create-links" aria-label="创建资料">
-              <Link href="/explore/opinions">＋ 新建研究</Link>
-              <Link href="/explore/original">新建笔记</Link>
-              <Link href="/account/plans">创建计划</Link>
+              <Link href="/explore/opinions"><Plus size={18} />新建研究</Link>
+              <Link href="/explore/original"><FileText size={18} />新建笔记</Link>
+              <Link href="/account/plans"><CalendarDays size={18} />创建计划</Link>
             </div>
-            <div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div>
           </div>
         </header>
         {active !== "概览" ? <ResearchCenterNav active={active === "书单" ? "lists" : undefined} counts={{ notes: resourceErrors.noteGroups ? undefined : noteGroups.length, plans: resourceErrors.plans ? undefined : readerData.plans.length, lists: resourceErrors.lists ? undefined : readerData.lists.length }} /> : null}
-        <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav></details>
+        <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav><div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div></details>
         {Array.from(topicCommands.memory.current.entries()).filter(([id, operation]) => operation.owner === String(session.user?.id) && (active !== "收藏" || !readerData.savedTopics.some(row => row.topic === id))).map(([id]) => <section key={id} className="form-message"><p>有一项主题收藏操作尚待核对，原请求与期望版本仍保留。</p><SaveTopicButton topicId={id} commands={topicCommands} onChange={() => setResourceAttempt(value => value + 1)} /></section>)}
 
         {active !== "概览" && resourcesLoading ? <p className="form-message" role="status">正在读取个人阅读资料……</p> : null}

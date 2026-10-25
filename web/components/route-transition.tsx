@@ -13,6 +13,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
   const pendingTimerRef = useRef<number | null>(null);
   const readerRoute = pathname.startsWith("/reader/");
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
+  const atlasRoute = pathname === "/" || pathname === "/account" || pathname === "/account/citation-audits";
   const routeKey = `${pathname}?${searchParams.toString()}`;
 
   const clearPendingNavigation = useCallback(() => {
@@ -81,7 +82,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={`route-content-transition ${readerRoute ? "reader-route" : ""}`}
-      data-ui-scope={exploreRoute ? "explore-frozen" : "editorial-v2"}
+      data-ui-scope={atlasRoute ? "stl4" : exploreRoute ? "explore-frozen" : "editorial-v2"}
       ref={containerRef}
     >
       {children}

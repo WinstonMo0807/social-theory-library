@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowUpRight,
   ArrowLeft,
@@ -30,29 +31,15 @@ import { Drawer } from "./ui/dialog";
 import { IconButton } from "./ui/controls";
 
 export function LibraryMark({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={`brand-mark ${className}`.trim()}
-      focusable="false"
-      viewBox="0 0 40 32"
-      role="img"
-    >
-      <path d="M3 7.5c5.4-.9 10.2.3 15.7 3.8v15.2C13.3 23.3 8.2 22.2 3 23.3V7.5Z" fill="currentColor" />
-      <path d="M37 7.5c-5.4-.9-10.2.3-15.7 3.8v15.2c5.4-3.2 10.5-4.3 15.7-3.2V7.5Z" fill="currentColor" />
-      <path d="M20 10.6v16.3" fill="none" stroke="var(--brand-mark-accent, #c9a96a)" strokeLinecap="round" strokeWidth="1.8" />
-      <circle cx="11" cy="5.2" r="2.3" fill="var(--brand-mark-accent, #c9a96a)" />
-      <circle cx="29" cy="5.2" r="2.3" fill="var(--brand-mark-accent, #c9a96a)" />
-      <path d="M6.2 10.1c1.4-1.2 3-1.8 4.8-1.8s3.4.6 4.8 1.8M24.2 10.1c1.4-1.2 3-1.8 4.8-1.8s3.4.6 4.8 1.8" fill="none" stroke="var(--brand-mark-accent, #c9a96a)" strokeLinecap="round" strokeWidth="1.5" />
-    </svg>
-  );
+  return <Image aria-hidden="true" alt="" className={`brand-mark ${className}`.trim()}
+    src="/brand/stl-mark-final-r2.png" width={61} height={45} unoptimized />;
 }
 
-export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }) {
+export function Wordmark({ config = defaultSiteConfig, home = false }: { config?: SiteConfig; home?: boolean }) {
   return (
     <span className="brand-lockup" aria-label={config.site_name}>
       <LibraryMark />
-      <span className="brand-type" aria-hidden="true"><span className="wordmark">
+      <span className="brand-type" aria-hidden="true"><picture className="brand-reference-type"><source media="(max-width: 700px)" srcSet="/brand/stl-wordmark-mobile-final-r2.png" /><Image src={home ? "/brand/stl-wordmark-home-final-r2.png" : "/brand/stl-wordmark-desktop-final-r2.png"} alt="" width={home ? 192 : 259} height={home ? 38 : 45} unoptimized /></picture><span className="wordmark">
         {config.wordmark_lines.map((line) => (
           <span key={line}>{line}</span>
         ))}
@@ -64,7 +51,6 @@ export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }
 export function SiteHeader({ config = defaultSiteConfig, preview = false, reader = false, beforeLogout }: { config?: SiteConfig; preview?: boolean; reader?: boolean; beforeLogout?: () => boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
   const [open, setOpen] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const { pendingAction, startAction, finishAction } = useActionGuard();
@@ -130,11 +116,11 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-edit-section={preview ? "brand" : undefined}
       data-stl-home={pathname === "/" || preview ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : undefined}
-      className={exploreRoute ? "site-header" : "site-header site-header--editorial"}
-      data-ui-scope={exploreRoute ? "explore-frozen" : "editorial-v2"}
+      className="site-header"
+      data-ui-scope="stl4"
     >
       <Link className="logo-link" href="/" prefetch={false}>
-        <Wordmark config={config} />
+        <Wordmark config={config} home={pathname === "/" || preview} />
       </Link>
       <nav className="desktop-nav" aria-label="主导航">
         {headerNavigation.map(([href, label]) => {
@@ -153,7 +139,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
         })}
       </nav>
       <div className="header-actions">
-        {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>返回原页面</span></Link> : null}
+        {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label="返回原页面" title="返回原页面" href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>返回原页面</span></Link> : null}
         <Link className="header-search" href="/explore" prefetch={false}>
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>

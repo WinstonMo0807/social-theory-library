@@ -41,8 +41,8 @@ export function auditLocation(location?: AuditLocation) {
   return parts.join(" · ");
 }
 
-export function AuditFrame({ children }: { children: ReactNode }) {
-  return <div className="stl4-research-page stl4-audit-page"><div className="stl4-research-detail-shell">{children}</div></div>;
+export function AuditFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`stl4-research-page stl4-audit-page ${className}`.trim()}><div className="stl4-research-detail-shell">{children}</div></div>;
 }
 export function AuditGate({ next, children }: { next: string; children: (ownerId: string, retrySession: () => void) => ReactNode }) {
   const { state, retry } = useSessionBootstrap();
