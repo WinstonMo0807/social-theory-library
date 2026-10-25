@@ -22,7 +22,7 @@ from catalog.services.page_geometry import locator_geometry, native_geometry, va
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v4"
+PARSER_VERSION = "outline-v5"
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*录|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(r"^(?P<title>.+?)\s*(?:[.．·…_]{2,}|\s{2,}|\t)\s*(?P<label>\d{1,5}|[ivxlcdmIVXLCDM]{1,12})\s*$")
@@ -136,6 +136,7 @@ def extract_outline(asset, path, *, progress=None):
     segments and ambiguous repeated labels. A whole-book offset is never guessed.
     """
     import fitz
+    from catalog.services.outline_bookmarks import BookmarkObservations
     from catalog.services.outline_headings import styled_headings
     nodes, diagnostics, geometry, native_pages = [], [], {}, {}
     native_headings = []
@@ -145,6 +146,10 @@ def extract_outline(asset, path, *, progress=None):
     with fitz.open(str(path)) as document:
         if len(document) != asset.page_count:
             raise OutlineConflict("实际 PDF 页数与文件校验记录不一致，请重新校验文件后生成目录。")
+        bookmark_rows = document.get_toc(simple=False)
+        if len(bookmark_rows) > 20000:
+            raise ValueError("原生书签超过 20000 项，请分段校准；未保存截断结果。")
+        bookmark_observations = BookmarkObservations(bookmark_rows)
         for number, pdf_page in enumerate(document, start=1):
             if progress and (number == 1 or number % 10 == 0 or number == len(document)):
                 progress("native_headings", number, len(document))
@@ -153,10 +158,11 @@ def extract_outline(asset, path, *, progress=None):
             native_pages[number] = native_geometry(pdf_page)
             if number not in manual_pages:
                 blocks = pdf_page.get_text("dict", flags=fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES).get("blocks", [])
+                bookmark_observations.observe_blocks(number, blocks)
                 native_headings.extend((number, row) for row in styled_headings(blocks))
                 if len(native_headings) > 20000:
                     raise ValueError("字号标题候选超过 20000 项，请分段校准；未保存截断结果。")
-        for ordinal, entry in enumerate(document.get_toc(simple=False)):
+        for ordinal, entry in enumerate(bookmark_rows):
             level, title, page = entry[:3]
             title = _title(title)
             detail = entry[3] if len(entry) > 3 and isinstance(entry[3], dict) else {}
@@ -187,6 +193,8 @@ def extract_outline(asset, path, *, progress=None):
         if progress and (processed == 1 or processed % 20 == 0 or processed == len(pages)):
             progress("contents_and_headings", processed, len(pages))
         lines = [line.strip() for line in page["text"].splitlines() if line.strip()]
+        for line in lines:
+            bookmark_observations.observe(page["index"], line)
         matches = [ENTRY.match(line) for line in lines]
         is_contents = any(CONTENTS.match(_title(line)) for line in lines[:8]) or sum(bool(match) for match in matches) >= 3
         if is_contents:
@@ -238,6 +246,8 @@ def extract_outline(asset, path, *, progress=None):
         if progress and processed % 500 == 0:
             progress("source_locations", block["index"], asset.page_count)
         title = _title(block["blocks__text"])
+        if block["index"] not in manual_pages:
+            bookmark_observations.observe(block["index"], block["blocks__text"])
         box = block["blocks__bbox"]
         if title and len(title) <= 180 and isinstance(box, list) and len(box) == 4 and all(type(value) in {int, float} and math.isfinite(value) for value in box):
             source = block["text_source"]
@@ -257,6 +267,7 @@ def extract_outline(asset, path, *, progress=None):
             locator.update(locator_geometry(box, observed))
             titles[_match_key(title)].append((block["index"], locator))
 
+    diagnostics.extend(bookmark_observations.review(nodes, contents_pages, lambda title: CONTENTS.fullmatch(title)))
     native_by_target = defaultdict(list)
     for node in nodes:
         native_by_target[(_match_key(node["title"]), node["pdf_page"])].append(node)

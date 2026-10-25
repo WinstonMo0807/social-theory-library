@@ -30,6 +30,8 @@ def outline_source(settings, tmp_path):
     with fitz.open() as pdf:
         for _ in range(3):
             pdf.new_page()
+        pdf[1].insert_text((72, 72), "Chapter One\nSection One")
+        pdf[2].insert_text((72, 72), "Chapter Two")
         pdf.set_toc([[1, "Chapter One", 2], [2, "Section One", 2], [1, "Chapter Two", 3]])
         pdf.save(path)
     work = Work.objects.create(title="合成目录校准材料", document_type="book")

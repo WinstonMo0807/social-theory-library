@@ -31,6 +31,8 @@ def source(settings, tmp_path):
         for heading in ["Chapter One", "Section 1.2", "Chapter Two"]:
             page = document.new_page()
             page.insert_text((72, 72), heading)
+            if heading == "Chapter One":
+                page.insert_text((72, 104), "Section 1.1")
         document.set_toc([[1, "Chapter One", 1], [2, "Section 1.1", 1],
                           [2, "Section 1.2", 2], [1, "Chapter Two", 3]])
         document.save(path)
@@ -70,6 +72,25 @@ def test_outline_task_is_idempotent_and_manifest_reads_adopted_tree(source, api_
     assert manifest.status_code == 200
     assert [row["level"] for row in manifest.data["outline"]] == [1, 2, 2, 1]
     assert DocumentOutlineRevision.objects.filter(asset=asset, is_active=True).count() == 1
+
+
+def test_corrected_page_text_prevents_unverified_native_auto_activation(source):
+    asset, _, path = source
+    # The original PDF and machine blocks still contain these titles. A later
+    # human correction is authoritative, so neither may corroborate over it.
+    Page.objects.filter(asset=asset, index=1).update(is_text_manual=True, text="Corrected heading")
+    nodes, diagnostics = extract_outline(asset, path)
+    native = [row for row in nodes if row["source"] == "pdf_bookmark"]
+    assert native[0]["pdf_page"] == native[1]["pdf_page"] == 1
+    assert native[1]["parent_id"] == native[0]["id"]
+    assert all(row["calibration_status"] == "needs_review" for row in native[:2])
+    assert {row["node_id"] for row in diagnostics if row["code"] == "bookmark_title_unverified"} >= {native[0]["id"], native[1]["id"]}
+    with patch("catalog.services.document_outline.dispatch_outline_job"):
+        job = queue_outline_rebuild(asset.pk, request_id=uuid4())
+    result = run_outline_job(job.pk, task_id=job.task_id)
+    assert result.status == "succeeded"
+    assert not asset.outline_revisions.filter(is_active=True).exists()
+    assert asset.outline_revisions.latest("revision").parser_version == "outline-v5"
 
 
 def test_candidates_preserve_manual_calibration_and_restore_history(source, admin_user):
