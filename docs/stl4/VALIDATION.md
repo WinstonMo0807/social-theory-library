@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 R18关联布局
+
+R18关联布局：8f3cef为225节点CSS解析和目标diff0；0222d4→891a26目标ESLint及TypeScript noEmit0。实际读取PDF73、74，不等于实现页面对照；没有测试、浏览器或部署。
+
 ## 2026-10-25 M08策划图片用途
 
 M08策划投影：674889四Python AST/compile、两SQLite SQL编译及diff0；6d12b4契约0错误10既有警告，79e1ca同步418路径；bc3521→d1960f目标ESLint/TypeScript noEmit0。五组验收定义未运行，无数据库、图片操作、测试、浏览器、迁移或部署。

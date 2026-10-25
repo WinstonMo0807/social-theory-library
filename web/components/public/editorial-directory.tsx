@@ -49,6 +49,24 @@ export function EditorialRelated({ related }: { related: EditorialDirectory["rel
   </div></section>;
 }
 
+function DirectoryRelated({related}:{related:EditorialDirectory["related"]}){
+  return <div className={styles.directoryRelated}>
+    <section aria-labelledby="directory-related-scholars"><header><h2 id="directory-related-scholars">相关学者 <small lang="en">SCHOLARS</small></h2><Link href="/scholars">学者目录 <ArrowRight size={13}/></Link></header>
+      {related.scholars.length?<div className={styles.directoryScholars}>{related.scholars.map(row=><Link key={row.id} href={row.href}>
+        <EditorialImage src={row.person.portrait} displayUses={row.person.portrait_media?.display_uses} className={styles.directoryPortrait} portrait/>
+        <div><h3>{row.person.preferred_name}</h3>{row.person.birth_year!=null||row.person.death_year!=null?<small>{row.person.birth_year==null?"出生年未详":row.person.birth_year}{row.person.death_year!=null?`—${row.person.death_year}`:""}</small>:null}<p>{row.short_description||row.fields.map(field=>field.name).join("、")||"公开资料待补充"}</p><ArrowRight size={13}/></div>
+      </Link>)}</div>:<p className={styles.directoryRelatedEmpty}>当前文章尚未编入公开学者档案。</p>}
+    </section>
+    <section aria-labelledby="directory-related-materials"><header><h2 id="directory-related-materials">相关材料与阅读路线 <small lang="en">RELATED RESOURCES</small></h2><Link href="/explore">探索馆藏 <ArrowRight size={13}/></Link></header>
+      {related.materials.length?<ol className={styles.directoryMaterials}>{related.materials.map(row=><li key={row.id}><Link href={row.href}>
+        <EditorialImage src={row.cover_url} displayUses={row.cover_display_uses} className={styles.relatedCover}/><span><strong>{row.title}</strong>{row.authors?<small>{row.authors}</small>:null}<small>{row.source_status==="available"?"馆藏原文":"公开书目"}</small></span><ArrowRight size={13}/>
+      </Link></li>)}</ol>:<p className={styles.directoryRelatedEmpty}>当前文章暂无可公开的关联材料。</p>}
+      {related.paths.length?<nav className={styles.directoryPaths} aria-label="相关阅读路线">{related.paths.map(row=><Link key={row.id} href={row.href}><span>{row.title}</span><ArrowRight size={13}/></Link>)}</nav>:null}
+    </section>
+    {related.notice?<p className={styles.directoryRelatedNotice}>{related.notice}</p>:null}
+  </div>;
+}
+
 export function EditorialDirectoryView({ data, params, error }: { data: EditorialDirectory | null; params: EditorialSearchParams; error: string }) {
   const router = useRouter(), q = editorialValue(params,"q"), list = editorialValue(params,"layout") === "list";
   const value = (key: string) => editorialValue(params,key);
@@ -73,6 +91,6 @@ export function EditorialDirectoryView({ data, params, error }: { data: Editoria
       <nav className={styles.layoutSwitch} aria-label="文章布局"><Link href={editorialHref(params,{layout:undefined})} aria-label="网格布局" aria-current={!list ? "true" : undefined}><LayoutGrid size={17} /></Link><Link href={editorialHref(params,{layout:"list"})} aria-label="列表布局" aria-current={list ? "true" : undefined}><List size={18} /></Link></nav></div></div>
     {error ? <section className={styles.empty} role="alert"><h2>专题文章未能读取</h2><p>{error}</p><button onClick={() => router.refresh()}>重新读取</button><Link href="/recommendations">重置筛选</Link></section> : data?.results.length ? <div className={`${styles.cards} ${list ? styles.list : ""}`}>{data.results.map(card => <Card key={card.id} card={card} />)}</div> : <section className={styles.empty}><FileText size={34} strokeWidth={1} /><h2>{q || chips.length ? "未找到符合条件的专题文章" : "当前暂无公开的专题文章"}</h2><p>{q || chips.length ? "可以减少筛选条件，或尝试其他关键词。" : "新的策划内容发布后会在这里显示。"}</p><Link href="/recommendations">查看已发布专题</Link></section>}
     {data && data.total_pages > 1 ? <nav className={styles.pagination} aria-label="专题文章分页">{data.previous ? <Link href={editorialHref(params,{page:String(data.page-1)})}>上一页</Link> : <span>上一页</span>}<span>第 {data.page} / {data.total_pages} 页</span>{data.next ? <Link href={editorialHref(params,{page:String(data.page+1)})}>下一页<ArrowRight size={14} /></Link> : <span>下一页</span>}</nav> : null}
-    {data ? <EditorialRelated related={data.related} /> : null}
+    {data ? <DirectoryRelated related={data.related} /> : null}
   </main>;
 }
