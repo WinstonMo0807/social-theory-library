@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search, X } from "lucide-react";
 import type { ParallelSegment, ParallelSegments, ParallelVersion } from "@/lib/api/parallel-reader.client";
 import { parallelFocusMatches } from "@/lib/api/parallel-navigation";
@@ -8,16 +8,18 @@ import { sameParallelSegment } from "@/lib/api/parallel-reader.client";
 import type { ResolvedEvidence } from "@/lib/api/research.client";
 import { useParallelResource } from "./use-parallel-resource";
 import { useReaderSearch } from "./use-reader-search";
+import { normalizePublicResourceUrl } from "@/lib/api";
 
 const ignorePagePrefetch = () => {};
 
-export function ParallelColumn({ side, version, page, segmentId, selectedReference, focusId, onPage, onSelect, onReady, onScrollSegment }: {
+export function ParallelColumn({ side, version, page, segmentId, selectedReference, focusId, onPage, onSelect, onReady, onScrollSegment, versionControl }: {
   side: "left" | "right"; version: ParallelVersion | undefined; page: number; segmentId: string;
   selectedReference?: ResolvedEvidence;
   focusId?: string;
   onPage: (page: number) => void; onSelect: (segment: ParallelSegment) => void;
   onReady: (ready: boolean) => void;
   onScrollSegment?: (segment: ParallelSegment) => void;
+  versionControl?: ReactNode;
 }) {
   const [typedPage, setTypedPage] = useState({ page, value: String(page) });
   const pageInput = typedPage.page === page ? typedPage.value : String(page);
@@ -60,6 +62,7 @@ export function ParallelColumn({ side, version, page, segmentId, selectedReferen
     if (Number.isInteger(target) && target >= 1 && target <= (version?.total_pages || resource.data?.total_pages || 1)) onPage(target);
   }
   return <section className="parallel-column" aria-label={`${side === "left" ? "左" : "右"}侧正文`}>
+    {versionControl ? <header className="parallel-manual-version">{version?.cover_url ? <img src={normalizePublicResourceUrl(version.cover_url)} alt={`${version.title}封面`} width={58} height={82} /> : null}<div><strong>{side === "left" ? "左侧版本" : "右侧版本"}：{version?.language || "尚未选择"}</strong><p>{version?.version_label || version?.title}</p></div><details><summary>更换版本</summary>{versionControl}</details></header> : null}
     <div className="parallel-column-heading"><strong>{side === "left" ? "左侧" : "右侧"} · {version?.language || "语言待补"}</strong><span>{version?.version_label || "出版版本"}</span></div>
     <div className="parallel-page-controls">
       <button type="button" aria-label={`${side === "left" ? "左" : "右"}侧上一页`} disabled={!version?.asset_id || page <= 1} onClick={() => go(page - 1)}><ChevronLeft size={16} /></button>

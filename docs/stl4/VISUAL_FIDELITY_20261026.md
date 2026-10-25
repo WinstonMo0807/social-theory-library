@@ -111,3 +111,13 @@ VISUAL-10部署记录：Web r11本机e806a5→437e5f退出0，1698文件包d7e6d
 
 
 VISUAL-11部署：NAS68ca7b→9f271d退出0，Web r12 c52c2124ad41；API r9和全部数据保持。仅替换Web并重启隔离Edge，无迁移/业务操作。
+
+## VISUAL-12 并读（PDF41–43）
+
+实际读取三张原图。ParallelReader旧黑色/纸底、通用品牌、手动模式仍用普通头部与版本条；手机候选默认隐藏，均与41/42原图不符。局部修复为原图品牌/页脚、白色深蓝正文、独立手动任务头、两侧版本卡、手机候选与笔记折叠、固定取消/保存。ParallelColumn仅新增versionControl插槽，原段落定位/文本/引用继续复用。
+
+私人保存状态严格由record/dirty/saveUnknown驱动，公共校准入口仍独立且要求已保存，原owner/回执恢复不变。按探索整组自问：普通读者能否选两侧版本、分清私人保存与公共投稿、在手机读正文后找到候选和笔记、看到真实保存结果？对应入口和状态绑定已接入，未执行候选、保存、投稿或业务表单。真实结果与各权限仍B待验收。PDF43的来源侧栏版式尚未完整对应，列A保留；原字体未取得。不能称41–43全部视觉通过。
+
+本机19edd8→6db865编译退出0；1734文件/31205323字节包SHA256 a2cee6aa5eaf8779ef563eabe8467bc0b51a647031b9cb5e6caa263478e935fa。NAS3c6012→e437cd退出0；sudo只读inspect确认Web r13 3c1810b6c241df134501b4ed14b4b585b29c79caf95e11b580ae15f5bf17e221，API r9不变。备份.env.before-parallel-r13留NAS；不提交、不输出凭据。未测试/迁移/模型调用/公网切换。
+
+VISUAL-13下一项证据：before-theory-r12-desktop-20261026.png及DOM测量显示/theory-schools正文650.8px，父flex宽1264.8px。theory-overview.module.css的.page只有max-width没有width，造成收缩；SiteHeader仍使用208品牌，与PDF45不符。现有理论数据为空，保留真实空态；不添加PDF示例记录。

@@ -85,3 +85,17 @@ All crops are 2× page clips of the sole final PDF. They preserve the source art
 | footer-reader-notes | 39 | 34,965,179,984 |
 
 The mobile directory mark uses the undimmed symbol and STL letters from the same PDF37 desktop mark. The modal backdrop supplies dimming at runtime; no dimmed screenshot is pasted into the header. Header assets use `stl-lockup-{suffix}-final-r2.png`; footer assets use `stl-{suffix}-final-r2.png`. Book covers, text, page numbers, search matches and private notes remain real application data.
+
+## Parallel reader PDF41–43 (2026-10-26)
+
+All 2× clips come from the sole final PDF. Assets contain brand fragments only; versions and task status remain live HTML bound to real records.
+
+| Asset suffix | PDF page | Native rectangle |
+| --- | --- | --- |
+| parallel-desktop | 41 | 61,18,325,54 |
+| parallel-mobile | 41 | 1252,81,1380,113 |
+| parallel-manual-desktop | 42 | 52,17,316,54 |
+| parallel-manual-mobile | 42 | 1248,70,1360,104 |
+| footer-parallel | 41 | 892,958,1186,979 |
+
+Header names use `stl-lockup-{suffix}-final-r2.png`; footer uses `stl-footer-parallel-final-r2.png`. No whole-page screenshot replaces application UI.
