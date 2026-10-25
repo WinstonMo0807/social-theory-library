@@ -65,3 +65,23 @@ Evidence brand (PDF30, 2× clips): `stl-lockup-evidence-desktop-final-r2.png` at
 
 
 PDF33/34/35文献详情品牌（2026-10-26）：`stl-lockup-work-{desktop,mobile}-final-r2.png`分别取33页原图(52,31,173,73)/(1007,31,1121,73)；journal取34页(73,10,320,48)/(1281,56,1395,93)；work-readable取35页(65,9,247,40)/(1253,24,1399,50)。2倍页面clip，仅提取原像素，不重画。footer-work取35页(43,997,169,1022)，footer-journal取34页(73,963,393,991)。三种头部由当前页面article/readable状态决定；所有业务封面/学者肖像仍来自真实馆藏，不把PDF示例书灌入数据库。
+
+
+## Reader PDF36–40 (2026-10-26)
+
+All crops are 2× page clips of the sole final PDF. They preserve the source artwork; no new source detail or font recovery is claimed.
+
+| Asset suffix | PDF page | Native rectangle |
+| --- | --- | --- |
+| reader-desktop | 36 | 68,31,201,76 |
+| reader-mobile | 40 | 1327,239,1484,273 |
+| reader-outline-desktop | 37 | 41,13,257,60 |
+| reader-outline-mobile | 37 | 41,13,175,60 |
+| reader-search-desktop | 38 | 51,43,283,85 |
+| reader-search-mobile | 38 | 1265,84,1463,113 |
+| reader-notes-desktop | 39 | 47,13,289,53 |
+| reader-notes-mobile | 39 | 1319,112,1476,139 |
+| footer-reader | 36 | 35,988,238,1008 |
+| footer-reader-notes | 39 | 34,965,179,984 |
+
+The mobile directory mark uses the undimmed symbol and STL letters from the same PDF37 desktop mark. The modal backdrop supplies dimming at runtime; no dimmed screenshot is pasted into the header. Header assets use `stl-lockup-{suffix}-final-r2.png`; footer assets use `stl-{suffix}-final-r2.png`. Book covers, text, page numbers, search matches and private notes remain real application data.

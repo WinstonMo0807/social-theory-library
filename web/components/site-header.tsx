@@ -35,7 +35,7 @@ export function LibraryMark({ className = "" }: { className?: string }) {
     src="/brand/stl-mark-final-r2.png" width={61} height={45} unoptimized />;
 }
 
-const referenceBrandSize = { about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38], evidence: [220,54], work: [121,42], journal: [247,38], "work-readable": [182,31] } as const;
+const referenceBrandSize = { about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38], evidence: [220,54], work: [121,42], journal: [247,38], "work-readable": [182,31], reader: [133,45], "reader-outline": [216,47], "reader-search": [232,42], "reader-notes": [242,40] } as const;
 export function Wordmark({ config = defaultSiteConfig, home = false, reference }: { config?: SiteConfig; home?: boolean; reference?: keyof typeof referenceBrandSize }) {
   if (reference) return <picture className="brand-reference-lockup" data-brand-variant={reference}><source media="(max-width: 700px)" srcSet={`/brand/stl-lockup-${reference}-mobile-final-r2.png`} /><Image src={`/brand/stl-lockup-${reference}-desktop-final-r2.png`} alt={config.site_name} width={referenceBrandSize[reference][0]} height={referenceBrandSize[reference][1]} unoptimized /></picture>;
   return (
@@ -50,7 +50,7 @@ export function Wordmark({ config = defaultSiteConfig, home = false, reference }
   );
 }
 
-export function SiteHeader({ config = defaultSiteConfig, preview = false, reader = false, beforeLogout }: { config?: SiteConfig; preview?: boolean; reader?: boolean; beforeLogout?: () => boolean }) {
+export function SiteHeader({ config = defaultSiteConfig, preview = false, reader = false, readerReference = "reader", beforeLogout }: { config?: SiteConfig; preview?: boolean; reader?: boolean; readerReference?: "reader" | "reader-outline" | "reader-search" | "reader-notes"; beforeLogout?: () => boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -78,7 +78,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   const workRoute = pathname.startsWith("/works/");
   const evidenceRoute = pathname === "/explore/evidence";
   const exploreLandingRoute = pathname === "/explore" && searchParams.size === 0;
-  const brandReference = pathname === "/about" ? "about" : pathname.startsWith("/help/") ? "article" : supportRoute ? "support" : exploreLandingRoute ? "explore" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined;
+  const brandReference = reader ? readerReference : pathname === "/about" ? "about" : pathname.startsWith("/help/") ? "article" : supportRoute ? "support" : exploreLandingRoute ? "explore" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined;
   const headerNavigation = readerCenterRoute ? [
     ["/account/research", "我的研究"], ["/account/notes", "笔记"], ["/account/plans", "阅读计划"],
     ["/account/collections", "书单"], ["/account/citation-audits", "引文体检"], ["/account/confirmed-notes", "已确认笔记"],
@@ -124,6 +124,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-stl-home={pathname === "/" || preview ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : undefined}
       data-stl-work={workRoute ? "true" : undefined}
+      data-stl-reader={reader ? readerReference : undefined}
       data-stl-support={supportRoute ? brandReference : undefined}
       data-stl-explore={exploreLandingRoute ? "landing" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined}
       className="site-header"
@@ -167,7 +168,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
           aria-controls="site-menu"
           onClick={() => setOpen((value) => !value)}
         >
-          {open ? <X size={25} /> : <Menu size={25} />}
+          {open ? <X size={25} /> : reader && readerReference === "reader-notes" ? <CircleUserRound size={25} /> : <Menu size={25} />}
         </IconButton>
       </div>
       {logoutError && !open ? <p className="site-navigation-returned" role="alert">{logoutError}</p> : null}

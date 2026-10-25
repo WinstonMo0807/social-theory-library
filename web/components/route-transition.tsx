@@ -82,7 +82,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={`route-content-transition ${readerRoute ? "reader-route" : ""}`}
-      data-ui-scope={atlasRoute ? "stl4" : exploreRoute ? "explore-frozen" : "editorial-v2"}
+      data-ui-scope={atlasRoute || readerRoute ? "stl4" : exploreRoute ? "explore-frozen" : "editorial-v2"}
       ref={containerRef}
     >
       {children}
