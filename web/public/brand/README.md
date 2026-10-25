@@ -276,3 +276,7 @@ Original PDF92 lockups. Publication, field locks and conflict decisions retain t
 ## Version and file workspace, final PDF page 95
 
 The original brand and document icon are extracted from the final PDF, without redrawing. Native image crop coordinates: desktop brand (31,10,226,59); mobile brand (1372,90,1472,122); document icon (940,411,965,442). Files: stl-lockup-admin-files-desktop-final-r2.png, stl-lockup-admin-files-mobile-final-r2.png, visual/stl4/admin/files-document-final-r2.png. Book covers and sample titles are not used as production data.
+
+## Field and material assistant, final PDF page 100
+
+Original brand fragments: desktop (32,24,230,75), mobile (1360,64,1510,103), in native embedded image pixels. Files stl-lockup-admin-assistant-desktop-final-r2.png and stl-lockup-admin-assistant-mobile-final-r2.png. Candidate data and portraits remain actual records, not PDF examples.

@@ -8,7 +8,7 @@ import { useContextState } from "@/lib/use-context-state";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { assistantCacheKey, invalidateAssistantCache, lookupFieldSuggestions } from "./field-assistant-cache";
 import { CandidateDecisionBar } from "../research/candidate-decision-bar";
-import { MaterialAssistantDialog, useMaterialField } from "./material-assistant";
+import { MaterialAssistantDialog, MaterialCandidate, useMaterialField } from "./material-assistant";
 import { useAdminSession } from "@/lib/admin-session";
 import { useAssistantCommands } from "./assistant-commands";
 import { withPrivateOwner } from "@/lib/api/private-owner";
@@ -310,25 +310,26 @@ export function FieldAssistantControl({
 
   return <div className="field-assistant-control">
     <button type="button" className="field-assistant-trigger" disabled={disabled || !editionId || Boolean(busy)} aria-haspopup="dialog" aria-expanded={open} aria-controls={popoverId} onClick={() => setOpen(true)}><Search size={13} />查看填写建议</button>
-    {open ? <MaterialAssistantDialog fieldId={reviewField.id} fieldLabel={copy.label} sources={visibleResults.map(row=>({id:row.id,label:row.label,evidence:row.evidence}))} open id={popoverId} className="field-assistant-dialog field-assistant-popover" aria-label={`${copy.label}建议`} aria-busy={loading} onRequestClose={() => { if (!busy) setOpen(false); }} onKeyDown={(event) => {
+    {open ? <MaterialAssistantDialog currentValue={currentLabel} onEditCurrent={onEdit && !disabled && !data?.field.locked ? onEdit : undefined} refresh={lookup} fieldId={reviewField.id} fieldLabel={copy.label} sources={visibleResults.map(row=>({id:row.id,label:row.label,evidence:row.evidence}))} open id={popoverId} className="field-assistant-dialog field-assistant-popover" aria-label={`${copy.label}建议`} aria-busy={loading||Boolean(busy)} onRequestClose={() => { if (!busy) setOpen(false); }} onKeyDown={(event) => {
       // Enter in the new-name input must not submit the surrounding work form.
       if (event.key === "Enter" && event.target instanceof HTMLInputElement) event.preventDefault();
     }}>
       <header><strong>{copy.label}建议</strong><button type="button" disabled={Boolean(busy)} aria-label={`关闭${copy.label}建议`} onClick={() => setOpen(false)}><X size={14} /></button></header>
       <p>{onFill ? "按本页填写核对建议。只有你选择填入的字段会改变；填写后仍需保存书目。" : "按本页填写核对建议。采用关联建议前请核对对象，现有公开内容保持不变。"}</p>
-      <button type="button" className="button secondary" disabled={disabled || loading || Boolean(busy)} onClick={lookup}>刷新馆内{copy.label}候选</button>
       <small>这里仅查看馆内记录与已有候选。外部书目查询请使用整条书目中的免费来源按钮。</small>
-      <p className="field-assistant-current">当前填写：{currentLabel || "尚未填写，可核对后填入建议。"}</p>
       {data?.field.locked ? <p role="status">此字段有人工锁：{data.field.lock_reason || "须由管理员核对后手工修改"}。建议可查看，不能直接填入。</p> : null}
       {loading ? <p><LoaderCircle className="spin" size={14} />正在查找馆内记录和已有依据</p> : null}
-      {!loading && visibleResults.map((suggestion) => <article key={suggestion.id}>
+      {!loading && visibleResults.map((suggestion) => <MaterialCandidate key={suggestion.id} id={suggestion.id} label={suggestion.label}>
         <div><strong>{suggestion.label}</strong><span>{suggestion.status_label}</span><p>{suggestion.summary}</p></div>
         {suggestion.conflicts.length ? <p className="field-assistant-conflict">{suggestion.conflicts.join("；")}</p> : null}
         <details><summary>查看依据</summary><ul>{suggestion.evidence.map((item, index) => <li key={`${suggestion.id}-${index}`}><b>{item.category}</b>{item.summary}</li>)}</ul>{suggestion.entity?.id ? <small>馆内记录编号：{suggestion.entity.id}。仅关联当前书目，不合并人物或修改学者主页。</small> : null}</details>
-        {onEdit?<><button type="button" disabled={Boolean(busy)||disabled||data?.field.locked} onClick={()=>setEditingValue(editingValue?.id===suggestion.id?null:{id:suggestion.id,value:suggestion.action.selected_value??suggestion.label})}>修改后采用</button>{editingValue?.id===suggestion.id?<label>修改后的{copy.label}<textarea value={editingValue.value} onChange={event=>setEditingValue({...editingValue,value:event.target.value})}/><button type="button" disabled={Boolean(busy)||disabled||data?.field.locked||!editingValue.value.trim()} onClick={()=>void adopt(suggestion,editingValue.value)}>核对后填入修改值</button></label>:null}</>:null}
+        <div className="material-candidate-actions">
         <button type="button" disabled={Boolean(busy) || disabled || data?.field.locked} onClick={() => adopt(suggestion)}>{busy === suggestion.id ? <LoaderCircle className="spin" size={13} /> : <Check size={13} />}{onFill ? identityReview === suggestion.id ? `已核对，填入${copy.label}` : (fieldName === "author" || fieldName === "translator") && !suggestion.entity?.id ? "填写新人物名称" : `填入${copy.label}` : data?.field.adopt_label || `采用${copy.label}`}</button>
+        {onEdit?<><button type="button" disabled={Boolean(busy)||disabled||data?.field.locked} onClick={()=>setEditingValue(editingValue?.id===suggestion.id?null:{id:suggestion.id,value:suggestion.action.selected_value??suggestion.label})}>修改后采用</button>{editingValue?.id===suggestion.id?<label>修改后的{copy.label}<textarea value={editingValue.value} onChange={event=>setEditingValue({...editingValue,value:event.target.value})}/><button type="button" disabled={Boolean(busy)||disabled||data?.field.locked||!editingValue.value.trim()} onClick={()=>void adopt(suggestion,editingValue.value)}>核对后填入修改值</button></label>:null}</>:null}
+
         <CandidateDecisionBar candidate={{ id: suggestion.id, actions: [{ action: "reject", label: "不采用" }] }} showInspect={false} disabled={Boolean(busy) || disabled} busyAction={busy === `reject-${suggestion.id}` ? "reject" : ""} onAction={(action) => reject(suggestion, String(action.payload.reason))} />
-      </article>)}
+        </div>
+      </MaterialCandidate>)}
       {!loading && data && !data.results.length && !message ? <p>当前没有可显示的已有建议，可以继续手工填写。</p> : null}
       {!loading && moreCount ? <button type="button" className="field-assistant-more" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>{showMore ? <ChevronUp size={13} /> : <ChevronDown size={13} />}{showMore ? "收起更多结果" : `查看另外 ${moreCount} 项结果`}</button> : null}
       {copy.create ? <footer><input ref={newLabelRef} aria-label={`新${copy.create}名称`} value={newLabel} disabled={Boolean(busy) || disabled} onChange={(event) => { setNewLabel(event.target.value); setDuplicates(null); }} placeholder={`输入${copy.create}名称`} /><button type="button" disabled={!newLabel.trim() || Boolean(busy) || disabled} onClick={() => create()}>{busy === "create" ? <LoaderCircle className="spin" size={13} /> : <Plus size={13} />}{data?.field.create_label || `创建${copy.create}`}并关联</button>{onFill ? <p>新建只保存最小身份草稿；当前书目的关联仍需点击页面保存，完整资料可稍后补充。</p> : null}{duplicates?.length ? <div><p>可能已有记录</p><ul>{duplicates.map((item) => <li key={item.id}>{item.label || item.name || "馆内已有对象"}</li>)}</ul><button type="button" disabled={Boolean(busy) || disabled} onClick={() => create(true)}>确认是不同对象，新建并关联</button></div> : null}</footer> : null}

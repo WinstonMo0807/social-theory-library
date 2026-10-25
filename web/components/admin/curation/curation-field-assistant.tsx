@@ -14,7 +14,7 @@ import {
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { useContextState } from "@/lib/use-context-state";
-import { MaterialAssistantDialog, useMaterialField, materialSourceHref } from "../workflow/material-assistant";
+import { MaterialAssistantDialog, MaterialCandidate, useMaterialField, materialSourceHref } from "../workflow/material-assistant";
 import { useAdminSession } from "@/lib/admin-session";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { useCatalogCommand } from "../workflow/use-intake-command";
@@ -278,7 +278,7 @@ export function CurationFieldAssistant({
       catch (reason) { setOutcome(reason instanceof Error ? reason.message : "页面读取失败，请稍后重试。"); }
       finally { busyRef.current = false; setBusy(""); }
     }}>重新读取保存结果</button> : null}
-    {open ? <MaterialAssistantDialog fieldId={reviewField.id} fieldLabel={label} sources={visible.map(row=>({id:row.key,label:row.label,evidence:row.evidence}))} open id={popoverId} className="field-assistant-dialog field-assistant-popover" aria-label={`${label}建议`} aria-busy={loading||Boolean(busy)||command.busy} onRequestClose={() => { if (!busy&&!command.busy) { setReview(null); setOpen(false); } }}>
+    {open ? <MaterialAssistantDialog currentValue={typeof currentValue==="string"||typeof currentValue==="number"?String(currentValue):Array.isArray(currentValue)?currentValue.filter(row=>typeof row==="string").join("、")||"已填写关联条目":query||""} refresh={()=>void lookup(false)} fieldId={reviewField.id} fieldLabel={label} sources={visible.map(row=>({id:row.key,label:row.label,evidence:row.evidence}))} open id={popoverId} className="field-assistant-dialog field-assistant-popover" aria-label={`${label}建议`} aria-busy={loading||Boolean(busy)||command.busy} onRequestClose={() => { if (!busy&&!command.busy) { setReview(null); setOpen(false); } }}>
       <header><strong>{label}建议</strong><button type="button" disabled={blocked} aria-label={`关闭${label}建议`} onClick={() => { setReview(null); setOpen(false); }}><X size={14} /></button></header>
       {recoveryNotice}
       {outcome ? <p role="status">{outcome}</p> : null}
@@ -296,24 +296,23 @@ export function CurationFieldAssistant({
         <button type="button" disabled={blocked} onClick={() => setReview(null)}>返回查看建议</button>
         {message ? <p role="alert">{message}</p> : null}
       </section> : <>
-      <p>先查看馆内记录和已有依据，不会保存或改变你的填写。</p><p>当前填写：{typeof currentValue==="string"||typeof currentValue==="number"?String(currentValue):Array.isArray(currentValue)?currentValue.filter(row=>typeof row==="string").join("、")||"已填写关联条目":query||"尚未填写"}</p>
-      <button type="button" className="button secondary" disabled={loading || blocked} onClick={() => void lookup(false)}>重新核对{label}候选</button>
+      <p>先查看馆内记录和已有依据，不会保存或改变你的填写。</p>
       {externalAllowed === false ? <p>当前账户没有外部查找权限，仍可核对已有建议或手工填写。</p> : null}
       <small>这里核对馆内记录及已有来源。未启用的来源会说明原因，不会生成示例建议。</small>
       {loading ? <p><LoaderCircle className="spin" size={14} />正在查找馆内记录和可核对资料</p> : null}
-      {!loading && visible.map((candidate) => <article key={candidate.key}>
+      {!loading && visible.map((candidate) => <MaterialCandidate key={candidate.key} id={candidate.key} label={candidate.label}>
         <div><strong>{candidate.label}</strong><span>{candidate.statusLabel}</span></div>
         {candidate.secondary ? <small>{candidate.secondary}</small> : null}
         <p>{candidate.summary}</p>
         {candidate.conflicts.length ? <p className="field-assistant-conflict">存在冲突，请先核对。{candidate.conflicts.join("；")}</p> : null}
         <details><summary>查看依据</summary><ul>{candidate.evidence.map((evidence, index) => <li key={`${candidate.key}:${index}`}><b>{evidence.category}</b> {evidence.summary}{materialSourceHref(evidence.url||evidence.locator?.url) ? <> <a href={materialSourceHref(evidence.url||evidence.locator?.url)} target="_blank" rel="noreferrer">查看资料<ExternalLink size={11} /></a></> : null}</li>)}</ul></details>
         {editingClaim?.key === candidate.key ? <label><span>修改后的{label}</span><textarea rows={4} value={editingClaim.proposition} disabled={blocked} onChange={(event) => setEditingClaim({ key: candidate.key, proposition: event.target.value })} /></label> : null}
-        <footer className="curation-field-assistant-actions">
+        <footer className="curation-field-assistant-actions material-candidate-actions">
           {(candidate.enrichment || candidate.claim || onApply) ? <button type="button" disabled={blocked || (editingClaim?.key === candidate.key && !editingClaim.proposition.trim())} onClick={() => choose(candidate)}><Check size={13} />{candidate.claim || (candidate.enrichment && !onFillSuggestion) ? `核对并保存${label}` : `填入${label}`}</button> : null}
           {candidate.claim ? <button type="button" disabled={blocked} onClick={() => setEditingClaim(editingClaim?.key === candidate.key ? null : { key: candidate.key, proposition: candidate.label })}>{editingClaim?.key === candidate.key ? "取消修改" : "修改后采用"}</button> : null}
           {candidate.enrichment || candidate.claim ? <CandidateDecisionBar candidate={{ id: candidate.key, actions: [{ action: "reject", label: "不采用" }] }} showInspect={false} disabled={blocked} busyAction={busy === `reject:${candidate.key}` ? "reject" : ""} onAction={(action) => reject(candidate, String(action.payload.reason))} /> : null}
         </footer>
-      </article>)}
+      </MaterialCandidate>)}
       {!loading && !visible.length ? <p>{message || "暂时没有合适建议，可以继续手工编辑。"}</p> : null}
       {!loading && moreCount ? <button type="button" className="field-assistant-more" aria-expanded={showMore} onClick={() => setShowMore((current) => !current)}>{showMore ? <ChevronUp size={13} /> : <ChevronDown size={13} />}{showMore ? "收起更多候选" : `更多候选（${moreCount}）`}</button> : null}
       {message && visible.length ? <p role="status" aria-live="polite" className="field-assistant-message">{message}</p> : null}
