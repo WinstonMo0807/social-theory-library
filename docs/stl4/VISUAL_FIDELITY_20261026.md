@@ -163,3 +163,11 @@ VISUAL-15证据：实际/theories/graph截图before-graph-r14-desktop-20261026.p
 原图资产坐标见brand/README.md，逐一实际查看；实际截图after-reading-paths-r17-desktop/mobile、after-timeline-r17-mobile-20261026.png保存在原tmp目录。编译db47aa→1ebd44退出0，1838文件/36149529字节，SHA256 ed575e66ba0ba474e2d61d9fda6953781a938cd9c1b8c2ae35aa86d6681a98bf。NAS更新会话续接已结束，86834a只读确认Web r17完整ID03a22da3618822ddb6903d4331ee51a9ac7f629104af08205311a67afed5162d、服务器ready与恢复点.env.before-reading-path-r17。API r9不变。
 
 原字体仍为A；有数据详情、计划复制、材料切换和版本升级为B，未测试/模型/迁移/公网切换。学者62–66已实际读图；继续既定62/63/66最新覆盖优先，64/65非重叠内容保留，避免混合不兼容主图。
+
+## VISUAL-17 学者（PDF62–66）
+
+实际查看62–66原图及before-scholars-r17-desktop。原页面缺width且仍editorial-v2覆盖，品牌误用通用图、横幅被局部裁切。最小修正Scholar CSS/Directory/Profile/Shared、SiteHeader、RouteTransition与目录服务端页脚；头像来自真实人物资料，不把示例学者写入数据。62/63/66各自品牌及四张纯装饰原图资产坐标在brand/README.md；提取时发现原搜索按钮边缘进入装饰图，已裁除并重新实际查看。
+
+66主状态保留现有作品/概念并排，调整行动按钮跨列、手机原头像与墙面构图；现有章节贡献/来源/作者编者不变。整组自问：普通读者能否认出同名者、图像缺失是否冒充其他人、候选关系会否公开、作品是否错误当整本作者？原真实身份/缺图/候选权限和章节责任保留；紧凑总览箭头进入人物档案，作品入口仍在档案中。无测试或业务操作，不称通过。
+
+编译1f5f0f→f7fa44退出0，1863文件38648691字节，SHA256 0a45de7e906f215d80c7021ff5f9dcb80bb92bc8bbc9a1e7462b622969921cfb。NAS ed1967→01e83f退出0，Web r18 d46cca8dc3d9；API r9不变，恢复点.env.before-scholars-r18。after-scholars-r18-desktop/mobile、after-scholar-directory-r18-desktop/mobile-20261026.png保存原tmp目录。字体及逐状态精确视觉仍A，真实详情/人物关系/章节操作B，未模型/迁移/公网切换。

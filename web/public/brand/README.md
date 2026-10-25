@@ -167,3 +167,20 @@ PDF58 list and PDF60 latest detail; footer fragment from PDF59. Native reference
 | visual/stl4/reading-paths/list-card-1-final-r2.png | 58 | 62,486,317,621 |
 | visual/stl4/reading-paths/list-card-2-final-r2.png | 58 | 62,647,317,780 |
 | visual/stl4/reading-paths/list-card-3-final-r2.png | 58 | 62,807,317,942 |
+
+## Scholars PDF62–66
+
+PDF62 hub, PDF63 directory and PDF66 latest overlapping profile state follow the recorded replacement order. PDF64/65 non-overlapping content remains. Portraits and academic facts always come from actual published records; only the wall fragment is decorative.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-scholars-desktop-final-r2.png | 62 | 80,13,342,73 |
+| brand/stl-lockup-scholars-mobile-final-r2.png | 62 | 1340,20,1529,65 |
+| brand/stl-lockup-scholar-directory-desktop-final-r2.png | 63 | 71,14,251,54 |
+| brand/stl-lockup-scholar-directory-mobile-final-r2.png | 63 | 1298,56,1458,86 |
+| brand/stl-lockup-scholar-profile-desktop-final-r2.png | 66 | 69,23,295,54 |
+| brand/stl-lockup-scholar-profile-mobile-final-r2.png | 66 | 1244,51,1383,73 |
+| visual/stl4/scholars/hub-hero-final-r2.png | 62 | 603,79,1284,426 |
+| visual/stl4/scholars/hub-hero-mobile-final-r2.png | 62 | 1321,78,1647,248 |
+| visual/stl4/scholars/directory-hero-final-r2.png | 63 | 612,59,1251,248 |
+| visual/stl4/scholars/profile-mobile-wall-final-r2.png | 66 | 1336,113,1480,207 |

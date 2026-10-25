@@ -15,7 +15,7 @@ export function ScholarResultCard({ scholar, compact = false }: { scholar: Publi
     <Link prefetch={false} href={scholar.href} className={styles.cardPortrait} aria-label={`查看${scholar.person.preferred_name}档案`}><ScholarImage scholar={scholar} /></Link>
     <div className={styles.cardCopy}><h3><Link prefetch={false} href={scholar.href}>{scholar.person.preferred_name}</Link></h3>{scholar.person.original_name ? <p className={styles.originalName}>{scholar.person.original_name}</p> : null}<p>{scholarYears(scholar.person)}</p><p className={styles.concerns}>{scholar.key_concerns.join(" · ") || scholar.short_description || "资料仍待补充"}</p>
       {scholar.matched_alias ? <p className={styles.aliasMatch}>别名命中：<strong>{scholar.matched_alias}</strong></p> : null}
-      <Link prefetch={false} className={styles.cardFooter} href={`${scholar.href}/works`}>查看作品（{scholar.work_count}）<ArrowRight size={15} /></Link>
+      <Link prefetch={false} className={styles.cardFooter} aria-label={compact ? `查看${scholar.person.preferred_name}档案` : undefined} href={compact ? scholar.href : `${scholar.href}/works`}>{compact ? null : `查看作品（${scholar.work_count}）`}<ArrowRight size={15} /></Link>
     </div>
   </article>;
 }
