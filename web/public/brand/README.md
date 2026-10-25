@@ -232,3 +232,14 @@ Original desktop/mobile lockups and empty-state book illustration from the final
 | brand/stl-lockup-admin-desktop-final-r2.png | 80 | 50,35,255,87 |
 | brand/stl-lockup-admin-mobile-final-r2.png | 80 | 1279,85,1374,121 |
 | visual/stl4/admin/today-empty-final-r2.png | 81 | 293,772,364,829 |
+
+## Upload PDF82–84
+
+Original lockups and decorative document/book icons. PDF84 latest list states take priority; PDF83 batch-detail order retained. Progress values remain measured from real transfer state.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-admin-upload-desktop-final-r2.png | 82 | 44,25,232,73 |
+| brand/stl-lockup-admin-upload-mobile-final-r2.png | 82 | 1321,63,1438,97 |
+| visual/stl4/admin/upload-documents-final-r2.png | 82 | 302,233,379,310 |
+| visual/stl4/admin/upload-manual-final-r2.png | 82 | 289,913,329,952 |

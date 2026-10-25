@@ -1,5 +1,7 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+2026-10-26当前：Web r22 `7e986bde778b`、API r10 `a79b2b97f68d`。恢复点.env.before-upload-r22；未公网切换。
+
 2026-10-26当前：Web r21 `d652f13d7815`、API r10 `a79b2b97f68d`。恢复点.env.before-admin-r21，r20保留；无公网切换。
 
 2026-10-26当前：Web r20 `0c4a6c9d20b1`、API r10 `a79b2b97f68d`。恢复点.env.before-editorial-r20，Web r19/API r9保留；仅隔离内网，未公网切换。

@@ -116,3 +116,22 @@
  .stl4-admin-shell .stl4-admin-mobile-nav>[aria-current]{color:#ab7826}
  .stl4-admin-shell .stl4-admin-mobile-nav>[aria-current]>svg{fill:#ab7826;color:#fff;border-radius:3px}
 }
+
+/* PDF82–84 uploads use a compact header and their own mobile action bar. */
+.admin-shell.stl4-admin-shell[data-admin-surface="upload"]{--stl-container-admin-sidebar:clamp(228px,19vw,274px)}
+.stl4-admin-shell[data-admin-surface="upload"] .admin-logo,.stl4-admin-shell[data-admin-surface="upload"] .admin-topbar{min-height:80px}
+.stl4-admin-shell[data-admin-surface="upload"] .admin-logo{padding-inline:26px}
+.stl4-admin-shell[data-admin-surface="upload"] .brand-reference-lockup[data-brand-variant="admin-upload"]{display:block;width:100%;max-width:224px}
+.stl4-admin-shell[data-admin-surface="upload"] .admin-topbar>.stl4-admin-search{margin-left:auto;margin-right:0;width:min(450px,60%)}
+.stl4-admin-shell[data-admin-surface="upload"] .stl4-search-submit{display:none}
+.stl4-admin-shell[data-admin-surface="upload"] .admin-topbar>form>label{border-right:1px solid var(--stl4-admin-line);min-height:38px;border-radius:3px}
+.stl4-admin-shell[data-admin-surface="upload"] .admin-content{padding:18px 30px 0}
+.stl4-admin-shell[data-admin-surface="upload"] .admin-nav-children{display:none}
+.stl4-admin-shell[data-admin-surface="upload"] .admin-sidebar nav a{min-height:45px}
+@media(max-width:900px){
+ .stl4-admin-shell[data-admin-surface="upload"] .admin-topbar{min-height:65px}
+ .stl4-admin-shell[data-admin-surface="upload"] .admin-content{padding:15px 16px 90px}
+ .stl4-admin-shell[data-admin-surface="upload"] .stl4-admin-mobile-nav,.stl4-admin-shell[data-admin-surface="upload"] .stl4-mobile-search-toggle{display:none}
+ .stl4-admin-shell[data-admin-surface="upload"] .stl4-mobile-brand{max-width:140px}
+ .stl4-admin-shell[data-admin-surface="upload"] .stl4-mobile-brand .brand-reference-lockup{width:130px}
+}

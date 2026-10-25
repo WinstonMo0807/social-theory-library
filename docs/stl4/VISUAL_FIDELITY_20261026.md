@@ -195,3 +195,9 @@ VISUAL-15证据：实际/theories/graph截图before-graph-r14-desktop-20261026.p
 before-admin-r19-desktop实际旧品牌/纸底/标题/顶栏差异。浏览器CSS规则显示editorial-v2覆盖管理外框，移出旧scope；AdminShell原权限/本人上下文/准确返回链保留，原图80桌面手机品牌、81空态插图接入，不把PDF设备框当页面。状态移至标题资料旁，主要工作按钮及时间在右，手机保持同一工作链接；原副搜索隐藏，顶部统一搜索可用。组内自问普通管理员空库能否开始、权限项是否可见、工作提醒是否真实、原任务入口是否准确，原接口/能力保护保持，未实际创建或提交工作。
 
 编译4b8ff8→bf5865退出0；1929文件44374410字节，SHA256 d54837ea7215f9786ceea81ae0a91211aa80d352b15eb5226e0babf8752473a4。NAS37287b→4195fd退出0，Web r21 d652f13d7815，API r10保持，恢复点.env.before-admin-r21。重启后首次502，日志ready后刷新恢复。after-admin-r21-desktop/mobile-20261026.png保存。实际仍有后置.admin-shell重设205px变量与纸底，已将根选择器限定为.admin-shell.stl4-admin-shell，同手机滚动条修正待r22。字体/真实任务行/受限权限B未验收；无测试/业务写入/模型/迁移/公网切换。
+
+## VISUAL-21 上传管理（PDF82–84）
+
+实际before-upload-r20-desktop及before-upload-r21-mobile确认旧品牌/双重内距/无独立进度列/底栏叠加。UploadBatchView沿原输入和所有操作，接原图品牌与两插图、白色海军蓝、PDF84进度列和83详情顺序。传输进度与后台识别保持真实不同状态；类型标签为原生/扫描/混合PDF。主操作复用pauseFile/upload/retryIngestionItem，格式失败只移除列表项。组内自问普通管理员能否发现真实状态、手机底栏是否可见、重试是否走原服务、无任务是否伪造内容，代码确认原边界保留。
+
+编译b475f8→e1ad7d退出0；包1942文件44497069字节，SHA256 8339118b7f277f8592aae559ad07077bf9f60b6ee4561f949558ddc8a153f3ca。NAS b2916d→354341→0ab627退出0，Web r22 7e986bde778b/API r10。恢复点.env.before-upload-r22；502在ready后刷新恢复。after-upload-r22-desktop/mobile-20261026.png实际保存。手机摘要偏高已修源码待r23。空库无法有文件核对，字体和精确状态未关闭；无测试/业务写入/模型/迁移/公网动作。
