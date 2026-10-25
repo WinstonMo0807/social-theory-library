@@ -92,8 +92,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const manualRoute = pathname === "/admin/cataloging/new";
   const editorRoute = /^\/admin\/library\/works\/[^/]+$/.test(pathname);
   const filesRoute = /^\/admin\/library\/works\/[^/]+\/files$/.test(pathname);
-  const compactWorkHeader = uploadRoute || intakeRoute || filesRoute;
-  const brandReference = filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
+  const mediaRoute = pathname === "/admin/media";
+  const compactWorkHeader = uploadRoute || intakeRoute || filesRoute || mediaRoute;
+  const brandReference = mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
   const searchParams = useSearchParams();
   const returnHref = safeAdminHref(searchParams.get("return_to"), "");
   const curationReturn = returnHref && new URL(returnHref, "https://admin.invalid");
@@ -209,7 +210,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
   return (
     <AdminSessionContext.Provider value={user}>
-    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
+    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
       {!focusMode ? <aside
         ref={sidebarRef}
         id="admin-navigation"
