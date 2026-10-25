@@ -15,7 +15,7 @@ import { EditorialReader } from "./editorial-reader";
 import styles from "./editorial.module.css";
 
 export function IssueItemCard({ item }: { item: IssueItem }) {
-  return <article className={styles.material}><EditorialImage key={item.cover_url} src={item.cover_url || ""} className={styles.materialCover} /><div>
+  return <article className={styles.material}><EditorialImage key={item.cover_url} src={item.cover_url || ""} displayUses={item.cover_display_uses} className={styles.materialCover} /><div>
     <h3>{item.work_url ? <Link href={item.work_url}>{item.title}</Link> : item.title}</h3>{item.authors ? <p>{item.authors}</p> : null}{item.version_note ? <small>{item.version_note}</small> : null}
     <small>{item.reader_url ? "馆藏原文" : item.work_url ? "公开书目 · 暂无全文" : item.kind === "planned" ? "计划上架" : "馆藏暂不可用"}</small>
     {item.note ? <p>{item.note}</p> : null}{item.reader_url ? <Link className={styles.inlineAction} href={item.reader_url}>阅读全文 <ArrowRight size={13} /></Link> : null}

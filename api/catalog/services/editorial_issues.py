@@ -23,6 +23,7 @@ from catalog.models import (AboutPageBlock, EditorialRevision, EditorialRevision
                             SiteSetting, Edition, DocumentType, RecycleEntry)
 from catalog.services.cataloging_sessions import open_cataloging_session
 from catalog.services.publication_eligibility import public_editions
+from catalog.services.media import DEFAULT_MEDIA_DISPLAY_USES, MEDIA_DISPLAY_USES
 from ingestion.models import AuditEvent
 
 
@@ -256,6 +257,7 @@ def save_issue(identifier, data, actor):
             row["authors"] = "、".join(edition_author_projection(snapshot)["authors"])
             row["cover_rendition_id"] = (work_snapshot.get("cover_media") or {}).get("primary_rendition_id")
             row["cover_path"] = work_snapshot.get("cover", "")
+            row["cover_display_uses"] = deepcopy((work_snapshot.get("cover_media") or {}).get("display_uses", list(DEFAULT_MEDIA_DISPLAY_USES)))
             row["version_note"] = row["version_note"] or str(snapshot.get("edition", {}).get("version_label") or "")
             row.update(work_id=str(edition.work_id), edition_id=str(edition.pk))
         else:
@@ -392,6 +394,10 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     from catalog.services.publication_eligibility import current_retrieval_source_q
     readable_ids = set(map(str, public_editions().filter(pk__in=edition_ids).filter(
         current_retrieval_source_q(asset_prefix="active_catalog_revision__reader_asset", access_statuses=("public", "inherit"))).values_list("pk", flat=True)))
+    legacy_cover_ids = {row['cover_rendition_id'] for row in payload.get('items', [])
+        if row.get('cover_rendition_id') and 'cover_display_uses' not in row}
+    legacy_cover_uses = {str(key):(metadata or {}).get('display_uses', list(DEFAULT_MEDIA_DISPLAY_USES))
+        for key, metadata in MediaRendition.objects.filter(pk__in=legacy_cover_ids).values_list('pk', 'metadata_snapshot')}
     for row in payload.get("items", []):
         record = records.get(row["id"])
         edition_id = row.get("edition_id")
@@ -404,6 +410,10 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
         row["file_status"] = reader.access_status if reader else "no_file"
         row["work_url"] = f"/works/{edition.public_slug}" if edition and edition.public_slug else ""
         row["reader_url"] = f"/reader/{reader.pk}?revision={edition.active_catalog_revision.document_revision_id}" if readable else ""
+        row['cover_url'] = ''
+        row.pop('available_work_id', None)
+        row.pop('available_edition_id', None)
+        uses = row.get('cover_display_uses', legacy_cover_uses.get(str(row.get('cover_rendition_id')), [] if row.get('cover_rendition_id') else list(DEFAULT_MEDIA_DISPLAY_USES)))
         if edition:
             row["available_work_id"] = str(edition.work_id)
             row["available_edition_id"] = str(edition.pk)
@@ -412,10 +422,11 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
                 work_snapshot = snapshot.get("work", {})
                 row["cover_rendition_id"] = (work_snapshot.get("cover_media") or {}).get("primary_rendition_id")
                 row["cover_path"] = work_snapshot.get("cover", "")
+                uses = (work_snapshot.get('cover_media') or {}).get('display_uses', list(DEFAULT_MEDIA_DISPLAY_USES))
             if row.get("cover_rendition_id") or row.get("cover_path"):
                 row["cover_url"] = (f"/api/catalog/recommendation-issues/{issue.slug}/items/{row['id']}/cover/" if public
                                     else f"/api/catalog/admin/recommendation-issues/{issue.pk}/items/{row['id']}/cover/")
-        row.setdefault("cover_url", "")
+        row['cover_display_uses'] = [value for value in MEDIA_DISPLAY_USES if value in uses] if edition and isinstance(uses,list) else []
         if public:
             row.pop("cataloging_session_id", None)
             if edition:

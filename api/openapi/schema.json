@@ -42319,6 +42319,13 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        },
+                        "readOnly": true
+                    },
                     "article_href": {
                         "type": "string"
                     },
@@ -42329,6 +42336,7 @@
                 "required": [
                     "article_href",
                     "authors",
+                    "cover_display_uses",
                     "cover_url",
                     "href",
                     "id",
@@ -46987,6 +46995,13 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "cover_display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        },
+                        "readOnly": true
+                    },
                     "file_status": {
                         "type": "string",
                         "readOnly": true
@@ -47026,6 +47041,7 @@
                     "available_edition_id",
                     "available_work_id",
                     "cataloging_session_id",
+                    "cover_display_uses",
                     "cover_url",
                     "file_status",
                     "kind",
@@ -65433,6 +65449,13 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "cover_display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        },
+                        "readOnly": true
+                    },
                     "file_status": {
                         "type": "string",
                         "readOnly": true
@@ -65481,6 +65504,7 @@
                     "available_edition_id",
                     "available_work_id",
                     "cataloging_session_id",
+                    "cover_display_uses",
                     "cover_url",
                     "file_status",
                     "kind",

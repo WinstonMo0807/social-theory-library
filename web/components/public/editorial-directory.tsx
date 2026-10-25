@@ -6,6 +6,8 @@ import { useState, type ChangeEvent } from "react";
 import { ArrowRight, FileText, ImageOff, LayoutGrid, List, Search, UserRound, X } from "lucide-react";
 import type { EditorialCard, EditorialCurator, EditorialDirectory, EditorialSearchParams } from "@/lib/api/recommendation-issues.types";
 import styles from "./editorial.module.css";
+import { MediaPlacement } from "@/components/media-placement";
+import type { MediaDisplayUse } from "@/lib/media-usage";
 
 export const editorialValue = (params: EditorialSearchParams, key: string) => { const value = params[key]; return Array.isArray(value) ? value[0] || "" : value || ""; };
 export function editorialHref(params: EditorialSearchParams, patch: Record<string, string | undefined> = {}) {
@@ -17,9 +19,11 @@ export function editorialHref(params: EditorialSearchParams, patch: Record<strin
   return `/recommendations${query.size ? `?${query}` : ""}`;
 }
 
-export function EditorialImage({ src, className = "", portrait = false, retry = false }: { src: string; className?: string; portrait?: boolean; retry?: boolean }) {
-  const [failed, setFailed] = useState(false);
-  return src && !failed ? <img className={className} src={src} alt="" loading="lazy" onError={() => setFailed(true)} /> : <span className={`${className} ${styles.imageMissing}`}><span role="img" aria-label={portrait ? "未提供公开头像" : failed ? "图片暂不可用" : "暂未提供配图"}>{portrait ? <UserRound size={20} strokeWidth={1} /> : <ImageOff size={28} strokeWidth={1} />}</span>{retry && failed ? <button type="button" onClick={() => setFailed(false)}>重新加载</button> : null}</span>;
+export function EditorialImage({ src, className = "", portrait = false, retry = false, displayUses }: { src: string; className?: string; portrait?: boolean; retry?: boolean; displayUses?:readonly MediaDisplayUse[] }) {
+  const [failedSource, setFailedSource] = useState("");
+  const failed=!!src&&failedSource===src;
+  const fallback=<span className={`${className} ${styles.imageMissing}`}><span role="img" aria-label={failed?"图片暂不可用":src?"本位置不展示配图":portrait?"未提供公开头像":"暂未提供配图"}>{portrait ? <UserRound size={20} strokeWidth={1} /> : <ImageOff size={28} strokeWidth={1} />}</span>{retry && failed ? <button type="button" onClick={() => setFailedSource("")}>重新加载</button> : null}</span>;
+  return <MediaPlacement uses={displayUses} fallback={fallback}>{src && !failed ? <img className={className} src={src} alt="" loading="lazy" onError={() => setFailedSource(src)} /> : fallback}</MediaPlacement>;
 }
 export function EditorialByline({ curator, date }: { curator: EditorialCurator; date: string | null }) {
   return <div className={styles.byline}>{curator.name ? <EditorialImage key={curator.portrait_url} src={curator.portrait_url} portrait className={styles.avatar} /> : null}
@@ -39,8 +43,8 @@ export function EditorialRelated({ related }: { related: EditorialDirectory["rel
   return <section className={styles.related} aria-label="继续探索"><nav aria-label="关联内容">
     {[["scholars","相关学者"],["materials","相关材料"],["paths","相关阅读路径"]].map(([key,label]) => <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}>{label}</button>)}
   </nav><p>{related.notice}</p><div className={styles.relatedRows}>
-    {tab === "scholars" ? related.scholars.length ? related.scholars.map(row => <Link key={row.id} href={row.href}><EditorialImage src={row.person.portrait} className={styles.relatedPortrait} portrait /><span><strong>{row.person.preferred_name}</strong><small>{row.person.original_name}</small><small>{row.short_description}</small></span><ArrowRight size={16} /></Link>) : <p>这些文章尚未编入公开学者档案。</p> : null}
-    {tab === "materials" ? related.materials.length ? related.materials.map(row => <Link key={row.id} href={row.href}><EditorialImage src={row.cover_url} className={styles.relatedCover} /><span><strong>{row.title}</strong><small>{row.authors}</small><small>{row.source_status === "available" ? "馆藏原文" : "公开书目"}</small></span><ArrowRight size={16} /></Link>) : <p>这些文章暂无可公开的关联材料。</p> : null}
+    {tab === "scholars" ? related.scholars.length ? related.scholars.map(row => <Link key={row.id} href={row.href}><EditorialImage src={row.person.portrait} displayUses={row.person.portrait_media?.display_uses} className={styles.relatedPortrait} portrait /><span><strong>{row.person.preferred_name}</strong><small>{row.person.original_name}</small><small>{row.short_description}</small></span><ArrowRight size={16} /></Link>) : <p>这些文章尚未编入公开学者档案。</p> : null}
+    {tab === "materials" ? related.materials.length ? related.materials.map(row => <Link key={row.id} href={row.href}><EditorialImage src={row.cover_url} displayUses={row.cover_display_uses} className={styles.relatedCover} /><span><strong>{row.title}</strong><small>{row.authors}</small><small>{row.source_status === "available" ? "馆藏原文" : "公开书目"}</small></span><ArrowRight size={16} /></Link>) : <p>这些文章暂无可公开的关联材料。</p> : null}
     {tab === "paths" ? related.paths.length ? related.paths.map(row => <Link key={row.id} href={row.href}><span><strong>{row.title}</strong><small>打开完整阅读路径</small></span><ArrowRight size={16} /></Link>) : <p>这些文章尚未编入公开阅读路径。</p> : null}
   </div></section>;
 }

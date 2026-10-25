@@ -9632,6 +9632,7 @@ export interface components {
             authors: string;
             href: string;
             cover_url: string;
+            readonly cover_display_uses: components["schemas"]["MediaDisplayUseEnum"][];
             article_href: string;
             source_status: string;
         };
@@ -11032,6 +11033,7 @@ export interface components {
             readonly work_url: string;
             readonly reader_url: string;
             readonly cover_url: string;
+            readonly cover_display_uses: components["schemas"]["MediaDisplayUseEnum"][];
             readonly file_status: string;
             /** Format: uuid */
             readonly cataloging_session_id: string | null;
@@ -16662,6 +16664,7 @@ export interface components {
             readonly work_url: string;
             readonly reader_url: string;
             readonly cover_url: string;
+            readonly cover_display_uses: components["schemas"]["MediaDisplayUseEnum"][];
             readonly file_status: string;
             /** Format: uuid */
             readonly cataloging_session_id: string | null;

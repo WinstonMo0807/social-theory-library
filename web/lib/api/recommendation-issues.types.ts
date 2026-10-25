@@ -1,6 +1,7 @@
 import type { SiteConfig } from "../site-config";
 import type { AboutPageBlock } from "./site.types";
 import type { PublicScholarCard } from "./scholars.types";
+import type { MediaDisplayUse } from "../media-usage";
 
 export type IssueSourceReference = { type: "work" | "edition" | "span" | "node" | "person" | "timeline" | "reading_path"; id: string; edition_id?: string; document_revision_id?: string };
 export type IssueResolvedSource = IssueSourceReference & { title: string; text?: string; reader_url?: string; work_url?: string; printed_label?: string; page_start?: number; source_type?: string; asset_id?: string; work_id?: string; href?: string; summary?: string; edition_label?: string; public_eligible?: boolean; edit_url?: string; image_url?:string;authors?:string[];publication_year?:number|null;publisher?:string;section?:string };
@@ -20,6 +21,7 @@ export type IssueItem = {
   id: string; kind: "catalog" | "planned"; work_id?: string | null; edition_id?: string | null;
   title: string; authors: string; version_note: string; isbn: string; doi: string; note: string; position: number;
   cataloging_session_id?: string | null; status?: string; work_url?: string; reader_url?: string; cover_url?: string;
+  cover_display_uses?: MediaDisplayUse[];
   match_candidates?: { work_id: string; edition_id: string; title: string; version_label: string; publication_year: number | null; match_basis: string }[];
   linked_edition_id?: string | null;
 };
@@ -51,7 +53,7 @@ export type EditorialDirectory = { count: number; page: number; page_size: numbe
   results: EditorialCard[]; query: string;
   filters: { topic: string; kind: string; curator: string; sort: "newest" | "oldest" | "title"; year_from: number | null; year_to: number | null };
   facets: { topics: { id: string; slug: string; name: string; href: string }[]; curators: string[]; years: number[]; kinds: { id: string; label: string }[] };
-  related: { scholars: PublicScholarCard[]; materials: {id:string;title:string;authors:string;href:string;cover_url:string;article_href:string;source_status:string}[]; paths:{id:string;title:string;href:string}[]; notice:string };
+  related: { scholars: PublicScholarCard[]; materials: {id:string;title:string;authors:string;href:string;cover_url:string;cover_display_uses?:MediaDisplayUse[];article_href:string;source_status:string}[]; paths:{id:string;title:string;href:string}[]; notice:string };
 };
 export type IssuePage = { count: number; next: string | null; previous: string | null; results: RecommendationIssue[]; current: RecommendationIssue | null; summary?: { total: number; published: number; drafts: number; scheduled: number }; upcoming?: RecommendationIssue[] };
 export type SiteContentDraft = { config: SiteConfig; about_blocks: AboutPageBlock[]; edit_version: string; has_unpublished_changes: boolean;

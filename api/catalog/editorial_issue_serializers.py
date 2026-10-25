@@ -3,6 +3,7 @@ from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.helpers import lazy_serializer
 from catalog.serializers import SiteConfigSerializer, AboutPageBlockSerializer
+from catalog.services.media import MEDIA_DISPLAY_USES
 
 
 class IssueTextMarkSerializer(serializers.Serializer):
@@ -51,6 +52,7 @@ class IssueItemSerializer(serializers.Serializer):
     work_url = serializers.CharField(read_only=True)
     reader_url = serializers.CharField(read_only=True)
     cover_url = serializers.CharField(read_only=True)
+    cover_display_uses = serializers.ListField(child=serializers.ChoiceField(choices=MEDIA_DISPLAY_USES), read_only=True)
     file_status = serializers.CharField(read_only=True)
     cataloging_session_id = serializers.UUIDField(read_only=True, allow_null=True)
     available_work_id = serializers.UUIDField(read_only=True, allow_null=True)
@@ -128,6 +130,7 @@ class EditorialRelatedMaterialSerializer(serializers.Serializer):
     authors = serializers.CharField(allow_blank=True)
     href = serializers.CharField()
     cover_url = serializers.CharField(allow_blank=True)
+    cover_display_uses = serializers.ListField(child=serializers.ChoiceField(choices=MEDIA_DISPLAY_USES), read_only=True)
     article_href = serializers.CharField()
     source_status = serializers.CharField()
 

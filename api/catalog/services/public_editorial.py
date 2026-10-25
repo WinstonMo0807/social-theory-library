@@ -180,7 +180,8 @@ def directory_related(cards):
                 continue
             seen.add(key)
             material_rows.append({"id": key, "title": item["title"], "authors": item.get("authors", ""), "href": item.get("work_url", ""),
-                "cover_url": item.get("cover_url", ""), "article_href": card["href"], "source_status": item["status"]})
+                "cover_url": item.get("cover_url", ""), "cover_display_uses": item.get('cover_display_uses', []),
+                "article_href": card["href"], "source_status": item["status"]})
             if len(material_rows) == 3:
                 break
         if len(material_rows) == 3:
