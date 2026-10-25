@@ -7,6 +7,7 @@ export type ExportCategory = "collaboration" | "article_comments" | "research" |
 export type EraseCategory = "collaboration" | "article_comments" | "reading_history" | "search_history" | "personal_notes" | "reading_plans" | "followed_topics" | "source_follows" | "saved_knowledge";
 export type PrivacyLeaf = "reader_groups" | "group_memberships" | "group_invitations" | "reader_shares" | "share_notices" | "article_comments" | "reading_history" | "search_history" | "annotations" | "bookmarks" | "memories" | "parallel_alignments" | "plans" | "followed_topics" | "source_follows" | "saved_knowledge" | "graph_views" | "reading_lists" | "saved_items" | "research" | "audits" | "citation_sources";
 export type PrivacyTarget = { category: PrivacyLeaf; id: string; revision: string; preference_revision?: number };
+export const privacyTargetKey = (target: Pick<PrivacyTarget, "category" | "id">) => `${target.category}:${target.id}`;
 export type PrivacyItem = PrivacyTarget & { title: string; updated_at: string; impact: string; source: { path?: string; title?: string; authors?: string[]; edition?: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; cover_url?: string | null; pdf_page?: number; printed_label?: string } };
 export type PrivacyItems = { owner_id: string; count: number; page: number; page_size: number; results: PrivacyItem[] };
 export type PrivacyOperation = {

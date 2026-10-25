@@ -1,6 +1,28 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { PrivacyItem, PrivacyOperation, PrivacySummary } from "../lib/api/privacy.client";
 
+test("mixed note types keep distinct selection even when their IDs match", async ({ page }) => {
+  const state = await mockPrivacy(page);
+  state.summary.erase_counts.personal_notes = 2;
+  const rows: PrivacyItem[] = (["annotations", "bookmarks"] as const).map((category, index) => ({
+    id: itemId, category, revision: stamp, title: `合成资料 ${index + 1}`, updated_at: stamp, source: {}, impact: "仅所选资料。",
+  }));
+  await page.route("**/api/reading/privacy/items/**", route => route.fulfill({ status: 200, contentType: "application/json",
+    body: JSON.stringify({ owner_id: "1", count: 2, page: 1, page_size: 20, results: rows }) }));
+  await page.goto("/account/settings/privacy/export");
+  await page.getByRole("button", { name: /^笔记、摘录与书签/ }).click();
+  const first = page.getByRole("checkbox", { name: "选择：合成资料 1", exact: true });
+  const second = page.getByRole("checkbox", { name: "选择：合成资料 2", exact: true });
+  await first.check();
+  await expect(second).not.toBeChecked();
+  await second.check();
+  await first.uncheck();
+  await expect(second).toBeChecked();
+  await page.getByRole("button", { name: "提交删除预览", exact: true }).click();
+  await expect.poll(() => state.requests.find(row => row.path === "/api/reading/privacy/operations/")?.body.targets)
+    .toEqual([{ category: "bookmarks", id: itemId, revision: stamp }]);
+});
+
 // Synthetic state-machine cases; intentionally not executed before unified acceptance.
 const itemId = "51000000-0000-4000-8000-000000000001";
 const operationId = "51000000-0000-4000-8000-000000000002";

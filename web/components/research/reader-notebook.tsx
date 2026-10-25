@@ -242,7 +242,7 @@ function NotebookActions({ owner, chosen, onChanged }: { owner: string; chosen: 
   const disabled = busy || !!intent || broken || !chosen.length;
   return <><div className={styles.actions}><button className={styles.primary} disabled={disabled} onClick={() => setProjectRows([...chosen])}>加入研究</button><button disabled={disabled} onClick={() => setExportRows([...chosen])}><Download size={14} />导出</button><button disabled={disabled} onClick={() => void submit("erase")}><Trash2 size={14} />删除</button></div>
     {message ? <p className={styles.notice} role="status">{message}</p> : null}{intent ? <button disabled={busy} onClick={() => void submit()}>核对原请求</button> : null}{broken ? <Link href="/account/privacy">打开隐私与资料核对</Link> : null}
-    {operation ? <OperationDialog id={operation} ownerId={owner} titles={Object.fromEntries(chosen.map(row => [row.id, row.work.title]))} onClose={() => { setOperation(null); onChanged(); }} onChanged={onChanged} onInvalid={reason => setMessage(reason instanceof Error ? reason.message : "账户状态需重新核对。")} /> : null}
+    {operation ? <OperationDialog id={operation} ownerId={owner} onClose={() => { setOperation(null); onChanged(); }} onChanged={onChanged} onInvalid={reason => setMessage(reason instanceof Error ? reason.message : "账户状态需重新核对。")} /> : null}
     {projectRows ? <Modal title="加入我的研究" onClose={() => setProjectRows(null)}><ProjectForm owner={owner} rows={projectRows} onDone={() => { setProjectRows(null); onChanged(); }} /></Modal> : null}
     {exportRows ? <Modal title="导出选中的阅读记录" onClose={() => setExportRows(null)}><NotebookExport owner={owner} rows={exportRows} onJson={() => { const selected = exportRows; setExportRows(null); void submit("export", selected); }} /></Modal> : null}</>;
 }
