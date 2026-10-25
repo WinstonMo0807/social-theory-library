@@ -22,6 +22,7 @@ class MappingPageSerializer(serializers.Serializer):
     page_type = serializers.ChoiceField(choices=["front", "body", "appendix", "other", "blank"])
     confirmed = serializers.BooleanField(default=False)
     note = serializers.CharField(max_length=1000, allow_blank=True, default="")
+    source_note = serializers.CharField(max_length=240, allow_blank=True, default="")
     override_manual = serializers.BooleanField(default=False)
     source = serializers.ChoiceField(choices=["manual", "pdf_page_labels", "embedded_text", "ocr", "sequence", "file_index", "unknown"], required=False)
     confidence = serializers.FloatField(min_value=0, max_value=1, required=False)
@@ -117,6 +118,7 @@ class MappingAssetSerializer(serializers.Serializer):
     edition_label = serializers.CharField(allow_blank=True)
     publication_year = serializers.IntegerField(allow_null=True)
     document_type = serializers.CharField()
+    byte_size = serializers.IntegerField()
     page_count = serializers.IntegerField()
     sha256 = serializers.CharField()
     status = serializers.CharField()
@@ -160,6 +162,8 @@ class MappingChangeSerializer(serializers.Serializer):
     page_type_before = serializers.CharField()
     page_type_after = serializers.CharField()
     note = serializers.CharField(allow_blank=True)
+    source_note_before = serializers.CharField(allow_blank=True)
+    source_note_after = serializers.CharField(allow_blank=True)
     manual_before = serializers.BooleanField()
 
 

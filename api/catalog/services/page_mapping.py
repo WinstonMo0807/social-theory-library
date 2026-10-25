@@ -52,6 +52,7 @@ def current_data(asset, pages=None):
             "page_type": prior.get(p.index, {}).get("page_type", "body"),
             "confirmed": bool(p.is_label_manual or prior.get(p.index, {}).get("confirmed")),
             "note": prior.get(p.index, {}).get("note", ""),
+            "source_note": prior.get(p.index, {}).get("source_note", ""),
             "override_manual": False,
             "source": p.label_source, "confidence": p.label_confidence,
         } for p in pages],
@@ -81,7 +82,8 @@ def validate_data(asset, data, pages=None):
         if len(labels) > 2 or any(not v for v in labels) or len(set(labels)) != len(labels) or len("–".join(labels)) > 40:
             raise ValueError("每个 PDF 页最多对应两个不同印刷页码，合并长度不能超过 40 字。")
         row.update(labels=labels, page_type=row.get("page_type", "body"), confirmed=bool(row.get("confirmed", False)),
-                   note=str(row.get("note", "")).strip(), override_manual=bool(row.get("override_manual", False)))
+                   note=str(row.get("note", "")).strip(), source_note=str(row.get("source_note", "")).strip(),
+                   override_manual=bool(row.get("override_manual", False)))
         old = actual[index]
         changed = "–".join(labels) != old.printed_label
         row["source"] = "manual" if row["confirmed"] else row.get("source", old.label_source)
@@ -149,6 +151,7 @@ def mapping_state(asset, *, history_page=1):
     # Reuse the existing, permission-scoped asset/preview identity contract.
     summary = outline_state(asset)["asset"]
     summary["publication_state"] = asset.edition.state
+    summary["byte_size"] = asset.byte_size
     preceding = PageMappingRevision.objects.filter(applied_asset=asset).exclude(asset=asset).order_by("-applied_at").first()
     return {"asset": summary, "asset_id": str(asset.pk), "expected_revision": latest.revision if latest else 0,
             "source_fingerprint": source_fingerprint(asset, pages), "current": current_data(asset, pages),
@@ -267,10 +270,11 @@ def prepare_mapping(asset, row):
     diag = diagnostics(row.data)
     changes = [{"pdf_page": r["pdf_page"], "before": old[r["pdf_page"]]["labels"], "after": r["labels"],
                 "page_type_before": old[r["pdf_page"]]["page_type"], "page_type_after": r["page_type"],
-                "note": r["note"], "manual_before": old[r["pdf_page"]]["confirmed"]}
+                "note": r["note"], "source_note_before": old[r["pdf_page"]].get("source_note", ""),
+                "source_note_after": r.get("source_note", ""), "manual_before": old[r["pdf_page"]]["confirmed"]}
                for r in row.data["pages"] if r["pdf_page"] in old and
-               (r["labels"], r["page_type"], r["confirmed"], r["note"]) !=
-               (old[r["pdf_page"]]["labels"], old[r["pdf_page"]]["page_type"], old[r["pdf_page"]]["confirmed"], old[r["pdf_page"]]["note"])]
+               (r["labels"], r["page_type"], r["confirmed"], r["note"], r.get("source_note", "")) !=
+               (old[r["pdf_page"]]["labels"], old[r["pdf_page"]]["page_type"], old[r["pdf_page"]]["confirmed"], old[r["pdf_page"]]["note"], old[r["pdf_page"]].get("source_note", ""))]
     blockers = []
     try:
         _source_current(asset)
