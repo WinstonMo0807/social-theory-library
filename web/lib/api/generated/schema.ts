@@ -6363,6 +6363,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/research-projects/{id}/selection-note-source/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Compatibility name used by the existing owner-scoped workspaces. */
+        get: operations["reading_research_projects_selection_note_source_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/research-projects/{id}/selections/": {
         parameters: {
             query?: never;
@@ -19666,6 +19683,18 @@ export interface components {
             order?: string[];
             additions?: components["schemas"]["EvidenceReferenceInputRequest"][];
             removals?: string[];
+        };
+        SelectionNoteSourceOutput: {
+            readonly reference_id: string;
+            readonly source_status: string;
+            /** Format: uuid */
+            readonly asset_id: string | null;
+            /** Format: uuid */
+            readonly document_revision_id: string | null;
+            readonly pdf_page: number | null;
+            readonly title: string;
+            readonly citation: string;
+            readonly reader_url: string | null;
         };
         ServiceDetail: {
             label: string;
@@ -37223,6 +37252,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReplayTreeOutput"];
+                };
+            };
+        };
+    };
+    reading_research_projects_selection_note_source_retrieve: {
+        parameters: {
+            query: {
+                reference_id: string;
+            };
+            header?: never;
+            path: {
+                /** @description 标识此 research project 的 UUID 字符串。 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelectionNoteSourceOutput"];
                 };
             };
         };

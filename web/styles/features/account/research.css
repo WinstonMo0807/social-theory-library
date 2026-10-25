@@ -340,3 +340,8 @@
 .stl4-research-workspace-tools button:disabled { opacity: .5; cursor: not-allowed; }
 .stl4-research-workspace-tools small { flex-basis: 100%; color: var(--night-muted, #8a8379); font: 10px/1.5 var(--sans); text-align: right; }
 @media (max-width: 860px) { .stl4-research-workspace-tools { max-width: none; justify-content: flex-start; }.stl4-research-workspace-tools small { text-align: left; } }
+.stl4-research-material-notes { margin: 18px 0; padding: 12px 0; border-block: 1px solid var(--night-line, #e5e1d9); color: var(--night-ink, #393630); font: 12px/1.7 var(--sans); }
+.stl4-research-material-notes ul { list-style: none; padding: 0; }
+.stl4-research-material-notes li { padding: 14px 0; border-bottom: 1px solid var(--night-line, #e5e1d9); }
+.stl4-research-material-notes :is(button, a) { color: var(--night-gold, #936c36); background: transparent; border: 0; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.stl4-research-material-notes button:disabled { opacity: .5; cursor: not-allowed; }

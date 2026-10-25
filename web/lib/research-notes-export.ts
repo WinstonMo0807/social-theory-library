@@ -10,14 +10,14 @@ export function researchNotesMarkdown(record: ResearchRecord<ProjectData> & { tu
   for (const ref of [...record.data.selections, ...(record.turns || []).flatMap(turn => [...(turn.data.selected_refs || []), ...(turn.data.result_refs || [])])]) {
     if (ref.reference_id) sources.set(ref.reference_id, ref);
   }
-  const sourceLabel = (id: string) => {
-    const ref = sources.get(id);
+  const label = (ref: ResolvedEvidence | undefined, id: string) => {
     if (!ref || ref.source_status !== "available") return `来源待核对 · 引用标识 ${heading(id)}`;
     return heading(ref.citation || [ref.title || "原文材料", ref.pdf_page ? `PDF 第 ${ref.pdf_page} 页` : ""].filter(Boolean).join(" · "));
   };
+  const sourceLabel = (id: string) => label(sources.get(id), id);
   if (note(record.data.notes)) sections.push(`## 研究笔记\n\n${note(record.data.notes)}`);
   for (const [id, value] of Object.entries(record.data.selection_notes || {})) {
-    if (note(value)) sections.push(`## 选材备注\n\n${sourceLabel(id)}\n\n${note(value)}`);
+    if (note(value)) sections.push(`## 选材备注\n\n${label(record.data.selection_note_sources?.[id], id)}\n\n${note(value)}`);
   }
   for (const cell of record.data.comparison?.cells || []) {
     if (!note(cell.note)) continue;

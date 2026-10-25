@@ -31062,6 +31062,57 @@
                 }
             }
         },
+        "/api/reading/research-projects/{id}/selection-note-source/": {
+            "get": {
+                "operationId": "reading_research_projects_selection_note_source_retrieve",
+                "description": "Compatibility name used by the existing owner-scoped workspaces.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "标识此 research project 的 UUID 字符串。",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "reference_id",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 240
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SelectionNoteSourceOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/research-projects/{id}/selections/": {
             "post": {
                 "operationId": "reading_research_projects_selections_create",
@@ -75640,6 +75691,59 @@
                 "required": [
                     "action",
                     "expected_revision"
+                ]
+            },
+            "SelectionNoteSourceOutput": {
+                "type": "object",
+                "properties": {
+                    "reference_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "source_status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "document_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "citation": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "reader_url": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "citation",
+                    "document_revision_id",
+                    "pdf_page",
+                    "reader_url",
+                    "reference_id",
+                    "source_status",
+                    "title"
                 ]
             },
             "ServiceDetail": {

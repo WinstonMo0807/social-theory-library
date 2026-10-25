@@ -434,6 +434,7 @@ def change_selection(user, pk, data):
             return project
     expect(project, data.get("expected_revision"))
     selected = payload.setdefault("selections", [])
+    preserve_selection_note_sources(payload, [*selected, *(row["reference"] for row in payload.get("removed_selections", []))])
     action = data.get("action")
     if action == "apply":
         if not request_id or data.get("expected_owner_id") != user.pk:
@@ -470,7 +471,9 @@ def change_selection(user, pk, data):
         if note or item_notes:
             notes = payload.setdefault("selection_notes", {})
             for row in added:
-                notes[reference_identity(row)] = item_notes.get(reference_identity(row), note)
+                key = reference_identity(row)
+                notes[key] = item_notes.get(key, note)
+                payload.setdefault("selection_note_sources", {})[key] = compact_reference(row)
         bounded_list(selected, "selections")
     elif action == "remove":
         key = str(data.get("reference_id", ""))
@@ -503,11 +506,36 @@ def change_selection(user, pk, data):
         raise ValidationError({"action": "支持 add/remove/undo/reorder/apply。"})
     if request_id:
         payload["selection_requests"] = [*payload.get("selection_requests", []), {"id": request_id, "fingerprint": fingerprint}][-100:]
-    retained_ids = {reference_identity(row) for row in payload.get("selections", [])}
-    retained_ids.update(reference_identity(row["reference"]) for row in payload.get("removed_selections", []))
-    if "selection_notes" in payload:
-        payload["selection_notes"] = {key: value for key, value in payload["selection_notes"].items() if key in retained_ids}
+    # Undo history is bounded; reader-authored notes are not disposable undo metadata.
+    preserve_selection_note_sources(payload, payload.get("selections", []))
     return save_data(project, payload)
+
+
+def preserve_selection_note_sources(payload, refs):
+    notes = payload.get("selection_notes", {})
+    if not notes:
+        return
+    sources = payload.setdefault("selection_note_sources", {})
+    for reference in refs:
+        key = reference_identity(reference)
+        if notes.get(key):
+            sources.setdefault(key, compact_reference(reference))
+
+
+def selection_note_source(project, user, reference_id):
+    if project.user_id != user.pk:
+        raise NotFound("该私人选材备注不存在。")
+    payload = unpack(project)
+    if not payload.get("selection_notes", {}).get(reference_id):
+        raise NotFound("该私人选材备注不存在。")
+    raw = payload.get("selection_note_sources", {}).get(reference_id)
+    if not raw:
+        raise NotFound("这条旧备注没有保存原始定位，备注文字仍保留。")
+    return note_source_metadata(resolve_reference(raw, user))
+
+
+def note_source_metadata(source):
+    return {name: source[name] for name in ("reference_id", "source_status", "asset_id", "document_revision_id", "pdf_page", "title", "citation", "reader_url") if name in source}
 
 
 @transaction.atomic
@@ -802,6 +830,17 @@ def serialize_record(record, user, *, memory_context_rows=None):
     for key in ("selections", "result_refs", "selected_refs", "sources"):
         if key in payload:
             payload[key] = [resolve_reference(ref, user) for ref in payload[key]]
+    if "selection_note_sources" in payload:
+        current = {reference_identity(ref): ref for ref in payload.get("selections", [])}
+        note_sources = {}
+        for key, raw in payload["selection_note_sources"].items():
+            if not payload.get("selection_notes", {}).get(key):
+                continue
+            candidate = current.get(key)
+            # Ordinary polling must not re-read every historical note's original source.
+            source = candidate if candidate and compact_reference(candidate) == raw else {"reference_id": key, "source_status": "unverified"}
+            note_sources[key] = note_source_metadata(source)
+        payload["selection_note_sources"] = note_sources
     if "comparison" in payload:
         available = {reference_identity(ref) for ref in payload.get("selections", [])
                      if ref["source_status"] == "available"}

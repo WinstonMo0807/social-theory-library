@@ -35,7 +35,7 @@ export type ResearchRecord<T = Record<string, unknown>> = {
 export type ComparisonCell = { dimension: string; column_id?: string; author?: string; reference_ids?: string[]; note?: string; evidence_status?: "selected" | "partial" | "unavailable" | "missing" };
 export type ProjectData = {
   title: string; question: string; notes?: string; scope: QueryScope; selections: ResolvedEvidence[];
-  selection_notes?: Record<string, string>; selection_receipts?: string[];
+  selection_notes?: Record<string, string>; selection_note_sources?: Record<string, ResolvedEvidence>; selection_receipts?: string[];
   comparison?: { dimensions: string[]; cells: ComparisonCell[] }; layout?: Record<string, unknown>; last_turn_id?: string;
 };
 export type Statement = { proposition: string; subject?: string; predicate?: string; object?: string; polarity?: "positive" | "negative" | "mixed" | "uncertain"; modality?: string; qualifiers?: string[]; temporal_scope?: unknown; geographic_scope?: unknown; population_scope?: unknown };
@@ -180,6 +180,9 @@ export function readResearchProjectForOwner(id: string, ownerId: string) {
     if (record.id !== id) throw new Error("读取到的研究身份无法核对，原输入仍保留。");
     return record;
   });
+}
+export function readResearchSelectionNoteSource(id: string, referenceId: string, ownerId: string) {
+  return withPrivateOwner(ownerId, () => privateRequest<ResolvedEvidence>(`${researchRecordPath("research-projects", id)}selection-note-source/?reference_id=${encodeURIComponent(referenceId)}`, { headers: { "X-Reader-Owner": ownerId } }));
 }
 export function updateResearchProject(id: string, data: Revision & Partial<Pick<ProjectData, "title" | "question" | "notes" | "scope" | "layout">> & { archived?: boolean }, ownerId?: string) {
   if (ownerId) return withPrivateOwner(ownerId, () => privateRequest<ResearchRecord<ProjectData>>(researchRecordPath("research-projects", id), { method: "PATCH", body: JSON.stringify(data), headers: { "X-Reader-Owner": ownerId } }));

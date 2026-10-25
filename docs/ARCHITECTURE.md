@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-26 选材备注保留修复
+
+selection_notes保留于原加密研究，selection_note_sources只保存原定位身份；普通刷新不回查全部历史源，单条selection-note-source沿本人研究权限显式读取，仅返回书目/定位。未新增表/迁移。
+
 ## 2026-10-26 R05导出入口
 
 R05笔记导出使用原ResearchProject/turns一致快照；前后账户核验与可取消请求，前端只输出已保存笔记投影，不导出模型待确认内容。

@@ -63,6 +63,21 @@ class SelectionInput(RevisionInput):
         return attrs
 
 
+class SelectionNoteSourceInput(serializers.Serializer):
+    reference_id = serializers.CharField(max_length=240)
+
+
+class SelectionNoteSourceOutput(serializers.Serializer):
+    reference_id = serializers.CharField(read_only=True)
+    source_status = serializers.CharField(read_only=True)
+    asset_id = serializers.UUIDField(read_only=True, required=False, allow_null=True)
+    document_revision_id = serializers.UUIDField(read_only=True, required=False, allow_null=True)
+    pdf_page = serializers.IntegerField(read_only=True, required=False, allow_null=True)
+    title = serializers.CharField(read_only=True, required=False)
+    citation = serializers.CharField(read_only=True, required=False)
+    reader_url = serializers.CharField(read_only=True, required=False, allow_null=True)
+
+
 class ComparisonCellInput(serializers.Serializer):
     dimension = serializers.CharField(max_length=160)
     column_id = serializers.CharField(max_length=160, required=False, allow_blank=True,

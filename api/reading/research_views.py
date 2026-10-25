@@ -21,7 +21,7 @@ from .research_directory import DirectoryActions
 from .path_serializers import PathCommandOutput
 from .citation_audit import audit_capabilities, audit_versions, create_audit, original_document, update_audit
 from .citation_sources import paginated_units
-from .research_serializers import CitationSourceCreateInput, CitationSourceCommandInput, CitationTextUnitsOutput
+from .research_serializers import CitationSourceCreateInput, CitationSourceCommandInput, CitationTextUnitsOutput, SelectionNoteSourceInput, SelectionNoteSourceOutput
 from .models import (CitationAudit, PersonalReadingPlan, ResearchMemory, ResearchProject, ResearchTurn)
 from .research_serializers import (AnalysisDecisionInput, AuditCapabilitiesOutput, AuditCommandInput, AuditCreateInput, AuditVersionInput, AuditVersionsOutput, CitationOCROutput, ComparisonDraftInput, ComparisonInput,
     MemoryCreateInput, MemoryListInput, MemorySearchInput, MemoryUpdateInput, MemoryUsageInput, PlanCreateInput, PlanUpdateInput,
@@ -164,6 +164,13 @@ class ResearchProjectViewSet(DirectoryActions, ReplayActions, PrivateRecordViewS
     @action(detail=True, methods=["post"])
     def selections(self, request, pk=None):
         return Response(research.serialize_record(research.change_selection(request.user, pk, command(request, SelectionInput)), request.user))
+
+    @extend_schema(parameters=[SelectionNoteSourceInput], responses=SelectionNoteSourceOutput)
+    @action(detail=True, methods=["get"], url_path="selection-note-source")
+    def selection_note_source(self, request, pk=None):
+        filters = SelectionNoteSourceInput(data=request.query_params)
+        filters.is_valid(raise_exception=True)
+        return Response(research.selection_note_source(self.get_object(), request.user, filters.validated_data["reference_id"]))
 
     @extend_schema(request=ComparisonInput)
     @action(detail=True, methods=["post"])
