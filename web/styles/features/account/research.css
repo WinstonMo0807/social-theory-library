@@ -191,3 +191,68 @@
 .stl4-comparison-text-view h3 { margin: 0 0 10px; color: #292723; font: 500 17px/1.5 var(--serif); }
 .stl4-comparison-text-view blockquote { margin: 12px 0; border-left: 2px solid #c4b08b; background: var(--night-white, #faf8f3); padding: 10px 14px; }
 .stl4-comparison-text-view blockquote a { color: #7f633e; font: 11px var(--sans); }
+
+/* Final atlas 196–197: selected documents, one dimension, distinct evidence and judgment. */
+.stl4-comparison-layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); }
+.stl4-comparison-content { min-width: 0; }
+.stl4-comparison-selected { min-width: 0; padding: 18px 14px; border-right: 1px solid var(--night-line, #e5e1d9); }
+.stl4-comparison-selected > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 15px; }
+.stl4-comparison-selected h2 { margin: 0; font: 600 15px/1.6 var(--serif); }
+.stl4-comparison-selected h2 small { margin-left: 4px; color: var(--night-muted, #777168); font: 11px var(--sans); }
+.stl4-comparison-selected > header a { flex: none; color: var(--night-ink, #4f4a44); font: 11px var(--sans); text-underline-offset: 3px; }
+.stl4-comparison-selected > details { padding: 12px 0; border-top: 1px solid var(--night-line, #e5e1d9); }
+.stl4-comparison-selected summary { display: flex; gap: 7px; align-items: start; list-style: none; cursor: pointer; }
+.stl4-comparison-selected summary::-webkit-details-marker, .stl4-comparison-mobile summary::-webkit-details-marker { display: none; }
+.stl4-comparison-selected summary > svg { flex: none; margin-top: 5px; }
+.stl4-comparison-index { flex: none; color: var(--night-gold, #9b7c45); font: 12px/1.8 var(--serif); }
+.stl4-comparison-document, .stl4-research-matrix .stl4-comparison-document { display: flex; min-width: 0; align-items: start; gap: 10px; }
+.stl4-comparison-document > span { min-width: 0; }
+.stl4-comparison-document strong { display: block; color: var(--night-ink, #292723); font: 600 13px/1.7 var(--serif); overflow-wrap: anywhere; }
+.stl4-comparison-document small { display: block; margin: 3px 0 0; color: var(--night-muted, #777168); font: 10px/1.6 var(--sans); }
+.stl4-comparison-cover, .stl4-research-matrix .stl4-comparison-cover { display: grid; place-items: center; flex: none; width: 42px; height: 60px; margin: 0; object-fit: contain; background: var(--night-paper, #f7f4ee); color: var(--night-muted, #777168); }
+.stl4-comparison-selected-evidence { max-height: 330px; overflow-y: auto; margin-top: 10px; }
+.stl4-comparison-selected-evidence blockquote { margin: 8px 0; padding: 10px; border-left: 2px solid var(--night-gold, #b89b6a); background: var(--night-paper, #f7f4ee); }
+.stl4-comparison-selected-evidence p { margin: 0 0 8px; font: 11px/1.8 var(--serif); white-space: pre-wrap; overflow-wrap: anywhere; }
+.stl4-comparison-selected-evidence footer { font: 10px/1.6 var(--sans); }
+.stl4-comparison-selected-evidence a { color: var(--night-ink, #4f4a44); }
+.stl4-comparison-selected > .stl4-research-secondary { width: 100%; margin-top: 12px; }
+.stl4-comparison-dimensions { display: flex; overflow-x: auto; gap: 2px; padding: 0 18px; border-bottom: 1px solid var(--night-line, #e5e1d9); }
+.stl4-comparison-dimensions button { flex: none; border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 13px 14px; color: var(--night-muted, #777168); font: 12px/1.5 var(--serif); cursor: pointer; }
+.stl4-comparison-dimensions button small { margin-right: 7px; font: 11px var(--sans); }
+.stl4-comparison-dimensions button[aria-pressed=true] { border-color: var(--night-gold, #b89b6a); color: var(--night-gold, #8e7045); background: var(--night-paper, #f7f4ee); }
+.stl4-comparison-desktop { padding: 18px; }
+.stl4-comparison-desktop thead th:first-child, .stl4-comparison-desktop tbody th { min-width: 100px; width: 100px; }
+.stl4-comparison-desktop tbody th small { display: block; margin-top: 7px; color: var(--night-muted, #777168); font: 10px/1.6 var(--sans); }
+.stl4-comparison-desktop thead th { min-width: 210px; }
+.stl4-comparison-desktop td { min-width: 210px; }
+.stl4-comparison-location { padding: 5px 0 12px; }
+.stl4-comparison-location + .stl4-comparison-location { padding-top: 12px; border-top: 1px solid var(--night-line, #e5e1d9); }
+.stl4-comparison-location p { margin: 0 0 7px; color: var(--night-muted, #777168); font: 11px/1.7 var(--serif); overflow-wrap: anywhere; }
+.stl4-comparison-location small { display: block; font: 10px/1.6 var(--sans); color: var(--night-muted, #777168); }
+.stl4-comparison-location a { display: block; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--night-line, #d8d2c7); color: var(--night-ink, #4f4a44); font: 12px/1.5 var(--sans); text-align: center; text-decoration: none; }
+.stl4-comparison-mobile { display: none; }
+.stl4-comparison-layout :is(a, button, summary):focus-visible { outline: 2px solid var(--night-gold, #9b7c45); outline-offset: 3px; }
+@media (max-width: 1050px) { .stl4-comparison-layout { grid-template-columns: 208px minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .stl4-comparison-layout { grid-template-columns: minmax(0, 1fr); }
+  .stl4-comparison-selected { padding: 16px; border-right: 0; border-bottom: 1px solid var(--night-line, #e5e1d9); }
+  .stl4-comparison-selected .stl4-comparison-document { flex: 1; }
+  .stl4-comparison-selected-evidence { max-height: 220px; }
+  .stl4-comparison-desktop { display: none; }
+  .stl4-comparison-dimensions { padding: 0 14px; }
+  .stl4-comparison-mobile { display: block; padding: 14px; }
+  .stl4-comparison-mobile > header { margin-bottom: 14px; padding: 12px; background: var(--night-paper, #f7f4ee); }
+  .stl4-comparison-mobile > header small { color: var(--night-muted, #777168); font: 10px var(--sans); }
+  .stl4-comparison-mobile h2 { margin: 5px 0 0; font: 600 18px/1.6 var(--serif); }
+  .stl4-comparison-mobile > details { margin-bottom: 12px; border: 1px solid var(--night-line, #e5e1d9); }
+  .stl4-comparison-mobile summary { display: flex; align-items: start; justify-content: space-between; gap: 12px; list-style: none; padding: 13px; cursor: pointer; }
+  .stl4-comparison-mobile summary > svg { flex: none; margin-top: 8px; }
+  .stl4-comparison-mobile details[open] > summary > svg { transform: rotate(180deg); }
+  .stl4-comparison-mobile details > section { padding: 0 13px 15px; }
+  .stl4-comparison-mobile h3 { margin: 16px 0 9px; font: 600 13px/1.7 var(--serif); }
+  .stl4-comparison-mobile blockquote { margin: 0 0 10px; padding: 12px; border-left: 2px solid var(--night-gold, #b89b6a); background: var(--night-paper, #f7f4ee); }
+  .stl4-comparison-mobile blockquote p { margin: 0 0 7px; color: var(--night-ink, #4f4a44); font: 13px/1.9 var(--serif); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .stl4-comparison-mobile blockquote footer { color: var(--night-muted, #777168); font: 10px/1.6 var(--sans); }
+  .stl4-comparison-mobile button { display: inline-flex; align-items: center; gap: 6px; padding: 9px 11px; border: 1px solid var(--night-line, #d8d2c7); background: var(--night-white, #fff); color: var(--night-ink, #4f4a44); font: 11px/1.5 var(--sans); }
+  .stl4-comparison-mobile button:disabled { opacity: .5; }
+}
