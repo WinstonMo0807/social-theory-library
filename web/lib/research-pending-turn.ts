@@ -1,6 +1,7 @@
 import type { EvidenceReference, QueryScope, ResearchTurnCommand } from "./api/research.client";
 
 export type PendingResearchTurn = { command: ResearchTurnCommand; branch: boolean };
+export type ResearchBranchDraft = { question: string; parent_id: string; scope: QueryScope };
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const filterKeys = new Set("work work_id work_ids scholar author authors theory theory_node_ids topic topic_ids concept tag concepts document_type document_types language languages year years year_min year_max access source_type source_types theories topics".split(" "));
 function object(value: unknown): Record<string, unknown> {
@@ -66,4 +67,9 @@ export function parsePendingResearchTurn(value: unknown, projectId?: string): Pe
   return { branch: raw.branch, command: { projectId: project, ...(command.expandTurnId !== undefined ? { expandTurnId: uuid(command.expandTurnId) } : {}),
     data: { expected_revision: positive(data.expected_revision), request_id: uuid(data.request_id), question: data.question, mode: "search",
       ...(data.parent_id !== undefined ? { parent_id: uuid(data.parent_id) } : {}), scope: parseResearchScopeDraft(data.scope) } } };
+}
+export function parseResearchBranchDraft(value: unknown): ResearchBranchDraft {
+  const raw = object(value);
+  if (typeof raw.question !== "string" || raw.question.length > 1200) throw new Error("分支草稿文字无法核对，原记录未覆盖。");
+  return { question: raw.question, parent_id: uuid(raw.parent_id), scope: parseResearchScopeDraft(raw.scope) };
 }
