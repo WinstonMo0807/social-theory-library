@@ -1,4 +1,4 @@
-.page { --theory-paper: #f7f4ee; --theory-line: #e3dfd7; --theory-ink: var(--night-ink, #10100f); --theory-muted: #69655d; color: var(--theory-ink); background: var(--night-white, #fff); width: 100%; max-width: 1440px; margin: 0 auto; }
+.page { --theory-paper: #f7f4ee; --theory-line: #e3dfd7; --theory-ink: var(--night-ink, #10100f); --theory-muted: #69655d; color: var(--theory-ink); background: var(--night-white, #fff); width: 100%; min-height:calc(100svh - 74px); max-width: 1440px; margin: 0 auto; }
 .page a { color: inherit; text-decoration: none; }.page a:focus-visible, .page :is(button,input):focus-visible { outline: 2px solid #a78c5e; outline-offset: 4px; }
 .hero { position: relative; min-height: 340px; overflow: hidden; border-bottom: 1px solid var(--theory-line); }
 .heroPhoto { position: absolute; inset: 0 0 0 auto; width: 55%; display: block; mask-image: linear-gradient(to right,transparent,#000 22%); }.heroPhoto img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }

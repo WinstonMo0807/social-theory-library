@@ -35,7 +35,7 @@ export function LibraryMark({ className = "" }: { className?: string }) {
     src="/brand/stl-mark-final-r2.png" width={61} height={45} unoptimized />;
 }
 
-const referenceBrandSize = { subdisciplines: [245,55], "subdiscipline-detail": [204,53], "theory-overview": [241,54], about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38], evidence: [220,54], work: [121,42], journal: [247,38], "work-readable": [182,31], reader: [133,45], "reader-outline": [216,47], "reader-search": [232,42], "reader-notes": [242,40], parallel: [264,36], "parallel-manual": [264,37] } as const;
+const referenceBrandSize = { "theory-concept": [235,35], "theory-tradition": [132,35], subdisciplines: [245,55], "subdiscipline-detail": [204,53], "theory-overview": [241,54], about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38], evidence: [220,54], work: [121,42], journal: [247,38], "work-readable": [182,31], reader: [133,45], "reader-outline": [216,47], "reader-search": [232,42], "reader-notes": [242,40], parallel: [264,36], "parallel-manual": [264,37] } as const;
 export function Wordmark({ config = defaultSiteConfig, home = false, reference }: { config?: SiteConfig; home?: boolean; reference?: keyof typeof referenceBrandSize }) {
   if (reference) return <picture className="brand-reference-lockup" data-brand-variant={reference}><source media="(max-width: 700px)" srcSet={`/brand/stl-lockup-${reference}-mobile-final-r2.png`} /><Image src={`/brand/stl-lockup-${reference}-desktop-final-r2.png`} alt={config.site_name} width={referenceBrandSize[reference][0]} height={referenceBrandSize[reference][1]} unoptimized /></picture>;
   return (
@@ -75,6 +75,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   ] as const;
   const readerCenterRoute = pathname === "/account" && !preview;
   const supportRoute = pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback";
+  const theoryDetailRoute = pathname.startsWith("/theories/nodes/");
   const subdisciplineReference = pathname === "/subdisciplines" ? "subdisciplines" : pathname.startsWith("/subdisciplines/") ? "subdiscipline-detail" : undefined;
   const theoryOverviewRoute = pathname === "/theories" || pathname === "/theory-schools";
   const workRoute = pathname.startsWith("/works/");
@@ -125,7 +126,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-edit-section={preview ? "brand" : undefined}
       data-stl-home={pathname === "/" || preview ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : undefined}
-      data-stl-theory={theoryOverviewRoute ? "overview" : subdisciplineReference}
+      data-stl-theory={theoryDetailRoute ? "detail" : theoryOverviewRoute ? "overview" : subdisciplineReference}
       data-stl-work={workRoute ? "true" : undefined}
       data-stl-reader={reader ? readerReference : undefined}
       data-stl-support={supportRoute ? brandReference : undefined}
@@ -134,7 +135,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-ui-scope="stl4"
     >
       <Link className="logo-link" href="/" prefetch={false}>
-        {workRoute ? <span className="brand-work-variants"><Wordmark config={config} reference="work" /><Wordmark config={config} reference="work-readable" /><Wordmark config={config} reference="journal" /></span> : <Wordmark config={config} home={pathname === "/" || preview} reference={brandReference} />}
+        {theoryDetailRoute ? <span className="brand-theory-variants"><Wordmark config={config} reference="theory-concept" /><Wordmark config={config} reference="theory-tradition" /></span> : workRoute ? <span className="brand-work-variants"><Wordmark config={config} reference="work" /><Wordmark config={config} reference="work-readable" /><Wordmark config={config} reference="journal" /></span> : <Wordmark config={config} home={pathname === "/" || preview} reference={brandReference} />}
       </Link>
       <nav className="desktop-nav" aria-label="主导航">
         {headerNavigation.map(([href, label]) => {
@@ -154,7 +155,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       </nav>
       <div className="header-actions">
         {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label="返回原页面" title="返回原页面" href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>返回原页面</span></Link> : null}
-        {evidenceRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label="搜索馆藏"><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">搜索书名、作者、概念</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder="搜索书名、作者、概念…" /></form> : null}
+        {evidenceRoute || theoryDetailRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label="搜索馆藏"><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">搜索书名、作者、概念</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder="搜索书名、作者、概念…" /></form> : null}
         <Link className="header-search" href="/explore" prefetch={false} aria-label={config.navigation.search}>
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>

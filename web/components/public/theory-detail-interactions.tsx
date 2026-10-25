@@ -70,13 +70,13 @@ export function TheoryUsageExplorer({ usages, unavailableCount = 0, initialCompa
     window.history.replaceState(null, "", `${address.pathname}${address.search}${address.hash}`);
   }
   return <section id="usages" className={styles.section} aria-labelledby="theory-usages-heading">
-    <header className={styles.sectionHeading}><div><h2 id="theory-usages-heading">不同作者的用法 <small>{selected.length ? `已选 ${selected.length} / ${usages.length}` : `共 ${usages.length} 处`}</small></h2><p>回到具体作者与原文，比较同一概念在不同语境中的含义。</p></div><button className={styles.primary} type="button" disabled={chosen.length !== 2} onClick={compare}>比较所选用法（{chosen.length}）<ArrowRight size={15} /></button></header>
-    {usages.length ? <div className={styles.filters}>
+    <header className={styles.sectionHeading}><div><h2 id="theory-usages-heading">核心用法 <small>（{selected.length}/{usages.length}）</small></h2><p>选择两个用法进行比较，深入理解同一概念在不同语境中的含义。</p></div><button className={styles.primary} type="button" disabled={chosen.length !== 2} onClick={compare}>比较所选用法（{chosen.length}）<ArrowRight size={15} /></button></header>
+    {usages.length ? <details className={styles.usageFilters}><summary>筛选用法{author || period || context ? " · 已筛选" : ""}<ChevronDown size={13} /></summary><div className={styles.filters}>
       <label>作者<select value={author} onChange={event => setAuthor(event.target.value)}><option value="">所有作者</option>{authors.map(person => <option value={person.id} key={person.id}>{person.name}</option>)}</select></label>
       {periods.length ? <label>时期<select value={period} onChange={event => setPeriod(event.target.value)}><option value="">所有时期</option>{periods.map(value => <option key={value}>{value}</option>)}</select></label> : null}
       {contexts.length ? <label>语境<select value={context} onChange={event => setContext(event.target.value)}><option value="">所有语境</option>{contexts.map(value => <option key={value}>{value}</option>)}</select></label> : null}
       {author || period || context ? <button type="button" onClick={() => { setAuthor(""); setPeriod(""); setContext(""); }}>清除筛选</button> : null}
-    </div> : null}
+    </div></details> : null}
     <div className={styles.usageGrid}>{visible.map(usage => <article className={`${styles.usageCard} ${selected.includes(usage.id) ? styles.selected : ""}`} key={usage.id} id={`usage-${usage.id}`}>
       <label className={styles.selectUsage}><input type="checkbox" checked={selected.includes(usage.id)} onChange={() => toggle(usage.id)} aria-label={`将${usage.author?.name || "本条"}的${label(usage)}加入比较`} /><span>{selected.includes(usage.id) ? "已选" : "加入比较"}</span></label>
       <button className={styles.usageSummary} type="button" onClick={() => setDetailId(usage.id)}>

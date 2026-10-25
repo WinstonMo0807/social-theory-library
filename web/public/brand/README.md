@@ -117,3 +117,14 @@ Header names use `stl-lockup-{suffix}-final-r2.png`; footer uses `stl-footer-par
 | visual/stl4/subdisciplines/related-shelves-final-r2.png | 51 | 882,524,987,593 |
 | visual/stl4/subdisciplines/topic-room-final-r2.png | 51 | 845,803,974,836 |
 | visual/stl4/subdisciplines/topic-street-final-r2.png | 51 | 845,851,974,886 |
+
+## Theory detail PDF48–49
+
+The latest concept layout follows PDF49; tradition detail follows PDF48. Separate brand fragments are retained and selected by the actual node type.
+
+| Asset | Page | Native rectangle |
+| --- | --- | --- |
+| stl-lockup-theory-concept-desktop-final-r2.png | 49 | 63,50,298,85 |
+| stl-lockup-theory-concept-mobile-final-r2.png | 49 | 1278,85,1426,111 |
+| stl-lockup-theory-tradition-desktop-final-r2.png | 48 | 72,9,204,44 |
+| stl-lockup-theory-tradition-mobile-final-r2.png | 48 | 1235,59,1371,94 |

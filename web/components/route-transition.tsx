@@ -13,7 +13,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
   const pendingTimerRef = useRef<number | null>(null);
   const readerRoute = pathname.startsWith("/reader/");
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
-  const atlasRoute = pathname === "/subdisciplines" || pathname.startsWith("/subdisciplines/") || pathname === "/theories" || pathname === "/theory-schools" || pathname.startsWith("/works/") || pathname === "/" || pathname === "/account" || pathname === "/account/citation-audits" || pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback" || pathname === "/explore/evidence" || pathname === "/explore/opinions" || (pathname === "/explore" && searchParams.size === 0) || (pathname === "/explore/original" && (!searchParams.has("type") || searchParams.get("type") === "catalog"));
+  const atlasRoute = pathname.startsWith("/theories/nodes/") || pathname === "/subdisciplines" || pathname.startsWith("/subdisciplines/") || pathname === "/theories" || pathname === "/theory-schools" || pathname.startsWith("/works/") || pathname === "/" || pathname === "/account" || pathname === "/account/citation-audits" || pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback" || pathname === "/explore/evidence" || pathname === "/explore/opinions" || (pathname === "/explore" && searchParams.size === 0) || (pathname === "/explore/original" && (!searchParams.has("type") || searchParams.get("type") === "catalog"));
   const routeKey = `${pathname}?${searchParams.toString()}`;
 
   const clearPendingNavigation = useCallback(() => {
