@@ -279,15 +279,16 @@ def discovery_coverage(access_statuses, filters=None, *, contribution_cache=None
     total = len(current)
     published = _published_coverage(access_statuses, filters, current, contribution_cache=contribution_cache)
     if not generation:
-        return {**published, "eligible_editions": total, "indexed_editions": 0, "vector_editions": 0,
+        return {**published, "eligible_editions": total, "indexed_editions": 0, "vector_editions": 0, "projected_editions": 0,
                 "passage_count": 0, "pending_editions": total, "index_pending_editions": total,
                 "vector_pending_editions": total, "partial": bool(total or published["text_pending_editions"]), "generation": None}
     # A source is ready only when its completed fingerprint is still current.
-    ready, vector, text_count = 0, 0, 0
+    ready, vector, text_count, projected = 0, 0, 0, 0
     counts = {(str(row["source_id"]), row["source_revision"]): row for row in
         DiscoveryDocument.objects.filter(generation=generation, source_type="edition", source_id__in=current,
             access_status__in=access_statuses).values("source_id", "source_revision").annotate(
-                keywords=Count("pk", filter=Q(keyword_ready=True)), vectors=Count("pk", filter=Q(keyword_ready=True, vector_ready=True)))}
+                keywords=Count("pk", filter=Q(keyword_ready=True)), vectors=Count("pk", filter=Q(keyword_ready=True, vector_ready=True)),
+                passages=Count("pk", filter=Q(channel="passages", keyword_ready=True)))}
     states = DiscoverySourceState.objects.filter(generation=generation, source_type="edition", source_id__in=current,
         indexed_at__isnull=False, error="").values("source_id", "source_revision", "completed_count", "expected_count")
     for state in states:
@@ -300,7 +301,8 @@ def discovery_coverage(access_statuses, filters=None, *, contribution_cache=None
             ready += 1
             text_count += n
             vector += int(count.get("vectors", 0) == n)
-    return {**published, "eligible_editions": total, "indexed_editions": ready, "vector_editions": vector,
+            projected += int(count.get("passages", 0) > 0)
+    return {**published, "eligible_editions": total, "indexed_editions": ready, "vector_editions": vector, "projected_editions": projected,
             "passage_count": text_count, "pending_editions": max(0, total - ready),
             "index_pending_editions": max(0, total - ready), "vector_pending_editions": max(0, total - vector),
             "partial": bool(published["text_pending_editions"] or ready < total or vector < ready), "generation": str(generation.pk)}

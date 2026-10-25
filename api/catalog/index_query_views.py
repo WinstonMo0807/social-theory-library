@@ -25,11 +25,11 @@ ACTION = "index.query.preview"
 class IndexQueryCommandSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     q = serializers.CharField(min_length=2, max_length=1200)
-    work_id = serializers.UUIDField()
+    work_id = serializers.UUIDField(required=False)
 
     def validate(self, data):
-        if set(self.initial_data) != set(self.fields):
-            raise serializers.ValidationError("请提交完整的作品查询参数。")
+        if set(self.initial_data) - set(self.fields):
+            raise serializers.ValidationError("查询包含不支持的参数。")
         return data
 
 
@@ -61,10 +61,13 @@ class IndexQueryView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
             if not prior.after.get("cancelled") and prior.after.get("signature") != signature:
                 raise EditConflict("同一次请求不能更换作品或检索词。")
             return Response(receipt(prior))
-        from catalog.models import Work
-        get_object_or_404(Work, pk=data["work_id"])
+        filters = {"access": ["public"]}
+        if data.get("work_id"):
+            from catalog.models import Work
+            get_object_or_404(Work, pk=data["work_id"])
+            filters["work_ids"] = [str(data["work_id"])]
         request.user = actor
-        session, _ = create_session(request, data["q"], normalize_filters({"work_ids": [str(data["work_id"])], "access": ["public"]}))
+        session, _ = create_session(request, data["q"], normalize_filters(filters))
         # Facets constrain passages; cap every channel before dispatch as well.
         session.access_statuses = sorted(set(session.access_statuses).intersection({"public"}))
         session.save(update_fields=["access_statuses", "updated_at"])

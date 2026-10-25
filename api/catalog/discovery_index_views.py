@@ -176,6 +176,7 @@ class DiscoveryIndexView(AdminPrivateResponseMixin, APIView):
         summary = {"total_editions": all_editions.count(), "eligible_editions": coverage.get("eligible_editions", 0), "published_editions": coverage.get("published_editions", 0),
             "readable": Asset.objects.filter(kind="normalized", is_current=True, status="ready", validation_status="valid").values("edition_id").distinct().count(),
             "text_ready": text_total, "keyword_ready": coverage.get("indexed_editions", 0), "vector_ready": coverage.get("vector_editions", 0),
+            "projection_ready": coverage.get("projected_editions", 0),
             "knowledge_ready": graph_total, "waiting": coverage.get("pending_editions", 0),
             "failed": ProcessingJob.objects.filter(job_type="discovery_index", status="failed").count()}
         if not generation:

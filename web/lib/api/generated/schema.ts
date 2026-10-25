@@ -10887,7 +10887,7 @@ export interface components {
             request_id: string;
             q: string;
             /** Format: uuid */
-            work_id: string;
+            work_id?: string;
         };
         IndexQueryReceipt: {
             owner_id: string;
