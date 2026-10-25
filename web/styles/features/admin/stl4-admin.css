@@ -118,25 +118,33 @@
 }
 
 /* PDF82–84 uploads use a compact header and their own mobile action bar. */
-.admin-shell.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]){--stl-container-admin-sidebar:clamp(228px,19vw,274px)}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-logo,.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-topbar{min-height:80px}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-logo{padding-inline:26px}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .brand-reference-lockup:is([data-brand-variant="admin-upload"],[data-brand-variant="admin-intake"]){display:block;width:100%;max-width:224px}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-topbar>.stl4-admin-search{margin-left:auto;margin-right:0;width:min(450px,60%)}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .stl4-search-submit{display:none}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-topbar>form>label{border-right:1px solid var(--stl4-admin-line);min-height:38px;border-radius:3px}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-content{padding:18px 30px 0}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-nav-children{display:none}
-.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-sidebar nav a{min-height:45px}
+.admin-shell.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]){--stl-container-admin-sidebar:clamp(228px,19vw,274px)}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-logo,.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-topbar{min-height:80px}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-logo{padding-inline:26px}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .brand-reference-lockup:is([data-brand-variant="admin-upload"],[data-brand-variant="admin-intake"],[data-brand-variant="admin-manual"]){display:block;width:100%;max-width:224px}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-topbar>.stl4-admin-search{margin-left:auto;margin-right:0;width:min(450px,60%)}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .stl4-search-submit{display:none}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-topbar>form>label{border-right:1px solid var(--stl4-admin-line);min-height:38px;border-radius:3px}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-content{padding:18px 30px 0}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-nav-children{display:none}
+.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-sidebar nav a{min-height:45px}
 @media(max-width:900px){
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-topbar{min-height:65px}
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .admin-content{padding:15px 16px 90px}
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .stl4-admin-mobile-nav,.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .stl4-mobile-search-toggle{display:none}
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .stl4-mobile-brand{max-width:140px}
- .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"]) .stl4-mobile-brand .brand-reference-lockup{width:130px}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-topbar{min-height:65px}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .admin-content{padding:15px 16px 90px}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .stl4-admin-mobile-nav,.stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .stl4-mobile-search-toggle{display:none}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .stl4-mobile-brand{max-width:140px}
+ .stl4-admin-shell:is([data-admin-surface="upload"],[data-admin-surface="intake"],[data-admin-surface="manual"]) .stl4-mobile-brand .brand-reference-lockup{width:130px}
 }
 
 .admin-shell.stl4-admin-shell[data-admin-surface="intake"]{--stl-container-admin-sidebar:clamp(220px,18.6vw,270px)}
 .stl4-admin-shell[data-admin-surface="intake"] .admin-logo,.stl4-admin-shell[data-admin-surface="intake"] .admin-topbar{min-height:65px}
 .stl4-admin-shell[data-admin-surface="intake"] .admin-content{padding:16px 24px 30px}
 @media(max-width:900px){.stl4-admin-shell[data-admin-surface="intake"] .admin-content{padding:14px 16px 120px}.stl4-admin-shell[data-admin-surface="intake"] .stl4-mobile-brand .brand-reference-lockup{width:145px}}
+
+.admin-shell.stl4-admin-shell[data-admin-surface="manual"]{--stl-container-admin-sidebar:clamp(220px,18.5vw,265px)}
+.stl4-admin-shell[data-admin-surface="manual"] .admin-content{padding:20px 24px 30px}
+.stl4-admin-shell[data-admin-surface="manual"] .admin-topbar>.stl4-admin-search{width:min(345px,45%)}
+.stl4-admin-shell[data-admin-surface="manual"] .brand-reference-lockup[data-brand-variant="admin-manual"]{max-width:193px}
+@media(max-width:900px){.stl4-admin-shell[data-admin-surface="manual"] .admin-content{padding:14px 16px 95px}.stl4-admin-shell[data-admin-surface="manual"] .stl4-mobile-brand .brand-reference-lockup{width:131px}.stl4-admin-shell[data-admin-surface="manual"] .admin-topbar>.stl4-work-notices{display:none}}
+
+.stl4-manual-account-notices{display:none}@media(max-width:900px){.stl4-manual-account-notices{display:block}}

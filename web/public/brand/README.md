@@ -254,3 +254,12 @@ Original brand and file/type illustrations from PDF86. Covers and page thumbnail
 | brand/stl-lockup-admin-intake-mobile-final-r2.png | 86 | 1335,70,1484,100 |
 | visual/stl4/admin/intake-pdf-final-r2.png | 86 | 280,231,311,271 |
 | visual/stl4/admin/intake-book-final-r2.png | 86 | 817,267,856,310 |
+
+## Manual cataloguing PDF88–90
+
+Original book-entry desktop/mobile lockups. Covers and field contents remain real data; PDF examples are not seeded.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-admin-manual-desktop-final-r2.png | 88 | 48,32,241,80 |
+| brand/stl-lockup-admin-manual-mobile-final-r2.png | 88 | 1354,60,1485,90 |
