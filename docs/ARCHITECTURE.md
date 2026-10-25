@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 R06补充检索
+
+R06复用ResearchTurn.return_context标记比较缺口，原retry继承该上下文。读者明确选择检索范围，结果不会自动写入comparison。没有新模型或迁移。
+
 ## 2026-10-25 M04人物候选分页
 
 原manual-catalog人物查询增加独立people_page及总数/页数，沿同一Person与原排除规则。前端复用usePersistentWorkspace账户绑定读取，原人物创建/确认边界不变。

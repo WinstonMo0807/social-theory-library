@@ -233,7 +233,8 @@ class ResearchTurnViewSet(PrivateRecordViewSet):
         data = dict(command(request, TurnRetryInput))
         previous = research.unpack(turn)
         data.update(parent_id=str(turn.id), question=previous["question"], scope=previous["scope"],
-                    mode=previous["mode"], statement=previous["statement"], expand_from_parent=True)
+                    mode=previous["mode"], statement=previous["statement"], expand_from_parent=True,
+                    return_context=previous.get("return_context", {}))
         new_turn = research.start_turn(request, turn.project_id, data)
         return Response(research.serialize_record(new_turn, request.user), status=202)
 

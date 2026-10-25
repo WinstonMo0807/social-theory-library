@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 R06补充检索
+
+R06补充检索：6bdea1两Python AST/compile、CSS288节点、diff0；0aecb3→af3b6b ESLint/TS0。两组用例未运行；无浏览器/业务/数据库/部署。
+
 ## 2026-10-25 R06单维度结构
 
 R06布局：9734c9为272节点CSS解析及目标diff0；87a59f→635a7a目标ESLint和TypeScript noEmit0。没有浏览器、测试、实现页截图、真实业务、数据库或部署。

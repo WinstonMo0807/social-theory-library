@@ -195,6 +195,22 @@
 /* Final atlas 196–197: selected documents, one dimension, distinct evidence and judgment. */
 .stl4-comparison-layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); }
 .stl4-comparison-content { min-width: 0; }
+.stl4-comparison-search-scope { display: grid; gap: 10px; margin: 18px 0; border: 1px solid var(--night-line, #e5e1d9); padding: 12px; }
+.stl4-comparison-search-scope label { display: flex; gap: 8px; align-items: center; }
+.stl4-comparison-search-scope input { width: auto; }
+.stl4-comparison-search-results { margin: 0 22px 18px; padding: 16px; background: var(--night-paper, #f7f4ee); border: 1px solid var(--night-line, #e5e1d9); font: 12px/1.8 var(--sans); }
+.stl4-comparison-search-results > header { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 12px; }
+.stl4-comparison-search-results p { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.stl4-comparison-search-results summary { display: flex; align-items: center; gap: 8px; padding: 12px 0; cursor: pointer; }
+.stl4-comparison-search-results article { padding: 12px 0; border-top: 1px solid var(--night-line, #e5e1d9); }
+.stl4-comparison-search-results article h3 { margin: 0; font: 600 15px/1.6 var(--serif); }
+.stl4-comparison-search-results label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.stl4-comparison-search-results select { min-width: 0; max-width: 100%; padding: 6px; color: inherit; background: var(--night-white, white); border: 1px solid var(--night-line, #e5e1d9); }
+.stl4-comparison-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.stl4-comparison-inline-actions button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--night-line, #ded8cc); padding: 7px 10px; background: var(--night-white, white); color: inherit; cursor: pointer; }
+.stl4-comparison-inline-actions button:disabled { opacity: .55; cursor: not-allowed; }
+.stl4-comparison-search-results a { color: var(--night-gold, #7f633e); text-underline-offset: 3px; }
+.stl4-comparison-search-results :is(button, select, summary, a):focus-visible { outline: 2px solid var(--night-gold, #9b7c45); outline-offset: 3px; }
 .stl4-comparison-selected { min-width: 0; padding: 18px 14px; border-right: 1px solid var(--night-line, #e5e1d9); }
 .stl4-comparison-selected > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 15px; }
 .stl4-comparison-selected h2 { margin: 0; font: 600 15px/1.6 var(--serif); }
