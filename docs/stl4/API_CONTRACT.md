@@ -585,3 +585,10 @@ GET /api/catalog/admin/search/ 使用TodayWorkPage投影，q≤200、kind(catalo
 ## 2026-10-26 馆藏主图范围数量
 
 GET /catalog/search/?scope=catalog 的 facets 新增 total（整数），含义是仅应用当前关键词/检索字段、尚未应用右侧其他过滤的去重公开作品数。取自同一 _facets(base) 的 COUNT DISTINCT work_id，不相加各版本/类型计数。前端 CatalogSearchPayload 可选读取以兼容上一版API；页面结果数量继续取pagination.total。无新端点、身份变化或migration。未运行接口测试。
+
+2026-10-26 Discovery原文卡/上下文source增加related_concepts、related_theories，元素仅id/title/slug；来源为原source_header当前正式快照并经过_taxonomy_for发布状态核对的节点。分别筛选concept/theory_tradition；不公开草稿关联、内部检索diagnostics或机器推测标签。无新增路径和migration；运行有数据状态待验收。
+
+
+### 2026-10-26 PDF30可读版本筛选
+
+Discovery filters新增availability重复值readable/pdf/zh_translation，同组并集，与原类型/年份等交集；不复用access权限字段。readable核对当前激活快照指定的规范阅读文件、同版本、就绪/验证状态；pdf额外核对MIME。zh_translation只认已发布可访问的中文译本，译作关系或整版译者记录作为依据，按作品/原作关联匹配；中文原著不算。按请求缓存关联集合，读回也重验。year_min/year_max沿用原接口，PDF30的六个年份快捷项直接转已有上下界，无新增索引/迁移/排序。已准备统一验收用例但未运行。

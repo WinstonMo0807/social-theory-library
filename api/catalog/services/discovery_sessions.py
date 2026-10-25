@@ -67,6 +67,7 @@ def normalize_filters(raw) -> dict:
         "document_type": "document_types", "document_types": "document_types",
         "language": "languages", "languages": "languages", "year": "years", "years": "years",
         "access": "access", "source_type": "source_types", "source_types": "source_types",
+        "availability": "availability",
         "theories": "theories", "topics": "topics",
     }
     output: dict = {}
@@ -116,6 +117,8 @@ def normalize_filters(raw) -> dict:
         output[target] = list(dict.fromkeys([*output.get(target, []), *clean]))
     if output.get("year_min", 1) > output.get("year_max", 3000):
         raise ValidationError({"year_max": "结束年份不能早于起始年份。"})
+    if any(value not in {"readable", "pdf", "zh_translation"} for value in output.get("availability", [])):
+        raise ValidationError({"availability": "可读版本筛选无效。"})
     source_types = output.pop("source_types", [])
     mapping = {"book": ["book"], "journal": ["journal_article", "journal_issue"], "other": ["thesis", "report", "chapter", "other"]}
     if any(value not in mapping for value in source_types):
@@ -979,6 +982,11 @@ def _public_row(row: dict) -> dict:
     output.setdefault("excerpt", output.get("text", ""))
     output.setdefault("context_reference", output.get("id"))
     if row.get("channel") == "passages" or output.get("asset_id"):
+        # PDF30's source inspector uses the current published taxonomy already
+        # revalidated by source_header, never draft tags or model suggestions.
+        for field, node_type in (("related_concepts", "concept"), ("related_theories", "theory_tradition")):
+            output[field] = [{"id": str(node["id"]), "title": str(node.get("name") or node.get("foreign_name") or ""), "slug": str(node.get("slug") or "")}
+                             for node in row.get("theories", []) if isinstance(node, dict) and node.get("id") and node.get("type") == node_type]
         if not isinstance(output.get("work"), dict):
             url = str(output.get("url") or "")
             output["work"] = {"id": str(output.get("work_id") or ""), "title": str(output.get("title") or "未题名"),

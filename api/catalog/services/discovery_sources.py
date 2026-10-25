@@ -132,6 +132,11 @@ def edition_metadata_header(row, *, taxonomy=None):
             if isinstance(item, dict) and str(item.get("id")) in allowed]}
     work = snapshot.get("work") or {}
     edition = snapshot.get("edition") or {}
+    readable = bool(asset and asset.kind == "normalized" and asset.status == "ready"
+        and asset.validation_status == "valid" and asset.file and asset.edition_id == row.pk
+        and str((snapshot.get("document") or {}).get("asset_id")) == str(asset.pk))
+    translated = bool(work.get("translation_of_id") or any(item.get("role") == "translator"
+        and whole_edition_contribution(item) for item in snapshot.get("contributions", [])))
     public_slug = str(edition.get("public_slug") or row.pk)
     cover = work.get("cover_media") or {}
     cover_url = reverse("public-work-cover", kwargs={"work_id": row.work_id}) if work.get("cover") or cover else ""
@@ -144,6 +149,9 @@ def edition_metadata_header(row, *, taxonomy=None):
         edition_id=str(row.pk), work_id=str(row.work_id), asset_id=str(asset.pk) if asset else None,
         access_status=asset.access_status if asset else "public", url=f"/works/{public_slug}",
         publication_year=edition.get("publication_year"), document_type=work.get("document_type", "book"),
+        reader_available=readable, pdf_available=readable and asset.mime_type.lower().split(";")[0] == "application/pdf",
+        translation_of_id=str(work.get("translation_of_id") or ""),
+        chinese_translation=translated and str(work.get("language") or "").lower().startswith("zh"),
         work={"id": str(row.work_id), "title": work.get("title", ""), "slug": public_slug},
         bibliography={"cover_url": cover_url, "cover_media": cover or None, "original_title": work.get("original_title", ""),
             "publication_year": edition.get("publication_year"), "publisher": edition.get("publisher", ""),

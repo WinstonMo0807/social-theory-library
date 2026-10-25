@@ -60,3 +60,5 @@ Citation illustration backplates: `stl4-support-citation-stage-final-r2.png` is 
 | ../editorial/stl4-catalog-hero-bottom-final-r2.png | 24 | 670,243,1180,302 |
 
 All are 2× clips of the PDF. The catalog illustration is split at the search-control boundary so neither search buttons nor text are burned into the artwork. The live search form and opinion link remain HTML. The main shell follows replacement PDF24; advanced fields, multiversion expansion and state behavior inherit PDF25–27. PDF28 supplies opinion layout; PDF29 explicitly supplies the 500-character counter and account history state. Its saved-history description follows the actual opted-in account behavior instead of falsely claiming that server-retained records exist only on the device.
+
+Evidence brand (PDF30, 2× clips): `stl-lockup-evidence-desktop-final-r2.png` at `51,19,271,73`; mobile at `1346,66,1462,114`. Header search and account controls are live HTML. The unimplemented EN control is recorded as an outstanding requirement; no inert language toggle is added.

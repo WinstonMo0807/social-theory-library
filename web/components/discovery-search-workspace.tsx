@@ -2,7 +2,7 @@
 import { MediaPlacement } from "./media-placement";
 
 import Link from "next/link";
-import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import { actOnDiscoverySearch, canKeepDiscoveryContext, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
@@ -21,6 +21,7 @@ const deepStatusLabels: Record<string, string> = { baseline_ready: "基础结果
 const kindLabels: Record<string, string> = { scholar: "学者", scholar_profile: "学者", theory: "理论", topic: "主题", concept: "概念", discipline: "学科", subdiscipline: "子学科", knowledge_node: "知识条目", timeline: "时间线", timeline_event: "历史事件", reading_path: "阅读路径", recommendation: "推荐书目" };
 const filterLabels: Record<string, string> = { work_ids: "指定作品", authors: "责任者", topic_ids: "主题", theory_node_ids: "理论", topics: "主题", theories: "理论流派", concepts: "概念", document_types: "文献类型", languages: "语言", years: "出版年", source_types: "来源类型", work_id: "指定作品", author: "责任者", scholar: "学者", theory: "理论", topic: "主题", concept: "概念", language: "语言", year: "出版年", year_min: "起始年", year_max: "截止年", document_type: "文献类型", source_type: "来源类型", access: "访问范围" };
 const channelLabels: Record<string, string> = { passages: "原文", entities: "知识", curation: "策展", deep: "材料整理" };
+const evidenceYears = [["全部", "", ""], ["2020 以后", "2020", ""], ["2010–2019", "2010", "2019"], ["2000–2009", "2000", "2009"], ["1990–1999", "1990", "1999"], ["1990 以前", "", "1989"]] as const;
 const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] || "" : value || "";
 const internalHref = (value: string) => value.startsWith("/") && !value.startsWith("//") && !/[\\\u0000-\u001f\u007f]/.test(value) ? value : "";
 // Disposable navigation state holds identifiers only, never stored excerpts or search history.
@@ -33,6 +34,8 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
 }) {
   const cacheKey = JSON.stringify([initialQuery, initialFilters]);
   const [selectedId, setSelectedId] = useState("");
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const queryInputRef = useRef<HTMLInputElement>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryHidden, setSummaryHidden] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -317,28 +320,38 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     });
   }
   const checked = (name: string, value: string) => (Array.isArray(filters[name]) ? filters[name] : [filters[name]]).includes(value);
+  const choiceField = (name: string, label: string, options: Array<{ value: string; label: string; count?: number }> = []) => <fieldset key={name}><legend>{label}</legend>
+    <label><input type="checkbox" checked={!first(filters[name])} onChange={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })} />全部</label>
+    {options.map(row => <label key={row.value}><input type="checkbox" name={name} value={row.value} checked={checked(name, row.value)} onChange={event => toggleFilter(name, row.value, event.target.checked)} /><span>{row.label}</span></label>)}
+    {(Array.isArray(filters[name]) ? filters[name] : [filters[name]]).filter(Boolean).filter(value => !options.some(row => row.value === value)).map(value => <label key={value}><input type="checkbox" name={name} value={value} checked onChange={() => toggleFilter(name, value, false)} />当前范围</label>)}
+  </fieldset>;
+  function setYearRange(low: string, high: string) {
+    setFilters(current => { const next: DiscoveryFilters = { ...current, year_min: low, year_max: high }; delete next.year; delete next.years; return next; });
+  }
   const filterFields = <>
     <div className={styles.filterGrid}>
-      {([ ["document_type", "文献类型", facets?.document_types], ["theories", "理论流派", facets?.theories], ["language", "文献语言", facets?.languages] ] as const).map(([name, label, options]) => <fieldset key={name}><legend>{label}</legend>
-        <label><input type="checkbox" checked={!first(filters[name])} onChange={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })} />全部</label>
-        {options?.map(row => <label key={row.value}><input type="checkbox" name={name} value={row.value} checked={checked(name, row.value)} onChange={event => toggleFilter(name, row.value, event.target.checked)} /><span>{row.label}</span><small>{row.count}</small></label>)}
-        {(Array.isArray(filters[name]) ? filters[name] : [filters[name]]).filter(Boolean).filter(value => !options?.some(row => row.value === value)).map(value => <label key={value}><input type="checkbox" name={name} value={value} checked onChange={() => toggleFilter(name, value, false)} />当前范围</label>)}
-      </fieldset>)}
-      <fieldset><legend>年份</legend><div className={styles.yearRange}><label><span className="sr-only">起始年</span><input type="number" name="year_min" min="1" max="3000" value={first(filters.year_min)} onChange={e => setFilters(current => ({ ...current, year_min: e.target.value }))} placeholder="起始年" /></label><label><span className="sr-only">结束年</span><input type="number" name="year_max" min="1" max="3000" value={first(filters.year_max)} onChange={e => setFilters(current => ({ ...current, year_max: e.target.value }))} placeholder="结束年" /></label></div></fieldset>
+      {choiceField("document_type", "文献类型", facets?.document_types)}
+      {choiceField("theories", "理论流派", facets?.theories)}
+      <fieldset><legend>年份</legend><div className={styles.yearRange}><label><span className="sr-only">起始年</span><input type="number" name="year_min" min="1" max="3000" value={first(filters.year_min)} onChange={e => setYearRange(e.target.value, first(filters.year_max))} placeholder="起始年" /></label><span aria-hidden="true">−</span><label><span className="sr-only">结束年</span><input type="number" name="year_max" min="1" max="3000" value={first(filters.year_max)} onChange={e => setYearRange(first(filters.year_min), e.target.value)} placeholder="结束年" /></label></div>
+        {evidenceYears.map(([label, low, high]) => <label key={label}><input type="radio" name="year_preset" checked={!first(filters.year) && !first(filters.years) && first(filters.year_min) === low && first(filters.year_max) === high} onChange={() => setYearRange(low, high)} />{label}</label>)}
+      </fieldset>
+      {choiceField("availability", "可读版本", [{ value: "readable", label: "有在线阅读" }, { value: "pdf", label: "有 PDF" }, { value: "zh_translation", label: "有中译本" }])}
+      <details className={styles.extraFilters}><summary>更多筛选</summary>
+      {choiceField("language", "文献语言", facets?.languages)}
       {([ ["author", "责任者", facets?.authors], ["topics", "主题", facets?.topics], ["concept", "概念", facets?.concepts] ] as const).map(([name, label, options]) => <label key={name}><span>{label}</span><select name={name} value={first(filters[name])} onChange={event => setFilters(current => ({ ...current, [name]: event.target.value }))}><option value="">不限</option>{first(filters[name]) && !options?.some(row => row.value === first(filters[name])) ? <option value={first(filters[name])}>当前选择</option> : null}{options?.map(row => <option key={row.value} value={row.value}>{row.label}</option>)}</select>{Array.isArray(filters[name]) ? filters[name].slice(1).map(value => <input key={value} type="hidden" name={name} value={value} />) : null}</label>)}
+      </details>
     </div>
-    {Object.entries(filters).filter(([name, value]) => !["document_type", "author", "theories", "topics", "concept", "language", "year_min", "year_max"].includes(name) && first(value)).map(([name, value]) => <span className={styles.filterChip} key={name}>{filterLabels[name] || "已有范围"}{(Array.isArray(value) ? value : [value]).map(entry => <input type="hidden" key={entry} name={name} value={entry} />)}<button type="button" aria-label={`取消${filterLabels[name] || "已有范围"}筛选`} onClick={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })}><X size={12} /></button></span>)}
-    <p className={styles.help}>选项数量是公开馆藏作品数。原文结果只来自当前可访问、正文已就绪的材料。</p>
+    {Object.entries(filters).filter(([name, value]) => !["document_type", "author", "theories", "topics", "concept", "language", "year_min", "year_max", "availability"].includes(name) && first(value)).map(([name, value]) => <span className={styles.filterChip} key={name}>{filterLabels[name] || "已有范围"}{(Array.isArray(value) ? value : [value]).map(entry => <input type="hidden" key={entry} name={name} value={entry} />)}<button type="button" aria-label={`取消${filterLabels[name] || "已有范围"}筛选`} onClick={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })}><X size={12} /></button></span>)}
     {facetBusy ? <p role="status">正在读取馆内筛选项……</p> : null}
     {facetError ? <p role="alert">{facetError}<button type="button" className="text-link" onClick={() => void loadFacets()}>重试读取筛选项</button></p> : null}
     <div className={styles.actions}><button className="button secondary" type="submit">应用范围并检索</button>{selectedCount ? <Link href={initialQuery ? `/explore/evidence?q=${encodeURIComponent(initialQuery)}` : "/explore/opinions"}>清除全部筛选</Link> : null}</div>
   </>;
   return <SavedWorkStatusProvider workIds={result?.passages.map(item => item.work.id) || []}><div className={`page-shell ${styles.page}`}>
     <header className={styles.evidenceHead}>
-      <p className={styles.breadcrumb}><Link href="/explore">探索</Link><span>/</span><Link href="/explore/opinions">观点检索</Link><span>/</span>原文证据</p>
+      <p className={styles.breadcrumb}><Link href="/explore">探索</Link><span>/</span>原文证据</p>
       <h1>原文证据结果</h1>
       <form className={styles.searchForm} action="/explore/evidence">
-        <div className={styles.queryRow}><Search size={19} aria-hidden="true" /><label className="sr-only" htmlFor="discovery-query">概念、研究问题或观点线索</label><input id="discovery-query" type="search" name="q" required minLength={2} maxLength={500} defaultValue={initialQuery} placeholder="输入概念、研究问题或观点线索" /><button className="button" type="submit">搜索</button></div>
+        <div className={styles.queryRow}><Search size={19} aria-hidden="true" /><label className="sr-only" htmlFor="discovery-query">概念、研究问题或观点线索</label><input ref={queryInputRef} id="discovery-query" type="search" name="q" required minLength={2} maxLength={500} value={queryInput} onChange={event => setQueryInput(event.target.value)} placeholder="输入概念、研究问题或观点线索" />{queryInput ? <button className={styles.queryClear} type="button" aria-label="清除检索问题" onClick={() => { setQueryInput(""); queryInputRef.current?.focus(); }}><X size={16} /></button> : null}<button className="button" type="submit" aria-label="搜索原文证据"><span>搜索</span><Search size={16} aria-hidden="true" /></button></div>
         {Object.entries(filters).flatMap(([name, value]) => (Array.isArray(value) ? value : [value]).filter(Boolean).map(entry => <input type="hidden" key={`${name}-${entry}`} name={name} value={entry} />))}
       </form>
     </header>
@@ -348,10 +361,10 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     {result?.warnings?.length ? <div className={styles.notice} role="status">{result.warnings.map((warning, index) => <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>)}</div> : null}
     {result?.source_changed ? <p className={styles.notice}>资料或访问范围已有变化，已重新核验当前结果。重新检索可使用最新馆藏与策展内容。</p> : null}
 
-    <div className={styles.mobileFilters}><button type="button" onClick={() => { setFilterOpen(true); void loadFacets(); }}><SlidersHorizontal size={14} />筛选{selectedCount ? ` · ${selectedCount} 项` : ""}</button><span>{result ? `${result.count ?? result.passages.length} 条原文` : "正在读取"}</span></div>
+    <div className={styles.mobileFilters}>{["文献类型", "理论流派", "年份"].map(label => <button key={label} type="button" aria-label={`按${label}筛选`} onClick={() => { setFilterOpen(true); void loadFacets(); }}>{label}<ChevronDown size={12} /></button>)}<span className="sr-only">{selectedCount ? `已选择${selectedCount}组条件` : "全部范围"}</span></div>
     <Dialog open={filterOpen} onRequestClose={() => setFilterOpen(false)} className={styles.filterDialog} aria-labelledby="evidence-filter-title"><header className={styles.dialogHeader}><h2 id="evidence-filter-title">筛选原文材料</h2><button type="button" onClick={() => setFilterOpen(false)} aria-label="关闭筛选"><X size={18} /></button></header><form action="/explore/evidence"><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></Dialog>
     <div className={`${styles.resultLayout} ${summaryHidden ? styles.summaryHidden : ""}`}>
-      <aside className={styles.filterSidebar} aria-label="筛选馆藏原文" onFocusCapture={() => void loadFacets()} onPointerEnter={() => void loadFacets()}><form action="/explore/evidence"><div className={styles.filterTitle}><strong>筛选馆藏原文{selectedCount ? ` · ${selectedCount}` : ""}</strong></div><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></aside>
+      <aside className={styles.filterSidebar} aria-label="筛选馆藏原文" onFocusCapture={() => void loadFacets()} onPointerEnter={() => void loadFacets()}><form action="/explore/evidence"><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></aside>
       <section className={styles.results} id="discovery-passages" aria-label="原文检索结果">
         <header className={styles.resultsHeader}><div><h2>检索结果</h2><span>{result ? `已显示 ${result.passages.length}${typeof result.count === "number" ? ` / ${result.count}` : ""} 段` : initialQuery ? "等待检索结果" : "等待输入"}</span></div><div className={styles.viewControls}><label><span className="sr-only">结果排序</span><select aria-label="结果排序" value={result?.sort || "relevance"} disabled={!result || Boolean(busy)} onChange={event => void sessionAction("sort", event.target.value as DiscoverySort)}><option value="relevance">相关性排序</option><option value="year_desc">出版年份从新到旧</option><option value="year_asc">出版年份从旧到新</option></select></label><button type="button" aria-label="列表视图" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={17} /></button><button type="button" aria-label="网格视图" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={17} /></button></div></header>
         {(busy === "create" || isRunning) ? <div className={styles.progress} role="status"><LoaderCircle size={18} className={styles.spinner} /><div><strong>{busy === "create" ? "正在创建检索" : result?.expansion_count ? "正在扩大研究范围" : statusLabels[result?.status || "running"]}</strong><p>{result?.status_message || "后台正在查找并排序材料。你可以先阅读已找到的结果。"}</p>{result?.completed_channels?.length ? <small>已完成：{result.completed_channels.map(name => channelLabels[name] || name).join("、")}</small> : null}{result ? <DiscoveryDeepProgress result={result} /> : null}</div>{result ? <button type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("cancel")}>取消检索</button> : null}</div> : null}

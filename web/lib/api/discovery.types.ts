@@ -11,6 +11,8 @@ export type DiscoveryPassage = {
   edition_id?: string; section_title?: string;
   bibliography?: { cover_url: string; cover_media?: components["schemas"]["PublicCoverMedia"] | null; original_title: string; publication_year: number | null; publisher: string; language: string; page_count: number | null; version_label: string; document_type: string };
   attribution?: { status: string; label: string; notice: string };
+  related_concepts?: Array<{ id: string; title: string; slug: string }>;
+  related_theories?: Array<{ id: string; title: string; slug: string }>;
   deep_rank?: number; deep_score?: number | null; deep_context?: { policy?: string; provider?: string; available?: boolean; before?: string; after?: string; blocks?: Array<Record<string, unknown>> };
 };
 export type DiscoveryEntity = {

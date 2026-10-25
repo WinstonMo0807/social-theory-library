@@ -151,3 +151,24 @@
  .brand-reference-lockup[data-brand-variant="opinion"] { width:110px; }
  .site-header[data-stl-explore="opinion"] { min-height:66px; }
 }
+
+/* PDF30: source discovery has its own compact brand and catalog-search field. */
+.brand-reference-lockup[data-brand-variant="evidence"] { width:220px; }
+.site-header[data-stl-explore="evidence"] { min-height:70px; padding:8px 26px; gap:26px; background:var(--night-white,#fdfcf9); }
+.site-header[data-stl-explore="evidence"] .desktop-nav { gap:26px; font-weight:600; }
+.site-header[data-stl-explore="evidence"] .desktop-nav a.active { color:var(--night-gold,#9a712e); }
+.site-header[data-stl-explore="evidence"] .desktop-nav a.active::after { background:currentColor; }
+.site-header[data-stl-explore="evidence"] .header-actions { gap:14px; }
+.site-header[data-stl-explore="evidence"] :is(.header-search,.menu-button) { display:none; }
+.header-reference-search { display:flex; align-items:center; gap:7px; width:222px; min-height:32px; padding:4px 11px; border:1px solid var(--night-line,#dce0e4); border-radius:20px; font:12px var(--serif); }
+.header-reference-search button { display:grid; place-items:center; padding:0; border:0; color:inherit; background:none; }
+.header-reference-search input { width:0; flex:1; min-width:0; padding:0; border:0; color:inherit; background:none; font:inherit; }
+.header-reference-account { display:flex; align-items:center; justify-content:center; min-width:30px; min-height:36px; }
+@media (max-width:1120px) { .site-header[data-stl-explore="evidence"] .menu-button { display:inline-flex; } }
+@media (max-width:700px) {
+ .site-header[data-stl-explore="evidence"] { min-height:74px; padding:10px 15px 10px 55px; }
+ .site-header[data-stl-explore="evidence"] .brand-reference-lockup { width:124px; }
+ .site-header[data-stl-explore="evidence"] .header-reference-search { display:none; }
+ .site-header[data-stl-explore="evidence"] .menu-button { position:absolute; left:12px; top:22px; }
+ .site-header[data-stl-explore="evidence"] .header-actions { gap:6px; }
+}

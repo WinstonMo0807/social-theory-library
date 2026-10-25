@@ -128,17 +128,17 @@
 .page .resultLayout.summaryHidden { grid-template-columns: 190px minmax(0, 1fr); }
 .page .filterSidebar { padding: 16px; border-radius: 3px; background: transparent; }
 .page .filterTitle { font: 600 16px/1.5 var(--serif); }
-.page .filterGrid { display: block; }
-.page .filterGrid label { color: var(--muted); }
-.page .filterGrid input, .page .filterGrid select { border-radius: 3px; background: transparent; }
-.page .filterGrid fieldset { border: 0; border-bottom: 1px solid var(--line); padding: 14px 0; margin: 0; min-width: 0; }
-.page .filterGrid legend { padding: 0; font-weight: 600; font-size: 14px; color: var(--ink); }
-.page .filterGrid fieldset label { display: flex; align-items: center; gap: 7px; border: 0; padding: 4px 0; font-size: 12px; }
-.page .filterGrid fieldset input { width: 15px; height: 15px; min-height: 15px; margin: 0; accent-color: var(--gold, #b28a48); }
-.page .filterGrid fieldset small { margin-left: auto; font-size: 10px; }
+:is(.page,.filterDialog) .filterGrid { display: block; }
+:is(.page,.filterDialog) .filterGrid label { color: var(--muted); }
+:is(.page,.filterDialog) .filterGrid input, :is(.page,.filterDialog) .filterGrid select { border-radius: 3px; background: transparent; }
+:is(.page,.filterDialog) .filterGrid fieldset { border: 0; border-bottom: 1px solid var(--line); padding: 14px 0; margin: 0; min-width: 0; }
+:is(.page,.filterDialog) .filterGrid legend { padding: 0; font-weight: 600; font-size: 14px; color: var(--ink); }
+:is(.page,.filterDialog) .filterGrid fieldset label { display: flex; align-items: center; gap: 7px; border: 0; padding: 4px 0; font-size: 12px; }
+:is(.page,.filterDialog) .filterGrid fieldset input { width: 15px; height: 15px; min-height: 15px; margin: 0; accent-color: var(--gold, #b28a48); }
+:is(.page,.filterDialog) .filterGrid fieldset small { margin-left: auto; font-size: 10px; }
 .yearRange { display: flex; gap: 8px; padding-top: 8px; }
 .yearRange label { flex: 1; min-width: 0; }
-.page .filterGrid .yearRange input { width: 100%; height: 36px; min-height: 36px; padding: 5px; font-size: 12px; }
+:is(.page,.filterDialog) .filterGrid .yearRange input { width: 100%; height: 36px; min-height: 36px; padding: 5px; font-size: 12px; }
 .page .results { border: 0; border-radius: 0; background: transparent; overflow: visible; }
 .page .resultsHeader { padding: 4px 0 15px; border-bottom: 0; align-items: center; }
 .page .resultsHeader h2 { display: inline; margin-right: 12px; font: 500 13px/1.5 var(--sans); }
@@ -257,3 +257,138 @@
 .documentActions button:disabled { opacity: .45; cursor: wait; }
 .documentTabs button:focus-visible, .documentActions button:focus-visible { outline: 2px solid #a38c5e; outline-offset: 3px; }
 @media (max-width: 640px) { .documentRow { grid-template-columns: 50px minmax(0, 1fr); gap: 12px; } .documentCover { width: 50px; height: 72px; } .documentTabs { gap: 16px; } .documentProgress > header { align-items: flex-start; } }
+
+/* Actual final PDF30–32 colors and geometry. Original data and actions stay live. */
+.page,.contextDialog,.filterDialog,.summaryDialog {
+ --ink:var(--night-ink,#092a4b); --muted:var(--night-muted,#697889); --surface:var(--night-white,#fcfbf8); --paper:var(--night-paper,#fcfbf8); --wash:var(--night-wash,#faf8f2); --line:var(--night-line,#e2e3e1); --line-dark:var(--night-line,#d5d8d8); --gold:var(--night-gold,#b58b39);
+ color:var(--ink); font-family:var(--serif);
+}
+.page { width:100%; max-width:1440px; padding:24px 26px 38px; background:var(--surface); }
+.evidenceHead { width:calc(100% - 319px); margin-bottom:14px; }
+.breadcrumb { margin-bottom:8px; font:13px/1.5 var(--serif); }
+.evidenceHead h1 { margin-bottom:12px; font:700 44px/1.2 var(--serif); letter-spacing:0; }
+.page .queryRow { min-height:42px; border-radius:5px; padding-left:14px; gap:10px; }
+.page .queryRow input { padding:9px 0; font:15px/1.5 var(--serif); }
+.page .queryRow > svg { color:var(--ink); }
+.page .queryRow :global(.button) { min-height:40px; min-width:94px; padding:8px 20px; border-radius:0 4px 4px 0; background:var(--ink); color:var(--surface); font:16px var(--serif); }
+.page .queryRow :global(.button) > svg { display:none; }
+.queryClear { display:flex; align-items:center; justify-content:center; min-width:24px; padding:3px; border:0; color:var(--muted); background:none; }
+.page .resultLayout { grid-template-columns:195px minmax(0,1fr) 295px; gap:24px; }
+.page .resultLayout.summaryHidden { grid-template-columns:195px minmax(0,1fr); }
+.page .filterSidebar { padding:13px 16px; }
+:is(.page,.filterDialog) .filterGrid { margin:0; }
+:is(.page,.filterDialog) .filterGrid fieldset:first-child { padding-top:0; }
+:is(.page,.filterDialog) .filterGrid legend { font:700 15px/1.5 var(--serif); }
+:is(.page,.filterDialog) .filterGrid fieldset label { font:14px/1.5 var(--serif); padding:3px 0; }
+:is(.page,.filterDialog) .filterGrid fieldset input { flex:none; }
+:is(.page,.filterDialog) .filterGrid fieldset small { font-size:12px; }
+:is(.page,.filterDialog) .filterGrid > label { font-size:13px; padding:10px 0; }
+.page .resultsHeader { min-height:38px; padding:4px 0 12px; }
+.page .resultsHeader h2,.page .resultsHeader span { font:13px var(--serif); }
+.viewControls select { font:12px var(--serif); background:var(--surface); }
+.viewControls button { min-width:36px; }
+.resultCard { padding:15px 0 17px; grid-template-columns:24px minmax(0,1fr); gap:14px; }
+.resultCard.selectedCard { border-left:0; padding-left:0; margin-left:0; }
+.resultNumber { font:20px/1.5 var(--serif); color:var(--muted); }
+.resultContent { grid-template-columns:112px minmax(0,1fr); gap:0 20px; }
+.evidenceBook { grid-template-columns:112px minmax(0,1fr); gap:20px; }
+.evidenceBook img,.coverMissing { width:112px; height:168px; }
+.evidenceBook h3 { font:700 20px/1.4 var(--serif); margin-bottom:6px; }
+.evidenceBook p { font:14px/1.5 var(--serif); }
+.evidenceBook small { font-size:12px; }
+.passageQuote { background:var(--wash); padding:10px 12px; margin:9px 0; }
+.passageQuote strong { font:600 14px/1.5 var(--serif); }
+.passageQuote p { font:14px/1.5 var(--serif); color:var(--muted); }
+.passageQuote small { font-size:12px; }
+.resultCard footer { font-size:13px; }
+.resultCard .evidenceTags { margin:4px 0; }
+.evidenceTags span { background:var(--night-tint,#f4ead3); color:var(--night-gold,#9b7025); font:12px/1.5 var(--serif); }
+.evidenceInspector { top:94px; margin-top:-132px; max-height:calc(100dvh - 108px); padding:16px; scrollbar-gutter:auto; }
+.evidenceInspector > header { margin-bottom:18px; }
+.evidenceInspector > header h2 { font-weight:700; }
+.compactBook { grid-template-columns:76px minmax(0,1fr); gap:18px; }
+.compactBook img,.compactBook .coverMissing { width:76px; height:114px; }
+.compactBook h3 { font-size:17px; }
+.compactBook p { font-size:13px; }
+.evidenceSummary p,.evidenceSummary dl { font:13px/1.6 var(--serif); }
+.evidenceSummary > section { margin-top:16px; padding-top:13px; }
+.evidenceSummary .passageQuote p { font:14px/1.5 var(--serif); }
+.relatedTags { display:flex; gap:6px; flex-wrap:wrap; }
+.relatedTags a { display:block; border:1px solid var(--line); border-radius:14px; padding:2px 12px; color:var(--muted); font:13px/1.5 var(--serif); }
+.evidenceSummary section:has(+section .relatedTags) .relatedTags a { border:0; background:var(--night-tint,#f4ead3); color:var(--night-gold,#9b7025); }
+.matchBasis { margin-top:16px; font-size:12px; color:var(--muted); }
+.matchBasis summary { cursor:pointer; }
+.page > .inspector { margin-left:219px; }
+.contextDialog { background:var(--surface); }
+.contextColumns { grid-template-columns:minmax(0,1.7fr) minmax(230px,1fr); }
+.contextBlock p,.contextMatch p { font-size:15px; line-height:1.7; }
+.contextColumns aside p,.contextColumns dl { font-size:13px; }
+.documentProgress { border-color:var(--line); }
+.documentProgress h3,.documentRow h4 { font-family:var(--serif); }
+.documentProgress h3 small,.documentProgress > header > span { font:13px var(--serif); color:var(--muted); }
+.documentRow { grid-template-columns:88px minmax(0,1fr); gap:18px; }
+.documentCover { width:88px; height:124px; }
+.documentRow p { font:14px/1.7 var(--serif); color:var(--muted); }
+.documentState { font:14px/1.6 var(--serif); background:var(--night-tint,#f8f2e3); }
+.documentTabs button { color:var(--muted); }
+.documentTabs button[aria-pressed="true"] { color:var(--ink); }
+.documentActions button { font:13px var(--serif); color:var(--ink); }
+@media (max-width:1250px) and (min-width:1001px) {
+ .page .resultLayout { grid-template-columns:180px minmax(0,1fr) 270px; gap:20px; }
+ .evidenceHead { width:calc(100% - 290px); }
+ .resultContent { grid-template-columns:100px minmax(0,1fr); gap:0 16px; }
+ .resultCard .evidenceBook > img,.resultCard .coverMissing { grid-row:1 / span 4; }
+ .resultCard .selectQuote,.resultCard footer { grid-column:2; }
+ .resultCard .evidenceBook img,.resultCard .coverMissing { width:100px; height:150px; }
+ .page > .inspector { margin-left:200px; }
+}
+@media (max-width:1000px) {
+ .page .resultLayout,.page .resultLayout.summaryHidden { grid-template-columns:180px minmax(0,1fr); }
+ .evidenceHead { width:100%; }
+ .page > .inspector { margin-left:0; }
+}
+@media (max-width:800px) {
+ .page { padding:16px 16px 30px; }
+ .page .resultLayout,.page .resultLayout.summaryHidden { grid-template-columns:1fr; }
+ .page .mobileFilters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; margin-bottom:15px; }
+ .mobileFilters button { justify-content:space-between; min-height:29px; padding:5px 9px; font:12px var(--serif); }
+ .evidenceHead h1 { font-size:30px; margin-bottom:12px; }
+ .page .queryRow { min-height:32px; }
+ .page .queryRow :global(.button) { min-width:36px; min-height:30px; padding:7px; }
+ .page .queryRow :global(.button) > span { display:none; }
+ .page .queryRow :global(.button) > svg { display:block; }
+ .page .queryRow input { font-size:14px; padding:6px 0; }
+ .page .resultsHeader { flex-wrap:wrap; gap:8px; }
+ .page .resultsHeader h2 { display:none; }
+ .page .resultsHeader span { font-size:12px; }
+ .viewControls { margin-left:auto; gap:5px; }
+ .viewControls select { max-width:120px; min-height:28px; }
+ .viewControls button { min-width:26px; min-height:28px; }
+ .resultCard { grid-template-columns:15px minmax(0,1fr); gap:9px; }
+ .resultContent { grid-template-columns:80px minmax(0,1fr); gap:0 16px; }
+ .resultCard .evidenceBook > img,.resultCard .coverMissing { grid-row:1 / span 2; }
+ .evidenceBook img,.coverMissing { width:80px; height:96px; }
+ .evidenceBook h3 { font-size:17px; line-height:1.4; margin-right:12px; }
+ .evidenceBook p { font-size:12px; }
+ .evidenceBook p.originalTitle { display:none; }
+ .resultCard .selectQuote,.resultCard footer { grid-column:1 / -1; }
+ .evidenceTags { gap:4px; }
+ .evidenceTags span { font-size:10px; padding:2px 6px; }
+ .passageQuote { padding:8px; }
+ .passageQuote p { font-size:13px; line-height:1.5; }
+ .passageQuote strong,.passageQuote small { font-size:11px; }
+ .resultCard footer { font-size:12px; }
+ .contextColumns { grid-template-columns:1fr; }
+ .documentRow { grid-template-columns:68px minmax(0,1fr); gap:14px; }
+ .documentCover { width:68px; height:96px; }
+ .documentRow p { font-size:13px; }
+}
+
+/* PDF30 keeps the four primary groups visible; legacy precise filters remain available. */
+.filterDialog .filterGrid { display:block; }
+.extraFilters { padding:12px 0; border-bottom:1px solid var(--line); }
+.extraFilters summary { cursor:pointer; font:13px/1.6 var(--font-sans); color:var(--muted); }
+.extraFilters > label { display:grid; gap:5px; padding:8px 0; }
+.yearRange { align-items:center; gap:5px; margin-bottom:7px; }
+:is(.page,.filterDialog) .filterGrid fieldset label { font-family:var(--font-sans); }
+:is(.page,.filterDialog) .filterGrid .yearRange input { font-size:12px; }

@@ -12,7 +12,7 @@ export const scopeKeys = {
   work: ["work", "work_id", "work_ids"], scholar: ["author", "authors", "scholar"], topic: ["topic", "topics", "topic_ids"],
 };
 export const scopeFilterKeys = Object.values(scopeKeys).flat();
-export const opinionFilterKeys = [...scopeFilterKeys, "document_type", "document_types", "source_type", "source_types", "theory", "theory_node_ids", "theories", "concept", "concepts", "language", "languages", "year", "years", "year_min", "year_max", "access"];
+export const opinionFilterKeys = [...scopeFilterKeys, "document_type", "document_types", "source_type", "source_types", "theory", "theory_node_ids", "theories", "concept", "concepts", "language", "languages", "year", "years", "year_min", "year_max", "access", "availability"];
 
 export function opinionResultHref(query: string, filters: DiscoveryFilters) {
   const params = new URLSearchParams({ q: query });

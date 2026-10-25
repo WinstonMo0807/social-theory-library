@@ -68,3 +68,18 @@ VISUAL-08 A证据：PDF28与实际opinion入口；标题44px偏小，输入区�
 构建：Web r6本机60ccad→e4a0b2退出0，包18c807d53e6ad58f126d2e8519242a880f73aa8006f53fd6cdcab9f2e0dd80d3，NAS b89433→67398a完成。Web r7本机6d857d→7a7f48退出0，包c6bdc702acd78c8f0c434f2413ee16a785d93b2cdcea0f54b98ae2c3dc41b836；NAS62f62f→3030a0完成，Web `8cea9f46792c` / API `36667a3509da`。备份.env.before-web-r6、.env.before-catalog-r7均只留NAS。无schema、生产或重置操作。Web r8正在本机构建，不能提前写已部署。
 
 Web r8更新：本机e636f6→768717退出0；包34d10dba515bc7d8b2755915a58eb82e187de87424aaa1f12a02b0c9f39d098c；NAS d03ace→87f0d4完成，仅Web。PDF28对应/opinions桌面及390×844手机已实际查看，四种范围卡恢复，输入框约65px，未触发检索；账号真实关闭历史保存且空记录。/original手机scrollWidth375、innerWidth390（15px滚动条），无横向溢出，页脚display:none。截图after-opinions-r8-desktop/mobile、after-catalog-r8-mobile均在原tmp目录。r8之后仅说明文字12px与旧无效色值清理待下一包。
+
+## 原文证据组 VISUAL-09（PDF30–32）
+
+A证据：实际/evidence无查询截图before-evidence-r8-desktop显示旧纸色/黑标题、误用208品牌、侧栏摘要位置/标题比例不同；viewpoint-search.module.css与SiteHeader仍是旧视觉。PDF30的概念/理论关联在DiscoveryPassage与EvidenceSummary未投影，现有source_header已从正式快照并由_taxonomy_for排除未发布节点，具备真实来源。
+
+最小修复：仅evidence路由退出旧scope；提取PDF30独立品牌；恢复页头真实馆藏搜索、读者入口、标题与三栏尺寸、手机三项筛选按钮、摘要/上下文/文献状态的颜色字号。通过_public_row从新鲜且已校验theories投影related_concepts/related_theories的id/title/slug；不改变数据存储、检索算法或索引。原摘录校验、权限、引用前重新核对、取消/重试/已获材料保留继续复用。
+
+明确未完成：PDF30中/EN控件尚无已实现的界面语言能力，不能放置假切换按钮或宣称整页闭合；正文原始字体仍未取得。只打开无q路由，未创建检索会话、执行模型、提交表单或业务数据。源码结果/多版本/上下文对应视图的实际有数据状态未验收，保持B。当前正构建r9，不能据源码或构建称已显示。
+
+
+r9实际更新记录：本机初始5ba28e→7d7115退出0；1674文件包bbe5aed01fa54ef9ca7d8ddc2c81afd931ef31032da0e4ad5f449ca196508581。NAS6feea1→f832f8更新完成，Web06d7a96fc9d1、APIec8f27420854；只读桌面1280与手机390截图after-evidence-r9-desktop/mobile已保存。页面实际显示新品牌/三栏/三项手机筛选，无查询无结果状态。截图又确认旧筛选项挤占主栏；按PDF补六段年份、可读版本，并把语言/责任者/主题/概念折入更多筛选。手机仅图标搜索缺少可访问名称也已补入。
+
+新增availability按真实激活版本与公开译作关系实现，未改变原文/深度排序。语言筛选沿用原Meilisearch language条件，不因_metadata匹配处无该字段就误判遗漏。文献类型中的译著/会议论文尚不能与当前DocumentType七值直接等同，仍A，未把会议论文错误映射为全部章节。语言切换和原字体仍未闭合。
+
+r10：本机27d2cc→0c2578退出0；手机按钮名称补入后6811b7→fd6427退出0。1677文件包995e7c23687b6aa2b8476d2b902a973292aa88aba5b53eac241bf2fe8921a38e，AST/diff6eabbd退出0。未运行测试/检索/模型/业务表单。正在更新隔离预览，备份.env.before-evidence-r10；原账号/批注/数据库保持。

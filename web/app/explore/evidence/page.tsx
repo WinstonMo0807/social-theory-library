@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { SiteFooter } from "@/components/site-footer";
 import { DiscoverySearchWorkspace } from "@/components/discovery-search-workspace";
 import type { DiscoveryFilters } from "@/lib/api/discovery.types";
 import { opinionFilterKeys } from "@/lib/api/opinion-entry.client";
@@ -17,5 +16,5 @@ export default async function EvidencePage({ searchParams }: {
     if (params[name]) filters[name] = params[name]!;
   }
   if (!filters.work_id && params.work) filters.work_id = params.work;
-  return <><DiscoverySearchWorkspace key={JSON.stringify([query, filters])} initialQuery={query} initialFilters={filters} legacyRelation={Boolean(params.relation)} /><SiteFooter /></>;
+  return <><DiscoverySearchWorkspace key={JSON.stringify([query, filters])} initialQuery={query} initialFilters={filters} legacyRelation={Boolean(params.relation)} /></>;
 }

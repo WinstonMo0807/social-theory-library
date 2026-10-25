@@ -35,7 +35,7 @@ export function LibraryMark({ className = "" }: { className?: string }) {
     src="/brand/stl-mark-final-r2.png" width={61} height={45} unoptimized />;
 }
 
-const referenceBrandSize = { about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38] } as const;
+const referenceBrandSize = { about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38], evidence: [220,54] } as const;
 export function Wordmark({ config = defaultSiteConfig, home = false, reference }: { config?: SiteConfig; home?: boolean; reference?: keyof typeof referenceBrandSize }) {
   if (reference) return <picture className="brand-reference-lockup" data-brand-variant={reference}><source media="(max-width: 700px)" srcSet={`/brand/stl-lockup-${reference}-mobile-final-r2.png`} /><Image src={`/brand/stl-lockup-${reference}-desktop-final-r2.png`} alt={config.site_name} width={referenceBrandSize[reference][0]} height={referenceBrandSize[reference][1]} unoptimized /></picture>;
   return (
@@ -75,8 +75,9 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   ] as const;
   const readerCenterRoute = pathname === "/account" && !preview;
   const supportRoute = pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback";
+  const evidenceRoute = pathname === "/explore/evidence";
   const exploreLandingRoute = pathname === "/explore" && searchParams.size === 0;
-  const brandReference = pathname === "/about" ? "about" : pathname.startsWith("/help/") ? "article" : supportRoute ? "support" : exploreLandingRoute ? "explore" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : undefined;
+  const brandReference = pathname === "/about" ? "about" : pathname.startsWith("/help/") ? "article" : supportRoute ? "support" : exploreLandingRoute ? "explore" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined;
   const headerNavigation = readerCenterRoute ? [
     ["/account/research", "我的研究"], ["/account/notes", "笔记"], ["/account/plans", "阅读计划"],
     ["/account/collections", "书单"], ["/account/citation-audits", "引文体检"], ["/account/confirmed-notes", "已确认笔记"],
@@ -122,7 +123,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-stl-home={pathname === "/" || preview ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : undefined}
       data-stl-support={supportRoute ? brandReference : undefined}
-      data-stl-explore={exploreLandingRoute ? "landing" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : undefined}
+      data-stl-explore={exploreLandingRoute ? "landing" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined}
       className="site-header"
       data-ui-scope="stl4"
     >
@@ -140,18 +141,20 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
               key={href}
               prefetch={false}
             >
-              {label}
+              {evidenceRoute && href === "/theories" ? "理论" : label}
             </Link>
           );
         })}
       </nav>
       <div className="header-actions">
         {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label="返回原页面" title="返回原页面" href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>返回原页面</span></Link> : null}
+        {evidenceRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label="搜索馆藏"><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">搜索书名、作者、概念</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder="搜索书名、作者、概念…" /></form> : null}
         <Link className="header-search" href="/explore" prefetch={false} aria-label={config.navigation.search}>
           <Search size={18} strokeWidth={1.7} />
           <span>{config.navigation.search}</span>
         </Link>
         <ThemeToggle />
+        {evidenceRoute ? <Link className="header-reference-account" href={user ? "/account" : "/login?next=%2Faccount"} onClick={enterAccount} aria-label={user ? "读者中心" : "读者登录"}><CircleUserRound size={28} strokeWidth={1.6} /></Link> : null}
         {readerCenterRoute && user ? <ReaderAccountMenu key={user.id} user={user} onLogout={logout} onPreferences={() => setOpen(true)} pending={pendingAction === "logout"} error={logoutError} /> : null}
         <IconButton
           ref={menuButtonRef}

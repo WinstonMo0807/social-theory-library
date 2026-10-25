@@ -59,6 +59,26 @@ def _matches(header, filters, *, edition=None, contribution_cache=None, access_s
         return False
     if str(header.get("edition_id")) in filters.get("_excluded_edition_ids", []):
         return False
+    if filters.get("availability"):
+        available = {"readable": header.get("reader_available", False), "pdf": header.get("pdf_available", False)}
+        if "zh_translation" in filters["availability"]:
+            cache = contribution_cache if contribution_cache is not None else {}
+            key = ("readable_chinese_translations", tuple(sorted(access_statuses or [])))
+            if key not in cache:
+                # Only activated, accessible Chinese translations count. A Chinese
+                # original or a draft translation relation is not a translation.
+                rows = public_editions().filter(active_catalog_revision__snapshot__work__language__istartswith="zh",
+                    active_catalog_revision__reader_asset__access_status__in=access_statuses or [])
+                translated = set()
+                for _, candidate in iter_edition_metadata_headers(rows):
+                    if candidate["reader_available"] and candidate["chinese_translation"]:
+                        translated.add(candidate["work_id"])
+                        if candidate["translation_of_id"]:
+                            translated.add(candidate["translation_of_id"])
+                cache[key] = translated
+            available["zh_translation"] = bool({header.get("work_id"), header.get("translation_of_id")} & cache[key])
+        if not any(available.get(value, False) for value in filters["availability"]):
+            return False
     from catalog.services.semantic_search import YEAR_FILTERS
     filters = dict(filters)
     if filters.get("document_types"):
@@ -167,6 +187,9 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None):
         key = (doc.source_type, str(doc.source_id))
         header = headers.get(key)
         if not header or header["source_revision"] != doc.source_revision or header["scope_token"] != doc.scope_token:
+            continue
+        if (filters or {}).get("availability") and not _matches(header, {"availability": filters["availability"]},
+                contribution_cache=contribution_cache, access_statuses=access_statuses):
             continue
         payload = dict(doc.payload)
         if channel == "passages":
