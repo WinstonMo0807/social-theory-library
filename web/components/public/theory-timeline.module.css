@@ -64,7 +64,8 @@
 .chosen button { background: var(--paper); padding: 3px 6px; font-size: 11px; overflow-wrap: anywhere; }
 .pickerPages { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .pickerPages button { padding: 4px 7px; font-size: 11px; }
-.typeFilter > div { display: flex; flex-wrap: wrap; gap: 5px 12px; min-height: 34px; align-items: center; }
+.typeChoices { display:flex; flex-wrap:wrap; gap:5px 12px; min-height:34px; align-items:center; }
+.typeFilter .typeDisclosure > summary { display:none; }
 .typeFilter label { display: inline-flex; gap: 5px; align-items: center; font-size: 11px; }
 .typeFilter input { margin: 0; }
 .typeFilter summary { display: flex; gap: 4px; align-items: center; cursor: pointer; font-size: 11px; }
@@ -260,7 +261,10 @@
   .picker:nth-of-type(1) { grid-column: 1/-1; }
   .picker summary { min-height: 36px; }
   .pickerPanel { width: 300px; max-width: calc(100vw - 36px); }
-  .typeFilter > div { display: grid; grid-template-columns: minmax(0,1fr); gap: 6px; }
+  .typeDisclosure { position:relative; }
+  .typeFilter .typeDisclosure > summary { display:flex; justify-content:space-between; align-items:center; min-height:36px; padding:6px 9px; border:1px solid var(--line); border-radius:3px; background:var(--night-white,#fff); list-style:none; }
+  .typeDisclosure > summary::-webkit-details-marker { display:none; }
+  .typeChoices { position:absolute; z-index:5; top:calc(100% + 4px); right:0; display:grid; width:190px; padding:12px; gap:9px; background:var(--night-white,#fff); border:1px solid var(--line); box-shadow:0 8px 20px #071e3912; }
   .typeFilter label, .typeFilter summary { font-size: 11px; }
   .typeFilter { grid-column: 2; }.typePanel { right: 0; }
   .filterActions { grid-column: 1/-1; display: grid; grid-template-columns: auto minmax(0,1fr); gap: 12px; order: 1; }

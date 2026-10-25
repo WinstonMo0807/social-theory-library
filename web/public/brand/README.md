@@ -149,3 +149,21 @@ Original PDF fragments only. Timeline uses the latest PDF57 layout; PDF55 schola
 | brand/stl-footer-theory-timeline-final-r2.png | 56 | 59,982,218,1013 |
 | visual/stl4/graph/hero-final-r2.png | 53 | 599,66,1207,243 |
 | visual/stl4/timeline/hero-final-r2.png | 57 | 440,85,1240,265 |
+
+## Reading paths PDF58–60
+
+PDF58 list and PDF60 latest detail; footer fragment from PDF59. Native reference crops, with no sample books or authors added to data. List fallback pictures are decorative; actual published covers remain authoritative.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-reading-paths-desktop-final-r2.png | 58 | 61,6,236,51 |
+| brand/stl-lockup-reading-paths-mobile-final-r2.png | 58 | 1237,52,1387,88 |
+| brand/stl-lockup-reading-path-desktop-final-r2.png | 60 | 71,54,304,90 |
+| brand/stl-lockup-reading-path-mobile-final-r2.png | 60 | 1230,97,1409,127 |
+| brand/stl-footer-reading-path-final-r2.png | 59 | 55,987,214,1014 |
+| visual/stl4/reading-paths/list-hero-final-r2.png | 58 | 520,56,1198,325 |
+| visual/stl4/reading-paths/list-hero-mobile-final-r2.png | 58 | 1236,204,1499,280 |
+| visual/stl4/reading-paths/detail-hero-final-r2.png | 60 | 558,99,1186,324 |
+| visual/stl4/reading-paths/list-card-1-final-r2.png | 58 | 62,486,317,621 |
+| visual/stl4/reading-paths/list-card-2-final-r2.png | 58 | 62,647,317,780 |
+| visual/stl4/reading-paths/list-card-3-final-r2.png | 58 | 62,807,317,942 |

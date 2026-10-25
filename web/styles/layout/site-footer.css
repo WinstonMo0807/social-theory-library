@@ -54,3 +54,8 @@
 .site-footer--map p { margin-inline:auto; font-size:11px; letter-spacing:.12em; }
 .site-footer--map p small { display:block; text-align:center; font-size:8px; letter-spacing:.3em; }
 @media(max-width:720px) { .site-footer.site-footer--map { display:none; } }
+
+.site-footer.site-footer--reading-path { min-height:58px; padding:9px 4%; border-top:1px solid var(--night-line,#e8e8e3); }
+.site-footer--reading-path > a { border:0; padding:0; }
+.site-footer--reading-path nav { margin-inline:auto; gap:24px; font-size:10px; }
+@media(max-width:720px) { .site-footer.site-footer--reading-path { display:none; } }

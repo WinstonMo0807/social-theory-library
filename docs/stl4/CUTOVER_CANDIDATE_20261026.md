@@ -1,5 +1,7 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+2026-10-26当前：Web r17 `03a22da36188`，API r9 `f95578893171`，Discovery r2保持。恢复点.env.before-reading-path-r17；r16保留。仅隔离预览更新，不是完整验收或公网切换。
+
 2026-10-26当前：Web r16 `91783fe867e3`，API r9 `f95578893171`，Discovery r2保持。恢复点.env.before-graph-timeline-r16；r15保留。只是隔离预览视觉更新，不是公网切换或完整验收。
 
 2026-10-26当前：Web r15 `588ed651b3c1`，API r9 `f95578893171`，Discovery r2。概念/流派详情本批视觉已部署；真实有数据详情未验收。恢复点.env.before-theory-detail-r15，前Web r14保留。未测试、业务写入、迁移或公网切换；下文旧版为历史。

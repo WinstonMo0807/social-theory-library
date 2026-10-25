@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, ChevronDown, Search } from "lucide-react";
@@ -10,6 +10,9 @@ import { timelineDate, timelineHref, timelineTypeLabels, type TimelineEvent, typ
 import styles from "./theory-timeline.module.css";
 
 const scales = ["100", "50", "20", "10", "custom"];
+function subscribeMobile(callback: () => void) { const media = window.matchMedia("(max-width:700px)"); media.addEventListener("change", callback); return () => media.removeEventListener("change", callback); }
+const mobileSnapshot = () => window.matchMedia("(max-width:700px)").matches;
+const serverSnapshot = () => false;
 const primaryTypes = ["publication", "concept_proposed", "translation"];
 const markerLabels = { publication: "作品出版", translation: "译本出版", concept_proposed: "概念使用", academic: "学术事件" };
 function markerKind(type: string): keyof typeof markerLabels {
@@ -41,6 +44,7 @@ export function TheoryTimelineWorkspace({ page, selected, selectionError, group,
   filters: TimelineFilters; actionPath: string; scope?: { name: string; href: string };
 }) {
   const router = useRouter();
+  const mobile = useSyncExternalStore(subscribeMobile, mobileSnapshot, serverSnapshot);
   const [scale, setScale] = useState(scales.includes(filters.scale) ? filters.scale : "100");
   const [types, setTypes] = useState(filters.event_type?.split(",").filter(Boolean) || []);
   const [customFrom, setCustomFrom] = useState(filters.year_from || "");
@@ -70,9 +74,9 @@ export function TheoryTimelineWorkspace({ page, selected, selectionError, group,
       <fieldset className={styles.scale}><legend>时间尺度</legend><div>{scales.map(value => <label key={value}><input type="radio" name="scale" value={value} checked={scale === value} onChange={() => setScale(value)} /><span>{value === "custom" ? "自定义" : `${value}年`}</span></label>)}</div></fieldset>
       <TimelinePicker kind="topic" values={filters.topic?.split(",").filter(Boolean) || []} selected={page.selected_topics} />
       <TimelinePicker kind="author" values={filters.author?.split(",").filter(Boolean) || []} selected={page.selected_authors} />
-      <fieldset className={styles.typeFilter}><legend>事件类型</legend><div>{primaryTypes.map(type => <label key={type}><input name="event_type" type="checkbox" value={type} checked={types.includes(type)} onChange={e => toggleType(type, e.target.checked)} /><span>{timelineTypeLabels[type]}</span></label>)}<details><summary>其他类型<ChevronDown size={12} aria-hidden="true" />{types.filter(type => otherTypes.includes(type)).length ? ` (${types.filter(type => otherTypes.includes(type)).length})` : ""}</summary><div className={styles.typePanel}>{otherTypes.map(type => <label key={type}><input name="event_type" type="checkbox" value={type} checked={types.includes(type)} onChange={e => toggleType(type, e.target.checked)} /><span>{timelineTypeLabels[type]}</span></label>)}</div></details></div>
+      <fieldset className={styles.typeFilter}><legend>事件类型</legend><details className={styles.typeDisclosure} open={!mobile}><summary>{types.length ? `${timelineTypeLabels[types[0]] || "已选类型"}${types.length > 1 ? ` 等 ${types.length} 项` : ""}` : "全部类型"}<ChevronDown size={12} /></summary><div className={styles.typeChoices}>{primaryTypes.map(type => <label key={type}><input name="event_type" type="checkbox" value={type} checked={types.includes(type)} onChange={e => toggleType(type, e.target.checked)} /><span>{timelineTypeLabels[type]}</span></label>)}<details><summary>其他类型<ChevronDown size={12} aria-hidden="true" />{types.filter(type => otherTypes.includes(type)).length ? ` (${types.filter(type => otherTypes.includes(type)).length})` : ""}</summary><div className={styles.typePanel}>{otherTypes.map(type => <label key={type}><input name="event_type" type="checkbox" value={type} checked={types.includes(type)} onChange={e => toggleType(type, e.target.checked)} /><span>{timelineTypeLabels[type]}</span></label>)}</div></details></div>
         {types.filter(type => !timelineTypeLabels[type]).map(type => <label key={type}><input name="event_type" type="checkbox" value={type} checked onChange={() => toggleType(type, false)} /><span>所选类型当前不可用</span></label>)}
-      </fieldset>
+      </details></fieldset>
       <div className={styles.filterActions}><Link href={timelineHref(actionPath, resetFilters)}>清空筛选</Link><button type="submit">应用筛选</button></div>
       <details className={styles.moreFilters} open={Boolean(scale === "custom" || filters.q || filters.year_from || filters.year_to || filters.has_collection || filters.related_to)}><summary>更多筛选<ChevronDown size={12} /></summary><div className={styles.searchRow}>
         <label className={styles.search}><Search size={16} aria-hidden="true" /><input name="q" aria-label="搜索时间线" defaultValue={filters.q || ""} placeholder="搜索事件、概念或来源说明" /></label>
