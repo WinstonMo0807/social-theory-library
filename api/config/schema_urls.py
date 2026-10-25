@@ -101,7 +101,7 @@ urlpatterns = [
     path("api/catalog/", include([pattern for pattern in catalog_patterns if pattern.name in VERIFIED_NAMES])),
     path("api/distribution/", include([pattern for pattern in distribution_patterns if pattern.name in {
         "asset-access", "asset-file", "admin-asset-preview", "backup-job-list", "reader-ocr-status",
-        "storage-workspace", "storage-command", "storage-backup-detail", "storage-receipt", "storage-verification-history", "storage-cleanup-detail",
+        "storage-workspace", "storage-command", "storage-backup-detail", "storage-receipt", "storage-verification-history", "storage-restore-history", "storage-cleanup-detail",
     }])),
     path("api/ingestion/", include([pattern for pattern in ingestion_patterns if pattern.name in {"processing-workspace", "processing-workspace-source", "processing-workspace-receipt", "processing-workspace-result", "ocr-workspace", "upload-workspace", "upload-workspace-receipt", "intake-confirmation", "intake-confirmation-receipt"}])),
     path("api/reading/", include([

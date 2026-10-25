@@ -20360,6 +20360,53 @@
                 }
             }
         },
+        "/api/distribution/storage/rehearsals/": {
+            "get": {
+                "operationId": "distribution_storage_rehearsals_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "backup_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "cursor",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                        }
+                    }
+                ],
+                "tags": [
+                    "distribution"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RestoreHistoryPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/distribution/storage/verifications/": {
             "get": {
                 "operationId": "distribution_storage_verifications_retrieve",
@@ -71719,6 +71766,93 @@
                 ],
                 "type": "string",
                 "description": "* `library` - library\n* `works` - works\n* `passages` - passages\n* `filtered` - filtered"
+            },
+            "RestoreHistoryPage": {
+                "type": "object",
+                "properties": {
+                    "as_of": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "source_status": {
+                        "$ref": "#/components/schemas/RestoreHistoryPageSourceStatusEnum"
+                    },
+                    "candidate_count": {
+                        "type": "integer"
+                    },
+                    "inspected_count": {
+                        "type": "integer"
+                    },
+                    "unverified_count": {
+                        "type": "integer"
+                    },
+                    "filtered_count": {
+                        "type": "integer"
+                    },
+                    "directory_errors": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RestoreHistoryRecord"
+                        }
+                    },
+                    "next_cursor": {
+                        "type": "string"
+                    },
+                    "notice": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "as_of",
+                    "candidate_count",
+                    "directory_errors",
+                    "filtered_count",
+                    "inspected_count",
+                    "next_cursor",
+                    "notice",
+                    "results",
+                    "source_status",
+                    "unverified_count"
+                ]
+            },
+            "RestoreHistoryPageSourceStatusEnum": {
+                "enum": [
+                    "available",
+                    "missing",
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `available` - available\n* `missing` - missing\n* `unavailable` - unavailable"
+            },
+            "RestoreHistoryRecord": {
+                "type": "object",
+                "properties": {
+                    "checked_at": {
+                        "type": "string"
+                    },
+                    "archive_sha256": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "archive_sha256",
+                    "checked_at",
+                    "detail",
+                    "id",
+                    "status"
+                ]
             },
             "RestorePlan": {
                 "type": "object",

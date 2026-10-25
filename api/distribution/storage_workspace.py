@@ -1,6 +1,5 @@
 """Storage and backup presentation over the original catalog and backup queue."""
 from datetime import timedelta
-from itertools import islice
 from pathlib import Path
 from hashlib import sha256
 import json
@@ -105,31 +104,11 @@ def backup_stalled(row):
 
 
 def restore_reports(checksum=None):
-    """Only signed reports written by the existing isolated-DB command count."""
-    directory = settings.NAS_BACKUP_ROOT.resolve() / "rehearsals"
-    reports, skipped = [], False
-    try:
-        if not directory.is_dir() or directory.is_symlink():
-            return reports, skipped
-        paths = list(islice(directory.iterdir(), 501))
-        skipped = len(paths) > 500
-        for path in paths[:500]:
-            if path.is_symlink() or path.suffix != ".json" or not path.is_file() or path.stat().st_size > 65536:
-                continue
-            try:
-                envelope = json.loads(path.read_text(encoding="utf-8"))
-                report = signing.loads(envelope["signed_report"], salt="stl-backup-restore-rehearsal-v1")
-                if not isinstance(report, dict) or report.get("status") != "restored" or not isinstance(report.get("checked_at"), str):
-                    continue
-                if checksum and report.get("archive_sha256") != checksum:
-                    continue
-                reports.append({"checked_at": report["checked_at"], "archive_sha256": report.get("archive_sha256", ""),
-                    "status": "database_restored", "detail": "已在空白隔离 PostgreSQL 中完成导入；应用功能、文件和索引恢复仍待核对。"})
-            except (OSError, ValueError, TypeError, KeyError, signing.BadSignature):
-                continue
-    except OSError:
-        return [], True
-    return sorted(reports, key=lambda row: row["checked_at"], reverse=True)[:50], skipped
+    """A recent window for existing summaries; full history has its own cursor."""
+    from .restore_history import report_window
+    page = report_window(checksum=checksum, limit=50)
+    limited = bool(page['next_after'] or page['directory_errors'] or page['unverified_count'] or page['source_status'] == 'unavailable')
+    return page['results'], limited
 
 
 def storage_snapshot(actor, *, page=1, status="", as_of=None):

@@ -4255,6 +4255,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/distribution/storage/rehearsals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["distribution_storage_rehearsals_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/distribution/storage/verifications/": {
         parameters: {
             query?: never;
@@ -18610,6 +18626,33 @@ export interface components {
          * @enum {string}
          */
         ResearchScopeKindEnum: "library" | "works" | "passages" | "filtered";
+        RestoreHistoryPage: {
+            /** Format: date-time */
+            as_of: string;
+            source_status: components["schemas"]["RestoreHistoryPageSourceStatusEnum"];
+            candidate_count: number;
+            inspected_count: number;
+            unverified_count: number;
+            filtered_count: number;
+            directory_errors: number;
+            results: components["schemas"]["RestoreHistoryRecord"][];
+            next_cursor: string;
+            notice: string;
+        };
+        /**
+         * @description * `available` - available
+         *     * `missing` - missing
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        RestoreHistoryPageSourceStatusEnum: "available" | "missing" | "unavailable";
+        RestoreHistoryRecord: {
+            checked_at: string;
+            archive_sha256: string;
+            status: string;
+            detail: string;
+            id: string;
+        };
         RestorePlan: {
             /** Format: uuid */
             backup_id: string;
@@ -31556,6 +31599,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageCommandReceipt"];
+                };
+            };
+        };
+    };
+    distribution_storage_rehearsals_retrieve: {
+        parameters: {
+            query?: {
+                backup_id?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoreHistoryPage"];
                 };
             };
         };

@@ -1,4 +1,5 @@
 from django.urls import path
+from .restore_history_views import RestoreHistoryView
 from .reader_ocr_views import ReaderOCRStatusView
 from .storage_cleanup_views import CleanupPlanView
 from .storage_views import StorageWorkspaceView, StorageCommandView, StorageBackupDetailView, StorageReceiptView, VerificationHistoryView
@@ -14,6 +15,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("storage/rehearsals/", RestoreHistoryView.as_view(), name="storage-restore-history"),
     path("storage/", StorageWorkspaceView.as_view(), name="storage-workspace"),
     path("storage/commands/", StorageCommandView.as_view(), name="storage-command"),
     path("storage/commands/<uuid:request_id>/", StorageReceiptView.as_view(), name="storage-receipt"),
