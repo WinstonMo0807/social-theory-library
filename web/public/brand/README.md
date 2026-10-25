@@ -284,3 +284,5 @@ Original brand fragments: desktop (32,24,230,75), mobile (1360,64,1510,103), in 
 ## Cover and media workspace, final PDF pages 104–105
 
 Original page 104 brands: desktop (47,32,235,80); mobile (1298,64,1459,96). Page 105 empty-image icon (1062,273,1087,297). Files stl-lockup-admin-media-desktop-final-r2.png, stl-lockup-admin-media-mobile-final-r2.png, visual/stl4/admin/media-empty-final-r2.png. Native image crop coordinates; existing book media is never replaced by atlas examples.
+
+- `stl-lockup-admin-processing-{desktop,mobile}-final-r2.png`：唯一最终PDF106原图裁取，原生坐标(37,28,220,76)/(1360,59,1464,101)，不重绘。

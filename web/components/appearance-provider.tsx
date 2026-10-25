@@ -57,9 +57,11 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
       if (!owner) { setStatus("外观设置保存在当前浏览器"); return; }
       try {
         const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]);
-        const result = await withPrivateOwner(owner, () => apiRequest<{ id: number; reading_preferences?: unknown }>("/auth/me/", {
+        // This response is the owner check itself. Keep its owner header and
+        // id comparison instead of issuing two more /auth/me/ requests.
+        const result = await apiRequest<{ id: number; reading_preferences?: unknown }>("/auth/me/", {
           cache: "no-store", signal, headers: { "X-Reader-Owner": owner },
-        }, getServerSessionCredential()), signal);
+        }, getServerSessionCredential());
         if (controller.signal.aborted || change.current !== revision) return;
         if (String(result.id) !== owner) throw new Error("登录账户已变化。");
         const next = { ...current.current, ...validAppearance(result.reading_preferences) };

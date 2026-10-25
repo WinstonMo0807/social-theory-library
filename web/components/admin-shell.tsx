@@ -86,6 +86,7 @@ const staffRoles = ["admin", "editor"] as const;
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const scope = adminTaskScope(pathname);
   const uploadRoute = pathname === "/admin/uploads";
   const intakeRoute = pathname.startsWith("/admin/intake/");
@@ -93,9 +94,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const editorRoute = /^\/admin\/library\/works\/[^/]+$/.test(pathname);
   const filesRoute = /^\/admin\/library\/works\/[^/]+\/files$/.test(pathname);
   const mediaRoute = pathname === "/admin/media";
+  const processingRoute = pathname === "/admin/processing" && (!searchParams.get("surface") || ["documents","overview"].includes(searchParams.get("surface")!));
   const compactWorkHeader = uploadRoute || intakeRoute || filesRoute || mediaRoute;
-  const brandReference = mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
-  const searchParams = useSearchParams();
+  const brandReference = processingRoute ? "admin-processing" : mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
   const returnHref = safeAdminHref(searchParams.get("return_to"), "");
   const curationReturn = returnHref && new URL(returnHref, "https://admin.invalid");
   const returnToCuration = curationReturn && curationReturn.pathname === "/admin/review" && curationReturn.searchParams.get("workspace") === "curation";
@@ -210,7 +211,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
   return (
     <AdminSessionContext.Provider value={user}>
-    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
+    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={processingRoute ? "processing" : mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
       {!focusMode ? <aside
         ref={sidebarRef}
         id="admin-navigation"

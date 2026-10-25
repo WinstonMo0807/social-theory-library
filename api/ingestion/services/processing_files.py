@@ -21,7 +21,9 @@ def stage_query(rows, source):
     group = Case(When(has_asset,
         then=Concat(Value('file:'), Replace(asset, Value('-'), Value('')))),
         default=Concat(Value(f'task:{source}:'), Replace(Cast('pk', CharField()), Value('-'), Value(''))), output_field=CharField())
-    stage = Case(When(stats__operation='outline_rebuild', then=Value('outline_rebuild')), When(stats__operation='concept_alignment', then=Value('concept_alignment')), default=F('job_type'), output_field=CharField()) if ordinary else Value('semantic_index', output_field=CharField())
+    # Keep the constant stage distinct from task_kind: Django's window-filter
+    # projection deduplicates identical Value expressions and drops one alias.
+    stage = Case(When(stats__operation='outline_rebuild', then=Value('outline_rebuild')), When(stats__operation='concept_alignment', then=Value('concept_alignment')), default=F('job_type'), output_field=CharField()) if ordinary else Cast(Value('semantic_index'), output_field=CharField())
     normalized = workspace_status() if ordinary else Case(*[When(status=old, then=Value(new)) for old,new in SEMANTIC_STATUS.items()], output_field=CharField())
     return rows.order_by().annotate(file_key=group, stage_key=stage,
         task_kind=F('job_type') if ordinary else Value('semantic_index', output_field=CharField()), task_state=normalized,
