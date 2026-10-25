@@ -263,3 +263,12 @@ Original book-entry desktop/mobile lockups. Covers and field contents remain rea
 | --- | --- | --- |
 | brand/stl-lockup-admin-manual-desktop-final-r2.png | 88 | 48,32,241,80 |
 | brand/stl-lockup-admin-manual-mobile-final-r2.png | 88 | 1354,60,1485,90 |
+
+## Catalogue editor PDF91–94
+
+Original PDF92 lockups. Publication, field locks and conflict decisions retain the existing services.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-admin-editor-desktop-final-r2.png | 92 | 40,23,235,71 |
+| brand/stl-lockup-admin-editor-mobile-final-r2.png | 92 | 1330,48,1435,83 |
