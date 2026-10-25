@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-26 中断页分页
+
+处理工作区增加failed-pages/<task_id>只读分页，重用failed_ocr_pages与task_version，限制OCR任务和VIEW_SYSTEM_STATUS；前端按原任务身份/版本保存页序选择并沿原重试POST，不增模型或任务实现。
+
 ## 2026-10-26 选材备注保留修复
 
 selection_notes保留于原加密研究，selection_note_sources只保存原定位身份；普通刷新不回查全部历史源，单条selection-note-source沿本人研究权限显式读取，仅返回书目/定位。未新增表/迁移。

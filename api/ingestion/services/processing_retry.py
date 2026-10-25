@@ -14,6 +14,23 @@ def failed_ocr_pages(job):
                    and index not in completed and (targets is None or index in targets)})
 
 
+def failed_page_listing(job, expected_version, page):
+    from rest_framework.exceptions import ValidationError
+    from catalog.services.editorial_issues import EditConflict
+    from .processing_commands import task_version
+    version = task_version(job)
+    if version != expected_version:
+        raise EditConflict("任务记录已变化，请重新读取任务并核对中断页。")
+    indexes = failed_ocr_pages(job)
+    page_size = 200
+    pages = max(1, (len(indexes) + page_size - 1) // page_size)
+    if type(page) is not int or not 1 <= page <= pages:
+        raise ValidationError({"page": "页码超出当前中断页列表，请重新读取。"})
+    return {"job_id": str(job.pk), "version": version, "count": len(indexes),
+            "page": page, "pages": pages, "page_size": page_size,
+            "results": indexes[(page - 1) * page_size:page * page_size]}
+
+
 def selected_ocr_remaining(stats, remaining):
     selection = stats.get("retry_selection") or {}
     if selection.get("state") != "active":

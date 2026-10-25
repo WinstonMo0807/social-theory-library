@@ -4402,6 +4402,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingestion/processing-workspace/failed-pages/{task_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ingestion_processing_workspace_failed_pages_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingestion/processing-workspace/results/{task_id}/": {
         parameters: {
             query?: never;
@@ -16271,6 +16287,17 @@ export interface components {
          * @enum {string}
          */
         ProcessingCreationTypeEnum: "ocr" | "outline";
+        ProcessingFailedPage: {
+            owner_id: string;
+            /** Format: uuid */
+            job_id: string;
+            version: string;
+            count: number;
+            page: number;
+            pages: number;
+            page_size: number;
+            results: number[];
+        };
         ProcessingFailureLocation: {
             pdf_page: number | null;
             start_offset: number | null;
@@ -32655,6 +32682,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProcessingReceipt"];
+                };
+            };
+        };
+    };
+    ingestion_processing_workspace_failed_pages_retrieve: {
+        parameters: {
+            query: {
+                expected_version: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessingFailedPage"];
                 };
             };
         };

@@ -255,6 +255,37 @@ class ProcessingWorkspaceView(EditorialErrorMixin, AdminPrivateResponseMixin, AP
         return run_processing_command(request, lambda: ProcessingCenterView()._perform_action(request))
 
 
+class ProcessingFailedPageQuerySerializer(serializers.Serializer):
+    expected_version = serializers.RegexField(r"^[a-f0-9]{64}$")
+    page = serializers.IntegerField(min_value=1, default=1)
+
+
+class ProcessingFailedPageSerializer(serializers.Serializer):
+    owner_id = serializers.CharField()
+    job_id = serializers.UUIDField()
+    version = serializers.CharField()
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    pages = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    results = serializers.ListField(child=serializers.IntegerField(min_value=1))
+
+
+class ProcessingFailedPageView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
+    permission_classes = [IsLibraryStaff]
+
+    @extend_schema(parameters=[ProcessingFailedPageQuerySerializer], responses=ProcessingFailedPageSerializer)
+    def get(self, request, task_id):
+        if not has_capability(request.user, Capability.VIEW_SYSTEM_STATUS):
+            raise PermissionDenied("当前账户不能查看完整处理队列，请从材料页查看所属版本的处理记录。")
+        data = ProcessingFailedPageQuerySerializer(data=request.query_params)
+        data.is_valid(raise_exception=True)
+        job = get_object_or_404(ProcessingJob.objects.select_related("asset"), pk=task_id, job_type="ocr")
+        from ingestion.services.processing_retry import failed_page_listing
+        result = failed_page_listing(job, **data.validated_data)
+        return Response({**result, "owner_id": str(request.user.pk)})
+
+
 class ProcessingSourceFileSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     filename = serializers.CharField()

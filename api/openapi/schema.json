@@ -21508,6 +21508,64 @@
                 }
             }
         },
+        "/api/ingestion/processing-workspace/failed-pages/{task_id}/": {
+            "get": {
+                "operationId": "ingestion_processing_workspace_failed_pages_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "expected_version",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "task_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ingestion"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessingFailedPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/ingestion/processing-workspace/results/{task_id}/": {
             "get": {
                 "operationId": "ingestion_processing_workspace_results_retrieve",
@@ -64155,6 +64213,50 @@
                 ],
                 "type": "string",
                 "description": "* `ocr` - ocr\n* `outline` - outline"
+            },
+            "ProcessingFailedPage": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pages": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "job_id",
+                    "owner_id",
+                    "page",
+                    "page_size",
+                    "pages",
+                    "results",
+                    "version"
+                ]
             },
             "ProcessingFailureLocation": {
                 "type": "object",
