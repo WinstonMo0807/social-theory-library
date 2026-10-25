@@ -171,3 +171,11 @@ VISUAL-15证据：实际/theories/graph截图before-graph-r14-desktop-20261026.p
 66主状态保留现有作品/概念并排，调整行动按钮跨列、手机原头像与墙面构图；现有章节贡献/来源/作者编者不变。整组自问：普通读者能否认出同名者、图像缺失是否冒充其他人、候选关系会否公开、作品是否错误当整本作者？原真实身份/缺图/候选权限和章节责任保留；紧凑总览箭头进入人物档案，作品入口仍在档案中。无测试或业务操作，不称通过。
 
 编译1f5f0f→f7fa44退出0，1863文件38648691字节，SHA256 0a45de7e906f215d80c7021ff5f9dcb80bb92bc8bbc9a1e7462b622969921cfb。NAS ed1967→01e83f退出0，Web r18 d46cca8dc3d9；API r9不变，恢复点.env.before-scholars-r18。after-scholars-r18-desktop/mobile、after-scholar-directory-r18-desktop/mobile-20261026.png保存原tmp目录。字体及逐状态精确视觉仍A，真实详情/人物关系/章节操作B，未模型/迁移/公网切换。
+
+## VISUAL-18 主题（PDF68–71）
+
+实际查看四张原图及before-topics-r18-desktop。原Topic页面缺width、旧editorial-v2、品牌/纸底/手机横幅与图不符。仅调整Topic目录/详情CSS与共享头部/route scope/目录页脚；11张品牌和纯装饰裁片来自唯一PDF，坐标见brand/README.md，手机目录品牌第一次裁片不完整已扩大并实际查看。层级API、真实封面、私人关注/收藏/反馈沿原调用。
+
+整类自问：读者能否保留筛选、是否把示例主题冒充真实数据、私人收藏是否公开、详情补充操作是否丢失？原GET查询/公开投影/owner服务保留；补充操作收进既有更多资料，并未删去。当前公开主题0，不造假数据。有数据详情/关系/私人写入B待验收，原字体/精确状态仍A。截图中确认标题字重偏轻、查看全部箭头独占行，已加局部字重与inline-flex，随r20发布。
+
+编译1d70ad→12bba9退出0；1889文件41909720字节，SHA256 62c3816ba22b2f47fcb17763e21a727b9869ab4e1a497cc1bbbb26e24cb6c3f8。NAS e52fa3→2976a6→b5ae79退出0，Web r19 06d4ecd85426，API r9保持，恢复点.env.before-topics-r19。after-topics-r19-desktop/mobile、after-topic-directory-r19-desktop/mobile-20261026.png在原tmp目录。无测试、业务写入、模型、迁移或公网操作，不称整组通过。

@@ -266,3 +266,19 @@ body:has(.work-detail[data-work-kind="article"]) .brand-work-variants [data-bran
  .brand-reference-lockup[data-brand-variant="scholar-profile"]{width:165px}
  .site-header[data-stl-scholar] .header-actions{gap:8px}
 }
+
+/* Original topic lockups from PDF68/69/71. */
+.site-header[data-stl-topic]{min-height:64px;padding:8px 3.3%;gap:26px}
+.site-header[data-stl-topic="topics"]{min-height:74px;color:var(--night-ink,#111)}
+.brand-reference-lockup[data-brand-variant="topics"]{width:264px}
+.brand-reference-lockup[data-brand-variant="topic-directory"]{width:242px}
+.brand-reference-lockup[data-brand-variant="topic-profile"]{width:210px}
+.site-header[data-stl-topic] .desktop-nav a.active::after{background:#b38b42}
+.site-header[data-stl-topic="topics"] .header-search span{display:none}
+@media(max-width:760px){
+ .site-header[data-stl-topic]{min-height:62px;padding:12px 16px;gap:12px}
+ .brand-reference-lockup[data-brand-variant="topics"]{width:190px}
+ .brand-reference-lockup[data-brand-variant="topic-directory"]{width:130px}
+ .brand-reference-lockup[data-brand-variant="topic-profile"]{width:165px}
+ .site-header[data-stl-topic] .header-actions{gap:8px}
+}

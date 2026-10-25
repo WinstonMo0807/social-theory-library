@@ -184,3 +184,21 @@ PDF62 hub, PDF63 directory and PDF66 latest overlapping profile state follow the
 | visual/stl4/scholars/hub-hero-mobile-final-r2.png | 62 | 1321,78,1647,248 |
 | visual/stl4/scholars/directory-hero-final-r2.png | 63 | 612,59,1251,248 |
 | visual/stl4/scholars/profile-mobile-wall-final-r2.png | 66 | 1336,113,1480,207 |
+
+## Topics PDF68–71
+
+PDF68 hub, PDF69 directory and PDF71 latest overlapping detail state. Original brand and decorative hero fragments only; published topic images and academic records remain authoritative.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-topics-desktop-final-r2.png | 68 | 78,12,342,69 |
+| brand/stl-lockup-topics-mobile-final-r2.png | 68 | 1340,21,1538,66 |
+| brand/stl-lockup-topic-directory-desktop-final-r2.png | 69 | 68,113,235,137 |
+| brand/stl-lockup-topic-directory-mobile-final-r2.png | 69 | 1344,146,1450,183 |
+| brand/stl-lockup-topic-profile-desktop-final-r2.png | 71 | 70,18,280,65 |
+| brand/stl-lockup-topic-profile-mobile-final-r2.png | 71 | 1262,51,1385,80 |
+| visual/stl4/topics/hub-hero-final-r2.png | 68 | 610,76,1286,389 |
+| visual/stl4/topics/hub-hero-mobile-final-r2.png | 68 | 1321,93,1653,254 |
+| visual/stl4/topics/directory-hero-final-r2.png | 69 | 508,148,866,358 |
+| visual/stl4/topics/detail-hero-final-r2.png | 71 | 530,72,1207,387 |
+| visual/stl4/topics/detail-hero-mobile-final-r2.png | 71 | 1262,196,1485,285 |
