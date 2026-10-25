@@ -129,7 +129,7 @@ def resolve_reference(raw, user, *, strict=False):
                 "reference_id": reference_identity({"anchors": resolved}),
                 "source_status": "available" if available else "unavailable", "locator_precision": "multi_anchor",
                 "quote": "\n".join(item["quote"] for item in resolved) if available else "",
-                **{key: first.get(key) for key in ("title", "authors", "publication_year", "cover_url", "cover_media", "citation")},
+                **{key: first.get(key) for key in ("title", "authors", "publication_year", "document_type", "language", "cover_url", "cover_media", "citation")},
                 "reader_url": first.get("reader_url") if available else None}
     span_id = raw.get("evidence_span_id")
     stale = {"schema_version": 1, "source_kind": "catalog", "source_status": "unavailable",
@@ -197,6 +197,8 @@ def resolve_reference(raw, user, *, strict=False):
             **structured_page_labels(page),
             "content_hash": digest, "title": (snapshot.get("work") or {}).get("title", ""),
             "authors": [value for value in authors if value],
+            "document_type": (snapshot.get("work") or {}).get("document_type", ""),
+            "language": (snapshot.get("work") or {}).get("language", ""),
             "publication_year": (snapshot.get("edition") or {}).get("publication_year"), **snapshot_cover(edition),
             "citation": format_gbt_7714_2025(edition, page.printed_label, snapshot=snapshot),
             "quote": source_text,

@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-26 R05书目与封面
+
+研究来源投影从已发布目录快照提供document_type/language；跨页沿首个同版来源传递。封面复用现有MediaPlacement，失效来源不保留书目/封面快照。
+
 ## 2026-10-25 R05整批选材同步
 
 原ResearchProject selections新增apply分支，保持旧指纹兼容，原事务一批写入；私人响应投影最近100个回执UUID。无新模型/迁移/服务。授权本机意图和单次重连许可不自动变成后台任务。

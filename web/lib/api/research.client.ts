@@ -17,6 +17,7 @@ export type ResolvedEvidence = EvidenceAnchor & ReaderGeometryBox & {
   printed_labels?: string[]; printed_label_precision?: "spread" | "page" | "unknown";
   quote?: string; citation?: string; authors?: string[]; locator_precision?: string;
   cover_url?: string | null; publication_year?: number | null;
+  document_type?: string; language?: string;
   bbox?: number[]; start_offset?: number; end_offset?: number;
   coordinate_space?: { width: number; height: number; text_source: string; requires_reader_transform: boolean };
   cover_media?: components["schemas"]["PublicCoverMedia"] | null;
