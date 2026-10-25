@@ -27,7 +27,9 @@ export function TheoryGraphWorkspace({ initialGraph, initialParams, initialError
   const [selectedNode, setSelectedNode] = useState(initialParams.selected_node || initialGraph?.selected_node || initialGraph?.center || "");
   const [selectedEdge, setSelectedEdge] = useState(initialParams.selected_edge || ""), [inspectorOpen, setInspectorOpen] = useState(true), [drawerOpen, setDrawerOpen] = useState(Boolean(initialParams.selected_node || initialParams.selected_edge));
   const [modeChoice, setMode] = useState<GraphMode | null>(modes.some(row => row.value === initialParams.view) ? initialParams.view as GraphMode : null);
-  const mode = modeChoice || (mobile ? "list" : "graph");
+  const centerKind = graph?.nodes.find(row => row.id === graph.center)?.kind || applied.center_kind;
+  const focusedMap = centerKind === "topic" || centerKind === "scholar";
+  const mode = modeChoice || (mobile && centerKind === "topic" ? "list" : "graph");
   const [zoom, setZoom] = useState(Math.max(.15, Math.min(4, number(initialParams.zoom, 1))));
   const [offset, setOffset] = useState({ x: number(initialParams.offset_x, 0), y: number(initialParams.offset_y, 0) });
   const [busy, setBusy] = useState(false), [error, setError] = useState(initialError), [notice, setNotice] = useState("");
@@ -100,8 +102,8 @@ export function TheoryGraphWorkspace({ initialGraph, initialParams, initialError
   }
   const inspector = graph ? <GraphInspector key={edge?.id || node?.id || "none"} graph={graph} node={node} edge={edge} onNode={chooseNode} onEdge={chooseEdge} onCenter={row => changeCenter(row.kind, row.entity_id)} onClose={() => { setInspectorOpen(false); setDrawerOpen(false); }} disabled={busy} /> : null;
   const filteredNodes = graph?.nodes.filter(row => mode === "topics" ? row.kind === "topic" : mode === "scholars" ? row.kind === "scholar" : true) || [];
-  return <div className={styles.page}>
-    <header className={styles.hero}><div><nav aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/theories">探索</Link><span>›</span><span>知识地图与学科目录</span></nav><h1>知识地图与学科目录</h1><p>在局部关系中找方向，并能从图回到叙事、目录与原文。</p></div><img src="/visual/stl4/graph/hero.webp" alt="" width={305} height={176} /></header>
+  return <div className={styles.page} data-graph-kind={centerKind || "overview"}>
+    <header className={styles.hero}><div><nav aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/explore">探索</Link><span>›</span><span>知识地图与学科目录</span></nav><h1>{centerKind === "topic" ? "知识地图" : "知识地图与学科目录"}</h1><p>在局部关系中找方向，并能从图回到叙事、目录与原文。</p></div>{!focusedMap ? <img src="/visual/stl4/graph/hero-final-r2.png" alt="" width={608} height={177} /> : null}</header>
     <div className={styles.topbar}><nav aria-label="知识探索视图"><span aria-current="page">知识地图</span><Link href="/theories/directory">目录视图</Link><button type="button" onClick={() => { if (graph?.edges.length) chooseEdge(graph.edges[0]); else changeMode("list"); }}>关系依据</button></nav><div className={styles.toolbarActions}><GraphSavedViews view={savedView} title={center ? `${center.name}的关系图` : "我的知识地图"} initialSavedView={initialSavedView} onRestore={view => void read(graphParamsForView(view), "replace", view)} disabled={busy || !graph} /><button className={styles.outlineButton} type="button" disabled={!savedView || busy} onClick={() => void share()}><Share2 size={15} />分享链接</button>{center ? <Link className={styles.primaryButton} href={center.href}>进入条目<ArrowRight size={14} /></Link> : null}</div></div>
     {notice ? <p role="status" className={styles.status}>{notice}</p> : null}
     {shareUrl ? <label className={styles.shareLink}>公开图谱链接<input value={shareUrl} readOnly onFocus={event => event.currentTarget.select()} /></label> : null}

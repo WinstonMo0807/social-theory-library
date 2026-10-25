@@ -128,3 +128,24 @@ The latest concept layout follows PDF49; tradition detail follows PDF48. Separat
 | stl-lockup-theory-concept-mobile-final-r2.png | 49 | 1278,85,1426,111 |
 | stl-lockup-theory-tradition-desktop-final-r2.png | 48 | 72,9,204,44 |
 | stl-lockup-theory-tradition-mobile-final-r2.png | 48 | 1235,59,1371,94 |
+
+## Knowledge map, directory and timeline PDF52–57
+
+Original PDF fragments only. Timeline uses the latest PDF57 layout; PDF55 scholar-state branding is selected only for an actual scholar center. Board numbers, device frames and review labels are excluded.
+
+| Asset | PDF page | Native rectangle |
+| --- | --- | --- |
+| brand/stl-lockup-graph-desktop-final-r2.png | 53 | 62,20,174,58 |
+| brand/stl-lockup-graph-mobile-final-r2.png | 53 | 1254,54,1363,88 |
+| brand/stl-lockup-graph-topic-desktop-final-r2.png | 52 | 74,12,221,64 |
+| brand/stl-lockup-graph-topic-mobile-final-r2.png | 52 | 1278,31,1399,74 |
+| brand/stl-lockup-graph-scholar-desktop-final-r2.png | 55 | 40,151,120,177 |
+| brand/stl-lockup-graph-scholar-mobile-final-r2.png | 55 | 1298,234,1375,259 |
+| brand/stl-lockup-theory-directory-desktop-final-r2.png | 54 | 77,12,323,65 |
+| brand/stl-lockup-theory-directory-mobile-final-r2.png | 54 | 1342,15,1533,57 |
+| brand/stl-lockup-theory-timeline-desktop-final-r2.png | 57 | 44,44,216,78 |
+| brand/stl-lockup-theory-timeline-mobile-final-r2.png | 57 | 1276,54,1413,84 |
+| brand/stl-footer-graph-final-r2.png | 53 | 38,991,310,1007 |
+| brand/stl-footer-theory-timeline-final-r2.png | 56 | 59,982,218,1013 |
+| visual/stl4/graph/hero-final-r2.png | 53 | 599,66,1207,243 |
+| visual/stl4/timeline/hero-final-r2.png | 57 | 440,85,1240,265 |

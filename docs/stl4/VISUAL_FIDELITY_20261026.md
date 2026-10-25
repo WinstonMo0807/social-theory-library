@@ -141,3 +141,15 @@ VISUAL-13下一项证据：before-theory-r12-desktop-20261026.png及DOM测量显
 编译5ac248→51f9d1退出0，1775文件/31653635字节包SHA256 1dc0d7b02d178bebc5e85d3839131bf2abbda4cf9325d9565bde558c5a75cef2；NAS138fcb→b02693退出0，Web r15 588ed651b3c1，API r9不变。备份.env.before-theory-detail-r15；45/50短页填足白色画布一并包含。没有测试、模型、业务写入、迁移或公网切换。
 
 VISUAL-15证据：实际/theories/graph截图before-graph-r14-desktop-20261026.png显示居中窄栏、旧品牌与纸底；52–57已实际读原图，graph/directory/timeline三个模块.page均缺width。只修已证实的尺寸/色彩/原图品牌与横幅，不重写图谱/时间线服务。
+
+## VISUAL-15 知识地图/目录/时间线（PDF52–57）
+
+已实际阅读52–57，实际三路由旧画面及源码确认graph窄栏、三模块缺width、旧通用品牌/黑色纸底、局部横幅裁切。最小修复为三个CSS模块、SiteHeader/RouteTransition对应路由、服务端SiteFooter，以及14个PDF原图资产。资产坐标记brand/README.md，均实际查看。地图/时间线采用原图蓝白，目录54黑白/浅金，时间线以57最新三栏主图为准。副标题/标题/导航仍是可访问文本，图片仅原图品牌与装饰片段。
+
+原GraphCanvas/GraphInspector、中心选择、筛选、候选权限、私人保存/分享、TimelinePicker/TimelineEventDetails、原文入口继续复用。手机默认图谱遵53/55；实际主题中心遵52列表，明确view或保存视图仍优先。时间线额外筛选折叠，自定义尺度会展开年份；所有输入仍在原form，未复制API。目录去掉原图没有的通用页脚。
+
+理论整组自问：普通读者能否选择中心和查看真实关系、手机能否返回列表、私人保存会否公开候选、时间线自定义能否填写年份、无资料是否误显示示例？原权限/参数/事实空态保留；没有业务点击或写入。实际三页桌面/手机截图after-{graph,directory,timeline}-r16-{desktop,mobile}-20261026.png保存于既有tmp目录。r16重启后第一次读取发生502；Web日志显示启动完成后重读成功，无新代码修补。
+
+编译5755e5→773ade退出0；1811文件包SHA256 126715c8f305e3d7dd488d09746acf86898c436a370d9c6514905fa07878c763，NAS b6668a→fbb2a0退出0。Web91783fe867e3、API r9不变；.env.before-graph-timeline-r16仅存NAS。未测试、业务写入、迁移、模型或公网切换。
+
+剩余具体A：PDF57手机事件类型应为下拉，当前三复选框展开；PDF52/55聚焦布局、PDF53五类关系与当前24种API关系的映射及字体未闭合。无实际公开节点和事件，有数据关系/详情/全部异常效果为B；不宣称52–57全部一致。阅读路径58–60已实际读图，VISUAL-16只修源码已证实品牌/纸色/横幅与手机阶段结构。

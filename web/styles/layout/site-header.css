@@ -57,6 +57,24 @@ body:has([data-theory-kind="tradition"]) .site-header[data-stl-theory="detail"] 
 .site-header[data-stl-theory^="subdiscipline"] .desktop-nav a.active::after { background:#c48026; }
 .site-header[data-stl-theory^="subdiscipline"] .header-search span { display:none; }
 .site-header[data-stl-theory^="subdiscipline"] .header-search svg { width:25px; height:25px; }
+
+/* PDF52–57 preserve each reference's own brand lockup. */
+.brand-graph-variants [data-brand-variant="graph"] { width:112px; }
+.brand-graph-variants [data-brand-variant="graph-topic"] { display:none; width:147px; }
+.brand-graph-variants [data-brand-variant="graph-scholar"] { display:none; width:120px; }
+body:has([data-graph-kind="topic"]) .brand-graph-variants [data-brand-variant="graph"],
+body:has([data-graph-kind="scholar"]) .brand-graph-variants [data-brand-variant="graph"] { display:none; }
+body:has([data-graph-kind="topic"]) .brand-graph-variants [data-brand-variant="graph-topic"],
+body:has([data-graph-kind="scholar"]) .brand-graph-variants [data-brand-variant="graph-scholar"] { display:block; }
+.brand-reference-lockup[data-brand-variant="theory-directory"] { width:246px; }
+.brand-reference-lockup[data-brand-variant="theory-timeline"] { width:172px; }
+.site-header[data-stl-map="graph"] { min-height:58px; padding:10px 4%; }
+.site-header[data-stl-map="theory-timeline"] { min-height:58px; padding:10px 3%; }
+.site-header[data-stl-map="theory-directory"] { min-height:74px; padding:10px 4%; color:var(--night-ink,#101010); }
+.site-header[data-stl-map="theory-directory"] .desktop-nav { font-size:17px; }
+.site-header[data-stl-map="theory-directory"] .desktop-nav a.active::after { background:#e79926; }
+.site-header[data-stl-map="theory-directory"] .header-search span { display:none; }
+.site-header[data-stl-map="theory-directory"] .header-search svg { width:25px; height:25px; }
 .site-header[data-stl-explore="landing"] { min-height: 74px; padding-block: 7px; color: var(--night-ink,#111); }
 .site-header[data-stl-explore="landing"] .header-search span { display: none; }
 .site-header[data-stl-explore="landing"] .header-search svg { width: 26px; height: 26px; }
@@ -145,6 +163,11 @@ body:has([data-theory-kind="tradition"]) .site-header[data-stl-theory="detail"] 
   .site-header[data-ui-scope="stl4"] .desktop-nav { display: none; }
 }
 @media (max-width: 700px) {
+  .site-header[data-stl-map] { min-height:66px; padding:10px 18px; }
+  .brand-reference-lockup[data-brand-variant="theory-directory"] { width:191px; }
+  .brand-reference-lockup[data-brand-variant="theory-timeline"] { width:160px; }
+  .brand-graph-variants [data-brand-variant="graph"] { width:125px; }
+  .brand-graph-variants [data-brand-variant="graph-topic"] { width:145px; }
   .site-header[data-ui-scope="stl4"] { min-height: 76px; padding: 9px 18px; gap: 10px; }
   .site-header[data-ui-scope="stl4"] .brand-mark { width: 54px; height: 40px; }
   .site-header[data-ui-scope="stl4"] .brand-reference-type { width: 75px; height: 55px; }

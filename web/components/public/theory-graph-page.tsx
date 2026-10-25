@@ -15,5 +15,5 @@ export async function TheoryGraphPage({ searchParams }: { searchParams: GraphSea
       ? "当前中心或筛选范围不可用，请重新选择公开条目或调整条件。"
       : "暂时无法读取实际关系，请重试。";
   }
-  return <><TheoryGraphWorkspace key={`${JSON.stringify(params)}:${savedView}`} initialGraph={graph} initialParams={params} initialError={error} initialSavedView={savedView} /><SiteFooter /></>;
+  return <><TheoryGraphWorkspace key={`${JSON.stringify(params)}:${savedView}`} initialGraph={graph} initialParams={params} initialError={error} initialSavedView={savedView} /><SiteFooter reference="graph" /></>;
 }

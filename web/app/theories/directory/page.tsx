@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { SiteFooter } from "@/components/site-footer";
 import { TheoryDirectory } from "@/components/theory/theory-directory";
 import { loadTheoryDirectory, loadTheoryDirectorySelection } from "@/lib/api/theory-directory.server";
 import { theoryDirectoryKinds, type TheoryDirectoryFailure, type TheoryDirectoryFilters, type TheoryDirectoryKind, type TheoryDirectorySelectionState } from "@/lib/api/theory-directory.types";
@@ -33,5 +32,5 @@ export default async function TheoryDirectoryPage({ searchParams }: {
   const selection: TheoryDirectorySelectionState = !filters.selected ? { status: "none" }
     : selectionResult.status === "rejected" ? { status: "error" }
       : selectionResult.value ? { status: "available", data: selectionResult.value } : { status: "unavailable" };
-  return <><TheoryDirectory directory={directory} failure={failure} filters={filters} selection={selection} /><SiteFooter /></>;
+  return <TheoryDirectory directory={directory} failure={failure} filters={filters} selection={selection} />;
 }

@@ -19,11 +19,11 @@ function markerKind(type: string): keyof typeof markerLabels {
 export function TimelineHero({ scope }: { scope?: { name: string; href: string } }) {
   return <header className={styles.hero}>
     <div className={styles.heroCopy}>
-      <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/theories">探索理论</Link><span>/</span>{scope ? <><Link href={scope.href}>{scope.name}</Link><span>/</span></> : null}<span>学科与概念时间线</span></nav>
+      <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/explore">探索</Link><span>/</span>{scope ? <><Link href={scope.href}>{scope.name}</Link><span>/</span></> : null}<span>学科与概念时间线</span></nav>
       <h1>学科与概念时间线</h1>
       <p>按时间理解作品、概念使用和学术事件的变化。</p>
     </div>
-    <img className={styles.heroPhoto} src="/visual/stl4/timeline/hero.webp" alt="" width={447} height={178} />
+    <img className={styles.heroPhoto} src="/visual/stl4/timeline/hero-final-r2.png" alt="" width={800} height={180} />
   </header>;
 }
 
@@ -74,13 +74,13 @@ export function TheoryTimelineWorkspace({ page, selected, selectionError, group,
         {types.filter(type => !timelineTypeLabels[type]).map(type => <label key={type}><input name="event_type" type="checkbox" value={type} checked onChange={() => toggleType(type, false)} /><span>所选类型当前不可用</span></label>)}
       </fieldset>
       <div className={styles.filterActions}><Link href={timelineHref(actionPath, resetFilters)}>清空筛选</Link><button type="submit">应用筛选</button></div>
-      <div className={styles.searchRow}>
+      <details className={styles.moreFilters} open={Boolean(scale === "custom" || filters.q || filters.year_from || filters.year_to || filters.has_collection || filters.related_to)}><summary>更多筛选<ChevronDown size={12} /></summary><div className={styles.searchRow}>
         <label className={styles.search}><Search size={16} aria-hidden="true" /><input name="q" aria-label="搜索时间线" defaultValue={filters.q || ""} placeholder="搜索事件、概念或来源说明" /></label>
         <div className={styles.yearInputs}><label>起始年份<input type="number" name="year_from" value={customFrom} onChange={e => setCustomFrom(e.target.value)} placeholder="不限" /></label><span>—</span><label>结束年份<input type="number" name="year_to" value={customTo} onChange={e => setCustomTo(e.target.value)} placeholder="不限" /></label></div>
         <label className={styles.collectionFilter}>馆藏<select name="has_collection" defaultValue={filters.has_collection || ""}><option value="">全部事件</option><option value="true">有馆藏依据</option><option value="false">无馆藏依据</option></select></label>
         {scope ? <Link className={styles.scopeNote} href={scope.href}>{scope.name}</Link> : filters.node || filters.discipline ? <span className={styles.scopeNote}>当前限定理论或学科范围</span> : null}
         {filters.related_to ? <span className={styles.scopeNote}>当前查看指定事件的相关事件</span> : null}
-      </div>
+      </div></details>
     </form>
     <div className={styles.workspaceToolbar}>
       <p>共 <strong>{page.scope_count}</strong> 个事件{filters.year ? ` · ${filters.year === "undated" ? "时间未详" : `${filters.year}年`} ${page.count} 个` : ""}</p>
