@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 M04人物候选分页
+
+M04人物分页：52971f两AST/compile、两SQLite SQL编译及diff0；ddbaf0禁数据库契约0错误10既有警告，28f792生成418路径；165e52→61bf1a目标ESLint/TypeScript noEmit0。三组用例只编写，没有测试、浏览器、真实人物操作、迁移或部署。
+
 ## 2026-10-25 M04同名核对
 
 M04同名核对：47f102两AST/compile、三SQLite SQL编译与diff0；f59a2b禁连数据库契约0错误10既有警告，b372c1同步418路径；1ba492→a722b1目标ESLint/TypeScript noEmit0。四组用例只编写，没有测试、浏览器、实际搜索/保存、迁移或部署。

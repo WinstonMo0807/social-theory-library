@@ -12502,6 +12502,9 @@ export interface components {
             owner_id: string;
             results: unknown[];
             people: unknown[];
+            people_count: number;
+            people_page: number;
+            people_pages: number;
             count: number;
             page: number;
             pages: number;
@@ -25792,6 +25795,7 @@ export interface operations {
                 match_title?: string;
                 page?: number;
                 people?: string;
+                people_page?: number;
                 q?: string;
                 session?: string;
             };

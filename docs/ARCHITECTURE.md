@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 M04人物候选分页
+
+原manual-catalog人物查询增加独立people_page及总数/页数，沿同一Person与原排除规则。前端复用usePersistentWorkspace账户绑定读取，原人物创建/确认边界不变。
+
 ## 2026-10-25 M04同名核对
 
 manual-catalog增加match_title只读查询，使用与最终保存相同的既有规范题名字段，结果仍按12条分页。前端保存前核对不替代原事务和固定请求回执，没有新模型或迁移。

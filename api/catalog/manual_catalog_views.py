@@ -106,7 +106,8 @@ class ManualCommandSerializer(serializers.Serializer):
 class ManualQuerySerializer(serializers.Serializer):
     q = serializers.CharField(max_length=160, required=False, allow_blank=True)
     match_title = serializers.CharField(max_length=600, required=False)
-    people = serializers.CharField(max_length=160, required=False, allow_blank=True)
+    people = serializers.CharField(max_length=240, required=False, allow_blank=True)
+    people_page = serializers.IntegerField(min_value=1, default=1)
     page = serializers.IntegerField(min_value=1, default=1)
     session = serializers.UUIDField(required=False)
 
@@ -115,6 +116,9 @@ class ManualWorkspaceSerializer(serializers.Serializer):
     owner_id = serializers.CharField()
     results = serializers.ListField(child=serializers.JSONField())
     people = serializers.ListField(child=serializers.JSONField())
+    people_count = serializers.IntegerField()
+    people_page = serializers.IntegerField()
+    people_pages = serializers.IntegerField()
     count = serializers.IntegerField()
     page = serializers.IntegerField()
     pages = serializers.IntegerField()
@@ -172,13 +176,15 @@ class ManualCatalogView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView)
                 "abstract": work.abstract, "subtitle": work.subtitle, "cover_url": f"/api/catalog/admin/media/renditions/{work.cover_rendition_id}/file/" if work.cover_rendition_id else "",
                 "editions": [{"id": str(row.pk), "version": version(row), "label": " · ".join(filter(None, [str(row.publication_year or ""), row.version_label, row.publisher])) or "出版信息待补",
                     "state": row.state, "bibliography": form_for(row)["bibliography"], "contributors": form_for(row)["contributors"]} for row in editions]})
-        people = person_rows(data["people"])[:15] if data.get("people") else []
+        people_pages = Paginator(person_rows(data["people"]) if data.get("people") else Person.objects.none(), 15)
+        people = people_pages.get_page(data["people_page"])
         saved = None
         if data.get("session"):
             session = get_object_or_404(CatalogingSession.objects.select_related("edition__work"), pk=data["session"], created_by=actor, source_type="manual")
             saved = {"session_id": str(session.pk), "version": version(session.edition), "edition_id": str(session.edition_id), "work_id": str(session.work_id),
                      "status": session.status, "form": form_for(session.edition), "shared_work": session.edition.work.editions.exclude(pk=session.edition_id).exists(), "editable": session.status in OPEN_STATUSES and session.status != "publishing" and session.edition.state == "draft"}
         payload = {"owner_id": str(actor.pk), "results": rows, "people": [{"id": str(row.pk), "name": row.preferred_name, "original_name": row.original_name, "context": " · ".join(filter(None, [row.country_region, str(row.birth_year or ""), row.authority_status]))} for row in people],
+                   "people_count": people_pages.count, "people_page": people.number, "people_pages": people_pages.num_pages,
                    "count": pages.count, "page": page.number, "pages": pages.num_pages, "saved": saved}
         actor_for(request)
         return Response(payload)

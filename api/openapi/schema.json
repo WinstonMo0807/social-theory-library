@@ -6840,7 +6840,16 @@
                         "name": "people",
                         "schema": {
                             "type": "string",
-                            "maxLength": 160
+                            "maxLength": 240
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "people_page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
                         }
                     },
                     {
@@ -52007,6 +52016,15 @@
                         "type": "array",
                         "items": {}
                     },
+                    "people_count": {
+                        "type": "integer"
+                    },
+                    "people_page": {
+                        "type": "integer"
+                    },
+                    "people_pages": {
+                        "type": "integer"
+                    },
                     "count": {
                         "type": "integer"
                     },
@@ -52026,6 +52044,9 @@
                     "page",
                     "pages",
                     "people",
+                    "people_count",
+                    "people_page",
+                    "people_pages",
                     "results",
                     "saved"
                 ]
