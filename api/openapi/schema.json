@@ -32833,6 +32833,62 @@
                         "description": ""
                     }
                 }
+            },
+            "post": {
+                "operationId": "reader_share_stop_pending",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "X-Reader-Owner",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareStopInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareStopInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShareStopInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShareRecoveryResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
             }
         },
         "/api/reading/shares/selection/": {
@@ -75977,6 +76033,35 @@
                     "user_id"
                 ]
             },
+            "ShareRecoveryResult": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/EditorialSaveReceiptStateEnum"
+                    },
+                    "receipt": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ShareReceipt"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "owner_id",
+                    "receipt",
+                    "request_id",
+                    "state"
+                ]
+            },
             "ShareSelectionInputRequest": {
                 "type": "object",
                 "properties": {
@@ -76113,6 +76198,22 @@
                     "page",
                     "results",
                     "total_pages"
+                ]
+            },
+            "ShareStopInputRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/PendingEditorialSaveActionEnum"
+                    }
+                },
+                "required": [
+                    "action",
+                    "request_id"
                 ]
             },
             "ShareWorkSummary": {

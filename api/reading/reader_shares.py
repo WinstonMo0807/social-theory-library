@@ -13,6 +13,16 @@ from . import privacy, research, reader_groups, share_scope
 from .models import ReadingList, ResearchProject
 from .services import decrypt_private_text, encrypt_private_text
 from .sharing_models import ReaderGroup, ReaderShare, ReaderShareNotice
+from .knowledge_models import KnowledgeSaveReceipt
+
+CANCEL_TARGET = 'reader-share-create-cancelled'
+
+
+def stopped_request(user, request_id):
+    saved = KnowledgeSaveReceipt.objects.filter(user=user, request_id=request_id).first()
+    if saved and saved.target_key != CANCEL_TARGET:
+        raise research.ResearchConflict('该请求编号已用于其他操作，请保留原编号核对记录。')
+    return saved is not None
 
 
 def visible(user):
@@ -50,9 +60,13 @@ def brief(row, user):
         "revoked": bool(row.revoked_at), "is_owner": row.user_id == user.pk, "review_state": row.review_state}
 
 
+@transaction.atomic
 def receipt(user, request_id):
+    privacy.command_owner(user)
     row = ReaderShare.objects.filter(user=user, request_id=request_id).first()
     if row is None:
+        if stopped_request(user, request_id):
+            raise research.ResearchConflict('这次尚未执行的提交已取消，不会再建立分享。可再次确认取消结果。')
         raise NotFound("未查到本次提交回执，请保留原请求后重试。")
     active = row.revoked_at is None and row.expires_at > timezone.now()
     return {"owner_id": str(user.pk), "request_id": str(request_id), "share": brief(row, user),
@@ -61,7 +75,7 @@ def receipt(user, request_id):
 
 @transaction.atomic
 def create(user, data):
-    privacy.lock_owner(user)
+    privacy.command_owner(user)
     if data.get("confirmed") is not True:
         raise ValidationError("请核对完整预览并明确确认分享所选内容。")
     fingerprint = share_scope.digest(data)
@@ -70,6 +84,8 @@ def create(user, data):
         if research.unpack(existing).get("request_fingerprint") != fingerprint:
             raise research.ResearchConflict("原提交的内容已变化，请先查回原结果。")
         return receipt(user, data["request_id"])
+    if stopped_request(user, data['request_id']):
+        raise research.ResearchConflict('这次提交已在服务器取消，迟到请求不会建立分享。请重新预览后发起新的提交。')
     if ReaderShare.objects.filter(user=user, revoked_at__isnull=True, expires_at__gt=timezone.now()).count() >= 1000:
         raise ValidationError("最多保留1000项有效分享，请先整理已有分享。")
     if data["destination"] == "group":
@@ -94,6 +110,18 @@ def create(user, data):
     if current_bindings != bindings or share_scope.digest(current) != research.unpack(row)["content_hash"]:
         raise research.ResearchConflict("内容刚刚更新，本次提交未完成，请重新预览。")
     return receipt(user, data["request_id"])
+
+
+@transaction.atomic
+def stop_create(user, request_id):
+    privacy.command_owner(user)
+    row = ReaderShare.objects.filter(user=user, request_id=request_id).first()
+    if row:
+        return {'owner_id':str(user.pk),'request_id':str(request_id),'state':'applied','receipt':receipt(user,request_id)}
+    if not stopped_request(user, request_id):
+        KnowledgeSaveReceipt.objects.create(user=user,request_id=request_id,target_key=CANCEL_TARGET,
+            fingerprint=share_scope.digest({'action':'cancel_pending','request_id':str(request_id)}),applied_saved=False)
+    return {'owner_id':str(user.pk),'request_id':str(request_id),'state':'cancelled','receipt':None}
 
 
 def read(row, user=None, token=None):

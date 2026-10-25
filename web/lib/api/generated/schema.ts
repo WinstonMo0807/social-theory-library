@@ -6757,7 +6757,7 @@ export interface paths {
         };
         get: operations["reader_share_receipt"];
         put?: never;
-        post?: never;
+        post: operations["reader_share_stop_pending"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19786,6 +19786,13 @@ export interface components {
             user_id: string;
             membership_id: string;
         };
+        ShareRecoveryResult: {
+            owner_id: string;
+            /** Format: uuid */
+            request_id: string;
+            state: components["schemas"]["EditorialSaveReceiptStateEnum"];
+            receipt: components["schemas"]["ShareReceipt"] | null;
+        };
         ShareSelectionInputRequest: {
             source_kind: components["schemas"]["ReaderShareSourceKindEnum"];
             /** Format: uuid */
@@ -19821,6 +19828,11 @@ export interface components {
             total_pages: number;
             owner_id: string;
             results: components["schemas"]["ShareSource"][];
+        };
+        ShareStopInputRequest: {
+            /** Format: uuid */
+            request_id: string;
+            action: components["schemas"]["PendingEditorialSaveActionEnum"];
         };
         ShareWorkSummary: {
             /** Format: uuid */
@@ -37949,6 +37961,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShareReceipt"];
+                };
+            };
+        };
+    };
+    reader_share_stop_pending: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Reader-Owner": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareStopInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ShareStopInputRequest"];
+                "multipart/form-data": components["schemas"]["ShareStopInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareRecoveryResult"];
                 };
             };
         };

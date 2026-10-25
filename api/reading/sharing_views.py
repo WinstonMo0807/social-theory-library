@@ -97,6 +97,11 @@ class ShareCreateInput(SharePreviewInput):
     confirmed = serializers.BooleanField()
 
 
+class ShareStopInput(StrictInput):
+    request_id = serializers.UUIDField()
+    action = serializers.ChoiceField(choices=['cancel_pending'])
+
+
 class ShareCommandInput(StrictInput):
     action = serializers.ChoiceField(choices=["revoke", "notify", "review"])
     expected_revision = serializers.IntegerField(min_value=1)
@@ -239,6 +244,11 @@ class ShareReceiptView(SharingPrivateView):
     @extend_schema(parameters=[OWNER, OpenApiParameter("request_id", str, required=True)], responses=output.ShareReceipt, operation_id="reader_share_receipt")
     def get(self, request):
         return Response(reader_shares.receipt(request.user, research.identifier(request.query_params.get("request_id"))))
+
+    @extend_schema(parameters=[OWNER], request=ShareStopInput, responses=output.ShareRecoveryResult, operation_id='reader_share_stop_pending')
+    def post(self, request):
+        data=parsed(ShareStopInput,request.data)
+        return Response(reader_shares.stop_create(request.user,data['request_id']))
 
 
 class ShareDetailView(SharingPrivateView):

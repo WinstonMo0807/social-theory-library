@@ -5,10 +5,11 @@ import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { CheckCircle2, Copy, Mail } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiRequestError } from "@/lib/api";
+import { ConfirmDialog } from "../confirm-dialog";
+import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { sharingRequest, shareLink, sectionLabels, type ShareSection, type ShareSelection, type SharePreview,
-  type SharePreviewInput, type ShareCreateInput, type ShareReceipt, type GroupDirectory, type GroupDetail, type ShareNotifyResult } from "@/lib/api/sharing.client";
+  type SharePreviewInput, type ShareCreateInput, type ShareReceipt, type ShareRecoveryResult, type GroupDirectory, type GroupDetail, type ShareNotifyResult } from "@/lib/api/sharing.client";
 import { SharingAccount, SharingPagination, SharedSummary, useSharingAction } from "./sharing-common";
 import styles from "./sharing.module.css";
 
@@ -28,7 +29,8 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
   const [groupId, setGroupId] = useState(""), [groupPage, setGroupPage] = useState(1), [members, setMembers] = useState<string[]>([]);
   const [message, setMessage] = useState(""), [expires, setExpires] = useState(30), [prepared, setPrepared] = useState<Prepared | null>(null), [confirmed, setConfirmed] = useState(false);
   const [receipt, setReceipt] = useState<ShareReceipt | null>(null), [recovery, setRecovery] = useState<string | null>(null), [retryReady, setRetryReady] = useState(false);
-  const [reviewed, setReviewed] = useState(false), [manual, setManual] = useState("");
+  const [stopOpen, setStopOpen] = useState(false), [manual, setManual] = useState("");
+  const [storageReady,setStorageReady]=useState(false),[storageError,setStorageError]=useState("");
   const pending = useRef<ShareCreateInput | null>(null), action = useSharingAction(owner), setActionMessage = action.setMessage;
   const storageKey = `stl-share-request:${owner}`;
   const loadSources = useCallback((path: string, signal: AbortSignal) => sharingRequest<SourcePage>(owner, path, { signal }), [owner]);
@@ -43,21 +45,23 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
   const group = usePersistentWorkspace<GroupDetail>(groupId ? `/reading/groups/${groupId}/` : "", owner, undefined, loadGroup);
   const groupData = group.error ? null : group.data;
   const selectedCount = selected.questions.length + selected.materials.length + selected.notes.length;
-  const blocked = action.busy || Boolean(recovery) || Boolean(receipt);
+  const blocked = action.busy || Boolean(recovery) || Boolean(receipt) || !storageReady || !!storageError;
+  useUnsavedForm(Boolean(recovery)||(!receipt&&(selectedCount>0||!!message)),false);
   useEffect(() => {
     const restore = () => {
       try {
         const requestId = sessionStorage.getItem(storageKey);
-        if (requestId && /^[\da-f-]{36}$/i.test(requestId)) setRecovery(requestId);
-      } catch { setActionMessage("恢复标识无法读取，请先核对分享记录。"); }
+        if(requestId&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId))throw Error("恢复标识格式异常，请保留本页并核对分享记录，未开放新提交。");
+        if(requestId)setRecovery(requestId);
+        setStorageReady(true);setStorageError("");
+      } catch(reason) { setStorageError(reason instanceof Error?reason.message:"恢复标识无法读取，请先核对分享记录。"); }
     };
     restore(); window.addEventListener("storage", restore);
     return () => window.removeEventListener("storage", restore);
-  }, [storageKey, setActionMessage]);
+  }, [storageKey]);
   function remember(value: string | null) {
+    if(value)sessionStorage.setItem(storageKey,value);else sessionStorage.removeItem(storageKey);
     setRecovery(value);
-    try { if (value) sessionStorage.setItem(storageKey, value); else sessionStorage.removeItem(storageKey); }
-    catch { setActionMessage("浏览器未能保存请求标识，请保持本页直到取得回执。"); }
   }
   function invalidate() { setPrepared(null); setConfirmed(false); }
   function chooseSource(nextKind: SourceKind, nextId = "") {
@@ -80,18 +84,33 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
     });
   }
   function finish(value: ShareReceipt) {
-    pending.current = null; setRetryReady(false); remember(null); setReceipt(value); setPhase(4);
+    if(value.owner_id!==owner||(pending.current&&value.request_id!==pending.current.request_id)||(recovery&&value.request_id!==recovery))throw Error("提交回执与当前账户或原编号不一致，请保留记录。");
+    remember(null);pending.current = null; setRetryReady(false); setReceipt(value); setPhase(4);
     setActionMessage(value.share.revoked ? "原提交后来已撤回，旧请求不会重新建立授权。" : "已取得真实提交回执，请查看接收范围与有效期。");
   }
   function send(original?: ShareCreateInput) {
     if (pending.current && original !== pending.current) return;
     if (!original && (!prepared || !ready || !confirmed)) return;
     const body: ShareCreateInput = original || { ...prepared!.input, request_id: createRequestKey(), preview_hash: prepared!.output.preview_hash, confirmed: true };
-    pending.current = body; setRetryReady(true); remember(body.request_id);
+    try{remember(body.request_id);}catch{setStorageError("浏览器不能保存原提交编号，尚未发送请求。请恢复存储后重新读取本页。");return;}
+    pending.current = body; setRetryReady(true);
     void action.run(signal => sharingRequest<ShareReceipt>(owner, "/reading/shares/", { method: "POST", body: JSON.stringify(body), signal }), finish, reason => {
-      if (reason instanceof ApiRequestError && reason.status >= 400 && reason.status < 500) {
-        pending.current = null; setRetryReady(false); remember(null); setConfirmed(false); choices.reload(); group.reload();
-      }
+      setConfirmed(false);
+      setActionMessage(`${reason instanceof Error?reason.message:"提交尚未确认。"} 原编号已保留；请先查回结果，或取消尚未执行的原提交。`);
+    });
+  }
+  function stopPending(){
+    if(!recovery)return;
+    const expected=recovery;
+    void action.run(signal=>sharingRequest<ShareRecoveryResult>(owner,"/reading/shares/receipt/",{method:"POST",signal,body:JSON.stringify({request_id:expected,action:"cancel_pending"})}),value=>{
+      if(value.owner_id!==owner||value.request_id!==expected)throw Error("取消回执与当前账户或原编号不一致，请保留记录。");
+      if(value.state==="applied"){
+        if(!value.receipt||value.receipt.request_id!==expected||value.receipt.owner_id!==owner)throw Error("原提交回执不完整，请保留编号。");
+        finish(value.receipt);setActionMessage("原分享已建立，停止待提交请求不会撤回它；可进入内容与授权查看，必要时另行撤回。");
+      }else if(value.state==="cancelled"){
+        remember(null);pending.current=null;setRetryReady(false);invalidate();setActionMessage("已在服务器取消原提交，迟到请求不会建立分享。内容选择保留，重新预览确认后才可发起新提交。");
+      }else throw Error("原提交状态无法确认，请保留编号。");
+      setStopOpen(false);
     });
   }
   function copyLink() {
@@ -106,7 +125,10 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
   return <>
     <header className={styles.heading}><div><h1>分享或提交策划的内容范围</h1><p>选择要分享的内容，预览将公开的范围，明确目的地或接收范围。私人正文与 PDF 原件始终不包含在内。</p></div></header>
     {action.message ? <p className={styles.feedback} role="status">{action.message}</p> : null}
-    {recovery ? <section className={styles.recovery}><h2>核对原提交结果</h2><p>已保留请求标识，尚未收到明确回执时不会再次建立分享。刷新后可查回结果。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${recovery}`, { signal }), finish)}>查回原结果</button>{retryReady ? <button disabled={action.busy} onClick={() => { if (pending.current) send(pending.current); }}>重试原提交</button> : <><Link href="/account/sharing">查看分享记录</Link><label><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />我已核对原结果</label><button disabled={action.busy || !reviewed} onClick={() => { remember(null); setReviewed(false); }}>结束恢复</button></>}</div></section> : null}
+    {storageError?<p className={styles.feedback} role="alert">{storageError} <Link href="/account/sharing">查看本人分享记录</Link></p>:null}
+    {recovery ? <section className={styles.recovery}><h2>核对原提交结果</h2><p>原编号：{recovery}。尚未确认时不能另起提交，刷新后仍可查回；取消只阻止尚未执行的请求。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${recovery}`, { signal }), finish)}>查回原结果</button>{retryReady?<button disabled={action.busy} onClick={()=>{if(pending.current)send(pending.current);}}>重试原提交</button>:null}<button disabled={action.busy} onClick={()=>setStopOpen(true)}>取消尚未执行的提交</button><Link href="/account/sharing">查看分享记录</Link></div></section>:null}
+    <ConfirmDialog open={stopOpen} title="取消尚未执行的分享提交" description="服务器先核对原编号。已经建立的分享会返回原回执，不会被撤回；尚未执行的请求会登记取消，迟到后也不会建立授权。" confirmLabel="核对并取消待提交请求" pending={action.busy} onCancel={()=>setStopOpen(false)} onConfirm={stopPending}/>
+
     <nav className={styles.mobileSteps} aria-label="分享步骤">{["选择内容", "预览", "选择目的地", "确认提交"].map((label, index) => <button key={label} aria-current={phase === index + 1 ? "step" : undefined} disabled={action.busy} onClick={() => setPhase(index + 1)}>{index + 1} {label}</button>)}</nav>
     <div className={styles.steps} data-phase={phase}>
       <section className={styles.step}><h2><span>1</span>选择当前研究或书单对象</h2><div className={styles.stepBody}>

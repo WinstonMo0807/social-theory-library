@@ -13,6 +13,7 @@ export type SharePreview = Schema["SharePreviewOutput"];
 export type SharePreviewInput = Schema["SharePreviewInputRequest"];
 export type ShareCreateInput = Schema["ShareCreateInputRequest"];
 export type ShareReceipt = Schema["ShareReceipt"];
+export type ShareRecoveryResult = Schema["ShareRecoveryResult"];
 export type ShareDirectory = Schema["ShareDirectory"];
 export type ShareDetail = Schema["ShareDetail"];
 export type ShareContent = Schema["ShareContent"];

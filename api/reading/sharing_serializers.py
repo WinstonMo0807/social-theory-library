@@ -174,6 +174,13 @@ class ShareReceipt(serializers.Serializer):
     token = serializers.CharField(allow_null=True)
 
 
+class ShareRecoveryResult(serializers.Serializer):
+    owner_id = serializers.CharField()
+    request_id = serializers.UUIDField()
+    state = serializers.ChoiceField(choices=['applied','cancelled'])
+    receipt = ShareReceipt(allow_null=True)
+
+
 class ShareDirectory(PageOutput):
     owner_id = serializers.CharField()
     results = ShareBrief(many=True)
