@@ -3,19 +3,20 @@ from __future__ import annotations
 from common.private_responses import PrivateAccountResponses
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError
+from django.db import transaction
+from drf_spectacular.utils import extend_schema
+from catalog.editorial_read import AdminPrivateResponseMixin
+from catalog.services.provider_secrets import ProviderSecretError
+from . import runtime_configuration as configuration
 
-from accounts.ownership import is_library_owner
-from common.ai_runtime import current_profile_document, validate_profile_document
 from common.permissions import CanManageAI
 
 from .runtime_profiles import (
-    runtime_profile_payload,
-    save_runtime_profile_document,
     test_runtime_profile,
 )
 from .runtime_serializers import (
-    AIRuntimeProfileDocumentSerializer,
+    AIRuntimeProfileDocumentSerializer, AIRuntimeSnapshot, AIRuntimeVersionInput, AIRuntimeProbeResult,
     AIRuntimeProfileTestSerializer,
     ReaderAIConnectionSerializer,
 )
@@ -29,72 +30,50 @@ from .user_ai import (
 from rest_framework.permissions import IsAuthenticated
 
 
-class AdminAIRuntimeProfilesView(APIView):
+class AdminAIRuntimeProfilesView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanManageAI]
 
-    @staticmethod
-    def _payload(request):
-        return {
-            **runtime_profile_payload(),
-            "permissions": {
-                "can_edit_profiles": True,
-                "can_edit_sensitive_aliases": is_library_owner(request.user),
-                "can_remove_profiles": is_library_owner(request.user),
-            },
-        }
-
+    @extend_schema(responses=AIRuntimeSnapshot)
+    @transaction.atomic
     def get(self, request):
-        return Response(self._payload(request))
+        return Response(configuration.snapshot(configuration.locked_actor(request, read=True)))
 
+    @extend_schema(request=AIRuntimeProfileDocumentSerializer, responses=AIRuntimeSnapshot)
+    @transaction.atomic
     def put(self, request):
         serializer = AIRuntimeProfileDocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        if not is_library_owner(request.user):
-            before = validate_profile_document(current_profile_document())
-            after = serializer.validated_data
-            before_rows = {row["key"]: row for row in before["profiles"]}
-            after_rows = {row["key"]: row for row in after["profiles"]}
-            removed = set(before_rows) - set(after_rows)
-            aliases_changed = any(
-                (
-                    key in before_rows
-                    and (
-                        row.get("endpoint_alias") != before_rows[key].get("endpoint_alias")
-                        or row.get("credential_alias") != before_rows[key].get("credential_alias")
-                    )
-                )
-                or (
-                    key not in before_rows
-                    and (
-                        row.get("endpoint_alias") not in {None, "", "default"}
-                        or row.get("credential_alias") not in {None, "", "default"}
-                    )
-                )
-                for key, row in after_rows.items()
-            )
-            if removed or aliases_changed:
-                raise PermissionDenied(
-                    "只有 System Owner 可以修改 endpoint/credential alias 或删除 AI runtime profile。"
-                )
-        request_id = str(request.META.get("HTTP_X_REQUEST_ID") or "")
-        save_runtime_profile_document(
-            serializer.validated_data,
-            actor=request.user,
-            request_id=request_id,
-        )
-        return Response(self._payload(request))
+        actor = configuration.locked_actor(request, serializer.validated_data['expected_version'])
+        try:
+            result = configuration.save(actor, serializer.validated_data, request_id=str(request.META.get('HTTP_X_REQUEST_ID') or ''))
+        except ProviderSecretError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(result)
+
+    @extend_schema(request=AIRuntimeVersionInput, responses=AIRuntimeSnapshot)
+    @transaction.atomic
+    def patch(self, request):
+        serializer = AIRuntimeVersionInput(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        expected = serializer.validated_data['expected_version']
+        actor = configuration.locked_actor(request, expected, allow_changed=True)
+        configuration.fence(actor, expected)
+        return Response(configuration.snapshot(actor))
 
 
-class AdminAIRuntimeProfileTestView(APIView):
+class AdminAIRuntimeProfileTestView(AdminPrivateResponseMixin, APIView):
     permission_classes = [CanManageAI]
 
+    @extend_schema(request=AIRuntimeProfileTestSerializer, responses=AIRuntimeProbeResult)
+    @transaction.atomic
     def post(self, request):
         serializer = AIRuntimeProfileTestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        configuration.locked_actor(request, serializer.validated_data['expected_version'])
         try:
-            result = test_runtime_profile(serializer.validated_data["profile_key"])
+            result = test_runtime_profile(serializer.validated_data['profile_key'])
         except ValueError as exc:
-            return Response({"detail": str(exc)}, status=400)
+            raise ValidationError('当前模型配置不能执行连通检查，请重新读取并核对配置。') from exc
         return Response(result)
 
 

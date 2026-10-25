@@ -4447,6 +4447,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/admin/ai-runtime-profiles/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reading_admin_ai_runtime_profiles_retrieve"];
+        put: operations["reading_admin_ai_runtime_profiles_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["reading_admin_ai_runtime_profiles_partial_update"];
+        trace?: never;
+    };
+    "/api/reading/admin/ai-runtime-profiles/test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_admin_ai_runtime_profiles_test_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/annotations/": {
         parameters: {
             query?: never;
@@ -6819,6 +6851,83 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AIRuntimeProbeResult: {
+            profile_key: string;
+            capability: string;
+            provider: string;
+            model: string;
+            configured: boolean;
+            available: boolean;
+            status: string;
+            detail: string;
+            secret_values_exposed: boolean;
+        };
+        AIRuntimeProfileDocumentRequest: {
+            expected_version: string;
+            active: {
+                [key: string]: string;
+            };
+            profiles: components["schemas"]["AIRuntimeProfileRequest"][];
+            credential?: components["schemas"]["RuntimeCredentialInputRequest"];
+        };
+        AIRuntimeProfileOutput: {
+            key: string;
+            capability: components["schemas"]["CapabilityEnum"];
+            provider: components["schemas"]["ProviderEnum"];
+            model: string;
+            enabled: boolean;
+            /** Format: double */
+            temperature: number;
+            max_output_tokens: number;
+            timeout_seconds: number;
+            max_input_chars: number;
+            endpoint_alias: string;
+            credential_alias: string;
+            retrieval_profile: components["schemas"]["RetrievalProfileEnum"];
+            answer_behavior: string;
+            fallback_profile_key?: string;
+            reasoning?: unknown;
+            environment: components["schemas"]["RuntimeEnvironmentOutput"];
+            credential_storage: components["schemas"]["CredentialStorageEnum"];
+            credential_managed_here: boolean;
+        };
+        AIRuntimeProfileRequest: {
+            key: string;
+            capability: components["schemas"]["CapabilityEnum"];
+            provider: components["schemas"]["ProviderEnum"];
+            model: string;
+            enabled: boolean;
+            /** Format: double */
+            temperature: number;
+            max_output_tokens: number;
+            timeout_seconds: number;
+            max_input_chars: number;
+            endpoint_alias?: string;
+            credential_alias?: string;
+            retrieval_profile: components["schemas"]["RetrievalProfileEnum"];
+            answer_behavior: string;
+            fallback_profile_key?: string;
+            reasoning?: unknown;
+        };
+        AIRuntimeProfileTestRequest: {
+            expected_version: string;
+            profile_key: string;
+        };
+        AIRuntimeSnapshot: {
+            configuration_version: string;
+            version: string;
+            source: string;
+            active: {
+                [key: string]: string;
+            };
+            profiles: components["schemas"]["AIRuntimeProfileOutput"][];
+            permissions: components["schemas"]["RuntimePermissionsOutput"];
+            secret_values_exposed: boolean;
+            hot_reload_fields: string[];
+            deployment_fields: string[];
+            credential_alias_options: string[];
+            more_credential_aliases: boolean;
+        };
         AboutPageBlock: {
             /** Format: uuid */
             readonly id: string;
@@ -8151,6 +8260,23 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /**
+         * @description * `metadata_extraction` - metadata_extraction
+         *     * `library_qa` - library_qa
+         *     * `field_enrichment_optional` - field_enrichment_optional
+         *     * `entity_reasoning` - entity_reasoning
+         *     * `claim_extraction` - claim_extraction
+         *     * `claim_attribution` - claim_attribution
+         *     * `claim_stance` - claim_stance
+         *     * `rerank` - rerank
+         *     * `theory_reasoning` - theory_reasoning
+         *     * `knowledge_relation_reasoning` - knowledge_relation_reasoning
+         *     * `debate_discovery` - debate_discovery
+         *     * `reading_path_generation` - reading_path_generation
+         *     * `curation_reasoning` - curation_reasoning
+         * @enum {string}
+         */
+        CapabilityEnum: "metadata_extraction" | "library_qa" | "field_enrichment_optional" | "entity_reasoning" | "claim_extraction" | "claim_attribution" | "claim_stance" | "rerank" | "theory_reasoning" | "knowledge_relation_reasoning" | "debate_discovery" | "reading_path_generation" | "curation_reasoning";
         CapabilityOutput: {
             id: string;
             label: string;
@@ -8628,6 +8754,13 @@ export interface components {
             workbench_url: string;
             canonical_write_deferred: boolean;
         };
+        /**
+         * @description * `environment` - environment
+         *     * `saved` - saved
+         *     * `absent` - absent
+         * @enum {string}
+         */
+        CredentialStorageEnum: "environment" | "saved" | "absent";
         /**
          * @description * `accept` - accept
          *     * `accept_with_edit` - accept_with_edit
@@ -14362,6 +14495,9 @@ export interface components {
             /** @default /account */
             next: string;
         };
+        PatchedAIRuntimeVersionInputRequest: {
+            expected_version?: string;
+        };
         PatchedAdminKnowledgeNodeRequest: {
             editorial_details?: components["schemas"]["NodeEditorialDetailsRequest"];
             node_type?: components["schemas"]["KnowledgeNodeTypeEnum"];
@@ -16606,6 +16742,20 @@ export interface components {
             role_label: string;
             is_active: boolean;
         };
+        /**
+         * @description * `set` - set
+         *     * `delete` - delete
+         * @enum {string}
+         */
+        ProviderCredentialOperationEnum: "set" | "delete";
+        /**
+         * @description * `none` - none
+         *     * `ollama` - ollama
+         *     * `openai_compatible` - openai_compatible
+         *     * `vllm` - vllm
+         * @enum {string}
+         */
+        ProviderEnum: "none" | "ollama" | "openai_compatible" | "vllm";
         PublicCitationInputRequest: {
             /** Format: uuid */
             edition_id?: string;
@@ -18791,6 +18941,12 @@ export interface components {
             policy: string;
             detail: string;
         };
+        /**
+         * @description * `stable` - stable
+         *     * `experimental_v2` - experimental_v2
+         * @enum {string}
+         */
+        RetrievalProfileEnum: "stable" | "experimental_v2";
         ReturnContextOutput: {
             path: string;
             state: components["schemas"]["PublicSourceAvailabilityEnum"];
@@ -18928,6 +19084,24 @@ export interface components {
             exists: boolean;
             /** Format: date-time */
             created_at: string;
+        };
+        RuntimeCredentialInputRequest: {
+            action: components["schemas"]["ProviderCredentialOperationEnum"];
+            profile_key: string;
+            alias: string;
+            secret?: string;
+            /** @default false */
+            confirm_delete: boolean;
+        };
+        RuntimeEnvironmentOutput: {
+            endpoint_configured: boolean;
+            credential_configured: boolean;
+            restart_may_be_required: boolean;
+        };
+        RuntimePermissionsOutput: {
+            can_edit_profiles: boolean;
+            can_edit_sensitive_aliases: boolean;
+            can_remove_profiles: boolean;
         };
         SaveIssueListCommandRequest: {
             /** Format: uuid */
@@ -19828,14 +20002,8 @@ export interface components {
             applied_revision: number;
             deleted: boolean;
         };
-        /**
-         * @description * `set` - set
-         *     * `delete` - delete
-         * @enum {string}
-         */
-        SourceCredentialInputActionEnum: "set" | "delete";
         SourceCredentialInputRequest: {
-            action: components["schemas"]["SourceCredentialInputActionEnum"];
+            action: components["schemas"]["ProviderCredentialOperationEnum"];
             source_key: components["schemas"]["ResearchSourceKeyEnum"];
             alias: string;
             secret?: string;
@@ -32332,6 +32500,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UploadBatchReceipt"];
+                };
+            };
+        };
+    };
+    reading_admin_ai_runtime_profiles_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIRuntimeSnapshot"];
+                };
+            };
+        };
+    };
+    reading_admin_ai_runtime_profiles_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIRuntimeProfileDocumentRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AIRuntimeProfileDocumentRequest"];
+                "multipart/form-data": components["schemas"]["AIRuntimeProfileDocumentRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIRuntimeSnapshot"];
+                };
+            };
+        };
+    };
+    reading_admin_ai_runtime_profiles_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAIRuntimeVersionInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAIRuntimeVersionInputRequest"];
+                "multipart/form-data": components["schemas"]["PatchedAIRuntimeVersionInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIRuntimeSnapshot"];
+                };
+            };
+        };
+    };
+    reading_admin_ai_runtime_profiles_test_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIRuntimeProfileTestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AIRuntimeProfileTestRequest"];
+                "multipart/form-data": components["schemas"]["AIRuntimeProfileTestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIRuntimeProbeResult"];
                 };
             };
         };

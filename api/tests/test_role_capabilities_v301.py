@@ -342,9 +342,11 @@ def test_ai_runtime_allows_admin_safe_fields_and_reserves_aliases_for_owner(
     api_client,
     settings,
 ):
+    from .test_stl4_ai_runtime_configuration_20261025 import body_for
     admin = _user("runtime-admin", User.Role.ADMIN)
     owner = _owner(settings)
     api_client.force_authenticate(admin)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(admin.pk))
     current = api_client.get("/api/reading/admin/ai-runtime-profiles/")
     assert current.status_code == 200
     assert current.data["permissions"] == {
@@ -352,10 +354,7 @@ def test_ai_runtime_allows_admin_safe_fields_and_reserves_aliases_for_owner(
         "can_edit_sensitive_aliases": False,
         "can_remove_profiles": False,
     }
-    document = {
-        "active": deepcopy(current.data["active"]),
-        "profiles": deepcopy(current.data["profiles"]),
-    }
+    document = body_for(current.data)
     document["profiles"][0]["temperature"] = 0.1
     safe_update = api_client.put(
         "/api/reading/admin/ai-runtime-profiles/",
@@ -365,10 +364,7 @@ def test_ai_runtime_allows_admin_safe_fields_and_reserves_aliases_for_owner(
     assert safe_update.status_code == 200
     assert SiteSetting.objects.filter(key="ai_runtime_profiles").exists()
 
-    sensitive = {
-        "active": deepcopy(safe_update.data["active"]),
-        "profiles": deepcopy(safe_update.data["profiles"]),
-    }
+    sensitive = body_for(safe_update.data)
     sensitive["profiles"][0]["credential_alias"] = "cloud_primary"
     denied = api_client.put(
         "/api/reading/admin/ai-runtime-profiles/",
@@ -378,6 +374,9 @@ def test_ai_runtime_allows_admin_safe_fields_and_reserves_aliases_for_owner(
     assert denied.status_code == 403
 
     api_client.force_authenticate(owner)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(owner.pk))
+    sensitive = body_for(api_client.get("/api/reading/admin/ai-runtime-profiles/").data)
+    sensitive["profiles"][0]["credential_alias"] = "cloud_primary"
     allowed = api_client.put(
         "/api/reading/admin/ai-runtime-profiles/",
         sensitive,

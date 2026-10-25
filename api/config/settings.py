@@ -189,6 +189,7 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "ProviderCredentialOperationEnum": ["set", "delete"],
         "ResearchSourceKeyEnum": "catalog.services.research_sources.SOURCE_KEY_CHOICES",
         "OcrRuntimeModeEnum": ["nas_preferred", "nas_only", "remote_only"],
         "TheoryReviewTaskTypeEnum": [("work_node", "文献与节点关系"), ("node_relation", "节点关系"), ("new_node", "建议新增节点"), ("timeline", "时间轴事件")],

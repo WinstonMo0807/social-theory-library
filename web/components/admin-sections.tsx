@@ -1,5 +1,6 @@
 "use client";
 
+import { AIRuntimeEditor } from "./admin/ai-runtime-editor";
 import { OcrRuntimeEditor } from "./admin/ocr-runtime-editor";
 
 import { ScholarProseEditor } from "./admin/knowledge/scholar-prose-editor";
@@ -1598,79 +1599,6 @@ type SemanticRuntime = {
   task?: { taskUid?: number; status?: string; version_id?: string; index_uid?: string; type?: string } | null;
 };
 
-type AIRuntimeCapability =
-  | "metadata_extraction"
-  | "library_qa"
-  | "field_enrichment_optional"
-  | "entity_reasoning"
-  | "claim_extraction"
-  | "claim_attribution"
-  | "claim_stance"
-  | "rerank"
-  | "theory_reasoning"
-  | "knowledge_relation_reasoning"
-  | "debate_discovery"
-  | "reading_path_generation"
-  | "curation_reasoning";
-
-type AIRuntimeProfile = {
-  key: string;
-  capability: AIRuntimeCapability;
-  provider: "none" | "ollama" | "vllm" | "openai_compatible";
-  model: string;
-  enabled: boolean;
-  temperature: number;
-  max_output_tokens: number;
-  timeout_seconds: number;
-  max_input_chars: number;
-  endpoint_alias: string;
-  credential_alias: string;
-  retrieval_profile: "stable" | "experimental_v2";
-  answer_behavior: string;
-  fallback_profile_key?: string;
-  reasoning?: Record<string, string | number | boolean | null>;
-  environment?: {
-    endpoint_configured: boolean;
-    credential_configured: boolean;
-    restart_may_be_required: boolean;
-  };
-};
-
-type AIRuntimeDocument = {
-  version: string;
-  active: Record<AIRuntimeCapability, string>;
-  profiles: AIRuntimeProfile[];
-  source: string;
-  secret_values_exposed: false;
-  hot_reload_fields: string[];
-  deployment_fields: string[];
-};
-
-const aiCapabilityLabels: Record<AIRuntimeCapability, string> = {
-  metadata_extraction: "元数据提取",
-  library_qa: "书库问答默认服务（可选）",
-  field_enrichment_optional: "联网补全可选判断",
-  entity_reasoning: "实体推理",
-  claim_extraction: "Claim 提取",
-  claim_attribution: "Claim 归属",
-  claim_stance: "Claim 立场",
-  rerank: "结果重排",
-  theory_reasoning: "理论推理",
-  knowledge_relation_reasoning: "知识关系推理",
-  debate_discovery: "Debate 发现",
-  reading_path_generation: "Reading Path 生成",
-  curation_reasoning: "内容编排建议",
-};
-
-const aiCapabilityGuidance: Partial<Record<AIRuntimeCapability, string>> = {
-  claim_extraction: "默认以 shadow task 运行。服务暂不可用时保持等待，不阻断出版。",
-  claim_attribution: "必须返回绑定 EvidenceSpan 的结构化判断，不能用模型常识补足原文。",
-  claim_stance: "用于区分支持、相斥与限定，不能只依赖向量相似度。",
-  rerank: "仅在 benchmark 证明收益后启用外部重排服务。",
-  debate_discovery: "只生成候选，人工采用后才建立 Debate 草稿。",
-  reading_path_generation: "一次生成完整候选，人工采用后才成为 ReadingPath 草稿。",
-};
-
 const defaultSemanticRuntime: SemanticRuntime = {
   engine: "lightweight",
   provider: "huggingFace",
@@ -1702,11 +1630,9 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
   const configResource = useAdminResource<SiteConfig>(scope === "legacy" ? "/catalog/site-config/" : null);
   const submissionResource = useAdminResource<{ email: string }>(scope !== "backups" ? "/catalog/admin/reader-submission/" : null);
   const semanticResource = useAdminResource<SemanticRuntime>(scope !== "backups" ? "/catalog/admin/semantic-runtime/" : null);
-  const aiRuntimeResource = useAdminResource<AIRuntimeDocument>(scope !== "backups" ? "/reading/admin/ai-runtime-profiles/" : null);
   const backups = useAdminResource<Paginated<BackupJob>>(canRunBackup && scope !== "processing" ? "/distribution/backups/" : null);
   const [draft, setDraft] = useState<SiteConfig | null>(null);
   const [semanticDraft, setSemanticDraft] = useState<SemanticRuntime | null>(null);
-  const [aiRuntimeDraft, setAiRuntimeDraft] = useState<AIRuntimeDocument | null>(null);
   const [submissionEmailDraft, setSubmissionEmail] = useState<string | null>(null);
   const [backupPath, setBackupPath] = useState("/data/backups");
   const [includeOriginals, setIncludeOriginals] = useState(false);
@@ -1721,7 +1647,6 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
     ?? semanticResource.data
     ?? defaultSemanticRuntime;
   const semanticRuntimeReady = Boolean(semanticDraft ?? semanticResource.data);
-  const aiRuntime = aiRuntimeDraft ?? aiRuntimeResource.data;
 
   function updateConfig(patch: Partial<SiteConfig>) {
     setDraft({ ...config, ...patch });
@@ -1842,70 +1767,6 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
     });
   }
 
-  function updateAiProfile(profileKey: string, patch: Partial<AIRuntimeProfile>) {
-    if (!aiRuntime) return;
-    setAiRuntimeDraft({
-      ...aiRuntime,
-      profiles: aiRuntime.profiles.map((profile) => (
-        profile.key === profileKey ? { ...profile, ...patch } : profile
-      )),
-    });
-  }
-
-  function updateAiActiveProfile(capability: AIRuntimeCapability, profileKey: string) {
-    if (!aiRuntime) return;
-    setAiRuntimeDraft({
-      ...aiRuntime,
-      active: { ...aiRuntime.active, [capability]: profileKey },
-    });
-  }
-
-  async function saveAiRuntime(event: FormEvent) {
-    event.preventDefault();
-    const token = getServerSessionCredential();
-    if (!token || !aiRuntime) {
-      setMessage("尚未读取服务器上的 AI Runtime 配置，未执行保存。");
-      setMessageState("error");
-      return;
-    }
-    await runSettingsAction("save-ai-runtime", "正在保存 AI Runtime……", "AI Runtime 设置保存失败。", async () => {
-      const saved = await apiRequest<AIRuntimeDocument>(
-        "/reading/admin/ai-runtime-profiles/",
-        {
-          method: "PUT",
-          body: JSON.stringify({
-            active: aiRuntime.active,
-            profiles: aiRuntime.profiles.map((profile) => {
-              const persisted = { ...profile };
-              delete persisted.environment;
-              return persisted;
-            }),
-          }),
-        },
-        token,
-      );
-      setAiRuntimeDraft(saved);
-      return "AI Runtime profiles 已保存。非密钥参数会在下一次任务或问答时读取。";
-    });
-  }
-
-  async function testAiRuntime(profileKey: string) {
-    const token = getServerSessionCredential();
-    if (!token) return;
-    await runSettingsAction(`test-ai-runtime:${profileKey}`, "正在测试 AI Runtime……", "AI Runtime 连通性测试失败。", async () => {
-      const result = await apiRequest<{
-        available: boolean;
-        detail: string;
-        profile_key: string;
-      }>(
-        "/reading/admin/ai-runtime-profiles/test/",
-        { method: "POST", body: JSON.stringify({ profile_key: profileKey }) },
-        token,
-      );
-      return `${result.profile_key}：${result.available ? "模型服务可用" : "模型服务不可用"}。${result.detail}`;
-    });
-  }
-
   return (
     <AdminPageFrame eyebrow={scope === "processing" ? "Processing Center" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? "处理服务设置" : "设置兼容入口"} description="查看已保存的配置与真实记录。各部分明确保存，敏感操作仍受权限保护。">
       <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} disabled={ocrBusy&&activeSection!==key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(ocrBusy||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>
@@ -1954,40 +1815,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           <ActionButton className="button secondary" type="submit" state={pendingAction === "save-submission-email" ? "pending" : "idle"} pendingLabel="正在保存邮箱" disabled={Boolean(pendingAction) && pendingAction !== "save-submission-email"}><Save size={15} />保存投稿邮箱</ActionButton>
         </form>
         {activeSection==='ocr'?<section className="admin-panel ocr-runtime-settings" role="tabpanel" aria-labelledby="settings-tab-ocr" id="ocr"><header><h2>OCR 资源</h2></header><OcrRuntimeEditor onBusyChange={setOcrBusy}/></section>:null}
-        <form className="admin-panel ai-runtime-settings" hidden={activeSection!=='ai'} role="tabpanel" aria-labelledby="settings-tab-ai" id="ai" onSubmit={saveAiRuntime}>
-          <header><h2>服务器 AI 能力（可选）</h2></header>
-          <p>注册读者可以在 Ask 页面使用自己的云端模型。这里仅维护元数据处理、联网补全和可选的服务器默认问答服务，不是读者配置入口；密钥和实际 endpoint 只由服务器环境提供。</p>
-          {aiRuntime ? <>
-            {aiRuntime.profiles.map((profile) => (
-              <fieldset key={profile.key}>
-                <legend>{aiCapabilityLabels[profile.capability]} · {profile.key}</legend>
-                {aiCapabilityGuidance[profile.capability] ? <p className="admin-help">{aiCapabilityGuidance[profile.capability]}</p> : null}
-                <label className="switch-row">
-                  <input type="checkbox" checked={profile.enabled} onChange={(event) => updateAiProfile(profile.key, { enabled: event.target.checked })} />
-                  <span>启用该 profile</span>
-                </label>
-                <label><span>服务类型</span><select value={profile.provider} onChange={(event) => updateAiProfile(profile.key, { provider: event.target.value as AIRuntimeProfile["provider"] })}><option value="none">未配置</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option><option value="openai_compatible">OpenAI 兼容接口</option></select></label>
-                <label><span>模型标识</span><input value={profile.model} onChange={(event) => updateAiProfile(profile.key, { model: event.target.value })} /></label>
-                <label><span>该能力的 active profile</span><select value={aiRuntime.active[profile.capability] || ""} onChange={(event) => updateAiActiveProfile(profile.capability, event.target.value)}>{aiRuntime.profiles.filter((candidate) => candidate.capability === profile.capability).map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.key}{candidate.enabled ? " · 已启用" : " · 已停用"}</option>)}</select></label>
-                <label><span>失败回退 profile</span><select value={profile.fallback_profile_key || ""} onChange={(event) => updateAiProfile(profile.key, { fallback_profile_key: event.target.value })}><option value="">不设置 fallback</option>{aiRuntime.profiles.filter((candidate) => candidate.capability === profile.capability && candidate.key !== profile.key).map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.key}</option>)}</select></label>
-                <label><span>Endpoint alias</span><input value={profile.endpoint_alias} onChange={(event) => updateAiProfile(profile.key, { endpoint_alias: event.target.value })} /></label>
-                <label><span>Credential alias</span><input value={profile.credential_alias} onChange={(event) => updateAiProfile(profile.key, { credential_alias: event.target.value })} /></label>
-                <label><span>生成温度（Temperature）</span><input type="number" min="0" max="2" step="0.05" value={profile.temperature} onChange={(event) => updateAiProfile(profile.key, { temperature: Number(event.target.value) })} /></label>
-                <label><span>最大输出 tokens</span><input type="number" min="128" max="8192" value={profile.max_output_tokens} onChange={(event) => updateAiProfile(profile.key, { max_output_tokens: Number(event.target.value) })} /></label>
-                <label><span>超时，秒</span><input type="number" min="3" max="600" value={profile.timeout_seconds} onChange={(event) => updateAiProfile(profile.key, { timeout_seconds: Number(event.target.value) })} /></label>
-                {profile.capability === "library_qa" ? <label><span>馆藏检索配置</span><select value={profile.retrieval_profile} onChange={(event) => updateAiProfile(profile.key, { retrieval_profile: event.target.value as AIRuntimeProfile["retrieval_profile"] })}><option value="stable">Stable，公开认可路径</option><option value="experimental_v2">Experimental V2，仅管理员显式使用</option></select></label> : null}
-                <dl className="ocr-runtime-status">
-                  <div><dt>服务地址</dt><dd>{profile.environment?.endpoint_configured ? "服务器已配置" : "服务器未配置"}</dd></div>
-                  <div><dt>凭据</dt><dd>{profile.environment?.credential_configured ? "服务器已配置或不需要" : "服务器未配置"}</dd></div>
-                  <div><dt>生效方式</dt><dd>模型参数热读取；密钥和 endpoint 需部署环境变更</dd></div>
-                </dl>
-                <ActionButton className="button secondary" type="button" state={pendingAction === `test-ai-runtime:${profile.key}` ? "pending" : "idle"} pendingLabel="测试中" disabled={Boolean(pendingAction) && pendingAction !== `test-ai-runtime:${profile.key}`} onClick={() => void testAiRuntime(profile.key)}>测试配置</ActionButton>
-              </fieldset>
-            ))}
-            <small>当前配置来源：{aiRuntime.source}。健康检查失败不会自动停用 profile。</small>
-            <ActionButton className="button" type="submit" state={pendingAction === "save-ai-runtime" ? "pending" : "idle"} pendingLabel="正在保存 AI Runtime" disabled={Boolean(pendingAction) && pendingAction !== "save-ai-runtime"}><Save size={15} />保存 AI Runtime</ActionButton>
-          </> : <p className={aiRuntimeResource.error ? "attempt-error" : "admin-help"}>{aiRuntimeResource.error || "正在读取 AI Runtime 配置。"}</p>}
-        </form>
+        {activeSection==='ai'?<section className="admin-panel ai-runtime-settings" role="tabpanel" aria-labelledby="settings-tab-ai" id="ai"><header><h2>服务器 AI 能力</h2></header><AIRuntimeEditor onBusyChange={setOcrBusy}/></section>:null}
         {scope !== "backups" ? <div hidden={activeSection!=='prompts'} role="tabpanel" aria-labelledby="settings-tab-prompts" id="prompts">{canManagePrompts ? <PromptRegistryAdmin /> : <section className="admin-panel"><h2>AI 提示词</h2><p>只有书库所有者可以查看和修改。</p></section>}</div> : null}
         <form className="admin-panel semantic-runtime-settings" hidden={activeSection!=='search'} role="tabpanel" aria-labelledby="settings-tab-search" id="search" onSubmit={saveSemanticRuntime}>
           <header><h2>观点检索资源</h2><Link href="/admin/semantic-index">打开索引管理</Link></header>

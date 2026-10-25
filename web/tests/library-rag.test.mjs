@@ -41,26 +41,18 @@ test("Reader and public entity pages use one scoped Ask link contract", async ()
 });
 
 
-test("Admin settings expose capability aliases but never a secret value input", async () => {
-  const source = await readFile(
-    new URL("../components/admin-sections.tsx", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(source, /\/reading\/admin\/ai-runtime-profiles\//);
-  assert.match(source, /\/reading\/admin\/ai-runtime-profiles\/test\//);
-  assert.match(source, /metadata_extraction: "元数据提取"/);
-  assert.match(source, /library_qa: "书库问答默认服务（可选）"/);
-  assert.match(source, /field_enrichment_optional: "联网补全可选判断"/);
-  assert.match(source, /密钥和实际 endpoint 只由服务器环境提供/);
-  const section = source.slice(
-    source.indexOf('<form className="admin-panel ai-runtime-settings"'),
-    source.indexOf('<form className="admin-panel semantic-runtime-settings"'),
-  );
-  assert.match(section, /Credential alias/);
-  assert.match(section, /profile\.credential_alias/);
-  assert.doesNotMatch(section, /<input[^>]*type=["']password["']/i);
-  assert.doesNotMatch(section, /profile\.(?:api_?key|secret|credential_value)/i);
+test("Admin settings share a private, versioned model editor", async () => {
+  const [settings, source] = await Promise.all([
+    "../components/admin-sections.tsx", "../components/admin/ai-runtime-editor.tsx",
+  ].map(path => readFile(new URL(path, import.meta.url), "utf8")));
+  assert.match(settings, /<AIRuntimeEditor/);
+  assert.match(source, /expected_version/);
+  assert.match(source, /X-Editor-Owner/);
+  assert.match(source, /can_edit_sensitive_aliases/);
+  assert.match(source, /type="password"/);
+  assert.match(source, /secret:""/);
+  assert.doesNotMatch(source, /ai-runtime-profiles\/test/);
+  assert.doesNotMatch(source, /sessionStorage\.setItem\([^;]*(?:secret|JSON\.stringify)/);
 });
 
 

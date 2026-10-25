@@ -444,8 +444,8 @@ def validate_profile_document(value: dict) -> dict:
     active = value.get("active")
     if not isinstance(rows, list) or not isinstance(active, dict):
         raise AIRuntimeProfileError("AI runtime 配置缺少 profiles 或 active。")
-    if not 1 <= len(rows) <= 24:
-        raise AIRuntimeProfileError("AI runtime profiles 数量必须在 1 到 24 之间。")
+    if not 1 <= len(rows) <= 48:
+        raise AIRuntimeProfileError("AI runtime profiles 数量必须在 1 到 48 之间。")
     profiles = [validate_runtime_profile(row) for row in rows]
     by_key = {profile.key: profile for profile in profiles}
     if len(by_key) != len(profiles):

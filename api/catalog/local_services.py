@@ -62,7 +62,7 @@ def service_definitions():
     from ingestion.services.ocr_provider import ocr_runtime_config
     from ingestion.services.provider_gateway import provider_configuration_health
     from reading.runtime_profiles import runtime_profile_payload
-    from common.ai_runtime import PROFILE_SETTING_KEY, resolve_endpoint
+    from common.ai_runtime import PROFILE_SETTING_KEY, resolve_endpoint, resolve_credential
     from catalog.services.research_sources import REGISTRY_SETTING_KEY, resolve_source_endpoint
 
     ocr = ocr_runtime_config()
@@ -103,7 +103,8 @@ def service_definitions():
         configured = bool(profile.get("provider") != "none" and profile.get("model") and environment.get("endpoint_configured"))
         add(f"profile-{profile['key']}", "generation", profile.get("model") or profile["key"], "配置的模型服务", configured,
             profile.get("enabled"), {"profile": profile, "updated_at": profile_version, "credentials": credential_versions,
-                "endpoint": resolve_endpoint(profile["endpoint_alias"])},
+                "endpoint": resolve_endpoint(profile["endpoint_alias"]),
+                "credential_identity": sha256(resolve_credential(profile["credential_alias"]).encode()).hexdigest()},
             [("配置档", profile["key"]), ("能力", profile["capability"]), ("模型来源", profile["provider"]),
              ("最大输入字符", profile["max_input_chars"]), ("最大输出 Token", profile["max_output_tokens"]),
              ("检查范围", "仅检查模型服务连接；不执行生成")], Capability.MANAGE_AI, "/admin/processing/settings#ai")
@@ -159,7 +160,9 @@ def task_counts():
     return totals(), {key: totals(kinds) for key, kinds in groups.items()}
 
 
+@transaction.atomic
 def services_snapshot(actor):
+    acquire_entity_lock('provider_configuration', 'research_source_registry')
     definitions = service_definitions()
     total_tasks, grouped_tasks = task_counts()
     keys = [PREFIX + row["id"] for row in definitions]
@@ -288,6 +291,8 @@ def check_service(request, values):
         if old.details.get("configuration_version") != values["configuration_version"]:
             raise ServiceCheckConflict("原检查对应其他配置版本。")
         return observation_payload(old)
+    if values['service_id'].startswith(('profile-', 'metadata-')):
+        acquire_entity_lock('provider_configuration', 'research_source_registry')
     definition = next((row for row in service_definitions() if row["id"] == values["service_id"]), None)
     if not definition or not definition["checkable"]:
         raise ValidationError("这项服务没有可用的独立检查器。")

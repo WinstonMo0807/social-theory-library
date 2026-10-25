@@ -21635,6 +21635,173 @@
                 }
             }
         },
+        "/api/reading/admin/ai-runtime-profiles/": {
+            "get": {
+                "operationId": "reading_admin_ai_runtime_profiles_retrieve",
+                "tags": [
+                    "reading"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AIRuntimeSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "reading_admin_ai_runtime_profiles_update",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AIRuntimeProfileDocumentRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AIRuntimeProfileDocumentRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AIRuntimeProfileDocumentRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AIRuntimeSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "reading_admin_ai_runtime_profiles_partial_update",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAIRuntimeVersionInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAIRuntimeVersionInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedAIRuntimeVersionInputRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AIRuntimeSnapshot"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/reading/admin/ai-runtime-profiles/test/": {
+            "post": {
+                "operationId": "reading_admin_ai_runtime_profiles_test_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AIRuntimeProfileTestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AIRuntimeProfileTestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AIRuntimeProfileTestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AIRuntimeProbeResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/annotations/": {
             "get": {
                 "operationId": "reading_annotations_list",
@@ -32962,6 +33129,338 @@
     },
     "components": {
         "schemas": {
+            "AIRuntimeProbeResult": {
+                "type": "object",
+                "properties": {
+                    "profile_key": {
+                        "type": "string"
+                    },
+                    "capability": {
+                        "type": "string"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "model": {
+                        "type": "string"
+                    },
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "secret_values_exposed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "available",
+                    "capability",
+                    "configured",
+                    "detail",
+                    "model",
+                    "profile_key",
+                    "provider",
+                    "secret_values_exposed",
+                    "status"
+                ]
+            },
+            "AIRuntimeProfileDocumentRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "active": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                        }
+                    },
+                    "profiles": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AIRuntimeProfileRequest"
+                        }
+                    },
+                    "credential": {
+                        "$ref": "#/components/schemas/RuntimeCredentialInputRequest"
+                    }
+                },
+                "required": [
+                    "active",
+                    "expected_version",
+                    "profiles"
+                ]
+            },
+            "AIRuntimeProfileOutput": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                    },
+                    "capability": {
+                        "$ref": "#/components/schemas/CapabilityEnum"
+                    },
+                    "provider": {
+                        "$ref": "#/components/schemas/ProviderEnum"
+                    },
+                    "model": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "temperature": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 2,
+                        "minimum": 0
+                    },
+                    "max_output_tokens": {
+                        "type": "integer",
+                        "maximum": 8192,
+                        "minimum": 128
+                    },
+                    "timeout_seconds": {
+                        "type": "integer",
+                        "maximum": 600,
+                        "minimum": 3
+                    },
+                    "max_input_chars": {
+                        "type": "integer",
+                        "maximum": 100000,
+                        "minimum": 1000
+                    },
+                    "endpoint_alias": {
+                        "type": "string"
+                    },
+                    "credential_alias": {
+                        "type": "string"
+                    },
+                    "retrieval_profile": {
+                        "$ref": "#/components/schemas/RetrievalProfileEnum"
+                    },
+                    "answer_behavior": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "fallback_profile_key": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "reasoning": {},
+                    "environment": {
+                        "$ref": "#/components/schemas/RuntimeEnvironmentOutput"
+                    },
+                    "credential_storage": {
+                        "$ref": "#/components/schemas/CredentialStorageEnum"
+                    },
+                    "credential_managed_here": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "answer_behavior",
+                    "capability",
+                    "credential_alias",
+                    "credential_managed_here",
+                    "credential_storage",
+                    "enabled",
+                    "endpoint_alias",
+                    "environment",
+                    "key",
+                    "max_input_chars",
+                    "max_output_tokens",
+                    "model",
+                    "provider",
+                    "retrieval_profile",
+                    "temperature",
+                    "timeout_seconds"
+                ]
+            },
+            "AIRuntimeProfileRequest": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                    },
+                    "capability": {
+                        "$ref": "#/components/schemas/CapabilityEnum"
+                    },
+                    "provider": {
+                        "$ref": "#/components/schemas/ProviderEnum"
+                    },
+                    "model": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "temperature": {
+                        "type": "number",
+                        "format": "double",
+                        "maximum": 2,
+                        "minimum": 0
+                    },
+                    "max_output_tokens": {
+                        "type": "integer",
+                        "maximum": 8192,
+                        "minimum": 128
+                    },
+                    "timeout_seconds": {
+                        "type": "integer",
+                        "maximum": 600,
+                        "minimum": 3
+                    },
+                    "max_input_chars": {
+                        "type": "integer",
+                        "maximum": 100000,
+                        "minimum": 1000
+                    },
+                    "endpoint_alias": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                    },
+                    "credential_alias": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                    },
+                    "retrieval_profile": {
+                        "$ref": "#/components/schemas/RetrievalProfileEnum"
+                    },
+                    "answer_behavior": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "fallback_profile_key": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "reasoning": {}
+                },
+                "required": [
+                    "answer_behavior",
+                    "capability",
+                    "enabled",
+                    "key",
+                    "max_input_chars",
+                    "max_output_tokens",
+                    "model",
+                    "provider",
+                    "retrieval_profile",
+                    "temperature",
+                    "timeout_seconds"
+                ]
+            },
+            "AIRuntimeProfileTestRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "profile_key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    }
+                },
+                "required": [
+                    "expected_version",
+                    "profile_key"
+                ]
+            },
+            "AIRuntimeSnapshot": {
+                "type": "object",
+                "properties": {
+                    "configuration_version": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "active": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "profiles": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AIRuntimeProfileOutput"
+                        }
+                    },
+                    "permissions": {
+                        "$ref": "#/components/schemas/RuntimePermissionsOutput"
+                    },
+                    "secret_values_exposed": {
+                        "type": "boolean"
+                    },
+                    "hot_reload_fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "deployment_fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "credential_alias_options": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "more_credential_aliases": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "active",
+                    "configuration_version",
+                    "credential_alias_options",
+                    "deployment_fields",
+                    "hot_reload_fields",
+                    "more_credential_aliases",
+                    "permissions",
+                    "profiles",
+                    "secret_values_exposed",
+                    "source",
+                    "version"
+                ]
+            },
             "AboutPageBlock": {
                 "type": "object",
                 "properties": {
@@ -37234,6 +37733,25 @@
                     "source_kind"
                 ]
             },
+            "CapabilityEnum": {
+                "enum": [
+                    "metadata_extraction",
+                    "library_qa",
+                    "field_enrichment_optional",
+                    "entity_reasoning",
+                    "claim_extraction",
+                    "claim_attribution",
+                    "claim_stance",
+                    "rerank",
+                    "theory_reasoning",
+                    "knowledge_relation_reasoning",
+                    "debate_discovery",
+                    "reading_path_generation",
+                    "curation_reasoning"
+                ],
+                "type": "string",
+                "description": "* `metadata_extraction` - metadata_extraction\n* `library_qa` - library_qa\n* `field_enrichment_optional` - field_enrichment_optional\n* `entity_reasoning` - entity_reasoning\n* `claim_extraction` - claim_extraction\n* `claim_attribution` - claim_attribution\n* `claim_stance` - claim_stance\n* `rerank` - rerank\n* `theory_reasoning` - theory_reasoning\n* `knowledge_relation_reasoning` - knowledge_relation_reasoning\n* `debate_discovery` - debate_discovery\n* `reading_path_generation` - reading_path_generation\n* `curation_reasoning` - curation_reasoning"
+            },
             "CapabilityOutput": {
                 "type": "object",
                 "properties": {
@@ -38878,6 +39396,15 @@
                     "saved",
                     "workbench_url"
                 ]
+            },
+            "CredentialStorageEnum": {
+                "enum": [
+                    "environment",
+                    "saved",
+                    "absent"
+                ],
+                "type": "string",
+                "description": "* `environment` - environment\n* `saved` - saved\n* `absent` - absent"
             },
             "CurationDecisionInputActionEnum": {
                 "enum": [
@@ -57703,6 +58230,16 @@
                     "email"
                 ]
             },
+            "PatchedAIRuntimeVersionInputRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    }
+                }
+            },
             "PatchedAdminKnowledgeNodeRequest": {
                 "type": "object",
                 "properties": {
@@ -65057,6 +65594,24 @@
                     "role_label",
                     "username"
                 ]
+            },
+            "ProviderCredentialOperationEnum": {
+                "enum": [
+                    "set",
+                    "delete"
+                ],
+                "type": "string",
+                "description": "* `set` - set\n* `delete` - delete"
+            },
+            "ProviderEnum": {
+                "enum": [
+                    "none",
+                    "ollama",
+                    "openai_compatible",
+                    "vllm"
+                ],
+                "type": "string",
+                "description": "* `none` - none\n* `ollama` - ollama\n* `openai_compatible` - openai_compatible\n* `vllm` - vllm"
             },
             "PublicCitationInputRequest": {
                 "type": "object",
@@ -72425,6 +72980,14 @@
                     "policy"
                 ]
             },
+            "RetrievalProfileEnum": {
+                "enum": [
+                    "stable",
+                    "experimental_v2"
+                ],
+                "type": "string",
+                "description": "* `stable` - stable\n* `experimental_v2` - experimental_v2"
+            },
             "ReturnContextOutput": {
                 "type": "object",
                 "properties": {
@@ -72914,6 +73477,77 @@
                     "request_id",
                     "saved_version",
                     "state"
+                ]
+            },
+            "RuntimeCredentialInputRequest": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/ProviderCredentialOperationEnum"
+                    },
+                    "profile_key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                    },
+                    "alias": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                    },
+                    "secret": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "minLength": 1,
+                        "maxLength": 16384
+                    },
+                    "confirm_delete": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "action",
+                    "alias",
+                    "profile_key"
+                ]
+            },
+            "RuntimeEnvironmentOutput": {
+                "type": "object",
+                "properties": {
+                    "endpoint_configured": {
+                        "type": "boolean"
+                    },
+                    "credential_configured": {
+                        "type": "boolean"
+                    },
+                    "restart_may_be_required": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "credential_configured",
+                    "endpoint_configured",
+                    "restart_may_be_required"
+                ]
+            },
+            "RuntimePermissionsOutput": {
+                "type": "object",
+                "properties": {
+                    "can_edit_profiles": {
+                        "type": "boolean"
+                    },
+                    "can_edit_sensitive_aliases": {
+                        "type": "boolean"
+                    },
+                    "can_remove_profiles": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "can_edit_profiles",
+                    "can_edit_sensitive_aliases",
+                    "can_remove_profiles"
                 ]
             },
             "SaveIssueListCommandRequest": {
@@ -76261,19 +76895,11 @@
                     "request_id"
                 ]
             },
-            "SourceCredentialInputActionEnum": {
-                "enum": [
-                    "set",
-                    "delete"
-                ],
-                "type": "string",
-                "description": "* `set` - set\n* `delete` - delete"
-            },
             "SourceCredentialInputRequest": {
                 "type": "object",
                 "properties": {
                     "action": {
-                        "$ref": "#/components/schemas/SourceCredentialInputActionEnum"
+                        "$ref": "#/components/schemas/ProviderCredentialOperationEnum"
                     },
                     "source_key": {
                         "$ref": "#/components/schemas/ResearchSourceKeyEnum"

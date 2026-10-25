@@ -115,18 +115,20 @@ def test_library_qa_profile_is_independent_from_metadata_model():
 
 @pytest.mark.django_db
 def test_runtime_profiles_are_superadmin_only_audited_and_secret_safe(api_client, reader_user, superadmin_user):
+    from .test_stl4_ai_runtime_configuration_20261025 import body_for
     with override_settings(AI_API_KEY="must-never-be-returned"):
         api_client.force_authenticate(reader_user)
         denied = api_client.get("/api/reading/admin/ai-runtime-profiles/")
         assert denied.status_code == 403
 
         api_client.force_authenticate(superadmin_user)
+        api_client.credentials(HTTP_X_EDITOR_OWNER=str(superadmin_user.pk))
         current = api_client.get("/api/reading/admin/ai-runtime-profiles/")
         assert current.status_code == 200
         assert "must-never-be-returned" not in str(current.data)
         saved = api_client.put(
             "/api/reading/admin/ai-runtime-profiles/",
-            {"active": current.data["active"], "profiles": current.data["profiles"]},
+            body_for(current.data),
             format="json",
             HTTP_X_REQUEST_ID="task6-admin-test",
         )

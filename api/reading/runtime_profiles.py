@@ -48,15 +48,19 @@ def runtime_profile_payload() -> dict:
             "retrieval_profile",
             "answer_behavior",
             "fallback_profile_key",
+            "endpoint_alias",
+            "credential_alias",
         ],
-        "deployment_fields": ["endpoint_alias", "credential_alias"],
+        "deployment_fields": ["endpoint_environment_value", "credential_environment_value"],
     }
 
 
 @transaction.atomic
 def save_runtime_profile_document(value: dict, *, actor, request_id: str = "") -> dict:
     from catalog.models import SiteSetting
+    from catalog.services.query_lexicon.mutations import acquire_entity_lock
 
+    acquire_entity_lock('provider_configuration', 'research_source_registry')
     validated = validate_profile_document(value)
     before = safe_profile_document(current_profile_document())
     setting, _created = SiteSetting.objects.select_for_update().update_or_create(
