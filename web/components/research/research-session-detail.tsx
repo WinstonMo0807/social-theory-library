@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, CircleAlert, GitBranch, LoaderCircle, RefreshCw, Search, Send, X } from "lucide-react";
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { ApiRequestError } from "@/lib/api";
 import { PrivateOwnerVerificationError } from "@/lib/api/private-owner";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
@@ -10,6 +10,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ResearchProjectNotes } from "./research-project-notes";
 import { ResearchPromptRecovery } from "./research-prompt-recovery";
+import { useResearchTabDraft } from "./use-research-tab-draft";
+import { ResearchTabRecovery } from "./research-tab-recovery";
+import { parsePendingResearchTurn, type PendingResearchTurn } from "@/lib/research-pending-turn";
 import { cancelResearchTurn, changeResearchSelection, lookupResearchTurnRequest, sendResearchTurnCommand, retryResearchTurn, type ResearchTurnCommand, updateResearchProject, type QueryScope, type ResolvedEvidence } from "@/lib/api/research.client";
 import { researchEvidenceKey, researchEvidenceReference, researchReaderHref, researchScopeLabel, researchScopeInput } from "@/lib/api/research-evidence";
 import { isTaskRunning } from "@/lib/api/task-polling";
@@ -32,13 +35,17 @@ export function ResearchSessionDetail({ id, initialTurn = "" }: { id: string; in
 
 function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof useResearchProject>; initialTurn: string }) {
   const { record, turns, pending, run, refresh, requestId, notice, actionError, pollPaused } = workspace;
-  const [submission, setSubmission] = useState<{ command: ResearchTurnCommand; branch: boolean } | null>(null);
-  const editingLocked = pending || submission !== null;
+  const [submission, setSubmission] = useState<PendingResearchTurn | null>(null);
+  const [localError, setLocalError] = useState("");
+  const owner = String(workspace.session.user?.id || ""), projectId = record?.id || "";
+  const parsePending = useCallback((value: unknown) => parsePendingResearchTurn(value, projectId), [projectId]);
+  const receipt = useResearchTabDraft({ owner, project: projectId, kind: "turn-request", value: submission, parseInput: parsePending });
+  const editingLocked = pending || submission !== null || !receipt.scanned || Boolean(receipt.recovery) || Boolean(receipt.error);
   const [activeId, setActiveId] = useState(initialTurn);
   const [question, setQuestion] = useState("");
   const [scopeChoice, setScopeChoice] = useState<"saved" | "selected" | "library">("saved");
   const [pane, setPane] = useState("evidence");
-  const [branchTarget, setBranchTarget] = useState<{ id: string; question: string; number: number; scope: QueryScope; scopeText: string } | null>(null);
+  const [branchTarget, setBranchTarget] = useState<{ id: string; question: string; number: number | null; scope: QueryScope; scopeText: string } | null>(null);
   const [discardBranch, setDiscardBranch] = useState(false);
   const [branchOpen, setBranchOpen] = useState(false);
   const [branchQuestion, setBranchQuestion] = useState("");
@@ -75,17 +82,21 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
     if (text.length < 2 || branch && !branchTarget) return;
     const parentId = branch ? branchTarget?.id : current?.id;
     const scope = branch && branchTarget ? branchTarget.scope : chosenScope;
-    const cleanScope = researchScopeInput(scope);
-    const command: ResearchTurnCommand = { projectId: record.id,
-      ...(!branch && current && JSON.stringify(current.data.scope) !== JSON.stringify(chosenScope) ? { expandTurnId: current.id } : {}),
-      data: { expected_revision: record.revision, request_id: requestId(JSON.stringify({ text, scope: cleanScope, parent: parentId, branch })),
-        question: text, scope: cleanScope, ...(parentId ? { parent_id: parentId } : {}), mode: "search" } };
-    if (current) setActiveId(current.id);
-    const attempt = { command, branch }; setSubmission(attempt);
-    await send(attempt);
+    try {
+      const cleanScope = researchScopeInput(scope);
+      const command: ResearchTurnCommand = { projectId: record.id,
+        ...(!branch && current && JSON.stringify(current.data.scope) !== JSON.stringify(chosenScope) ? { expandTurnId: current.id } : {}),
+        data: { expected_revision: record.revision, request_id: requestId(JSON.stringify({ text, scope: cleanScope, parent: parentId, branch })),
+          question: text, scope: cleanScope, ...(parentId ? { parent_id: parentId } : {}), mode: "search" } };
+      const attempt = parsePendingResearchTurn({ command, branch }, record.id);
+      if (current) setActiveId(current.id);
+      setLocalError(""); setSubmission(attempt);
+      if (receipt.enabled) receipt.capture(attempt);
+      await send(attempt);
+    } catch (reason) { setLocalError(reason instanceof Error ? reason.message : "本次请求未能准备好，输入仍保留。"); }
   }
   function acceptSubmission(id: string, branch: boolean) {
-    setSubmission(null); setActiveId(id); setPane("evidence");
+    receipt.capture(null); setSubmission(null); setActiveId(id); setPane("evidence");
     if (branch) { setBranchOpen(false); setBranchQuestion(""); setBranchTarget(null); } else setQuestion("");
   }
   async function send(attempt: NonNullable<typeof submission>) {
@@ -100,7 +111,7 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
         throw reason;
       }
     }, attempt.branch ? "已从选定轮次建立分支，原材料继续保留。" : "新的研究轮次已加入队列，进度会自动更新。");
-    if (ok) acceptSubmission(nextId, attempt.branch); else if (rejected) setSubmission(null);
+    if (ok) acceptSubmission(nextId, attempt.branch); else if (rejected) { receipt.capture(null); setSubmission(null); }
   }
   async function lookupSubmission() {
     if (!submission) return;
@@ -124,13 +135,24 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
     if (!record) return;
     void run(() => changeResearchSelection(record.id, { expected_revision: record.revision, action: remove ? "remove" : "add", ...(remove ? { reference_id: researchEvidenceKey(ref) } : { references: [researchEvidenceReference(ref)] }) }), remove ? "已从当前选材移除。" : "已加入选材，来源身份和版本已重新核对。");
   }
+  function restoreSubmission(value: PendingResearchTurn) {
+    setSubmission(value); setLocalError("");
+    if (!value.branch) { setQuestion(value.command.data.question); return; }
+    const parentIndex = turns.findIndex(turn => turn.id === value.command.data.parent_id);
+    setBranchQuestion(value.command.data.question);
+    setBranchTarget({ id: value.command.data.parent_id!, number: parentIndex < 0 ? null : parentIndex + 1, question: turns[parentIndex]?.data.question || "原轮次信息待核对", scope: value.command.data.scope, scopeText: researchScopeLabel(value.command.data.scope) });
+    setBranchOpen(true);
+  }
+  const receiptAtTop = Boolean(submission || receipt.recovery || receipt.error);
+  const receiptControls = <ResearchTabRecovery storage={receipt} label="未确认请求" description="仅保留本次问题、范围与来源定位、原请求标识，不暂存原文或凭据。恢复后先查回，再决定是否原样重试。" pending={pending} onRestore={restoreSubmission} preview={value => <p className="stl4-research-notes-copy">{value.command.data.question} · {researchScopeLabel(value.command.data.scope)}{value.branch ? " · 分支请求" : ""}</p>} discardDescription="仅清除此标签页的查回记录，不会取消服务器可能已经接收的任务。请先在研究过程核对原轮次，避免清除后重复提交同一问题。"/>;
   const statusText = current?.data.return_context?.kind === "comparison_draft" ? "本轮为比较草稿生成。可在证据比较中查看草稿，已有选材和本人笔记保留。" : isTaskRunning(activeStatus) ? "正在核对来源与页码，已有材料仍可阅读。" : activeStatus === "partial" ? "部分检索已完成，可保留现有材料并重试。" : activeStatus === "failed" ? "本轮未完成，问题与材料已保留。" : ["canceled", "cancelled"].includes(activeStatus) ? "本轮已取消，原有轮次与选材继续保留。" : current ? "可以继续核对来源、选择材料或提出后续问题。" : "提交问题后开始第一轮研究。";
   return <Frame>
     <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><Link href="/account/research">我的研究</Link><span>/</span><strong>持续研究</strong></nav>
     <header className="stl4-research-heading stl4-research-workspace-heading"><h1>持续研究工作区</h1><p>{record.data.title || record.data.question || "未命名研究"}</p><span className="stl4-research-privacy">仅本人可见 · 问题、选材和比较记录保存在此会话</span></header>
     <section className="stl4-research-workspace" aria-label="持续研究工作区" data-workspace-pane={pane}>
       <ResearchCenterNav active="research" />
-      {submission ? <div className="stl4-research-source-notice" role="status"><strong>{pending ? "正在提交原请求" : "原请求结果待核对"}</strong><p>本次问题与范围已固定。服务器可能已经接收，请先查回；重试沿用原请求，不会再建一轮。离开或关闭本页会失去此处的内存查回入口。</p><div className="stl4-comparison-inline-actions"><button type="button" disabled={pending} onClick={()=>void lookupSubmission()}>查回原请求</button><button type="button" disabled={pending} onClick={()=>void send(submission)}>重试原请求</button></div></div> : null}
+      {submission ? <div className="stl4-research-source-notice" role="status"><strong>{pending ? "正在提交原请求" : "原请求结果待核对"}</strong><p className="stl4-research-notes-copy">{submission.command.data.question}</p><p>本次问题与范围已固定。服务器可能已经接收，请先查回；重试沿用原请求，不会再建一轮。{receipt.enabled && receipt.savedAt && !receipt.error ? "已按你的允许保留本标签页恢复记录。" : "尚无已确认的本机恢复记录，离开本页可能丢失查回入口。"}</p><div className="stl4-comparison-inline-actions"><button type="button" disabled={pending} onClick={()=>void lookupSubmission()}>查回原请求</button><button type="button" disabled={pending} onClick={()=>void send(submission)}>重试原请求</button></div></div> : null}
+      {receiptAtTop && !branchOpen ? receiptControls : null}
       <div className={`stl4-research-status-panel status-${activeStatus}`} role="status"><div><strong>{statuses[activeStatus] || "尚未开始"}</strong><span>{statusText}</span></div><div className="stl4-research-status-actions">{current && isTaskRunning(activeStatus) ? <button disabled={editingLocked} onClick={() => void run(() => cancelResearchTurn(current.id), "本轮已取消，已取得的材料继续保留。")}>取消本轮</button> : null}{current && ["failed", "partial", "canceled", "cancelled"].includes(activeStatus) ? <button disabled={editingLocked} onClick={() => void retry()}><RefreshCw size={14} />重新检索</button> : null}<button disabled={editingLocked} onClick={refresh}><RefreshCw size={14} />{pollPaused ? "继续更新" : "刷新"}</button></div></div>
       {unavailableSelected ? <div className="stl4-research-source-notice" role="status"><strong>{unavailableSelected} 条选材的来源待重新核对</strong><p>旧引用身份和已保存笔记仍保留，不会自动换成另一版本。请在选材中核对，重新选取的材料会作为新引用保存。</p><button type="button" className="stl4-research-secondary" onClick={()=>setPane("materials")}>查看选材</button><Link href="/explore" target="_blank" rel="noreferrer">查找当前可用文献</Link></div> : null}
       <nav className="stl4-research-pane-switch" aria-label="研究工作区视图">{[["questions", "问题"], ["evidence", `证据（${candidates.length}）`], ["materials", `选材（${selected.length}）`], ["notes", "笔记"]].map(([value,label])=><button type="button" key={value} aria-pressed={pane===value} onClick={()=>setPane(value)}>{label}</button>)}</nav>
@@ -144,9 +166,11 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
         <aside className="stl4-research-selected" aria-label="当前选材"><header><h2>当前选材</h2><span>{selected.length}</span></header>{selected.length ? <ol>{selected.map((ref, index) => <li key={researchEvidenceKey(ref)}><div><strong>{titleOf(ref, index)}</strong><small>{locationOf(ref)}{ref.source_status !== "available" ? " · 来源待核对" : ""}</small></div><button aria-label={`移除${titleOf(ref, index)}`} disabled={editingLocked} onClick={() => selection(ref, true)}><X size={14} /></button></li>)}</ol> : <p>从本轮证据中选择材料。</p>}<Link className="stl4-research-secondary" href={`/account/research/${record.id}/history`}>研究过程回放 <ArrowRight size={14} /></Link><Link className="stl4-research-secondary" href={`/account/research/${record.id}/compare`}>比较当前选材 <ArrowRight size={14} /></Link><Link className="stl4-research-secondary" href={`/account/sharing/new?kind=research&source=${record.id}`}>分享或提交策划 <ArrowRight size={14} /></Link><ResearchMemoryReminders turn={current?.data} /></aside>
       </div>
       <form className="stl4-research-prompt" onSubmit={(event) => void submit(event)}><label htmlFor="research-follow-up">{current ? `承接第 ${currentNumber} 轮继续提问` : "提出研究问题"}</label><div><textarea id="research-follow-up" value={question} disabled={editingLocked} onChange={(event) => setQuestion(event.target.value)} placeholder="基于原文材料继续追问……" minLength={2} maxLength={1200} rows={2} required /><button type="submit" disabled={editingLocked || question.trim().length < 2 || !validScope}>{pending ? <LoaderCircle className="stl4-spin" size={15} /> : <Send size={15} />}发送</button></div><fieldset className="stl4-research-scope"><legend>下一轮检索范围</legend>{([["saved", "已保存的范围"], ["selected", "仅当前选材"], ["library", "扩展至全馆"]] as const).map(([value, label]) => <label key={value}><input type="radio" name="research-scope" value={value} checked={scopeChoice === value} disabled={editingLocked} onChange={() => setScopeChoice(value)} />{label}</label>)}<button type="button" className="stl4-research-text-button" disabled={editingLocked || !validScope || scopeChoice === "saved"} onClick={() => void run(() => updateResearchProject(record.id, { expected_revision: record.revision, scope: chosenScope }), "已保存后续研究范围，既有轮次不变。").then((ok) => { if (ok) setScopeChoice("saved"); })}>保存为后续范围</button></fieldset><p className="stl4-research-scope-caption">{scopeText}{!validScope ? " · 请先加入可用原文材料" : ""}</p><ResearchPromptRecovery owner={String(workspace.session.user!.id)} project={record.id} input={{question,scope:scopeChoice}} disabled={editingLocked} onRestore={value=>{setQuestion(value.question);setScopeChoice(value.scope);}} onReconnect={()=>{if(!editingLocked)refresh();}}/></form>
+      {!receiptAtTop && !branchOpen ? <details className="stl4-research-prompt-recovery"><summary>未确认请求的断网恢复设置</summary>{receiptControls}</details> : null}
+      {localError ? <p className="stl4-research-action-message is-error" role="alert">{localError}</p> : null}
       {notice ? <p className="stl4-research-action-message" role="status">{notice}</p> : null}{actionError ? <p className="stl4-research-action-message is-error" role="alert">{actionError} 输入内容仍保留，请刷新状态后重试。</p> : null}
     </section>
-    <Dialog open={branchOpen} onRequestClose={closeBranch} className="stl4-research-dialog" aria-labelledby="research-branch-title"><form onSubmit={(event) => void submit(event, true)}><h2 id="research-branch-title">从第 {branchTarget?.number} 轮建立分支</h2><p>{branchTarget?.question}</p><label htmlFor="research-branch-question">新的研究问题</label><textarea id="research-branch-question" value={branchQuestion} disabled={editingLocked} onChange={(event) => setBranchQuestion(event.target.value)} minLength={2} maxLength={1200} rows={4} required /><p>范围：{branchTarget?.scopeText}。原问题和已收集材料继续保留。</p>{actionError ? <p role="alert">{actionError}</p> : null}{submission?.branch ? <div className="stl4-comparison-inline-actions"><button type="button" disabled={pending} onClick={()=>void lookupSubmission()}>查回原请求</button><button type="button" disabled={pending} onClick={()=>void send(submission)}>重试原请求</button></div> : null}<footer><button type="button" disabled={editingLocked} onClick={closeBranch}>返回</button><button type="submit" disabled={editingLocked || !branchTarget || branchQuestion.trim().length < 2}>{pending ? "正在创建……" : "建立分支"}</button></footer></form></Dialog>
+    <Dialog open={branchOpen} onRequestClose={closeBranch} className="stl4-research-dialog" aria-labelledby="research-branch-title"><form onSubmit={(event) => void submit(event, true)}><h2 id="research-branch-title">{branchTarget?.number ? `从第 ${branchTarget.number} 轮建立分支` : "从原轮次建立分支"}</h2><p>{branchTarget?.question}</p><label htmlFor="research-branch-question">新的研究问题</label><textarea id="research-branch-question" value={branchQuestion} disabled={editingLocked} onChange={(event) => setBranchQuestion(event.target.value)} minLength={2} maxLength={1200} rows={4} required /><p>范围：{branchTarget?.scopeText}。原问题和已收集材料继续保留。</p>{localError ? <p role="alert">{localError}</p> : null}{actionError ? <p role="alert">{actionError}</p> : null}{branchOpen ? receiptControls : null}{submission?.branch ? <div className="stl4-comparison-inline-actions"><button type="button" disabled={pending} onClick={()=>void lookupSubmission()}>查回原请求</button><button type="button" disabled={pending} onClick={()=>void send(submission)}>重试原请求</button></div> : null}<footer><button type="button" disabled={editingLocked} onClick={closeBranch}>返回</button><button type="submit" disabled={editingLocked || !branchTarget || branchQuestion.trim().length < 2}>{pending ? "正在创建……" : "建立分支"}</button></footer></form></Dialog>
     <ConfirmDialog open={discardBranch} title="放弃尚未提交的分支问题？" description="原研究轮次、材料和笔记都会保留。" confirmLabel="放弃本次填写" cancelLabel="继续填写" pending={editingLocked} onCancel={()=>setDiscardBranch(false)} onConfirm={()=>{setDiscardBranch(false);setBranchOpen(false);setBranchQuestion("");setBranchTarget(null);}}/>
   </Frame>;
 }
