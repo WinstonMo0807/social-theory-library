@@ -33,8 +33,9 @@ ACTION = "manual_catalog.command"
 def actor_for(request, lock=False):
     if request.headers.get("X-Editor-Owner") != str(request.user.pk):
         raise PermissionDenied("登录账户已变化，请重新打开书目草稿。")
-    if not lock: return request.user
-    actor = get_object_or_404(get_user_model().objects.select_for_update(), pk=request.user.pk, is_active=True)
+    actors = get_user_model().objects.all()
+    if lock: actors = actors.select_for_update()
+    actor = get_object_or_404(actors, pk=request.user.pk, is_active=True)
     if actor.token_version != request.user.token_version or not has_capability(actor, Capability.EDIT_METADATA):
         raise PermissionDenied("当前会话不能保存书目。")
     return actor
@@ -48,9 +49,11 @@ def version(edition):
     return sha256("|".join(parts).encode()).hexdigest()
 
 
-def work_rows(query):
-    return Work.objects.filter(Q(title__icontains=query) | Q(editions__contributions__person__preferred_name__icontains=query) |
-        Q(editions__isbn__icontains=query) | Q(editions__doi__icontains=query)).distinct().prefetch_related(
+def work_rows(query, *, match_title=None):
+    condition = Q(normalized_title=match_title.strip().casefold()) if match_title is not None else (
+        Q(title__icontains=query) | Q(editions__contributions__person__preferred_name__icontains=query) |
+        Q(editions__isbn__icontains=query) | Q(editions__doi__icontains=query))
+    return Work.objects.filter(condition).distinct().prefetch_related(
             Prefetch("editions", queryset=Edition.objects.order_by("-publication_year", "pk").prefetch_related("contributions__person"))).order_by("title", "pk")
 
 
@@ -102,6 +105,7 @@ class ManualCommandSerializer(serializers.Serializer):
 
 class ManualQuerySerializer(serializers.Serializer):
     q = serializers.CharField(max_length=160, required=False, allow_blank=True)
+    match_title = serializers.CharField(max_length=600, required=False)
     people = serializers.CharField(max_length=160, required=False, allow_blank=True)
     page = serializers.IntegerField(min_value=1, default=1)
     session = serializers.UUIDField(required=False)
@@ -159,7 +163,7 @@ class ManualCatalogView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView)
         actor = actor_for(request)
         query = ManualQuerySerializer(data=request.query_params); query.is_valid(raise_exception=True)
         data = query.validated_data
-        pages = Paginator(work_rows(data["q"]) if data.get("q") else Work.objects.none(), 12)
+        pages = Paginator(work_rows(data.get("q", ""), match_title=data.get("match_title")) if data.get("q") or data.get("match_title") else Work.objects.none(), 12)
         page = pages.get_page(data["page"])
         rows = []
         for work in page:
@@ -174,8 +178,10 @@ class ManualCatalogView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView)
             session = get_object_or_404(CatalogingSession.objects.select_related("edition__work"), pk=data["session"], created_by=actor, source_type="manual")
             saved = {"session_id": str(session.pk), "version": version(session.edition), "edition_id": str(session.edition_id), "work_id": str(session.work_id),
                      "status": session.status, "form": form_for(session.edition), "shared_work": session.edition.work.editions.exclude(pk=session.edition_id).exists(), "editable": session.status in OPEN_STATUSES and session.status != "publishing" and session.edition.state == "draft"}
-        return Response({"owner_id": str(actor.pk), "results": rows, "people": [{"id": str(row.pk), "name": row.preferred_name, "original_name": row.original_name, "context": " · ".join(filter(None, [row.country_region, str(row.birth_year or ""), row.authority_status]))} for row in people],
-                         "count": pages.count, "page": page.number, "pages": pages.num_pages, "saved": saved})
+        payload = {"owner_id": str(actor.pk), "results": rows, "people": [{"id": str(row.pk), "name": row.preferred_name, "original_name": row.original_name, "context": " · ".join(filter(None, [row.country_region, str(row.birth_year or ""), row.authority_status]))} for row in people],
+                   "count": pages.count, "page": page.number, "pages": pages.num_pages, "saved": saved}
+        actor_for(request)
+        return Response(payload)
 
     @extend_schema(request=ManualCommandSerializer, responses=ManualReceiptSerializer)
     @transaction.atomic
@@ -256,7 +262,9 @@ class ManualCatalogReceiptView(EditorialErrorMixin, AdminPrivateResponseMixin, A
     @extend_schema(responses=ManualReceiptSerializer)
     def get(self, request, request_id):
         actor = actor_for(request)
-        return Response(receipt(get_object_or_404(AuditEvent, actor=actor, action=ACTION, request_id=str(request_id))))
+        result = receipt(get_object_or_404(AuditEvent, actor=actor, action=ACTION, request_id=str(request_id)))
+        actor_for(request)
+        return Response(result)
 
     @extend_schema(request=ManualCancelSerializer, responses=ManualReceiptSerializer)
     @transaction.atomic

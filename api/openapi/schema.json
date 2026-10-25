@@ -6819,6 +6819,15 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "match_title",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 600
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "page",
                         "schema": {
                             "type": "integer",

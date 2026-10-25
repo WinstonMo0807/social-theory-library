@@ -1,5 +1,9 @@
 # 验收记录
 
+## 2026-10-25 M04同名核对
+
+M04同名核对：47f102两AST/compile、三SQLite SQL编译与diff0；f59a2b禁连数据库契约0错误10既有警告，b372c1同步418路径；1ba492→a722b1目标ESLint/TypeScript noEmit0。四组用例只编写，没有测试、浏览器、实际搜索/保存、迁移或部署。
+
 ## 2026-10-25 M03候选范围与恢复
 
 M03候选范围：fd702f两AST/compile、四SQLite SQL编译及diff0；eed75d禁数据库契约0错误10既有警告，fe8b25生成418路径；9b84b7→94fa40目标ESLint/TypeScript noEmit0。八组用例只编写，没有测试、浏览器、实际文件或数据库操作、迁移、部署。

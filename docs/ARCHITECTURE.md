@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-25 M04同名核对
+
+manual-catalog增加match_title只读查询，使用与最终保存相同的既有规范题名字段，结果仍按12条分页。前端保存前核对不替代原事务和固定请求回执，没有新模型或迁移。
+
 ## 2026-10-25 M03候选范围与恢复
 
 M03原收件接口增加分页前scope筛选和独立selected_candidate投影，沿同一Work/Edition/Asset/AuditEvent。保存选择版本不自动更新，回执补当前收件身份；无模型、迁移或合并变更。

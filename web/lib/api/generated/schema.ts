@@ -25789,6 +25789,7 @@ export interface operations {
     catalog_admin_manual_catalog_retrieve: {
         parameters: {
             query?: {
+                match_title?: string;
                 page?: number;
                 people?: string;
                 q?: string;
