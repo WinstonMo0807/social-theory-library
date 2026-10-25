@@ -15,10 +15,12 @@ class StorageCommandInput(serializers.Serializer):
     request_id = serializers.UUIDField()
     include_originals = serializers.BooleanField(required=False)
     retry_from_id = serializers.UUIDField(required=False)
+    base_backup_id = serializers.UUIDField(required=False, allow_null=True)
+    expected_base_checksum = serializers.RegexField(r"^[a-f0-9]{64}$", required=False)
     backup_id = serializers.UUIDField(required=False)
     expected_checksum = serializers.RegexField(r"^[a-f0-9]{64}$", required=False)
     verification_id = serializers.UUIDField(required=False)
-    scope = serializers.ChoiceField(choices=["database", "originals"], required=False)
+    scope = serializers.ChoiceField(choices=["database", "originals", "incremental"], required=False)
     enabled = serializers.BooleanField(required=False)
     interval_hours = serializers.IntegerField(min_value=6, max_value=720, required=False)
     first_run_at = serializers.DateTimeField(required=False, allow_null=True)
@@ -47,16 +49,25 @@ class StorageCommandInput(serializers.Serializer):
             return attrs
         if attrs["operation"] == "save_schedule":
             required = {"operation", "request_id", "scope", "enabled", "interval_hours", "expected_version"}
-            allowed = required | {"first_run_at"}
+            allowed = required | {"first_run_at", "base_backup_id", "expected_base_checksum"}
             if required - set(attrs) or set(attrs) - allowed:
                 raise serializers.ValidationError("字段与备份计划操作不匹配。")
+            if attrs['scope'] == 'incremental' and attrs['enabled'] and (not attrs.get('base_backup_id') or not attrs.get('expected_base_checksum')):
+                raise serializers.ValidationError('启用增量计划必须指定已校验全量基准及其归档身份。')
+            if bool(attrs.get('base_backup_id')) != bool(attrs.get('expected_base_checksum')):
+                raise serializers.ValidationError('增量基准编号与归档身份必须同时提供。')
+            if attrs['scope'] != 'incremental' and (attrs.get('base_backup_id') or attrs.get('expected_base_checksum')):
+                raise serializers.ValidationError('只有增量备份计划可以指定基准。')
             return attrs
         required = {"operation", "request_id"} | ({"include_originals"} if attrs["operation"] == "create_backup" else {"backup_id", "expected_checksum"})
         if attrs["operation"] == "close_stalled_verification":
             required.add("verification_id")
-        allowed = required | ({"retry_from_id"} if attrs["operation"] == "create_backup" else set())
+        allowed = required | ({"retry_from_id", "base_backup_id", "expected_base_checksum"} if attrs["operation"] == "create_backup" else set())
         if required - set(attrs) or set(attrs) - allowed:
             raise serializers.ValidationError("字段与本次操作不匹配。")
+        if attrs['operation'] == 'create_backup':
+            if bool(attrs.get('base_backup_id')) != bool(attrs.get('expected_base_checksum')) or attrs.get('base_backup_id') and not attrs['include_originals']:
+                raise serializers.ValidationError('增量备份须包含原件，并提供完整基准及其归档身份。')
         return attrs
 
 
@@ -78,6 +89,9 @@ class BackupVerificationOutput(serializers.Serializer):
 
 
 class BackupOutput(serializers.Serializer):
+    incremental_base_id = serializers.UUIDField(allow_null=True, required=False)
+    incremental_base_checksum = serializers.CharField(allow_blank=True, required=False)
+    can_seed_incremental = serializers.BooleanField(required=False)
     consistency_detail = serializers.CharField(required=False)
     id = serializers.UUIDField()
     status = serializers.CharField()
@@ -145,6 +159,8 @@ class RetentionRule(serializers.Serializer):
 
 
 class BackupScheduleOutput(serializers.Serializer):
+    base_backup_id = serializers.UUIDField(allow_null=True)
+    base_checksum = serializers.CharField(allow_blank=True)
     scope = serializers.CharField()
     label = serializers.CharField()
     enabled = serializers.BooleanField()

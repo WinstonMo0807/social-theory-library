@@ -121,7 +121,18 @@ def dispatch_due_backups():
                 plan.next_run_at = timezone.now() + timedelta(hours=1)
                 plan.save(update_fields=["last_error", "next_run_at", "updated_at"])
                 continue
-            job = BackupJob.objects.create(requested_by=actor, destination_path=str(root), include_originals=plan.scope == "originals")
+            base, manifest = None, {}
+            if plan.scope == 'incremental':
+                from .incremental_backup import require_base, base_identity
+                try:
+                    base = require_base(plan.incremental_base_id)
+                except BackupIntegrityError as error:
+                    plan.last_error = str(error)
+                    plan.next_run_at = timezone.now() + timedelta(hours=1)
+                    plan.save(update_fields=['last_error','next_run_at','updated_at'])
+                    continue
+                manifest = {'incremental_base':base_identity(base)}
+            job = BackupJob.objects.create(requested_by=actor, destination_path=str(root), include_originals=plan.scope in {"originals", "incremental"}, incremental_base=base, manifest=manifest)
             plan.last_job = job
             plan.next_run_at = timezone.now() + timedelta(hours=plan.interval_hours)
             plan.last_error = ""

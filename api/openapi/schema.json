@@ -36407,6 +36407,17 @@
             "BackupOutput": {
                 "type": "object",
                 "properties": {
+                    "incremental_base_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "incremental_base_checksum": {
+                        "type": "string"
+                    },
+                    "can_seed_incremental": {
+                        "type": "boolean"
+                    },
                     "consistency_detail": {
                         "type": "string"
                     },
@@ -36533,6 +36544,14 @@
             "BackupScheduleOutput": {
                 "type": "object",
                 "properties": {
+                    "base_backup_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "base_checksum": {
+                        "type": "string"
+                    },
                     "scope": {
                         "type": "string"
                     },
@@ -36566,6 +36585,8 @@
                     }
                 },
                 "required": [
+                    "base_backup_id",
+                    "base_checksum",
                     "enabled",
                     "interval_hours",
                     "label",
@@ -76114,6 +76135,16 @@
                         "type": "string",
                         "format": "uuid"
                     },
+                    "base_backup_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "expected_base_checksum": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[a-f0-9]{64}$"
+                    },
                     "backup_id": {
                         "type": "string",
                         "format": "uuid"
@@ -76181,10 +76212,11 @@
             "StorageCommandInputScopeEnum": {
                 "enum": [
                     "database",
-                    "originals"
+                    "originals",
+                    "incremental"
                 ],
                 "type": "string",
-                "description": "* `database` - database\n* `originals` - originals"
+                "description": "* `database` - database\n* `originals` - originals\n* `incremental` - incremental"
             },
             "StorageCommandOutput": {
                 "type": "object",

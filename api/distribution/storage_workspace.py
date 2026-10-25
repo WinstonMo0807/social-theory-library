@@ -41,7 +41,9 @@ def file_statistics():
 
 
 def schedule_payload(scope, row=None):
-    return {"scope": scope, "label": "数据库与文件清单" if scope == "database" else "数据库、清单与原件",
+    return {"scope": scope, "label": {"database":"数据库与文件清单", "originals":"数据库、清单与原件", "incremental":"数据库与增量原件"}[scope],
+        "base_backup_id": str(row.incremental_base_id) if row and row.incremental_base_id else None,
+        "base_checksum": row.incremental_base.checksum if row and row.incremental_base_id else "",
         "enabled": bool(row and row.enabled), "interval_hours": row.interval_hours if row else 24,
         "next_run_at": row.next_run_at if row else None, "version": row.updated_at.isoformat() if row else "unconfigured",
         "last_job_id": str(row.last_job_id) if row and row.last_job_id else None,
@@ -83,13 +85,17 @@ def backup_payload(row, *, latest=None):
     manifest = row.manifest if isinstance(row.manifest, dict) else {}
     database_metadata = manifest.get('database_metadata')
     catalog_snapshot = isinstance(database_metadata, dict) and database_metadata.get('catalog_inventory_snapshot') is True
+    base = manifest.get('incremental_base')
     size = manifest.get("archive_bytes")
     duration = (row.completed_at - row.started_at).total_seconds() if row.completed_at and row.started_at else None
     error = "备份未完成，现有归档及原件保留。请核对备份目录、数据库备份工具与后台任务。" if row.status == "failed" else ""
     stalled = backup_stalled(row)
     return {"id": str(row.pk), "status": row.status, "status_label": "执行状态待核对" if stalled else row.get_status_display(),
         "stalled": stalled, "version": row.updated_at.isoformat(),
-        "include_originals": row.include_originals, "scope": "数据库、文件清单与原件" if row.include_originals else "数据库与文件清单",
+        "include_originals": row.include_originals, "scope": "完整数据库与增量原件（依赖全量基准）" if row.incremental_base_id else "数据库、文件清单与原件" if row.include_originals else "数据库与文件清单",
+        "incremental_base_id": str(row.incremental_base_id) if row.incremental_base_id else None,
+        "incremental_base_checksum": base.get('archive_sha256','') if isinstance(base,dict) else '',
+        "can_seed_incremental": bool(row.status=='completed' and row.include_originals and not row.incremental_base_id and latest and latest.status=='completed' and latest.expected_checksum==row.checksum),
         "consistency_detail": ("此归档记录数据库、馆藏文件清单与迁移记录来自同一快照；原件按该清单的哈希复制，恢复仍须隔离核对。" if catalog_snapshot else
                                "此记录尚未提供数据库与馆藏清单共享快照的证据。旧备份不会自动升级此标记，须在隔离恢复时核对。"),
         "archive_name": Path(row.archive_path).name if row.archive_path else "尚未生成归档", "location": "配置的 NAS 备份目录",
@@ -140,7 +146,7 @@ def storage_snapshot(actor, *, page=1, status="", as_of=None):
         group = [row for row in stats if row["file_type"] == label]
         files.append({"label": label, "bytes": sum(max(0, row["bytes"] or 0) for row in group), "count": sum(row["count"] for row in group)})
     can_backup = has_capability(actor, Capability.RUN_BACKUP)
-    schedules = {row.scope: row for row in BackupSchedule.objects.select_related("last_job").all()}
+    schedules = {row.scope: row for row in BackupSchedule.objects.select_related("last_job", "incremental_base").all()}
     rehearsals, reports_limited = restore_reports() if can_backup else ([], False)
     can_cleanup = can_backup and has_capability(actor, Capability.DESTRUCTIVE_MAINTENANCE)
     cleanup_rows = StorageCleanupPlan.objects.filter(requested_by=actor).order_by("-created_at", "-id")
@@ -156,8 +162,8 @@ def storage_snapshot(actor, *, page=1, status="", as_of=None):
             {"label": "数据库与索引", "bytes": None}, {"label": "系统与其他", "bytes": None}],
         "file_statistics_notice": "分类数值来自登记的馆藏文件；不包含未登记缓存、模型、数据库或索引，不能代替所在卷实际占用。",
         "schedule": {"configured": any(row.enabled for row in schedules.values()),
-            "detail": "定时计划通过原任务服务发起完整数据库归档，可选择包含原件；不提供未实现的增量或独立索引备份。任务服务状态与执行结果需分别核对。",
-            "plans": [schedule_payload(scope, schedules.get(scope)) for scope in ("database", "originals")]},
+            "detail": "定时计划通过原任务服务执行。增量原件始终依赖指定的全量基准，数据库仍为完整快照；独立索引备份尚待接入。任务状态与归档校验分别核对。",
+            "plans": [schedule_payload(scope, schedules.get(scope)) for scope in ("database", "originals", "incremental")]},
         "backups": {"count": count, "page": page, "page_size": 20, "as_of": as_of, "results": [backup_payload(row, latest=latest.get(row.pk)) for row in page_rows]},
         "verifications": [verification_payload(row) for row in BackupVerification.objects.order_by("-created_at", "-id")[:30]],
         "rehearsals": rehearsals, "rehearsals_limited": reports_limited,
@@ -250,6 +256,15 @@ def _apply_storage_command(actor, values):
         if values["enabled"] and (values.get("first_run_at") is None or values["first_run_at"] <= timezone.now()):
             raise ValidationError("启用计划时，请明确选择未来的首次执行时间。")
         row = row or BackupSchedule(scope=scope)
+        if scope == 'incremental' and values.get('base_backup_id') and (values['enabled'] or values['base_backup_id'] != row.incremental_base_id):
+            from .incremental_backup import require_base
+            from .backup_integrity import BackupIntegrityError
+            try:
+                row.incremental_base = require_base(values['base_backup_id'], values.get('expected_base_checksum'))
+            except BackupIntegrityError as error:
+                raise ValidationError(str(error)) from error
+        elif scope != 'incremental':
+            row.incremental_base = None
         row.enabled = values["enabled"]
         row.interval_hours = values["interval_hours"]
         row.next_run_at = values.get("first_run_at") if row.enabled else None
@@ -266,7 +281,7 @@ def _apply_storage_command(actor, values):
             raise StorageConflict("请求编号已用于归档校验。")
         existing = BackupJob.objects.filter(pk=identifier).first()
         if existing:
-            if existing.requested_by_id != actor.pk or existing.include_originals != values["include_originals"]:
+            if existing.requested_by_id != actor.pk or existing.include_originals != values["include_originals"] or existing.incremental_base_id != values.get('base_backup_id'):
                 raise StorageConflict("请求编号已用于不同的备份。")
             return {"request_id": str(identifier), "operation": operation, "backup": backup_payload(existing)}
         destination = settings.NAS_BACKUP_ROOT.resolve()
@@ -275,11 +290,21 @@ def _apply_storage_command(actor, values):
         source_id = values.get("retry_from_id")
         if source_id:
             source = BackupJob.objects.filter(pk=source_id, status="failed").first()
-            if source is None or source.include_originals != values["include_originals"]:
+            if source is None or source.include_originals != values["include_originals"] or source.incremental_base_id != values.get('base_backup_id'):
                 raise StorageConflict("原备份状态或范围已变化，请重新读取失败记录。")
-        job = BackupJob.objects.create(pk=identifier, requested_by=actor, destination_path=str(destination), include_originals=values["include_originals"])
+        base = None
+        manifest = {}
+        if values.get('base_backup_id'):
+            from .incremental_backup import require_base, base_identity
+            from .backup_integrity import BackupIntegrityError
+            try:
+                base = require_base(values['base_backup_id'], values['expected_base_checksum'])
+            except BackupIntegrityError as error:
+                raise ValidationError(str(error)) from error
+            manifest = {'incremental_base':base_identity(base)}
+        job = BackupJob.objects.create(pk=identifier, requested_by=actor, destination_path=str(destination), include_originals=values["include_originals"], incremental_base=base, manifest=manifest)
         AuditEvent.objects.create(actor=actor, action="storage_backup_requested", object_type="BackupJob", object_id=str(job.pk), request_id=str(identifier),
-            after={"include_originals": job.include_originals, "retry_from_id": str(source_id) if source_id else None})
+            after={"include_originals": job.include_originals, "retry_from_id": str(source_id) if source_id else None, **manifest})
         from .storage_tasks import enqueue_authorized_backup
         transaction.on_commit(lambda: enqueue_authorized_backup(job.pk))
         return {"request_id": str(identifier), "operation": operation, "backup": backup_payload(job)}
@@ -316,13 +341,25 @@ def _apply_storage_command(actor, values):
             from .storage_tasks import enqueue_verification
             transaction.on_commit(lambda: enqueue_verification(record.pk))
         return {"request_id": str(identifier), "operation": operation, "verification": verification_payload(record)}
-    verified = backup.verifications.filter(status="completed", expected_checksum=backup.checksum).order_by("-completed_at").first()
+    verified = backup.verifications.filter(expected_checksum=backup.checksum).order_by('-created_at', '-pk').first()
+    if verified and verified.status != 'completed':
+        verified = None
+    if verified and backup.incremental_base_id:
+        from .incremental_backup import require_base
+        from .backup_integrity import BackupIntegrityError
+        identity = backup.manifest.get('incremental_base', {}) if isinstance(backup.manifest, dict) else {}
+        try:
+            if not isinstance(identity, dict) or not identity.get('archive_sha256'):
+                raise BackupIntegrityError('完整基准身份缺失。')
+            require_base(backup.incremental_base_id, identity['archive_sha256'])
+        except BackupIntegrityError:
+            verified = None
     return {"request_id": str(identifier), "operation": "restore_plan", "restore_plan": {
         "backup_id": str(backup.pk), "archive_name": Path(backup.archive_path).name, "archive_sha256": backup.checksum,
         "integrity_verified_at": verified.completed_at if verified else None, "restore_executed": False,
         "ready_for_rehearsal": bool(verified), "target": "空白隔离 PostgreSQL 数据库",
         "command": "rehearse_database_restore", "report_option": "--write-report",
-        "requirements": ["先完成归档、数据库文件和所包含原件的校验。", "目标必须为空白隔离数据库，名称明确含 rehearsal/restore/test 等标记，并逐字确认数据库名。",
+        "requirements": ([f"这是增量原件归档，必须同时保留完整基准 {backup.incremental_base_id}；两份归档均需校验。恢复仅提取本归档清单列明的原件，不能把基准中的已删旧文件全部重新公开。数据库使用本次归档的完整快照。"] if backup.incremental_base_id else []) + ["先完成归档、数据库文件和所包含原件的校验。", "目标必须为空白隔离数据库，名称明确含 rehearsal/restore/test 等标记，并逐字确认数据库名。",
             "命令的 --expected-sha256 必须填写本清单的 archive_sha256；使用 --write-report 保存签名演练记录。",
             "沿既有命令检查 PostgreSQL 客户端与服务器版本；不把当前生产库作为目标。", "导入完成后核对账号、文件、索引及实际业务；导入成功本身不能代表整站恢复完成。",
             "生产恢复或不可逆清理须另行提交具体影响与回退方案，并取得最终确认。"]}}

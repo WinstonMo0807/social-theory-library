@@ -7931,6 +7931,10 @@ export interface components {
          */
         BackupJobStatusEnum: "queued" | "running" | "completed" | "failed";
         BackupOutput: {
+            /** Format: uuid */
+            incremental_base_id?: string | null;
+            incremental_base_checksum?: string;
+            can_seed_incremental?: boolean;
             consistency_detail?: string;
             /** Format: uuid */
             id: string;
@@ -7964,6 +7968,9 @@ export interface components {
             results: components["schemas"]["BackupOutput"][];
         };
         BackupScheduleOutput: {
+            /** Format: uuid */
+            base_backup_id: string | null;
+            base_checksum: string;
             scope: string;
             label: string;
             enabled: boolean;
@@ -19837,6 +19844,9 @@ export interface components {
             /** Format: uuid */
             retry_from_id?: string;
             /** Format: uuid */
+            base_backup_id?: string | null;
+            expected_base_checksum?: string;
+            /** Format: uuid */
             backup_id?: string;
             expected_checksum?: string;
             /** Format: uuid */
@@ -19856,9 +19866,10 @@ export interface components {
         /**
          * @description * `database` - database
          *     * `originals` - originals
+         *     * `incremental` - incremental
          * @enum {string}
          */
-        StorageCommandInputScopeEnum: "database" | "originals";
+        StorageCommandInputScopeEnum: "database" | "originals" | "incremental";
         StorageCommandOutput: {
             /** Format: uuid */
             request_id: string;

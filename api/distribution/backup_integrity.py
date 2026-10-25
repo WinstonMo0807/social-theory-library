@@ -31,7 +31,7 @@ def _name(value):
     return str(name)
 
 
-def verify_archive(backup, expected_checksum):
+def verify_archive(backup, expected_checksum, *, return_manifest=False):
     if not re.fullmatch(r"[0-9a-f]{64}", expected_checksum) or backup.checksum != expected_checksum:
         raise BackupIntegrityError("备份校验标识已变化，请重新读取备份记录。")
     archive = archive_path(backup)
@@ -70,7 +70,7 @@ def verify_archive(backup, expected_checksum):
                     while chunk := stream.read(1024 * 1024):
                         digest.update(chunk)
             hashes[name], sizes[name] = digest.hexdigest(), member.size
-    if not isinstance(manifest, dict) or manifest.get("schema") != 1:
+    if not isinstance(manifest, dict) or type(manifest.get("schema")) is not int or manifest["schema"] not in {1, 2}:
         raise BackupIntegrityError("备份清单缺失或版本不受支持。")
     database = _name(manifest.get("database"))
     if "/" in database or database == "manifest.json" or hashes.get(database) != manifest.get("database_sha256"):
@@ -81,7 +81,20 @@ def verify_archive(backup, expected_checksum):
     if not isinstance(assets, list) or len(assets) > 100000 or manifest.get("include_originals") is not backup.include_originals:
         raise BackupIntegrityError("原件清单不完整或备份范围不一致。")
     expected = {database, "manifest.json"}
+    base_originals = {}
+    if manifest['schema'] == 2:
+        from .incremental_backup import require_base, verified_base_manifest, base_identity
+        if not backup.incremental_base_id or not backup.include_originals:
+            raise BackupIntegrityError('增量归档缺少登记的完整基准备份。')
+        base = require_base(backup.incremental_base_id)
+        if manifest.get('incremental_base') != base_identity(base):
+            raise BackupIntegrityError('增量归档的基准身份与原任务不一致。')
+        base_originals = verified_base_manifest(base)
+    elif getattr(backup, 'incremental_base_id', None) or manifest.get('incremental_base'):
+        raise BackupIntegrityError('备份任务与完整/增量归档范围不一致。')
     original_count = 0
+    reused_count = 0
+    original_paths = set()
     if backup.include_originals:
         for asset in assets:
             if not isinstance(asset, dict):
@@ -89,6 +102,18 @@ def verify_archive(backup, expected_checksum):
             if asset.get("kind") != "original":
                 continue
             name = "originals/" + _name(asset.get("relative_path"))
+            if name in original_paths:
+                raise BackupIntegrityError('原件清单包含重复路径。')
+            original_paths.add(name)
+            if manifest['schema'] == 2 and asset.get('backup_storage') == 'base':
+                from .incremental_backup import matches_base
+                if not matches_base(asset, base_originals):
+                    raise BackupIntegrityError('基准备份无法提供当前清单所需的原件。')
+                original_count += 1
+                reused_count += 1
+                continue
+            if manifest['schema'] == 2 and asset.get('backup_storage') != 'archive':
+                raise BackupIntegrityError('增量原件来源未明确登记。')
             if name in expected or hashes.get(name) != asset.get("sha256"):
                 raise BackupIntegrityError("原件备份缺失、重复或校验不一致。")
             if asset.get("byte_size") and sizes.get(name) != asset["byte_size"]:
@@ -100,7 +125,9 @@ def verify_archive(backup, expected_checksum):
     after = archive.stat()
     if (before.st_ino, before.st_size, before.st_mtime_ns) != (after.st_ino, after.st_size, after.st_mtime_ns):
         raise BackupIntegrityError("归档在校验期间发生变化，请重新校验。")
-    return {"archive_sha256": expected_checksum, "archive_bytes": before.st_size,
+    result = {"archive_sha256": expected_checksum, "archive_bytes": before.st_size,
         "database_verified": True, "database_bytes": sizes[database],
         "originals_included": backup.include_originals, "originals_verified": original_count,
-        "restore_verified": False, "detail": "归档、数据库文件及所包含原件的校验已完成；尚未执行恢复演练。"}
+        "base_originals_verified": reused_count,
+        "restore_verified": False, "detail": ("增量归档与完整基准均已校验；恢复原件需同时保留两份归档。尚未执行恢复。" if manifest['schema'] == 2 else "归档、数据库文件及所包含原件的校验已完成；尚未执行恢复演练。")}
+    return (result, manifest) if return_manifest else result

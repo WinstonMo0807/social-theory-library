@@ -110,6 +110,16 @@ def create_backup_archive(self, job_id):
         with tempfile.TemporaryDirectory(prefix="library-backup-", dir=destination) as temporary:
             staging = Path(temporary)
             _require_backup_delivery(job)
+            base = None
+            base_originals = {}
+            if job.incremental_base_id:
+                from .incremental_backup import require_base, verified_base_manifest, base_identity, matches_base
+                expected_base = job.manifest.get('incremental_base') if isinstance(job.manifest, dict) else None
+                if not isinstance(expected_base, dict) or expected_base.get('id') != str(job.incremental_base_id) or not expected_base.get('archive_sha256'):
+                    raise RuntimeError('增量备份的基准身份未完整登记。')
+                base = require_base(job.incremental_base_id, expected_base['archive_sha256'])
+                base_originals = verified_base_manifest(base)
+                _require_backup_delivery(job)
             database, migration_heads, assets = capture_backup_snapshot(staging)
             _require_backup_delivery(job)
             storage = Asset._meta.get_field("file").storage
@@ -118,6 +128,10 @@ def create_backup_archive(self, job_id):
                 source = Path(storage.path(record["relative_path"]))
                 record["exists"] = source.exists()
                 if job.include_originals and record["kind"] == Asset.Kind.ORIGINAL:
+                    if base:
+                        record['backup_storage'] = 'base' if matches_base(record, base_originals) else 'archive'
+                        if record['backup_storage'] == 'base':
+                            continue
                     identifier = record["id"]
                     if not source.is_file():
                         raise RuntimeError(f"原始文件 {identifier} 不存在，未生成不完整备份。")
@@ -132,7 +146,8 @@ def create_backup_archive(self, job_id):
                             or (record["byte_size"] and target.stat().st_size != record["byte_size"])):
                         raise RuntimeError(f"原始文件 {identifier} 的备份副本校验失败，源文件保留。")
             manifest = {
-                "schema": 1,
+                "schema": 2 if base else 1,
+                **({'incremental_base': base_identity(base)} if base else {}),
                 "created_at": backup_created_at.isoformat(),
                 "database": database.filename,
                 "database_sha256": database.sha256,
@@ -162,8 +177,9 @@ def create_backup_archive(self, job_id):
             "created_at": backup_created_at.isoformat(),
             "asset_count": len(assets),
             "included_original_count": sum(
-                1 for asset in assets if asset["kind"] == Asset.Kind.ORIGINAL and job.include_originals
+                1 for asset in assets if asset["kind"] == Asset.Kind.ORIGINAL and job.include_originals and asset.get('backup_storage') != 'base'
             ),
+            **({'incremental_base': base_identity(base), 'base_original_count': sum(asset.get('backup_storage') == 'base' for asset in assets)} if base else {}),
             "archive_bytes": archive.stat().st_size,
             "archive_sha256": job.checksum,
             "database": database.filename,
