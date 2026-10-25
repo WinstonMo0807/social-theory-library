@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-26 R05导出入口
+
+R05笔记导出使用原ResearchProject/turns一致快照；前后账户核验与可取消请求，前端只输出已保存笔记投影，不导出模型待确认内容。
+
 ## 2026-10-26 R05书目与封面
 
 研究来源投影从已发布目录快照提供document_type/language；跨页沿首个同版来源传递。封面复用现有MediaPlacement，失效来源不保留书目/封面快照。

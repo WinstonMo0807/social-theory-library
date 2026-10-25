@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CircleAlert, GitBranch, LoaderCircle, RefreshCw, Search, Send, X } from "lucide-react";
-import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowRight, CircleAlert, Download, GitBranch, History, LoaderCircle, RefreshCw, Save, Search, Send, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ApiRequestError } from "@/lib/api";
-import { PrivateOwnerVerificationError } from "@/lib/api/private-owner";
+import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
+import { researchNotesMarkdown } from "@/lib/research-notes-export";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { Dialog } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -15,7 +16,7 @@ import { ResearchTabRecovery } from "./research-tab-recovery";
 import { useResearchSelectionDraft } from "./research-selection-draft";
 import { ResearchEvidenceCard, ResearchEvidenceCover, researchDocumentTypes, researchEvidenceLocation } from "./research-evidence-card";
 import { parsePendingResearchTurn, parseResearchBranchDraft, type PendingResearchTurn, type ResearchBranchDraft } from "@/lib/research-pending-turn";
-import { cancelResearchTurn, changeResearchSelection, lookupResearchTurnRequest, sendResearchTurnCommand, retryResearchTurn, type ResearchTurnCommand, updateResearchProject, type QueryScope, type ResolvedEvidence } from "@/lib/api/research.client";
+import { cancelResearchTurn, changeResearchSelection, exportResearchRecord, lookupResearchTurnRequest, sendResearchTurnCommand, retryResearchTurn, type ResearchTurnCommand, updateResearchProject, type ProjectData, type QueryScope, type ResolvedEvidence } from "@/lib/api/research.client";
 import { researchEvidenceKey, researchEvidenceReference, researchReaderHref, researchScopeLabel, researchScopeInput } from "@/lib/api/research-evidence";
 import { isTaskRunning } from "@/lib/api/task-polling";
 import { ResearchCenterNav } from "./research-center-nav";
@@ -40,6 +41,8 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
   const { record, turns, pending, run, refresh, requestId, notice, actionError, pollPaused } = workspace;
   const [submission, setSubmission] = useState<PendingResearchTurn | null>(null);
   const [localError, setLocalError] = useState("");
+  const exportController = useRef<AbortController | null>(null);
+  useEffect(() => () => exportController.current?.abort(), []);
   const owner = String(workspace.session.user?.id || ""), projectId = record?.id || "";
   const parsePending = useCallback((value: unknown) => parsePendingResearchTurn(value, projectId), [projectId]);
   const receipt = useResearchTabDraft({ owner, project: projectId, kind: "turn-request", value: submission, parseInput: parsePending });
@@ -148,6 +151,24 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
     }, "已重新排队，上一轮材料仍然保留。");
     if (ok) { setActiveId(nextId); setPane("evidence"); }
   }
+  async function saveScope() {
+    if (!record || editingLocked || !validScope) return;
+    const ok = await run(() => updateResearchProject(record.id, { expected_revision: record.revision, scope: researchScopeInput(chosenScope) }, owner), "已保存后续研究范围，既有轮次和未发送追问保留。");
+    if (ok) setScopeChoice("saved");
+  }
+  async function exportNotes() {
+    if (!record || requestLocked) return;
+    exportController.current?.abort();
+    const controller = new AbortController(); exportController.current = controller;
+    await run(async () => {
+      const payload = await withPrivateOwner(owner, () => exportResearchRecord<ProjectData>("research-projects", record.id, owner, controller.signal), controller.signal);
+      if (payload.id !== record.id) throw new Error("导出研究的身份无法核对，请重新读取。");
+      const markdown = researchNotesMarkdown(payload);
+      if (!markdown) throw new Error("这份研究还没有服务器已保存的笔记。请先保存研究笔记、选材备注或比较笔记。");
+      const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" }));
+      const anchor = document.createElement("a"); anchor.href = url; anchor.download = `research-notes-${record.id}.md`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, "已生成已保存笔记的 Markdown 下载文件；当前未保存输入未包含在内。");
+  }
   function selection(ref: ResolvedEvidence, remove: boolean) {
     if (!record || selectionDraft.blocked) return;
     if (selectionDraft.shouldStage()) { selectionDraft.stage(ref, remove); return; }
@@ -170,7 +191,7 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
   const statusText = current?.data.return_context?.kind === "comparison_draft" ? "本轮为比较草稿生成。可在证据比较中查看草稿，已有选材和本人笔记保留。" : isTaskRunning(activeStatus) ? "正在核对来源与页码，已有材料仍可阅读。" : activeStatus === "partial" ? "部分检索已完成，可保留现有材料并重试。" : activeStatus === "failed" ? "本轮未完成，问题与材料已保留。" : ["canceled", "cancelled"].includes(activeStatus) ? "本轮已取消，原有轮次与选材继续保留。" : current ? "可以继续核对来源、选择材料或提出后续问题。" : "提交问题后开始第一轮研究。";
   return <Frame>
     <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><Link href="/account/research">我的研究</Link><span>/</span><strong>持续研究</strong></nav>
-    <header className="stl4-research-heading stl4-research-workspace-heading"><h1>持续研究工作区</h1><p>{record.data.title || record.data.question || "未命名研究"}</p><span className="stl4-research-privacy">仅本人可见 · 问题、选材和比较记录保存在此会话</span></header>
+    <header className="stl4-research-heading stl4-research-workspace-heading"><div className="stl4-research-heading-copy"><h1>持续研究工作区</h1><p>{record.data.title || record.data.question || "未命名研究"}</p><span className="stl4-research-privacy">仅本人可见 · 问题、选材和比较记录保存在此会话</span></div><div className="stl4-research-workspace-tools"><button type="button" disabled={requestLocked} onClick={()=>void exportNotes()}><Download size={14}/>导出笔记</button><Link href={`/account/research/${record.id}/history`}><History size={14}/>查看与恢复历史</Link><button type="button" disabled={editingLocked || !validScope} onClick={()=>void saveScope()}><Save size={14}/>保存当前范围</button><small>导出与历史只包含已保存资料；追问需另行发送。</small></div></header>
     <section className="stl4-research-workspace" aria-label="持续研究工作区" data-workspace-pane={pane}>
       <ResearchCenterNav active="research" />
       {submission ? <div className="stl4-research-source-notice" role="status"><strong>{pending ? "正在提交原请求" : "原请求结果待核对"}</strong><p className="stl4-research-notes-copy">{submission.command.data.question}</p><p>本次问题与范围已固定。服务器可能已经接收，请先查回；重试沿用原请求，不会再建一轮。{receipt.enabled && receipt.savedAt && !receipt.error ? "已按你的允许保留本标签页恢复记录。" : "尚无已确认的本机恢复记录，离开本页可能丢失查回入口。"}</p><div className="stl4-comparison-inline-actions"><button type="button" disabled={pending} onClick={()=>void lookupSubmission()}>查回原请求</button><button type="button" disabled={pending} onClick={()=>void send(submission)}>重试原请求</button></div></div> : null}
@@ -189,7 +210,7 @@ function Workspace({ workspace, initialTurn }: { workspace: ReturnType<typeof us
         <section className="stl4-research-workspace-notes"><ResearchProjectNotes workspace={{ ...workspace, pending: requestLocked }}/> </section>
         <aside className="stl4-research-selected" aria-label="当前选材"><header><h2>当前选材</h2><span>{selected.length}</span></header>{selected.length ? <ol>{selected.map((ref, index) => <li key={researchEvidenceKey(ref)}><ResearchEvidenceCover reference={ref} small/><div><strong>{titleOf(ref, index)}</strong>{ref.source_status === "available" ? <small>{[ref.authors?.join("、"),ref.publication_year].filter(Boolean).join(" · ") || "出版信息待核对"}</small> : null}<small>{locationOf(ref)}{ref.source_status !== "available" ? " · 来源待核对" : ""}</small></div><button aria-label={`移除${titleOf(ref, index)}`} disabled={selectionDraft.blocked || Boolean(selectionDraft.statusFor(researchEvidenceKey(ref)))} onClick={() => selection(ref, true)}><X size={14} /></button></li>)}</ol> : <p>从本轮证据中选择材料。</p>}<Link className="stl4-research-secondary" href={`/account/research/${record.id}/history`}>研究过程回放 <ArrowRight size={14} /></Link><Link className="stl4-research-secondary" href={`/account/research/${record.id}/compare`}>比较当前选材 <ArrowRight size={14} /></Link><Link className="stl4-research-secondary" href={`/account/sharing/new?kind=research&source=${record.id}`}>分享或提交策划 <ArrowRight size={14} /></Link><ResearchMemoryReminders turn={current?.data} /></aside>
       </div>
-      <form className="stl4-research-prompt" onSubmit={(event) => void submit(event)}><label htmlFor="research-follow-up">{current ? `承接第 ${currentNumber} 轮继续提问` : "提出研究问题"}</label><div><textarea id="research-follow-up" value={question} disabled={requestLocked} onChange={(event) => setQuestion(event.target.value)} placeholder="基于原文材料继续追问……" minLength={2} maxLength={1200} rows={2} required /><button type="submit" disabled={editingLocked || question.trim().length < 2 || !validScope}>{pending ? <LoaderCircle className="stl4-spin" size={15} /> : <Send size={15} />}发送</button></div><fieldset className="stl4-research-scope"><legend>下一轮检索范围</legend>{([["saved", "已保存的范围"], ["selected", "仅当前选材"], ["library", "扩展至全馆"]] as const).map(([value, label]) => <label key={value}><input type="radio" name="research-scope" value={value} checked={scopeChoice === value} disabled={editingLocked} onChange={() => setScopeChoice(value)} />{label}</label>)}<button type="button" className="stl4-research-text-button" disabled={editingLocked || !validScope || scopeChoice === "saved"} onClick={() => void run(() => updateResearchProject(record.id, { expected_revision: record.revision, scope: chosenScope }), "已保存后续研究范围，既有轮次不变。").then((ok) => { if (ok) setScopeChoice("saved"); })}>保存为后续范围</button></fieldset><p className="stl4-research-scope-caption">{scopeText}{!validScope ? " · 请先加入可用原文材料" : ""}</p><ResearchPromptRecovery owner={String(workspace.session.user!.id)} project={record.id} input={{question,scope:scopeChoice}} disabled={requestLocked} onRestore={value=>{setQuestion(value.question);setScopeChoice(value.scope);}} onReconnect={()=>{if(!editingLocked)refresh();}}/></form>
+      <form className="stl4-research-prompt" onSubmit={(event) => void submit(event)}><label htmlFor="research-follow-up">{current ? `承接第 ${currentNumber} 轮继续提问` : "提出研究问题"}</label><div><textarea id="research-follow-up" value={question} disabled={requestLocked} onChange={(event) => setQuestion(event.target.value)} placeholder="基于原文材料继续追问……" minLength={2} maxLength={1200} rows={2} required /><button type="submit" disabled={editingLocked || question.trim().length < 2 || !validScope}>{pending ? <LoaderCircle className="stl4-spin" size={15} /> : <Send size={15} />}发送</button></div><fieldset className="stl4-research-scope"><legend>下一轮检索范围</legend>{([["saved", "已保存的范围"], ["selected", "仅当前选材"], ["library", "扩展至全馆"]] as const).map(([value, label]) => <label key={value}><input type="radio" name="research-scope" value={value} checked={scopeChoice === value} disabled={editingLocked} onChange={() => setScopeChoice(value)} />{label}</label>)}<button type="button" className="stl4-research-text-button" disabled={editingLocked || !validScope || scopeChoice === "saved"} onClick={() => void saveScope()}>保存为后续范围</button></fieldset><p className="stl4-research-scope-caption">{scopeText}{!validScope ? " · 请先加入可用原文材料" : ""}</p><ResearchPromptRecovery owner={String(workspace.session.user!.id)} project={record.id} input={{question,scope:scopeChoice}} disabled={requestLocked} onRestore={value=>{setQuestion(value.question);setScopeChoice(value.scope);}} onReconnect={()=>{if(!editingLocked)refresh();}}/></form>
       {!receiptAtTop && !branchOpen ? <details className="stl4-research-prompt-recovery"><summary>未确认请求的断网恢复设置</summary>{receiptControls}</details> : null}
       {localError ? <p className="stl4-research-action-message is-error" role="alert">{localError}</p> : null}
       {notice ? <p className="stl4-research-action-message" role="status">{notice}</p> : null}{actionError ? <p className="stl4-research-action-message is-error" role="alert">{actionError} 输入内容仍保留，请刷新状态后重试。</p> : null}

@@ -154,8 +154,8 @@ export function listResearchRecords<T>(collection: ResearchCollection, page = 1,
 export function readResearchRecord<T>(collection: ResearchCollection, id: string, signal?: AbortSignal) {
   return privateRequest<ResearchRecord<T>>(researchRecordPath(collection, id), { signal });
 }
-export function exportResearchRecord<T>(collection: ResearchCollection, id: string, ownerId?: string) {
-  return privateRequest<ResearchRecord<T> & { schema_version: number; turns?: ResearchRecord<TurnData>[] }>(`${researchRecordPath(collection, id)}export/`, ownerId ? { headers: { "X-Reader-Owner": ownerId } } : {});
+export function exportResearchRecord<T>(collection: ResearchCollection, id: string, ownerId?: string, signal?: AbortSignal) {
+  return privateRequest<ResearchRecord<T> & { schema_version: number; turns?: ResearchRecord<TurnData>[] }>(`${researchRecordPath(collection, id)}export/`, { signal, ...(ownerId ? { headers: { "X-Reader-Owner": ownerId } } : {}) });
 }
 export function deleteResearchRecord(collection: Exclude<ResearchCollection, "research-turns">, id: string, revision: number) {
   return write<void>(researchRecordPath(collection, id), { expected_revision: revision }, "DELETE");
