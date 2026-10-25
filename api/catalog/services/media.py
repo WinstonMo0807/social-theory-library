@@ -347,7 +347,7 @@ def select_work_cover(edition_id, media_id, *, actor):
 def media_reference_inventory(media_id, *, actor=None):
     """Read persisted current/draft/history references without opening files."""
     from django.db.models import Q
-    from catalog.models import CatalogPublicationMedia, EditorialRevisionMedia, Work, Person, ScholarProfile, KnowledgeNode, ReadingPath, Discipline, Subdiscipline, RecommendationIssue
+    from catalog.models import CatalogPublicationMedia, EditorialRevisionMedia, Work, Person, ScholarProfile, KnowledgeNode, ReadingPath, Discipline, Subdiscipline, Topic, RecommendationIssue
     from catalog.services.publication_commands import catalog_publication_state
 
     references = []
@@ -369,7 +369,7 @@ def media_reference_inventory(media_id, *, actor=None):
         references.append({"id": f"project:{project.pk}", "kind": "canonical", "label": project.title,
             "detail": "策划项目选图", "editor_url": f"/admin/recommendations?project={project.pk}", "public_url": ""})
     from catalog.models import TheoryTimelineEvent, TimelineEvidenceImage
-    target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline, "recommendation_issue": RecommendationIssue, "timeline_event": TheoryTimelineEvent}
+    target_models = {"work": Work, "scholar_profile": ScholarProfile, "knowledge_node": KnowledgeNode, "reading_path": ReadingPath, "discipline": Discipline, "subdiscipline": Subdiscipline, "topic": Topic, "recommendation_issue": RecommendationIssue, "timeline_event": TheoryTimelineEvent}
     labels = {}
     for kind, model in target_models.items():
         ids = [row.editorial_revision.target_id for row in drafts if row.editorial_revision.target_type == kind]
@@ -384,6 +384,8 @@ def media_reference_inventory(media_id, *, actor=None):
         route = {"work": f"/admin/library/works/{target_id}", "scholar_profile": f"/admin/scholars/{target_id}", "knowledge_node": f"/admin/theories/{target_id}", "reading_path": f"/admin/reading-paths?path={target_id}", "discipline": f"/admin/disciplines?discipline={target_id}", "subdiscipline": f"/admin/subdisciplines?subdiscipline={target_id}"}.get(kind, "")
         if kind == "recommendation_issue":
             route = f"/admin/recommendations/issues/{target_id}"
+        elif kind == "topic":
+            route = f"/admin/topics/{target_id}"
         elif kind == "timeline_event":
             route = f"/admin/theories/timeline?event={target_id}"
         elif kind == "site_content":
@@ -411,10 +413,32 @@ def media_reference_inventory(media_id, *, actor=None):
             public = target.editorial_status == "published"
             references.append({"id": f"{kind}:{target.pk}", "kind": "current_public" if public else "canonical", "label": target.name,
                                "detail": "学科页面图片", "editor_url": f"/admin/{kind}s?{kind}={target.pk}", "public_url": f"{public_prefix}{target.slug}" if public else ""})
+    # Topic readers use the latest published snapshot, which may deliberately
+    # retain a different image/name/slug from the canonical editor record.
+    from catalog.services.public_topics import _base as public_topics, _formal as formal_topic
+    topic_ids = {row.editorial_revision.target_id for row in drafts if row.editorial_revision.target_type == "topic"}
+    canonical_topics = list(Topic.objects.filter(hero_rendition__media_id=media_id).order_by("pk"))
+    topic_ids.update(topic.pk for topic in canonical_topics)
+    renditions = {str(identifier) for identifier in MediaRendition.objects.filter(media_id=media_id).values_list("pk", flat=True)}
+    published_selections = {}
+    for observed in public_topics(counts=False).filter(pk__in=topic_ids).order_by("pk"):
+        topic = formal_topic(observed)
+        selection = getattr(topic, "_public_image_selection", None)
+        rendition = selection.get("rendition_id") if selection is not None else topic.hero_rendition_id
+        if str(rendition) not in renditions:
+            continue
+        published_selections[topic.pk] = str(rendition)
+        references.append({"id": f"topic-public:{topic.pk}", "kind": "current_public", "label": topic.name,
+                           "detail": "主题正式页面横幅", "editor_url": f"/admin/topics/{topic.pk}", "public_url": f"/topics/{topic.slug}"})
+    for topic in canonical_topics:
+        if published_selections.get(topic.pk) == str(topic.hero_rendition_id):
+            continue
+        references.append({"id": f"topic:{topic.pk}", "kind": "canonical", "label": topic.name,
+                           "detail": "当前主题选图，实际公开图片以正式修订为准", "editor_url": f"/admin/topics/{topic.pk}", "public_url": ""})
     for row in TimelineEvidenceImage.objects.filter(rendition__media_id=media_id).select_related("event").order_by("event_id", "source_key"):
         public = row.source_key == "primary" and row.event.review_status == "approved"
         references.append({"id": f"timeline:{row.pk}", "kind": "current_public" if public else "canonical",
                            "label": row.event.title, "detail": "事件主要出处展示图片" if row.source_key == "primary" else "事件补充出处图片，仅编辑可见",
                            "editor_url": f"/admin/theories/timeline?event={row.event_id}",
                            "public_url": f"/theories/timeline?event={row.event_id}" if public else ""})
-    return {"count": len(references), "results": references, "scope": "持久媒体选择、编辑修订与公开修订引用；旧未迁入媒体库的文件不在此范围", "reader_private_data": "not_read"}
+    return {"count": len(references), "results": references, "scope": "当前账户可见的已登记选图、编辑修订与公开修订引用；旧文件未迁入媒体库的引用不在此范围。引用条数不等于各端实际展示次数。", "reader_private_data": "not_read"}
