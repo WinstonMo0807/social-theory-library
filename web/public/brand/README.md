@@ -62,3 +62,6 @@ Citation illustration backplates: `stl4-support-citation-stage-final-r2.png` is 
 All are 2× clips of the PDF. The catalog illustration is split at the search-control boundary so neither search buttons nor text are burned into the artwork. The live search form and opinion link remain HTML. The main shell follows replacement PDF24; advanced fields, multiversion expansion and state behavior inherit PDF25–27. PDF28 supplies opinion layout; PDF29 explicitly supplies the 500-character counter and account history state. Its saved-history description follows the actual opted-in account behavior instead of falsely claiming that server-retained records exist only on the device.
 
 Evidence brand (PDF30, 2× clips): `stl-lockup-evidence-desktop-final-r2.png` at `51,19,271,73`; mobile at `1346,66,1462,114`. Header search and account controls are live HTML. The unimplemented EN control is recorded as an outstanding requirement; no inert language toggle is added.
+
+
+PDF33/34/35文献详情品牌（2026-10-26）：`stl-lockup-work-{desktop,mobile}-final-r2.png`分别取33页原图(52,31,173,73)/(1007,31,1121,73)；journal取34页(73,10,320,48)/(1281,56,1395,93)；work-readable取35页(65,9,247,40)/(1253,24,1399,50)。2倍页面clip，仅提取原像素，不重画。footer-work取35页(43,997,169,1022)，footer-journal取34页(73,963,393,991)。三种头部由当前页面article/readable状态决定；所有业务封面/学者肖像仍来自真实馆藏，不把PDF示例书灌入数据库。

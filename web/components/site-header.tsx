@@ -35,7 +35,7 @@ export function LibraryMark({ className = "" }: { className?: string }) {
     src="/brand/stl-mark-final-r2.png" width={61} height={45} unoptimized />;
 }
 
-const referenceBrandSize = { about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38], evidence: [220,54] } as const;
+const referenceBrandSize = { about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38], evidence: [220,54], work: [121,42], journal: [247,38], "work-readable": [182,31] } as const;
 export function Wordmark({ config = defaultSiteConfig, home = false, reference }: { config?: SiteConfig; home?: boolean; reference?: keyof typeof referenceBrandSize }) {
   if (reference) return <picture className="brand-reference-lockup" data-brand-variant={reference}><source media="(max-width: 700px)" srcSet={`/brand/stl-lockup-${reference}-mobile-final-r2.png`} /><Image src={`/brand/stl-lockup-${reference}-desktop-final-r2.png`} alt={config.site_name} width={referenceBrandSize[reference][0]} height={referenceBrandSize[reference][1]} unoptimized /></picture>;
   return (
@@ -75,6 +75,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   ] as const;
   const readerCenterRoute = pathname === "/account" && !preview;
   const supportRoute = pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback";
+  const workRoute = pathname.startsWith("/works/");
   const evidenceRoute = pathname === "/explore/evidence";
   const exploreLandingRoute = pathname === "/explore" && searchParams.size === 0;
   const brandReference = pathname === "/about" ? "about" : pathname.startsWith("/help/") ? "article" : supportRoute ? "support" : exploreLandingRoute ? "explore" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined;
@@ -122,13 +123,14 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-edit-section={preview ? "brand" : undefined}
       data-stl-home={pathname === "/" || preview ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : undefined}
+      data-stl-work={workRoute ? "true" : undefined}
       data-stl-support={supportRoute ? brandReference : undefined}
       data-stl-explore={exploreLandingRoute ? "landing" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined}
       className="site-header"
       data-ui-scope="stl4"
     >
       <Link className="logo-link" href="/" prefetch={false}>
-        <Wordmark config={config} home={pathname === "/" || preview} reference={brandReference} />
+        {workRoute ? <span className="brand-work-variants"><Wordmark config={config} reference="work" /><Wordmark config={config} reference="work-readable" /><Wordmark config={config} reference="journal" /></span> : <Wordmark config={config} home={pathname === "/" || preview} reference={brandReference} />}
       </Link>
       <nav className="desktop-nav" aria-label="主导航">
         {headerNavigation.map(([href, label]) => {

@@ -1,5 +1,7 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+2026-10-26最新：API r9 `f95578893171`、Web r10 `b8a976bc652a`、Discovery r2。PDF30–32视觉与availability真实筛选已更新，原账号/批注/数据库保持；恢复点.env.before-evidence-r9/r10只留NAS。Web r11文献详情已更新，当前8bf383419b1e；恢复点.env.before-work-r11。当前空库未操作有数据文献。无迁移、检索测评或公网切换。
+
 2026-10-26最新：API r7 `36667a3509da`、Discovery r2、Web r8。仅探索/馆藏/观点视觉和facets.total投影更新，原账号、批注和数据库保留。恢复点.env.before-web-r6、.env.before-catalog-r7、.env.before-web-r8只留NAS。下文r5等均是历史，不能覆盖当前。公网未切换。
 
 2026-10-26当前：API r6 `57c1db0af199`、Discovery r2、Web r5 `0fdefd11deb0`；R33视觉更新，已有数据/13服务保留。最新操作和恢复见VISUAL_FIDELITY_20261026.md与RECOVERY.md；下文初始候选摘要是历史，不能覆盖当前版本。公网切换仍未执行。

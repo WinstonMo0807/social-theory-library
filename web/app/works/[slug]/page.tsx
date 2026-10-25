@@ -23,5 +23,5 @@ export default async function WorkDetailPage({
   const { slug } = await params;
   const work = await loadWork(slug);
   if (!work) notFound();
-  return <WorkDetailView key={work.editionId || work.slug} work={work} footer={<SiteFooter />} />;
+  return <WorkDetailView key={work.editionId || work.slug} work={work} footer={work.kind === "期刊论文" || work.readerHref ? <SiteFooter reference={work.kind === "期刊论文" ? "journal" : "work"} /> : null} />;
 }

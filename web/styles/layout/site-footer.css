@@ -39,3 +39,12 @@
 .site-footer--opinion > a { padding:0; border:0; }
 .site-footer--opinion p { font-size:12px; letter-spacing:.14em; }
 .site-footer--opinion p small { display:block; font-size:9px; letter-spacing:.2em; line-height:1.8; }
+
+.site-footer.site-footer--work { justify-content:flex-start; min-height:46px; padding:10px 28px; gap:22px; border-top:1px solid var(--night-line,#e4e5e2); background:var(--night-white,#fffefa); }
+.site-footer--work > a { padding-right:18px; }
+.site-footer--work img { height:auto; }
+.site-footer--work p { font-size:12px; }
+.site-footer--work small { font:10px var(--serif); letter-spacing:.12em; }
+.site-footer--work-journal > a { border:0; }
+.site-footer--work-journal p { margin-inline:auto; }
+@media(max-width:720px) { .site-footer.site-footer--work { display:none; } }

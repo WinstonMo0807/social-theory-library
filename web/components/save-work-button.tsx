@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark } from "lucide-react";
+import { Bookmark, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -46,9 +46,11 @@ export function SavedWorkStatusProvider({ workIds, children }: { workIds: string
 export function SaveWorkButton({
   workId,
   compact = false,
+  icon = "bookmark",
 }: {
   workId?: string;
   compact?: boolean;
+  icon?: "bookmark" | "star";
 }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<{ key: string; id: string | null } | null>(null);
@@ -145,7 +147,7 @@ export function SaveWorkButton({
       aria-label={effectiveSavedId ? "取消收藏" : "收藏"}
       title={readError || undefined}
     >
-      <Bookmark size={15} fill={effectiveSavedId ? "currentColor" : "none"} />
+      {icon === "star" ? <Star size={15} fill={effectiveSavedId ? "currentColor" : "none"} /> : <Bookmark size={15} fill={effectiveSavedId ? "currentColor" : "none"} />}
       {!compact ? (effectiveSavedId ? "已收藏" : "收藏") : null}
     </ActionButton>
   );

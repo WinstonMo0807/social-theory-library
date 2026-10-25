@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ListPlus, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { readAllPages } from "@/lib/api/read-all-pages";
@@ -12,7 +12,7 @@ import { Dialog } from "./ui/dialog";
 
 type ReadingListChoice = { id: string; title: string; items: { work: string }[] };
 
-export function AddWorkToListButton({ workId, title }: { workId: string; title: string }) {
+export function AddWorkToListButton({ workId, title, children }: { workId: string; title: string; children?: ReactNode }) {
   const router = useRouter();
   const { state: session } = usePublicSession();
   const owner = session.status === "authenticated" && session.user ? String(session.user.id) : "";
@@ -55,7 +55,7 @@ export function AddWorkToListButton({ workId, title }: { workId: string; title: 
     } finally { if (epoch === generation.current) setBusy(false); }
   }
   const alreadyAdded = lists?.find(list => list.id === selected)?.items.some(item => item.work === workId);
-  return <><button type="button" onClick={show} disabled={session.status === "loading"}><ListPlus size={14} />加入书单</button>
+  return <><button type="button" onClick={show} disabled={session.status === "loading"}>{children || <><ListPlus size={14} />加入书单</>}</button>
     <Dialog open={open && Boolean(owner)} className="stl4-catalog-list-dialog" aria-label="加入书单" initialFocusRef={closeRef} onRequestClose={() => { if (!busy) setOpen(false); }}>
       <header><h2>加入书单</h2><button type="button" ref={closeRef} aria-label="关闭书单选择" disabled={busy} onClick={() => setOpen(false)}><X size={18} /></button></header><p>{title}</p>
       {lists ? lists.length ? <label>选择你的书单<select value={selected} onChange={event => { setSelected(event.target.value); setMessage(""); }} disabled={busy}><option value="">请选择</option>{lists.map(list => <option key={list.id} value={list.id}>{list.title}{list.items.some(item => item.work === workId) ? "（已加入）" : ""}</option>)}</select></label> : <p>还没有书单。<Link href="/account/collections">前往我的书单创建</Link></p> : !message ? <p role="status">正在读取你的书单…</p> : <button type="button" onClick={() => { setMessage(""); setAttempt(value => value + 1); }}>重新读取书单</button>}
