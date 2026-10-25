@@ -31,7 +31,7 @@ const empty:Form={work:{title:"",document_type:"book",language:"zh-CN",subtitle:
 function PersonField({owner,row,onChange,disabled}:{owner:string;row:PersonRow;onChange:(next:PersonRow)=>void;disabled:boolean}){
   const [opened,setOpened]=useState(false),[query,setQuery]=useState(""),[page,setPage]=useState(1);
   const name=row.name.trim();
-  useEffect(()=>{if(!opened||!name)return;const timer=setTimeout(()=>setQuery(name),300);return()=>clearTimeout(timer);},[name,opened]);
+  useEffect(()=>{if(!opened||!name||name===query)return;const timer=setTimeout(()=>{setPage(1);setQuery(name);},300);return()=>clearTimeout(timer);},[name,opened,query]);
   const load=useCallback(async(path:string,signal:AbortSignal)=>{const result=await apiRequest<Workspace>(path,{signal,headers:{"X-Editor-Owner":owner},cache:"no-store"},getServerSessionCredential(),false);if(result.owner_id!==owner)throw new PrivateOwnerVerificationError("人物候选与当前账户不匹配，请重新读取。",403);return result;},[owner]);
   const people=usePersistentWorkspace<Workspace>(opened&&name&&name===query?`/catalog/admin/manual-catalog/?${new URLSearchParams({people:query,people_page:String(page)})}`:"",owner,undefined,load);
   const searching=name!==query||people.loading;
