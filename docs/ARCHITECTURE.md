@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-10-26 隔离验收候选与旧库兼容
+
+compose.stl4-preview.yaml沿同一应用/接口/任务架构提供临时验收副本，专用数据库、存储、模型副本和Cookie；不开邮件外发或Beat，不自动同步生产。13服务入口及恢复见stl4/CUTOVER_CANDIDATE_20261026.md。0089仅为历史3.0.9.1保留的三个非空KnowledgeNode列补数据库默认值，既有行、列及迁移记录保持；只迁移预览。offline/api.Dockerfile避免基底镜像的旧应用文件污染当前源码，未改技术栈。
+
 ## 2026-10-26 M11/M12分段双页标签与诊断定位
 
 outline-v6只读Page及已采用page_mapping，结构仍须与当前物理页标签一致。分段身份支持范围端点核对；双页/重复/缺页作为原目录诊断，不新增导航库、原件或迁移。

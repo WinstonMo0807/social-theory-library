@@ -17,6 +17,9 @@ x-preview-api: &preview-api
   DJANGO_X_FRAME_OPTIONS: SAMEORIGIN
   DJANGO_SECURE_COOKIES: "false"
   DJANGO_SECURE_SSL_REDIRECT: "false"
+  ALLOW_LOCAL_PUBLIC_ASSET_ACCESS: "true"
+  REQUIRE_CLOUD_FOR_PUBLICATION: "false"
+  PADDLEOCR_SERVICE_URL: http://paddleocr:8010
   # Preview actions must not send mail to real readers.
   EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
 
@@ -28,6 +31,8 @@ services:
     mem_limit: 128m
     memswap_limit: 128m
   meilisearch:
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:7700/health"]
     volumes: !override
       - meilisearch_data:/meili_data
       - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/models:/meili_data/models:ro
@@ -64,11 +69,22 @@ services:
   beat:
     profiles: [scheduled-tasks]
   paddleocr:
+    image: ${LIBRARY_OCR_IMAGE:-social-theory-library-paddleocr:stl4-preview-20261026-r1}
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    cpus: 1.0
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
+          cpus: "1.0"
     volumes: !override
       - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/ocr-models:/models
   grobid:
     ports: !reset []
   web:
+    environment:
+      NODE_ENV: production
     ports: !reset []
     mem_limit: 768m
     memswap_limit: 768m

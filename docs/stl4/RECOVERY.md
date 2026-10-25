@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-26 从已运行内网候选继续
+
+先查最新Git和CUTOVER_CANDIDATE_20261026.md，不重复构建、克隆或迁移已经运行的预览。项目stl4-preview-20261026-r1位于NAS /volume2/library/stl-previews/20261026-r1，入口192.168.5.6:18084/admin/visual-review，13服务已启动、账号副本保留。API使用r3镜像；r1旧迁移冲突/r2漏提示词的制备记录保留，不能恢复到失败候选。
+
+PREVIEW-01–04已转D；206视图B、3按D010排除，没有登记未关闭A。继续既定首选检索深度制品/配置及统一验收准备，不重新审计已关闭模块。禁止测试、浏览器、生产写入或公网切换仍有效；深度模型实际未启用，不把基础服务健康当深度业务通过。
+
 ## 2026-10-26 继续专用内网预览
 
 规则按AGENTS顶部A/B/C/D；查DELIVERY_CLOSURE_20261026.md和VISUAL_REVIEW_PREVIEW_20261024.md。当前在NAS /volume2/library/stl-previews/20261026-r1 准备镜像；独立项目名stl4-preview-20261026-r1，绝不能换成生产social-science-library。Web本机构建已完成，运行包已传；先查看evidence/api-build.log及新镜像，再继续隔离数据/服务启动，不重新排查全站。源码含原未提交成果，生产保持。

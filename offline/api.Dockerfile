@@ -9,5 +9,8 @@ RUN python -m pip install --no-index --find-links=/tmp/stl-security-wheels pip==
     && python -m pip install --no-index --find-links=/tmp/stl-security-wheels --require-hashes --no-deps -r /tmp/stl-requirements.txt \
     && python -m pip check \
     && rm -rf /tmp/stl-security-wheels /tmp/stl-requirements.txt
+# The base supplies the runtime, not the application tree. COPY alone retains
+# retired migration files and can introduce a second migration graph branch.
+RUN rm -rf /app && mkdir /app && chown library:library /app
 COPY --chown=library:library api/ /app/
 USER library
