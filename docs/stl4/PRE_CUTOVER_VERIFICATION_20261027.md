@@ -2,6 +2,12 @@
 
 当前工作继续至公网切换前。只有本记录明确列出的运行行为经过验证，不能将其推广为206视图全部验收。生产未更改。
 
+## 06:47 索引运行中断与恢复
+
+DEEP-RUN-01：原补写PID26在453条后退出137，现有接续器自动按input_hash跳过453条后继续；实际读回890/2404。API容器cgroup记录oom=2/oom_kill=2，容器未重启；当前主进程、请求进程、补写进程RSS约76/187/186MiB，共享512MiB。该限额下额外完整Django诊断进程会再占用同一预算，后续常规统计改为stdlib只读探针。未获得各次OOM精确时刻，不推断每次受害进程或宣称全部根因已证明。
+
+本轮最小处置仅将运行中的预览API热调到768MiB/禁Swap，前后容器ID、主PID、启动时间相同，未重启/重复补写，应用源码及Compose均未修改。恢复参数NAS deep-backfill-memory-recovery/limits.json；补写退出后恢复512MiB。最后读回memory.current=435355648、上限805306368、OOM计数仍2。历史失败保留，生产不变；D关闭本次资源处置，持续运行及完整覆盖仍B。证据tmp/stl4-rapidocr-20261027/deep-heartbeat-0640.log、deep-memory-adjustment.log、deep-heartbeat-0650.log。
+
 ## 已确认并修复
 
 - PAGE-LABEL-01：`ingestion/services/extract._explicit_page_labels`把扫描器默认PDF 1…N视为可靠印刷标签。样书Reader在PDF34显示印刷34，而原目录/正文应为21。仅排除默认单段连续物理编号，明确分段/罗马标签保留；人工页码映射优先。12项聚焦检查通过，包括映射历史与发布契约。

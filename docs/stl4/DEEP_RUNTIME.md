@@ -2,6 +2,8 @@
 
 ## 2026-10-27 当前运行接续
 
+06:47更新：原补写进程退出137，现有脱离会话接续器跳过453条匹配输入后续写，实际索引890/2404。预览API内cgroup有两次OOM kill记录；仅为当前API与维护进程并存临时热调768MiB/禁Swap，未重启容器，Compose保持512MiB。恢复参数在NAS deep-backfill-memory-recovery/limits.json；完成后恢复512MiB，再进行全覆盖和启用核对。常规进度改用tmp/stl4-rapidocr-20261027/read_deep_progress_light.py，不再在忙API加载额外Django探针。总开关仍false，既定模型、基础索引和生产不变。
+
 实际沿API既有客户端验证同一NAS服务：EG2返回768维、身份及归一化校验通过（7.67秒）；BGE两条合成材料完成（4.24秒）；ConvMemory同输入顺序与身份保留（1.27秒）。/deep/status为ready，三个模型inference_completed为true。只检查运行契约，不评价相关性、准确率或比较模型。日志tmp/stl4-rapidocr-20261027/deep-functional-runtime.log。
 
 DEEP-03实际执行discovery_deep_index --prepare-only时，deep_index.prepare_index的SimpleNamespace缺少共用ensure_index已要求的config_snapshot，抛AttributeError。仅补空快照，保留独立768维与baseline_generation过滤；7项契约通过。API/四worker r52（41f9a5647a89）已更新，Web80不动。恢复点deep-index-r52-recovery；原任务空闲后更新、beat恢复。原样书来源索引和六个发布消费者此前已完成。

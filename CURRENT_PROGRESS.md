@@ -1,12 +1,14 @@
 # Social Theory Library 当前进度
 
-## 2026-10-27 05:43 深度运行通过，索引持续补建与自动接续
+## 2026-10-27 06:47 索引中断已自动续跑，临时内存限额已调整
 
-06:10自动接续核对：当前独立索引已实际读回453/2404条，原任务持续推进；脱离会话接续器仍等待原PID26，没有并行重建。证据tmp/stl4-rapidocr-20261027/deep-heartbeat-0610.log。总开关与运行容器不变，继续等待完整覆盖后核验，不因正常在途重启或修改代码。
+06:40自动接续轮发现原PID26退出137，接续器已自动跳过453条已匹配输入并继续，当前实际读回890/2404条。API容器cgroup实际oom=2/oom_kill=2、RestartCount=0，API主进程约76MiB、请求进程约187MiB、补写约186MiB，共享512MiB；未定位每次OOM的精确时刻，不能把两次都归给同一进程。已热调仅此预览API到768MiB且不启用Swap，容器ID、主PID及启动时间未变。补写仍进行，总开关false。
+
+恢复参数保存在NAS deep-backfill-memory-recovery/limits.json，补写结束后恢复512MiB；Compose仍512MiB，无持久配置或应用源码修改。后续常规核对用`.venv/Scripts/python.exe tmp/stl4-rapidocr-20261027/run_nas.py tmp/stl4-rapidocr-20261027/read_deep_progress_light.py`，只读stdlib探针不在忙API额外加载Django。证据deep-heartbeat-0640.log、deep-memory-adjustment.log、deep-heartbeat-0650.log（文件名沿本轮标记，实际核对在06:47前）。原OOM/失败日志均保留，仍不能声称长期稳定。
 
 API及四worker r52（41f9a5647a89）、Web80、RapidOCR3已运行内网。原样书索引5371683a已成功230单元/385派生文档，115d819c六个消费者全部completed。当前深度EG2/BGE/ConvMemory实际合成调用成功（7.67/4.24/1.27秒），不是质量评测。独立索引初始化缺config_snapshot的真实AttributeError已最小修复，7项契约通过，恢复点deep-index-r52-recovery。
 
-既有discovery_deep_index正在补写2404条当前公开原文，50条用时261.4秒；总开关仍false，尚不能称深度查询全面启用。会话内执行session83208，本机日志tmp/stl4-rapidocr-20261027/deep-current-backfill.log。NAS API容器当前原进程PID26；脱离会话的接续器等待其退出后按输入hash补齐，日志/tmp/stl4-deep-backfill-resume.log。源脚本/volume2/library/stl-previews/20261026-r1/deep-current-backfill.py。不要重启此API容器或重复启动索引写入。若进程失效，先查接续器和实际索引数再恢复。
+既有discovery_deep_index继续补写2404条当前公开原文；总开关仍false，尚不能称深度查询全面启用。旧session83208和原PID26已结束，本机deep-current-backfill.log保留退出137。当前脱离会话接续器正在写入，日志/tmp/stl4-deep-backfill-resume.log；NAS源脚本/volume2/library/stl-previews/20261026-r1/deep-current-backfill.py。不要重启此API容器或重复启动索引写入。若进程失效，先查进程、接续日志和实际索引数再恢复；当前接续器不是无限重试守护程序。
 
 已创建当前对话heartbeat自动接续stl-4-0，每30分钟推进本任务，状态无变化保持安静，完成/失败/需决定才通知。接续时先核对记录和Git；补建完整后才启用既定总开关并回读真实API链，继续原有视觉/业务和公网前准备，不新增潜在问题。生产、账号、原件和原索引均未更改。
 

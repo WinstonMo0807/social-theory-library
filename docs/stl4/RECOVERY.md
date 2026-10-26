@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-27 06:47 当前后台补写与临时资源
+
+内网API/四worker r52（41f9a5647a89）、Web80、RapidOCR3，生产不变。原PID26退出137；现有接续器已跳过453条并继续写入，06:47前实际读回890/2404，总开关false。当前日志在API容器/tmp/stl4-deep-backfill-resume.log；不要按旧PID26或旧session83208判断仍有原进程，也不要重复启动。
+
+API容器cgroup出现2次OOM kill；本轮只热调其内存上限至768MiB且不启用Swap，没有重启。NAS /volume2/library/stl-previews/20261026-r1/deep-backfill-memory-recovery/limits.json记录原512MiB及容器身份，Compose仍512MiB。完整补写结束且进程退出后恢复512MiB，再核对全覆盖和启用深度查询。禁止在仍补写时重建API。日常只读探针为本机tmp/stl4-rapidocr-20261027/read_deep_progress_light.py，通过同目录run_nas.py运行，避免额外加载Django。需要Django的完整来源核对应在补写结束后执行。历史失败日志保留，接续器只自动接续一次而非无限重试。
+
 ## 2026-10-27 05:30 当前候选
 
 API/普通/入库/查询worker r51（20d2c9551c97）、Web80（958185f55582）、RapidOCR r3。索引worker仍r45有活动作业5371683a，不强停；beat已启动。恢复点outline-export-r51-recovery，前API50/Web80；本轮无schema变更。详情CURRENT_PROGRESS和PRE_CUTOVER_VERIFICATION_20261027。
