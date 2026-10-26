@@ -2,6 +2,8 @@
 
 ## 2026-10-27 05:43 深度运行通过，索引持续补建与自动接续
 
+06:10自动接续核对：当前独立索引已实际读回453/2404条，原任务持续推进；脱离会话接续器仍等待原PID26，没有并行重建。证据tmp/stl4-rapidocr-20261027/deep-heartbeat-0610.log。总开关与运行容器不变，继续等待完整覆盖后核验，不因正常在途重启或修改代码。
+
 API及四worker r52（41f9a5647a89）、Web80、RapidOCR3已运行内网。原样书索引5371683a已成功230单元/385派生文档，115d819c六个消费者全部completed。当前深度EG2/BGE/ConvMemory实际合成调用成功（7.67/4.24/1.27秒），不是质量评测。独立索引初始化缺config_snapshot的真实AttributeError已最小修复，7项契约通过，恢复点deep-index-r52-recovery。
 
 既有discovery_deep_index正在补写2404条当前公开原文，50条用时261.4秒；总开关仍false，尚不能称深度查询全面启用。会话内执行session83208，本机日志tmp/stl4-rapidocr-20261027/deep-current-backfill.log。NAS API容器当前原进程PID26；脱离会话的接续器等待其退出后按输入hash补齐，日志/tmp/stl4-deep-backfill-resume.log。源脚本/volume2/library/stl-previews/20261026-r1/deep-current-backfill.py。不要重启此API容器或重复启动索引写入。若进程失效，先查接续器和实际索引数再恢复。
