@@ -532,7 +532,7 @@ def scanned_pdf_bytes(count=1):
 
 def test_private_scan_checkpoint_token_resume_owner_and_original(reader_user, admin_user, api_client, settings, monkeypatch):
     from catalog.models import Asset
-    settings.PADDLEOCR_SERVICE_URL = "http://127.0.0.1:8090"
+    settings.RAPIDOCR_SERVICE_URL = "http://127.0.0.1:8090"
     monkeypatch.setattr("reading.tasks.enqueue_citation_audit", lambda *args: None)
     calls = []
     def gateway(path, **options):
@@ -589,7 +589,7 @@ def test_private_docx_image_is_derived_without_word_page_or_field_rewrite(reader
     output = BytesIO()
     document.save(output)
     blob = output.getvalue()
-    settings.PADDLEOCR_SERVICE_URL = "http://127.0.0.1:8090"
+    settings.RAPIDOCR_SERVICE_URL = "http://127.0.0.1:8090"
     monkeypatch.setattr("reading.tasks.enqueue_citation_audit", lambda *args: None)
     def gateway(path, **options):
         with fitz.open(stream=options["pdf_bytes"], filetype="pdf") as image_pdf:
@@ -610,7 +610,7 @@ def test_private_docx_image_is_derived_without_word_page_or_field_rewrite(reader
 
 
 def test_private_ocr_remote_refusal_retry_and_decision_preservation(reader_user, settings, monkeypatch):
-    settings.PADDLEOCR_SERVICE_URL = "https://remote.example/"
+    settings.RAPIDOCR_SERVICE_URL = "https://remote.example/"
     settings.OCR_REMOTE_API_URL = "https://other.example/"
     monkeypatch.setattr("reading.local_analysis.socket.getaddrinfo", lambda *args, **kwargs: (
         _ for _ in ()).throw(AssertionError("Unapproved OCR URL must not reach DNS")))
@@ -630,7 +630,7 @@ def test_private_ocr_remote_refusal_retry_and_decision_preservation(reader_user,
     audit.refresh_from_db()
     assert audit.status == "partial" and not calls
     assert research.unpack(audit)["ocr_units"]["pdf:1"]["status"] == "failed"
-    settings.PADDLEOCR_SERVICE_URL = "http://127.0.0.1:8090"
+    settings.RAPIDOCR_SERVICE_URL = "http://127.0.0.1:8090"
     audit = update_audit(reader_user, audit.id, {"expected_revision": audit.revision, "action": "retry"})
     process_audit(audit.id, audit.generation, audit.task_id)
     audit.refresh_from_db()
@@ -654,7 +654,7 @@ def test_private_ocr_remote_refusal_retry_and_decision_preservation(reader_user,
 def test_private_ocr_cancellation_and_pinned_dns(settings, monkeypatch):
     from reading.private_ocr import enrich_private_manuscript
     from reading.citation_audit import parse_pdf
-    settings.PADDLEOCR_SERVICE_URL = "http://ocr:8090"
+    settings.RAPIDOCR_SERVICE_URL = "http://ocr:8090"
     monkeypatch.setattr("reading.local_analysis.socket.getaddrinfo", lambda *args, **kwargs: [(2, 1, 6, "", ("192.168.1.20", 8090))])
     cache, current, calls = {}, [True], []
     def gateway(path, **options):
@@ -790,7 +790,7 @@ def test_plan_unknown_duration_and_invalid_budget_are_explicit():
 def test_ocr_no_text_remains_unverified_and_retries_only_after_new_generation(settings, monkeypatch):
     from reading.private_ocr import enrich_private_manuscript
     from reading.citation_audit import parse_pdf
-    settings.PADDLEOCR_SERVICE_URL = "http://127.0.0.1:8090"
+    settings.RAPIDOCR_SERVICE_URL = "http://127.0.0.1:8090"
     calls = []
     monkeypatch.setattr("reading.private_ocr._request_document_gateway", lambda *args, **kwargs: calls.append(1) or {
         "pages": [{"index": 1, "blocks": []}]})
@@ -815,7 +815,7 @@ def test_pdf_wrapped_quote_retains_physical_page_and_character_position():
 
 
 def test_ocr_retry_preserves_owner_link_when_another_page_was_unavailable(reader_user, settings, monkeypatch):
-    settings.PADDLEOCR_SERVICE_URL = "http://127.0.0.1:8090"
+    settings.RAPIDOCR_SERVICE_URL = "http://127.0.0.1:8090"
     monkeypatch.setattr("reading.tasks.enqueue_citation_audit", lambda *args: None)
     attempts = []
     def gateway(path, **options):

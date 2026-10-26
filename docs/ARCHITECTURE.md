@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-27 OCR 实施更新
+
+用户选定的 OCR 主链改为 RapidOCR 3.10.0 / ONNX Runtime 1.31.0 / PP-OCRv6 tiny。上传、馆藏任务、读者 OCR 状态、私人引文稿件、可搜索PDF、页码/目录与检索继续共用现有调用链。NAS_URL 改为 RAPIDOCR_SERVICE_URL；默认 nas_only，远端必须返回同一引擎模型身份。详情及当前部署状态见 docs/stl4/OCR_WORKFLOW_REPLACEMENT_20261027.md 和 CURRENT_PROGRESS.md。旧 Paddle 章节仅作历史，不能用于当前构建。
+
+
 ## 2026-10-26 隔离验收候选与旧库兼容
 
 compose.stl4-preview.yaml沿同一应用/接口/任务架构提供临时验收副本，专用数据库、存储、模型副本和Cookie；不开邮件外发或Beat，不自动同步生产。13服务入口及恢复见stl4/CUTOVER_CANDIDATE_20261026.md。0089仅为历史3.0.9.1保留的三个非空KnowledgeNode列补数据库默认值，既有行、列及迁移记录保持；只迁移预览。offline/api.Dockerfile避免基底镜像的旧应用文件污染当前源码，未改技术栈。

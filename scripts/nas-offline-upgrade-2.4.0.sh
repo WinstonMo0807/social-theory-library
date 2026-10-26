@@ -1,4 +1,7 @@
 #!/bin/sh
+# Retired before RapidOCR migration; historical release only.
+printf '%s\n' 'This release script is retired. Follow docs/stl4/OCR_WORKFLOW_REPLACEMENT_20261027.md.' >&2
+exit 64
 set -eu
 
 APP_DIR="${APP_DIR:-/volume2/library/docker/social-theory-library}"

@@ -23,7 +23,7 @@ const labels: Record<string, string> = {
   cache: "Redis 缓存",
   broker: "Celery 消息代理",
   worker: "Worker 心跳",
-  paddleocr: "PaddleOCR",
+  rapidocr: "RapidOCR · PP-OCRv6 tiny",
   remote_ocr: "远程 OCR",
   meilisearch: "Meilisearch",
   embedding_model: "语义模型",

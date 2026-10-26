@@ -78,7 +78,7 @@ class Command(BaseCommand):
                     "legacy_mixed_ocr" if ocr_pages else "legacy_native_text"
                 ),
                 extraction_version="v2.9.2-baseline",
-                ocr_provider="paddleocr" if ocr_pages else "",
+                ocr_provider=(asset.extraction_method or "legacy_ocr_unknown") if ocr_pages else "",
                 ocr_model="legacy-unrecorded" if ocr_pages else "",
                 ocr_version="legacy-unrecorded" if ocr_pages else "",
                 pending_ocr_pages=pending_ocr_pages,

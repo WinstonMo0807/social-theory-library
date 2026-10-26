@@ -78,7 +78,7 @@ def service_definitions():
             "details": [{"label": label, "value": str(value)} for label, value in details],
             "permission": permission, "config_url": config_url, "checkable": checkable})
 
-    add("ocr", "parse", "PaddleOCR", "NAS 解析服务", ocr.get("nas_url"), ocr.get("mode") != "remote_only", ocr,
+    add("ocr", "parse", "RapidOCR · PP-OCRv6 tiny", "NAS 解析服务", ocr.get("nas_url"), ocr.get("mode") != "remote_only", ocr,
         [("服务地址", _origin(ocr.get("nas_url"))), ("解析策略", ocr.get("mode", "未配置")),
          ("检查范围", "读取服务就绪状态，不发送文档")], Capability.RETRY_JOBS, "/admin/processing/settings#ocr")
     if ocr.get("remote_url") or ocr.get("mode") == "remote_only":

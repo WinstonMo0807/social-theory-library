@@ -12,9 +12,8 @@ PATH = '/api/catalog/admin/ocr-runtime/'
 @pytest.fixture(autouse=True)
 def runtime_environment(settings):
     settings.OCR_REMOTE_API_URL = ''
-    settings.OCR_REMOTE_MODEL = ''
     settings.OCR_REMOTE_API_KEY = ''
-    settings.PADDLEOCR_SERVICE_URL = 'http://ocr.invalid:8001'
+    settings.RAPIDOCR_SERVICE_URL = 'http://ocr.invalid:8001'
 
 
 def client_for(actor):
@@ -53,7 +52,7 @@ def test_remote_mode_requires_complete_configuration_and_explicit_change_acknowl
     assert client.put(PATH, command(first, mode='remote_only'), format='json').status_code == 400
     settings.OCR_REMOTE_API_KEY = 'fixture-only-credential'
     first = client.get(PATH).data
-    values = command(first, mode='remote_only', remote_url='https://gateway.invalid', remote_model='fixture-model')
+    values = command(first, mode='remote_only', remote_url='https://gateway.invalid', remote_model='PP-OCRv6-tiny')
     assert client.put(PATH, values, format='json').status_code == 400
     values['acknowledge_remote'] = True
     result = client.put(PATH, values, format='json')
@@ -85,6 +84,5 @@ def test_audit_failure_rolls_back_original_setting_and_get_never_probes(admin_us
     with patch('ingestion.services.health.ocr_service_health', side_effect=AssertionError('GET cannot load OCR')):
         first = client.get(PATH).data
     with patch('catalog.ocr_runtime_settings.AuditEvent.objects.create', side_effect=RuntimeError('audit unavailable')):
-        with pytest.raises(RuntimeError):
-            client.put(PATH, command(first), format='json')
+        assert client.put(PATH, command(first), format='json').status_code == 500
     assert not SiteSetting.objects.filter(key='ocr_runtime').exists()

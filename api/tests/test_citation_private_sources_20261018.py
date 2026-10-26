@@ -294,7 +294,7 @@ def test_scan_consent_and_private_matching_follow_selected_checks(reader_user, m
 
 
 def test_source_partial_ocr_retry_reuses_completed_pages(reader_user, settings, monkeypatch):
-    settings.PADDLEOCR_SERVICE_URL = "http://127.0.0.1:8090"
+    settings.RAPIDOCR_SERVICE_URL = "http://127.0.0.1:8090"
     calls, fail = [], {"page_two": True}
     def gateway(path, **options):
         page = options["page_numbers"][0]

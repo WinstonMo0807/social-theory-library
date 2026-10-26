@@ -376,7 +376,7 @@ def test_semantic_ratio_changes_keyword_and_vector_fusion_weights():
 def test_ocr_prefers_nas_and_can_fall_back_to_remote(tmp_path, settings):
     source = tmp_path / "scan.pdf"
     source.write_bytes(b"%PDF-1.4")
-    settings.PADDLEOCR_SERVICE_URL = "http://paddleocr:8010"
+    settings.RAPIDOCR_SERVICE_URL = "http://paddleocr:8010"
     settings.OCR_REMOTE_API_URL = "https://ocr.example.org"
     settings.OCR_REMOTE_API_KEY = "secret"
     settings.OCR_REMOTE_MODEL = "remote-layout-model"

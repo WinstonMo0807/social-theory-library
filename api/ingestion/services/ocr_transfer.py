@@ -12,14 +12,14 @@ from django.utils import timezone
 from catalog.services.editorial_issues import EditConflict
 from common.capabilities import Capability, has_capability
 from ingestion.models import AuditEvent
-from .ocr_provider import OCRConfigurationError, ocr_runtime_config
+from .ocr_provider import OCRConfigurationError, OCR_MODEL_ID, ocr_runtime_config
 
 active_ocr_config = ContextVar("active_ocr_config", default=None)
 TARGETS = {"nas": "NAS OCR 服务", "remote": "配置的远程 OCR 服务"}
 
 
 def target_version(config, target):
-    values = ([config["nas_url"]] if target == "nas" else
+    values = ([config["nas_url"], OCR_MODEL_ID] if target == "nas" else
               [config["remote_url"], config["remote_model"], settings.OCR_REMOTE_API_KEY])
     return sha256(json.dumps(values, ensure_ascii=False).encode()).hexdigest()
 

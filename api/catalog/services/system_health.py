@@ -192,7 +192,7 @@ def _ocr_probe() -> ProbeResult:
     config = ocr_runtime_config()
     configured = bool(config.get("nas_url"))
     if not configured:
-        return ProbeResult(False, False, False, False, "PaddleOCR 服务未配置。", {"mode": config.get("mode")})
+        return ProbeResult(False, False, False, False, "RapidOCR · PP-OCRv6 tiny 服务未配置。", {"mode": config.get("mode")})
     live = ocr_service_health(config["nas_url"])
     reachable = bool(live.get("reachable"))
     functional = live.get("functional") is True
@@ -584,7 +584,7 @@ def _register_probes() -> None:
         HealthProbe("external_public", "public_internet", "公网入口", 300, _external_public_probe, ("公网访问",), ("Cloudflare 或上游出站故障",), layer="external"),
         HealthProbe("worker", "background_processing", "Broker / Worker / Beat", 60, _worker_probe, ("入库", "OCR", "Research", "索引"), ("Broker 不可达", "Worker 未消费", "Beat 未调度"), ("rerun_probe", "recover_ingestion_queue"), True, layer="infrastructure"),
         HealthProbe("storage_reader", "public_reading", "PDF 存储与 Reader", 300, _storage_reader_probe, ("在线阅读", "下载", "复制"), ("NAS 挂载不可用", "PDF 缺失或损坏"), critical=True, layer="infrastructure"),
-        HealthProbe("ocr", "ingestion", "PaddleOCR", 300, _ocr_probe, ("OCR", "全文复制", "入库"), ("OCR 容器不可达", "模型未加载"), ("rerun_probe", "recover_ingestion_queue")),
+        HealthProbe("ocr", "ingestion", "RapidOCR · PP-OCRv6 tiny", 300, _ocr_probe, ("OCR", "全文复制", "入库"), ("OCR 容器不可达", "模型未加载"), ("rerun_probe", "recover_ingestion_queue")),
         HealthProbe("semantic", "search", "Meilisearch 与语义索引", 300, _semantic_probe, ("站内检索", "语义检索"), ("Meilisearch 不可达", "活动索引缺失"), ("rerun_probe", "recover_semantic_queue"), False),
         HealthProbe("query_lexicon", "search", "QueryLexicon", 300, _query_lexicon_probe, ("双语检索", "实体匹配"), ("投影未初始化", "重建任务失败"), ("rerun_probe", "recover_query_lexicon")),
         HealthProbe("processing", "background_processing", "处理任务", 60, _processing_probe, ("入库", "OCR", "索引", "研究"), ("任务 ownership 失效", "Worker 中断"), ("rerun_probe", "recover_ingestion_queue")),

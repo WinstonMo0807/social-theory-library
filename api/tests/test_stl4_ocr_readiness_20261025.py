@@ -15,11 +15,12 @@ class Reply(BytesIO):
 
 
 @pytest.mark.parametrize('body,ready', [
-    (b'{"available":true,"runtime_verified":true}', True),
+    (b'{"available":true,"runtime_verified":true,"engine":"RapidOCR","model":"PP-OCRv6-tiny"}', True),
+    (b'{"available":true,"runtime_verified":true,"engine":"PaddleOCR"}', False),
     (b'{"available":true,"runtime_verified":false}', False),
     (b'{"available":true}', False),
     (b'{"available":1,"runtime_verified":true}', False),
-    (b'not json', False), (b'"' + b'a' * 65537 + b'"', False),
+    (b'not json', False), pytest.param(b'"' + b'a' * 65537 + b'"', False, id="oversized"),
 ])
 def test_normal_ocr_probe_requires_current_runtime_evidence(body, ready):
     with patch('ingestion.services.health.urlopen', return_value=Reply(body)) as call:

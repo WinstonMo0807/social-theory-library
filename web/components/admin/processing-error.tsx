@@ -1,6 +1,6 @@
 export function ProcessingError({ message, code = "" }: { message: string; code?: string }) {
   const longIndex = /index row size.*exceeds.*maximum/i.test(message);
-  const unavailable = /OCRServiceUnavailable|paddleocr_nas.*不可用/.test(`${code} ${message}`);
+  const unavailable = /OCRServiceUnavailable|(?:rapidocr_nas|paddleocr_nas).*不可用/.test(`${code} ${message}`);
   const guidance = longIndex
     ? "文字已提取，但保存检索索引时失败。这不代表 PDF 损坏。可重新处理；仍失败时请联系书库所有者检查索引。"
     : unavailable

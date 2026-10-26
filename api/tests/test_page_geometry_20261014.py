@@ -165,7 +165,7 @@ def test_additive_geometry_keeps_old_writer_insert_compatible(settings, tmp_path
 
 def test_private_ocr_retains_validated_coordinates_without_public_catalog_writes(settings, tmp_path):
     from reading.private_ocr import enrich_private_manuscript
-    settings.PADDLEOCR_SERVICE_URL = "http://127.0.0.1:8090"
+    settings.RAPIDOCR_SERVICE_URL = "http://127.0.0.1:8090"
     path = cropped_pdf(tmp_path / "private.pdf")
     with fitz.open(path) as document:
         geometry = rendered_geometry(document[0])

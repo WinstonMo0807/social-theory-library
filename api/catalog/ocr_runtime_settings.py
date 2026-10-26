@@ -17,7 +17,7 @@ from common.permissions import IsLibraryAdmin
 from catalog.models import SiteSetting
 from catalog.services.query_lexicon.mutations import acquire_entity_lock
 from ingestion.models import AuditEvent, ProcessingJob
-from ingestion.services.ocr_provider import ocr_runtime_config, OCR_RUNTIME_KEY
+from ingestion.services.ocr_provider import ocr_runtime_config, OCR_RUNTIME_KEY, OCR_MODEL_ID
 from catalog.editorial_read import AdminPrivateResponseMixin
 
 
@@ -97,8 +97,8 @@ class OcrRuntimeInput(serializers.Serializer):
         return value
 
     def validate_remote_model(self, value):
-        if any(ord(char) < 32 for char in value):
-            raise serializers.ValidationError('模型标识不能含控制字符。')
+        if value not in {'', OCR_MODEL_ID}:
+            raise serializers.ValidationError('全站统一使用 PP-OCRv6-tiny，请配置同一 RapidOCR 网关。')
         return value
 
 
@@ -159,12 +159,13 @@ class OcrRuntimeSettingsView(AdminPrivateResponseMixin, APIView):
         data = serializer.validated_data
         actor, before = locked_configuration(request, data['expected_version'])
         value = {key: data[key] for key in ('mode', 'remote_url', 'remote_model')}
+        value['remote_model'] = OCR_MODEL_ID
         if value['mode'] == 'nas_only' and not value['remote_url'] and not editable_url(before['remote_url']):
             # Turning off remote processing must not erase a hidden legacy address.
             stored = SiteSetting.objects.filter(key=OCR_RUNTIME_KEY).first()
             value['remote_url'] = stored.value.get('remote_url', '') if stored and isinstance(stored.value, dict) else ''
         effective_url = value['remote_url'] or settings.OCR_REMOTE_API_URL.strip()
-        effective_model = value['remote_model'] or settings.OCR_REMOTE_MODEL.strip()
+        effective_model = OCR_MODEL_ID
         complete = bool(effective_url and effective_model and before['remote_key_configured'])
         if value['mode'] != 'nas_only' and not editable_url(effective_url):
             raise serializers.ValidationError({'remote_url': '现有默认地址包含隐藏凭据或参数，请填写新的无凭据地址，或先在服务器修正默认配置。'})

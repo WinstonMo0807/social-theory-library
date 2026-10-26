@@ -57,16 +57,11 @@ def write_manifest(probe: dict) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Load PaddleOCR models, run a minimal inference and record a model manifest."
+        description="Load pinned RapidOCR ONNX models, run a minimal inference and record a model manifest."
     )
-    parser.add_argument("--include-fallback", action="store_true")
-    parser.add_argument("--include-structure", action="store_true")
     parser.add_argument("--write-manifest", action="store_true")
     args = parser.parse_args()
-    probe = probe_models(
-        include_fallback=args.include_fallback,
-        include_structure=args.include_structure,
-    )
+    probe = probe_models()
     manifest = write_manifest(probe) if probe["available"] and args.write_manifest else None
     result = {
         **probe,

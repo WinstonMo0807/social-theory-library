@@ -27,7 +27,7 @@ def stored_audit(user, **extra):
 
 
 def test_capabilities_are_private_configuration_eligibility(api_client, reader_user, settings, monkeypatch):
-    settings.PADDLEOCR_SERVICE_URL = "https://unapproved.example"
+    settings.RAPIDOCR_SERVICE_URL = "https://unapproved.example"
     monkeypatch.setattr("reading.local_analysis.current_ai_configuration", lambda *_: SimpleNamespace(enabled=False))
     assert api_client.get("/api/reading/citation-audits/capabilities/").status_code in {401, 403}
     api_client.force_authenticate(reader_user)

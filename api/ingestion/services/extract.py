@@ -45,6 +45,7 @@ class ExtractedPage:
     raster_coverage: float = 0
     ocr_reasons: tuple[str, ...] = ()
     geometry: dict = field(default_factory=dict)
+    ocr_metadata: dict = field(default_factory=dict)
 
 
 def _explicit_page_labels(document) -> bool:
@@ -265,6 +266,8 @@ def _ocr_pages(
                 label_source=label_source,
                 label_confidence=label_confidence,
                 geometry=geometry,
+                ocr_metadata={"provider": provider, **{key: payload.get(key, "") for key in
+                    ("engine", "model", "model_revision", "runtime", "runtime_version")}},
             )
         )
     source_document.close()

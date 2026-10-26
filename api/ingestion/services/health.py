@@ -222,7 +222,8 @@ def http_service_health(url: str, path: str = "", *, timeout: int = 4, expected_
 def ocr_service_health(url: str, *, deep: bool = False, timeout: int = 5) -> dict:
     """Normal checks only read current worker evidence; deep is an explicit action."""
     return http_service_health(url, "/ready?deep=true" if deep else "/ready", timeout=timeout,
-                               expected_json={"available": True, "runtime_verified": True})
+                               expected_json={"available": True, "runtime_verified": True,
+                                              "engine": "RapidOCR", "model": "PP-OCRv6-tiny"})
 
 
 def stored_queue_health():

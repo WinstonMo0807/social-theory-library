@@ -67,7 +67,7 @@ services:
       TRANSFORMERS_OFFLINE: ${HF_HUB_OFFLINE:-1}
       HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
       HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
-      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,api,worker,beat,paddleocr,web,edge}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,api,worker,beat,rapidocr,web,edge}
     expose:
       - "7700"
     volumes:
@@ -92,7 +92,7 @@ services:
       SEARXNG_BASE_URL: http://searxng:8080/
       HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
       HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
-      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,searxng,api,worker,beat,paddleocr,web,edge}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,searxng,api,worker,beat,rapidocr,web,edge}
     expose:
       - "8080"
     volumes:
@@ -281,29 +281,27 @@ services:
       redis:
         condition: service_healthy
 
-  paddleocr:
-    image: ${LIBRARY_OCR_IMAGE:-social-science-library-paddleocr}
+  rapidocr:
+    image: ${LIBRARY_OCR_IMAGE:-social-science-library-rapidocr}
     <<: *service-hardening
     build:
       context: ./ocr_service
     profiles: ["ocr"]
     environment:
+      OCR_MODEL_DIR: /models
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
       OCR_PRIMARY_LANGUAGE: ch
-      OCR_FALLBACK_LANGUAGE: chinese_cht
-      OCR_ENABLE_STRUCTURE: ${OCR_ENABLE_STRUCTURE:-false}
       OCR_REQUIRE_PERSISTENT_MODELS: "true"
-      OCR_REQUIRE_FALLBACK: "false"
-      OCR_REQUIRE_STRUCTURE: "false"
       OCR_RENDER_DPI: "180"
       OCR_MAX_PAGES: "5000"
-      PADDLE_PDX_MODEL_SOURCE: modelscope
       HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
       HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
-      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,api,worker,beat,paddleocr,web,edge}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,postgres,redis,meilisearch,api,worker,beat,rapidocr,web,edge}
     expose:
       - "8010"
     volumes:
-      - ${NAS_HOST_ROOT:-./data}/ocr-models:/models
+      - ${NAS_HOST_ROOT:-./data}/rapidocr-models:/models
     networks:
       - backend
     healthcheck:
@@ -315,7 +313,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1536m
+          cpus: "1.0"
 
   web:
     <<: *service-hardening

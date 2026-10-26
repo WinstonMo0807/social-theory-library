@@ -1,5 +1,10 @@
 # Social Theory Library 当前进度
 
+## 2026-10-27 RapidOCR 全链替换实施中
+
+用户已确认采用 RapidOCR 3.10.0 + ONNX Runtime 1.31.0、PP-OCRv6 tiny，删除旧活动方案。调用链和策略已写入 docs/stl4/OCR_WORKFLOW_REPLACEMENT_20261027.md。已修改服务、入口、固定模型契约、Compose 配置和管理文案，正在完成按页来源记录、检查与预览部署。此时尚未部署，不能称替换完成。NAS 只读状态可用769MiB、swap4084MiB，避免并行加载新旧模型。既有实书任务仍暂停9/170页；已有结果/人工目录/原文件/账户保留。生产服务不在本次预览切换范围。
+
+
 ## 2026-10-27 NAS OCR 候选对比完成，整书暂停9页
 
 用户最新要求实际比较更适合NAS的OCR。报告 docs/stl4/OCR_NAS_COMPARISON_20261027.md；临时证据 tmp/stl4-ocr-editor-20261027/benchmark/，不提交原书/模型/识别全文。N5105、单核、180DPI、同6页各两次：RapidOCR3.10/ONNX1.31 small第二轮均值42.627秒、tiny4.617秒，Tesseract5.3为4.103秒。人工参考414个非标点字符的编辑差异0/1/14；5组目录标题+页码4/5、2/5、2/5，只是小样本。tiny列为下一步正文首选候选，尚未接入业务，独立目录数字仍需核对。Tesseract不作为本书主链。原生Paddle tiny取消未测。

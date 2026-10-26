@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-requested_model_dir="${PADDLE_HOME:-/models}"
+requested_model_dir="${OCR_MODEL_DIR:-/models}"
 fallback_model_dir="${OCR_FALLBACK_MODEL_DIR:-/tmp/ocr/models}"
 runtime_dir="${OCR_RUNTIME_DIR:-/tmp/ocr}"
 require_persistent_models="${OCR_REQUIRE_PERSISTENT_MODELS:-false}"
@@ -28,16 +28,10 @@ else
   printf '%s\n' "OCR 提示：模型持久化目录 $requested_model_dir 不可写，当前改用 $fallback_model_dir。请修复 NAS 目录权限后重建容器。" >&2
 fi
 
-mkdir -p \
-  "$cache_root/.paddlex" \
-  "$cache_root/.cache" \
-  "$runtime_dir/tmp"
-
-export HOME="$cache_root"
-export PADDLE_HOME="$cache_root"
-export PADDLE_PDX_CACHE_HOME="$cache_root/.paddlex"
-export XDG_CACHE_HOME="$cache_root/.cache"
+mkdir -p "$runtime_dir/tmp"
+export OCR_MODEL_DIR="$cache_root"
 export TMPDIR="$runtime_dir/tmp"
 export LIBRARY_OCR_EFFECTIVE_MODEL_ROOT="$cache_root"
+python /app/rapid_models.py --root "$cache_root"
 
 exec "$@"

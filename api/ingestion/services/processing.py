@@ -1064,12 +1064,26 @@ def _persist_claimed_ocr_pages(job, pages, claim_task_id):
     from .catalog_ocr import ensure_source_current
 
     ensure_source_current(current)
+    page_models = dict(current.stats.get("page_models") or {})
+    if "page_models" not in current.stats and current.stats.get("processed_pages"):
+        # A resumed job may contain pages from a retired engine. Preserve that
+        # provenance; never assign the newly selected model to old results.
+        old_indexes = current.stats.get("completed_page_indexes") or list(
+            job.asset.pages.filter(text_source__in=[Page.TextSource.OCR, Page.TextSource.HYBRID])
+            .values_list("index", flat=True))
+        for index in old_indexes:
+            page_models[str(index)] = {"provider": current.stats.get("engine") or job.asset.extraction_method,
+                "model": current.stats.get("last_ocr_model", ""), "legacy": True}
     persist_page_batch(job.asset, pages)
+    protected = set(job.asset.pages.filter(is_text_manual=True).values_list("index", flat=True))
+    page_models.update({str(page.index): page.ocr_metadata for page in pages
+                        if page.ocr_metadata and page.index not in protected})
+    job.stats = {**current.stats, "page_models": page_models}
     if current.stats.get("requested_mode") in {"all_pages", "selected_pages"}:
         completed = sorted(set(current.stats.get("completed_page_indexes") or []).union(page.index for page in pages))
-        job.stats = {**current.stats, "completed_page_indexes": completed, "processed_pages": len(completed), "remaining_pages": max(0, current.stats["target_pages"] - len(completed)), "active_page_indexes": []}
-        current.stats = job.stats
-        current.save(update_fields=["stats", "updated_at"])
+        job.stats.update(completed_page_indexes=completed, processed_pages=len(completed), remaining_pages=max(0, current.stats["target_pages"] - len(completed)), active_page_indexes=[])
+    current.stats = job.stats
+    current.save(update_fields=["stats", "updated_at"])
     return True
 
 
@@ -1171,7 +1185,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         if document_page_count <= 0:
             raise ValueError("OCR 目标文件没有可处理的页面。")
 
-        provider = str(stats.get("engine") or asset.extraction_method or "paddleocr_nas")
+        provider = str(stats.get("engine") or asset.extraction_method or "rapidocr_nas")
         from .processing_retry import selected_ocr_remaining
         selected_remaining = selected_ocr_remaining(stats, remaining)
         if selected_remaining:
@@ -1201,12 +1215,16 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             document_page_count, target_page_count, remaining = _remaining_ocr_page_indexes(asset, job)
             processed_pages = target_page_count - len(remaining)
             providers = list(stats.get("providers") or [])
+            for metadata in stats.get("page_models", {}).values():
+                if metadata.get("provider") and metadata["provider"] not in providers:
+                    providers.append(metadata["provider"])
             if provider not in providers:
                 providers.append(provider)
             stats.update(
                 {
                     "engine": provider,
-                    "last_ocr_model": used_config["remote_model"] if provider == "remote_ocr" else "",
+                    "last_ocr_model": pages[-1].ocr_metadata.get("model", ""),
+                    "last_ocr_model_revision": pages[-1].ocr_metadata.get("model_revision", ""),
                     "last_ocr_configuration": target_version(used_config, "remote" if provider == "remote_ocr" else "nas"),
                     "providers": providers,
                     "total_pages": document_page_count,
@@ -1329,11 +1347,10 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             asset,
             page_indexes=completed_ocr_pages,
             provider=provider,
-            model=(
-                stats.get("last_ocr_model", runtime_config["remote_model"])
-                if provider == "remote_ocr"
-                else ""
-            ),
+            model=("mixed; see OCR job page_models" if len({
+                (item.get("provider"), item.get("model"), item.get("model_revision"))
+                for item in stats.get("page_models", {}).values()
+            }) > 1 else stats.get("last_ocr_model", "")),
             provider_version=(
                 stats.get("last_ocr_configuration") or job.settings_version
                 or runtime_config["saved_configuration_version"]

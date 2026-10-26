@@ -209,7 +209,7 @@ def system_health_snapshot() -> dict:
                 detail=broker,
             ),
             "worker": worker,
-            "paddleocr": ocr,
+            "rapidocr": ocr,
             "remote_ocr": remote_ocr,
             "meilisearch": meilisearch,
             "embedding_model": embedding,

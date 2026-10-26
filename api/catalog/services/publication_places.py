@@ -66,7 +66,7 @@ def _publication_page_texts(asset: Asset, *, allow_targeted_ocr: bool = True) ->
     if (
         not missing
         or not allow_targeted_ocr
-        or asset.extraction_method.startswith("paddleocr")
+        or asset.extraction_method.startswith(("rapidocr", "paddleocr", "remote_ocr"))
     ):
         return output
     try:

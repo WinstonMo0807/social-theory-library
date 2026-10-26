@@ -33,7 +33,7 @@ def ocr_request_lease(job, identity):
     from .ocr_transfer import active_ocr_config
     config = active_ocr_config.get() or {}
     remote = config.get("mode") == "remote_only"
-    base_url = config.get("remote_url") if remote else config.get("nas_url", settings.PADDLEOCR_SERVICE_URL)
+    base_url = config.get("remote_url") if remote else config.get("nas_url", settings.RAPIDOCR_SERVICE_URL)
     base_url = base_url.rstrip("/").removesuffix("/v1/parse-pdf")
     headers = {"Authorization": f"Bearer {settings.OCR_REMOTE_API_KEY}"} if remote else {}
     token = request_identity.set(identity)

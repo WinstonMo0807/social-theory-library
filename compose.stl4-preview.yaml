@@ -19,7 +19,7 @@ x-preview-api: &preview-api
   DJANGO_SECURE_SSL_REDIRECT: "false"
   ALLOW_LOCAL_PUBLIC_ASSET_ACCESS: "true"
   REQUIRE_CLOUD_FOR_PUBLICATION: "false"
-  PADDLEOCR_SERVICE_URL: http://paddleocr:8010
+  RAPIDOCR_SERVICE_URL: http://rapidocr:8010
   # Preview actions must not send mail to real readers.
   EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
 
@@ -70,8 +70,8 @@ services:
     memswap_limit: 512m
   beat:
     profiles: [scheduled-tasks]
-  paddleocr:
-    image: ${LIBRARY_OCR_IMAGE:-social-theory-library-paddleocr:stl4-preview-20261026-r1}
+  rapidocr:
+    image: ${LIBRARY_OCR_IMAGE:-social-theory-library-rapidocr:stl4-preview-20261026-r1}
     mem_limit: 1536m
     memswap_limit: 1536m
     cpus: 1.0
@@ -81,7 +81,7 @@ services:
           memory: 1536m
           cpus: "1.0"
     volumes: !override
-      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/ocr-models:/models
+      - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/rapidocr-models:/models
   grobid:
     ports: !reset []
   web:

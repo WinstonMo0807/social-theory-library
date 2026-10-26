@@ -1,3 +1,9 @@
+# 已退役的离线依赖
+
+当前构建只使用 RapidOCR + ONNX Runtime；此目录不再参与构建。旧 wheel 若保存在本机，仅作为历史回退资料，不可装入新镜像。安装入口见上一级 Dockerfile，离线流程见 docs/stl4/OCR_WORKFLOW_REPLACEMENT_20261027.md。
+
+以下为历史构建证据，不是当前安装说明。
+
 # NAS PaddlePaddle wheel
 
 本目录中的 wheel 用于社会理论书库 OCR 容器。目标 NAS 的 Intel Celeron N5105 不支持 AVX，PaddlePaddle 官方 x86-64 wheel 会在导入阶段以退出码 132 终止。该文件由 PaddlePaddle 3.3.1 源码编译，并在目标 NAS 上完成断网运行测试。

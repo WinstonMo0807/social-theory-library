@@ -96,7 +96,7 @@ def pipeline_status() -> dict:
     result["worker"] = worker_status["online"]
     result["worker_heartbeat_at"] = worker_status["heartbeat_at"]
     result["worker_detail"] = worker_status["detail"]
-    result["ocr"] = ocr_service_health(settings.PADDLEOCR_SERVICE_URL)
+    result["ocr"] = ocr_service_health(settings.RAPIDOCR_SERVICE_URL)
     result["search"] = http_service_health(settings.MEILISEARCH_URL, "/health")
     result["ingestion_pending"] = UploadItem.objects.filter(
         dispatch_status__in=[
@@ -120,7 +120,7 @@ def pipeline_status() -> dict:
         ]
     ).count()
     required = [result["database"], result["cache"], result["broker"], result["worker"]]
-    if settings.PADDLEOCR_SERVICE_URL:
+    if settings.RAPIDOCR_SERVICE_URL:
         required.append(result["ocr"].get("functional") is True)
     if settings.USE_EXTERNAL_SEARCH or settings.SEMANTIC_SEARCH_ENABLED:
         required.append(result["search"]["reachable"])

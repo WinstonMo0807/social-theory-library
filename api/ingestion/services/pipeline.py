@@ -1304,7 +1304,7 @@ def run_pipeline(item_id: str) -> UploadItem:
             with processing_attempt(item, "metadata_refinement", reuse_completed=False) as attempt:
                 refined = extract_text_candidates(
                     canonical_first_text,
-                    source="ocr_first_pages" if method == "paddleocr" else "canonical_first_pages",
+                    source="ocr_first_pages" if method.startswith(("rapidocr", "paddleocr", "remote_ocr")) else "canonical_first_pages",
                 )
                 candidates = [*candidates, *refined]
                 provider_warnings = ["自动处理仅使用本地资料；外部书目须在工作页明确查找免费来源。"]

@@ -19,38 +19,29 @@ import fitz
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from paddleocr import PaddleOCR, PPStructureV3
+from rapid_models import MODEL_ID, MODEL_REVISION
+from rapid_runtime import load_engine
 
 
-app = FastAPI(title="Social Theory Library OCR", version="3.0.8.1")
+app = FastAPI(title="Social Theory Library OCR", version="4.0.0-rapidocr-1")
 PRIMARY_LANGUAGE = os.getenv("OCR_PRIMARY_LANGUAGE", "ch")
-FALLBACK_LANGUAGE = os.getenv("OCR_FALLBACK_LANGUAGE", "chinese_cht")
 RENDER_DPI = int(os.getenv("OCR_RENDER_DPI", "180"))
 MAX_PAGES = int(os.getenv("OCR_MAX_PAGES", "2000"))
-ENABLE_STRUCTURE = os.getenv("OCR_ENABLE_STRUCTURE", "false").lower() in {"1", "true", "yes"}
-REQUIRE_FALLBACK = os.getenv("OCR_REQUIRE_FALLBACK", "false").lower() in {"1", "true", "yes"}
-REQUIRE_STRUCTURE = os.getenv("OCR_REQUIRE_STRUCTURE", "false").lower() in {"1", "true", "yes"}
+CPU_THREADS = max(1, min(int(os.getenv("OCR_CPU_THREADS", "1")), 4))
 MODEL_LOCK = threading.Lock()
 PROCESS_POOL_LOCK = threading.Lock()
 OCR_PROCESS_POOL = None
+RUNTIME_WORKER_PID = None
 REQUESTS = OrderedDict()
 REQUEST_GATE = asyncio.Lock()
 MAX_REQUESTS = 32
-MODEL_STATUS = {
-    "engines": {},
-    "structure": {
-        "loaded": False,
-        "inference_success": False,
-        "last_success_at": None,
-        "last_error": "",
-    },
-}
+MODEL_STATUS = {"engines": {}}
 
 
 def ocr_process_pool() -> ProcessPoolExecutor:
     """Return the single persistent OCR worker process.
 
-    Paddle inference can hold the Python GIL for minutes on the NAS CPU. A
+    Rendering and inference must not occupy the HTTP process. A
     thread keeps the ASGI event loop logically free but can still starve the
     process that serves health checks. The dedicated spawned process keeps one
     model instance warm while the HTTP process remains responsive.
@@ -67,23 +58,42 @@ def ocr_process_pool() -> ProcessPoolExecutor:
 
 
 def discard_ocr_process_pool(executor: ProcessPoolExecutor | None = None) -> None:
-    global OCR_PROCESS_POOL
+    global OCR_PROCESS_POOL, RUNTIME_WORKER_PID
     with PROCESS_POOL_LOCK:
         current = OCR_PROCESS_POOL
         if current is None or (executor is not None and current is not executor):
             return
         OCR_PROCESS_POOL = None
+        RUNTIME_WORKER_PID = None
+        for state in MODEL_STATUS["engines"].values():
+            state.update(loaded=False, inference_success=False)
     current.shutdown(wait=False, cancel_futures=True)
 
 
-async def run_in_ocr_process(function, /, *args, **kwargs):
-    executor = ocr_process_pool()
-    job = partial(function, *args, **kwargs)
+def _execute_with_model_status(function, args, kwargs):
     try:
-        return await asyncio.get_running_loop().run_in_executor(executor, job)
+        result = function(*args, **kwargs)
+    except Exception as exc:
+        return None, MODEL_STATUS, os.getpid(), exc
+    return result, MODEL_STATUS, os.getpid(), None
+
+
+async def run_in_ocr_process(function, /, *args, **kwargs):
+    global RUNTIME_WORKER_PID
+    executor = ocr_process_pool()
+    job = partial(_execute_with_model_status, function, args, kwargs)
+    try:
+        result, status, worker_pid, failure = await asyncio.get_running_loop().run_in_executor(executor, job)
     except BrokenProcessPool:
         discard_ocr_process_pool(executor)
         raise
+    # Spawned globals are separate. Return both successful and failed inference
+    # state; a malformed PDF alone must not invalidate an already working engine.
+    MODEL_STATUS.update(status)
+    RUNTIME_WORKER_PID = worker_pid
+    if failure is not None:
+        raise failure
+    return result
 
 
 @app.on_event("shutdown")
@@ -103,11 +113,9 @@ def installed_version(distribution: str) -> str:
 
 
 def model_paths() -> dict:
-    root = Path(os.getenv("PADDLE_HOME", "/models"))
-    paddlex = Path(os.getenv("PADDLE_PDX_CACHE_HOME", str(root / ".paddlex")))
+    root = Path(os.getenv("OCR_MODEL_DIR", "/models"))
     return {
         "root": root,
-        "paddlex": paddlex,
         "manifest": root / "library-ocr-model-manifest.json",
     }
 
@@ -148,8 +156,6 @@ def cache_inventory(*, include_files: bool = False) -> dict:
         "root": str(root),
         "root_exists": root.is_dir(),
         "root_writable": os.access(root, os.W_OK) if root.exists() else False,
-        "paddlex_cache": str(paths["paddlex"]),
-        "paddlex_cache_exists": paths["paddlex"].is_dir(),
         "file_count": file_count,
         "total_bytes": total_bytes,
         "manifest": manifest,
@@ -183,156 +189,54 @@ def _engine_state(language: str) -> dict:
     )
 
 
-@lru_cache(maxsize=3)
-def engine(language: str):
-    state = _engine_state(language)
-    try:
-        instance = PaddleOCR(
-            lang=language,
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=True,
-        )
-        state.update({"loaded": True, "last_error": ""})
-        return instance
-    except Exception as exc:
-        state.update({"loaded": False, "last_error": str(exc)[:2000]})
-        raise
-
-
 @lru_cache(maxsize=1)
-def structure_engine():
-    options = {
-        "use_doc_orientation_classify": False,
-        "use_doc_unwarping": False,
-        "use_textline_orientation": True,
-        "use_seal_recognition": False,
-        "use_table_recognition": False,
-        "use_formula_recognition": False,
-        "cpu_threads": 4,
-    }
-    state = MODEL_STATUS["structure"]
+def engine():
+    state = _engine_state(PRIMARY_LANGUAGE)
     try:
-        try:
-            instance = PPStructureV3(**options)
-        except TypeError:
-            instance = PPStructureV3(
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_textline_orientation=True,
-            )
-        state.update({"loaded": True, "last_error": ""})
+        instance = load_engine(model_paths()["root"], CPU_THREADS)
+        state.update(loaded=True, last_error="")
         return instance
     except Exception as exc:
-        state.update({"loaded": False, "last_error": str(exc)[:2000]})
+        state.update(loaded=False, last_error=str(exc)[:2000])
         raise
 
 
 def _probe_image() -> np.ndarray:
-    image = np.full((96, 320, 3), 255, dtype=np.uint8)
-    image[36:60, 24:296] = 32
-    return image
+    from PIL import Image, ImageDraw
+    image = Image.new("RGB", (320, 96), "white")
+    ImageDraw.Draw(image).text((20, 28), "STL 012345", fill="black", font_size=28)
+    return np.asarray(image)
 
 
-def _consume_predictions(predictor, image: np.ndarray) -> int:
-    return sum(1 for _prediction in predictor.predict(input=image))
-
-
-def probe_models(
-    *,
-    include_fallback: bool = False,
-    include_structure: bool = False,
-) -> dict:
-    """Load configured models and execute a minimal in-process inference."""
-
+def probe_models() -> dict:
+    """Exercise detection, orientation and recognition in the actual worker."""
     started = time.monotonic()
-    image = _probe_image()
-    components = {}
+    state = _engine_state(PRIMARY_LANGUAGE)
     with MODEL_LOCK:
-        languages = [PRIMARY_LANGUAGE]
-        if include_fallback and FALLBACK_LANGUAGE not in languages:
-            languages.append(FALLBACK_LANGUAGE)
-        for language in languages:
-            state = _engine_state(language)
-            try:
-                predictions = _consume_predictions(engine(language), image)
-                state.update(
-                    {
-                        "loaded": True,
-                        "inference_success": True,
-                        "last_success_at": utc_now(),
-                        "last_error": "",
-                    }
-                )
-                components[f"ocr:{language}"] = {
-                    "available": True,
-                    "predictions": predictions,
-                }
-            except Exception as exc:
-                state.update(
-                    {
-                        "inference_success": False,
-                        "last_error": str(exc)[:2000],
-                    }
-                )
-                components[f"ocr:{language}"] = {
-                    "available": False,
-                    "error": str(exc)[:2000],
-                }
-        if include_structure:
-            state = MODEL_STATUS["structure"]
-            try:
-                predictions = _consume_predictions(structure_engine(), image)
-                state.update(
-                    {
-                        "loaded": True,
-                        "inference_success": True,
-                        "last_success_at": utc_now(),
-                        "last_error": "",
-                    }
-                )
-                components["structure"] = {
-                    "available": True,
-                    "predictions": predictions,
-                }
-            except Exception as exc:
-                state.update(
-                    {
-                        "inference_success": False,
-                        "last_error": str(exc)[:2000],
-                    }
-                )
-                components["structure"] = {
-                    "available": False,
-                    "error": str(exc)[:2000],
-                }
+        try:
+            blocks = recognize(_probe_image(), PRIMARY_LANGUAGE, False)
+            if not blocks:
+                raise RuntimeError("OCR model probe returned no text.")
+            component = {"available": True, "predictions": len(blocks)}
+        except Exception as exc:
+            state.update(inference_success=False, last_error=str(exc)[:2000])
+            component = {"available": False, "error": str(exc)[:2000]}
     return {
-        "available": all(component["available"] for component in components.values()),
-        "components": components,
+        "available": component["available"],
+        "components": {f"ocr:{PRIMARY_LANGUAGE}": component},
         "duration_seconds": round(time.monotonic() - started, 3),
         "checked_at": utc_now(),
-        "versions": {
-            "paddleocr": installed_version("paddleocr"),
-            "paddlepaddle": installed_version("paddlepaddle"),
-        },
+        "engine": "RapidOCR", "model": MODEL_ID, "model_revision": MODEL_REVISION,
+        "versions": {"rapidocr": installed_version("rapidocr"), "onnxruntime": installed_version("onnxruntime")},
         "cache": compact_cache_inventory(),
     }
 
 
-def result_payload(result) -> dict:
-    if hasattr(result, "json"):
-        value = result.json
-        return value() if callable(value) else value
-    if hasattr(result, "res"):
-        return result.res
-    return result if isinstance(result, dict) else {}
-
-
 def extract_blocks(raw: dict) -> list[dict]:
     result = raw.get("res", raw)
-    texts = result.get("rec_texts") or result.get("texts") or []
-    scores = result.get("rec_scores") or result.get("scores") or []
-    boxes = result.get("rec_boxes") or result.get("dt_polys") or result.get("boxes") or []
+    texts = result.get("texts") or []
+    scores = result.get("scores") or []
+    boxes = result.get("boxes") or []
     blocks = []
     for index, text in enumerate(texts):
         text = str(text).strip()
@@ -367,73 +271,18 @@ def extract_blocks(raw: dict) -> list[dict]:
     return blocks
 
 
-def extract_structure_blocks(raw: dict) -> list[dict]:
-    result = raw.get("res", raw)
-    parsed = result.get("parsing_res_list") or []
-    blocks = []
-    for item in parsed:
-        text = str(item.get("block_content", "")).strip()
-        if not text:
-            continue
-        bbox = np.asarray(item.get("block_bbox", []), dtype=float).reshape(-1)
-        blocks.append(
-            {
-                "text": text,
-                "bbox": bbox[:4].tolist() if bbox.size >= 4 else [],
-                "confidence": float(item.get("score", 1)),
-                "type": item.get("sub_label") or item.get("block_label") or "paragraph",
-                "segment_start": bool(item.get("seg_start_flag", True)),
-                "segment_end": bool(item.get("seg_end_flag", True)),
-                "reading_order": int(item.get("index", len(blocks))),
-            }
-        )
-    blocks.sort(key=lambda block: block["reading_order"])
-    return blocks
-
-
 def recognize(image: np.ndarray, language: str, layout: bool) -> list[dict]:
-    if layout and ENABLE_STRUCTURE:
-        try:
-            structured = []
-            for prediction in structure_engine().predict(input=image):
-                structured.extend(extract_structure_blocks(result_payload(prediction)))
-            MODEL_STATUS["structure"].update(
-                {
-                    "inference_success": True,
-                    "last_success_at": utc_now(),
-                    "last_error": "",
-                }
-            )
-            if structured:
-                return structured
-        except Exception as exc:
-            MODEL_STATUS["structure"].update(
-                {
-                    "inference_success": False,
-                    "last_error": str(exc)[:2000],
-                }
-            )
-    state = _engine_state(language)
+    # The same multilingual tiny model serves all supported language selections.
+    state = _engine_state(PRIMARY_LANGUAGE)
     try:
-        predictions = engine(language).predict(input=image)
-        blocks = []
-        for prediction in predictions:
-            blocks.extend(extract_blocks(result_payload(prediction)))
-        state.update(
-            {
-                "inference_success": True,
-                "last_success_at": utc_now(),
-                "last_error": "",
-            }
-        )
+        result = engine()(np.ascontiguousarray(image[:, :, ::-1]))
+        blocks = extract_blocks({"texts": list(result.txts or []),
+            "scores": list(result.scores) if result.scores is not None else [],
+            "boxes": result.boxes.tolist() if result.boxes is not None else []})
+        state.update(loaded=True, inference_success=True, last_success_at=utc_now(), last_error="")
         return blocks
     except Exception as exc:
-        state.update(
-            {
-                "inference_success": False,
-                "last_error": str(exc)[:2000],
-            }
-        )
+        state.update(inference_success=False, last_error=str(exc)[:2000])
         raise
 
 
@@ -441,7 +290,6 @@ def _parse_pdf_path(
     temp_path: Path,
     *,
     primary: str,
-    fallback: str | None,
     layout: bool,
     page_numbers: str,
 ) -> dict:
@@ -466,7 +314,7 @@ def _parse_pdf_path(
 
         pages = []
         matrix = fitz.Matrix(RENDER_DPI / 72, RENDER_DPI / 72)
-        # PaddleOCR model instances are process-wide singletons and are not
+        # OCR model instances are process-wide singletons and are not
         # assumed to be safe for concurrent inference. Health endpoints do not
         # acquire this lock and remain responsive while a document is running.
         with MODEL_LOCK:
@@ -485,27 +333,32 @@ def _parse_pdf_path(
                     if blocks
                     else 0
                 )
-                if fallback and mean_confidence < 0.72:
-                    fallback_blocks = recognize(image, fallback, False)
-                    fallback_confidence = (
-                        sum(block["confidence"] for block in fallback_blocks) / len(fallback_blocks)
-                        if fallback_blocks
-                        else 0
-                    )
-                    if fallback_confidence > mean_confidence:
-                        blocks = fallback_blocks
-                        mean_confidence = fallback_confidence
                 pages.append(
                     {
                         "index": index,
                         "width": pixmap.width,
                         "height": pixmap.height,
+                        "geometry": {
+                            "schema": 1,
+                            "coordinate_space": "rendered_pixels",
+                            "render_width": pixmap.width,
+                            "render_height": pixmap.height,
+                            "render_dpi": RENDER_DPI,
+                            "render_matrix": list(matrix),
+                            "page_rect": list(page.rect),
+                            "crop_box": list(page.cropbox),
+                            "rotation": page.rotation,
+                            "pixmap_origin": [pixmap.x, pixmap.y],
+                        },
                         "confidence": mean_confidence,
                         "blocks": blocks,
                     }
                 )
         return {
-            "engine": "PaddleOCR",
+            "engine": "RapidOCR",
+            "model": MODEL_ID, "model_revision": MODEL_REVISION,
+            "runtime": "onnxruntime", "runtime_version": installed_version("onnxruntime"),
+            "layout_method": "text_geometry",
             "layout_requested": layout,
             "requested_pages": sorted(selected_pages) if selected_pages is not None else "all",
             "pages": pages,
@@ -521,8 +374,8 @@ def health():
         "status": "ok",
         "service_version": app.version,
         "primary_language": PRIMARY_LANGUAGE,
-        "fallback_language": FALLBACK_LANGUAGE,
-        "structure_enabled": ENABLE_STRUCTURE,
+        "engine": "RapidOCR", "model": MODEL_ID, "model_revision": MODEL_REVISION,
+        "languages": ["ch", "en", "chinese_cht"], "layout_method": "text_geometry",
         "model_root": inventory["root"],
         "model_root_writable": inventory["root_writable"],
         "model_manifest_present": bool(inventory["manifest"]),
@@ -532,50 +385,40 @@ def health():
 @app.get("/ready")
 async def readiness(
     deep: bool = False,
-    include_fallback: bool = False,
-    include_structure: bool = False,
 ):
-    include_fallback = include_fallback or REQUIRE_FALLBACK
-    include_structure = include_structure or REQUIRE_STRUCTURE
     probe = None
     if deep:
         if REQUEST_GATE.locked():
             return JSONResponse({"available": False, "status": "busy", "detail": "OCR is processing a document; no extra probe was queued."}, status_code=409)
         async with REQUEST_GATE:
-            probe = await run_in_ocr_process(probe_models, include_fallback=include_fallback, include_structure=include_structure)
+            probe = await run_in_ocr_process(probe_models)
     manifest_probe = (inventory_probe := cache_inventory()).get("manifest") or {}
     manifest_components = (manifest_probe.get("probe") or {}).get("components") or {}
 
     def component_ready(name: str, state: dict) -> bool:
         if probe is not None and name in probe.get("components", {}):
             return bool(probe["components"][name].get("available"))
-        return bool(state.get("inference_success")) or bool(
-            manifest_components.get(name, {}).get("available")
-        )
+        return RUNTIME_WORKER_PID is not None and bool(state.get("inference_success"))
 
     primary = _engine_state(PRIMARY_LANGUAGE)
     required = [component_ready(f"ocr:{PRIMARY_LANGUAGE}", primary)]
-    if include_fallback:
-        required.append(
-            component_ready(
-                f"ocr:{FALLBACK_LANGUAGE}",
-                _engine_state(FALLBACK_LANGUAGE),
-            )
-        )
-    if include_structure:
-        required.append(
-            component_ready("structure", MODEL_STATUS["structure"])
-        )
     inventory = compact_cache_inventory(inventory_probe)
     available = all(required) and inventory["root_writable"]
     payload = {
         "status": "ready" if available else "not_ready",
         "available": available,
+        "runtime_verified": all(required),
+        "engine": "RapidOCR", "model": MODEL_ID, "model_revision": MODEL_REVISION,
+        "runtime_worker_pid": RUNTIME_WORKER_PID,
+        "installation_probe": {
+            "checked_at": (manifest_probe.get("probe") or {}).get("checked_at"),
+            "components": manifest_components,
+            "current_runtime_evidence": False,
+        },
         "service_version": app.version,
         "required": {
             "primary": PRIMARY_LANGUAGE,
-            "fallback": FALLBACK_LANGUAGE if include_fallback else None,
-            "structure": include_structure,
+            "model": MODEL_ID,
         },
         "engines": MODEL_STATUS,
         "cache": inventory,
@@ -601,7 +444,8 @@ async def parse_pdf(
     await file.seek(0)
     requested = [item.strip() for item in languages.split(",") if item.strip()]
     primary = PRIMARY_LANGUAGE if PRIMARY_LANGUAGE in requested or not requested else requested[0]
-    fallback = FALLBACK_LANGUAGE if FALLBACK_LANGUAGE in requested else None
+    if any(language not in {"ch", "en", "chinese_cht"} for language in requested):
+        raise HTTPException(status_code=400, detail="Supported languages: ch,en,chinese_cht.")
     with tempfile.NamedTemporaryFile(suffix=".pdf", dir="/tmp/ocr", delete=False) as handle:
         fingerprint = hashlib.sha256(f"{languages}:{layout}:{page_numbers}".encode())
         while chunk := await file.read(1024 * 1024):
@@ -631,7 +475,7 @@ async def parse_pdf(
                 async with REQUEST_GATE:
                     receipt.update(state="running", started_at=utc_now())
                     result = await run_in_ocr_process(_parse_pdf_path, temp_path, primary=primary,
-                        fallback=fallback, layout=layout, page_numbers=page_numbers)
+                        layout=layout, page_numbers=page_numbers)
                     receipt.update(state="completed", finished_at=utc_now())
                     # Single-page resumable jobs keep small receipts. Legacy
                     # whole-file/anonymous calls must not retain large OCR text.

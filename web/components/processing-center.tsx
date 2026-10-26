@@ -292,7 +292,7 @@ const stageLabels: Record<string, string> = {
   received: "等待处理",
   validating: "校验 PDF",
   extracting: "提取逐页文本",
-  ocr: "PaddleOCR",
+  ocr: "RapidOCR · PP-OCRv6 tiny",
   metadata: "识别书目信息",
   linking: "建立知识关联",
   indexing: "建立全文索引",

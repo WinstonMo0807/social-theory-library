@@ -1,28 +1,11 @@
+# Import the clean image built with ocr_service/Dockerfile, exported with docker save.
+# Retired Paddle images cannot be used as an offline base.
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
-
-ENV OPENBLAS_CORETYPE=ATOM \
-    PADDLE_PDX_MODEL_SOURCE=modelscope
-
 USER root
 WORKDIR /app
-COPY offline/security-20261024/ocr-runtime/requirements-linux.lock /tmp/stl-requirements.txt
-COPY offline/security-20261024/ocr-runtime/wheels/ /tmp/stl-security-wheels/
-RUN python -m pip install --no-index --find-links=/tmp/stl-security-wheels pip==26.2.2 \
-    && python -m pip install --no-index --find-links=/tmp/stl-security-wheels --require-hashes --no-deps -r /tmp/stl-requirements.txt \
-    && python -m pip check \
-    && rm -rf /tmp/stl-security-wheels /tmp/stl-requirements.txt
-COPY ocr_service/vendor/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl /tmp/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl
-RUN printf '%s  %s\n' \
-      '80d0ed4ce96859395cf634d4c3e06df4527ea2abdffc826f24b8f6bc68656f39' \
-      '/tmp/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl' | sha256sum -c - \
-    && (python -m pip uninstall -y paddlepaddle >/dev/null 2>&1 || true) \
-    && python -m pip install --no-index --force-reinstall --no-deps /tmp/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl \
-    && python -m pip check \
-    && python -c 'import numpy as np, paddle; assert paddle.__version__ == "3.3.1", paddle.__version__; actual = paddle.matmul(paddle.to_tensor([[1.0, 2.0], [3.0, 4.0]], dtype="float32"), paddle.to_tensor([[2.0], [1.0]], dtype="float32")).numpy(); np.testing.assert_allclose(actual, np.array([[4.0], [10.0]], dtype=np.float32), rtol=0, atol=0)' \
-    && rm -f /tmp/paddlepaddle-3.3.1-cp311-cp311-manylinux_2_35_x86_64.manylinux_2_36_x86_64.whl
-COPY --chown=ocr:ocr ocr_service/app.py /app/app.py
-COPY --chown=ocr:ocr ocr_service/model_probe.py /app/model_probe.py
+RUN python -c "from importlib.metadata import version, packages_distributions; assert version('rapidocr') == '3.10.0'; assert version('onnxruntime') == '1.31.0'; assert 'paddle' not in packages_distributions()"
+COPY --chown=ocr:ocr ocr_service/app.py ocr_service/model_probe.py ocr_service/rapid_models.py ocr_service/rapid_runtime.py /app/
 COPY ocr_service/docker-entrypoint.sh /usr/local/bin/library-ocr-entrypoint
 RUN chmod 0755 /usr/local/bin/library-ocr-entrypoint
 USER ocr

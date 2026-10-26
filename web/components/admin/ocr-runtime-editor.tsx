@@ -85,10 +85,10 @@ function Editor({owner,onSaved,onBusyChange}:{owner:string;onSaved?:()=>void;onB
       {data.remote_url_redacted?<p role="alert" className={styles.error}>现有远程地址包含不应展示的凭据或参数。请填写无凭据的新地址，或先在服务器修正；密钥原文不会显示。</p>:null}
       {draft&&draft.expected_version!==data.configuration_version?<p role="alert" className={styles.error}>服务器配置已变化，当前输入仍保留。请先重新读取；旧输入不会覆盖新配置。</p>:null}
       <fieldset disabled={locked}>
-        <label><span>运行方式</span><select value={input.mode} onChange={event=>change({mode:event.target.value as Input["mode"]})}><option value="nas_only">只使用 NAS PaddleOCR</option><option value="nas_preferred">NAS 优先，失败后使用已配置的远程服务</option><option value="remote_only">只使用远程解析网关</option></select></label>
+        <label><span>运行方式</span><select value={input.mode} onChange={event=>change({mode:event.target.value as Input["mode"]})}><option value="nas_only">只使用 NAS RapidOCR · PP-OCRv6 tiny</option><option value="nas_preferred">NAS 优先，失败后使用已配置的远程服务</option><option value="remote_only">只使用远程解析网关</option></select></label>
         <label><span>远程网关地址</span><input type="url" maxLength={2048} value={input.remote_url} onChange={event=>change({remote_url:event.target.value})} autoComplete="off" spellCheck={false}/></label>
-        <label><span>远程模型标识</span><input maxLength={300} value={input.remote_model} onChange={event=>change({remote_model:event.target.value})} autoComplete="off" spellCheck={false}/></label>
-        <small>地址或模型留空时沿用服务器环境中的默认值；选择“只使用 NAS”可停用远程回退。</small>
+        <label><span>远程模型标识</span><input readOnly value="PP-OCRv6-tiny"/></label>
+        <small>远端也须运行相同的 RapidOCR tiny 网关。地址留空时沿用服务器默认值；选择“只使用 NAS”可停用远程回退。</small>
         {input.mode!=="nas_only"?<label className={styles.consent}><input type="checkbox" checked={input.acknowledge_remote||false} onChange={event=>setDraft({...input,acknowledge_remote:event.target.checked})}/><span>我确认此解析方式在需要时会把待识别文档发送到配置的远程服务。</span></label>:null}
       </fieldset>
       <dl><div><dt>NAS 服务</dt><dd>{data.nas_configured?data.nas_url:"未配置"}</dd></div><div><dt>远程密钥</dt><dd>{data.remote_key_configured?"服务器已配置":"未配置"}</dd></div><div><dt>远程配置</dt><dd>{data.remote_configured?"地址、模型和密钥齐全":"尚不完整"}</dd></div><div><dt>最近处理成功</dt><dd>{data.last_success_at?new Date(data.last_success_at).toLocaleString("zh-CN"):"尚无记录"}</dd></div></dl>

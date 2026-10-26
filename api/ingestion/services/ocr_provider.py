@@ -9,6 +9,7 @@ from catalog.models import SiteSetting
 
 
 OCR_RUNTIME_KEY = "ocr_runtime"
+OCR_MODEL_ID = "PP-OCRv6-tiny"
 OCR_MODES = {"nas_preferred", "nas_only", "remote_only"}
 
 
@@ -48,14 +49,14 @@ class OCRServiceBusy(RuntimeError):
 def ocr_runtime_config():
     stored = SiteSetting.objects.filter(key=OCR_RUNTIME_KEY).first()
     value = stored.value if stored and isinstance(stored.value, dict) else {}
-    mode = str(value.get("mode") or "nas_preferred")
+    mode = str(value.get("mode") or "nas_only")
     if mode not in OCR_MODES:
-        mode = "nas_preferred"
+        mode = "nas_only"
     return {
         "mode": mode,
         "remote_url": str(value.get("remote_url") or settings.OCR_REMOTE_API_URL).strip(),
-        "remote_model": str(value.get("remote_model") or settings.OCR_REMOTE_MODEL).strip(),
-        "nas_url": settings.PADDLEOCR_SERVICE_URL.strip(),
+        "remote_model": OCR_MODEL_ID,
+        "nas_url": settings.RAPIDOCR_SERVICE_URL.strip(),
         "remote_key_configured": bool(settings.OCR_REMOTE_API_KEY),
         "saved_configuration_version": (
             stored.updated_at.isoformat() if stored else "environment-default"
@@ -127,6 +128,8 @@ def _request_document_gateway(
     payload = response.json()
     if not isinstance(payload, dict) or not isinstance(payload.get("pages"), list):
         raise ValueError("OCR 服务返回了无法识别的数据格式。")
+    if payload.get("engine") != "RapidOCR" or payload.get("model") != OCR_MODEL_ID or not payload.get("model_revision"):
+        raise ValueError("OCR 服务尚未使用已选定的 RapidOCR PP-OCRv6 tiny，请核对服务版本。")
     if page_map:
         mapped = []
         for page in payload["pages"]:
@@ -148,7 +151,7 @@ def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None, task_
     if config["mode"] in {"nas_preferred", "nas_only"}:
         providers.append(
             (
-                "paddleocr_nas",
+                "rapidocr_nas",
                 config["nas_url"],
                 "",
                 "",
@@ -187,7 +190,7 @@ def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None, task_
             )
             return payload, provider
         except (httpx.HTTPError, ValueError) as exc:
-            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {429, 503} and provider == "paddleocr_nas":
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {429, 503} and provider == "rapidocr_nas":
                 try:
                     detail = str(exc.response.json().get("detail", ""))
                 except (ValueError, AttributeError):

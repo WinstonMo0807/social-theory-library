@@ -29,7 +29,7 @@ services:
       SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
       HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
       HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
-      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,paddleocr}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,rapidocr}
     command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --hostname=worker@%h
     volumes:
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/archive:/data/archive
@@ -75,7 +75,7 @@ services:
       SEMANTIC_SEARCH_OFFLINE_MODE: ${SEMANTIC_SEARCH_OFFLINE_MODE:-true}
       HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
       HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
-      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,paddleocr}
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,rapidocr}
     command: celery -A config worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1 --queues=${INGESTION_TASK_QUEUE:-ingestion} --hostname=ingestion@%h
     volumes:
       - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/archive:/data/archive
@@ -93,28 +93,25 @@ services:
       retries: 5
       start_period: 60s
 
-  paddleocr:
+  rapidocr:
     build:
       context: ./ocr_service
     restart: unless-stopped
     profiles: ["ocr"]
     environment:
+      OCR_MODEL_DIR: /models
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
       OCR_PRIMARY_LANGUAGE: ch
-      OCR_FALLBACK_LANGUAGE: chinese_cht
-      OCR_ENABLE_STRUCTURE: ${OCR_ENABLE_STRUCTURE:-false}
+      OCR_CPU_THREADS: ${OCR_CPU_THREADS:-1}
       OCR_REQUIRE_PERSISTENT_MODELS: "true"
-      OCR_REQUIRE_FALLBACK: "false"
-      OCR_REQUIRE_STRUCTURE: "false"
       OCR_RENDER_DPI: "180"
       OCR_MAX_PAGES: "2000"
-      PADDLE_PDX_MODEL_SOURCE: modelscope
       HTTP_PROXY: ${CONTAINER_HTTP_PROXY:-}
       HTTPS_PROXY: ${CONTAINER_HTTPS_PROXY:-}
-      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,paddleocr}
-      PADDLE_HOME: /models
-      OCR_FALLBACK_MODEL_DIR: /tmp/ocr/models
+      NO_PROXY: ${CONTAINER_NO_PROXY:-127.0.0.1,localhost,rapidocr}
     volumes:
-      - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/ocr-models:/models
+      - ${NAS_HOST_ROOT:?请设置 NAS_HOST_ROOT}/rapidocr-models:/models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=3)"]
       interval: 30s
@@ -124,4 +121,5 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1536m
+          cpus: "1.0"

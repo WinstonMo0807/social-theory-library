@@ -20,13 +20,12 @@ MAX_TOTAL_CHARS = 1_000_000
 
 
 def _local_gateway():
-    base = str(getattr(settings, "PADDLEOCR_SERVICE_URL", "") or "").strip()
+    base = str(getattr(settings, "RAPIDOCR_SERVICE_URL", "") or "").strip()
     parsed = urlsplit(base)
     if (parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password
             or parsed.query or parsed.fragment or parsed.path not in {"", "/", "/v1/parse-pdf"}):
         raise AIServiceUnavailable("私人扫描稿件的本地 OCR 地址未配置或无效。")
-    allowed = getattr(settings, "PRIVATE_OCR_ALLOWED_HOSTS", ("localhost", "127.0.0.1", "::1", "paddleocr",
-        "paddleocr-service", "paddleocr-nas", "ocr", "host.docker.internal"))
+    allowed = getattr(settings, "PRIVATE_OCR_ALLOWED_HOSTS", ("localhost", "127.0.0.1", "::1", "rapidocr", "ocr", "host.docker.internal"))
     return base, allowed
 
 
@@ -89,14 +88,14 @@ def enrich_private_manuscript(*, blob, kind, paragraphs, cache, generation, chec
         if not is_current():
             return None
         for unit in pending:
-            cache[unit["id"]] = {"generation": generation, "location": unit["location"], "provider": "paddleocr_local",
+            cache[unit["id"]] = {"generation": generation, "location": unit["location"], "provider": "rapidocr_local",
                 "status": "failed", "error_code": "private_ocr_unavailable", "text": "", "blocks": []}
         if not checkpoint(cache, len(units), len(units)):
             return None
     for unit in ([] if gateway_error else pending[:UNITS_PER_ATTEMPT]):
         if not is_current():
             return None
-        result = {"generation": generation, "location": unit["location"], "provider": "paddleocr_local",
+        result = {"generation": generation, "location": unit["location"], "provider": "rapidocr_local",
                   "status": "failed", "error_code": "private_ocr_unavailable", "text": "", "blocks": []}
         try:
             content = _image_pdf(blob, unit) if kind == "docx" else blob
@@ -126,7 +125,7 @@ def enrich_private_manuscript(*, blob, kind, paragraphs, cache, generation, chec
             if len(text_value) + sum(len(row.get("text", "")) for key, row in cache.items() if key != unit["id"]) > MAX_TOTAL_CHARS:
                 result["error_code"] = "private_ocr_text_limit"
                 raise ValueError("本地 OCR 文字总量超过上限。")
-            result.update(status="completed" if text_value.strip() else "no_text", error_code="", text=text_value,
+            result.update(ocr_metadata={key: payload.get(key, "") for key in ("engine", "model", "model_revision", "runtime", "runtime_version")}, status="completed" if text_value.strip() else "no_text", error_code="", text=text_value,
                 blocks=blocks, width=page.get("width"), height=page.get("height"), geometry=geometry,
                 coordinate_space={"unit": "ocr_page_coordinates", "width": page.get("width"), "height": page.get("height"),
                     "requires_reader_transform": True}, image_sha256=unit.get("sha256"),
