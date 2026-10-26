@@ -66,6 +66,9 @@ function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: 
   useUnsavedForm(dirty, false);
   const currentNode = nodes.find(node => node.id === selectedId) || nodes[0];
   const currentId = currentNode?.id || "";
+  useEffect(() => {
+    setPreviewPage(currentNode?.pdf_page || currentNode?.contents_page || 1);
+  }, [currentId, currentNode?.pdf_page, currentNode?.contents_page]);
   const stale = Boolean(draft && data && draft.expected !== data.expected_revision);
   const busy = resource.pending || reading;
   const sourceUnavailable = data?.asset?.source_current === false;

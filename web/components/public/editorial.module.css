@@ -101,7 +101,7 @@
  .exhibitReading h1{font-size:28px}
 }
 .empty>svg{display:block;margin-inline:auto}
-@media(min-width:1101px){.hero{min-height:320px;padding-top:20px;padding-bottom:16px}.heroCopy{margin-top:20px}.hero h1{font-size:clamp(42px,4.25vw,60px);line-height:1.25}.subtitle{font-size:18px;line-height:1.6}.description{line-height:1.6}.search{height:42px;margin-top:16px}}
+@media(min-width:1101px){.hero{min-height:320px;padding-top:20px;padding-bottom:16px}.heroCopy{margin-top:20px}.hero h1{font-size:clamp(42px,4.25vw,60px);line-height:1.25}.subtitle{font-size:24px;line-height:1.5}.description{font-size:18px;line-height:1.5}.search{height:42px;margin-top:16px}}
 
 /* PDF73 uses a broad lead article alongside three smaller cards. */
 .cards[data-featured]{grid-template-columns:2.5fr repeat(3,minmax(0,1fr))}

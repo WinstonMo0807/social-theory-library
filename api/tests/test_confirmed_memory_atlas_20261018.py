@@ -190,7 +190,8 @@ def test_list_counts_are_server_wide_before_state_filter(api_client, reader_user
     response = api_client.get("/api/reading/research-memories/", {"q": "制度", "kind": "method", "state": "confirmed", "order": "newest"})
     assert response.status_code == 200
     assert response.data["count"] == 2
-    assert response.data["counts"] == {"total": 4, "confirmed": 2, "proposed": 1, "ignored": 1}
+    assert response.data["counts"] == {"total": 4, "confirmed": 2, "proposed": 1, "ignored": 1,
+                                       "needs_revision": 1, "revised": 4}
     assert all(row["data"]["kind"] == "method" for row in response.data["results"])
     assert response["Cache-Control"] == "private, no-store"
 

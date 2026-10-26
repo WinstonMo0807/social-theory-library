@@ -889,6 +889,28 @@ def _semantic_projection(
     *,
     catalog_revision=None,
 ) -> dict:
+    from catalog.services.discovery_indexing import enabled as discovery_enabled
+    if discovery_enabled():
+        sources = [{"edition_id": str(asset.edition_id), "asset_id": str(asset.pk),
+                    "catalog_revision_id": str(catalog_revision.pk if catalog_revision else asset.edition.active_catalog_revision_id)}
+                   for asset in assets]
+        with transaction.atomic():
+            locked = ProcessingJob.objects.select_for_update().get(pk=job.pk)
+            stats = dict(locked.stats or {})
+            plan = dict(stats.get("projection_plan") or {})
+            plan.update(discovery_sources=sources, semantic_job_ids=[],
+                        semantic_state_id=tracked.get("state_id"),
+                        semantic_source_revision=tracked.get("source_revision"))
+            stats["projection_plan"] = plan
+            locked.stats = stats
+            locked.save(update_fields=["stats", "updated_at"])
+        result = _discovery_publication_result(sources)
+        if result["status"] == "current":
+            _complete_tracked(tracked)
+        elif result["status"] == "failed":
+            _fail_tracked(tracked, code="discovery_projection_failed", message=result["error"])
+        return result
+
     from catalog.services.semantic_indexing import queue_semantic_job
 
     jobs = []
@@ -936,6 +958,7 @@ def _semantic_projection(
         locked = ProcessingJob.objects.select_for_update().get(pk=job.pk)
         stats = dict(locked.stats or {})
         plan = dict(stats.get("projection_plan") or {})
+        plan.pop("discovery_sources", None)
         plan["semantic_job_ids"] = [str(row.id) for row in jobs]
         plan["semantic_state_id"] = tracked.get("state_id")
         plan["semantic_source_revision"] = tracked.get("source_revision")
@@ -992,6 +1015,37 @@ def _semantic_projection(
         _complete_tracked(tracked)
         return {"status": "current", "jobs": [str(row.id) for row in jobs]}
     return {"status": "delegated", "jobs": [str(row.id) for row in jobs]}
+
+
+def _discovery_publication_result(sources):
+    """Check the same published source generation consumed by Explore and Ask.
+
+    The existing Discovery scheduler owns encoding and retries. A publication
+    waits for its exact file/revision, never a previous index or a legacy job.
+    """
+    from catalog.discovery_index_models import DiscoverySourceState
+    from catalog.services.discovery_projection import active_generation
+    from catalog.services.discovery_sources import get_source
+
+    if not sources:
+        return {"status": "current", "backend": "discovery", "empty": True}
+    generation = active_generation()
+    if generation is None:
+        return {"status": "failed", "backend": "discovery", "error": "尚无可用的 Discovery 索引版本。"}
+    for source in sources:
+        _, header = get_source("edition", source["edition_id"])
+        if not header or any(header.get(key) != source[key] for key in ("asset_id", "catalog_revision_id")):
+            return {"status": "delegated", "backend": "discovery", "reason": "awaiting_public_revision"}
+        state = DiscoverySourceState.objects.select_related("job").filter(
+            generation=generation, source_type="edition", source_id=source["edition_id"]).first()
+        if (state and state.source_revision == header["source_revision"] and state.indexed_at
+                and not state.error and state.expected_count > 0 and state.completed_count == state.expected_count):
+            continue
+        if (state and state.job and state.job.stats.get("source_revision") == header["source_revision"]
+                and state.job.status in {"failed", "canceled"}):
+            return {"status": "failed", "backend": "discovery", "error": "当前公开原文的 Discovery 索引任务未完成，请在文件与处理中重试。"}
+        return {"status": "delegated", "backend": "discovery", "reason": "indexing_current_source"}
+    return {"status": "current", "backend": "discovery", "generation_id": str(generation.pk)}
 
 
 def _recommendation_projection(
@@ -1332,12 +1386,13 @@ def reconcile_delegated_projection_job(
     stats = dict(parent.stats or {})
     plan = dict(stats.get("projection_plan") or {})
     semantic_ids = plan.get("semantic_job_ids") or []
-    if not semantic_ids:
+    discovery_sources = plan.get("discovery_sources")
+    if not semantic_ids and discovery_sources is None:
         return parent
     jobs = list(
         SemanticIndexJob.objects.filter(pk__in=semantic_ids).order_by("id")
     )
-    if (
+    if discovery_sources is None and (
         len(jobs) != len(set(semantic_ids))
         or any(row.status not in SEMANTIC_TERMINAL for row in jobs)
     ):
@@ -1348,6 +1403,11 @@ def reconcile_delegated_projection_job(
     ).first()
     captured_revision = int(plan.get("semantic_source_revision") or 0)
     semantic_result = {"jobs": [str(row.id) for row in jobs]}
+    if discovery_sources is not None:
+        semantic_result = _discovery_publication_result(discovery_sources)
+        if (semantic_result["status"] == "delegated" and state is not None
+                and state.source_revision == captured_revision and state.task_owner_key == str(parent.id)):
+            return parent
     if (
         state is not None
         and state.source_revision == captured_revision
@@ -1358,7 +1418,8 @@ def reconcile_delegated_projection_job(
             parent,
             captured_revision,
         )
-        if all(_semantic_job_verified(row) for row in jobs):
+        if (semantic_result.get("status") == "current" if discovery_sources is not None
+                else all(_semantic_job_verified(row) for row in jobs)):
             if lease_status == "claimed":
                 complete_projection(
                     state.id,
@@ -1389,8 +1450,7 @@ def reconcile_delegated_projection_job(
                     lease_token,
                     error_code="semantic_projection_failed",
                     error_message=(
-                        "A delegated SemanticIndexJob did not complete a "
-                        "verified Meilisearch write."
+                        semantic_result.get("error") or "A delegated SemanticIndexJob did not complete a verified Meilisearch write."
                     ),
                 )
                 semantic_result["status"] = "failed"

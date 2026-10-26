@@ -38,7 +38,7 @@ class PrivacyRequestStopInput(serializers.Serializer):
 
     def to_internal_value(self, data):
         if not isinstance(data, dict) or set(data) != {"action"}:
-            raise serializers.ValidationError("仅可停止指定编号尚未创建的本人资料请求。")
+            raise serializers.ValidationError({"non_field_errors": ["仅可停止指定编号尚未创建的本人资料请求。"]})
         return super().to_internal_value(data)
 
 

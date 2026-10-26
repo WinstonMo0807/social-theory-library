@@ -194,6 +194,11 @@ def _fake_dump(destination: Path) -> DatabaseDumpResult:
     )
 
 
+def _fake_snapshot(destination, heads=None):
+    from distribution.backup_snapshot import inventory_query, inventory_records
+    return _fake_dump(destination), heads or [], inventory_records(inventory_query())
+
+
 def test_backup_job_records_runtime_manifest_and_checksum(
     tmp_path,
     settings,
@@ -203,11 +208,8 @@ def test_backup_job_records_runtime_manifest_and_checksum(
     settings.NAS_BACKUP_ROOT = tmp_path
     destination = tmp_path / "formal"
     job = _create_job(django_user_model, destination)
-    monkeypatch.setattr("distribution.tasks.create_database_dump", _fake_dump)
-    monkeypatch.setattr(
-        "distribution.tasks.applied_migration_heads",
-        lambda: ["catalog.0027_query_lexicon_core", "ingestion.0010_processing_pause_controls"],
-    )
+    monkeypatch.setattr("distribution.tasks.capture_backup_snapshot", lambda destination: _fake_snapshot(
+        destination, ["catalog.0027_query_lexicon_core", "ingestion.0010_processing_pause_controls"]))
 
     archive_path = Path(create_backup_archive.run(str(job.id)))
 
@@ -236,11 +238,10 @@ def test_backup_job_artifact_write_failure_is_failed_and_leaves_no_archive(
     settings.NAS_BACKUP_ROOT = tmp_path
     destination = tmp_path / "write-failure"
     job = _create_job(django_user_model, destination)
-    monkeypatch.setattr("distribution.tasks.create_database_dump", _fake_dump)
-    monkeypatch.setattr("distribution.tasks.applied_migration_heads", lambda: [])
+    monkeypatch.setattr("distribution.tasks.capture_backup_snapshot", _fake_snapshot)
 
-    def fail_archive(path, mode):
-        Path(path).write_bytes(b"partial archive")
+    def fail_archive(*, fileobj, mode):
+        fileobj.write(b"partial archive")
         raise OSError("artifact write failure")
 
     monkeypatch.setattr("distribution.tasks.tarfile.open", fail_archive)
@@ -252,3 +253,43 @@ def test_backup_job_artifact_write_failure_is_failed_and_leaves_no_archive(
     assert job.status == BackupJob.Status.FAILED
     assert "artifact write failure" in job.error_message
     assert list(destination.glob("*.tar.gz")) == []
+
+
+def test_completed_backup_duplicate_delivery_keeps_existing_archive(tmp_path, settings, monkeypatch, django_user_model):
+    settings.NAS_BACKUP_ROOT = tmp_path
+    job = _create_job(django_user_model, tmp_path / "once")
+    calls = []
+    def dump(destination):
+        calls.append(destination)
+        return _fake_snapshot(destination)
+    monkeypatch.setattr("distribution.tasks.capture_backup_snapshot", dump)
+    first = create_backup_archive.run(str(job.id))
+    second = create_backup_archive.run(str(job.id))
+    assert first == second and len(calls) == 1 and Path(first).is_file()
+
+
+def test_invalid_backup_destination_records_failure(tmp_path, settings, django_user_model):
+    settings.NAS_BACKUP_ROOT = tmp_path / "permitted"
+    job = _create_job(django_user_model, tmp_path / "outside")
+    with pytest.raises(RuntimeError, match="备份目标超出"):
+        create_backup_archive.run(str(job.id))
+    job.refresh_from_db()
+    assert job.status == BackupJob.Status.FAILED and not (tmp_path / "outside").exists()
+
+
+def test_missing_original_prevents_false_success(tmp_path, settings, monkeypatch, django_user_model):
+    from catalog.models import Asset, Edition, Work
+    settings.NAS_BACKUP_ROOT = tmp_path
+    settings.MEDIA_ROOT = tmp_path / "media"
+    work = Work.objects.create(title="备份原件")
+    edition = Edition.objects.create(work=work)
+    Asset.objects.create(edition=edition, kind=Asset.Kind.ORIGINAL, file="missing.pdf", sha256="a" * 64)
+    job = _create_job(django_user_model, tmp_path / "originals")
+    job.include_originals = True
+    job.save(update_fields=["include_originals"])
+    monkeypatch.setattr("distribution.tasks.capture_backup_snapshot", _fake_snapshot)
+    with pytest.raises(RuntimeError, match="不存在"):
+        create_backup_archive.run(str(job.id))
+    job.refresh_from_db()
+    assert job.status == BackupJob.Status.FAILED and not job.checksum
+    assert list((tmp_path / "originals").glob("*.tar.gz")) == []

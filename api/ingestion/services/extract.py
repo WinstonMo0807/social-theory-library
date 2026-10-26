@@ -50,7 +50,10 @@ class ExtractedPage:
 
 def _explicit_page_labels(document) -> bool:
     try:
-        return bool(document.get_page_labels())
+        rules = document.get_page_labels()
+        # A scanner's 1..N file numbering is not evidence of printed pagination.
+        # Leave it to observed page numbers or explicit manual calibration.
+        return bool(rules) and rules != [{"startpage": 0, "prefix": "", "firstpagenum": 1, "style": "D"}]
     except (AttributeError, RuntimeError, ValueError):
         return False
 

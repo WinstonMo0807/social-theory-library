@@ -92,7 +92,9 @@ def test_duplicate_and_missing_page_require_review_without_creating_pdf_pages(ma
     result = save_mapping(mapping_asset.pk, actor=admin_user, data=command(mapping_asset, data=data))
     preview = prepare_mapping(mapping_asset, result)
     assert preview["can_apply"]
-    assert preview["changed_page_count"] == 2
+    # Confirmation changes are included even when that page's label stays put.
+    assert preview["changed_page_count"] == 3
+    assert preview["changes"][2]["before"] == preview["changes"][2]["after"]
     assert mapping_asset.pages.count() == 3
     invalid = deepcopy(data)
     invalid["missing"][0]["label"] = "1"
@@ -126,7 +128,9 @@ def test_draft_apply_preserves_missing_as_metadata_and_nonce_is_replayable(mappi
     mapping_asset.refresh_from_db()
     assert mapping_asset.pages.count() == 3
     assert mapping_asset.pages.get(index=2).printed_label == "2–3"
-    assert mapping_asset.validation_details["page_mapping"]["missing"] == data["missing"]
+    assert mapping_asset.validation_details["page_mapping"]["missing"] == [
+        {**row, "action": "mark"} for row in data["missing"]
+    ]
     assert mapping_asset.edition.page_label_status == "ready"
 
 

@@ -184,18 +184,18 @@ def test_owner_header_private_queryset_and_service_guard(api_client, reader_user
         service.task_output(record, admin_user)
 
 
-def test_retention_off_blocks_new_writes_but_preserves_existing_receipt_and_delete(reader_user, parallel_source):
+def test_retention_off_blocks_new_tasks_but_preserves_existing_edit_receipt_and_delete(reader_user, parallel_source):
     command = task_command(parallel_source)
     created = service.create_task(reader_user, command)
     privacy.update_preferences(reader_user, {"expected_revision": privacy.preferences(reader_user)["revision"],
         "retention": {"personal_notes": False}})
     with pytest.raises(ValidationError):
         service.create_task(reader_user, task_command(parallel_source))
-    with pytest.raises(ValidationError):
-        service.update_task(reader_user, created["id"],
-            {"request_id": str(uuid4()), "expected_revision": 1, "data": command["data"]})
+    edited = service.update_task(reader_user, created["id"],
+        {"request_id": str(uuid4()), "expected_revision": 1, "data": command["data"]})
+    assert edited["revision"] == 2
     assert service.create_task(reader_user, command)["id"] == created["id"]
-    service.delete_task(reader_user, created["id"], 1)
+    service.delete_task(reader_user, created["id"], 2)
     assert not ParallelReadingTask.objects.filter(pk=created["id"]).exists()
 
 

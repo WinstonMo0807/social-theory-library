@@ -231,7 +231,6 @@ def update_task(user, pk, raw):
     receipt = existing_receipt(user, command["request_id"], digest, task_id=record.id)
     if receipt:
         return task_output(record, user, applied_revision=receipt.applied_revision)
-    require_retention(user, "personal_notes")
     research.expect(record, command["expected_revision"])
     data = normalize_task(command["data"], user, previous=research.unpack(record))
     research.save_data(record, data)
