@@ -3,6 +3,7 @@ from collections import Counter
 from copy import deepcopy
 from hashlib import sha256
 import json
+import re
 from uuid import uuid5
 
 from django.db import transaction
@@ -74,6 +75,36 @@ def page_status(row, failed, options):
     return "completed", "已有文字，尚未逐字人工确认"
 
 
+def quality_spans(page, text, options):
+    """Code-point offsets into this exact text, never guessed character boxes."""
+    spans = []
+    if options["detect_garbled"]:
+        spans.extend({"start": match.start(), "end": match.end(), "reason": "实际替换符 U+FFFD，可能存在乱码，请对照原页。"}
+                     for match in re.finditer("\ufffd+", text))
+    if page and not page.is_text_manual and page.text_source in {"ocr", "hybrid"} and page.text == text:
+        blocks = list(page.blocks.order_by("order"))
+        # The OCR ingestion path joins these exact blocks with two newlines.
+        # If the stored text no longer has that alignment, keep only literal evidence.
+        if "\n\n".join(block.text for block in blocks) == text:
+            offset = 0
+            for block in blocks:
+                # Legacy imports also used zero for absent scores; do not turn
+                # that missing evidence into a located recognition warning.
+                if block.text.strip() and 0 < block.confidence < options["quality_threshold"]:
+                    spans.append({"start": offset, "end": offset + len(block.text),
+                        "reason": "此文字段的识别引擎置信度偏低，需人工核对；不代表已确定存在错字。"})
+                offset += len(block.text) + 2
+    merged = []
+    for span in sorted(spans, key=lambda row: (row["start"], row["end"])):
+        if merged and span["start"] <= merged[-1]["end"]:
+            merged[-1]["end"] = max(merged[-1]["end"], span["end"])
+            if span["reason"] not in merged[-1]["reason"]:
+                merged[-1]["reason"] += " " + span["reason"]
+        else:
+            merged.append(dict(span))
+    return merged
+
+
 def workspace_state(asset, actor, *, pdf_page=1, list_page=1, status="all", history_page=1,
                     quality_threshold=.75, detect_spreads=True, detect_garbled=True):
     options = normalize_task_options({"quality_threshold": quality_threshold, "detect_spreads": detect_spreads, "detect_garbled": detect_garbled})
@@ -120,6 +151,8 @@ def workspace_state(asset, actor, *, pdf_page=1, list_page=1, status="all", hist
               "history": [revision_payload(row) for row in history[(history_page-1)*10:history_page*10]],
               "history_count": history_count, "history_page": history_page,
               "history_next_page": history_page + 1 if history_page * 10 < history_count else None}
+    detail["quality_spans"] = quality_spans(selected, detail["text"], options)
+    detail["original_quality_spans"] = detail["quality_spans"] if detail["original_text"] == detail["text"] else quality_spans(None, detail["original_text"], options)
     context = ocr_context(asset.edition, actor)
     return {"asset": summary, "source_version": asset.updated_at.isoformat(),
             "expected_revision": revisions.values_list("revision", flat=True).first() or 0,

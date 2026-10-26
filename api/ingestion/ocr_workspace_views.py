@@ -105,7 +105,15 @@ class OCRPageSerializer(serializers.Serializer):
     replacement_character = serializers.BooleanField()
 
 
+class OCRQualitySpanSerializer(serializers.Serializer):
+    start = serializers.IntegerField(min_value=0, help_text="当前文本中从0开始的Unicode码点偏移。")
+    end = serializers.IntegerField(min_value=1, help_text="不含末尾的Unicode码点偏移。")
+    reason = serializers.CharField()
+
+
 class OCRPageDetailSerializer(serializers.Serializer):
+    quality_spans = OCRQualitySpanSerializer(many=True, read_only=True)
+    original_quality_spans = OCRQualitySpanSerializer(many=True, read_only=True)
     pdf_page = serializers.IntegerField()
     text = serializers.CharField(allow_blank=True)
     original_text = serializers.CharField(allow_blank=True)

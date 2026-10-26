@@ -13786,7 +13786,16 @@ export interface components {
             height: number;
             replacement_character: boolean;
         };
+        OCRQualitySpan: {
+            /** @description 当前文本中从0开始的Unicode码点偏移。 */
+            start: number;
+            /** @description 不含末尾的Unicode码点偏移。 */
+            end: number;
+            reason: string;
+        };
         OCRPageDetail: {
+            readonly quality_spans: components["schemas"]["OCRQualitySpan"][];
+            readonly original_quality_spans: components["schemas"]["OCRQualitySpan"][];
             pdf_page: number;
             text: string;
             original_text: string;

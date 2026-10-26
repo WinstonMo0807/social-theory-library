@@ -56800,6 +56800,20 @@
                     "history_next_page": {
                         "type": "integer",
                         "nullable": true
+                    },
+                    "quality_spans": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OCRQualitySpan"
+                        },
+                        "readOnly": true
+                    },
+                    "original_quality_spans": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OCRQualitySpan"
+                        },
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -56811,9 +56825,11 @@
                     "manual",
                     "manual_revision",
                     "manual_revision_id",
+                    "original_quality_spans",
                     "original_text",
                     "parsed",
                     "pdf_page",
+                    "quality_spans",
                     "source_fingerprint",
                     "text"
                 ]
@@ -86878,6 +86894,29 @@
                     "caption",
                     "id",
                     "rendition_id"
+                ]
+            },
+            "OCRQualitySpan": {
+                "type": "object",
+                "properties": {
+                    "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "当前文本中从0开始的Unicode码点偏移。"
+                    },
+                    "end": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "不含末尾的Unicode码点偏移。"
+                    },
+                    "reason": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "end",
+                    "reason",
+                    "start"
                 ]
             }
         },
