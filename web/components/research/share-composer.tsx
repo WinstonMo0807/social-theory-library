@@ -3,8 +3,9 @@
 import { writeClipboardText } from "@/lib/clipboard";
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
-import { CheckCircle2, Copy, Mail } from "lucide-react";
+import { CheckCircle2, Copy, FileText, Info, Mail, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Dialog } from "../ui/dialog";
 import { ConfirmDialog } from "../confirm-dialog";
 import { useUnsavedForm } from "@/lib/use-unsaved-form";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
@@ -21,12 +22,12 @@ const emptySelections=():Selections=>({questions:[],materials:[],notes:[]});
 type Prepared = { input: SharePreviewInput; output: SharePreview };
 
 export function ShareComposer({ sourceId = "", sourceKind = "research" }: { sourceId?: string; sourceKind?: SourceKind }) {
-  return <SharingAccount next="/account/sharing/new">{owner => <Composer owner={owner} initialId={sourceId} initialKind={sourceKind} />}</SharingAccount>;
+  return <SharingAccount next="/account/sharing/new" composer>{owner => <Composer owner={owner} initialId={sourceId} initialKind={sourceKind} />}</SharingAccount>;
 }
 
 function Composer({ owner, initialId, initialKind }: { owner: string; initialId: string; initialKind: SourceKind }) {
   const [kind, setKind] = useState<SourceKind>(initialKind), [id, setId] = useState(initialId), [sourcePage, setSourcePage] = useState(1);
-  const [section, setSection] = useState<ShareSection>("materials"), [page, setPage] = useState(1), [phase, setPhase] = useState(1);
+  const [section, setSection] = useState<ShareSection>("materials"), [page, setPage] = useState(1), [phase, setPhase] = useState(1),[choicesOpen,setChoicesOpen]=useState(false);
   const [objects,setObjects]=useState<ChosenSource[]>(()=>initialId?[{kind:initialKind,id:initialId,title:"从原位置选入的对象",version:"",values:emptySelections()}]:[]);
   const activeObject=objects.find(row=>row.kind===kind&&row.id===id);
   const selected=activeObject?.values||emptySelections();
@@ -151,13 +152,13 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
   }
   if (action.invalid) return <div className={styles.empty} role="alert"><p>账户或权限需要重新核对，已隐藏原账户内容。</p><button onClick={() => window.location.reload()}>重新核对账户</button></div>;
   return <>
-    <header className={styles.heading}><div><h1>分享或提交策划的内容范围</h1><p>选择要分享的内容，预览将公开的范围，明确目的地或接收范围。私人正文与 PDF 原件始终不包含在内。</p></div></header>
+    <header className={styles.heading}><div><h1>分享或提交策划的内容范围</h1><p>选择要分享或提交的内容，预览将公开的范围，明确目的地或接收范围。默认不包含您的私人正文及 PDF 原件。</p></div><aside className={styles.scopeNote}><Info size={17}/><div><strong>说明</strong><p>仅分享您选择的内容。不会包含您的私人正文、未勾选的个人笔记及 PDF 原件。来源文献的全文需由接收方通过本馆访问或自行获取，状态为“尚未核实”。</p><small>本次主动勾选的本人笔记会列入范围。</small></div></aside></header>
     {action.message ? <p className={styles.feedback} role="status">{action.message}</p> : null}
     {storageError?<p className={styles.feedback} role="alert">{storageError} <Link href="/account/sharing">查看本人分享记录</Link></p>:null}
     {recovery ? <section className={styles.recovery}><h2>核对原提交结果</h2><p>原编号：{recovery}。尚未确认时不能另起提交，刷新后仍可查回；取消只阻止尚未执行的请求。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${recovery}`, { signal }), finish)}>查回原结果</button>{retryReady?<button disabled={action.busy} onClick={()=>{if(pending.current)send(pending.current);}}>重试原提交</button>:null}<button disabled={action.busy} onClick={()=>setStopOpen(true)}>取消尚未执行的提交</button><Link href="/account/sharing">查看分享记录</Link></div></section>:null}
     <ConfirmDialog open={stopOpen} title="取消尚未执行的分享提交" description="服务器先核对原编号。已经建立的分享会返回原回执，不会被撤回；尚未执行的请求会登记取消，迟到后也不会建立授权。" confirmLabel="核对并取消待提交请求" pending={action.busy} onCancel={()=>setStopOpen(false)} onConfirm={stopPending}/>
 
-    <nav className={styles.mobileSteps} aria-label="分享步骤">{["选择内容", "预览", "选择目的地", "确认提交"].map((label, index) => <button key={label} aria-current={phase === index + 1 ? "step" : undefined} disabled={action.busy} onClick={() => setPhase(index + 1)}>{index + 1} {label}</button>)}</nav>
+    <nav className={styles.mobileSteps} aria-label="分享步骤">{["选择内容", "预览", "选择目的地", "确认提交"].map((label, index) => <button key={label} aria-current={phase === index + 1 ? "step" : undefined} disabled={action.busy} onClick={() => setPhase(index + 1)}><span>{index + 1}</span>{label}</button>)}</nav>
     <div className={styles.steps} data-phase={phase}>
       <section className={styles.step}><h2><span>1</span>选择当前研究或书单对象</h2><div className={styles.stepBody}>
         <div className={styles.tabs}>{(["research", "booklist"] as const).map(value => <button key={value} aria-pressed={kind === value} disabled={blocked} onClick={() => { chooseSource(value); setSourcePage(1); }}>{value === "research" ? "我的研究" : "我的书单"}</button>)}</div>
@@ -166,13 +167,7 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
         {objects.length?<><p className={styles.muted}>已选 {objects.length}/5 个对象。每类内容跨对象合计最多20项；每个对象至少勾选一项才能预览。</p><ul className={styles.scopeList}>{objects.map(object=><li key={`${object.kind}:${object.id}`}><button type="button" disabled={blocked} onClick={()=>chooseSource(object.kind,object.id)}>{object.title} · {Object.values(object.values).reduce((sum,items)=>sum+items.length,0)} 项</button><button type="button" disabled={blocked} onClick={()=>removeSource(object)}>移除</button></li>)}</ul></>:null}
       </div></section>
       <section className={styles.step}><h2><span>2</span>选择要包含的内容项</h2><div className={styles.stepBody}>
-        <div className={styles.tabs}>{(Object.keys(sectionLabels) as ShareSection[]).map(key => <button key={key} aria-pressed={section === key} disabled={blocked} onClick={() => { setSection(key); setPage(1); }}>{sectionLabels[key]} {totals[key] || ""}</button>)}</div>
-        {!id ? <p className={styles.muted}>先选择一个本人研究或书单。</p> : choices.error ? <p role="alert">{choices.error}<button onClick={choices.reload}>重新读取</button>{activeObject?<button disabled={blocked} onClick={()=>removeSource(activeObject)}>清除此对象选择，再重新读取</button>:null}</p> : !data ? <p role="status">正在读取可选内容…</p> : <>
-          {data.results.map(row => <label className={styles.choice} key={row.id}><input type="checkbox" checked={selected[section].includes(row.id)} disabled={blocked || !row.available || (totals[section]>=20||!activeObject&&objects.length>=5) && !selected[section].includes(row.id)} onChange={event => { const checked = event.target.checked; setSelected(value => ({ ...value, [section]: checked ? [...value[section], row.id] : value[section].filter(key => key !== row.id) })); invalidate(); }} /><span><strong>{row.title}</strong>{row.text ? <p>{row.text}</p> : null}<small>{row.available ? row.truncated ? "只分享预览显示的前 2000 字" : "只包含本项明确选择的内容" : "当前不可分享"}</small></span></label>)}
-          {!data.results.length ? <p className={styles.muted}>当前对象没有此类内容。</p> : null}
-          <SharingPagination page={page} total={data.total_pages} disabled={blocked} onPage={setPage} />
-          {selected[section].length ? <button disabled={blocked} onClick={() => { setSelected(value => ({ ...value, [section]: [] })); invalidate(); }}>清空此对象本类选择</button> : null}
-        </>}
+        <div className={styles.scopeKinds}>{(Object.keys(sectionLabels) as ShareSection[]).map(key=><div key={key}><input type="checkbox" aria-label={`包含${sectionLabels[key]}`} checked={totals[key]>0} disabled={blocked} onChange={event=>{if(!event.target.checked){setObjects(value=>value.map(object=>({...object,values:{...object.values,[key]:[]}})));invalidate();}else{setSection(key);setPage(1);setChoicesOpen(true);}}}/><FileText size={26}/><div><strong>{sectionLabels[key]} <small>{totals[key]} 项已选择</small></strong><p>{key==="questions"?"包含我提出的研究问题及简要说明。":key==="materials"?"包含我选择的文献条目与引用位置。":"包含我撰写的笔记与标签。"}</p></div><button disabled={blocked} onClick={()=>{setSection(key);setPage(1);setChoicesOpen(true);}}>选择 ›</button></div>)}</div>
         <div className={styles.excluded}><div><input type="checkbox" disabled checked={false} readOnly />私人正文 · 不包含</div><div><input type="checkbox" disabled checked={false} readOnly />PDF 原件 · 不包含</div><p>本人笔记需逐项勾选。未选中的内容不会分享。</p></div>
       </div></section>
       <section className={styles.step}><h2><span>3</span>预览将公开或提交的内容</h2><div className={styles.stepBody}><div className={styles.summaryBox}>{prepared ? <SharedSummary value={prepared.output} /> : <p className={styles.muted}>已选择 {selectedCount} 项。生成预览后，请逐项核对实际文字和来源。</p>}</div><button disabled={blocked || !currentInput || !selectedCount} onClick={() => preview()}>生成或更新预览</button></div></section>
@@ -205,6 +200,13 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
         {manual ? <label className={styles.manual}>手动复制分享链接<textarea readOnly value={manual} onFocus={event => event.currentTarget.select()} /></label> : null}
       </div></section>
     </div>
+    <Dialog open={choicesOpen} onRequestClose={()=>{if(!action.busy)setChoicesOpen(false);}} className={`${styles.dialog} ${styles.choiceDialog}`} aria-label={`选择${sectionLabels[section]}`}><header className={styles.heading}><h2>选择{sectionLabels[section]}</h2><button disabled={action.busy} aria-label="关闭内容选择" onClick={()=>setChoicesOpen(false)}><X size={18}/></button></header><p>{data?.source.title||"请先选择本人研究或书单"}</p>        {!id ? <p className={styles.muted}>先选择一个本人研究或书单。</p> : choices.error ? <p role="alert">{choices.error}<button onClick={choices.reload}>重新读取</button>{activeObject?<button disabled={blocked} onClick={()=>removeSource(activeObject)}>清除此对象选择，再重新读取</button>:null}</p> : !data ? <p role="status">正在读取可选内容…</p> : <>
+          {data.results.map(row => <label className={styles.choice} key={row.id}><input type="checkbox" checked={selected[section].includes(row.id)} disabled={blocked || !row.available || (totals[section]>=20||!activeObject&&objects.length>=5) && !selected[section].includes(row.id)} onChange={event => { const checked = event.target.checked; setSelected(value => ({ ...value, [section]: checked ? [...value[section], row.id] : value[section].filter(key => key !== row.id) })); invalidate(); }} /><span><strong>{row.title}</strong>{row.text ? <p>{row.text}</p> : null}<small>{row.available ? row.truncated ? "只分享预览显示的前 2000 字" : "只包含本项明确选择的内容" : "当前不可分享"}</small></span></label>)}
+          {!data.results.length ? <p className={styles.muted}>当前对象没有此类内容。</p> : null}
+          <SharingPagination page={page} total={data.total_pages} disabled={blocked} onPage={setPage} />
+          {selected[section].length ? <button disabled={blocked} onClick={() => { setSelected(value => ({ ...value, [section]: [] })); invalidate(); }}>清空此对象本类选择</button> : null}
+        </>}
+<div className={styles.actions}><button className={styles.primary} disabled={action.busy} onClick={()=>setChoicesOpen(false)}>完成选择</button></div></Dialog>
     <div className={styles.mobileNext}>{phase > 1 ? <button disabled={action.busy} onClick={() => setPhase(value => value - 1)}>上一步</button> : null}{phase < 4 ? <button className={styles.primary} disabled={blocked || phase === 1 && (!currentInput || !selectedCount)} onClick={() => phase === 1 ? preview(2) : phase === 3 ? preview(4) : setPhase(value => value + 1)}>{phase === 1 ? "下一步：预览内容" : phase === 2 ? "下一步：选择目的地" : "下一步：确认范围"}</button> : null}</div>
   </>;
 }

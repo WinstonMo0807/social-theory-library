@@ -11,13 +11,13 @@ import { sectionLabels, type ShareContent, type SharePreview, type ShareWorkSumm
 import { ResearchCenterNav } from "./research-center-nav";
 import styles from "./sharing.module.css";
 
-export function SharingAccount({ children, next }: { children: (owner: string, capabilities: string[]) => ReactNode; next: string }) {
+export function SharingAccount({ children, next, composer=false }: { composer?:boolean; children: (owner: string, capabilities: string[]) => ReactNode; next: string }) {
   const { state, retry } = useSessionBootstrap();
   const [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(next)}`); }, [state.status, next]);
   if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><h1>分享与小组</h1><p role="status">{state.message || "正在核对登录状态…"}</p>{["temporary_error", "forbidden"].includes(state.status) ? <button onClick={retry}>重新核对登录</button> : null}</main>;
-  return <main className={styles.page} key={`${state.user.id}:${epoch}`}><ResearchCenterNav active="sharing" /><nav className={styles.subnav} aria-label="协作与隐私"><Link href="/account/sharing">分享记录</Link><Link href="/account/groups">我的小组</Link><Link href="/account/settings/privacy">隐私与资料</Link></nav>{children(String(state.user.id), state.user.capabilities || [])}</main>;
+  return <main className={styles.page} data-share-composer={composer||undefined} key={`${state.user.id}:${epoch}`}>{composer?null:<><ResearchCenterNav active="sharing" /><nav className={styles.subnav} aria-label="协作与隐私"><Link href="/account/sharing">分享记录</Link><Link href="/account/groups">我的小组</Link><Link href="/account/settings/privacy">隐私与资料</Link></nav></>}{children(String(state.user.id), state.user.capabilities || [])}</main>;
 }
 
 export function useSharingAction(owner: string) {

@@ -324,3 +324,5 @@ Original page 104 brands: desktop (47,32,235,80); mobile (1298,64,1459,96). Page
 存储备份原图品牌：最终PDF第161页内嵌1586×992图，desktop裁切(47,24,242,70)，mobile裁切(1344,90,1493,119)。用户拥有图中资产版权。
 
 内容编排/选书品牌：唯一PDF174原生1586×992图，desktop裁切(44,36,255,87)211×51，mobile裁切(1318,97,1490,129)172×32；stl-lockup-admin-placement-{desktop,mobile}-final-r2.png。原图裁切，无重绘。
+
+分享范围品牌：唯一PDF182原生1536×1024图，desktop(36,10,253,64)217×54，mobile(1216,81,1378,111)162×30，footer(24,996,290,1016)266×20。stl-lockup-sharing-{desktop,mobile}-final-r2.png和stl-footer-sharing-final-r2.png，原图裁切未重绘。

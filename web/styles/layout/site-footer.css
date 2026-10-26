@@ -63,3 +63,6 @@
 .site-footer.site-footer--editorial{min-height:54px;padding:12px 3.5%;border-top:1px solid var(--night-line,#e9e7e1)}
 .site-footer--editorial>a{padding:0;border:0}.site-footer--editorial nav{margin-inline:auto;font-size:11px;gap:24px}
 @media(max-width:760px){.site-footer.site-footer--editorial{display:none}}
+
+.site-footer.site-footer--sharing{display:block;padding:20px 24px;background:var(--night-white,#fff);border-top:1px solid var(--night-line,#e9e7e1);min-height:0}.site-footer--sharing img{width:266px;height:20px;object-fit:contain}.site-footer--sharing>a{display:inline-block}
+@media(max-width:900px){.site-footer.site-footer--sharing{display:none}}
