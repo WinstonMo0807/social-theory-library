@@ -525,3 +525,13 @@ e4747d→41fa31及最终bc5923静态类型退出0，site_layout AST完成；编�
 只读查看/account/plans创建表单桌面/手机，plans-r56-create-desktop/mobile.png保留。已读数量及每周小时确实显示；A截图/DOM证据显示已读数量输入被原:is选择器撑满，PDF202左侧导航仍缺，下一批按此修正。PDF203行内先修冲突呈现与精确字体几何仍A；真实计划状态及保存运行效果B待统一验收。本账号既有计划为空，不虚构示例计划。此前档案r53修正已在archive-r55-recheck-desktop.png只读复核，搜索不再重叠、空态批量栏已收起、侧栏图标与首项高亮可见，关闭这四项开发缺陷，不代表全档案验收。
 
 证据：reading-plan-form.tsx原时间单位/无已读数量、reading-plan-detail.tsx原模态设置与阶段缺少展开控制，不符合201–204。修改限定原表单/原计划服务/契约及图片样式。
+
+## VISUAL-56 个人学术记忆（PDF205–207）
+
+前置e63ae154。唯一PDF205–207逐张读取。原图品牌与空态纸张插画直接提取并查看；原ConfirmedNotesWorkspace全宽白色、深墨标题/筛选/列表/手机布局更新。原MemoryInspector改页面内列表与详情，保留选中切换前未保存确认、expected revision、原始笔记、来源编辑/失效与更新提示、历史/删除确认；确认保存和明确范围授权保持分开，未新建记忆服务。计划设置补PDF202左侧导航并修复r56数量宽度选择器冲突。
+
+类型711c43退出0；编译7adb48→ab2a08退出0。最终包2312文件48383735字节SHA515b76ed8906ea8c4506a697b832cad69e16c9ca0f2652e37b3282970f458a30。初次NAS构建因tar内缺指定Dockerfile失败，未更新容器；补包后18ae29→e965d9成功。Web r57 f84e25e507ca/API r24 22b9d3045bfb，恢复点.env.before-memory-r57（r56/API24）。API/worker/数据保持；未测试、创建/确认/授权/删除笔记、提交计划、迁移或公网切换。
+
+只读查看/account/confirmed-notes桌面与手机，memory-r57-desktop/mobile.png保留，手机clientWidth/scrollWidth390/390；真实笔记为空。只读计划创建页plans-r57-settings-desktop.png确认190px侧栏及96px数量输入实际生效，关闭这两项开发缺陷。A学术记忆206确认列表的搜索/状态页签、205待修正分类和移动底栏尚未完整复现，精确字体几何仍A；有数据确认/来源变化/范围授权及保存B待统一验收，未虚构笔记填充。PDF209–214已实际逐张读取；226–230为无嵌图旧封面/目录，非产品页面。
+
+证据：原confirmed-notes.module.css纸色外层/1200px边框/10–13px文字与205不同；MemoryInspector原960px模态与206页面内确认不同。修复限定原组件、样式与原PDF资产。

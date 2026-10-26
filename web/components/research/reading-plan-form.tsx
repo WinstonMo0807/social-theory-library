@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BookOpen, NotebookPen, History, MessageCircle, Settings, Clock3 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import type { Paginated } from "@/lib/api/pagination";
 import type { MemoryData, PlanData, PlanLevel, PlanPolicy, ProjectData, ResearchRecord, ResolvedEvidence } from "@/lib/api/research.client";
@@ -12,9 +13,9 @@ export type PlanSettings = PlanPolicy & { goal: string; background: string };
 export const planLevels: Record<PlanLevel, string> = { beginner: "没有基础", intermediate: "有一些基础", advanced: "已有基础" };
 export const planDurations = (minutes?: number | null) => typeof minutes === "number" ? minutes >= 60 ? `${Math.floor(minutes / 60)} 小时${minutes % 60 ? ` ${minutes % 60} 分钟` : ""}` : `${minutes} 分钟` : "时长待估计";
 
-export function PlanSettingsForm({ ownerId, initial, defaultGoal, preserveSourceOrder = false, busy, error, onSave, onCancel, children }: {
+export function PlanSettingsForm({ ownerId, initial, defaultGoal, navigation = false, preserveSourceOrder = false, busy, error, onSave, onCancel, children }: {
   ownerId: string; initial?: PlanData; busy: boolean; error?: string;
-  defaultGoal?: string;
+  defaultGoal?: string; navigation?: boolean;
   preserveSourceOrder?: boolean;
   onSave: (settings: PlanSettings) => void; onCancel: () => void; children?: React.ReactNode;
 }) {
@@ -50,7 +51,7 @@ export function PlanSettingsForm({ ownerId, initial, defaultGoal, preserveSource
       session_minutes: Number(sessionMinutes), language_preference: language, prefer_unread: preserveSourceOrder ? false : preferUnread,
       ...(!publicCopy ? { use_confirmed_memories: useMemories, confirmed_memory_ids: useMemories ? memoryIds : [] } : {}) });
   }
-  return <form className="stl4-plan-settings" onSubmit={submit} onChange={() => setEdited(true)}>
+  return <div className={navigation ? "stl4-plan-setting-layout" : undefined}>{navigation ? <nav className="stl4-plan-setting-nav" aria-label="我的阅读计划"><h3>我的阅读计划</h3><span aria-current="page"><Clock3 size={17}/>设置阅读目标与时间</span><Link href="/account/collections"><BookOpen size={17}/>我的书架</Link><Link href="/account/notes"><NotebookPen size={17}/>阅读笔记</Link><Link href="/account?section=history"><History size={17}/>阅读历史</Link><Link href="/account/research"><MessageCircle size={17}/>我的问题</Link><Link href="/account/settings/privacy"><Settings size={17}/>账号设置</Link></nav> : null}<form className="stl4-plan-settings" onSubmit={submit} onChange={() => setEdited(true)}>
     <div className="stl4-plan-fields">
       <section><h3>1. 研究问题</h3><label>用一个简短问题或主题，说明你希望通过阅读解决什么<textarea value={goal} onChange={event => setGoal(event.target.value)} maxLength={1200} minLength={2} required rows={3} /></label><small>{goal.length} / 1200</small></section>
       <section><h3>2. 当前基础</h3><fieldset className="stl4-plan-levels"><legend className="sr-only">当前阅读基础</legend>{Object.entries(planLevels).map(([value, label]) => <label key={value}><input type="radio" name="plan-level" value={value} checked={level === value} onChange={() => setLevel(value as PlanLevel)} /><span>{label}<small>{value==="beginner"?"从头开始了解":value==="intermediate"?"读过少量相关书籍":"对该主题比较熟悉"}</small></span></label>)}</fieldset><label className="stl4-plan-read-count">已读相关书籍数量<input type="number" min={0} max={10000} step={1} value={readCount} onChange={event=>setReadCount(event.target.value)} required/><span>本</span></label><label>已读材料与关注方向<textarea value={background} onChange={event => setBackground(event.target.value)} maxLength={4000} rows={2} /></label></section>
@@ -61,7 +62,7 @@ export function PlanSettingsForm({ ownerId, initial, defaultGoal, preserveSource
       {total !== null && total > 100000 ? <p role="alert">本轮预算不能超过 100000 分钟，请缩短周期。</p> : null}
       {error ? <p className="stl4-plan-error" role="alert">{error}</p> : null}<div className="stl4-plan-buttons"><button type="button" onClick={onCancel} disabled={busy}>取消</button><button className="is-primary" type="submit" disabled={busy || !valid}>{busy ? "正在保存…" : initial ? "保存设置" : "生成计划"}</button></div>
     </aside>
-  </form>;
+  </form></div>;
 }
 
 function PlanMemoryPicker({ ownerId, value, onChange }: { ownerId: string; value: string[]; onChange: (value: string[]) => void }) {

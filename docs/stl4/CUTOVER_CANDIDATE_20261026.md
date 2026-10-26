@@ -1,5 +1,7 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+2026-10-26 当前Web r57 f84e25e507ca/API r24 22b9d3045bfb，恢复点.env.before-memory-r57。视觉A及业务B仍有剩余，不可公网切换。
+
 2026-10-26 当前Web r56 c3466f464596/API r24 22b9d3045bfb，worker/ingestion-worker/beat同步API24；恢复点.env.before-plans-r56。仍有视觉A及业务B，不可公网切换。
 
 2026-10-26 当前Web r55 e145af50117e/API r23 e1126ae674ea，恢复点.env.before-analysis-r55。仍有视觉A及业务B，不可公网切换。
