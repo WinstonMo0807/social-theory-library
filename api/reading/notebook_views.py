@@ -152,7 +152,7 @@ class NotebookChoicesView(NotebookBase):
             raise ValidationError("筛选类型无效。")
         query = NotebookQuery(data=request.query_params)
         query.is_valid(raise_exception=True)
-        return Response(notebook.choices(request.user, kind, query.validated_data["page"]))
+        return Response(notebook.choices(request.user, kind, query.validated_data["page"], query.validated_data["q"]))
 
 
 class NotebookDetailView(NotebookBase):

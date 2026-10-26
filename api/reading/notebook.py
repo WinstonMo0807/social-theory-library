@@ -153,14 +153,21 @@ def listing(user, options):
     return {"owner_id": str(user.pk), "count": total, "page": page, "total_pages": max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE), "results": results}
 
 
-def choices(user, kind, page):
+def choices(user, kind, page, query=""):
+    query = query.strip().casefold()
     start = (page - 1) * PAGE_SIZE
     if kind == "projects":
         rows = ResearchProject.objects.filter(user=user, archived=False).order_by("-updated_at", "-id")
-        total = rows.count()
-        results = [{"id": str(row.pk), "title": research.unpack(row).get("title") or "未命名研究", "revision": row.revision} for row in rows[start:start + PAGE_SIZE]]
+        if query:
+            matches = [{"id": str(row.pk), "title": research.unpack(row).get("title") or "未命名研究", "revision": row.revision} for row in rows.iterator()]
+            matches = [row for row in matches if query in row["title"].casefold()]
+            total, results = len(matches), matches[start:start + PAGE_SIZE]
+        else:
+            total = rows.count()
+            results = [{"id": str(row.pk), "title": research.unpack(row).get("title") or "未命名研究", "revision": row.revision} for row in rows[start:start + PAGE_SIZE]]
     else:
-        parts = [collection(user, category).order_by().values_list("asset__edition__work_id", flat=True) for category in MODELS]
+        visible_works = Edition.objects.filter(public_edition_q(), is_primary=True, active_catalog_revision__snapshot__work__title__icontains=query).values("work_id") if query else None
+        parts = [(collection(user, category).filter(asset__edition__work_id__in=visible_works) if query else collection(user, category)).order_by().values_list("asset__edition__work_id", flat=True) for category in MODELS]
         ids = parts[0].union(parts[1]).order_by("asset__edition__work_id")
         total = ids.count()
         selected = list(ids[start:start + PAGE_SIZE])
