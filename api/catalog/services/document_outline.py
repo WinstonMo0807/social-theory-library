@@ -23,12 +23,12 @@ from catalog.services.outline_labels import LABEL_ONLY, LABEL_RANGE, PRINTED_LAB
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v7"
+PARSER_VERSION = "outline-v8"
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*[录錄]|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(rf"^(?P<title>.+?)\s*(?:[.．·…_]{{2,}}|\s{{2,}}|\t)\s*(?P<label>{PRINTED_LABEL})\s*$")
 TRAILING_PAGE = re.compile(rf"^(?P<title>.+?\D)\s+(?P<label>{PRINTED_LABEL})\s*$")
-CONTENTS_TITLE_START = re.compile(r"^(?:第[一二三四五六七八九十\d]+版(?:序言|前言)|序言|前言|引言|绪论|后记|附录|preface\b|introduction\b|foreword\b)", re.I)
+CONTENTS_TITLE_START = re.compile(r"^(?:第[一二三四五六七八九十\d]+版(?:序言|前言)|序言|前言|引言|绪论|结论|后记|附录|preface\b|introduction\b|foreword\b)", re.I)
 
 
 class OutlineConflict(ValueError):
@@ -44,7 +44,7 @@ def _title(value):
 
 
 def _match_key(value):
-    original = _title(value)
+    original = re.sub(r"[①-⑳¹²³⁴⁵⁶⁷⁸⁹⁰]+$", "", _title(value))
     value = re.sub(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w]+|\d+(?:\.\d+)*)[\s:：.、-]*", "", original, flags=re.I) or original
     return re.sub(r"[\s\W_]+", "", value, flags=re.UNICODE).casefold()
 
@@ -148,6 +148,8 @@ def extract_outline(asset, path, *, progress=None):
     with fitz.open(str(path)) as document:
         if len(document) != asset.page_count:
             raise OutlineConflict("实际 PDF 页数与文件校验记录不一致，请重新校验文件后生成目录。")
+        label_rules = document.get_page_labels()
+        file_sequence_labels = label_rules == [{"startpage": 0, "prefix": "", "firstpagenum": 1, "style": "D"}]
         bookmark_rows = document.get_toc(simple=False)
         if len(bookmark_rows) > 20000:
             raise ValueError("原生书签超过 20000 项，请分段校准；未保存截断结果。")
@@ -184,8 +186,12 @@ def extract_outline(asset, path, *, progress=None):
                 diagnostics.append({"code": "invalid_bookmark", "node_id": node["id"], "message": "书签标题或落点需要校准。"})
     _parents(nodes)
 
-    pages = list(asset.pages.filter(index__gte=1, index__lte=asset.page_count).order_by("index").values("index", "printed_label", "label_segment", "text"))
-    labels = OutlineLabels(pages, (asset.validation_details or {}).get("page_mapping"))
+    pages = list(asset.pages.filter(index__gte=1, index__lte=asset.page_count).order_by("index").values("index", "printed_label", "label_source", "is_label_manual", "label_segment", "text"))
+    # A PDF numbering every physical page from 1 does not establish printed
+    # page labels. Preserve those stored labels, but match contents to actual
+    # body observations instead of treating the file index as evidence.
+    label_pages = [{**page, "printed_label": ""} if file_sequence_labels and page["label_source"] == "pdf_page_labels" and not page["is_label_manual"] else page for page in pages]
+    labels = OutlineLabels(label_pages, (asset.validation_details or {}).get("page_mapping"))
     titles = defaultdict(list)
     headings, contents_rows = [], []
     contents_pages = set()
@@ -199,12 +205,13 @@ def extract_outline(asset, path, *, progress=None):
         is_contents = (any(CONTENTS.match(_title(line)) for line in lines[:8])
             or any(CONTENTS.fullmatch(_title("".join(lines[i:i+2]))) for i in range(min(7, len(lines)-1)))
             or sum(bool(match) for match in matches) >= 3
-            or page["index"]-1 in contents_pages and any(matches))
+            or page["index"]-1 in contents_pages and (any(matches) or any(line in {"目", "录", "錄"} for line in lines[:4])))
         if is_contents:
             contents_pages.add(page["index"])
             pending = ""
             for line_index, line in enumerate(lines):
-                if (CONTENTS.fullmatch(_title(line))
+                if (line_index < 4 and line in {"目", "录", "錄"}
+                    or CONTENTS.fullmatch(_title(line))
                     or line_index < 7 and CONTENTS.fullmatch(_title("".join(lines[line_index:line_index+2])))
                     or 0 < line_index < 8 and CONTENTS.fullmatch(_title("".join(lines[line_index-1:line_index+1])))):
                     pending = ""
@@ -233,6 +240,18 @@ def extract_outline(asset, path, *, progress=None):
                 titles[_match_key(title)].append((page["index"], {}))
                 if HEADING.match(title):
                     headings.append((title, page["index"]))
+    # Join only adjacent observed lines that exactly reproduce a printed entry.
+    # This handles split chapter titles without inventing a title or page offset.
+    contents_titles = {_match_key(title): title for title, _label, _page in contents_rows}
+    for page in pages:
+        if page["index"] in contents_pages:
+            continue
+        lines = [line.strip() for line in page["text"].splitlines() if line.strip()]
+        for start in range(min(8, len(lines))):
+            for length in (2, 3):
+                joined = "".join(lines[start:start+length])
+                if _match_key(joined) in contents_titles:
+                    titles[_match_key(joined)].append((page["index"], {}))
     # OCR returns rendered pixmap pixels. Native text blocks use MuPDF's
     # unrotated points. Keep their actual space and reference geometry; the
     # Reader adapter must not consume either as a naked PDF-point coordinate.
@@ -257,10 +276,52 @@ def extract_outline(asset, path, *, progress=None):
     headings.sort(key=lambda item: item[1])
     if suppressed:
         diagnostics.append({"code": "repeated_heading_observations", "count": len(suppressed), "message": "重复出现的大字号文字可能是页眉，未自动补入目录；可从原文人工核对。"})
-    for processed, block in enumerate(asset.pages.filter(index__gte=1, index__lte=asset.page_count).exclude(index__in=contents_pages).values("index", "width", "height", "geometry", "text_source", "blocks__text", "blocks__bbox").iterator(chunk_size=500), start=1):
+    observed_blocks = list(asset.pages.filter(index__gte=1, index__lte=asset.page_count).exclude(index__in=contents_pages).values("index", "width", "height", "geometry", "text_source", "blocks__text", "blocks__bbox").order_by("index", "blocks__order"))
+    # Retain geometry for adjacent OCR title fragments, including spaced glyphs.
+    by_page = defaultdict(list)
+    for block in observed_blocks:
+        by_page[block["index"]].append(block)
+    joined_blocks = []
+    for blocks in by_page.values():
+        for start in range(min(8, len(blocks))):
+            for length in (2, 3):
+                parts = blocks[start:start+length]
+                joined = "".join(_title(part["blocks__text"]) for part in parts)
+                boxes = [part["blocks__bbox"] for part in parts]
+                if _match_key(joined) in contents_titles and all(isinstance(box, list) and len(box) == 4 and all(type(v) in {int, float} and math.isfinite(v) for v in box) for box in boxes):
+                    joined_blocks.append({**parts[0], "blocks__text": joined, "blocks__bbox": [min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)]})
+    observed_blocks.extend(joined_blocks)
+    margin_titles, margin_prefixes = defaultdict(set), defaultdict(set)
+    def margin_heading(block):
+        box = block["blocks__bbox"]
+        return (block["index"] not in manual_pages and isinstance(box, list) and len(box) == 4
+                and all(type(v) in {int, float} and math.isfinite(v) for v in box)
+                and block["height"] > 0 and 0 <= box[1] / block["height"] <= .16)
+    for block in observed_blocks:
+        if margin_heading(block):
+            title = _title(block["blocks__text"])
+            margin_titles[_match_key(title)].add(block["index"])
+            if prefix := HEADING.match(title):
+                margin_prefixes[prefix[0]].add(block["index"])
+    body_title_keys = {_match_key(block["blocks__text"]) for block in observed_blocks if not margin_heading(block)}
+    running_headers = set()
+    for block in observed_blocks:
+        title = _title(block["blocks__text"])
+        prefix = HEADING.match(title)
+        if margin_heading(block) and ((len(margin_titles[_match_key(title)]) >= 3 or len(margin_titles[_match_key(title)]) >= 2 and _match_key(title) in body_title_keys) or prefix and len(margin_prefixes[prefix[0]]) >= 3):
+            running_headers.add((_match_key(title), block["index"]))
+    for key, number in running_headers:
+        titles[key] = [hit for hit in titles[key] if hit[0] != number]
+    headings = [(title, number) for title, number in headings if (_match_key(title), number) not in running_headers
+                and not re.search(r"(?:译者|编者|原注)[）)]$", title)]
+    if running_headers:
+        diagnostics.append({"code": "repeated_running_headers", "count": len(running_headers), "message": "已排除有重复页边位置证据的页眉；原文字及坐标保持。"})
+    for processed, block in enumerate(observed_blocks, start=1):
         if progress and processed % 500 == 0:
             progress("source_locations", block["index"], asset.page_count)
         title = _title(block["blocks__text"])
+        if (_match_key(title), block["index"]) in running_headers:
+            continue
         if block["index"] not in manual_pages:
             bookmark_observations.observe(block["index"], block["blocks__text"])
         box = block["blocks__bbox"]
@@ -348,6 +409,13 @@ def extract_outline(asset, path, *, progress=None):
         node = _node(asset, ordinal, title, page, source="generated_heading", level=_level(title),
                      locator=locators[0] if locators else {})
         node["calibration_status"] = "needs_review" if had_formal else "generated"
+        # A split first line at the same verified destination is an observation
+        # of its complete printed title, not an additional chapter.
+        partial = next((row for row in nodes if row["source"] == "printed_contents" and row["pdf_page"] == page
+                        and _match_key(row["title"]).startswith(_match_key(title))), None)
+        if partial and _match_key(partial["title"]) != _match_key(title):
+            partial.setdefault("candidate_sources", [_candidate(partial)]).append(_candidate(node))
+            continue
         if (_match_key(title), page) not in existing_targets:
             generated.append(node)
             existing_targets.add((_match_key(title), page))

@@ -293,6 +293,7 @@ body:has(.work-detail[data-work-kind="article"]) .brand-work-variants [data-bran
 
 /* PDF74/76/78: published article/exhibition state selects its original lockup. */
 .site-header[data-stl-editorial]{min-height:64px;padding:10px 3.8%;gap:26px}
+.brand-reference-lockup[data-brand-variant="editorial-home"]{width:210px}
 .brand-reference-lockup[data-brand-variant="editorial-directory"]{width:224px}
 .brand-editorial-variants{display:flex;align-items:center}
 .brand-editorial-variants .brand-reference-lockup{display:none}
@@ -309,7 +310,7 @@ body:has([data-editorial-kind="exhibition"]) .brand-editorial-variants [data-bra
 @media(max-width:760px){
  .site-header[data-stl-editorial]{min-height:62px;padding:12px 16px;gap:12px}
  .site-header[data-stl-editorial] .header-actions{gap:8px}
- .brand-reference-lockup[data-brand-variant="editorial-directory"],.brand-editorial-variants [data-brand-variant="editorial-article"]{width:190px}
+ .brand-reference-lockup[data-brand-variant="editorial-home"],.brand-reference-lockup[data-brand-variant="editorial-directory"],.brand-editorial-variants [data-brand-variant="editorial-article"]{width:190px}
  .brand-editorial-variants [data-brand-variant="editorial-exhibition"],.brand-editorial-variants [data-brand-variant="editorial-exhibit"]{width:120px}
 }
 

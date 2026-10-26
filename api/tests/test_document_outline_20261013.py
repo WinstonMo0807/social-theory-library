@@ -90,7 +90,7 @@ def test_corrected_page_text_prevents_unverified_native_auto_activation(source):
     result = run_outline_job(job.pk, task_id=job.task_id)
     assert result.status == "succeeded"
     assert not asset.outline_revisions.filter(is_active=True).exists()
-    assert asset.outline_revisions.latest("revision").parser_version == "outline-v7"
+    assert asset.outline_revisions.latest("revision").parser_version == "outline-v8"
 
 
 def test_candidates_preserve_manual_calibration_and_restore_history(source, admin_user):
@@ -293,3 +293,27 @@ def test_directory_writes_replay_receipts_before_stale_precondition(source, admi
     assert adopt_outline(asset.pk, revision_id=saved.pk, expected_revision=1, actor=admin_user, request_id=adopted_request).pk == adopted.pk
     with pytest.raises(OutlineConflict):
         edit_outline(asset.pk, nodes=[{"title": "不能换输入", "pdf_page": 2}], expected_revision=0, actor=admin_user, request_id=request)
+
+
+def test_scanned_contents_rejects_file_indexes_and_running_headers(source, tmp_path):
+    asset, _, _ = source
+    path = tmp_path / "scan-fixture.pdf"
+    with fitz.open() as document:
+        for _ in range(8): document.new_page()
+        document.set_page_labels([{"startpage":0,"prefix":"","firstpagenum":1,"style":"D"}])
+        document.save(path)
+    asset.pages.all().delete()
+    asset.page_count = 8
+    asset.save(update_fields=["page_count"])
+    texts = ["目\n录\n第一章 合成标题…… 1", "2\n目\n本页只有章节摘要", "目\n3\n结论…… 5",
+             "第一章 合成\n标题", "第一章 合成标题\n真实正文", "第一章 合成标题\n其他正文",
+             "第一章 合成标题\n其他正文", "结\n论"]
+    for number,text in enumerate(texts,1):
+        page=Page.objects.create(asset=asset,index=number,text=text,text_source="ocr",printed_label=str(number),label_source="pdf_page_labels",width=600,height=800)
+        for order,line in enumerate(text.splitlines()):
+            top=80 if number in {5,6,7} and order==0 else 220+order*30
+            TextBlock.objects.create(page=page,order=order,text=line,bbox=[100,top,400,top+20])
+    nodes, diagnostics = extract_outline(asset,path)
+    assert [(row["title"],row["pdf_page"]) for row in nodes] == [("第一章 合成标题",4),("结论",8)]
+    assert all(row["calibration_status"] == "matched" for row in nodes)
+    assert any(row["code"] == "repeated_running_headers" for row in diagnostics)
