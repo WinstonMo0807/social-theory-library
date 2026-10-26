@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-27 批注终稿挂载权限修复
+
+实际/admin/visual-review参考图500；API日志明确/reference/final-r2.pdf Permission denied。预览镜像以uid100/gid101运行，而NAS旧副本实际ACL仅uid1000可读；宿主stat显示777不能证明容器内可读。该预览副本属主改100:101并chmod400，仍以ro挂载，不改Windows唯一原PDF或生产。原ACL保存在guest-records-recovery/final-atlas-acl.before。最初仅setfacl以及仅chown均未读通，最后chmod400后以API实际用户fitz成功读取230页及第10页2,296,741字节图像。复用或重建候选时必须实际以API用户读取挂载副本，不能仅检查is_file。
+
 ## 2026-10-27 03:14 访客转存已更新内网候选
 
 API及四worker r45（067a879d3d03）、Web r77（8eb97807a375）、RapidOCR r3已运行。reading0028增量迁移完成，4个账号身份/密码哈希/角色摘要与更新前一致。更新8fa9ab→c331a6退出0；首次被正在执行的定时健康检查阻止，随后临时停预览beat、确认四worker空闲后完成，beat已恢复。生产不变。

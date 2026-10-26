@@ -65,6 +65,7 @@ class ArticleMetadataSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=["article", "research", "exhibition"], required=False)
     keywords = serializers.ListField(child=serializers.CharField(max_length=80), max_length=30, required=False)
     topic_ids = serializers.ListField(child=serializers.UUIDField(), max_length=50, required=False)
+    theory_ids = serializers.ListField(child=serializers.UUIDField(), max_length=50, required=False)
     scholar_ids = serializers.ListField(child=serializers.UUIDField(), max_length=50, required=False)
     reading_path_ids = serializers.ListField(child=serializers.UUIDField(), max_length=50, required=False)
     curator_role = serializers.CharField(max_length=240, allow_blank=True, required=False)
@@ -72,11 +73,7 @@ class ArticleMetadataSerializer(serializers.Serializer):
     curator_portrait_id = serializers.UUIDField(allow_null=True, required=False)
 
 
-class PublicEditorialCuratorSerializer(serializers.Serializer):
-    name = serializers.CharField(allow_blank=True)
-    role = serializers.CharField(allow_blank=True)
-    affiliation = serializers.CharField(allow_blank=True)
-    portrait_url = serializers.CharField(allow_blank=True)
+from catalog.site_layout import PublicEditorialCuratorSerializer
 
 
 class PublicEditorialCardSerializer(serializers.Serializer):
@@ -98,6 +95,7 @@ class PublicEditorialCardSerializer(serializers.Serializer):
 
 class EditorialDirectoryFiltersSerializer(serializers.Serializer):
     topic = serializers.CharField(allow_blank=True)
+    theory = serializers.CharField(allow_blank=True)
     kind = serializers.CharField(allow_blank=True)
     curator = serializers.CharField(allow_blank=True)
     sort = serializers.ChoiceField(choices=["newest", "oldest", "title"])
@@ -122,6 +120,7 @@ class EditorialDirectoryFacetsSerializer(serializers.Serializer):
     years = serializers.ListField(child=serializers.IntegerField())
     kinds = EditorialDirectoryKindSerializer(many=True)
     topics = EditorialDirectoryTopicSerializer(many=True)
+    theories = EditorialDirectoryTopicSerializer(many=True)
 
 
 class EditorialRelatedMaterialSerializer(serializers.Serializer):

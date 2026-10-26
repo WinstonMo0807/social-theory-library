@@ -68,10 +68,10 @@ def test_home_curator_uses_effective_public_identity_not_editor_or_draft(admin_u
     issues.save_issue(row.pk, {"edit_version":issues.edit_version("recommendation_issue", row.pk),
         "public_byline":"未发布署名", "article_metadata":{"curator_role":"私人草稿身份"}}, admin_user)
     row.refresh_from_db()
-    card = source_card({"type":"issue", "id":str(row.pk)}, row)
+    card = source_card({"type":"issue", "id":str(row.pk)})
     assert card["curator"] == {"name":"公开策划署名", "role":"公开身份", "affiliation":"", "portrait_url":""}
     anonymous = article(admin_user, public_byline="", article_metadata={"curator_role":"不公开身份"})
-    assert source_card({"type":"issue", "id":str(anonymous.pk)}, anonymous)["curator"] == {
+    assert source_card({"type":"issue", "id":str(anonymous.pk)})["curator"] == {
         "name":"", "role":"", "affiliation":"", "portrait_url":""}
 
 
@@ -234,3 +234,25 @@ def test_comment_public_revision_never_moves_to_rewritten_article(admin_user):
     assert comments.own_page(admin_user,row.pk,{})["count"] == 1
     with pytest.raises(research.ResearchConflict): comments.public_page(row.pk,{"public_revision_id":data["public_revision_id"]})
     with pytest.raises(research.ResearchConflict): comments.submit(admin_user,row.pk,{**data,"request_id":uuid4()})
+
+
+def test_theory_filter_uses_only_published_article_links_and_visible_traditions(admin_user):
+    from catalog.models import KnowledgeNode
+    theory = KnowledgeNode.objects.create(node_type="theory_tradition", canonical_name_zh="测试传统", slug="test-tradition", status="published")
+    draft = KnowledgeNode.objects.create(node_type="theory_tradition", canonical_name_zh="未公开传统", slug="draft-tradition", status="draft")
+    from catalog.editorial_issue_serializers import ArticleMetadataSerializer
+    metadata = ArticleMetadataSerializer(data={"theory_ids":[str(theory.pk), str(draft.pk)]})
+    metadata.is_valid(raise_exception=True)
+    assert metadata.validated_data["theory_ids"] == [theory.pk, draft.pk]
+    row = article(admin_user, article_metadata=metadata.validated_data)
+    data = public_directory({"theory":theory.slug})
+    assert data["count"] == 1 and data["facets"]["theories"] == [{"id":str(theory.pk),"slug":theory.slug,"name":theory.canonical_name_zh,"href":f"/theories/nodes/{theory.slug}"}]
+    assert data["results"][0]["article_metadata"]["theory_ids"] == [str(theory.pk)]
+    assert public_directory({"theory":draft.slug})["count"] == 0
+    issues.save_issue(row.pk, {"edit_version":issues.edit_version("recommendation_issue",row.pk), "article_metadata":{"theory_ids":[]}}, admin_user)
+    assert public_directory({"theory":str(theory.pk)})["count"] == 1
+    issues.publish_issue(row.pk, issues.edit_version("recommendation_issue",row.pk), admin_user)
+    assert public_directory({"theory":theory.slug})["count"] == 0
+    concept = KnowledgeNode.objects.create(node_type="concept", canonical_name_zh="测试概念", slug="test-concept")
+    with pytest.raises(ValidationError):
+        metadata_input({"theory_ids":[str(concept.pk)]})

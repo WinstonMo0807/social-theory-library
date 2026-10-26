@@ -7756,6 +7756,7 @@ export interface components {
             kind?: components["schemas"]["IssueCreationKindEnum"];
             keywords?: string[];
             topic_ids?: string[];
+            theory_ids?: string[];
             scholar_ids?: string[];
             reading_path_ids?: string[];
             curator_role?: string;
@@ -7767,6 +7768,7 @@ export interface components {
             kind?: components["schemas"]["IssueCreationKindEnum"];
             keywords?: string[];
             topic_ids?: string[];
+            theory_ids?: string[];
             scholar_ids?: string[];
             reading_path_ids?: string[];
             curator_role?: string;
@@ -9763,9 +9765,11 @@ export interface components {
             years: number[];
             kinds: components["schemas"]["EditorialDirectoryKind"][];
             topics: components["schemas"]["EditorialDirectoryTopic"][];
+            theories: components["schemas"]["EditorialDirectoryTopic"][];
         };
         EditorialDirectoryFilters: {
             topic: string;
+            theory: string;
             kind: string;
             curator: string;
             sort: components["schemas"]["EditorialDirectoryFiltersSortEnum"];
@@ -31841,6 +31845,7 @@ export interface operations {
                 page_size?: string;
                 q?: string;
                 sort?: string;
+                theory?: string;
                 topic?: string;
                 view?: string;
                 year_from?: string;

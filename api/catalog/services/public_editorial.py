@@ -10,11 +10,11 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from catalog.models import MediaRendition, ReadingPath, ScholarProfile, Topic
+from catalog.models import KnowledgeNode, MediaRendition, ReadingPath, ScholarProfile, Topic
 from catalog.services.public_scholars import _choice, _page, _paging
 
 KINDS = {"article": "策划文章", "research": "研究论文", "exhibition": "原文展览"}
-METADATA_FIELDS = {"kind", "keywords", "topic_ids", "scholar_ids", "reading_path_ids", "curator_role", "curator_affiliation", "curator_portrait_id"}
+METADATA_FIELDS = {"kind", "keywords", "topic_ids", "theory_ids", "scholar_ids", "reading_path_ids", "curator_role", "curator_affiliation", "curator_portrait_id"}
 
 
 def metadata_input(value):
@@ -26,7 +26,7 @@ def metadata_input(value):
     if not isinstance(keywords, list) or len(keywords) > 30:
         raise ValidationError({"keywords": "最多填写30个关键词。"})
     result["keywords"] = list(dict.fromkeys(text for row in keywords if (text := _text(row, 80))))
-    for key, model in (("topic_ids", Topic), ("scholar_ids", ScholarProfile), ("reading_path_ids", ReadingPath)):
+    for key, model in (("topic_ids", Topic), ("theory_ids", KnowledgeNode), ("scholar_ids", ScholarProfile), ("reading_path_ids", ReadingPath)):
         ids = value.get(key, [])
         if not isinstance(ids, list) or len(ids) > 50:
             raise ValidationError({key: "最多选择50项明确关联。"})
@@ -34,7 +34,10 @@ def metadata_input(value):
             ids = list(dict.fromkeys(str(UUID(str(row))) for row in ids))
         except (TypeError, ValueError, AttributeError):
             raise ValidationError({key: "对象编号无效。"})
-        if model.objects.filter(pk__in=ids).count() != len(ids):
+        choices = model.objects.filter(pk__in=ids)
+        if key == "theory_ids":
+            choices = choices.filter(node_type="theory_tradition")
+        if choices.count() != len(ids):
             raise ValidationError({key: "包含不存在的关联对象。"})
         result[key] = ids
     for key in ("curator_role", "curator_affiliation"):
@@ -50,7 +53,7 @@ def public_metadata(payload, *, public=True):
     result = {"kind": raw.get("kind", "article"), "keywords": raw.get("keywords", []),
         "curator_role": raw.get("curator_role", ""), "curator_affiliation": raw.get("curator_affiliation", ""),
         "curator_portrait_id": raw.get("curator_portrait_id")}
-    for key, model, status in (("topic_ids", Topic, "editorial_status"), ("scholar_ids", ScholarProfile, "editorial_status"), ("reading_path_ids", ReadingPath, "status")):
+    for key, model, status in (("topic_ids", Topic, "editorial_status"), ("theory_ids", KnowledgeNode, "status"), ("scholar_ids", ScholarProfile, "editorial_status"), ("reading_path_ids", ReadingPath, "status")):
         ids = raw.get(key, [])
         allowed = set(map(str, model.objects.filter(pk__in=ids, **{status: "published"}).values_list("pk", flat=True))) if public else set(ids)
         result[key] = [key for key in ids if key in allowed]
@@ -109,16 +112,23 @@ def public_directory(params=None):
     rows = published_projection()
     # Facets read only small metadata from effective public versions, never draft text.
     facets, topic_ids = {"curators": [], "years": [], "kinds": [{"id": key, "label": name} for key, name in KINDS.items()]}, set()
-    names, years = set(), set()
+    names, years, theory_ids = set(), set(), set()
     for metadata, name, date in rows.values_list(KeyTransform("article_metadata", "public_snapshot"), "public_byline", "effective_display_from").iterator(chunk_size=100):
         topic_ids.update((metadata or {}).get("topic_ids", []))
+        theory_ids.update((metadata or {}).get("theory_ids", []))
         if name:
             names.add(name)
         if date:
             years.add(timezone.localtime(date).year)
     from catalog.services.public_topics import _base as topic_base, _formal, _link
     topics = [_link(_formal(row)) for row in topic_base(counts=False).filter(pk__in=topic_ids).order_by("public_name", "pk")]
-    facets.update(curators=sorted(names), years=sorted(years, reverse=True), topics=topics)
+    theories = [{"id": str(node.pk), "slug": node.slug, "name": node.canonical_name_zh, "href": f"/theories/nodes/{node.slug}"}
+        for node in KnowledgeNode.objects.filter(pk__in=theory_ids, status="published", node_type="theory_tradition").order_by("canonical_name_zh", "pk")]
+    facets.update(curators=sorted(names), years=sorted(years, reverse=True), topics=topics, theories=theories)
+    selected_theory = str(params.get("theory", "")).strip()
+    if selected_theory:
+        theory = next((row for row in theories if selected_theory in {row["id"], row["slug"]}), None)
+        rows = rows.filter(public_snapshot__article_metadata__theory_ids__icontains=theory["id"]) if theory else rows.none()
     selected_topic = str(params.get("topic", "")).strip()
     if selected_topic:
         topic = next((row for row in topics if selected_topic in {row["id"], row["slug"]}), None)
@@ -147,11 +157,11 @@ def public_directory(params=None):
     # This endpoint has scalar filters; commas in a curator name or search are literal.
     from urllib.parse import urlencode
     def link(page):
-        pairs = {key: str(params.get(key, "")) for key in ("q", "topic", "kind", "curator", "year_from", "year_to", "sort") if params.get(key)}
+        pairs = {key: str(params.get(key, "")) for key in ("q", "topic", "theory", "kind", "curator", "year_from", "year_to", "sort") if params.get(key)}
         return "/api/catalog/recommendation-issues/?" + urlencode({**pairs, "view": "directory", "page": page, "page_size": result["page_size"]})
     result["next"] = link(result["page"] + 1) if result["next"] else None
     result["previous"] = link(result["page"] - 1) if result["previous"] else None
-    result.update(query=query, filters={"topic": selected_topic, "kind": kind, "curator": curator, "sort": sort, **years_filter}, facets=facets)
+    result.update(query=query, filters={"topic": selected_topic, "theory": selected_theory, "kind": kind, "curator": curator, "sort": sort, **years_filter}, facets=facets)
     result["related"] = directory_related(result["results"])
     return result
 

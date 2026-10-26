@@ -116,7 +116,10 @@ function artwork(layout, w, h, name) {
   } else {
     icon();
     const x = 142, available = W - x;
-    if (layout === "full" || layout === "full-caps") {
+    if (layout === "editorial-home") {
+      const right = x + available * .48; stl(x, 78, available * .4); rule(right - 12);
+      text("Social", right, 28, 27, W-right); text("Theory", right, 57, 27, W-right); chineseLine(right, 88, W-right, 25);
+    } else if (layout === "full" || layout === "full-caps") {
       const stlWidth = available * .43;
       stl(x, 78, stlWidth);
       const right = x + stlWidth + 16;
@@ -173,3 +176,8 @@ for (const file of readdirSync(directory).filter((name) => /^stl-(lockup|footer|
   count++;
 }
 console.log(`Drew ${count} vector brand assets; original PDF crops retained.`);
+
+// PDF73 default directory uses a separate lockup from the PDF74 filtered state.
+for (const [mode,w,h,layout] of [["desktop",210,40,"editorial-home"],["mobile",190,45,"full"]]) {
+  writeFileSync(path.join(directory,`stl-lockup-editorial-home-${mode}-final-r2.svg`), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w/h*100} 100" width="${w}" height="${h}" role="img" aria-label="社会理论书库"><title>社会理论书库 · Social Theory Library</title>${artwork(layout,w,h,"editorial-home")}</svg>\n`);
+}

@@ -27,7 +27,7 @@
 .directoryPage .heroCopy>p{font-size:18px}
 .directoryPage .search input{padding:9px 12px;font-size:12px}
 .hubPage .search{max-width:530px;margin-top:28px}
-.hubPage .hubSection h2{font-size:30px}
+.hubPage .hubSection h2{font-size:30px;font-weight:700}
 .hubPage .sectionHeading{margin-bottom:12px}
 .compactCard .cardCopy{position:relative;padding-right:35px}
 .compactCard .cardFooter,.hubGrid .cardFooter{position:absolute;right:12px;bottom:16px;margin:0;padding:0}

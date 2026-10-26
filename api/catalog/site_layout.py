@@ -13,7 +13,12 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from catalog.editorial_issue_serializers import PublicEditorialCuratorSerializer
+class PublicEditorialCuratorSerializer(serializers.Serializer):
+    name = serializers.CharField(allow_blank=True)
+    role = serializers.CharField(allow_blank=True)
+    affiliation = serializers.CharField(allow_blank=True)
+    portrait_url = serializers.CharField(allow_blank=True)
+
 from catalog.services import editorial_issues as ledger
 from catalog.services.shared_curation import identifier
 

@@ -11,7 +11,7 @@ export function loadRecommendationIssue(slug: string) {
 
 export function loadEditorialDirectory(params: EditorialSearchParams) {
   const query = new URLSearchParams({ view: "directory" });
-  for (const key of ["q", "topic", "kind", "curator", "year_from", "year_to", "sort", "page", "page_size"]) {
+  for (const key of ["q", "topic", "theory", "kind", "curator", "year_from", "year_to", "sort", "page", "page_size"]) {
     const value = params[key];
     if (value) query.set(key, Array.isArray(value) ? value[0] : value);
   }

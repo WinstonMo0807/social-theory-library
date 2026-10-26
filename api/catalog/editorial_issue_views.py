@@ -47,7 +47,7 @@ class PublicIssueListView(APIView):
     permission_classes = [AllowAny]
     @extend_schema(operation_id="catalog_recommendation_issues_list", responses=PolymorphicProxySerializer(
         component_name="RecommendationIssueListing", serializers=[RecommendationIssueCollectionSerializer, PublicEditorialDirectorySerializer], resource_type_field_name=None),
-        parameters=[OpenApiParameter(key, type=str) for key in ("view", "q", "topic", "kind", "curator", "year_from", "year_to", "sort", "page", "page_size")])
+        parameters=[OpenApiParameter(key, type=str) for key in ("view", "q", "topic", "theory", "kind", "curator", "year_from", "year_to", "sort", "page", "page_size")])
     def get(self, request):
         if request.query_params.get("view") == "directory":
             from catalog.services.public_editorial import public_directory

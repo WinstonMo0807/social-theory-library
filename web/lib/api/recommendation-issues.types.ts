@@ -41,7 +41,7 @@ export type RecommendationIssue = {
 };
 export type IssueSelection = {question:string;query:string;filters:Record<string,string|string[]|number>;references:IssueSourceReference[];materials?:Array<{target:IssueSourceReference;source:IssueResolvedSource|null;available:boolean;public_eligible:boolean}>};
 export type ArticleMetadata = {
-  kind: "article" | "research" | "exhibition"; keywords: string[]; topic_ids: string[]; scholar_ids: string[]; reading_path_ids: string[];
+  kind: "article" | "research" | "exhibition"; keywords: string[]; topic_ids: string[]; theory_ids?: string[]; scholar_ids: string[]; reading_path_ids: string[];
   curator_role: string; curator_affiliation: string; curator_portrait_id: string | null;
 };
 export type EditorialCurator = { name: string; role: string; affiliation: string; portrait_url: string };
@@ -51,8 +51,8 @@ export type EditorialCard = Pick<RecommendationIssue, "id" | "slug" | "title" | 
 export type EditorialSearchParams = Record<string, string | string[] | undefined>;
 export type EditorialDirectory = { count: number; page: number; page_size: number; total_pages: number; next: string | null; previous: string | null;
   results: EditorialCard[]; query: string;
-  filters: { topic: string; kind: string; curator: string; sort: "newest" | "oldest" | "title"; year_from: number | null; year_to: number | null };
-  facets: { topics: { id: string; slug: string; name: string; href: string }[]; curators: string[]; years: number[]; kinds: { id: string; label: string }[] };
+  filters: { topic: string; theory?: string; kind: string; curator: string; sort: "newest" | "oldest" | "title"; year_from: number | null; year_to: number | null };
+  facets: { theories?: { id: string; slug: string; name: string }[]; topics: { id: string; slug: string; name: string; href: string }[]; curators: string[]; years: number[]; kinds: { id: string; label: string }[] };
   related: { scholars: PublicScholarCard[]; materials: {id:string;title:string;authors:string;href:string;cover_url:string;cover_display_uses?:MediaDisplayUse[];article_href:string;source_status:string}[]; paths:{id:string;title:string;href:string}[]; notice:string };
 };
 export type IssuePage = { count: number; next: string | null; previous: string | null; results: RecommendationIssue[]; current: RecommendationIssue | null; summary?: { total: number; published: number; drafts: number; scheduled: number }; upcoming?: RecommendationIssue[] };

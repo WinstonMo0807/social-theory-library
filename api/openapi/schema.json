@@ -18376,6 +18376,13 @@
                     },
                     {
                         "in": "query",
+                        "name": "theory",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "topic",
                         "schema": {
                             "type": "string"
@@ -36502,6 +36509,14 @@
                         },
                         "maxItems": 50
                     },
+                    "theory_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
                     "scholar_ids": {
                         "type": "array",
                         "items": {
@@ -36549,6 +36564,14 @@
                         "maxItems": 30
                     },
                     "topic_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 50
+                    },
+                    "theory_ids": {
                         "type": "array",
                         "items": {
                             "type": "string",
@@ -42945,11 +42968,18 @@
                         "items": {
                             "$ref": "#/components/schemas/EditorialDirectoryTopic"
                         }
+                    },
+                    "theories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EditorialDirectoryTopic"
+                        }
                     }
                 },
                 "required": [
                     "curators",
                     "kinds",
+                    "theories",
                     "topics",
                     "years"
                 ]
@@ -42958,6 +42988,9 @@
                 "type": "object",
                 "properties": {
                     "topic": {
+                        "type": "string"
+                    },
+                    "theory": {
                         "type": "string"
                     },
                     "kind": {
@@ -42982,6 +43015,7 @@
                     "curator",
                     "kind",
                     "sort",
+                    "theory",
                     "topic",
                     "year_from",
                     "year_to"
