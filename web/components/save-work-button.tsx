@@ -1,4 +1,5 @@
 "use client";
+import { useEvidenceLanguage } from "./evidence-language";
 
 import { Bookmark, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -52,6 +53,7 @@ export function SaveWorkButton({
   compact?: boolean;
   icon?: "bookmark" | "star";
 }) {
+  const { t } = useEvidenceLanguage();
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<{ key: string; id: string | null } | null>(null);
   const [error, setError] = useState("");
@@ -141,14 +143,14 @@ export function SaveWorkButton({
       onClick={() => void toggle()}
       disabled={!workId || session.status === "loading" || (Boolean(owner) && !current && !readError)}
       state={pendingAction ? "pending" : readError ? "error" : "idle"}
-      pendingLabel={compact ? "处理中" : effectiveSavedId ? "正在取消" : "正在收藏"}
-      errorLabel={compact ? "失败" : "操作失败，重试"}
+      pendingLabel={compact ? t("处理中") : effectiveSavedId ? t("正在取消") : t("正在收藏")}
+      errorLabel={compact ? t("失败") : t("操作失败，重试")}
       pressed={Boolean(effectiveSavedId)}
-      aria-label={effectiveSavedId ? "取消收藏" : "收藏"}
-      title={readError || undefined}
+      aria-label={effectiveSavedId ? t("取消收藏") : t("收藏")}
+      title={readError ? t(readError) : undefined}
     >
       {icon === "star" ? <Star size={15} fill={effectiveSavedId ? "currentColor" : "none"} /> : <Bookmark size={15} fill={effectiveSavedId ? "currentColor" : "none"} />}
-      {!compact ? (effectiveSavedId ? "已收藏" : "收藏") : null}
+      {!compact ? (effectiveSavedId ? t("已收藏") : t("收藏")) : null}
     </ActionButton>
   );
 }

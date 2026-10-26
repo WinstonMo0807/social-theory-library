@@ -26,6 +26,7 @@ import { usePublicNavigationReturn } from "@/lib/public-navigation-return";
 import { ActionButton, AsyncStatus } from "./action-feedback";
 import { DisplayPreferences } from "./display-preferences";
 import { ThemeToggle } from "./theme-toggle";
+import { EvidenceLanguageSwitch, useEvidenceLanguage } from "./evidence-language";
 import { usePublicSession } from "./public-session-provider";
 import { Drawer } from "./ui/dialog";
 import { IconButton } from "./ui/controls";
@@ -51,6 +52,7 @@ export function Wordmark({ config = defaultSiteConfig, home = false, reference }
 }
 
 export function SiteHeader({ config = defaultSiteConfig, preview = false, reader = false, readerReference = "reader", beforeLogout }: { config?: SiteConfig; preview?: boolean; reader?: boolean; readerReference?: "reader" | "reader-outline" | "reader-search" | "reader-notes" | "parallel" | "parallel-manual"; beforeLogout?: () => boolean }) {
+  const { t } = useEvidenceLanguage();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -170,7 +172,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       <Link className="logo-link" href="/" prefetch={false}>
         {editorialDetailRoute ? <span className="brand-editorial-variants"><Wordmark config={config} reference="editorial-article" /><Wordmark config={config} reference="editorial-exhibition" /><Wordmark config={config} reference="editorial-exhibit" /></span> : graphRoute ? <span className="brand-graph-variants"><Wordmark config={config} reference="graph" /><Wordmark config={config} reference="graph-topic" /><Wordmark config={config} reference="graph-scholar" /></span> : theoryDetailRoute ? <span className="brand-theory-variants"><Wordmark config={config} reference="theory-concept" /><Wordmark config={config} reference="theory-tradition" /></span> : workRoute ? <span className="brand-work-variants"><Wordmark config={config} reference="work" /><Wordmark config={config} reference="work-readable" /><Wordmark config={config} reference="journal" /></span> : <Wordmark config={config} home={pathname === "/" || preview} reference={brandReference} />}
       </Link>
-      <nav className="desktop-nav" aria-label="主导航">
+      <nav className="desktop-nav" aria-label={t("主导航")}>
         {headerNavigation.map(([href, label]) => {
           const active = href === "/about" && supportRoute ? true : href.includes("?") ? `${pathname}?${searchParams}` === href : isActive(href);
           return (
@@ -181,26 +183,27 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
               key={href}
               prefetch={false}
             >
-              {evidenceRoute && href === "/theories" ? "理论" : label}
+              {t(evidenceRoute && href === "/theories" ? "理论" : label)}
             </Link>
           );
         })}
       </nav>
       <div className="header-actions">
-        {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label="返回原页面" title="返回原页面" href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>返回原页面</span></Link> : null}
-        {evidenceRoute || theoryDetailRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label="搜索馆藏"><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">搜索书名、作者、概念</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder="搜索书名、作者、概念…" /></form> : null}
-        <Link className="header-search" href="/explore" prefetch={false} aria-label={config.navigation.search}>
+        {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label={t("返回原页面")} title={t("返回原页面")} href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>{t("返回原页面")}</span></Link> : null}
+        {evidenceRoute || theoryDetailRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label={t("搜索馆藏")}><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">{t("搜索书名、作者、概念")}</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder={t("搜索书名、作者、概念…")} /></form> : null}
+        <Link className="header-search" href="/explore" prefetch={false} aria-label={t(config.navigation.search)}>
           <Search size={18} strokeWidth={1.7} />
-          <span>{config.navigation.search}</span>
+          <span>{t(config.navigation.search)}</span>
         </Link>
         <ThemeToggle />
-        {evidenceRoute ? <Link className="header-reference-account" href={user ? "/account" : "/login?next=%2Faccount"} onClick={enterAccount} aria-label={user ? "读者中心" : "读者登录"}><CircleUserRound size={28} strokeWidth={1.6} /></Link> : null}
+        {evidenceRoute ? <EvidenceLanguageSwitch /> : null}
+        {evidenceRoute ? <Link className="header-reference-account" href={user ? "/account" : "/login?next=%2Faccount"} onClick={enterAccount} aria-label={t(user ? "读者中心" : "读者登录")}><CircleUserRound size={28} strokeWidth={1.6} /></Link> : null}
         {(readerCenterRoute || archiveRoute) && user ? <ReaderAccountMenu key={user.id} user={user} onLogout={logout} onPreferences={() => setOpen(true)} pending={pendingAction === "logout"} error={logoutError} /> : null}
         <IconButton
           ref={menuButtonRef}
           className={`icon-button menu-button${(readerCenterRoute || archiveRoute) && user ? " reader-account-menu-toggle" : ""}`}
           type="button"
-          aria-label={open ? "关闭菜单" : "打开菜单"}
+          aria-label={t(open ? "关闭菜单" : "打开菜单")}
           aria-expanded={open}
           aria-controls="site-menu"
           onClick={() => setOpen((value) => !value)}
@@ -209,28 +212,28 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
         </IconButton>
       </div>
       {logoutError && !open ? <p className="site-navigation-returned" role="alert">{logoutError}</p> : null}
-      {navigationReturn.returned ? <p className="site-navigation-returned" role="status">已返回先前页面</p> : null}
+      {navigationReturn.returned ? <p className="site-navigation-returned" role="status">{t("已返回先前页面")}</p> : null}
       {open ? (
         <Drawer open={open} onRequestClose={closeMenu} initialFocusRef={closeButtonRef} className="site-menu-layer" id="site-menu" aria-labelledby="site-menu-title">
-          <button className="site-menu-backdrop" type="button" aria-label="关闭菜单" onClick={closeMenu} />
+          <button className="site-menu-backdrop" type="button" aria-label={t("关闭菜单")} onClick={closeMenu} />
           <aside className="site-menu-panel" aria-labelledby="site-menu-title">
             <header className="site-menu-head">
-              <Link href="/" prefetch={false} onClick={closeMenu}><Wordmark config={config} /><span className="sr-only" id="site-menu-title">书库导航</span></Link>
-              <IconButton ref={closeButtonRef} aria-label="关闭菜单" onClick={closeMenu}>
+              <Link href="/" prefetch={false} onClick={closeMenu}><Wordmark config={config} /><span className="sr-only" id="site-menu-title">{t("书库导航")}</span></Link>
+              <IconButton ref={closeButtonRef} aria-label={t("关闭菜单")} onClick={closeMenu}>
                 <X size={25} />
               </IconButton>
             </header>
 
-            <form action="/explore" className="site-menu-search" role="search" aria-label="菜单内搜索" onSubmit={closeMenu}>
-              <Search size={16} aria-hidden="true" /><label className="sr-only" htmlFor="menu-search-input">搜索书名、作者、概念、主题</label>
-              <input id="menu-search-input" type="search" name="q" maxLength={500} value={menuSearch} onChange={event => setMenuSearch(event.target.value)} placeholder="搜索书名、作者、概念、主题…" />
-              <button type="submit" aria-label="提交菜单搜索"><ChevronRight size={16} /></button>
+            <form action="/explore" className="site-menu-search" role="search" aria-label={t("菜单内搜索")} onSubmit={closeMenu}>
+              <Search size={16} aria-hidden="true" /><label className="sr-only" htmlFor="menu-search-input">{t("搜索书名、作者、概念、主题")}</label>
+              <input id="menu-search-input" type="search" name="q" maxLength={500} value={menuSearch} onChange={event => setMenuSearch(event.target.value)} placeholder={t("搜索书名、作者、概念、主题…")} />
+              <button type="submit" aria-label={t("提交菜单搜索")}><ChevronRight size={16} /></button>
             </form>
 
-            <nav className="site-menu-nav" aria-label="书库导航">
+            <nav className="site-menu-nav" aria-label={t("书库导航")}>
               {navigation.map(([href, label]) => (
                 <Link href={href} key={href} prefetch={false} onClick={closeMenu} aria-current={isActive(href) ? "page" : undefined}>
-                  <strong>{label}</strong>
+                  <strong>{t(label)}</strong>
                   <ChevronRight size={15} />
                 </Link>
               ))}
@@ -240,37 +243,37 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
               <div>
                 <Link href="/account" prefetch={false} onClick={enterAccount} aria-current={pathname === "/account" && searchParams.get("section") !== "settings" ? "page" : undefined}>
                   <CircleUserRound size={18} />
-                  <span><strong>我的资料</strong></span><ChevronRight size={15} />
+                  <span><strong>{t("我的资料")}</strong></span><ChevronRight size={15} />
                 </Link>
                 <Link href="/account?section=settings" prefetch={false} onClick={enterAccount} aria-current={pathname === "/account" && searchParams.get("section") === "settings" ? "page" : undefined}>
                   <Settings size={18} />
-                  <span><strong>账户设置</strong></span><ChevronRight size={15} />
+                  <span><strong>{t("账户设置")}</strong></span><ChevronRight size={15} />
                 </Link>
-                {user ? <Link data-auth-full-page href="/login?next=%2Faccount" onClick={closeMenu}><CircleUserRound size={18} /><span><strong>切换账户</strong><small>登录另一账户，私人资料不会合并</small></span><ChevronRight size={15} /></Link> : null}
-                {user?.capabilities?.includes("access_back_office") ? <Link href="/admin" prefetch={false} onClick={closeMenu}><Settings size={18} /><span><strong>管理后台</strong></span><ChevronRight size={15} /></Link> : null}
-                <Link href="/help" prefetch={false} onClick={closeMenu} aria-current={isActive("/help") ? "page" : undefined}><CircleHelp size={18} /><span><strong>帮助与支持</strong></span><ChevronRight size={15} /></Link>
-                <Link href="/about" prefetch={false} onClick={closeMenu} aria-current={isActive("/about") ? "page" : undefined}><ArrowUpRight size={18} /><span><strong>关于我们</strong></span><ChevronRight size={15} /></Link>
+                {user ? <Link data-auth-full-page href="/login?next=%2Faccount" onClick={closeMenu}><CircleUserRound size={18} /><span><strong>{t("切换账户")}</strong><small>{t("登录另一账户，私人资料不会合并")}</small></span><ChevronRight size={15} /></Link> : null}
+                {user?.capabilities?.includes("access_back_office") ? <Link href="/admin" prefetch={false} onClick={closeMenu}><Settings size={18} /><span><strong>{t("管理后台")}</strong></span><ChevronRight size={15} /></Link> : null}
+                <Link href="/help" prefetch={false} onClick={closeMenu} aria-current={isActive("/help") ? "page" : undefined}><CircleHelp size={18} /><span><strong>{t("帮助与支持")}</strong></span><ChevronRight size={15} /></Link>
+                <Link href="/about" prefetch={false} onClick={closeMenu} aria-current={isActive("/about") ? "page" : undefined}><ArrowUpRight size={18} /><span><strong>{t("关于我们")}</strong></span><ChevronRight size={15} /></Link>
                 {!user ? (
                   <>
                     <Link href="/login?next=/account" prefetch={false} onClick={enterAccount}>
                       <CircleUserRound size={18} />
-                      <span><strong>登录</strong><small>同步个人阅读资料</small></span>
+                      <span><strong>{t("登录")}</strong><small>{t("同步个人阅读资料")}</small></span>
                     </Link>
                     <Link href="/register" prefetch={false} onClick={enterAccount}>
                       <UserPlus size={18} />
-                      <span><strong>注册</strong><small>创建免费读者账户</small></span>
+                      <span><strong>{t("注册")}</strong><small>{t("创建免费读者账户")}</small></span>
                     </Link>
                   </>
                 ) : (
                   <ActionButton
                     type="button"
                     state={pendingAction === "logout" ? "pending" : logoutError ? "error" : "idle"}
-                    pendingLabel="正在退出"
-                    errorLabel="退出失败，请重试"
+                    pendingLabel={t("正在退出")}
+                    errorLabel={t("退出失败，请重试")}
                     onClick={() => void logout()}
                   >
                     <LogOut size={18} />
-                    <span><strong>退出登录</strong><small>{user.display_name}</small></span>
+                    <span><strong>{t("退出登录")}</strong><small>{user.display_name}</small></span>
                   </ActionButton>
                 )}
               </div>
@@ -281,8 +284,8 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
             <DisplayPreferences />
 
             <footer className="site-menu-foot">
-              <span>{user ? `${user.display_name} · ${user.role === "reader" ? "读者" : "馆员"}` : "访客可直接阅读、下载、复制与引用"}</span>
-              <Link href="/about" prefetch={false} onClick={closeMenu}>关于书库 <ArrowUpRight size={14} /></Link>
+              <span>{user ? `${user.display_name} · ${user.role === "reader" ? t("读者") : t("馆员")}` : t("访客可直接阅读、下载、复制与引用")}</span>
+              <Link href="/about" prefetch={false} onClick={closeMenu}>{t("关于书库")}<ArrowUpRight size={14} /></Link>
             </footer>
           </aside>
         </Drawer>

@@ -218,6 +218,13 @@ body:has([data-graph-kind="scholar"]) .brand-graph-variants [data-brand-variant=
 .site-header[data-stl-explore="evidence"] .desktop-nav a.active { color:var(--night-gold,#9a712e); }
 .site-header[data-stl-explore="evidence"] .desktop-nav a.active::after { background:currentColor; }
 .site-header[data-stl-explore="evidence"] .header-actions { gap:14px; }
+.evidence-language-switch{display:flex;align-items:center;gap:3px;flex-shrink:0;font:12px/1.2 var(--font-sans),sans-serif;white-space:nowrap;color:var(--night-ink,#082541)}
+.evidence-language-switch button{padding:8px 2px;min-width:22px;border:0;border-radius:3px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.evidence-language-switch button[aria-pressed=true]{color:var(--night-gold,#ae812f)}
+.evidence-language-switch span{color:var(--night-muted,#7b8590)}
+.evidence-language-switch button:focus-visible{outline:2px solid var(--night-gold,#ae812f);outline-offset:2px}
+html[lang=en] .site-header[data-stl-explore="evidence"] .desktop-nav{gap:18px;white-space:nowrap}
+@media(max-width:390px){.site-header[data-stl-explore="evidence"] .header-actions{gap:3px}.site-header[data-stl-explore="evidence"] .theme-toggle{width:27px;min-width:27px;padding:3px}}
 .site-header[data-stl-explore="evidence"] :is(.header-search,.menu-button) { display:none; }
 .header-reference-search { display:flex; align-items:center; gap:7px; width:222px; min-height:32px; padding:4px 11px; border:1px solid var(--night-line,#dce0e4); border-radius:20px; font:12px var(--serif); }
 .header-reference-search button { display:grid; place-items:center; padding:0; border:0; color:inherit; background:none; }

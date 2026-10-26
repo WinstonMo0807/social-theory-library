@@ -16,6 +16,7 @@ import { loadSiteChromeConfig } from "@/lib/api/site.server";
 import { RouteTransition } from "@/components/route-transition";
 import { PublicSessionProvider } from "@/components/public-session-provider";
 import { AuthSessionDialog } from "@/components/auth-session-dialog";
+import { EvidenceLanguageProvider } from "@/components/evidence-language";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { config } = await loadSiteChromeConfig();
@@ -57,6 +58,7 @@ export default async function RootLayout({
       <body>
         <PublicSessionProvider>
         <AppearanceProvider>
+        <EvidenceLanguageProvider>
           <a className="skip-link" href="#main-content">
             跳到主要内容
           </a>
@@ -64,6 +66,7 @@ export default async function RootLayout({
           {unavailable ? <p className="site-config-unavailable" role="status">网站设置暂时无法加载，当前使用默认导航。</p> : null}
           <main id="main-content"><RouteTransition>{children}</RouteTransition></main>
           <AuthSessionDialog />
+        </EvidenceLanguageProvider>
         </AppearanceProvider>
         </PublicSessionProvider>
       </body>
