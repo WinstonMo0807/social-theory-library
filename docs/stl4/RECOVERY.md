@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-27 05:30 当前候选
+
+API/普通/入库/查询worker r51（20d2c9551c97）、Web80（958185f55582）、RapidOCR r3。索引worker仍r45有活动作业5371683a，不强停；beat已启动。恢复点outline-export-r51-recovery，前API50/Web80；本轮无schema变更。详情CURRENT_PROGRESS和PRE_CUTOVER_VERIFICATION_20261027。
+
+page-label-r80-recovery/candidate-after-r80.dump已恢复到独立stl4_verify_20261027_r80库并核对4账号摘要。该库保留，未覆盖当前或生产。后续又新增一个书签副本8d4b32db，勿把此较早备份说成已包含该副本。源码、凭据、原件与模型均不得混入Git。实际映射文件5bc8a288、目录220b4c88、正式快照e0ec49b2保持。
+
 ## 2026-10-27 批注终稿挂载权限修复
 
 实际/admin/visual-review参考图500；API日志明确/reference/final-r2.pdf Permission denied。预览镜像以uid100/gid101运行，而NAS旧副本实际ACL仅uid1000可读；宿主stat显示777不能证明容器内可读。该预览副本属主改100:101并chmod400，仍以ro挂载，不改Windows唯一原PDF或生产。原ACL保存在guest-records-recovery/final-atlas-acl.before。最初仅setfacl以及仅chown均未读通，最后chmod400后以API实际用户fitz成功读取230页及第10页2,296,741字节图像。复用或重建候选时必须实际以API用户读取挂载副本，不能仅检查is_file。

@@ -19,7 +19,7 @@ PROCESSOR = "adopted-outline-export"
 def export_revision(asset, revision_id):
     _source_current(asset)
     revision = asset.outline_revisions.filter(pk=revision_id, is_active=True, reviewed=True,
-        source_checksum=asset.sha256, origin__in=["adopted", "restored"]).first()
+        source_checksum=asset.sha256, origin__in=["adopted", "restored", "page_mapping"]).first()
     document = asset.document_revisions.filter(is_active=True).first()
     if not revision or str(revision.document_revision_id or "") != str(document.pk if document else ""):
         raise OutlineConflict("已采用目录或原文已变化，请重新读取当前目录；原文件保留。")
@@ -82,10 +82,17 @@ def write_bookmarked_copy(source, destination, nodes, *, page_count, heartbeat):
                 point = fitz.Point(relative[0] * page.rect.width, relative[1] * page.rect.height)
             elif row.get("coordinate_space") == "pymupdf_toc" and len(row.get("pdf_position", [])) == 2:
                 point = fitz.Point(row["pdf_position"])
-            # set_toc/get_toc in the installed PyMuPDF use the same displayed coordinates.
-            toc.append([row["level"], row["title"], number, {"kind": fitz.LINK_GOTO, "to": point, "zoom": 0}])
+            toc.append([row["level"], row["title"], number])
             expected.append((row["level"], row["title"], number, point))
         pdf.set_toc(toc)
+        # PyMuPDF 1.26 set_toc offsets cropped/rotated destinations. Write each
+        # destination in PDF coordinates, then retain the displayed-point check.
+        for xref, (_, _, number, point) in zip(pdf.get_outline_xrefs(), expected):
+            page = pdf[number - 1]
+            unrotated = point * page.derotation_matrix
+            target = fitz.Point(unrotated.x + page.cropbox.x0,
+                                page.mediabox.y1 - page.cropbox.y0 - unrotated.y)
+            pdf.xref_set_key(xref, "A/D", f"[{page.xref} 0 R /XYZ {target.x:.6f} {target.y:.6f} 0]")
         heartbeat("writing", 0, 1)
         pdf.save(str(destination), garbage=0, deflate=False)
     heartbeat("validating", 0, 1)

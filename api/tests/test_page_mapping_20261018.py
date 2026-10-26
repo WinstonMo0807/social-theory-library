@@ -174,6 +174,14 @@ def test_published_mapping_stages_new_identity_and_preserves_public_metadata_and
     assert copied.nodes[0]["title"] == "人工目录标题"
     assert copied.nodes[0]["normalized_position"] == [0.1, 0.2]
     assert copied.nodes[0]["printed_label"] == "10"
+    # Mapping preserves the human adoption and binds it to the new document.
+    from catalog.services.outline_exports import export_revision
+    from catalog.services.document_outline import OutlineConflict
+    assert export_revision(result.applied_asset, copied.pk).pk == copied.pk
+    copied.reviewed = False
+    copied.save(update_fields=["reviewed"])
+    with pytest.raises(OutlineConflict):
+        export_revision(result.applied_asset, copied.pk)
     outline.refresh_from_db()
     assert outline.nodes[0]["printed_label"] == "1"
     edition.refresh_from_db()

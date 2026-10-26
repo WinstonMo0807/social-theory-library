@@ -9,6 +9,8 @@
 - PRIVACY-EDIT-01：`parallel_reading.update_task`额外要求新笔记保存开关，违反现有隐私界面和PRIVACY_OPERATIONS明确的“已有内容仍可编辑”。只移除已有任务编辑的该条件；新建、本人归属、事务锁、版本和回执校验保留。两份早期测试对此互相冲突，按现有产品规则修正旧断言。
 - PRIVACY-INPUT-01：`PrivacyRequestStopInput.to_internal_value`在多余owner字段时抛字符串错误，DRF封装errors时ValueError，实际返回500。改为标准non_field_errors，仍拒绝多余字段及他人归属，接口回归返回400。
 - PUBLICATION-DISCOVERY-01：实际校准发布事件115d819c在rag/semantic消费者重试8次后dead_letter。读者检索与LibraryRetrievalService已消费Discovery，但`projection_refresh._semantic_projection`仍启动旧SemanticIndexJob，因无旧active SemanticIndexVersion失败。启用Discovery时沿同一任务账本验证当前公开文件、CatalogRevision、source_revision、generation及完整写入记录；等待现有索引调度完成，失败仍保留，未启用Discovery的旧路径保持。延迟完成复用原投影租约和版本检查，不新建索引架构或隐藏失败。
+- OUTLINE-EXPORT-MAPPING-01：当前5bc8a288的10项人工目录来源是page_mapping，指纹、正文、reviewed均正确，管理端正常点击导出仍被outline_exports.export_revision的来源枚举拒绝。补合法page_mapping分支，保留人工确认、当前指纹、正文版本和所有节点校验；无需修改历史数据。
+- OUTLINE-EXPORT-POSITION-01：已有旋转/裁切合成回归四项均实际失败，PyMuPDF1.26的set_toc坐标转换丢失裁切偏移。只在独立副本中将显示落点反旋转、加CropBox偏移并转换到PDF坐标，使用公共xref_set_key写入GoTo目标；保留全部标题、层级、页数及精确落点读回检查。18项导出/页码回归最终通过，初次失败日志保留。
 
 ## 本轮真实样书
 
@@ -28,6 +30,14 @@ v8真实目录任务e5cfece5生成10项。逐项查看原PDF章节起页，人�
 - Web类型、构建退出0；实际r80策划页读取新品牌和副标题/描述字号。只读PDF73及当前截图，实际内容数量保持1，未填造PDF示例数据或人物肖像。
 - API49 d695df3c1ff3/Web80 958185f55582已更新内网；API50 e60e7518c1c0准备应用发布消费者修复。更新仅空闲服务，索引worker仍有任务保留旧镜像；beat在finally恢复。最终版本/重试/恢复演练结果继续补充。
 
-## 仍需读回
+## 05:25 已读回与仍需完成
 
-发布消费者修复部署后重试同一事件，核对实际Discovery来源与发布状态；候选备份的隔离恢复；r80目录初选原页。账户身份/生产环境保持，公网批准仍待用户最终确认。其余206视图的B验收不改记为开发缺项，已有功能不重复开发。模型质量和全NAS长期稳定性未由上述检查证明。
+- API50已部署，Web80保持；原事件已沿现有重试入口恢复，Discovery原作业5371683a继续当前准确source_revision，149个单元、物理页112。rag/semantic仍等待，不冒充完成。API51目录导出修复镜像20d2c9551c97已构建，部署中。
+- r80目录初选原稿实际显示PDF14，截图outline-preview-r80.png。当前阅读PDF34显示印刷21。
+- 候选备份candidate-after-r80.dump共15,722,229字节，SHA256 4e8f321ecb672a7fd483585bc27e86f85c24f99ddcf1d100c6a9aafa86859c0f。已恢复到独立stl4_verify_20261027_r80数据库，4账号身份/密码哈希/权限摘要与更新前一致；182迁移、3作品、3版本、12资产读回。旧库及生产不变。证据restore-verification.log；不是生产恢复演练。
+- DOCX第一次探针误在不挂载socket的API执行，不作为服务故障。实际worker随后返回conversion_timeout，NAS内存PSI some约67%。确认无活动OCR作业后暂时停止空闲RapidOCR，再经同一worker/socket转换两页合成DOCX：14.96秒、两页正文正确、源指纹未变、LibreOffice7.4.7.2；finally已重启RapidOCR。证据docx-isolated-runtime.log。这证明转换链可用，不能单独证明全部超时根因或双栈高负载稳定。
+- 原OCR实例曾有OOM=1/kill=1记录，时间未定位；重启前health/ready均200且模型实际验证通过。原PG OOM及恢复过程也保留。不得用重启后清零计数宣称无中断。
+
+05:28:25：API51（20d2c9551c97）更新后原UI提交任务2a186965成功，生成8d4b32db副本。实际打开170页并读回10个正确书签，原件SHA未变（mapped-export-readback.log）。API/普通/入库/查询worker r51、Web80保持，索引worker忙保留r45；beat恢复。首次更新因健康任务忙未改环境，第二次沿同一恢复点核对后更新空闲服务。
+
+继续确认当前来源索引和发布消费者完成。既定深度bundle健康prepared，三个角色尚无真实推理；总开关false、BGE/ConvMemory子开关true，EG2独立索引尚不存在，当前公开passages2387。此为既定运行接续，不重开质量测评。公网批准仍待用户最终确认。其余206视图的B验收不改记为开发缺项，字体文件身份及全站逐像素一致尚未证明。模型质量和全NAS长期稳定性未由上述检查证明。

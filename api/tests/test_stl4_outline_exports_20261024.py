@@ -60,3 +60,25 @@ def test_export_requires_adoption_and_reuses_original_request(outline_source, ad
     with pytest.raises(OutlineConflict):
         run_export(stale.pk, task_id=stale.task_id)
     assert Asset.objects.filter(source_asset=asset, processor="adopted-outline-export").count() == 1
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("changed", ["source_checksum", "document_revision", "calibration_status"])
+def test_mapped_outline_still_rejects_stale_or_unconfirmed_source(outline_source, changed):
+    from catalog.services.outline_exports import export_revision
+
+    asset, document, path = outline_source
+    nodes, _ = extract_outline(asset, path)
+    revision = DocumentOutlineRevision.objects.create(asset=asset, document_revision=document,
+        revision=1, source_checksum=asset.sha256, nodes=nodes, origin="page_mapping",
+        is_active=True, reviewed=True)
+    assert export_revision(asset, revision.pk).pk == revision.pk
+    if changed == "source_checksum":
+        revision.source_checksum = "f" * 64
+    elif changed == "document_revision":
+        revision.document_revision = None
+    else:
+        revision.nodes[0]["calibration_status"] = "unverified"
+    revision.save()
+    with pytest.raises(OutlineConflict):
+        export_revision(asset, revision.pk)

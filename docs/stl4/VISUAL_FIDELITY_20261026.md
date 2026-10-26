@@ -731,3 +731,5 @@ VISUAL-74最小修改文件：home-stl4.css、scholar.module.css、topic.module.
 策展控件从ArticleMetadataFields到ArticleMetadataSerializer/metadata_input、正式revision、public_directory、前端参数和筛选chips贯通。只公开已发布理论传统；未发布文章修改不提前影响筛选；未公开或非传统节点不能混入结果。新用例覆盖这条调用链。测试遇到site_layout与editorial_issue_serializers共用策划者Serializer互导失败，移动已有Serializer定义消除循环；旧用例将未经annotate的实例传给source_card，改为走实际公开投影入口，保留原署名/草稿隔离断言。
 
 验证：23项聚焦用例通过(aa5125)，Web类型与构建ae86aa退出0，严格契约生成d5ce41退出0。截图和日志tmp/stl4-rapidocr-20261027。API46/Web78镜像准备中；当前仍r45/r77，部署及更新后页面须另记。字体文件身份和全站逐像素一致仍未证明，不能称视觉终稿全部验收。
+
+后续实际读回（2026-10-27 05:30）：上述修改已运行Web80/API51。r78新品牌变体宽度问题已补桌面210/手机190；PDF73副标题24px/说明18px只在桌面生效。实际r80策划页截图editorial-r80.png显示新品牌、四项筛选和真实1篇策划；未虚构12篇或人物照片。目录首节点原稿预览现同步到PDF14（outline-preview-r80.png）。批注台原PDF权限修复后已画线、文字、保存、刷新读回，review-saved-r77.png记录。D关闭上述具体开发缺口；字体文件身份和206视图完整运行验收继续按证据登记，不把全部未验收页面视为需重做。
