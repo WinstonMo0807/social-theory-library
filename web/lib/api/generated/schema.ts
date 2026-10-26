@@ -18037,6 +18037,7 @@ export interface components {
          */
         ReaderMaterialKindEnum: "research" | "notes" | "bookmarks" | "plans" | "lists" | "audits" | "confirmed" | "saved";
         ReaderMaterialOutput: {
+            source?: components["schemas"]["ShareWorkSummary"] | null;
             /** Format: uuid */
             id: string;
             key: string;

@@ -55,6 +55,24 @@ def private_text(row, kind):
     return "", ""
 
 
+def material_source(kind, row):
+    from . import notebook, share_scope
+    if kind in {"research", "lists"}:
+        return share_scope.directory_source(row, "research" if kind == "research" else "booklist")["first_material"]
+    if kind in {"notes", "bookmarks"}:
+        return notebook.published_work(row.asset.edition.work_id, edition_id=row.asset.edition_id)
+    if kind == "saved":
+        return notebook.published_work(row.work_id)
+    if kind in {"plans", "confirmed"}:
+        data = research.unpack(row)
+        refs = data.get("items" if kind == "plans" else "sources") or []
+        first = refs[0] if refs else {}
+        work_id = first.get("work_id")
+        if work_id:
+            return notebook.published_work(work_id)
+    return None
+
+
 def material(user, kind, row, *, text=None):
     title, question = text if text is not None else private_text(row, kind)
     title = title.strip().split("\n")[0][:160] or {"notes": "阅读标记", "bookmarks": "页面书签", "plans": "未命名阅读计划", "lists": "未命名书单", "audits": "引文体检", "confirmed": "个人认识", "research": "未命名研究", "saved": "来源暂不可用"}[kind]
@@ -92,7 +110,7 @@ def material(user, kind, row, *, text=None):
     if presentation["archived"]:
         state = "archived"
     return {"id": str(row.pk), "key": f"{kind}:{row.pk}", "kind": kind, "kind_label": KINDS[kind],
-            "title": title, "question": question[:240], "status": state, "href": path,
+            "title": title, "question": question[:240], "status": state, "href": path, "source": material_source(kind, row),
             "editable_title": editable_title, "source_revision": source_revision(row), "preference_revision": presentation["revision"],
             "updated_at": presentation["updated_at"].isoformat(), "revision": command_revision(row, kind)}
 

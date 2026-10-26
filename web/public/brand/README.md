@@ -326,3 +326,5 @@ Original page 104 brands: desktop (47,32,235,80); mobile (1298,64,1459,96). Page
 内容编排/选书品牌：唯一PDF174原生1586×992图，desktop裁切(44,36,255,87)211×51，mobile裁切(1318,97,1490,129)172×32；stl-lockup-admin-placement-{desktop,mobile}-final-r2.png。原图裁切，无重绘。
 
 分享范围品牌：唯一PDF182原生1536×1024图，desktop(36,10,253,64)217×54，mobile(1216,81,1378,111)162×30，footer(24,996,290,1016)266×20。stl-lockup-sharing-{desktop,mobile}-final-r2.png和stl-footer-sharing-final-r2.png，原图裁切未重绘。
+
+PDF183品牌 desktop (65,14)-(370,53), mobile (1222,39)-(1360,99), footer (65,992)-(330,1014); PDF184品牌 desktop (57,18)-(157,55), mobile (1245,124)-(1306,146); PDF185品牌 desktop (68,10)-(307,45), mobile (1215,51)-(1381,81), 空态文具 (509,745)-(632,813)。2026-10-26：均从唯一终稿原生内嵌图提取，用户确认资产权利；不含样例读者/书目数据。

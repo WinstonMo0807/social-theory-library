@@ -304,3 +304,7 @@ body:has([data-editorial-kind="exhibition"]) .brand-editorial-variants [data-bra
  .brand-reference-lockup[data-brand-variant="editorial-directory"],.brand-editorial-variants [data-brand-variant="editorial-article"]{width:190px}
  .brand-editorial-variants [data-brand-variant="editorial-exhibition"],.brand-editorial-variants [data-brand-variant="editorial-exhibit"]{width:120px}
 }
+
+.site-header[data-stl-account] .brand-reference-lockup{width:305px;flex-shrink:0;max-width:none}.site-header[data-stl-account=archive] .brand-reference-lockup{width:239px}.site-header[data-stl-research] .brand-reference-lockup{width:100px}.site-header[data-stl-research]{min-height:76px;padding-inline:4%;background:var(--night-white,#fff)}
+@media(max-width:700px){.site-header[data-stl-account] .brand-reference-lockup{width:138px}.site-header[data-stl-account=archive] .brand-reference-lockup{width:166px}.site-header[data-stl-account] .brand-reference-lockup img{height:auto;width:100%;max-height:none}.site-header[data-stl-research] .brand-reference-lockup{width:100px}.site-header[data-stl-research]{min-height:64px}}
+

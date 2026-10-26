@@ -196,6 +196,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   }
   const topicCommands = useTopicSaveCommands(session.status === "authenticated" && session.user ? String(session.user.id) : null);
   const section = searchParams.get("section");
+  const archiveView = searchParams.get("view") === "archive" && !section;
   const [selectedTab, selectTab] = useState<{ section: string | null; label: string } | null>(null);
   const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : section === "history" ? "阅读历史" : section === "saved" ? "收藏" : "概览";
   const setActive = (label: string) => { if (label === "书单") router.push("/account/collections"); else if (["笔记", "书签", "高亮与划线"].includes(label)) router.push(`/account/notes?kind=${label === "书签" ? "bookmark" : label === "高亮与划线" ? "excerpt" : "note"}`); else selectTab({ section, label }); };
@@ -491,18 +492,19 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   const user = profile;
 
   return (
-    <div className="reader-center">
+    <div className="reader-center" data-archive={archiveView||undefined}>{archiveView?<aside className="reader-archive-nav"><h2>我的资料</h2><nav aria-label="研究档案导航">{[["/account?view=archive","研究档案"],["/account/notes","我的笔记"],["/account/collections","阅读书单"],["/account/plans","研究计划"],["/account/research","问题列表"],["/account?section=history","最近浏览"]].map(([href,label])=><Link key={href} href={href} aria-current={label==="研究档案"?"page":undefined}><FileText size={16}/>{label}</Link>)}</nav><h2>账号与设置</h2><nav aria-label="账户与资料"><Link href="/account?section=settings"><Settings size={16}/>个人资料</Link><Link href="/account/settings/privacy"><LockKeyhole size={16}/>数据管理</Link></nav></aside>:null}
       <div className="account-content">
-        <nav className="reader-center-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><span>读者中心</span></nav>
+        <nav className="reader-center-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><span>{archiveView?"我的资料与研究档案":"读者中心"}</span></nav>
         <header className="reader-center-heading">
-          <div><h1>读者中心 <small className="reader-center-private"><LockKeyhole size={15} />仅本人可见</small></h1><p>继续阅读，整理笔记与研究。</p></div>
-          <div className="reader-center-heading-actions">
+          <div><h1>{archiveView?"我的资料与研究档案":"读者中心"} {!archiveView?<small className="reader-center-private"><LockKeyhole size={15} />仅本人可见</small>:null}</h1><p>{archiveView?"快速回到自己的研究、笔记、计划、稿件和未完成问题。":"继续阅读，整理笔记与研究。"}</p></div>
+          {!archiveView?<div className="reader-center-heading-actions">
+            <details className="reader-center-mobile-create"><summary><Plus size={17}/>新建研究 <ChevronRight size={15}/></summary><div><Link href="/explore/opinions">新建研究</Link><Link href="/explore/original">新建笔记</Link><Link href="/account/plans">创建计划</Link></div></details>
             <div className="reader-center-create-links" aria-label="创建资料">
               <Link href="/explore/opinions"><Plus size={18} />新建研究</Link>
               <Link href="/explore/original"><FileText size={18} />新建笔记</Link>
               <Link href="/account/plans"><CalendarDays size={18} />创建计划</Link>
             </div>
-          </div>
+          </div>:null}
         </header>
         {active !== "概览" ? <ResearchCenterNav active={active === "书单" ? "lists" : undefined} counts={{ notes: resourceErrors.noteGroups ? undefined : noteGroups.length, plans: resourceErrors.plans ? undefined : readerData.plans.length, lists: resourceErrors.lists ? undefined : readerData.lists.length }} /> : null}
         <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav><div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div></details>
@@ -523,7 +525,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
           </section>
         ) : null}
 
-        {active === "概览" ? <ReaderOverview ownerId={String(session.user!.id)} /> : null}
+        {active === "概览" ? <ReaderOverview ownerId={String(session.user!.id)} archive={archiveView} /> : null}
 
         {active === "收藏" ? (
           <DataPanel title="收藏">

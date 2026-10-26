@@ -475,3 +475,13 @@ e4747d→41fa31及最终bc5923静态类型退出0，site_layout AST完成；编�
 只读打开/account/sharing/new桌面/手机及研究问题选择层，sharing-r51-desktop/mobile/choice-mobile.png保留，真实本人研究为空，手机clientWidth/scrollWidth均390。A桌面main仍继承1233.85px固定内容宽（父1440px），下一批显式恢复全宽；手机前两步标题应使用PDF的选择对象/选择内容项，下一批对应。字体与满数据几何仍A；无真实来源时引用导出浮层不伪造实例，B待统一验收。PDF183–185读者中心/研究目录/档案状态已经实际读取，下一批继续原私人资料服务。
 
 证据：原引用浮层430px/13px文字和灰色引用区、常显复制按钮与格式更多入口不合PDF181；原分享页额外读者导航、类别横排tab而非三项勾选/选择入口，与PDF182不同。仅改原组件/样式与共享外观可选参数，不改私人与公开授权服务。
+
+## VISUAL-51 读者中心/研究目录/资料档案（PDF183–185）
+
+前置d0fa0685。唯一PDF183–185逐张读取，品牌与档案空态文具直接提取。读者中心改全宽资料区、移动新建菜单、真实来源封面与摘要；研究目录使用PDF184六项导航/字号/间距；原ReaderOverview增加?view=archive，复用本人资料、搜索/类型/归档范围/分页/批量/回执及本机转存，新增对应侧栏与分类条。原API逐项source只读投影复用share_scope/notebook，限原owner集合且封面/书目仅公开版本；serializer与TS同步，无迁移。r51分享页全宽与手机标题源码同步修正。
+
+类型0816fc退出0；2个Python AST完成；编译246465→13ea60退出0。包2234文件47594192字节SHA779052eda4a8d65d16760d478978f404f30e368dc670ea87a980036d661af694；部署e5c08b→c345f3退出0。Web r52 daac797ae863/API r23 e1126ae674ea，恢复点.env.before-reader-r52（r51/API22）。未测试、资料写入/导出/删除/转存/迁移/公网切换。
+
+只读查看/account、/account?view=archive、/account/research桌面/手机，reader/archive/research-directory-r52-{desktop,mobile}.png保存。本人实际空资料，档案手机clientWidth/scrollWidth均390。A档案搜索与旧更多入口桌面重叠、空态批量栏过多、侧栏同图标及概览首项未着色，下一批按源码/截图最小修正；字体与满数据几何仍A。B真实来源卡片/私人操作待统一验收。PDF186–190已逐张读取，继续现有账户入口与会话浮层。
+
+证据：原资料行只有FileText无来源；reader-center 1222px再内缩4.4%，研究目录八项导航与PDF六项不符，档案独立侧栏和分类缺失。修改仅原视图与只读展示字段。

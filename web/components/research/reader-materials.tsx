@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { SharingCover } from "./sharing-common";
+import type { ShareWorkSummary } from "@/lib/api/sharing.client";
 import { ArrowRight, Download, FileText, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { PrivacyTarget } from "@/lib/api/privacy.client";
@@ -10,7 +12,7 @@ import { ReaderMaterialActions } from "./reader-material-actions";
 import { OperationDialog } from "./privacy-workspace";
 import styles from "./reader-overview.module.css";
 
-export type ReaderMaterial = { id: string; key: string; kind: string; kind_label: string; title: string; editable_title: string; source_revision: string; preference_revision: number; question: string; status: string; href: string; updated_at: string; revision: string };
+export type ReaderMaterial = { source?:ShareWorkSummary|null; id: string; key: string; kind: string; kind_label: string; title: string; editable_title: string; source_revision: string; preference_revision: number; question: string; status: string; href: string; updated_at: string; revision: string };
 const leaves: Record<string, PrivacyTarget["category"]> = { research: "research", notes: "annotations", bookmarks: "bookmarks", plans: "plans", lists: "reading_lists", audits: "audits", confirmed: "memories", saved: "saved_items" };
 const erasable = new Set(["notes", "bookmarks", "plans", "lists", "confirmed", "saved"]);
 const statuses: Record<string, string> = { saved: "已保存", archived: "已归档", confirmed: "已确认", reading: "进行中", pending: "待开始", queued: "待处理", running: "处理中", completed: "已完成", complete: "已完成", partial: "部分完成", failed: "处理失败", cancelled: "已取消", canceled: "已取消", source_unavailable: "来源待核对" };
@@ -56,7 +58,7 @@ export function ReaderMaterials({ rows, ownerId, cards, onChanged, onGuardChange
     {message ? <div className={styles.bulkNotice} role="alert"><p>{message}</p></div> : null}
     {rows.length ? <div className={`${styles.materials} ${cards ? styles.cards : ""}`}>
       <div className={styles.tableHead}><span>标题</span><span>类型</span><span>关联问题</span><span>最近更新</span><span>状态</span><span>操作</span></div>
-      {rows.map(row => <article key={row.key} data-selected={selectedKeys.has(row.key)}><div className={styles.materialTitle}><input type="checkbox" aria-label={`选择${row.title}`} checked={selectedKeys.has(row.key)} disabled={locked} onChange={event => select([row], event.target.checked)} /><FileText size={18} /><Link href={row.href}><strong>{row.title}</strong></Link></div><span className={styles.kind}>{row.kind_label}</span><p className={styles.question}>{row.question || "—"}</p><time dateTime={row.updated_at}>{new Date(row.updated_at).toLocaleDateString("zh-CN")}</time><span className={styles.status} data-state={row.status}>{statuses[row.status] || "待核对"}</span><Link className={styles.open} href={row.href} aria-label={`打开${row.title}`}>打开 <ArrowRight size={14} /></Link></article>)}
+      {rows.map(row => <article key={row.key} data-selected={selectedKeys.has(row.key)}><div className={styles.materialTitle}><input type="checkbox" aria-label={`选择${row.title}`} checked={selectedKeys.has(row.key)} disabled={locked} onChange={event => select([row], event.target.checked)} /><span className={styles.materialCover}>{row.source?.cover_url?<SharingCover work={row.source}/>:<FileText size={18}/>}</span><div className={styles.materialCopy}><Link href={row.href}><strong>{row.title}</strong></Link>{row.source?.title&&row.source.title!=="来源当前不可用"?<small>{[row.source.title,row.source.authors?.join("、"),row.source.year].filter(Boolean).join(" · ")}</small>:null}</div></div><span className={styles.kind}>{row.kind_label}</span><p className={styles.question}>{row.question || "—"}</p><time dateTime={row.updated_at}>{new Date(row.updated_at).toLocaleDateString("zh-CN")}</time><span className={styles.status} data-state={row.status}>{statuses[row.status] || "待核对"}</span><Link className={styles.open} href={row.href} aria-label={`打开${row.title}`}>打开 <ArrowRight size={14} /></Link></article>)}
     </div> : null}
     {operation ? <OperationDialog id={operation} ownerId={ownerId} onClose={() => { setOperation(null); onChanged(); }} onChanged={onChanged} onInvalid={reason => setMessage(reason instanceof Error ? reason.message : "任务暂不可用，请重新读取。")} /> : null}
   </>;

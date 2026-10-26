@@ -9,6 +9,7 @@ from common.private_responses import PrivateAccountResponses
 from . import reader_center
 from .serializers import ReadingProgressSerializer
 from .privacy_serializers import PrivacyRequestStopInput
+from .sharing_serializers import ShareWorkSummary
 
 
 class ReaderCenterQuery(serializers.Serializer):
@@ -21,6 +22,7 @@ class ReaderCenterQuery(serializers.Serializer):
 
 
 class ReaderMaterialOutput(serializers.Serializer):
+    source = ShareWorkSummary(allow_null=True, required=False)
     id = serializers.UUIDField()
     key = serializers.CharField()
     kind = serializers.ChoiceField(choices=list(reader_center.KINDS))
