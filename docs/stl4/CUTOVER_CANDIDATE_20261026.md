@@ -1,5 +1,7 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+2026-10-26 当前内网Web r53a f8f600340f69/API r23 e1126ae674ea，恢复点.env.before-auth-r53a / .env.before-auth-r53。尚未最终视觉与业务验收，不可公网切换。
+
 2026-10-26 当前内网Web r52 daac797ae863/API r23 e1126ae674ea，恢复点.env.before-reader-r52。原账户及私人资料服务保留，未公网切换。
 
 当前内网Web r51 2bae11bf0926/API r22 079485e17f55，恢复点.env.before-sharing-r51。引用/分享视觉批次，未业务提交与公网切换。

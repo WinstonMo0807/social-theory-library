@@ -45,7 +45,7 @@ export function ReaderMaterials({ rows, ownerId, cards, onChanged, onGuardChange
   }
   const locked = preparation.locked || commandLocked;
   return <>
-    <div className={styles.bulk}>
+    <div className={styles.bulk} data-passive-empty={!rows.length&&!selected.length&&!locked||undefined}>
       <label><input type="checkbox" aria-label="选择当前页全部资料" disabled={locked || !rows.length} checked={rows.length > 0 && currentChosen.length === rows.length} onChange={event => select(rows, event.target.checked)} />已选择 {chosen.length} 项（本页 {currentChosen.length} 项）</label>
       <ReaderMaterialActions ownerId={ownerId} selection={selected} blocked={preparation.locked} onLocked={setCommandLocked} onApplied={() => { setSelected([]); onChanged(); }} />
       <button type="button" disabled={locked || !chosen.length} onClick={() => setSelected([])}>清除全部选择</button>

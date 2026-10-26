@@ -12,6 +12,7 @@ import {
   Clock3,
   Download,
   FileText,
+  FolderClosed,
   Heart,
   Highlighter,
   List,
@@ -492,7 +493,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   const user = profile;
 
   return (
-    <div className="reader-center" data-archive={archiveView||undefined}>{archiveView?<aside className="reader-archive-nav"><h2>我的资料</h2><nav aria-label="研究档案导航">{[["/account?view=archive","研究档案"],["/account/notes","我的笔记"],["/account/collections","阅读书单"],["/account/plans","研究计划"],["/account/research","问题列表"],["/account?section=history","最近浏览"]].map(([href,label])=><Link key={href} href={href} aria-current={label==="研究档案"?"page":undefined}><FileText size={16}/>{label}</Link>)}</nav><h2>账号与设置</h2><nav aria-label="账户与资料"><Link href="/account?section=settings"><Settings size={16}/>个人资料</Link><Link href="/account/settings/privacy"><LockKeyhole size={16}/>数据管理</Link></nav></aside>:null}
+    <div className="reader-center" data-archive={archiveView||undefined}>{archiveView?<aside className="reader-archive-nav"><h2>我的资料</h2><nav aria-label="研究档案导航">{[["/account?view=archive","研究档案"],["/account/notes","我的笔记"],["/account/collections","阅读书单"],["/account/plans","研究计划"],["/account/research","问题列表"],["/account?section=history","最近浏览"]].map(([href,label])=><Link key={href} href={href} aria-current={label==="研究档案"?"page":undefined}>{label==="研究档案"?<FolderClosed size={16}/>:label==="我的笔记"?<StickyNote size={16}/>:label==="阅读书单"?<BookOpen size={16}/>:label==="研究计划"?<CalendarDays size={16}/>:label==="最近浏览"?<Clock3 size={16}/>:<FileText size={16}/>}<span>{label}</span></Link>)}</nav><h2>账号与设置</h2><nav aria-label="账户与资料"><Link href="/account?section=settings"><Settings size={16}/>个人资料</Link><Link href="/account/settings/privacy"><LockKeyhole size={16}/>数据管理</Link></nav></aside>:null}
       <div className="account-content">
         <nav className="reader-center-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><span>{archiveView?"我的资料与研究档案":"读者中心"}</span></nav>
         <header className="reader-center-heading">
