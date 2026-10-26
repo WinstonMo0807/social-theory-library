@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, ArrowRight, ExternalLink, RefreshCw } from "lucide-react";
+import { AlertCircle, ArrowRight, ExternalLink, RefreshCw, Archive } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
@@ -113,14 +113,14 @@ export function PublicationDesk() {
   }
   if(selected?.edition_id)return <PublicationLedger key={selected.edition_id} editionId={selected.edition_id} backHref={adminListHref(pathname,search.toString(),{selection:null})} onChanged={result.retry}/>;
   return <div className="admin-page publication-desk-page">
-    <PageHeader eyebrow="内容" title="发布台、历史与撤回" description="管理当前公开版本，核对变更会影响哪些读者页面。" />
+    <PageHeader eyebrow="内容" title="发布台、历史与撤回" description="管理当前公开版本，知道变更会影响哪些读者页面。" />
     <form className={styles.toolbar} onSubmit={submit}>
       <label>题名或来源<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部出版版本" /></label>
       <label>公开状态<select value={filter} onChange={(event) => change({ publication: event.target.value })}>{Object.entries(publicFilters).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
       <label>来源<select value={source} onChange={(event) => change({ source: event.target.value })}><option value="">全部来源</option>{Object.entries(sourceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
       <button className="button" type="submit">搜索</button><button className="button secondary" onClick={result.retry} type="button"><RefreshCw size={15} />刷新发布结果</button>
     </form>
-    <p className={styles.count} role="status">{page ? `当前完整筛选共 ${page.count} 项，第 ${page.page} 页显示 ${page.results.length} 项。先筛选再分页，包含非上传来源。` : result.error ? "发布记录数量未能读取。" : "正在读取全部来源的发布记录…"}</p>
+    <p className={styles.count} role="status">{page ? `共 ${page.count} 项 · 第 ${page.page} 页` : result.error ? "发布记录数量未能读取。" : "正在读取全部来源的发布记录…"}</p>
     {result.error ? <div className={styles.error} role="alert"><AlertCircle size={16} />{result.error}<button type="button" onClick={result.retry}>重试发布列表</button></div> : null}
     {result.loading ? <p role="status">正在读取当前页…</p> : null}
     <section className={styles.rows} aria-label="馆藏发布列表">{page?.results.map((item) => {
@@ -133,7 +133,7 @@ export function PublicationDesk() {
         <div className={styles.cell}><Link aria-current={selectedId === item.id ? "true" : undefined} href={adminListHref(pathname, search.toString(), { selection: item.id })}>预览与影响</Link>{destination ? <Link href={withAdminReturn(destination, returnTo, "publication")}>继续复核与发布 <ArrowRight size={14} /></Link> : <span>工作位置待核实</span>}</div>
       </article>;
     })}</section>
-    {page && !page.results.length ? <p className="admin-list-state">当前筛选下没有记录。可选择全部公开状态或其他来源。</p> : null}
+    {page && !page.results.length ? <div className="stl4-publication-empty"><Archive size={36}/><h2>暂无发布记录</h2><p>{query||filter!=="all"||source?"当前筛选下没有记录，可调整筛选后继续查看。":"书目保存后，可在此核对公开版本、发布历史与影响范围。"}</p><Link className="button" href="/admin/library">查看馆藏目录 <ArrowRight size={14}/></Link></div> : null}
     {page ? <Pagination className={styles.pagination} label="发布列表分页" page={page.page} totalPages={page.total_pages} previousHref={adminListHref(pathname, search.toString(), { page: Math.max(1, page.page - 1) }, true)} nextHref={adminListHref(pathname, search.toString(), { page: Math.min(page.total_pages, page.page + 1) }, true)} /> : null}
     {page && selectedId && !selected ? <p className={styles.error} role="alert">指定记录不在当前筛选或当前页中，未显示其他作品。请恢复原筛选和页码，或明确重新选择记录。</p> : null}
     {selected ? <PublicationDetails key={selected.id} item={selected} returnTo={returnTo} /> : page && !selectedId ? <p className={styles.scope}>请选择要查看的文献。</p> : null}
