@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CircleAlert, X } from "lucide-react";
+import { BookOpen, CircleAlert, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { normalizePublicResourceUrl } from "@/lib/api";
 import type { components } from "@/lib/api/generated/schema";
 import styles from "./recovery-workspace.module.css";
 
@@ -14,9 +14,15 @@ type Props={preview:Detail|null;pending:boolean;message:string;onCancel:()=>void
 export function RecoveryRestoreDialog(props:Props){
   const {preview,pending,message,onCancel,onConfirm}=props;
   if(preview?.names.count)return <NameConflict key={preview.version} {...props} preview={preview}/>;
-  return <ConfirmDialog open={!!preview} title="确认恢复对象" description={preview?.notice||""}
-    details={preview?[preview.title,`关联摘要：${preview.dependency_count} 项；其他已删除对象需单独恢复。`,...(preview.storage.state==="checked"?[`已核对 ${preview.storage.total} 份登记文件的存在与大小，不含内容完整性校验。`]:[]),...preview.blockers,...(message?[message]:[])]:[]}
-    confirmLabel={pending?"正在恢复…":"确认恢复（保持未发布）"} pending={pending} onCancel={onCancel} onConfirm={()=>onConfirm()}/>;
+  if(!preview)return null;
+  return <Dialog open className={`${styles.conflictDialog} ${styles.confirmRestore}`} aria-labelledby="recovery-confirm-title" onRequestClose={()=>{if(!pending)onCancel();}}>
+    <header className={styles.relatedTools}><h2 id="recovery-confirm-title">恢复确认</h2><button type="button" aria-label="关闭恢复确认" disabled={pending} onClick={onCancel}><X size={17}/></button></header>
+    <p>确认恢复以下内容，恢复后将保持未发布状态。</p>
+    <div className={styles.restoreSummary}><div className={styles.restoreObject}>{preview.cover_url?<img src={normalizePublicResourceUrl(preview.cover_url)} alt={`${preview.title}封面`}/>:<BookOpen size={30}/>}<div><small>恢复对象</small><strong>{preview.title}</strong><p>{[preview.subtitle,preview.kind_label].filter(Boolean).join(" ｜ ")}</p></div></div><div><small>关联依赖</small><strong>共 {preview.dependency_count} 项</strong><span>其他已删除对象需单独恢复</span></div></div>
+    <aside className={styles.notice}><CircleAlert size={17}/><div><p>{preview.notice}</p>{preview.storage.state==="checked"?<p>已核对 {preview.storage.total} 份登记文件的存在与大小，不含内容完整性校验。</p>:null}</div></aside>
+    {preview.blockers.length?<ul className={styles.error}>{preview.blockers.map(item=><li key={item}>{item}</li>)}</ul>:null}{message?<p className={styles.error} role="alert">{message}</p>:null}
+    <footer className={styles.relatedTools}><button type="button" disabled={pending} onClick={onCancel}>取消</button><button type="button" className={styles.primary} disabled={pending||!preview.can_restore} onClick={()=>onConfirm()}>{pending?"正在恢复…":"确认恢复（保持未发布）"}</button></footer>
+  </Dialog>;
 }
 
 function NameConflict({preview,pending,message,onCancel,onConfirm}:Props&{preview:Detail}){

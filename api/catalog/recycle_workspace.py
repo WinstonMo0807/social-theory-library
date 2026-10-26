@@ -15,7 +15,7 @@ from accounts.models import User
 from common.capabilities import Capability, has_capability
 from common.recycle import RECYCLE_MODELS
 from ingestion.models import AuditEvent
-from .models import RecycleEntry
+from .models import Contribution, RecycleEntry
 from .lifecycle_views import LIFECYCLE_MODELS, CANONICAL_OBJECT_TYPES, _name
 from .services.query_lexicon.mutations import acquire_entity_lock
 from .services.recycle import require_editor, restore_object, restore_archived_object
@@ -107,26 +107,51 @@ def row_payload(row):
 
 def cover_url(obj, kind):
     source=obj.work if obj and kind=="edition" else obj.person if obj and kind=="scholar" else obj
+    rendition=getattr(source,"cover_rendition_id",None) if kind in {"work","edition"} else getattr(source,"portrait_rendition_id",None) if kind in {"person","scholar"} else None
+    if rendition: return f"/api/catalog/admin/media/renditions/{rendition}/file/"
     image=getattr(source,"cover",None) if kind in {"work","edition"} else getattr(source,"portrait",None) if kind in {"person","scholar"} else None
     return image.url if image else ""
 
 
-def directory(*, search="", kind="", state="", since=None, page=1, actor=None, operator="", reason=""):
+def presentation(obj, kind):
+    """Display original metadata only after the recovery object's permission check."""
+    subtitle="";kind_label=LABELS[kind];description="";image=cover_url(obj,kind)
+    if obj and kind in {"work","edition"}:
+        work=obj.work if kind=="edition" else obj
+        contributions=Contribution.objects.filter(approved=True,role__in=["author","chief_editor","editor"])
+        contributions=contributions.filter(edition=obj) if kind=="edition" else contributions.filter(edition__work=work)
+        names=list(dict.fromkeys(contributions.order_by("order","pk").values_list("person__preferred_name",flat=True)))
+        year=obj.publication_year if kind=="edition" else work.first_publication_date.year if work.first_publication_date else None
+        subtitle=" · ".join(part for part in ["、".join(names),str(year) if year else ""] if part)
+        kind_label=work.get_document_type_display()
+        description=work.abstract
+    elif obj and kind=="recommendation-issue":
+        from .services.editorial_issues import issue_draft_payload
+        payload=issue_draft_payload(obj)
+        rendition=payload.get("cover_rendition_id")
+        image=f"/api/catalog/admin/media/renditions/{rendition}/file/" if rendition else payload.get("cover_url") or ""
+        subtitle=" · ".join(str(payload.get(key) or "") for key in ("issue_label","public_byline") if payload.get(key))
+        description=str(payload.get("introduction") or "")
+    return {"cover_url":image,"subtitle":subtitle,"kind_label":kind_label,"description":description}
+
+
+def directory(*, search="", kind="", state="", since=None, page=1, page_size=20, actor=None, operator="", reason=""):
     filters={"search":search,"kind":kind,"since":since,"actor":actor,"operator":operator,"reason":reason}
     query=collection_query(**filters,state=state)
     counts={name:collection_query(**filters,state=name).count() for name in ("deleted","archived","restored")}
-    results=[row_payload(row) for row in query[(page-1)*20:page*20]]
+    results=[row_payload(row) for row in query[(page-1)*page_size:page*page_size]]
     # Resolve images only for the current, already permission-filtered page.
-    for image_kind in {row["kind"] for row in results} & {"work","edition","person","scholar"}:
+    for image_kind in {row["kind"] for row in results} & {"work","edition","person","scholar","recommendation-issue"}:
         objects=LIFECYCLE_MODELS[image_kind].model.all_objects.filter(pk__in=[row["object_id"] for row in results if row["kind"]==image_kind])
         if image_kind in {"edition","scholar"}: objects=objects.select_related("work" if image_kind=="edition" else "person")
-        images={str(obj.pk):cover_url(obj,image_kind) for obj in objects}
+        images={str(obj.pk):presentation(obj,image_kind) for obj in objects}
         for row in results:
-            if row["kind"]==image_kind: row["cover_url"]=images.get(row["object_id"],"")
-    for row in results: row.setdefault("cover_url","")
+            if row["kind"]==image_kind: row.update(images.get(row["object_id"],{}))
+    for row in results:
+        row.setdefault("cover_url","");row.setdefault("subtitle","");row.setdefault("kind_label",row["label"]);row.setdefault("description","")
     options=[part.filter(recovery_actor_id__gt="").values("recovery_actor_id","recovery_actor_name") for part in collection_queries(**{**filters,"operator":""},state=state)]
     operators=list(options[0].union(*options[1:]).order_by("recovery_actor_name","recovery_actor_id")[:101]) if options else []
-    return {"count":query.count(),"page":page,"page_size":20,"counts":counts,
+    return {"count":query.count(),"page":page,"page_size":page_size,"counts":counts,
         "results":results,"operators":[{"id":row["recovery_actor_id"],"label":row["recovery_actor_name"]} for row in operators[:100]],"operators_limited":len(operators)>100,
         "kinds":[{"id":key,"label":label} for key,label in LABELS.items()],
         "notice":"回收与归档保留原对象身份及文件。恢复后不自动发布，也不重启处理；其他变更栏显示回收恢复记录。"}
@@ -246,7 +271,7 @@ def detail(kind, identifier, actor, *, locked=None, check_files=False):
         "entry_updated":entry.updated_at if entry else None,"state":state,"dependencies":deps,"total":total,"blockers":blockers,
         "files":storage["checks"],"public_children":public_children,"public_editions":public_editions,"names":names["fingerprint"],"rename":rename["version"]},cls=DjangoJSONEncoder,sort_keys=True).encode()).hexdigest()
     return {"kind":kind,"object_id":str(identifier),"entry_id":str(entry.pk) if entry else None,"title":title,"label":LABELS[kind],
-        "record_state":state,"version":version,"destination":destination(kind,obj) if obj else DESTINATIONS[kind],"cover_url":cover_url(obj,kind),
+        "record_state":state,"version":version,"destination":destination(kind,obj) if obj else DESTINATIONS[kind],**presentation(obj,kind),
         "created_at":obj.created_at if obj else None,"updated_at":obj.updated_at if obj else None,
         "changed_at":entry.updated_at if entry and not archived else obj.updated_at,"operator":entry.deleted_by.display_name if deleted and entry.deleted_by else "详见变更历史",
         "reason":str(before.get("_recycle_reason") or "原记录未保存操作原因"),"dependencies":deps,"dependency_count":total,

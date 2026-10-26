@@ -18756,6 +18756,9 @@ export interface components {
             /** Format: uuid */
             entry_id: string | null;
             title: string;
+            subtitle: string;
+            kind_label: string;
+            description: string;
             label: string;
             record_state: string;
             version: string;
@@ -18889,6 +18892,9 @@ export interface components {
             object_id: string;
             kind: string;
             title: string;
+            subtitle: string;
+            kind_label: string;
+            description: string;
             /** Format: date-time */
             changed_at: string;
             /** Format: uuid */
@@ -27892,6 +27898,7 @@ export interface operations {
                 kind?: "" | "upload" | "work" | "edition" | "person" | "scholar" | "topic" | "knowledge-node" | "theory-school" | "discipline" | "subdiscipline" | "reading-path" | "timeline-event" | "knowledge-relation" | "evidence-curation" | "scholar-relation" | "recommendation-issue" | "recommendation-item" | "about-block" | "publisher";
                 operator?: string;
                 page?: number;
+                page_size?: 10 | 20;
                 reason?: string;
                 search?: string;
                 since?: string;
