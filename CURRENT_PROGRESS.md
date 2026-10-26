@@ -1,5 +1,14 @@
 # Social Theory Library 当前进度
 
+## 2026-10-26 扫描PDF原生解析缓存按页释放
+
+上一修复r39未解决真实样例OOM：原任务21:02:34再次SIGKILL，容器oom_kill=1。对同一用户文件做只读原生解析诊断d244a5，RSS逐页升至339MB；逐页释放MuPDF缓存0d7c8c后稳定约55–58MB，253页完整读取，无OCR。extract.py只在文本/坐标已转为普通对象后store_shrink(100)，不改变文件、文本内容、页码或OCR策略。
+
+语法及镜像dd6c81完成；首轮更新因任务活跃安全退出，c30577→1cb3b2确认四节点空闲后更新退出0。API/4workers r40 3ea6c2f22c0c，Web72保持；.env.before-native-r40及recovery-images保留。旧中断任务经容器消失及四节点无任务证明后，1d3da5→b26d7d只恢复该条为可重试，保留原件与书目。仍需从原批次重试并确认ready，不以诊断或镜像称流程完成。未运行测试套件、OCR或生产操作。
+
+实际样例已保存三本书目及原书封面；3学科、3主题、3理论传统草稿，首两条原著出版事件与关联填写中。下一步完成三书关联、原文阅读与内网样例发布，再录入六节特别策划；唯一原件与样例私人数据留在忽略目录。
+
+
 ## 2026-10-26 实书原生文本提取的内存阻塞修复中
 
 《科学革命的结构》停在text_extraction；7c4840读回started，0a8073实际日志20:37:37子进程SIGKILL，c80804容器memory.events记录oom_kill=2、上限512MiB。extract.py原生文字提取get_text(dict)默认解码图像，但后续立即丢弃所有非文字块；本扫描PDF已有文本层，处理图像字节无用途。最小修复增加TEXTFLAGS_DICT去掉TEXT_PRESERVE_IMAGES，保留独立get_image_info覆盖率与全部文字/坐标提取，不调用OCR。

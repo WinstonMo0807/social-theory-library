@@ -171,6 +171,10 @@ def _native_pages(path: str | Path) -> list[ExtractedPage]:
                     geometry=native_geometry(page),
                 )
             )
+            # Each result owns plain text and coordinates, not MuPDF objects.
+            # Release decoded scan/font resources instead of retaining the
+            # document cache across hundreds of pages in the bounded worker.
+            fitz.TOOLS.store_shrink(100)
         return pages
     finally:
         document.close()
