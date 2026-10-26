@@ -3,6 +3,8 @@ from rapid_models import verify_models
 
 
 def load_engine(root, threads):
+    import onnxruntime
+    onnxruntime.disable_telemetry_events()
     from rapidocr import RapidOCR, ModelType, OCRVersion
     paths = verify_models(root)
     return RapidOCR(params={

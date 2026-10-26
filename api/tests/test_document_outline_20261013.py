@@ -90,7 +90,7 @@ def test_corrected_page_text_prevents_unverified_native_auto_activation(source):
     result = run_outline_job(job.pk, task_id=job.task_id)
     assert result.status == "succeeded"
     assert not asset.outline_revisions.filter(is_active=True).exists()
-    assert asset.outline_revisions.latest("revision").parser_version == "outline-v6"
+    assert asset.outline_revisions.latest("revision").parser_version == "outline-v7"
 
 
 def test_candidates_preserve_manual_calibration_and_restore_history(source, admin_user):
@@ -161,6 +161,25 @@ def test_printed_contents_uses_segment_labels_not_one_global_offset(source, tmp_
     nodes, diagnostics = extract_outline(asset, path)
     assert [(row["title"], row["pdf_page"], row["printed_label"]) for row in nodes] == [("Preface", 2, "iv"), ("Introduction", 3, "1")]
     assert not diagnostics
+
+
+def test_split_contents_header_and_synopsis_do_not_pollute_next_chapter(source, tmp_path):
+    asset, _, _ = source
+    path = tmp_path / "split-contents.pdf"
+    with fitz.open() as document:
+        for _ in range(3):
+            document.new_page()
+        document.save(path)
+    asset.pages.all().update(text="", printed_label="")
+    TextBlock.objects.filter(page__asset=asset).delete()
+    Page.objects.filter(asset=asset, index=1).update(text=(
+        "目\n录\n引言  21\n关于社会事实的讨论与研究的方法。\n"
+        "第一章 什么是社会事实……23\n本章讨论社会事实的特征。"))
+    Page.objects.filter(asset=asset, index=2).update(text="第二章 关于观察社会事实的准则……35")
+    nodes, _ = extract_outline(asset, path)
+    printed = [row for row in nodes if row["source"] == "printed_contents"]
+    assert [(row["title"], row["printed_label"]) for row in printed] == [
+        ("引言", "21"), ("第一章 什么是社会事实", "23"), ("第二章 关于观察社会事实的准则", "35")]
 
 
 def test_outline_write_requires_staff_capability(source, api_client):

@@ -9,13 +9,13 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libglib2.0-0 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
+COPY requirements-linux.lock .
 RUN pip install --upgrade pip==26.2.2 \
-    && pip install -r requirements.txt \
+    && pip install --require-hashes -r requirements-linux.lock \
     && python -m pip check
 COPY rapid_models.py .
 RUN python rapid_models.py --root /opt/ocr-models --download
-COPY app.py rapid_runtime.py model_probe.py ./
+COPY app.py rapid_runtime.py toc_layout.py model_probe.py ./
 COPY docker-entrypoint.sh /usr/local/bin/library-ocr-entrypoint
 RUN addgroup --system ocr && adduser --system --ingroup ocr ocr \
     && mkdir -p /models /tmp/ocr \

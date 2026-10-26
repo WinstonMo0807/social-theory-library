@@ -21,9 +21,10 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from rapid_models import MODEL_ID, MODEL_REVISION
 from rapid_runtime import load_engine
+from toc_layout import repair_contents
 
 
-app = FastAPI(title="Social Theory Library OCR", version="4.0.0-rapidocr-1")
+app = FastAPI(title="Social Theory Library OCR", version="4.0.0-rapidocr-2")
 PRIMARY_LANGUAGE = os.getenv("OCR_PRIMARY_LANGUAGE", "ch")
 RENDER_DPI = int(os.getenv("OCR_RENDER_DPI", "180"))
 MAX_PAGES = int(os.getenv("OCR_MAX_PAGES", "2000"))
@@ -275,10 +276,14 @@ def recognize(image: np.ndarray, language: str, layout: bool) -> list[dict]:
     # The same multilingual tiny model serves all supported language selections.
     state = _engine_state(PRIMARY_LANGUAGE)
     try:
-        result = engine()(np.ascontiguousarray(image[:, :, ::-1]))
-        blocks = extract_blocks({"texts": list(result.txts or []),
-            "scores": list(result.scores) if result.scores is not None else [],
-            "boxes": result.boxes.tolist() if result.boxes is not None else []})
+        def read_region(region):
+            result = engine()(np.ascontiguousarray(region[:, :, ::-1]), use_det=True, use_cls=True, use_rec=True)
+            return extract_blocks({"texts": list(result.txts or []),
+                "scores": list(result.scores) if result.scores is not None else [],
+                "boxes": result.boxes.tolist() if result.boxes is not None else []})
+        blocks = read_region(image)
+        if layout:
+            blocks = repair_contents(image, blocks, read_region)
         state.update(loaded=True, inference_success=True, last_success_at=utc_now(), last_error="")
         return blocks
     except Exception as exc:
@@ -358,7 +363,7 @@ def _parse_pdf_path(
             "engine": "RapidOCR",
             "model": MODEL_ID, "model_revision": MODEL_REVISION,
             "runtime": "onnxruntime", "runtime_version": installed_version("onnxruntime"),
-            "layout_method": "text_geometry",
+            "layout_method": "text_geometry_toc_regions_v1",
             "layout_requested": layout,
             "requested_pages": sorted(selected_pages) if selected_pages is not None else "all",
             "pages": pages,
@@ -375,7 +380,7 @@ def health():
         "service_version": app.version,
         "primary_language": PRIMARY_LANGUAGE,
         "engine": "RapidOCR", "model": MODEL_ID, "model_revision": MODEL_REVISION,
-        "languages": ["ch", "en", "chinese_cht"], "layout_method": "text_geometry",
+        "languages": ["ch", "en", "chinese_cht"], "layout_method": "text_geometry_toc_regions_v1",
         "model_root": inventory["root"],
         "model_root_writable": inventory["root_writable"],
         "model_manifest_present": bool(inventory["manifest"]),

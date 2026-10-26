@@ -23,11 +23,12 @@ from catalog.services.outline_labels import LABEL_ONLY, LABEL_RANGE, PRINTED_LAB
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v6"
+PARSER_VERSION = "outline-v7"
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*[录錄]|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(rf"^(?P<title>.+?)\s*(?:[.．·…_]{{2,}}|\s{{2,}}|\t)\s*(?P<label>{PRINTED_LABEL})\s*$")
 TRAILING_PAGE = re.compile(rf"^(?P<title>.+?\D)\s+(?P<label>{PRINTED_LABEL})\s*$")
+CONTENTS_TITLE_START = re.compile(r"^(?:第[一二三四五六七八九十\d]+版(?:序言|前言)|序言|前言|引言|绪论|后记|附录|preface\b|introduction\b|foreword\b)", re.I)
 
 
 class OutlineConflict(ValueError):
@@ -195,20 +196,35 @@ def extract_outline(asset, path, *, progress=None):
         for line in lines:
             bookmark_observations.observe(page["index"], line)
         matches = [ENTRY.match(line) for line in lines]
-        is_contents = any(CONTENTS.match(_title(line)) for line in lines[:8]) or sum(bool(match) for match in matches) >= 3
+        is_contents = (any(CONTENTS.match(_title(line)) for line in lines[:8])
+            or any(CONTENTS.fullmatch(_title("".join(lines[i:i+2]))) for i in range(min(7, len(lines)-1)))
+            or sum(bool(match) for match in matches) >= 3
+            or page["index"]-1 in contents_pages and any(matches))
         if is_contents:
             contents_pages.add(page["index"])
             pending = ""
-            for line in lines:
+            for line_index, line in enumerate(lines):
+                if (CONTENTS.fullmatch(_title(line))
+                    or line_index < 7 and CONTENTS.fullmatch(_title("".join(lines[line_index:line_index+2])))
+                    or 0 < line_index < 8 and CONTENTS.fullmatch(_title("".join(lines[line_index-1:line_index+1])))):
+                    pending = ""
+                    continue
                 match = ENTRY.match(line) or TRAILING_PAGE.match(line)
                 if match:
-                    title = _title(f"{pending} {match.group('title')}")
+                    entry_title = _title(match.group("title"))
+                    # A chapter synopsis belongs to the preceding entry, not
+                    # the next explicitly numbered chapter or front matter.
+                    if HEADING.match(entry_title) or CONTENTS_TITLE_START.match(entry_title):
+                        pending = ""
+                    title = _title(f"{pending} {entry_title}")
                     contents_rows.append((title, match.group("label"), page["index"]))
                     pending = ""
                 elif LABEL_ONLY.fullmatch(line) and pending:
                     contents_rows.append((_title(pending), line, page["index"]))
                     pending = ""
                 elif not CONTENTS.match(_title(line)) and len(line) < 180:
+                    if HEADING.match(line) or CONTENTS_TITLE_START.match(line):
+                        pending = ""
                     pending = f"{pending} {line}".strip()[:600]
             continue
         for line in lines:
@@ -217,7 +233,7 @@ def extract_outline(asset, path, *, progress=None):
                 titles[_match_key(title)].append((page["index"], {}))
                 if HEADING.match(title):
                     headings.append((title, page["index"]))
-    # PaddleOCR returns rendered pixmap pixels. Native text blocks use MuPDF's
+    # OCR returns rendered pixmap pixels. Native text blocks use MuPDF's
     # unrotated points. Keep their actual space and reference geometry; the
     # Reader adapter must not consume either as a naked PDF-point coordinate.
     repeating = defaultdict(set)

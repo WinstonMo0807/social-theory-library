@@ -8,7 +8,7 @@ COPY requirements-linux.lock /tmp/requirements-linux.lock
 COPY wheels/ /tmp/wheels/
 RUN pip install --no-index --find-links=/tmp/wheels pip==26.2.2 && pip install --no-index --find-links=/tmp/wheels --require-hashes -r /tmp/requirements-linux.lock && pip check && rm -rf /tmp/wheels
 COPY models/ /opt/ocr-models/
-COPY app.py rapid_models.py rapid_runtime.py model_probe.py ./
+COPY app.py rapid_models.py rapid_runtime.py toc_layout.py model_probe.py ./
 RUN python -c "from rapid_models import verify_models; verify_models('/opt/ocr-models')"
 COPY docker-entrypoint.sh /usr/local/bin/library-ocr-entrypoint
 RUN addgroup --system ocr && adduser --system --ingroup ocr --home /nonexistent ocr && mkdir -p /models /tmp/ocr && chown -R ocr:ocr /models /tmp/ocr /app && chmod 0755 /usr/local/bin/library-ocr-entrypoint

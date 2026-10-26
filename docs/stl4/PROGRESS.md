@@ -1,5 +1,9 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-27 OCR迁移当前节点
+
+RapidOCR全链源码87e6a12a，预览Web75/OCR3/API44更新中。聚焦测试24+1+12+3+17通过；管理界面实际就绪检查通过，整书仍9/170待恢复，不能称整书或全站验收完成。详细证据与恢复入口见CURRENT_PROGRESS顶部及OCR_WORKFLOW_REPLACEMENT_20261027.md。当前开发范围不扩张。
+
 ## 2026-10-26 23:34 最新接续
 
 品牌SVG已更新内网Web r73（61c1151f3625），API/4workers仍r41；恢复.env.before-brand-r73。首页/登录页实际读取SVG，完整视觉仍待确认。三书Discovery原任务已成功，活动索引2043条，OCR0。PDF186转存后端草稿在工作区，前端未接入、迁移未执行，勿误称已部署。准确范围/证据/剩余项见根CURRENT_PROGRESS.md顶部及VISUAL_FIDELITY_20261026.md的VISUAL-72。
