@@ -1,5 +1,13 @@
 # 隔离深度推理运行时
 
+## 2026-10-27 当前运行接续
+
+实际沿API既有客户端验证同一NAS服务：EG2返回768维、身份及归一化校验通过（7.67秒）；BGE两条合成材料完成（4.24秒）；ConvMemory同输入顺序与身份保留（1.27秒）。/deep/status为ready，三个模型inference_completed为true。只检查运行契约，不评价相关性、准确率或比较模型。日志tmp/stl4-rapidocr-20261027/deep-functional-runtime.log。
+
+DEEP-03实际执行discovery_deep_index --prepare-only时，deep_index.prepare_index的SimpleNamespace缺少共用ensure_index已要求的config_snapshot，抛AttributeError。仅补空快照，保留独立768维与baseline_generation过滤；7项契约通过。API/四worker r52（41f9a5647a89）已更新，Web80不动。恢复点deep-index-r52-recovery；原任务空闲后更新、beat恢复。原样书来源索引和六个发布消费者此前已完成。
+
+当前使用原discovery_deep_index命令补写2404条当前公开passages，源身份/当前正式修订验证及输入hash续跑沿用；不导入历史实验文本、不改基础索引。总开关仍false，待独立投影完成和实际接续回读后启用，不能将模型ready写成深度检索已全面启用。下文保留最初接入历史。
+
 ## 2026-10-26 继承制品与真实接线
 
 DEEP-01修正原EG2请求误走基础E5 `/embed` 的调用链。新增同一服务 `/deep-embed`，使用旧实验的SearchQuery/题名模板和已导出的768维mean/L2输出；拒绝截断，模型和代次单独核对。EG2/BGE/ConvMemory仍共享一个串行CPU模型槽。新增artifact_identity供制备与运行共用，两个Dockerfile包含该文件。

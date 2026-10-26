@@ -1,5 +1,16 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-27 05:43 深度运行通过，索引持续补建与自动接续
+
+API及四worker r52（41f9a5647a89）、Web80、RapidOCR3已运行内网。原样书索引5371683a已成功230单元/385派生文档，115d819c六个消费者全部completed。当前深度EG2/BGE/ConvMemory实际合成调用成功（7.67/4.24/1.27秒），不是质量评测。独立索引初始化缺config_snapshot的真实AttributeError已最小修复，7项契约通过，恢复点deep-index-r52-recovery。
+
+既有discovery_deep_index正在补写2404条当前公开原文，50条用时261.4秒；总开关仍false，尚不能称深度查询全面启用。会话内执行session83208，本机日志tmp/stl4-rapidocr-20261027/deep-current-backfill.log。NAS API容器当前原进程PID26；脱离会话的接续器等待其退出后按输入hash补齐，日志/tmp/stl4-deep-backfill-resume.log。源脚本/volume2/library/stl-previews/20261026-r1/deep-current-backfill.py。不要重启此API容器或重复启动索引写入。若进程失效，先查接续器和实际索引数再恢复。
+
+已创建当前对话heartbeat自动接续stl-4-0，每30分钟推进本任务，状态无变化保持安静，完成/失败/需决定才通知。接续时先核对记录和Git；补建完整后才启用既定总开关并回读真实API链，继续原有视觉/业务和公网前准备，不新增潜在问题。生产、账号、原件和原索引均未更改。
+
+OCR恢复后实际/health200、/ready200/runtime_verified=true/PID208；管理端05:43单项检查保存成功回执，重新读取设置显示最近成功03:54:29。截图ocr-restored-service-r52.png及ocr-last-success-r52.png。此前未刷新标签里的旧时间不构成代码缺陷，未修改。详细运行、恢复和视觉边界见PRE_CUTOVER_VERIFICATION_20261027、DEEP_RUNTIME、CUTOVER_CANDIDATE。
+
+
 ## 2026-10-27 05:30 校准文件导出闭环完成，切换前环境继续
 
 API/普通/入库/查询worker r51（20d2c9551c97）、Web80（958185f55582）运行内网；活动索引worker保留r45，beat恢复，生产不变。修复校准继承目录被导出来源枚举误拒及裁切/旋转PDF书签落点偏移。18项导出/页码回归通过。原UI05:28:25生成任务2a186965成功，副本8d4b32db实际打开170页/10正确书签，原件SHA未变。恢复点outline-export-r51-recovery；首次更新因健康任务忙主动停止，第二次空闲后完成。

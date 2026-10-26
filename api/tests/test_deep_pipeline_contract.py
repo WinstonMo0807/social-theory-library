@@ -9,6 +9,20 @@ from django.test import override_settings
 from catalog.services.retrieval import deep_pipeline as pipeline
 
 
+def test_deep_index_settings_use_shared_writer_and_keep_baseline_isolation():
+    from catalog.services.retrieval import deep_index
+    from catalog.services import discovery_indexing
+
+    with patch.object(deep_index, "configuration", return_value=("deep-synthetic", "artifact", "generation")), \
+            patch.object(discovery_indexing, "meili", return_value={}) as call, \
+            patch.object(discovery_indexing, "wait_index_task"):
+        assert deep_index.prepare_index() == "deep-synthetic"
+    method, path, config = call.call_args.args
+    assert (method, path) == ("PATCH", "/indexes/deep-synthetic/settings")
+    assert config["embedders"]["discovery"]["dimensions"] == 768
+    assert "baseline_generation" in config["filterableAttributes"]
+
+
 def test_eg2_uses_deep_encoder_without_replacing_baseline():
     from catalog.services import discovery_inference as client
 

@@ -27,7 +27,7 @@ def prepare_index():
     from catalog.services.discovery_indexing import ensure_index
 
     uid, _, _ = configuration()
-    ensure_index(SimpleNamespace(uid=uid, dimensions=768), extra_filterable=("baseline_generation",))
+    ensure_index(SimpleNamespace(uid=uid, dimensions=768, config_snapshot={}), extra_filterable=("baseline_generation",))
     return uid
 
 

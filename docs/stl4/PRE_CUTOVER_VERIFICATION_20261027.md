@@ -40,4 +40,8 @@ v8真实目录任务e5cfece5生成10项。逐项查看原PDF章节起页，人�
 
 05:28:25：API51（20d2c9551c97）更新后原UI提交任务2a186965成功，生成8d4b32db副本。实际打开170页并读回10个正确书签，原件SHA未变（mapped-export-readback.log）。API/普通/入库/查询worker r51、Web80保持，索引worker忙保留r45；beat恢复。首次更新因健康任务忙未改环境，第二次沿同一恢复点核对后更新空闲服务。
 
-继续确认当前来源索引和发布消费者完成。既定深度bundle健康prepared，三个角色尚无真实推理；总开关false、BGE/ConvMemory子开关true，EG2独立索引尚不存在，当前公开passages2387。此为既定运行接续，不重开质量测评。公网批准仍待用户最终确认。其余206视图的B验收不改记为开发缺项，字体文件身份及全站逐像素一致尚未证明。模型质量和全NAS长期稳定性未由上述检查证明。
+05:43最终读回：原5371683a成功230单元/385派生文档，115d819c六个消费者全部completed。EG2/BGE/ConvMemory合成运行成功，deep/status ready；独立索引初始化config_snapshot遗漏修复后API/四worker r52（41f9a5647a89），7项契约通过。2404条公开passages正在原命令中补写，50条261.4秒，总开关false等待完整索引。已安排同线程30分钟自动接续及NAS脱离会话接续器，详情CURRENT_PROGRESS。
+
+OCR重启后冷态/ready503如实返回；原管理界面验证模型后实际health/ready均200，runtime_verified=true、workerPID208。服务页05:43新检查回执成功，设置重新读取显示最近处理成功03:54:29；旧开着的页面未刷新并非接口漏记录，没有据此改代码。证据ocr-restored-ready-verified.log、ocr-restored-service-r52.png。
+
+公网批准仍待用户最终确认。其余206视图的B验收不改记为开发缺项，字体文件身份及全站逐像素一致尚未证明。模型质量和全NAS长期稳定性未由上述检查证明。
