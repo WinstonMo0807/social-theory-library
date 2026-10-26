@@ -1,5 +1,13 @@
 # 开发进度
 
+## 2026-10-26 三书已发布，扫描书策划阅读入口修复
+
+原批次三项均 ready/completed，r40 已从原条目重试完成库恩 PDF 原生解析，未重复上传。三本书目、原封面、主要学科、主题及流派关联已保存并在内网发布；3个事件按实际上传的2019/2012/1995中文版本审批，原著1998/1962/1895另记说明。六节《国家的视角》策划已保存12块正文、公开示例署名及3个准确馆藏版本，尚待确认发布和读者端收尾。
+
+真实文章预览发现 SAMPLE-READER-01：editorial_issues.issue_payload 使用 current_retrieval_source_q 判断阅读全文入口，误将两本无合格检索文本但可阅读的已发布扫描本显示为暂无全文。3acf1e证实二者正规阅读资产ready/public/valid且活动修订存在，仅fulltext_ready=False。最小修复复用 reading.services.readable_assets_for_user(None)，保留活动资产/正式快照/公开权限判断；检索门禁不变，无OCR。不对原文质量作虚假升级。原有来源权限断言补真实快照身份及扫描场景，未运行测试。
+
+语法解析0797aa完成；预览镜像1a61ed b0f7eef32fd4，1a61ed→a0dbcf退出0，四worker空闲后API/4workers更新r41，Web72保持；恢复.env.before-reader-r41及reader-r41/recovery-images.json。读者端已实际加载《国家的视角》436页PDF和原目录。新版Discovery模型已准备但无索引，旧语义配置缺模型；继续按既定方案处理样例派生索引，不开展评测，不影响生产。
+
 ## 2026-10-26 扫描PDF原生解析缓存按页释放
 
 上一修复r39未解决真实样例OOM：原任务21:02:34再次SIGKILL，容器oom_kill=1。对同一用户文件做只读原生解析诊断d244a5，RSS逐页升至339MB；逐页释放MuPDF缓存0d7c8c后稳定约55–58MB，253页完整读取，无OCR。extract.py只在文本/坐标已转为普通对象后store_shrink(100)，不改变文件、文本内容、页码或OCR策略。

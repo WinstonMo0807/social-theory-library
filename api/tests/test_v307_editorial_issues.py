@@ -279,9 +279,16 @@ def test_reading_path_internal_note_stays_in_admin_serialization_only():
 def test_issue_reader_link_requires_valid_exact_public_reader_source(admin_user, kind, validation, access, readable):
     edition = public_edition(reader_attributes={"kind": kind, "status": "ready", "validation_status": validation,
         "access_status": access, "is_current": False, "file": "synthetic/issue-reader.pdf", "sha256": "f" * 64, "byte_size": 20})
+    revision = edition.active_catalog_revision
+    revision.snapshot["document"] = {"asset_id": str(revision.reader_asset_id)}
+    revision.save(update_fields=["snapshot"])
+    assert revision.fulltext_ready is False  # Scans do not need searchable text to be readable.
     issue = service.create_issue(issue_data(edition), admin_user)
     service.publish_issue(issue.pk, service.issue_payload(issue)["edit_version"], admin_user)
     issue.refresh_from_db()
     row = service.issue_payload(issue, public=True)["items"][0]
     assert bool(row["reader_url"]) is readable
     assert row["status"] == ("available" if readable else "bibliographic")
+    revision.snapshot["document"]["asset_id"] = str(uuid4())
+    revision.save(update_fields=["snapshot"])
+    assert service.issue_payload(issue, public=True)["items"][0]["reader_url"] == ""

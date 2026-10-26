@@ -391,9 +391,10 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     edition_ids = {row.get("edition_id") for row in payload.get("items", []) if row.get("edition_id")}
     edition_ids.update(str(row.linked_edition_id) for row in records.values() if row.linked_edition_id)
     editions = {str(row.pk): row for row in public_editions().filter(pk__in=edition_ids)}
-    from catalog.services.publication_eligibility import current_retrieval_source_q
-    readable_ids = set(map(str, public_editions().filter(pk__in=edition_ids).filter(
-        current_retrieval_source_q(asset_prefix="active_catalog_revision__reader_asset", access_statuses=("public", "inherit"))).values_list("pk", flat=True)))
+    from reading.services import readable_assets_for_user
+    # A published scan can be read without an OCR/searchable text layer.
+    readable_ids = set(map(str, readable_assets_for_user(None).filter(
+        edition_id__in=edition_ids).values_list("edition_id", flat=True)))
     legacy_cover_ids = {row['cover_rendition_id'] for row in payload.get('items', [])
         if row.get('cover_rendition_id') and 'cover_display_uses' not in row}
     legacy_cover_uses = {str(key):(metadata or {}).get('display_uses', list(DEFAULT_MEDIA_DISPLAY_USES))
@@ -409,7 +410,9 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
         row["status"] = "available" if readable else "bibliographic" if edition else "planned" if row["kind"] == "planned" else "unavailable"
         row["file_status"] = reader.access_status if reader else "no_file"
         row["work_url"] = f"/works/{edition.public_slug}" if edition and edition.public_slug else ""
-        row["reader_url"] = f"/reader/{reader.pk}?revision={edition.active_catalog_revision.document_revision_id}" if readable else ""
+        row["reader_url"] = f"/reader/{reader.pk}" if readable else ""
+        if readable and edition.active_catalog_revision.document_revision_id:
+            row["reader_url"] += f"?revision={edition.active_catalog_revision.document_revision_id}"
         row['cover_url'] = ''
         row.pop('available_work_id', None)
         row.pop('available_edition_id', None)
