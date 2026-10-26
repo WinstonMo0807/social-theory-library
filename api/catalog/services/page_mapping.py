@@ -273,19 +273,25 @@ def save_mapping(identifier, *, data, actor):
 
 
 def prepare_mapping(asset, row):
+    from catalog.services.page_mapping_exports import completed_copy, expanded_mapping
     if row.asset_id != asset.pk:
         raise ValueError("页码候选不属于当前文件。")
     current = current_data(asset)
     old = {r["pdf_page"]: r for r in current["pages"]}
     diag = diagnostics(row.data)
-    changes = [{"pdf_page": r["pdf_page"], "before": old[r["pdf_page"]]["labels"], "after": r["labels"],
+    expanded, positions, inserted = expanded_mapping(row.data)
+    copy_asset = completed_copy(asset, row) if inserted else None
+    changes = [{"pdf_page": r["pdf_page"], "new_pdf_page": positions[r["pdf_page"]], "before": old[r["pdf_page"]]["labels"], "after": r["labels"],
                 "page_type_before": old[r["pdf_page"]]["page_type"], "page_type_after": r["page_type"],
                 "note": r["note"], "source_note_before": old[r["pdf_page"]].get("source_note", ""),
                 "source_note_after": r.get("source_note", ""), "manual_before": old[r["pdf_page"]]["confirmed"]}
                for r in row.data["pages"] if r["pdf_page"] in old and
-               (r["labels"], r["page_type"], r["confirmed"], r["note"], r.get("source_note", "")) !=
-               (old[r["pdf_page"]]["labels"], old[r["pdf_page"]]["page_type"], old[r["pdf_page"]]["confirmed"], old[r["pdf_page"]]["note"], old[r["pdf_page"]].get("source_note", ""))]
+               (positions[r["pdf_page"]] != r["pdf_page"] or
+                (r["labels"], r["page_type"], r["confirmed"], r["note"], r.get("source_note", "")) !=
+                (old[r["pdf_page"]]["labels"], old[r["pdf_page"]]["page_type"], old[r["pdf_page"]]["confirmed"], old[r["pdf_page"]]["note"], old[r["pdf_page"]].get("source_note", "")))]
     blockers = []
+    if inserted and not copy_asset:
+        blockers.append("请先生成当前已保存校准的补页副本，待回读核对完成后再确认发布。")
     try:
         _source_current(asset)
     except OutlineConflict as exc:
@@ -308,9 +314,11 @@ def prepare_mapping(asset, row):
     if asset.edition.catalog_revisions.filter(revision__gt=active.revision if active else 0, status__in=["preparing", "failed"]).exists():
         blockers.append("尚有馆藏发布等待完成或恢复，请先在发布记录处理。")
     result = {"revision_id": str(row.pk), "source_fingerprint": source_fingerprint(asset),
+              "copy_asset_id": str(copy_asset.pk) if copy_asset else None,
+              "inserted_pages": inserted, "new_page_count": len(expanded["pages"]),
               "changes": changes, "changed_page_count": len(changes),
-              "missing_before": current["missing"], "missing_after": row.data["missing"],
-              "segments_before": current["segments"], "segments_after": row.data["segments"],
+              "missing_before": current["missing"], "missing_after": expanded["missing"],
+              "segments_before": current["segments"], "segments_after": expanded["segments"],
               "diagnostics": diag, "blockers": blockers, "can_apply": not blockers,
               "mode": "publish" if asset.edition.state == PublicationState.PUBLISHED else "apply_draft"}
     result["prepared_fingerprint"] = _hash(result)
@@ -321,6 +329,7 @@ def prepare_mapping(asset, row):
 def apply_mapping(identifier, *, data, actor):
     from catalog.services.document_intelligence import stage_document_asset, synchronize_document_revision
     from catalog.services.knowledge_publication import create_catalog_publication_event
+    from catalog.services.page_mapping_exports import completed_copy, expanded_mapping
 
     asset = _locked_asset(identifier)
     replay = _replay(asset, data, actor, applying=True)
@@ -339,15 +348,42 @@ def apply_mapping(identifier, *, data, actor):
         raise ValueError(" ".join(prepared["blockers"]))
     validate_data(asset, row.data)
     document = asset.document_revisions.filter(is_active=True).first()
-    staged = stage_document_asset(asset, stage_key=f"page-mapping:{row.pk}")
+    expanded, positions, inserted = expanded_mapping(row.data)
+    copy_asset = completed_copy(asset, row) if inserted else None
+    if inserted and (not copy_asset or str(copy_asset.pk) != prepared["copy_asset_id"]):
+        raise MappingConflict("补页副本已变化，请重新查看影响预览。")
+    staged = stage_document_asset(asset, stage_key=f"page-mapping:{row.pk}", force_copy=bool(inserted))
+    if inserted:
+        originals = {page.index: page for page in _pages(staged)}
+        # Descending updates preserve the existing unique (asset, index) constraint.
+        for old in sorted(originals, reverse=True):
+            Page.objects.filter(pk=originals[old].pk).update(index=positions[old])
+        for blank in inserted:
+            adjacent = originals[blank["after_pdf_page"]]
+            Page.objects.create(asset=staged, index=blank["pdf_page"], text_source=Page.TextSource.EMBEDDED,
+                width=adjacent.width, height=adjacent.height, confidence=1)
+        staged.file = copy_asset.file.name
+        staged.sha256, staged.byte_size, staged.page_count = copy_asset.sha256, copy_asset.byte_size, copy_asset.page_count
+        details = dict(staged.validation_details or {})
+        for key in ("ocr_required_page_indexes", "ocr_detected_page_indexes"):
+            if isinstance(details.get(key), list):
+                details[key] = [positions[index] for index in details[key] if index in positions]
+        prior_blanks = (details.get("physical_page_mapping") or {}).get("inserted_pages", [])
+        details["physical_page_mapping"] = {"copy_asset_id": str(copy_asset.pk), "source_asset_id": str(asset.pk),
+            "target_asset_id": str(staged.pk), "mapping_revision_id": str(row.pk),
+            "source_document_revision_id": str(document.pk) if document else "",
+            "positions": {str(old): new for old, new in positions.items()},
+            "inserted_pages": sorted({positions[index] for index in prior_blanks if index in positions} | {item["pdf_page"] for item in inserted})}
+        staged.validation_details = details
+        staged.save(update_fields=["file", "sha256", "byte_size", "page_count", "validation_details", "updated_at"])
     segments = {}
     staged.page_label_segments.all().delete()
-    for s in row.data["segments"]:
+    for s in expanded["segments"]:
         segment = PageLabelSegment.objects.create(asset=staged, start_file_page_index=s["start"], end_file_page_index=s["end"],
             start_label=s["start_label"], style=s["style"], source="manual", confidence=1, created_by=actor)
         for index in range(s["start"], s["end"] + 1):
             segments[index] = str(segment.pk)
-    changed = {r["pdf_page"]: r for r in row.data["pages"]}
+    changed = {r["pdf_page"]: r for r in expanded["pages"]}
     pages = _pages(staged)
     for page in pages:
         item = changed[page.index]
@@ -358,7 +394,7 @@ def apply_mapping(identifier, *, data, actor):
         page.label_confidence = 1
         page.label_segment = segments.get(page.index, "")
     Page.objects.bulk_update(pages, ["printed_label", "is_label_manual", "is_label_anchor", "label_source", "label_confidence", "label_segment"])
-    staged.validation_details = {**(staged.validation_details or {}), "page_mapping": {**deepcopy(row.data), "revision_id": str(row.pk)}}
+    staged.validation_details = {**(staged.validation_details or {}), "page_mapping": {**expanded, "revision_id": str(row.pk)}}
     staged.save(update_fields=["validation_details", "updated_at"])
     outline = asset.outline_revisions.filter(is_active=True, source_checksum=asset.sha256,
         document_revision=document).first() if document else None
@@ -368,19 +404,27 @@ def apply_mapping(identifier, *, data, actor):
         extraction_method=document.extraction_method if document else "existing-text",
         extraction_version=document.extraction_version if document else "page-mapping-v1",
         ocr_provider=document.ocr_provider if document else "", ocr_model=document.ocr_model if document else "",
-        ocr_version=document.ocr_version if document else "", actor=actor)
+        ocr_version=document.ocr_version if document else "", actor=actor, schedule_outline=not bool(outline))
+    mapped_outline = None
     if outline:
-        # Physical locations and titles remain valid: only printed labels change.
         nodes = deepcopy(outline.nodes)
         for node in nodes:
+            if node.get("pdf_page") in positions:
+                node["pdf_page"] = positions[node["pdf_page"]]
             if node.get("pdf_page") in changed:
                 node["printed_label"] = "–".join(changed[node["pdf_page"]]["labels"])
         staged.outline_revisions.filter(is_active=True).update(is_active=False)
-        DocumentOutlineRevision.objects.create(asset=staged,
+        mapped_outline = DocumentOutlineRevision.objects.create(asset=staged,
             revision=(staged.outline_revisions.order_by("-revision").values_list("revision", flat=True).first() or 0) + 1,
             document_revision_id=result["revision_id"], source_checksum=staged.sha256,
             parser_version=outline.parser_version, nodes=nodes, diagnostics=deepcopy(outline.diagnostics),
             origin="page_mapping", is_active=True, reviewed=outline.reviewed, created_by=actor)
+    if staged.pk != asset.pk:
+        staged.validation_details["navigation_mapping"] = {"source_asset_id": str(asset.pk), "target_asset_id": str(staged.pk),
+            "source_document_revision_id": str(document.pk) if document else "", "document_revision_id": str(result["revision_id"]),
+            "source_outline_revision_id": str(outline.pk) if outline else "", "outline_revision_id": str(mapped_outline.pk) if mapped_outline else "",
+            "positions": {str(old): new for old, new in positions.items()}, "page_count": staged.page_count}
+        staged.save(update_fields=["validation_details", "updated_at"])
     if prepared["mode"] == "publish":
         row.publication_event = create_catalog_publication_event(asset.edition,
             event_type=KnowledgePublicationEvent.EventType.CATALOG_UPDATED,
@@ -388,6 +432,10 @@ def apply_mapping(identifier, *, data, actor):
             idempotency_key=f"page-mapping:{row.pk}:{data['request_id']}", content_asset_id=staged.pk,
             provenance={"source": "page_mapping", "page_mapping_revision_id": str(row.pk), "source_asset_id": str(asset.pk)})
     else:
+        if inserted:
+            Asset.objects.filter(edition=asset.edition, kind=Asset.Kind.NORMALIZED, is_current=True).exclude(pk=staged.pk).update(is_current=False, updated_at=timezone.now())
+            staged.is_current = True
+            staged.save(update_fields=["is_current", "updated_at"])
         asset.edition.page_label_status = PageLabelStatus.READY
         asset.edition.save(update_fields=["page_label_status", "updated_at"])
     row.applied_asset = staged

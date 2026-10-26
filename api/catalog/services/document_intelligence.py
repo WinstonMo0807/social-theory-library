@@ -41,7 +41,7 @@ def document_asset_is_published(asset: Asset) -> bool:
 
 
 @transaction.atomic
-def stage_document_asset(asset: Asset, *, stage_key: str, reset_ocr: bool = False) -> Asset:
+def stage_document_asset(asset: Asset, *, stage_key: str, reset_ocr: bool = False, force_copy: bool = False) -> Asset:
     """Copy a text interpretation, sharing immutable PDF bytes with its source.
 
     Page, passage and evidence identities on the published asset remain intact.
@@ -55,7 +55,7 @@ def stage_document_asset(asset: Asset, *, stage_key: str, reset_ocr: bool = Fals
     ).first()
     if existing:
         return existing
-    if not document_asset_is_published(source):
+    if not force_copy and not document_asset_is_published(source):
         return source
     if source.kind != Asset.Kind.NORMALIZED:
         raise ValueError("正文修订必须从规范阅读文件创建。")
@@ -229,7 +229,9 @@ def _quality_values(
         row["human_verified"] = bool(row["is_text_manual"] and row["manual_text_revision__confirmed"]
                                      and row["manual_text_revision__text"] == row["text"])
     page_count = len(page_rows)
-    denominator = max(page_count, 1)
+    inserted = set(((asset.validation_details or {}).get("physical_page_mapping") or {}).get("inserted_pages", []))
+    confirmed_blanks = {row["index"] for row in page_rows if row["index"] in inserted and not row["text"].strip() and not row["normalized_text"].strip()}
+    denominator = max(page_count - len(confirmed_blanks), 1)
     populated = [row for row in page_rows if str(row["normalized_text"] or "").strip()]
     claim_ready = [
         row
@@ -256,10 +258,10 @@ def _quality_values(
     structure_quality = (
         0.6
         * sum(bool(str(row["chapter_title"] or "").strip()) for row in page_rows)
-        / denominator
+        / max(page_count, 1)
         + 0.4
         * sum(bool(str(row["printed_label"] or "").strip()) for row in page_rows)
-        / denominator
+        / max(page_count, 1)
     )
     ocr_rows = [
         row
@@ -273,8 +275,8 @@ def _quality_values(
     critical_pages = {
         int(row["index"])
         for row in page_rows
-        if not str(row["normalized_text"] or "").strip()
-        or not row["human_verified"] and float(row["confidence"] or 0) < 0.5
+        if row["index"] not in confirmed_blanks and (not str(row["normalized_text"] or "").strip()
+        or not row["human_verified"] and float(row["confidence"] or 0) < 0.5)
     }
     critical_pages.update(int(index) for index in pending_ocr_pages if int(index) > 0)
     return {
@@ -287,6 +289,7 @@ def _quality_values(
         "critical_pages": sorted(critical_pages),
         "details": {
             "page_count": page_count,
+            "confirmed_blank_pages": len(confirmed_blanks),
             "populated_pages": len(populated),
             "passage_pages": passage_pages,
             "claim_ready_pages": len(claim_ready),

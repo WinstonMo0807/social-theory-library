@@ -380,9 +380,13 @@ def _source_current(asset):
     details = asset.validation_details or {}
     if (details.get("text_publication_state") == "staging" and asset.source_asset_id
             and details.get("text_source_asset_id") == str(asset.source_asset_id)):
-        parent = Asset.objects.filter(pk=asset.source_asset_id, edition=asset.edition, sha256=asset.sha256).first()
+        parent = Asset.objects.filter(pk=asset.source_asset_id, edition=asset.edition).first()
         if parent and (parent.is_current or pending_replacement_source(parent)):
-            return
+            if parent.sha256 == asset.sha256:
+                return
+            from catalog.services.page_mapping_exports import staging_copy_matches
+            if staging_copy_matches(asset, parent):
+                return
     raise OutlineConflict("文件已更换；旧目录和原文仍保留，请选择当前文件。")
 
 

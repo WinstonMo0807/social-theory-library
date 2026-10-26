@@ -942,6 +942,9 @@ def create_catalog_publication_event(
         # not insert modern optional keys into historical immutable content.
         from copy import deepcopy
         snapshot = deepcopy(restored.snapshot)
+    elif _asset and (_asset.validation_details or {}).get("navigation_mapping"):
+        from catalog.services.page_mapping_exports import remap_contribution_scopes
+        snapshot = {**snapshot, "contributions": remap_contribution_scopes(snapshot.get("contributions", []), _asset)}
     fingerprint = _fingerprint(snapshot)
     # Workbench publication first commits its Work EditorialRevision and then
     # invokes the existing Edition publication adapter in the same outer

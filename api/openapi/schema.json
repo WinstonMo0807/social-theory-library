@@ -52843,6 +52843,9 @@
                     },
                     "manual_before": {
                         "type": "boolean"
+                    },
+                    "new_pdf_page": {
+                        "type": "integer"
                     }
                 },
                 "required": [
@@ -52852,7 +52855,8 @@
                     "note",
                     "page_type_after",
                     "page_type_before",
-                    "pdf_page"
+                    "pdf_page",
+                    "new_pdf_page"
                 ]
             },
             "MappingCommandActionEnum": {
@@ -53308,6 +53312,20 @@
                     },
                     "mode": {
                         "$ref": "#/components/schemas/DocumentRevisionApplyModeEnum"
+                    },
+                    "copy_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "inserted_pages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingInsertedPage"
+                        }
+                    },
+                    "new_page_count": {
+                        "type": "integer"
                     }
                 },
                 "required": [
@@ -53323,7 +53341,10 @@
                     "revision_id",
                     "segments_after",
                     "segments_before",
-                    "source_fingerprint"
+                    "source_fingerprint",
+                    "copy_asset_id",
+                    "inserted_pages",
+                    "new_page_count"
                 ]
             },
             "MappingPublication": {
@@ -86766,6 +86787,49 @@
                         "maximum": 3000
                     }
                 }
+            },
+            "MappingInsertedPage": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "after_pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    },
+                    "confirmed": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "action": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MappingMissingActionEnum"
+                            }
+                        ],
+                        "default": "mark"
+                    },
+                    "pdf_page": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "after_pdf_page",
+                    "id",
+                    "label",
+                    "pdf_page"
+                ]
             }
         },
         "securitySchemes": {

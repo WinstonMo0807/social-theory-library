@@ -170,6 +170,7 @@ class MappingStateSerializer(serializers.Serializer):
 
 class MappingChangeSerializer(serializers.Serializer):
     pdf_page = serializers.IntegerField()
+    new_pdf_page = serializers.IntegerField()
     before = serializers.ListField(child=serializers.CharField())
     after = serializers.ListField(child=serializers.CharField())
     page_type_before = serializers.CharField()
@@ -180,10 +181,17 @@ class MappingChangeSerializer(serializers.Serializer):
     manual_before = serializers.BooleanField()
 
 
+class MappingInsertedPageSerializer(MappingMissingSerializer):
+    pdf_page = serializers.IntegerField()
+
+
 class MappingPreviewSerializer(serializers.Serializer):
     revision_id = serializers.UUIDField()
     source_fingerprint = serializers.CharField()
     prepared_fingerprint = serializers.CharField()
+    copy_asset_id = serializers.UUIDField(allow_null=True)
+    inserted_pages = MappingInsertedPageSerializer(many=True)
+    new_page_count = serializers.IntegerField()
     changes = MappingChangeSerializer(many=True)
     changed_page_count = serializers.IntegerField()
     missing_before = MappingMissingSerializer(many=True)

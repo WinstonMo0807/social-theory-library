@@ -12705,6 +12705,7 @@ export interface components {
         };
         MappingChange: {
             pdf_page: number;
+            new_pdf_page: number;
             before: string[];
             after: string[];
             page_type_before: string;
@@ -12823,11 +12824,15 @@ export interface components {
             revision_id: string;
             revision: number;
         };
+        MappingInsertedPage: components["schemas"]["MappingMissing"] & { pdf_page: number };
         MappingPreview: {
             /** Format: uuid */
             revision_id: string;
             source_fingerprint: string;
             prepared_fingerprint: string;
+            copy_asset_id: string | null;
+            inserted_pages: components["schemas"]["MappingInsertedPage"][];
+            new_page_count: number;
             changes: components["schemas"]["MappingChange"][];
             changed_page_count: number;
             missing_before: components["schemas"]["MappingMissing"][];
