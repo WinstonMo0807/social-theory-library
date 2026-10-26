@@ -16,3 +16,7 @@
 
 /* Actual r34 empty-state screenshot: the generic icon margin spread the button contents. */
 .empty>button svg{margin:0}
+
+/* PDF123: edit the project question in the selected project, using its original revision. */
+.inlineQuestion{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}.inlineQuestion textarea{display:block;width:100%;box-sizing:border-box;min-height:76px;border:1px solid var(--line);border-radius:3px;background:var(--surface);color:var(--ink);padding:10px;font:13px/1.7 var(--serif);resize:vertical}.inlineQuestion>span{font-size:12px;color:var(--annotation)}.inlineQuestion>p{font-size:12px;color:var(--night-danger,#ad4943);margin:0}.inlineQuestion>button{margin-left:auto}
+@media(max-width:760px){.inlineQuestion textarea{font-size:13px;min-height:72px}.inlineQuestion>button{width:100%}}

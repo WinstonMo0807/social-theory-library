@@ -20,7 +20,7 @@ import styles from "./privacy.module.css";
 
 const coreRetention: RetentionKey[] = ["reading_history","search_history","personal_notes","followed_topics"];
 const coreExports: ExportCategory[] = ["research","notes","plans","audits"];
-const retentionDisplay: Partial<Record<RetentionKey,[string,string]>> = {reading_history:["阅读历史","我阅读过的书籍与文章"],search_history:["搜索记录","我使用的关键词与筛选条件"],personal_notes:["个人笔记","我添加的笔记与标注"],followed_topics:["关注的主题","我关注的学者列表或主题"]};
+const retentionDisplay: Partial<Record<RetentionKey,[string,string]>> = {reading_history:["阅读历史","我阅读过的书籍与文章"],search_history:["搜索记录","我使用的关键词与筛选条件"],personal_notes:["个人笔记","我添加的笔记与标注"],followed_topics:["关注的主题","我收藏的主题"]};
 const exportDisplay: Partial<Record<ExportCategory,[string,string]>> = {research:["研究资料","收藏的文献、书籍与条目（含来源与版本）"],notes:["笔记内容","个人笔记与标注（含创建时间）"],plans:["研究计划","我创建的研究计划与阅读清单"],audits:["引用报告","我生成的引用报告（含来源与版本）"]};
 const retentionLabels: Record<RetentionKey, string> = { reading_history: "阅读历史", search_history: "搜索记录", personal_notes: "笔记、摘录与书签", followed_topics: "收藏的主题", source_follows: "来源、学者与主题关注", saved_knowledge: "知识条目、图谱视图与私人书单" };
 const retentionCopy: Record<RetentionKey, string> = { reading_history: "保存以后阅读的位置记录，阅读进度单独保留。", search_history: "仅在开启后保存新的检索词与筛选条件。", personal_notes: "允许新建阅读笔记、书签、个人认识与私人并读对齐（含术语笔记）。已有内容仍可编辑；研究工作台中主动保存的笔记单独保留。", followed_topics: "允许新增主题收藏，已有收藏不会自动删除；主题档案更新关注单独管理。", source_follows: "允许关注公开来源、学者与主题档案，并保存后续正式更新。关闭后停止记录更新，已有记录仍保留。", saved_knowledge: "允许收藏理论、概念与争论，以及保存私人图谱范围、布局和文章书单。关闭后不新增，已有记录仍可取消或删除。" };
