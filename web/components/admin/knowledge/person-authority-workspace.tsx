@@ -17,6 +17,7 @@ import { asRecord, textValue, personApi, personPage, isPersonId, type PersonDupl
 import { Dialog } from "@/components/ui/dialog";
 import { BusinessImpact, History, PersonMergeRecovery, PersonPicker, PreviewLoader, RecordWorkspace } from "./person-resolution-workspace";
 import styles from "./person-authority.module.css";
+import { SourceEditorFrame, type SourceEditorOptions } from "./source-editor-frame";
 
 const status: Record<string, string> = { draft: "草稿", needs_review: "待核验", verified: "已核验", merged: "已归并", archived: "已归档", rejected: "未采用" };
 const labels: Record<string, string> = { preferred_name: "规范名", original_name: "原文名", birth_year: "生年", death_year: "卒年", biography: "人物简介", preferred_language: "规范名语言", original_language: "原文名语言", country_region: "国别／地区", authority_note: "内部说明", external_ids: "外部标识", identifier_sources: "标识来源", authority_status: "规范状态", name_variants: "常用异名" };
@@ -158,14 +159,14 @@ function variantSummary(value: AuthorityVariant) {
 }
 
 /** Inline variant maintenance reuses the complete authority preview and receipt. */
-export function PersonAliasesDialog({ owner, personId, onClose, onSaved }: { owner: string; personId: string; onClose: () => void; onSaved: () => void }) {
+export function PersonAliasesDialog({ owner, personId, onClose, onSaved, ...options }: { owner: string; personId: string; onClose: () => void; onSaved: () => void } & SourceEditorOptions) {
   const load = useCallback((path: string, signal: AbortSignal) => authorityRequest<AuthorityDetail>(owner, path, { signal }), [owner]);
   const resource = usePersistentWorkspace<AuthorityDetail>(`${personId}/workspace/`, owner, undefined, load);
-  if (!resource.data) return <Dialog open className={`${styles.dialog} ${styles.aliasDialog}`} onRequestClose={onClose} aria-label="人物异名来源"><h2>人物异名来源</h2><p role={resource.error ? "alert" : "status"}>{resource.error || "正在读取权威人物记录…"}</p><button type="button" onClick={resource.reload}>重新读取</button><button type="button" onClick={onClose}>关闭</button></Dialog>;
-  return <AliasesEditor key={`${owner}:${resource.data.id}`} actor={owner} source={resource.data} readError={resource.error} onClose={onClose} onSaved={onSaved} reload={resource.reload} />;
+  if (!resource.data) return <SourceEditorFrame embedded={options.embedded} onClose={onClose} label="人物异名来源"><h2>人物异名来源</h2><p role={resource.error ? "alert" : "status"}>{resource.error || "正在读取权威人物记录…"}</p><button type="button" onClick={resource.reload}>重新读取</button><button type="button" onClick={onClose}>关闭</button></SourceEditorFrame>;
+  return <AliasesEditor {...options} key={`${owner}:${resource.data.id}`} actor={owner} source={resource.data} readError={resource.error} onClose={onClose} onSaved={onSaved} reload={resource.reload} />;
 }
 
-function AliasesEditor({ actor, source, readError, onClose, onSaved, reload }: { actor: string; source: AuthorityDetail; readError: string; onClose: () => void; onSaved: () => void; reload: () => void }) {
+function AliasesEditor({ actor, source, readError, onClose, onSaved, reload, embedded, formId, onState }: { actor: string; source: AuthorityDetail; readError: string; onClose: () => void; onSaved: () => void; reload: () => void } & SourceEditorOptions) {
   // Focus revalidation may reveal a competing revision; it never replaces this draft.
   const [original, setOriginal] = useState(source);
   const [variants, setVariants] = useState(original.variants), [reason, setReason] = useState("");
@@ -175,6 +176,8 @@ function AliasesEditor({ actor, source, readError, onClose, onSaved, reload }: {
   const dirty = useUnsavedForm({variants, reason}, {variants:original.variants, reason:""});
   const needsPublisher = source.values.authority_status === "verified" && !source.can_verify;
   const readOnly = !source.can_edit || source.pending_draft || needsPublisher || Boolean(input) || refreshing;
+  const saveable=!readOnly&&dirty&&source.version===original.version;
+  useEffect(()=>{onState?.({dirty,busy:Boolean(input)||refreshing,saveable});},[onState,dirty,input,refreshing,saveable]);
   function close() { if (!input && !refreshing && (!dirty || window.confirm("异名修改尚未保存，关闭会放弃当前输入。是否关闭？"))) onClose(); }
   async function refreshSource() {
     const active=request.current;
@@ -190,12 +193,12 @@ function AliasesEditor({ actor, source, readError, onClose, onSaved, reload }: {
     event.preventDefault(); if (readOnly) return;
     setInput({operation:"update",person_id:original.id,expected_version:original.version,values:original.values,reason,variants:variants.map(row=>({...(row.id?{id:row.id}:{}),name:row.name,language:row.language,variant_type:row.variant_type,source_note:row.source_note,is_verified:row.is_verified,displayable:row.displayable}))});
   }
-  return <Dialog open className={`${styles.dialog} ${styles.aliasDialog}`} aria-labelledby="inline-alias-title" onRequestClose={close}><header className={styles.row}><h2 id="inline-alias-title">{original.values.preferred_name} · 人名与异名</h2><button type="button" disabled={Boolean(input)||refreshing} onClick={close}>关闭</button></header><p>编辑原人物的异名与核验依据。查询词由已保存的权威来源同步，规范名和人物身份沿原记录保留。</p>
+  return <SourceEditorFrame embedded={embedded} label="人物异名来源" onClose={close}><header className={styles.row}><h2 id="inline-alias-title">{original.values.preferred_name} · 人名与异名</h2><button type="button" disabled={Boolean(input)||refreshing} onClick={close}>关闭</button></header><p>编辑原人物的异名与核验依据。查询词由已保存的权威来源同步，规范名和人物身份沿原记录保留。</p>
     <Recovery actor={actor} onResolved={result=>{setNotice(result.state==="cancelled"?"尚未执行的原保存已停止，本次输入仍保留。":result.person_id===original.id?"原人物操作已确认，重新读取后可继续维护。":"已确认此前另一人物的保存，本次输入仍保留。");onSaved();reload();}}/>
     {readError ? <p role="alert">{readError}；当前输入仍保留。</p> : null}{source.version!==original.version ? <p role="alert" className={styles.notice}>来源已有新版本，当前输入仍保留。请先核对新记录，不能覆盖他人的修改。</p> : null}
     {notice ? <p role="status" className={styles.notice}>{notice}</p> : null}{source.pending_draft ? <p className={styles.notice}>关联学者仍有草稿，须先在<Link href={`/admin/scholars/${source.scholar_id}`}>学者编辑页</Link>完成版本核对，再更新正式人物异名。</p> : null}{!source.can_edit || needsPublisher ? <p className={styles.notice}>{needsPublisher ? "此人物已正式核验，修改需规范发布权限。" : "当前账户可查看来源，不能修改人物规范。"}</p> : null}
-    <form onSubmit={review}><fieldset className={styles.aliasFields} disabled={readOnly}>{variants.map((variant,index)=><VariantEditor key={variant.id||index} value={variant} onChange={value=>setVariants(rows=>rows.map((row,at)=>at===index?value:row))} remove={!variant.id?()=>setVariants(rows=>rows.filter((_,at)=>at!==index)):undefined}/>)}{!variants.length ? <p>尚无异名。请按真实出处添加，不能依据检索相似度推定同一人物。</p> : null}<button type="button" disabled={variants.length>=200} onClick={()=>setVariants(rows=>[...rows,{name:"",language:"und",variant_type:"alias",source_note:"",is_verified:false,displayable:false}])}>添加异名</button><label className={styles.aliasReason}>本次修改依据<textarea value={reason} required minLength={2} maxLength={1000} rows={3} onChange={event=>setReason(event.target.value)} /></label><p className={styles.muted}>原异名记录不可删除。取消人工核验后停止用于公开匹配，后台仍保留来源。新增或修改已核验异名需要规范发布权限。</p><div className={styles.actions}><button className={styles.primary} type="submit" disabled={!dirty||source.version!==original.version}>预览变化与影响</button></div></fieldset></form>
+    <form id={formId} onSubmit={review}><fieldset className={styles.aliasFields} disabled={readOnly}>{variants.map((variant,index)=><VariantEditor key={variant.id||index} value={variant} onChange={value=>setVariants(rows=>rows.map((row,at)=>at===index?value:row))} remove={!variant.id?()=>setVariants(rows=>rows.filter((_,at)=>at!==index)):undefined}/>)}{!variants.length ? <p>尚无异名。请按真实出处添加，不能依据检索相似度推定同一人物。</p> : null}<button type="button" disabled={variants.length>=200} onClick={()=>setVariants(rows=>[...rows,{name:"",language:"und",variant_type:"alias",source_note:"",is_verified:false,displayable:false}])}>添加异名</button><label className={styles.aliasReason}>本次修改依据<textarea value={reason} required minLength={2} maxLength={1000} rows={3} onChange={event=>setReason(event.target.value)} /></label><p className={styles.muted}>原异名记录不可删除。取消人工核验后停止用于公开匹配，后台仍保留来源。新增或修改已核验异名需要规范发布权限。</p><div className={styles.actions}><button className={styles.primary} type="submit" disabled={!dirty||source.version!==original.version}>预览变化与影响</button></div></fieldset></form>
     <button type="button" disabled={Boolean(input)||refreshing} onClick={()=>void refreshSource()}>{refreshing?"正在读取…":"重新读取来源"}</button>
     {input ? <CommandPreview actor={actor} input={input} stayOnPage onClose={()=>setInput(null)} onSaved={()=>{setInput(null);onSaved();onClose();}}/> : null}
-  </Dialog>;
+  </SourceEditorFrame>;
 }

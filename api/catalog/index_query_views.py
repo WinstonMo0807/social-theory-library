@@ -22,10 +22,23 @@ from ingestion.models import AuditEvent
 ACTION = "index.query.preview"
 
 
+class IndexQueryFiltersSerializer(serializers.Serializer):
+    document_types = serializers.ListField(child=serializers.ChoiceField(choices=["book", "journal_article", "journal_issue", "thesis", "report", "chapter", "other"]), required=False, max_length=7)
+    languages = serializers.ListField(child=serializers.ChoiceField(choices=["zh", "en", "de", "fr", "ja", "ru", "es", "unknown"]), required=False, max_length=8)
+    year_min = serializers.IntegerField(min_value=1, max_value=3000, required=False)
+    year_max = serializers.IntegerField(min_value=1, max_value=3000, required=False)
+
+    def validate(self, data):
+        if set(self.initial_data) - set(self.fields):
+            raise serializers.ValidationError("高级检索包含不支持的筛选。")
+        return normalize_filters(data)
+
+
 class IndexQueryCommandSerializer(serializers.Serializer):
     request_id = serializers.UUIDField()
     q = serializers.CharField(min_length=2, max_length=1200)
     work_id = serializers.UUIDField(required=False)
+    filters = IndexQueryFiltersSerializer(required=False)
 
     def validate(self, data):
         if set(self.initial_data) - set(self.fields):
@@ -61,7 +74,7 @@ class IndexQueryView(EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
             if not prior.after.get("cancelled") and prior.after.get("signature") != signature:
                 raise EditConflict("同一次请求不能更换作品或检索词。")
             return Response(receipt(prior))
-        filters = {"access": ["public"]}
+        filters = {**data.get("filters", {}), "access": ["public"]}
         if data.get("work_id"):
             from catalog.models import Work
             get_object_or_404(Work, pk=data["work_id"])

@@ -46738,6 +46738,9 @@
                     "work_id": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "filters": {
+                        "$ref": "#/components/schemas/IndexQueryFiltersRequest"
                     }
                 },
                 "required": [
@@ -86715,6 +86718,54 @@
                     "mapping_revision_id",
                     "download_url"
                 ]
+            },
+            "IndexQueryFiltersRequest": {
+                "type": "object",
+                "properties": {
+                    "document_types": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "book",
+                                "journal_article",
+                                "journal_issue",
+                                "thesis",
+                                "report",
+                                "chapter",
+                                "other"
+                            ]
+                        },
+                        "maxItems": 7
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "zh",
+                                "en",
+                                "de",
+                                "fr",
+                                "ja",
+                                "ru",
+                                "es",
+                                "unknown"
+                            ]
+                        },
+                        "maxItems": 8
+                    },
+                    "year_min": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3000
+                    },
+                    "year_max": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3000
+                    }
+                }
             }
         },
         "securitySchemes": {
