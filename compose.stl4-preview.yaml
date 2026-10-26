@@ -31,13 +31,15 @@ services:
     mem_limit: 128m
     memswap_limit: 128m
   meilisearch:
+    environment:
+      MEILI_MAX_INDEXING_MEMORY: 128Mb
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:7700/health"]
     volumes: !override
       - meilisearch_data:/meili_data
       - ${STL_PREVIEW_ROOT:?Set a dedicated preview directory}/storage/models:/meili_data/models:ro
-    mem_limit: 384m
-    memswap_limit: 384m
+    mem_limit: 768m
+    memswap_limit: 768m
   api:
     environment: *preview-api
     # Startup does not migrate any database. Initialize the isolated preview
