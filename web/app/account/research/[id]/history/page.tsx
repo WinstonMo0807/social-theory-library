@@ -7,5 +7,5 @@ export default async function ResearchHistoryPage({ params, searchParams }: { pa
   const { id } = await params;
   const { turn } = await searchParams;
   const initialTurn = typeof turn === "string" && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(turn) ? turn : "";
-  return <><ResearchReplay id={id} initialTurn={initialTurn} /><SiteFooter /></>;
+  return <><ResearchReplay id={id} initialTurn={initialTurn} /><SiteFooter reference="research-replay" /></>;
 }
