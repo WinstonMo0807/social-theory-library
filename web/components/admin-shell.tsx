@@ -94,14 +94,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const editorRoute = /^\/admin\/library\/works\/[^/]+$/.test(pathname);
   const filesRoute = /^\/admin\/library\/works\/[^/]+\/files$/.test(pathname);
   const mediaRoute = pathname === "/admin/media";
+  const articleRoute = /^\/admin\/recommendations\/issues\/[^/]+$/.test(pathname);
   const curationRoute = pathname === "/admin/recommendations" && !["home","legacy"].includes(searchParams.get("view")||"");
   const indexRoute = pathname === "/admin/processing/semantic-index";
   const mappingRoute = /^\/admin\/library\/assets\/[^/]+\/page-mapping$/.test(pathname);
   const outlineRoute = /^\/admin\/library\/assets\/[^/]+\/outline$/.test(pathname);
   const ocrRoute = /^\/admin\/library\/assets\/[^/]+\/ocr$/.test(pathname);
   const processingRoute = pathname === "/admin/processing" && (!searchParams.get("surface") || ["documents","overview"].includes(searchParams.get("surface")!));
-  const compactWorkHeader = uploadRoute || intakeRoute || filesRoute || mediaRoute || ocrRoute || outlineRoute || mappingRoute || indexRoute || curationRoute;
-  const brandReference = curationRoute ? "admin-curation" : indexRoute ? "admin-index" : mappingRoute ? "admin-mapping" : outlineRoute ? "admin-outline" : ocrRoute ? "admin-ocr" : processingRoute ? "admin-processing" : mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
+  const compactWorkHeader = uploadRoute || intakeRoute || filesRoute || mediaRoute || ocrRoute || outlineRoute || mappingRoute || indexRoute || curationRoute || articleRoute;
+  const brandReference = articleRoute ? "admin-article" : curationRoute ? "admin-curation" : indexRoute ? "admin-index" : mappingRoute ? "admin-mapping" : outlineRoute ? "admin-outline" : ocrRoute ? "admin-ocr" : processingRoute ? "admin-processing" : mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
   const returnHref = safeAdminHref(searchParams.get("return_to"), "");
   const curationReturn = returnHref && new URL(returnHref, "https://admin.invalid");
   const returnToCuration = curationReturn && curationReturn.pathname === "/admin/review" && curationReturn.searchParams.get("workspace") === "curation";
@@ -216,7 +217,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
   return (
     <AdminSessionContext.Provider value={user}>
-    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={curationRoute ? "curation" : indexRoute ? "index" : mappingRoute ? "mapping" : outlineRoute ? "outline" : ocrRoute ? "ocr" : processingRoute ? "processing" : mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
+    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={articleRoute ? "article" : curationRoute ? "curation" : indexRoute ? "index" : mappingRoute ? "mapping" : outlineRoute ? "outline" : ocrRoute ? "ocr" : processingRoute ? "processing" : mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
       {!focusMode ? <aside
         ref={sidebarRef}
         id="admin-navigation"
@@ -231,7 +232,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
         <nav aria-label="管理工作区">
           {navigationGroups.map(group => <section className="stl4-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.entries.map(entry => {
-            const active = (ocrRoute || outlineRoute || mappingRoute || indexRoute ? "/admin/processing" : navigationHref(pathname)) === entry.href;
+            const active = (articleRoute ? "/admin/content" : ocrRoute || outlineRoute || mappingRoute || indexRoute ? "/admin/processing" : navigationHref(pathname)) === entry.href;
             const allowed = canViewRoute(entry.href);
             return <div className="admin-nav-section" key={entry.href}>
               {allowed ? <Link className={`admin-nav-primary ${active ? "active" : ""}`} aria-current={active ? "page" : undefined} href={entry.href} prefetch={false} onClick={closeNavigation}><entry.Icon size={17} /><span>{entry.title}</span>{active && entry.children.length ? <ChevronDown size={13} /> : null}</Link> : <span className="stl4-nav-locked" aria-disabled="true"><entry.Icon size={17} /><span>{entry.title}</span><LockKeyhole size={12} /></span>}

@@ -13,3 +13,6 @@
 
 .page .mobileCreate{display:none}
 @media(max-width:760px){.header{position:relative}.header>.actions{display:flex;position:absolute;top:-7px;right:0;padding:0;margin:0}.header>.actions>button{display:none}.header .more summary{width:25px;min-height:26px;border:0;background:transparent}.header .eyebrow{padding-right:28px}.page .mobileCreate{display:flex;position:fixed;bottom:22px;right:22px;width:46px;height:46px;min-height:46px;padding:0;border-radius:50%;background:var(--ink);color:var(--surface);border-color:var(--ink);box-shadow:0 3px 10px rgb(11 36 60/.16);z-index:8}.page[data-mobile-selection=true] .mobileCreate{display:none}}
+
+/* Actual r34 empty-state screenshot: the generic icon margin spread the button contents. */
+.empty>button svg{margin:0}

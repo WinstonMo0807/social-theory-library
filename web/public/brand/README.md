@@ -296,3 +296,5 @@ Original page 104 brands: desktop (47,32,235,80); mobile (1298,64,1459,96). Page
 - `stl-lockup-admin-index-{desktop,mobile}-final-r2.png`：唯一最终 PDF120 原图裁取，原生坐标(39,24,218,71)/(1361,59,1498,97)，无重绘。
 
 - stl-lockup-admin-curation-{desktop,mobile}-final-r2.png：唯一最终 PDF122 原图裁取，原生坐标(44,24,231,71)/(1344,54,1502,85)，无重绘。
+
+- stl-lockup-admin-article-{desktop,mobile}-final-r2.png：唯一最终 PDF124 原图裁取，原生坐标(35,12,228,61)/(1318,76,1498,111)，无重绘。
