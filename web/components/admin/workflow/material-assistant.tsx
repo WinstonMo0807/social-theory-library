@@ -30,7 +30,7 @@ export function useMaterialField(label:string,open:()=>void){
 export function MaterialAssistantEntry({autoOpen=false}:{autoOpen?:boolean}){
   const context=useContext(AssistantContext),opened=useRef(false);
   useEffect(()=>{if(autoOpen&&!opened.current&&context?.fields.length&&!context.disabled){opened.current=true;context.fields[0].open();}},[autoOpen,context]);
-  return context?.fields.length?<button type="button" disabled={context.disabled} onClick={()=>context.fields[0].open()}>字段候选与材料助手</button>:null;
+  return context?.fields.length?<button className="material-assistant-entry" type="button" disabled={context.disabled} onClick={()=>context.fields[0].open()}>字段候选与材料助手</button>:null;
 }
 export type MaterialEvidence={category?:string;summary?:string;url?:string;locator?:{url?:string;page?:number;work_id?:string;edition_id?:string;asset_id?:string;title?:string}};
 export type MaterialSource={id:string;label:string;evidence:MaterialEvidence[]};

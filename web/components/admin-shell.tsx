@@ -96,6 +96,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const mediaRoute = pathname === "/admin/media";
   const articleRoute = /^\/admin\/recommendations\/issues\/[^/]+(?:\/preview)?$/.test(pathname);
   const curationRoute = pathname === "/admin/recommendations" && !["home","legacy"].includes(searchParams.get("view")||"");
+  const conceptRoute = /^\/admin\/scholars\/[^/]+\/relations$/.test(pathname) || pathname === "/admin/theories" || /^\/admin\/theories\/[^/]+$/.test(pathname) && !["disciplines","subdisciplines","relations","timeline","reading-paths"].includes(pathname.split("/").at(-1)||"");
   const scholarRoute = /^\/admin\/scholars\/[^/]+$/.test(pathname) && !pathname.endsWith("/people");
   const peopleRoute = pathname === "/admin/people" || pathname === "/admin/scholars/people";
   const ledgerRoute = pathname === "/admin/publication" || /^\/admin\/publication\/[^/]+$/.test(pathname) && !pathname.endsWith("/knowledge");
@@ -104,8 +105,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const outlineRoute = /^\/admin\/library\/assets\/[^/]+\/outline$/.test(pathname);
   const ocrRoute = /^\/admin\/library\/assets\/[^/]+\/ocr$/.test(pathname);
   const processingRoute = pathname === "/admin/processing" && (!searchParams.get("surface") || ["documents","overview"].includes(searchParams.get("surface")!));
-  const compactWorkHeader = scholarRoute || peopleRoute || ledgerRoute || uploadRoute || intakeRoute || filesRoute || mediaRoute || ocrRoute || outlineRoute || mappingRoute || indexRoute || curationRoute || articleRoute;
-  const brandReference = scholarRoute ? "admin-scholar" : peopleRoute ? "admin-people" : ledgerRoute ? "admin-ledger" : articleRoute ? "admin-article" : curationRoute ? "admin-curation" : indexRoute ? "admin-index" : mappingRoute ? "admin-mapping" : outlineRoute ? "admin-outline" : ocrRoute ? "admin-ocr" : processingRoute ? "admin-processing" : mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
+  const compactWorkHeader = conceptRoute || scholarRoute || peopleRoute || ledgerRoute || uploadRoute || intakeRoute || filesRoute || mediaRoute || ocrRoute || outlineRoute || mappingRoute || indexRoute || curationRoute || articleRoute;
+  const brandReference = conceptRoute ? "admin-concept" : scholarRoute ? "admin-scholar" : peopleRoute ? "admin-people" : ledgerRoute ? "admin-ledger" : articleRoute ? "admin-article" : curationRoute ? "admin-curation" : indexRoute ? "admin-index" : mappingRoute ? "admin-mapping" : outlineRoute ? "admin-outline" : ocrRoute ? "admin-ocr" : processingRoute ? "admin-processing" : mediaRoute ? "admin-media" : filesRoute ? "admin-files" : editorRoute ? "admin-editor" : manualRoute ? "admin-manual" : intakeRoute ? "admin-intake" : uploadRoute ? "admin-upload" : "admin";
   const returnHref = safeAdminHref(searchParams.get("return_to"), "");
   const curationReturn = returnHref && new URL(returnHref, "https://admin.invalid");
   const returnToCuration = curationReturn && curationReturn.pathname === "/admin/review" && curationReturn.searchParams.get("workspace") === "curation";
@@ -221,7 +222,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
   return (
     <AdminSessionContext.Provider value={user}>
-    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={scholarRoute ? "scholar" : peopleRoute ? "people" : ledgerRoute ? "ledger" : articleRoute ? "article" : curationRoute ? "curation" : indexRoute ? "index" : mappingRoute ? "mapping" : outlineRoute ? "outline" : ocrRoute ? "ocr" : processingRoute ? "processing" : mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
+    <div className={`admin-shell stl4-admin-shell ${focusMode ? "focus-mode" : ""}`} data-admin-surface={conceptRoute ? "concept" : scholarRoute ? "scholar" : peopleRoute ? "people" : ledgerRoute ? "ledger" : articleRoute ? "article" : curationRoute ? "curation" : indexRoute ? "index" : mappingRoute ? "mapping" : outlineRoute ? "outline" : ocrRoute ? "ocr" : processingRoute ? "processing" : mediaRoute ? "media" : filesRoute ? "files" : editorRoute ? "editor" : manualRoute ? "manual" : intakeRoute ? "intake" : uploadRoute ? "upload" : undefined}>
       {!focusMode ? <aside
         ref={sidebarRef}
         id="admin-navigation"
@@ -239,8 +240,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
             const active = (articleRoute || scholarRoute ? "/admin/content" : ocrRoute || outlineRoute || mappingRoute || indexRoute ? "/admin/processing" : navigationHref(pathname)) === entry.href;
             const allowed = canViewRoute(entry.href);
             return <div className="admin-nav-section" key={entry.href}>
-              {allowed ? <Link className={`admin-nav-primary ${active ? "active" : ""}`} aria-current={active ? "page" : undefined} href={entry.href} prefetch={false} onClick={closeNavigation}><entry.Icon size={17} /><span>{entry.title}</span>{active && entry.children.length && !peopleRoute && !scholarRoute ? <ChevronDown size={13} /> : null}</Link> : <span className="stl4-nav-locked" aria-disabled="true"><entry.Icon size={17} /><span>{entry.title}</span><LockKeyhole size={12} /></span>}
-              {active && allowed && entry.children.length && (peopleRoute||scholarRoute)?<button className="stl4-subnav-toggle" type="button" aria-label={"展开或收起"+entry.title+"子页面"} aria-expanded={expandedNavigation===entry.href} onClick={()=>setExpandedNavigation(value=>value===entry.href?"":entry.href)}><ChevronDown size={12}/></button>:null}{active && allowed && entry.children.length && (!(peopleRoute||scholarRoute)||expandedNavigation===entry.href) ? <div className="admin-nav-children">{entry.children.filter(([href]) => canViewRoute(href)).map(([href, title]) => <Link key={href} href={href} prefetch={false} onClick={closeNavigation} aria-current={`${pathname}${searchParams.size ? `?${searchParams}` : ""}` === href ? "page" : undefined}>{title}</Link>)}</div> : null}
+              {allowed ? <Link className={`admin-nav-primary ${active ? "active" : ""}`} aria-current={active ? "page" : undefined} href={entry.href} prefetch={false} onClick={closeNavigation}><entry.Icon size={17} /><span>{entry.title}</span>{active && entry.children.length && !peopleRoute && !scholarRoute && !conceptRoute ? <ChevronDown size={13} /> : null}</Link> : <span className="stl4-nav-locked" aria-disabled="true"><entry.Icon size={17} /><span>{entry.title}</span><LockKeyhole size={12} /></span>}
+              {active && allowed && entry.children.length && (peopleRoute||scholarRoute||conceptRoute)?<button className="stl4-subnav-toggle" type="button" aria-label={"展开或收起"+entry.title+"子页面"} aria-expanded={expandedNavigation===entry.href} onClick={()=>setExpandedNavigation(value=>value===entry.href?"":entry.href)}><ChevronDown size={12}/></button>:null}{active && allowed && entry.children.length && (!(peopleRoute||scholarRoute||conceptRoute)||expandedNavigation===entry.href) ? <div className="admin-nav-children">{entry.children.filter(([href]) => canViewRoute(href)).map(([href, title]) => <Link key={href} href={href} prefetch={false} onClick={closeNavigation} aria-current={`${pathname}${searchParams.size ? `?${searchParams}` : ""}` === href ? "page" : undefined}>{title}</Link>)}</div> : null}
             </div>;
           })}</section>)}
         </nav>

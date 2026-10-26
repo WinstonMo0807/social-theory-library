@@ -745,8 +745,8 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
   return (
     <AdminFrame
       eyebrow="内容管理"
-      title="理论与概念"
-      description="选择条目后修改名称、简介和相关资料。保存后可预览，确认发布后读者才会看到修改。"
+      title="理论、概念与关系编辑"
+      description="维护概念用法、理论争论和有证据的知识关系。"
       actions={<><Link className="admin-outline-button" href="/admin/theories/timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></>}
     >
       {command.recovery || knownSavedId || command.error ? <section className="admin-panel" aria-label="核对理论与概念保存">
@@ -756,7 +756,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
         {knownSavedId ? <button type="button" disabled={Boolean(pendingAction)} onClick={() => void recoverNode("read")}>重新读取原对象</button> : null}
       </section> : null}
       <div className="theory-node-admin-grid knowledge-object-host-layout" inert={Boolean(command.recovery) || Boolean(pendingAction) || Boolean(knownSavedId)} onCompositionStartCapture={() => { composing.current = true; }} onCompositionEndCapture={() => { composing.current = false; }}>
-        <section className="admin-panel theory-node-table-panel">
+        <details className="admin-panel theory-node-table-panel"><summary>选择已有条目或新建理论、概念</summary>
           <nav className="theory-node-tabs">
             {editableNodeTypeEntries.map(([value, label]) => <button className={nodeType === value ? "active" : ""} type="button" key={value} onClick={() => { if(start()){ theoryLocation.update({ page: 1, node_type: value }); setNodeType(value); setDraft(current=>({...current,node_type:value})); } }}>{label}</button>)}
           </nav>
@@ -783,15 +783,15 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
           </div>
           {!nodes.loading && !visibleNodes.length ? <div className="theory-admin-empty"><FileText size={22} /><strong>当前筛选下没有理论或概念</strong><button type="button" onClick={() => start()}>建立第一个理论或概念</button></div> : null}
           <EditorListPages data={nodes.data} page={nodePage} pageKey="page" label="理论与概念分页" ordering="按排序值、名称及编号稳定排序" busy={nodes.loading} href={(updates) => theoryLocation.href({ node_type: nodeType, status: statusFilter, discipline: disciplineFilter, q: query, ...updates })} />
-        </section>
+        </details>
 
         <KnowledgeVisualEditor onRelationGuardChange={value=>{relationGuard.current=value;}} objectType={knowledgeStudioNodeType(editing?.node_type || draft.node_type)} objectId={editing?.id} savedRecord={editing} onPublished={() => {nodes.refresh();allNodes.refresh();requestedNode.refresh();setEditConflict(true);setMessage("发布操作已提交，请打开最新资料后继续编辑。");}} draft={{...draft,preview_labels:{...entityLabels,...Object.fromEntries((disciplines.data?.results || []).map(row=>[row.id,row.name]))}}} dirty={nodeDirty} refreshKey={`${editing?.updated_at}:${imageRevision}`}>
         {openingNode ? <div role="status"><p>正在读取指定理论或概念，载入后即可编辑。</p><ErrorNotice message={requestedNode.error || nodes.error} retry={requestedNodeId ? requestedNode.refresh : nodes.refresh} /></div> : null}
         <form className="admin-panel theory-node-editor" onSubmit={(event) => void saveNode(event, true)} inert={openingNode} aria-busy={openingNode}>
-          <p>保存本页名称、说明、分类和关联，不跳转。已有公开内容的修改需另行发布。时间线在当前理论的次级页面维护。</p>
+          <p data-editor-section="publication">保存本页名称、说明、分类和关联，不跳转。已有公开内容的修改需另行发布。时间线在当前理论的次级页面维护。</p>
           <EditorialPrefillNotice state={prefills} />
           <fieldset disabled={openingNode || !canEdit || !command.ready || !editing && !canCreate} style={{ display: "contents" }}>
-          <header><div><h2>{editing ? `编辑 ${editing.canonical_name_zh}` : "新建条目"}</h2><p>{editing ? `相关文献 ${editing.work_count} · 关联 ${editing.relation_count}` : "先填写名称和简介，其他资料可以稍后补充。"}</p></div>{editing ? <div className="theory-editor-preview-links"><Link href={`/admin/preview/knowledge/${knowledgeStudioNodeType(editing.node_type)}/${editing.id}`} target="_blank">预览已保存内容 <ExternalLink size={14} /></Link><Link href={`/admin/theories/${editing.id}?section=timeline&returnTo=${encodeURIComponent(theoryLocation.href({ node: editing.id }))}`}>管理此理论的时间线</Link><Link href={`/theories/graph?center=${encodeURIComponent(editing.slug)}`} target="_blank">查看公开关系图 <ExternalLink size={14} /></Link></div> : null}</header>
+          <header data-editor-section="publication"><div><h2>{editing ? `编辑 ${editing.canonical_name_zh}` : "新建条目"}</h2><p>{editing ? `相关文献 ${editing.work_count} · 关联 ${editing.relation_count}` : "先填写名称和简介，其他资料可以稍后补充。"}</p></div>{editing ? <div className="theory-editor-preview-links"><Link href={`/admin/preview/knowledge/${knowledgeStudioNodeType(editing.node_type)}/${editing.id}`} target="_blank">预览已保存内容 <ExternalLink size={14} /></Link><Link href={`/admin/theories/${editing.id}?section=timeline&returnTo=${encodeURIComponent(theoryLocation.href({ node: editing.id }))}`}>管理此理论的时间线</Link><Link href={`/theories/graph?center=${encodeURIComponent(editing.slug)}`} target="_blank">查看公开关系图 <ExternalLink size={14} /></Link></div> : null}</header>
           <div className="inline-fields"><label><span>标准中文名</span><input autoComplete="off" required value={draft.canonical_name_zh} onChange={(event) => setDraft({ ...draft, canonical_name_zh: event.target.value })} /></label><label><span>资料类型</span><select value={draft.node_type} onChange={(event) => setDraft({ ...draft, node_type: event.target.value })}>{editableNodeTypeEntries.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
           <CurationFieldAssistant
             label="名称"

@@ -1177,7 +1177,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
           /></section>
           <section data-editor-section="assistance"><ScholarMaterialFields value={draft} onChange={patch=>{prefills.fill("",current=>({...current,...patch}));}}/></section>
           <label data-editor-section="identity-original"><span>外文名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
-          <section data-editor-section="sources"><StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" /></section>
+          
 
           <div data-editor-section="identity-years" className="scholar-years"><span>生卒年</span><div><label><span className="sr-only">出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><span aria-hidden="true">–</span><label><span className="sr-only">逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div></div>
           <section data-editor-section="biography"><h2>二、导读</h2><ScholarProseEditor label="导读" value={draft.description} format={draft.prose.short_description} recommendedLength={300} maxLength={400} disabled={!canEdit||saving||!command.ready||Boolean(command.recovery)} onChange={(text,format)=>setDraft(current=>({...current,description:text,prose:{...current.prose,short_description:format}}))}/></section>
@@ -1197,7 +1197,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             }}
             onAccepted={refreshScholarSuggestion}
           /></section>
-          <section data-editor-section="sources"><StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" /></section>
+          
           <section data-editor-section="assistance"><CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="外部标识"
             targetType="person"
@@ -1226,7 +1226,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             }}
             onAccepted={refreshScholarSuggestion}
           /></section>
-          <section data-editor-section="sources"><StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" /></section>
+          
           <StructuredRowsEditor focused
             label="生平与重要发表"
             description="这里保留历史生平笔记，不自动成为公开事件。新版时间线使用已绑定人物、日期与准确来源并正式发布的事件。"
@@ -1322,7 +1322,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             />
           </fieldset>
           <section data-editor-section="identity-tags"><ScholarProfileFieldsEditor section="identity" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
-          <section data-editor-section="sources"><h2>四、规范信息与来源</h2><ScholarProfileFieldsEditor section="sources" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
+          <section data-editor-section="sources"><h2>四、规范信息与来源</h2><details className="scholar-normative-fields"><summary>研究领域、机构与其他名称</summary><StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" /><StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" /><StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" /></details><ScholarProfileFieldsEditor section="sources" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
           <section data-editor-section="paths"><ScholarProfileFieldsEditor section="paths" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
           <section data-editor-section="sources"><details><summary>历史语录文字（保留原记录）</summary><p>这些自由文字继续保存供编辑核对；新版公开页的引语只使用上方绑定的正式原文。</p>
           <label><span>代表语录</span><textarea rows={3} value={draft.quote} onChange={(event) => setDraft({ ...draft, quote: event.target.value })} /></label>

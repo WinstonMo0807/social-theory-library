@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { normalizePublicResourceUrl } from "@/lib/api";
 import { NodeRelations, type NodeRelationGuard } from "./node-relations";
 import { cloneElement, useId, type FormHTMLAttributes, type ReactElement, type ReactNode } from "react";
 import { PreviewViewport } from "../curation/fixed-page-editor";
@@ -26,8 +27,8 @@ export function KnowledgeNodeEditorFrame({ composing=false, form, groups, active
   dirty: boolean; disabled: boolean; locked: boolean; saved?: object | null; draft: object; objectType: string;
   publication: ReactNode; preview: ReactNode; rail: ReactNode; extra: ReactNode; onRelationsChanged?:()=>void; onRelationGuardChange?:(value:NodeRelationGuard)=>void; relationBusy?:boolean;
 }) {
-  const formId = useId(), record = (saved || {}) as { id?: string; updated_at?: string; editorial_revision?: { status?: string }; status?: string };
-  const input = draft as { canonical_name_zh?: string; canonical_name_en?: string; name?: string; summary?: string };
+  const formId = useId(), record = (saved || {}) as { id?: string; cover_url?:string; created_at?:string; updated_at?: string; editorial_revision?: { status?: string }; status?: string };
+  const input = draft as { canonical_name_zh?: string; canonical_name_en?: string; name?: string; summary?: string; parent?:string; preview_labels?:Record<string,string> };
   const status = !saved ? "尚未建立草稿" : dirty ? "有未保存修改" : record.editorial_revision?.status === "draft" ? "已保存未发布" : record.status === "published" ? "当前版本已公开" : record.status === "archived" ? "已下线" : "已保存未公开";
   const editForm = cloneElement(form as ReactElement<FormHTMLAttributes<HTMLFormElement>>, { id: formId,
     onInvalidCapture: event => {
@@ -37,8 +38,9 @@ export function KnowledgeNodeEditorFrame({ composing=false, form, groups, active
   }, <fieldset disabled={disabled || locked || relationBusy} style={{ display: "contents" }}>{groups.map((group, index) =>
     <div key={index} data-field-section={group.section} hidden={!group.persistent && knowledgeNodeSection(group.section) !== active}>{group.node}</div>
   )}</fieldset>);
-  return <section className={`${styles.workspace} ${styles.nodeForm}`} aria-label="理论与概念编辑">
-    <header className={styles.nodeHero}><div><h2>{input.canonical_name_zh || input.name || "新的知识条目"}</h2>{input.canonical_name_en ? <p>{input.canonical_name_en}</p> : null}<p>{status}{record.updated_at ? ` · 上次保存 ${new Date(record.updated_at).toLocaleString("zh-CN")}` : ""}</p></div><div className={styles.nodeActions}><button type="submit" form={formId} disabled={disabled || locked || composing || relationBusy}>保存草稿</button><button type="button" onClick={() => changeSection("preview")}>预览</button><button type="button" className={styles.primary} onClick={() => changeSection("publication")}>发布</button></div></header>
+  return <section className={`${styles.workspace} ${styles.nodeForm}`} data-node-section={active} aria-label="理论与概念编辑">
+    <header className={styles.nodeToolbar}><span className={styles.draftStatus}>{status}</span>{record.updated_at?<small>上次保存 · {new Date(record.updated_at).toLocaleString("zh-CN")}</small>:null}<div className={styles.nodeActions}>{dirty||!saved?<button type="submit" form={formId} disabled={disabled || locked || composing || relationBusy}>保存草稿</button>:null}<button type="button" onClick={() => changeSection("preview")}>预览</button><button type="button" className={styles.primary} onClick={() => changeSection("publication")}>发布</button></div></header>
+    <section className={styles.nodeHero} aria-label="当前知识条目">{record.cover_url?<img className={styles.heroImage} src={normalizePublicResourceUrl(record.cover_url)} alt=""/>:null}<div>{input.parent&&input.preview_labels?.[input.parent]?<small>{input.preview_labels[input.parent]}</small>:null}<h2>{input.canonical_name_zh || input.name || "新的知识条目"}<span className={styles.typeLabel}>{{theory:"理论",concept:"概念",debate:"争论",research_problem:"研究问题"}[objectType]||"知识条目"}</span></h2>{input.canonical_name_en ? <p>{input.canonical_name_en}</p> : null}{input.summary?<p>{input.summary}</p>:null}</div>{record.created_at||record.updated_at?<dl className={styles.heroFacts}>{record.created_at?<><dt>创建时间</dt><dd>{new Date(record.created_at).toLocaleDateString("zh-CN")}</dd></>:null}{record.updated_at?<><dt>最近更新</dt><dd>{new Date(record.updated_at).toLocaleDateString("zh-CN")}</dd></>:null}</dl>:null}</section>
     <nav className={styles.nodeTabs} aria-label="理论与概念编辑栏目">{tabs.map(tab => <button key={tab.id} type="button" aria-current={tab.id === active ? "page" : undefined} onClick={() => changeSection(tab.id)}>{tab.label}</button>)}<label><span className="sr-only">其他编辑区域</span><select aria-label="其他编辑区域" value={tabs.some(tab => tab.id === active) ? "" : active} onChange={event => { if (event.target.value) changeSection(event.target.value); }}><option value="">更多</option>{knowledgeNodeSections.slice(tabs.length).map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}</select></label></nav>
     {locked && active !== "publication" ? <p role="status" className={styles.notice}>发布记录正在核对。<button type="button" onClick={() => changeSection("publication")}>查看原操作</button></p> : null}
     {editForm}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MaterialAssistantEntry } from "../workflow/material-assistant";
 import { cloneElement, isValidElement, useId, useState, type FormHTMLAttributes, type ReactElement, type ReactNode } from "react";
 import { PreviewViewport } from "../curation/fixed-page-editor";
 import styles from "./scholar-editor.module.css";
@@ -38,7 +39,7 @@ export function ScholarEditorFrame({ composing=false, form, groups, active, chan
     <div hidden={active !== "identity"}><h2>一、基本信息</h2><div className={styles.identity}><div className={styles.portrait}>{portrait || <p>保存草稿后可选择肖像。</p>}</div><div className={styles.identityFields}>{identity.map(field)}</div></div></div>
     {mainFields.filter(group => group.section === "biography").map(field)}{mainFields.filter(group => group.section !== "biography" && !["theory", "timeline"].includes(scholarEditorSection(group.section))).map(field)}
     <details className={styles.support} hidden={!["theory", "timeline"].includes(active)}><summary>历史编排记录与原编辑入口</summary><p>保留已有记录供核对；自由文字不会自动成为正式关系或事件。</p>{mainFields.filter(group => ["theory", "timeline"].includes(scholarEditorSection(group.section))).map(field)}</details>
-    <details className={styles.support} hidden={active !== "identity"}><summary>候选资料与编辑辅助</summary>{groups.filter(group => group.section === "assistance").map((group, index) => <div key={index}>{group.node}</div>)}</details>
+    <details className={styles.support} hidden={active !== "identity"}><summary>候选资料与编辑辅助</summary><MaterialAssistantEntry/>{groups.filter(group => group.section === "assistance").map((group, index) => <div key={index}>{group.node}</div>)}</details>
   </fieldset>);
   return <section className={styles.editor} data-section={active} aria-label="学者公开页编辑">
     <header className={styles.header}><div><p><span className={styles.status}>{saved ? status : "尚未建立草稿"}</span></p>{record.updated_at ? <p>上次保存 · {new Date(record.updated_at).toLocaleString("zh-CN")}</p> : null}</div><div className={styles.actions}>{dirty||!saved?<button type="submit" form={formId} disabled={disabled || locked || composing}>保存草稿</button>:null}<button type="button" disabled={composing} onClick={() => changeSection("preview")}>预览</button><button type="button" className={styles.primary} onClick={() => changeSection("publication")}>发布</button></div></header>
