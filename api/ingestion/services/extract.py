@@ -121,7 +121,9 @@ def _native_pages(path: str | Path) -> list[ExtractedPage]:
                 page,
                 explicit_labels=explicit_labels,
             )
-            raw = page.get_text("dict", sort=True)
+            # Text extraction never consumes image bytes; decoding scan images
+            # here can exhaust the worker before their blocks are discarded.
+            raw = page.get_text("dict", sort=True, flags=fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES)
             blocks: list[ExtractedBlock] = []
             for raw_block in raw.get("blocks", []):
                 if raw_block.get("type") != 0:

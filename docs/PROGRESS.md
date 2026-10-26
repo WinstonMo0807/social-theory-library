@@ -1,5 +1,14 @@
 # 开发进度
 
+## 2026-10-26 实书原生文本提取的内存阻塞修复中
+
+《科学革命的结构》停在text_extraction；7c4840读回started，0a8073实际日志20:37:37子进程SIGKILL，c80804容器memory.events记录oom_kill=2、上限512MiB。extract.py原生文字提取get_text(dict)默认解码图像，但后续立即丢弃所有非文字块；本扫描PDF已有文本层，处理图像字节无用途。最小修复增加TEXTFLAGS_DICT去掉TEXT_PRESERVE_IMAGES，保留独立get_image_info覆盖率与全部文字/坐标提取，不调用OCR。
+
+语法/镜像77b3d0及更新77b3d0→ee713b退出0，API和4个worker r39 e20fc5b34ab6，Web72保持，恢复.env.before-native-r39。未运行测试，尚须在原任务恢复后核对效果。原任务已失去执行进程，但保留started和两小时锁；需要依据已观察的旧进程消失、当前任务清单与原有重试流程安全恢复，不可把仍有实际执行者的锁直接清除。
+
+第三本真实书目已保存并确认，PDF第一页封面已保存。只读d3e326确认三本策略skip，OCR任务0、OCR执行记录0；扫描本ready，首本ready，库恩因上述中断待恢复。六节策划原稿在忽略目录editorial-copy.json，尚未录入正式策划。知识关联开始建立草稿，未宣称全流程完成。
+
+
 ## 2026-10-26 公开内容确认契约缺口已修复
 
 实际库恩编目中选择“书目与全文PDF”并确认后，公开内容仍未确认。workflow-editor.tsx提交publication_mode，BIBLIOGRAPHY_FIELDS及保存服务已支持，但BibliographySectionSerializer缺此字段而静默丢弃。补原Edition.PublicationMode枚举字段，不改变发布门禁。语法/镜像5d3938通过，API r38 c376ffed8e46；5d3938→7812cd更新退出0，恢复.env.before-mode-r38。Web72/worker36保持；回归断言添加未运行。正经原表单复核回执，样例未完成发布，不调用OCR。
