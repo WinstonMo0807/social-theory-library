@@ -6,6 +6,7 @@ from catalog.contracts.serializers import CatalogContractValidationMixin
 from catalog.models import (
     Contribution,
     DocumentType,
+    Edition,
     ReaderRenditionPolicy,
     RelationStrength,
     WorkNodeRelation,
@@ -43,6 +44,7 @@ class JournalIssueArticleRowSerializer(serializers.Serializer):
 
 
 class BibliographySectionSerializer(WorkflowSectionSerializer):
+    publication_mode = serializers.ChoiceField(choices=Edition.PublicationMode.choices, required=False)
     journal_contents = JournalIssueArticleRowSerializer(many=True, required=False)
     version_label = serializers.CharField(max_length=120, required=False, allow_blank=True)
     publication_date = serializers.DateField(required=False, allow_null=True)

@@ -14,3 +14,11 @@ def test_full_isbn_pair_replaces_stale_legacy_value_and_still_validates():
     assert not invalid.is_valid()
     legacy_only = BibliographySectionSerializer(data={"isbn": "0120025265"})
     assert not legacy_only.is_valid()
+
+
+def test_bibliography_preserves_explicit_publication_mode():
+    serializer = BibliographySectionSerializer(data={"publication_mode": "document"})
+    assert serializer.is_valid(), serializer.errors
+    assert serializer.validated_data["publication_mode"] == "document"
+    invalid = BibliographySectionSerializer(data={"publication_mode": "invalid"})
+    assert not invalid.is_valid()

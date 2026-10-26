@@ -1,5 +1,10 @@
 # 中断恢复最短路径
 
+## 2026-10-26 公开内容确认契约缺口已修复
+
+实际库恩编目中选择“书目与全文PDF”并确认后，公开内容仍未确认。workflow-editor.tsx提交publication_mode，BIBLIOGRAPHY_FIELDS及保存服务已支持，但BibliographySectionSerializer缺此字段而静默丢弃。补原Edition.PublicationMode枚举字段，不改变发布门禁。语法/镜像5d3938通过，API r38 c376ffed8e46；5d3938→7812cd更新退出0，恢复.env.before-mode-r38。Web72/worker36保持；回归断言添加未运行。正经原表单复核回执，样例未完成发布，不调用OCR。
+
+
 ## 2026-10-26 真实编目 ISBN 更正阻塞已修复
 
 三书第二本实际保存提示“ISBN兼容值无效”：自动候选写入旧isbn=0120025265，页面已清空ISBN-10并填写原书ISBN-13，但隐藏旧值仍随完整表单送回。BibliographySectionSerializer现在仅在同时明确提交isbn10/isbn13时由该对生成兼容isbn，含同时清空；仅提交旧字段仍按原规则校验，错误校验码仍拒绝。未放松验证或直接改数据库。
