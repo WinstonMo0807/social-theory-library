@@ -92,6 +92,8 @@ class ProjectDirectorySerializer(serializers.Serializer):
 
 
 class ProjectArticleSerializer(serializers.Serializer):
+    source_problem_count = serializers.IntegerField()
+    public_url = serializers.CharField(allow_blank=True)
     id = serializers.UUIDField()
     title = serializers.CharField()
     introduction = serializers.CharField(allow_blank=True)

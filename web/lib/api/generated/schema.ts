@@ -16802,6 +16802,8 @@ export interface components {
             actor: string;
         };
         ProjectArticle: {
+            source_problem_count: number;
+            public_url: string;
             /** Format: uuid */
             id: string;
             title: string;

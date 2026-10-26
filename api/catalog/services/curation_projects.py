@@ -94,7 +94,7 @@ def project_detail(project, actor, page=1):
     for article in paging.object_list:
         payload = ledger.issue_payload(article)
         cards.append({key: payload.get(key) for key in ("id", "title", "introduction", "public_byline", "cover_url", "saved_at", "saved_by", "has_unpublished_changes", "edit_version")})
-        cards[-1].update(published=article.pk in public_ids, edit_url=f"/admin/recommendations/issues/{article.pk}", position=article.project_position)
+        cards[-1].update(published=article.pk in public_ids, edit_url=f"/admin/recommendations/issues/{article.pk}", position=article.project_position, source_problem_count=len(payload.get("body_source_problems", [])), public_url=f"/recommendations/{article.slug}" if article.pk in public_ids else "")
         for item in payload.get("items", []): materials.append({**item, "article_id": str(article.pk), "article_title": payload["title"]})
         for problem in payload.get("body_source_problems", []): problems.append({"article_id": str(article.pk), "article_title": payload["title"], **problem})
     from django.db.models.functions import Cast
