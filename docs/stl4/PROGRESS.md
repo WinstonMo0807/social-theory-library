@@ -2,6 +2,8 @@
 
 ## 2026-10-27 06:47 索引中断已自动续跑，临时内存限额已调整
 
+07:10自动接续核对：轻量只读查询实际返回1191/2404条，较上轮最终914条继续增长。memory.current=430800896，上限805306368，oom/oom_kill仍2，未见新增；总开关仍false。证据tmp/stl4-rapidocr-20261027/deep-heartbeat-0710.log。没有重启、重复补写或新开发缺陷；继续原任务，完整覆盖后再核对来源并启用。
+
 06:40自动接续轮发现原PID26退出137，接续器已自动跳过453条已匹配输入并继续，当前实际读回890/2404条。API容器cgroup实际oom=2/oom_kill=2、RestartCount=0，API主进程约76MiB、请求进程约187MiB、补写约186MiB，共享512MiB；未定位每次OOM的精确时刻，不能把两次都归给同一进程。已热调仅此预览API到768MiB且不启用Swap，容器ID、主PID及启动时间未变。补写仍进行，总开关false。
 
 恢复参数保存在NAS deep-backfill-memory-recovery/limits.json，补写结束后恢复512MiB；Compose仍512MiB，无持久配置或应用源码修改。后续常规核对用`.venv/Scripts/python.exe tmp/stl4-rapidocr-20261027/run_nas.py tmp/stl4-rapidocr-20261027/read_deep_progress_light.py`，只读stdlib探针不在忙API额外加载Django。证据deep-heartbeat-0640.log、deep-memory-adjustment.log、deep-heartbeat-0650.log（文件名沿本轮标记，实际核对在06:47前）。原OOM/失败日志均保留，仍不能声称长期稳定。
