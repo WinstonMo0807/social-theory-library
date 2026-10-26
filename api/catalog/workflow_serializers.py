@@ -68,6 +68,13 @@ class BibliographySectionSerializer(WorkflowSectionSerializer):
     extent = serializers.CharField(max_length=160, required=False, allow_blank=True)
     responsibility_statement = serializers.CharField(required=False, allow_blank=True)
 
+    def validate(self, attrs):
+        # The catalog form edits these two fields, not the hidden legacy alias.
+        # A full pair also represents an explicit request to clear both values.
+        if "isbn10" in attrs and "isbn13" in attrs:
+            attrs["isbn"] = attrs["isbn13"] or attrs["isbn10"]
+        return super().validate(attrs)
+
 
 from catalog.contribution_serializers import ContributionScopeInputSerializer
 

@@ -1,5 +1,12 @@
 # 中断恢复最短路径
 
+## 2026-10-26 真实编目 ISBN 更正阻塞已修复
+
+三书第二本实际保存提示“ISBN兼容值无效”：自动候选写入旧isbn=0120025265，页面已清空ISBN-10并填写原书ISBN-13，但隐藏旧值仍随完整表单送回。BibliographySectionSerializer现在仅在同时明确提交isbn10/isbn13时由该对生成兼容isbn，含同时清空；仅提交旧字段仍按原规则校验，错误校验码仍拒绝。未放松验证或直接改数据库。
+
+语法与镜像d98e3e退出0，部署d98e3e→a754ca退出0，API r37 6c09aed59e31，worker r36/Web r72保持，恢复.env.before-isbn-r37。回归用例已添加未运行。浏览器原表单重提后已观察“本页所有书目修改已保存”，保存时间20:41:14。首本原任务只读25856e确认ready/dispatch completed及原件关联，证明前一状态转换阻塞已消除。三书全流程仍在继续，未调用OCR或执行生产变更。
+
+
 ## 2026-10-26 真实样例确认后的文件续跑阻塞已修复
 
 实际三书样例中，首本收件确认已成功建立馆藏，随后任务失败。只读回查e139da证实InvalidWorkflowTransition：needs_review不能进入preflight；intake_confirmation.py保存身份后schedule_upload_item，pipeline.py从VALIDATING继续，与workflow.py状态图冲突。最小修复允许待复核返回预检，仍禁止直接发布，不改OCR策略或权限。原文件、人工编目、身份关系保留，继续原任务而不重新上传。
