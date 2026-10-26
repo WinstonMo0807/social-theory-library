@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { isTaskRunning } from "@/lib/api/task-polling";
 import type { AuditData, AuditLocation, AuditOccurrence, ResearchRecord } from "@/lib/api/research.client";
@@ -10,6 +10,9 @@ import type { AuditData, AuditLocation, AuditOccurrence, ResearchRecord } from "
 export const auditStatuses: Record<string, string> = { queued: "排队中", running: "处理中", completed: "检查已完成", partial: "部分结果待核对", failed: "处理未完成", canceled: "已取消", cancelled: "已取消" };
 export const auditDecisions = { accepted: "已核对", ignored: "暂时忽略", corrected: "已记录修正", needs_review: "仍待核对" };
 export const auditFindingNames: Record<string, string> = { identity: "书目身份", fulltext: "原文可用性", support: "论断关系", direct_quote: "引文文字", private_quote: "本人来源文字", page: "页码" };
+export const auditRelationNames: Record<string,string> = { support:"支持", different_conclusion:"不同结论", qualification:"限定条件", reframe:"转换解释", insufficient_evidence:"证据不足" };
+export const auditRelations = (row:AuditOccurrence) => [...new Set((row.support_analysis?.suggestions||[]).map(item=>item.relation).filter((value): value is string=>Boolean(value)))];
+
 export const auditCategories = { all: "全部", text_match: "文字已匹配", unverified: "待核对", unavailable: "原文不可用", corrected: "本人已修正", accepted: "本人已核对", ignored: "暂时忽略" };
 export type AuditCategory = keyof typeof auditCategories;
 
@@ -54,10 +57,11 @@ export function AuditGate({ next, children }: { next: string; children: (ownerId
 export function AuditBreadcrumb({ id, issue, parse }: { id?: string; issue?: boolean; parse?: boolean }) {
   return <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/account">读者中心</Link><span>/</span><Link href="/account/citation-audits">引文体检</Link>{id ? <><span>/</span>{issue ? <Link href={`/account/citation-audits/${id}`}>体检报告</Link> : <span>{parse ? "解析与核对" : "体检报告"}</span>}</> : null}{issue ? <><span>/</span><span>原文核验</span></> : null}<span className="stl4-audit-private"><LockKeyhole size={12} />仅本人可见</span></nav>;
 }
-export function AuditProgress({ record }: { record: ResearchRecord<AuditData> }) {
+export function AuditProgress({ record, ring=false }: { record: ResearchRecord<AuditData>; ring?: boolean }) {
   const active = isTaskRunning(record.status);
   const stages = [{ id: "queued", label: "等待处理" }, { id: "parsing", label: "解析稿件" }, { id: "ocr", label: "文字识别" }, { id: "matching", label: "馆藏匹配" }, { id: "checking", label: "引文核对" }, { id: "report", label: "生成报告" }];
   const stage = record.status === "queued" ? "queued" : record.data.stage || "parsing";
   const index = stages.findIndex(item => item.id === stage);
-  return <div className="stl4-audit-progress" aria-live="polite"><div><strong>{auditStatuses[record.status || ""] || "任务已保存"}</strong><span>{active ? "本地服务处理，可以离开后再回来。" : "已保存的结果与人工记录可继续查看。"}</span></div><ol>{stages.filter(item => item.id !== "ocr" || record.data.ocr_progress?.total || stage === "ocr").map(item => <li key={item.id} aria-current={item.id === stage ? "step" : undefined} data-passed={stages.indexOf(item) < index || undefined}>{item.label}</li>)}</ol>{typeof record.total_units === "number" && record.total_units > 0 ? <><progress max={record.total_units} value={record.completed_units || 0} aria-label="当前阶段进度" /><small>当前阶段已处理 {record.completed_units || 0} / {record.total_units} 项</small></> : active ? <small>当前阶段尚未提供可计算的进度。</small> : null}{record.error_code ? <p role="alert">任务未能全部完成。已保存内容保留，可重试或查看已解析结果。</p> : null}</div>;
+  const fraction=typeof record.total_units==="number"&&record.total_units>0?Math.min(1,Math.max(0,(record.completed_units||0)/record.total_units)):null;
+  return <div className="stl4-audit-progress" aria-live="polite"><div>{ring?<span className="stl4-audit-progress-ring" aria-label={fraction===null?"当前进度尚未确定":`当前阶段 ${Math.round(fraction*100)}%`} data-indeterminate={fraction===null||undefined} style={{"--audit-progress":`${(fraction??0)*100}%`} as CSSProperties}/>:null}<strong>{auditStatuses[record.status || ""] || "任务已保存"}</strong><span>{active ? "本地服务处理，可以离开后再回来。" : "已保存的结果与人工记录可继续查看。"}</span></div><ol>{stages.filter(item => item.id !== "ocr" || record.data.ocr_progress?.total || stage === "ocr").map(item => <li key={item.id} aria-current={item.id === stage ? "step" : undefined} data-passed={stages.indexOf(item) < index || undefined}>{item.label}</li>)}</ol>{typeof record.total_units === "number" && record.total_units > 0 ? <><progress max={record.total_units} value={record.completed_units || 0} aria-label="当前阶段进度" /><small>当前阶段已处理 {record.completed_units || 0} / {record.total_units} 项</small></> : active ? <small>当前阶段尚未提供可计算的进度。</small> : null}{record.error_code ? <p role="alert">任务未能全部完成。已保存内容保留，可重试或查看已解析结果。</p> : null}</div>;
 }

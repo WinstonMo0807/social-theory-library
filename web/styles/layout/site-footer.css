@@ -76,3 +76,5 @@
 .site-footer--research-compare img{width:154px}
 
 .site-footer--reading-plan img{width:230px}
+
+.site-footer--citation-issue{padding:12px 3.2%;font:12px var(--serif);background:var(--night-white,#fff);border-top:1px solid var(--night-line,#e5e8ed)}.site-footer--citation-issue img{width:119px;height:17px;object-fit:contain}.site-footer--citation-issue p{font:12px var(--serif)}
