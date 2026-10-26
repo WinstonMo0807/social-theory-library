@@ -12,7 +12,6 @@ import { exportResearchRecord, saveResearchComparison, updateResearchProject, ty
 import { comparisonCellColumn, comparisonColumns, type ComparisonColumn } from "@/lib/api/research-comparison";
 import { researchEvidenceKey, researchReaderHref } from "@/lib/api/research-evidence";
 import { useResearchProject } from "./use-research-project";
-import { ResearchCenterNav } from "./research-center-nav";
 import { ResearchComparisonDrafts, ResearchComparisonGenerate } from "./research-comparison-draft";
 import { ResearchComparisonTranslations } from "./research-comparison-translations";
 import { ResearchComparisonActivity, ResearchComparisonSearch, type ComparisonSearchTarget } from "./research-comparison-search";
@@ -36,6 +35,7 @@ function Comparison({ workspace }: { workspace: ReturnType<typeof useResearchPro
   const [dimension, setDimension] = useState("");
   const [editor, setEditor] = useState<Editor | null>(null);
   const [filter, setFilter] = useState("");
+  const [matrixLayout,setMatrixLayout]=useState<"overview"|"dimension">("overview");
   const [tab, setTab] = useState("matrix");
   const [noteDraft, setNoteDraft] = useState<{ text: string; initialText: string; revision: number } | null>(null);
   const [discard, setDiscard] = useState<"cell" | "notes" | "dimension" | null>(null);
@@ -102,19 +102,19 @@ function Comparison({ workspace }: { workspace: ReturnType<typeof useResearchPro
       const anchor = document.createElement("a"); anchor.href = url; anchor.download = `research-${record.id}.json`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, "已导出当前已保存的研究、证据身份与比较记录。");
   }
-  function entriesFor(column: ComparisonColumn) { return cells.filter(cell=>cell.dimension===activeDimension&&comparisonCellColumn(cell,columns)===column.id); }
-  function columnEvidence(column: ComparisonColumn, sourceOnly=false) {
-    const ids=[...new Set(entriesFor(column).flatMap(cell=>cell.reference_ids||[]))];
+  function entriesFor(column: ComparisonColumn,name=activeDimension) { return cells.filter(cell=>cell.dimension===name&&comparisonCellColumn(cell,columns)===column.id); }
+  function columnEvidence(column: ComparisonColumn, sourceOnly=false,name=activeDimension) {
+    const ids=[...new Set(entriesFor(column,name).flatMap(cell=>cell.reference_ids||[]))];
     return ids.length?ids.map(key=>sourceOnly?<SourceLocation key={key} reference={references.get(key)}/>:<Evidence key={key} reference={references.get(key)} showLink={false}/>):<p className="stl4-comparison-gap">本维度尚未选入原文依据，可从选材区核对后补充。</p>;
   }
-  function columnNotes(column: ComparisonColumn) {
-    const entries=entriesFor(column);
-    return <>{entries.map((cell,index)=><div className="stl4-comparison-entry" key={index}><p className="stl4-comparison-note">{cell.note||"尚未写下判断。"}</p><p className="stl4-comparison-evidence-status">{evidenceLabels[cell.evidence_status||(cell.reference_ids?.length?"selected":"missing")]}</p><button type="button" disabled={pending} onClick={()=>editCell(activeDimension,column,cell)}><Pencil size={12}/>编辑笔记与证据</button></div>)}{!entries.length?<p className="stl4-comparison-gap">尚未填写本人判断。</p>:null}{column.references.length?<button type="button" className="stl4-comparison-add" disabled={pending||cells.length>=200} onClick={()=>editCell(activeDimension,column)}><Plus size={12}/>{entries.length?"补充一条笔记":"填写比较与依据"}</button>:null}</>;
+  function columnNotes(column: ComparisonColumn,name=activeDimension) {
+    const entries=entriesFor(column,name);
+    return <>{entries.map((cell,index)=><div className="stl4-comparison-entry" key={index}><p className="stl4-comparison-note">{cell.note||"尚未写下判断。"}</p><p className="stl4-comparison-evidence-status">{evidenceLabels[cell.evidence_status||(cell.reference_ids?.length?"selected":"missing")]}</p><button type="button" disabled={pending} onClick={()=>editCell(name,column,cell)}><Pencil size={12}/>编辑笔记与证据</button></div>)}{!entries.length?<p className="stl4-comparison-gap">尚未填写本人判断。</p>:null}{column.references.length?<button type="button" className="stl4-comparison-add" disabled={pending||cells.length>=200} onClick={()=>editCell(name,column)}><Plus size={12}/>{entries.length?"补充一条笔记":"填写比较与依据"}</button>:null}</>;
   }
   return <Frame>
     <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><Link href={`/account/research/${record.id}`}>持续研究</Link><span>/</span><strong>证据比较</strong></nav>
-    <header className="stl4-research-heading"><h1>选材比较与证据矩阵</h1><p>沿研究维度并列核对文献，保留原文依据与自己的判断。</p><span className="stl4-research-privacy">仅本人可见</span></header>
-    <section className="stl4-research-workspace stl4-research-compare-surface"><ResearchCenterNav active="research" />
+    <header className="stl4-research-heading"><h1>选材比较与证据矩阵</h1><p>把不同作者或文献放到同一问题的比较维度中。</p><span className="stl4-research-privacy">仅本人可见</span></header>
+    <section className="stl4-research-workspace stl4-research-compare-surface" data-matrix-layout={matrixLayout}>
       <div className="stl4-research-compare-head"><div><p className="stl4-research-kicker">当前研究</p><h2>{record.data.title || record.data.question || "未命名研究"}</h2></div><Link href={`/account/research/${record.id}`}><ArrowLeft size={14} />返回工作区</Link></div>
       <div className="stl4-comparison-layout"><aside className="stl4-comparison-selected" aria-label="当前选材">
         <header><h2>已选文献 / 段落 <small>{columns.filter(column=>column.references.length).length}</small></h2><Link href={`/account/research/${record.id}`}>管理</Link></header>
@@ -122,13 +122,14 @@ function Comparison({ workspace }: { workspace: ReturnType<typeof useResearchPro
         {!selections.length?<p>尚未选入文献或原文段落。</p>:null}<Link className="stl4-research-secondary" href={`/account/research/${record.id}`}><Plus size={14}/>添加文献或段落</Link>
       </aside><div className="stl4-comparison-content">
       <div className="stl4-comparison-tabs" role="tablist" aria-label="比较资料视图" onKeyDown={(event) => { const names = ["matrix", "sources", "draft", "gaps", "notes"]; const offset = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0; if (!offset && event.key !== "Home" && event.key !== "End") return; event.preventDefault(); const next = event.key === "Home" ? names[0] : event.key === "End" ? names.at(-1)! : names[(names.indexOf(tab) + offset + names.length) % names.length]; setTab(next); document.getElementById(`comparison-tab-${next}`)?.focus(); }}>{[["matrix", "比较视图"], ["sources", `已选文献（${columns.filter((column) => column.references.length).length}）`], ["draft", "比较草稿"], ["gaps", `证据缺口（${gaps.length}）`], ["notes", "我的笔记"]].map(([value, label]) => <button key={value} id={`comparison-tab-${value}`} role="tab" tabIndex={tab === value ? 0 : -1} aria-selected={tab === value} aria-controls={`comparison-panel-${value}`} onClick={() => setTab(value)}>{label}</button>)}</div>
-      <div className="stl4-research-compare-toolbar"><label>比较维度<select value={activeDimension} disabled={!dimensions.length} onChange={(event) => setFilter(event.target.value)}>{!dimensions.length?<option value="">尚未设置</option>:null}{dimensions.map((name) => <option key={name}>{name}</option>)}</select></label><div><button type="button" disabled={pending || dimensions.length >= 20} onClick={() => setDimensionOpen(true)}><Plus size={14} />添加维度</button><button type="button" disabled={pending || record.archived} onClick={() => setSearchTarget({ dimension: activeDimension })}>扩展寻找新证据</button><button type="button" disabled={pending || record.archived || !activeDimension || !selections.some(ref=>ref.source_status==="available")} onClick={()=>setGenerationDimension(activeDimension)}>生成比较草稿</button><button disabled={pending} onClick={() => void exportComparison()}><Download size={14} />导出</button><button disabled={pending} onClick={refresh}><RefreshCw size={14} />刷新</button></div></div>
+      <div className="stl4-research-compare-toolbar"><div className="stl4-comparison-layout-choice" aria-label="比较视图布局"><button type="button" aria-pressed={matrixLayout==="overview"} onClick={()=>setMatrixLayout("overview")}>全部维度矩阵</button><button type="button" aria-pressed={matrixLayout==="dimension"} onClick={()=>setMatrixLayout("dimension")}>单维度对照</button></div><label>比较维度<select value={activeDimension} disabled={!dimensions.length} onChange={(event) => setFilter(event.target.value)}>{!dimensions.length?<option value="">尚未设置</option>:null}{dimensions.map((name) => <option key={name}>{name}</option>)}</select></label><div><button type="button" disabled={pending || dimensions.length >= 20} onClick={() => setDimensionOpen(true)}><Plus size={14} />添加维度</button><button type="button" disabled={pending || record.archived} onClick={() => setSearchTarget({ dimension: activeDimension })}>扩展寻找新证据</button><button type="button" disabled={pending || record.archived || !activeDimension || !selections.some(ref=>ref.source_status==="available")} onClick={()=>setGenerationDimension(activeDimension)}>生成比较草稿</button><button disabled={pending} onClick={() => void exportComparison()}><Download size={14} />导出</button><button disabled={pending} onClick={refresh}><RefreshCw size={14} />刷新</button></div></div>
       {notice ? <p className="stl4-research-action-message" role="status">{notice}</p> : null}{actionError ? <p className="stl4-research-action-message is-error" role="alert">{actionError}</p> : null}
       <ResearchComparisonActivity workspace={workspace}/>
       <div id={`comparison-panel-${tab}`} role="tabpanel" aria-labelledby={`comparison-tab-${tab}`}>
       {tab === "matrix" ? dimensions.length && columns.length ? <>
         <nav className="stl4-comparison-dimensions" aria-label="比较维度">{dimensions.map((name,index)=><button type="button" key={name} aria-pressed={activeDimension===name} onClick={()=>setFilter(name)}><small>{String(index+1).padStart(2,"0")}</small>{name}</button>)}</nav>
-        <div className="stl4-research-matrix stl4-comparison-desktop" tabIndex={0} role="region" aria-label="可横向滚动的单维度证据比较"><table><caption className="sr-only">{activeDimension}：按文献版本分别核对原文、来源和本人判断</caption><thead><tr><th scope="col"><small>比较维度</small><strong>{activeDimension}</strong></th>{columns.map(column=><th scope="col" key={column.id}><ColumnHeading column={column}/></th>)}</tr></thead><tbody>
+        {matrixLayout==="overview"?<div className="stl4-research-matrix stl4-comparison-desktop stl4-comparison-overview" tabIndex={0} role="region" aria-label="全部维度证据矩阵"><table><caption className="sr-only">将各文献的比较判断和原文按维度并列</caption><thead><tr><th scope="col">比较维度</th>{columns.map(column=><th scope="col" key={column.id}><ColumnHeading column={column}/></th>)}</tr></thead><tbody>{dimensions.map(name=><tr key={name}><th scope="row"><button type="button" onClick={()=>{setFilter(name);setMatrixLayout("dimension");}}>{name}</button></th>{columns.map(column=><td key={column.id}>{columnNotes(column,name)}{columnEvidence(column,false,name)}</td>)}</tr>)}</tbody></table></div>:null}
+        <div className="stl4-research-matrix stl4-comparison-desktop stl4-comparison-single" tabIndex={0} role="region" aria-label="可横向滚动的单维度证据比较"><table><caption className="sr-only">{activeDimension}：按文献版本分别核对原文、来源和本人判断</caption><thead><tr><th scope="col"><small>比较维度</small><strong>{activeDimension}</strong></th>{columns.map(column=><th scope="col" key={column.id}><ColumnHeading column={column}/></th>)}</tr></thead><tbody>
           <tr><th scope="row">作者原话<small>已明确选入本维度的段落</small></th>{columns.map(column=><td key={column.id}>{columnEvidence(column)}</td>)}</tr>
           <tr><th scope="row">来源信息</th>{columns.map(column=><td key={column.id}>{columnEvidence(column,true)}</td>)}</tr>
           <tr><th scope="row">比较笔记<small>我的理解与判断</small></th>{columns.map(column=><td key={column.id}>{columnNotes(column)}</td>)}</tr>
@@ -173,4 +174,4 @@ function SourceLocation({reference}:{reference?:ResolvedEvidence}) {
   const href=researchReaderHref(reference);
   return <div className="stl4-comparison-location">{reference.citation?<p>{reference.citation}</p>:null}<small>{locationLabel(reference)}</small>{href?<Link href={href} target="_blank" rel="noreferrer">打开原文{(reference.anchors?.length||0)>1?"（起始位置）":""} →</Link>:<p>原文定位待核对</p>}<button type="button" onClick={()=>setTranslations(true)}>译本与版本差异</button>{translations?<ResearchComparisonTranslations reference={reference} onClose={()=>setTranslations(false)}/>:null}</div>;
 }
-function Frame({ children }: { children: ReactNode }) { return <div className="stl4-research-page"><div className="stl4-research-detail-shell">{children}</div></div>; }
+function Frame({ children }: { children: ReactNode }) { return <div className="stl4-research-page stl4-comparison-page"><div className="stl4-research-detail-shell">{children}</div></div>; }
