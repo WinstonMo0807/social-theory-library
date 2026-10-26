@@ -9,7 +9,7 @@ from pypinyin import lazy_pinyin
 from unidecode import unidecode
 
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Count, Max
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -96,6 +96,7 @@ def workspace(request, row, query):
     total_trash = rows.filter(removed_at__gt=cutoff).count()
     rows = rows.filter(removed_at__gt=cutoff) if trash else rows.filter(removed_at__isnull=True)
     editions = public_editions()
+    kind_counts = {str(item["active_catalog_revision__snapshot__work__document_type"]): item["total"] for item in editions.filter(work_id__in=rows.values("work_id")).order_by().values("active_catalog_revision__snapshot__work__document_type").annotate(total=Count("work_id", distinct=True))}
     if query["q"]:
         editions = editions.filter(active_catalog_revision__snapshot__work__title__icontains=query["q"])
     if query["kind"]:
@@ -120,7 +121,7 @@ def workspace(request, row, query):
         raise research.ResearchConflict("书单正在另一页面修改，请重新读取。")
     return {"owner_id": str(request.user.pk), "list": summary(row), "items": result,
         "count": count, "page": page, "total_pages": max(1, (count + PAGE_SIZE - 1) // PAGE_SIZE),
-        "active_count": total_active, "trash_count": total_trash}
+        "active_count": total_active, "trash_count": total_trash, "kind_counts": kind_counts}
 
 
 def receipt_for(user, pk, request_id):
@@ -184,6 +185,8 @@ def command(user, data):
                     setattr(row, name, data[name])
             row.save()
         elif verb == "add":
+            if row.items.filter(work_id=data["work_id"], removed_at__isnull=True).exists():
+                raise ValidationError("该作品已经在你的书单中，未重复加入。请返回作品列表查看。")
             add_work(row, data["work_id"])
         elif verb in {"topic_add", "topic_remove"}:
             key = str(data["topic_id"])

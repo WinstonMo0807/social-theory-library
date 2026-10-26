@@ -7,7 +7,7 @@ import type { NotebookRecord } from "./notebook.client";
 
 export type BooklistSummary = { id: string; title: string; description: string; goal: string; tags: string[]; topic_ids: string[]; version: string; created_at: string; updated_at: string; item_count: number };
 export type BooklistItem = { id: string; work_id: string; order: number; work: ApiWork | null; created_at: string; removed_at: string | null; expires_at: string | null; progress_ratio: number | null; reader_url: string | null };
-export type BooklistWorkspace = { owner_id: string; list: BooklistSummary; items: BooklistItem[]; count: number; page: number; total_pages: number; active_count: number; trash_count: number };
+export type BooklistWorkspace = { owner_id: string; list: BooklistSummary; items: BooklistItem[]; count: number; page: number; total_pages: number; active_count: number; trash_count: number; kind_counts?: Record<string,number> };
 export type BooklistDirectory = { owner_id: string; count: number; page: number; total_pages: number; results: BooklistSummary[] };
 export type BooklistRelatedSection = "plans" | "notes" | "topics" | "scholars";
 export type BooklistPublicLink = { id: string; title: string; href: string | null; selected: boolean; description: string; source_count: number; portrait_url: string | null; portrait_media: components["schemas"]["PublicCoverMedia"] | null };

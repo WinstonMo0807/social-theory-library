@@ -342,3 +342,5 @@ PDF186原生图：auth desktop(66,40)-(302,91), mobile(1197,76)-(1330,114), foot
 2026-10-26 引文子页原资产：parse品牌取PDF209，report取211，issue取213；资产坐标按本批提取记录：[(209, 'png', (79, 34, 388, 71), 'stl-lockup-citation-parse-desktop-final-r2.png'), (209, 'png', (1274, 89, 1458, 125), 'stl-lockup-citation-parse-mobile-final-r2.png'), (211, 'jpeg', (57, 17, 274, 52), 'stl-lockup-citation-report-desktop-final-r2.png'), (211, 'jpeg', (1262, 49, 1438, 83), 'stl-lockup-citation-report-mobile-final-r2.png'), (213, 'jpeg', (42, 10, 257, 46), 'stl-lockup-citation-issue-desktop-final-r2.png'), (213, 'jpeg', (1353, 50, 1481, 89), 'stl-lockup-citation-issue-mobile-final-r2.png'), (213, 'jpeg', (40, 961, 159, 978), 'stl-footer-citation-issue-final-r2.png')]。仅图片资产，未复制示例稿件、引用正文或示例统计。
 
 笔记页品牌直接提取最终PDF217原生图(42,9)-(247,41)/(1311,54)-(1444,79)，页脚取216(38,993)-(171,1016)。用户确认拥有全部资产版权。
+
+书单品牌、页脚和空态书摞直接提取最终PDF220原生图，裁切(60,17)-(264,50)/(1237,60)-(1408,91)/(35,995)-(207,1019)/(140,884)-(221,916)。

@@ -60,6 +60,7 @@ class ListWorkspace(serializers.Serializer):
     total_pages = serializers.IntegerField()
     active_count = serializers.IntegerField()
     trash_count = serializers.IntegerField()
+    kind_counts = serializers.DictField(child=serializers.IntegerField(min_value=0), required=False)
 
 
 class ListRelatedQuery(serializers.Serializer):

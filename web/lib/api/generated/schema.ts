@@ -12379,6 +12379,7 @@ export interface components {
             total_pages: number;
             active_count: number;
             trash_count: number;
+            kind_counts?: { [key: string]: number };
         };
         LocalService: {
             id: string;
