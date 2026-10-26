@@ -2,6 +2,12 @@
 
 Source: `output/pdf/social-theory-library-visual-atlas-20261015-final-r2.pdf`, the user's sole final visual reference. The user expressly confirmed ownership of every visual asset on 2026-10-26. These files contain isolated brand artwork, not a page rendered as a website.
 
+## Vector implementation (2026-10-26, Web r73)
+
+The user requested directly drawn, sharp brand artwork after observing blurred raster lockups. The active mark, wordmarks, desktop/mobile lockups and branded footers now use the matching `.svg` files. `node web/scripts/draw-brand-assets.mjs` redraws all 199 assets from one authored emblem and the PDF's arrangement families. It reads only the old PNG dimensions to retain the existing aspect ratios; no bitmap is embedded in the SVG. Circles and Bézier paths define the emblem. SVG text uses serif/CJK font stacks and adjusts size/letter spacing without stretching glyph shapes.
+
+The PNG files and coordinates below are retained as source evidence. These SVGs are newly drawn implementations, not vector originals extracted from the PDF. The PDF contains raster artwork, not the original font program; exact font identity and complete page geometry remain part of the visual acceptance work. Rendering was directly inspected in the updated internal homepage and login page. No business form or account setting was submitted for this visual change.
+
 Coordinates are in the embedded reference image, before PDF page scaling:
 
 | Asset | PDF page | Native image rectangle (x0, y0, x1, y1) |

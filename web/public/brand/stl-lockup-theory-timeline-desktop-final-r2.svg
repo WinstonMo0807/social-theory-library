@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" width="345" height="69" role="img" aria-label="社会理论书库"><title>社会理论书库 · Social Theory Library</title>
+<g transform="translate(0 0) scale(0.5524861878453039)">
+  <g fill="#10283e">
+    <circle cx="82" cy="32" r="13"/>
+    <path d="M43 53C72 47 103 61 122 81C90 90 62 111 43 136Z"/>
+    <path d="M15 79H21V163C49 153 70 155 91 164C62 149 39 146 15 153Z"/>
+    <path d="M27 66H33V150C52 142 70 145 88 153C61 136 43 135 27 141Z"/>
+    <path d="M38 58H44V137C59 133 72 137 86 145C64 129 51 125 38 129Z"/>
+  </g>
+  <g fill="#c99443">
+    <circle cx="168" cy="32" r="13"/>
+    <path d="M112 81C138 59 166 49 203 55V145C168 117 141 92 112 81Z"/>
+    <path d="M210 67H216V147C198 142 181 145 164 154C188 139 201 135 210 138Z"/>
+    <path d="M222 79H228V157C202 149 182 153 160 164C189 148 208 145 222 150Z"/>
+    <path d="M233 87H239V169C210 160 183 159 151 169C182 154 211 153 233 161Z"/>
+  </g>
+  <path fill="#10283e" d="M48 130C71 103 94 86 119 83C151 84 177 106 200 135L193 149C165 119 142 101 119 99C94 97 71 112 48 130Z"/>
+  </g>
+<text x="142" y="78" font-family="'Times New Roman', 'Noto Serif', serif" font-size="81.44973544973544" font-weight="700" fill="#10283e" textLength="153.94" lengthAdjust="spacing">STL</text>
+<text x="311.94" y="23" font-family="'Times New Roman', 'Noto Serif', serif" font-size="25" font-weight="700" fill="#10283e" textLength="82.65" lengthAdjust="spacing">Social</text>
+<text x="311.94" y="45" font-family="'Times New Roman', 'Noto Serif', serif" font-size="25" font-weight="700" fill="#10283e" textLength="96.52499999999999" lengthAdjust="spacing">Theory</text>
+<text x="311.94" y="67" font-family="'Times New Roman', 'Noto Serif', serif" font-size="25" font-weight="700" fill="#10283e" textLength="107.225" lengthAdjust="spacing">Library</text>
+<text x="311.94" y="94" font-family="'Songti SC', SimSun, 'Noto Serif CJK SC', serif" font-size="25" font-weight="700" fill="#10283e" textLength="168.75" lengthAdjust="spacing">社会理论书库</text>
+</svg>
