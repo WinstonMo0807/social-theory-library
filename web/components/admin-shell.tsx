@@ -228,7 +228,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         aria-hidden={compactNavigation && !open}
         inert={compactNavigation && !open}
       >
-        <Link className="admin-logo" href="/" prefetch={false}><Wordmark reference={brandReference} /><span className="stl4-assistant-brand"><Wordmark reference="admin-assistant" /></span></Link>
+        <Link className="admin-logo" href="/" prefetch={false}><Wordmark reference={brandReference} />{articleRoute?<span className="stl4-selection-brand"><Wordmark reference="admin-selection"/></span>:null}<span className="stl4-assistant-brand"><Wordmark reference="admin-assistant" /></span></Link>
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
         <nav aria-label="管理工作区">
           {navigationGroups.map(group => <section className="stl4-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.entries.map(entry => {
@@ -253,7 +253,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             aria-controls="admin-navigation"
             onClick={() => setOpen(true)}
           ><Menu size={20} /></button>
-          <Link className="stl4-mobile-brand" href="/admin" aria-label="管理首页"><Wordmark reference={brandReference} /><span className="stl4-assistant-brand"><Wordmark reference="admin-assistant" /></span></Link><span className="sr-only">{scope.title}</span>
+          <Link className="stl4-mobile-brand" href="/admin" aria-label="管理首页"><Wordmark reference={brandReference} />{articleRoute?<span className="stl4-selection-brand"><Wordmark reference="admin-selection"/></span>:null}<span className="stl4-assistant-brand"><Wordmark reference="admin-assistant" /></span></Link><span className="sr-only">{scope.title}</span>
           <button className="stl4-mobile-search-toggle" type="button" aria-label="打开后台搜索" aria-controls="admin-global-search" aria-expanded={searchOpen} onClick={() => setSearchOpen(value => !value)}><Search size={18} /></button>
           <form action="/admin/search" id="admin-global-search" className={`stl4-admin-search ${searchOpen ? "is-open" : ""}`} key={pathname === "/admin/search" ? searchParams.get("q") || "" : pathname}>
             <label><Search size={15} /><input type="search" name="q" defaultValue={pathname === "/admin/search" ? searchParams.get("q") || "" : ""} maxLength={200} placeholder="搜索书名、作者、主题、任务编号…" aria-label="搜索后台书名、作者、主题或任务编号" /></label>
