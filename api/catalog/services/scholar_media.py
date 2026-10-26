@@ -58,7 +58,34 @@ def portrait_media(person, *, selection=None, private=False):
 
 def protect_portrait_references(revision, profile):
     identifiers = [profile.person.portrait_rendition_id, (revision.materialized_preview.get("portrait_selection") or {}).get("rendition_id")]
+    for curation in (profile.curation, revision.materialized_preview.get("curation", {})):
+        identifiers.extend(row["rendition_id"] for row in (curation or {}).get("biographical_materials", []))
     protect_editorial_renditions(revision, identifiers)
+
+
+def validate_biographical_materials(value):
+    """Keep an exact immutable media selection for each biographical image."""
+    from rest_framework.exceptions import ValidationError
+
+    if not isinstance(value, list) or len(value) > 100:
+        raise ValidationError({"biographical_materials": "人物照片与生平资料最多100项。"})
+    clean, seen, versions = [], set(), set()
+    for row in value:
+        if not isinstance(row, dict) or set(row) != {"id", "rendition_id", "caption"}:
+            raise ValidationError({"biographical_materials": "每项资料须包含编号、图片版本和说明。"})
+        try:
+            identifier, rendition_id = str(UUID(str(row["id"]))), str(UUID(str(row["rendition_id"])))
+        except (ValueError, TypeError, AttributeError) as error:
+            raise ValidationError({"biographical_materials": "资料或图片版本编号无效。"}) from error
+        if identifier in seen or rendition_id in versions or not isinstance(row["caption"], str) or len(row["caption"]) > 500:
+            raise ValidationError({"biographical_materials": "同一图片版本不能重复添加，说明最多500字。"})
+        seen.add(identifier)
+        versions.add(rendition_id)
+        clean.append({"id": identifier, "rendition_id": rendition_id, "caption": row["caption"].strip()})
+    renditions = list(MediaRendition.objects.filter(pk__in=versions, kind="card"))
+    if len(renditions) != len(versions) or any(not row.file.name or not row.file.storage.exists(row.file.name) for row in renditions):
+        raise ValidationError({"biographical_materials": "所选资料图片不存在或不能读取，请重新选择。"})
+    return clean
 
 
 def apply_portrait_selection(profile, value, *, actor):

@@ -403,6 +403,12 @@ def media_reference_inventory(media_id, *, actor=None):
         public = profile.editorial_status == "published" and profile.person.authority_status == "verified"
         references.append({"id": f"scholar:{profile.pk}", "kind": "current_public" if public else "canonical", "label": profile.person.preferred_name,
                            "detail": "学者肖像", "editor_url": f"/admin/scholars/{profile.pk}", "public_url": f"/scholars/{profile.slug}" if public else ""})
+    materials = Q(pk__in=[])
+    for rendition_id in MediaRendition.objects.filter(media_id=media_id, kind="card").values_list("pk", flat=True):
+        materials |= Q(curation__biographical_materials__contains=[{"rendition_id": str(rendition_id)}])
+    for profile in ScholarProfile.objects.filter(materials).select_related("person").order_by("pk"):
+        references.append({"id": f"scholar-material:{profile.pk}", "kind": "canonical", "label": profile.person.preferred_name,
+            "detail": "人物照片与生平资料", "editor_url": f"/admin/people?source={profile.person_id}", "public_url": ""})
     for kind, model, public_prefix, admin_prefix in (("knowledge_node", KnowledgeNode, "/theories/nodes/", "/admin/theories/"), ("reading_path", ReadingPath, "/theories/reading-paths/", "/admin/reading-paths?path=")):
         for target in model.objects.filter(cover_rendition__media_id=media_id).order_by("pk"):
             public = target.status == "published"

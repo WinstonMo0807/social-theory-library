@@ -60,12 +60,14 @@ def audit_rows(person_id):
     return AuditEvent.objects.filter(action=ACTION, object_type="catalog.Person", object_id=str(person_id)).order_by("-created_at", "-pk")
 
 
-def research_concerns(person):
+def scholar_values(person):
     profile = ScholarProfile.objects.filter(person=person).first() if person else None
     if profile is None:
-        return []
+        return {"key_concerns": [], "biographical_materials": []}
     draft = EditorialRevision.objects.filter(target_type="scholar_profile", target_id=profile.pk, status="draft").order_by("-revision").first()
-    return list((draft.materialized_preview if draft else {}).get("key_concerns", profile.key_concerns) or [])
+    preview = draft.materialized_preview if draft else {}
+    return {"key_concerns": list(preview.get("key_concerns", profile.key_concerns) or []),
+        "biographical_materials": (preview.get("curation", profile.curation) or {}).get("biographical_materials", [])}
 
 
 def detail(person, actor):
@@ -87,7 +89,7 @@ def detail(person, actor):
         portrait_url = person.portrait.url
     # A bibliography editor does not gain access to any reader's private records.
     return {"actor_id": str(actor.pk), "id": str(person.pk), "version": digest(snapshot),
-        "updated_at": person.updated_at, "values": {**{key: getattr(person, key) for key in FIELDS}, "key_concerns": research_concerns(person)}, "variants": variants,
+        "updated_at": person.updated_at, "values": {**{key: getattr(person, key) for key in FIELDS}, **scholar_values(person)}, "variants": variants,
         "identifiers": describe_external_identifiers(person.external_ids),
         "can_edit": has_capability(actor, Capability.EDIT_DRAFT_AUTHORITY) and person.authority_status not in {"merged", "archived", "rejected"},
         "can_verify": has_capability(actor, Capability.PUBLISH_AUTHORITY),
@@ -133,12 +135,16 @@ def prepare(actor, data, *, person=None, target=None):
         for key, value in data["values"].items():
             if key in FIELDS:
                 setattr(proposed, key, value)
-        previous_concerns = research_concerns(person)
+        previous_scholar = scholar_values(person)
+        previous_concerns = previous_scholar["key_concerns"]
         next_concerns = data["values"].get("key_concerns", previous_concerns)
+        from catalog.services.scholar_media import validate_biographical_materials
+        previous_materials = previous_scholar["biographical_materials"]
+        next_materials = validate_biographical_materials(data["values"]["biographical_materials"]) if "biographical_materials" in data["values"] else previous_materials
         if len(set(next_concerns)) != len(next_concerns):
             raise ValidationError("研究领域不能重复。")
-        if next_concerns and not before["profiles"] and not has_capability(actor, Capability.CREATE_AUTHORITY):
-            raise PermissionDenied("此人物尚无学者档案，保存研究领域需要建立学者草稿的权限。")
+        if (next_concerns or next_materials) and not before["profiles"] and not has_capability(actor, Capability.CREATE_AUTHORITY):
+            raise PermissionDenied("此人物尚无学者档案，保存研究领域或生平资料需要建立学者草稿的权限。")
         if proposed.authority_status == "verified" and not has_capability(actor, Capability.PUBLISH_AUTHORITY):
             raise PermissionDenied("核验或更改正式人物资料需要规范发布权限。")
         if person and person.authority_status == "verified" and proposed.authority_status != "verified":
@@ -192,6 +198,8 @@ def prepare(actor, data, *, person=None, target=None):
             changes.append("name_variants")
         if previous_concerns != next_concerns:
             changes.append("key_concerns")
+        if previous_materials != next_materials:
+            changes.append("biographical_materials")
         if not changes:
             raise ValidationError("没有需要保存的变更。")
     editions = sorted({str(row["edition_id"]) for row in before["contributions"]})
@@ -199,7 +207,7 @@ def prepare(actor, data, *, person=None, target=None):
         raise AuthorityConflict("关联版本超过500，请先通过书目维护流程缩小本次影响。")
     projection = {"actor_id": str(actor.pk), "person_id": str(person.pk) if person else None,
         "fields": changes, "edition_count": len(editions), "profile_count": len(before["profiles"]),
-        "public_update": operation != "decision" and proposed.authority_status == "verified" and bool(set(changes) - {"authority_note", "identifier_sources", "key_concerns"}),
+        "public_update": operation != "decision" and proposed.authority_status == "verified" and bool(set(changes) - {"authority_note", "identifier_sources", "key_concerns", "biographical_materials"}),
         "reason": data["reason"], "decision": data.get("decision", ""),
         "before": {key: getattr(person, key) for key in FIELDS} if person else None,
         "after": {key: getattr(proposed, key) for key in FIELDS} if proposed else None,
@@ -210,7 +218,9 @@ def prepare(actor, data, *, person=None, target=None):
     if operation != "decision":
         if projection["before"] is not None:
             projection["before"]["key_concerns"] = previous_concerns
+            projection["before"]["biographical_materials"] = previous_materials
         projection["after"]["key_concerns"] = next_concerns
+        projection["after"]["biographical_materials"] = next_materials
     request = {key: value for key, value in data.items() if key not in {"request_id", "confirmed", "preview_hash"}}
     projection["preview_hash"] = digest({"actor": actor.pk, "request": request, "before": before,
         "target": state(target) if target else None, "projection": projection})
@@ -279,7 +289,7 @@ def command(actor, data):
     events = []
     if proposed:
         proposed.save()
-        if "key_concerns" in preview["fields"]:
+        if {"key_concerns", "biographical_materials"} & set(preview["fields"]):
             profile = ScholarProfile.objects.filter(person=proposed).first()
             concerns = preview["after"]["key_concerns"]
             if profile is None:
@@ -288,12 +298,15 @@ def command(actor, data):
                 serializer = AdminScholarSerializer(data={"existing_person_id": str(proposed.pk), "preferred_name": proposed.preferred_name,
                     "key_concerns": concerns}, context={"request": SimpleNamespace(user=actor)})
                 serializer.is_valid(raise_exception=True)
-                serializer.save()
-            elif profile.editorial_status == "published":
+                profile = serializer.save()
+            patch = {"key_concerns": concerns} if "key_concerns" in preview["fields"] else {}
+            if "biographical_materials" in preview["fields"]:
+                patch["curation"] = {**(profile.curation or {}), "biographical_materials": preview["after"]["biographical_materials"]}
+            if profile.editorial_status == "published" or "curation" in patch:
                 from catalog.services.scholar_media import save_scholar_editorial_patch
-                save_scholar_editorial_patch(profile.pk, {"key_concerns": concerns}, actor=actor,
-                    change_note=data["reason"], request_key=f"person-concerns:{data['request_id']}")
-            else:
+                save_scholar_editorial_patch(profile.pk, patch, actor=actor,
+                    change_note=data["reason"], request_key=f"person-scholar:{data['request_id']}")
+            elif "key_concerns" in patch:
                 profile.key_concerns = concerns
                 profile.save(update_fields=["key_concerns", "updated_at"])
         for item in variants:

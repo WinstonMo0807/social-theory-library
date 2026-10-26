@@ -19,7 +19,14 @@ class StrictInput(serializers.Serializer):
         return super().to_internal_value(data)
 
 
+class AuthorityMaterial(StrictInput):
+    id = serializers.UUIDField()
+    rendition_id = serializers.UUIDField()
+    caption = serializers.CharField(max_length=500, allow_blank=True)
+
+
 class AuthorityValues(StrictInput):
+    biographical_materials = AuthorityMaterial(many=True, max_length=100, required=False)
     key_concerns = serializers.ListField(child=serializers.CharField(max_length=240), max_length=100, required=False)
     preferred_name = serializers.CharField(max_length=240)
     original_name = serializers.CharField(max_length=240, allow_blank=True)

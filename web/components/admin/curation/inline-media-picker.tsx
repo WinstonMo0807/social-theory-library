@@ -14,7 +14,7 @@ const fields = [["alt_text", "图片说明", 1000], ["source_label", "出处名�
 type Metadata = Record<(typeof fields)[number][0], string>;
 const metadataOf = (media: Media): Metadata => Object.fromEntries(fields.map(([key]) => [key, media[key] || ""])) as Metadata;
 
-export function InlineMediaPicker({ onSelect, selectedRenditionId, kind = "hero", onDirtyChange, selectionMessage }: { onSelect: (id: string, url: string) => void; selectedRenditionId?: string | null; kind?: "hero" | "portrait"; onDirtyChange?: (dirty: boolean) => void; selectionMessage?: string }) {
+export function InlineMediaPicker({ onSelect, selectedRenditionId, kind = "hero", onDirtyChange, selectionMessage }: { onSelect: (id: string, url: string) => void; selectedRenditionId?: string | null; kind?: "hero" | "portrait" | "card"; onDirtyChange?: (dirty: boolean) => void; selectionMessage?: string }) {
   const user = useAdminSession(), owner = user ? String(user.id) : "";
   const selectLatest = useRef(onSelect);
   useEffect(() => { selectLatest.current = onSelect; }, [onSelect]);

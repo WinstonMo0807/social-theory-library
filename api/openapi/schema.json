@@ -37512,6 +37512,13 @@
                             "maxLength": 240
                         },
                         "maxItems": 100
+                    },
+                    "biographical_materials": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AuthorityMaterialRequest"
+                        },
+                        "maxItems": 100
                     }
                 },
                 "required": [
@@ -86849,6 +86856,28 @@
                     "id",
                     "label",
                     "pdf_page"
+                ]
+            },
+            "AuthorityMaterialRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "rendition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "caption": {
+                        "type": "string",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "caption",
+                    "id",
+                    "rendition_id"
                 ]
             }
         },

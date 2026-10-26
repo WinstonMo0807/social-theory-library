@@ -624,6 +624,9 @@ def validate_scholar_curation(value, profile=None):
     if not isinstance(value, dict):
         raise ValidationError({"curation": "策划内容须为对象。"})
     result = deepcopy(value)
+    if "biographical_materials" in result:
+        from catalog.services.scholar_media import validate_biographical_materials
+        result["biographical_materials"] = validate_biographical_materials(result["biographical_materials"])
     if "profile_prose" in result:
         from catalog.services.scholar_prose import normalize_profile_prose
         result["profile_prose"] = normalize_profile_prose(result["profile_prose"])

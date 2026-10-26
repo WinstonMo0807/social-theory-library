@@ -8077,7 +8077,13 @@ export interface components {
          * @enum {string}
          */
         AuthorityValuesAuthorityStatusEnum: "draft" | "needs_review" | "verified";
+        AuthorityMaterialRequest: {
+            id: string;
+            rendition_id: string;
+            caption: string;
+        };
         AuthorityValuesRequest: {
+            biographical_materials?: components["schemas"]["AuthorityMaterialRequest"][];
             key_concerns?: string[];
             preferred_name: string;
             original_name: string;
