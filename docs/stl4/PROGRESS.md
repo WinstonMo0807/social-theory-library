@@ -1,5 +1,13 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-26 首页编排本批已更新内网
+
+前置f0cce5ab。唯一PDF167–169逐张读取；原图品牌、槽位分组/状态/顺序菜单、右侧设置与空态、来源缩略图、独立图片选择、真实保存时间、移动编辑层已更新。原草稿/来源撤回/版本/发布检查/回执保持。更多内容的主题和最新/最早/标题排序复用public_editorial.public_directory，只取当前公开修订；原site-content sources追加topics与subtitle只读展示，Python serializer/TS契约同步。无迁移。r48回收筛选默认文字按图缩短。
+
+e4747d→41fa31及最终bc5923静态类型退出0，site_layout AST完成；编译4e993d→dc35b6退出0。包2185文件47156417字节，SHA 72e327d869a343627a65687fccecbbc1afec3e0b3eeceb750f73fadf65bb3458。NAS074168→8c062a退出0，Web r49 25577fe7a641、API r21 bd0fb9058351，恢复点.env.before-home-r49（r48/API20）。未测试、保存/选书/图片上传/发布/迁移/公网切换。
+
+只读查看/admin/about桌面、手机和关于书库移动编辑层；home-r49-desktop/mobile/about-mobile.png保存。真实未编排/空来源如实展示，手机clientWidth/scrollWidth均390，无可见错误。A移动公共说明编辑层未带底部保存栏（原SiteTextFields无footer），已定位，下一批补共用底栏；选中槽位的右侧预览仍使用整页缩放，PDF169要求单卡预览，下一批复用HomeCuratedSection。原字体/有数据精确几何仍A；B真实编辑/来源/发布待统一验收。PDF173–179逐张读取，准备接续原PlacementWorkspace/PlacementCatalogPicker。M30的170–172继续按D010排除。
+
 ## 2026-10-26 回收与恢复本批已更新内网
 
 前置d9db3333。唯一PDF164–166逐张读取；原图品牌、左侧标题与目录、右侧详情、筛选/分页、对象摘要、变更操作列和手机详情层已更新。原恢复预演、同名处理、批量、版本、权限、原请求查回及保持未发布流程保留。源码证明图片资产版本未被cover_url读取，本批接原受保护rendition地址；作者/年份/类型/说明与策划封面读取原已审核贡献者和原修订，不填示例数据。原目录追加page_size=10/20（兼容默认20）及只读展示字段，serializer和TS契约同步，无迁移。

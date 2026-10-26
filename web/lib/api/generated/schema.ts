@@ -10567,6 +10567,7 @@ export interface components {
          */
         HeadingLevelEnum: 1 | 2 | 3;
         HomeCard: {
+            subtitle?: string;
             curator?: components["schemas"]["PublicEditorialCurator"] | null;
             id: string;
             title: string;
@@ -10581,6 +10582,7 @@ export interface components {
             source_image_url?: string;
         };
         HomeCardRequest: {
+            subtitle?: string;
             curator?: components["schemas"]["PublicEditorialCuratorRequest"] | null;
             id: string;
             title: string;
@@ -10683,6 +10685,7 @@ export interface components {
             source: components["schemas"]["HomeCard"];
         };
         HomeSourcePage: {
+            topics: {id:string;name:string}[];
             count: number;
             page: number;
             total_pages: number;
@@ -28916,6 +28919,8 @@ export interface operations {
         parameters: {
             query?: {
                 page?: number;
+                topic?: string;
+                sort?: "newest" | "oldest" | "title";
                 q?: string;
                 /**
                  * @description * `issue` - issue

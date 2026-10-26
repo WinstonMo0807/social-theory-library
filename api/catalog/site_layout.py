@@ -55,6 +55,7 @@ class HomeCardSerializer(serializers.Serializer):
     source_title = serializers.CharField(allow_blank=True, required=False)
     source_description = serializers.CharField(allow_blank=True, required=False)
     source_image_url = serializers.CharField(allow_blank=True, required=False)
+    subtitle = serializers.CharField(allow_blank=True, required=False)
 
 
 class HomeLayoutPreviewSerializer(serializers.Serializer):
@@ -67,6 +68,8 @@ class HomeSourceQuerySerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=KINDS, default="issue")
     q = serializers.CharField(max_length=200, allow_blank=True, default="")
     page = serializers.IntegerField(min_value=1, max_value=100000, default=1)
+    topic = serializers.CharField(max_length=180, allow_blank=True, default="")
+    sort = serializers.ChoiceField(choices=["newest","oldest","title"], default="newest")
 
 
 class HomeSourceChoiceSerializer(serializers.Serializer):
@@ -74,11 +77,17 @@ class HomeSourceChoiceSerializer(serializers.Serializer):
     source = HomeCardSerializer()
 
 
+class HomeSourceTopicSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+
+
 class HomeSourcePageSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     page = serializers.IntegerField()
     total_pages = serializers.IntegerField()
     results = HomeSourceChoiceSerializer(many=True)
+    topics = HomeSourceTopicSerializer(many=True)
 
 
 def source_rows(kind, query=""):
@@ -110,7 +119,8 @@ def source_card(target, row=None):
         _metadata, curator = public_metadata(raw, public=True)
         card.update(curator=curator, label=raw.get("issue_label") or LABELS[kind])
         image = f"/api/catalog/editorial-media/{raw['cover_rendition_id']}/" if raw.get("cover_rendition_id") else raw.get("cover_url", "")
-        card.update(title=raw.get("title", ""), description=raw.get("introduction", ""), image_url=image, href=f"/recommendations/{row.slug}")
+        card.update(title=raw.get("title", ""), description=raw.get("introduction", ""), image_url=image, href=f"/recommendations/{row.slug}",
+                    subtitle=" · ".join(str(value) for value in [raw.get("issue_label"),raw.get("public_byline"),row.effective_display_from.date().isoformat() if row.effective_display_from else None] if value))
     elif kind == "scholar":
         from catalog.services.public_scholars import _formal_profile
         from catalog.serializers import PersonCompactSerializer
@@ -134,9 +144,17 @@ def source_page(params):
     serializer = HomeSourceQuerySerializer(data=params)
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
+    if data["type"]=="issue":
+        # Reuse the effective public revision's topic facets and sorting.
+        from catalog.services.public_editorial import public_directory
+        page=public_directory({key:data[key] for key in ("q","page","topic","sort")} | {"page_size":20})
+        return {"count":page["count"],"page":page["page"],"total_pages":page["total_pages"],"topics":[{"id":row["id"],"name":row["name"]} for row in page["facets"]["topics"]],
+                "results":[{"target":{"type":"issue","id":row["id"]},"source":{"id":row["id"],"title":row["title"],"description":row["introduction"],
+                    "href":row["href"],"image_url":row["cover_url"],"label":row["issue_label"] or LABELS["issue"],"curator":row["curator"],"available":True,"visible":True,
+                    "subtitle":" · ".join(str(value) for value in [row["issue_label"],row["public_byline"],str(row["display_from"])[:10] if row["display_from"] else None] if value)}} for row in page["results"]]}
     pages = Paginator(source_rows(data["type"], data["q"]), 20)
     page = pages.get_page(data["page"])
-    return {"count": pages.count, "page": page.number, "total_pages": pages.num_pages,
+    return {"count": pages.count, "page": page.number, "total_pages": pages.num_pages,"topics":[],
             "results": [{"target": {"type": data["type"], "id": str(row.pk)},
                          "source": source_card({"type": data["type"], "id": str(row.pk)}, row)} for row in page]}
 

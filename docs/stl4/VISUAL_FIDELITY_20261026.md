@@ -446,3 +446,12 @@ cfce5d类型退出0；编译f15aa7→df449e退出0。包2155文件46902545字节
 
 只读查看/admin/recycle，recovery-r48-desktop/mobile.png保留。原目录真实为空；品牌与空态加载完成后复看，手机clientWidth/scrollWidth均390。A桌面时间/操作人筛选的默认文字被宽度截断，下一批按图缩短默认标签；原字体/有数据精确几何仍A。B真实恢复、同名、依赖与回执待统一验收。PDF167–169首页编排逐张读取，继续原site-content版本/槽位/来源/发布服务。
 
+
+## VISUAL-48 首页编排（PDF167–169）
+
+前置f0cce5ab。唯一PDF167–169逐张读取；原图品牌、槽位分组/状态/顺序菜单、右侧设置与空态、来源缩略图、独立图片选择、真实保存时间、移动编辑层已更新。原草稿/来源撤回/版本/发布检查/回执保持。更多内容的主题和最新/最早/标题排序复用public_editorial.public_directory，只取当前公开修订；原site-content sources追加topics与subtitle只读展示，Python serializer/TS契约同步。无迁移。r48回收筛选默认文字按图缩短。
+
+e4747d→41fa31及最终bc5923静态类型退出0，site_layout AST完成；编译4e993d→dc35b6退出0。包2185文件47156417字节，SHA 72e327d869a343627a65687fccecbbc1afec3e0b3eeceb750f73fadf65bb3458。NAS074168→8c062a退出0，Web r49 25577fe7a641、API r21 bd0fb9058351，恢复点.env.before-home-r49（r48/API20）。未测试、保存/选书/图片上传/发布/迁移/公网切换。
+
+只读查看/admin/about桌面、手机和关于书库移动编辑层；home-r49-desktop/mobile/about-mobile.png保存。真实未编排/空来源如实展示，手机clientWidth/scrollWidth均390，无可见错误。A移动公共说明编辑层未带底部保存栏（原SiteTextFields无footer），已定位，下一批补共用底栏；选中槽位的右侧预览仍使用整页缩放，PDF169要求单卡预览，下一批复用HomeCuratedSection。原字体/有数据精确几何仍A；B真实编辑/来源/发布待统一验收。PDF173–179逐张读取，准备接续原PlacementWorkspace/PlacementCatalogPicker。M30的170–172继续按D010排除。
+
