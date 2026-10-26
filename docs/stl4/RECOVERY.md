@@ -1,5 +1,14 @@
 # 中断恢复最短路径
 
+## 2026-10-26 真实样例确认后的文件续跑阻塞已修复
+
+实际三书样例中，首本收件确认已成功建立馆藏，随后任务失败。只读回查e139da证实InvalidWorkflowTransition：needs_review不能进入preflight；intake_confirmation.py保存身份后schedule_upload_item，pipeline.py从VALIDATING继续，与workflow.py状态图冲突。最小修复允许待复核返回预检，仍禁止直接发布，不改OCR策略或权限。原文件、人工编目、身份关系保留，继续原任务而不重新上传。
+
+Python语法解析及镜像b3a045退出0；回归用例已补，未运行测试。包SHA90a592a9649922fc11e4061a4329a23248d28b4d87112578f0d7ed5fbc918748。4节点空闲后更新0ccbcf→ba7c88退出0，API/普通/入库/Discovery查询/索引worker为r36 7c47847d65e9；Web仍r72。预览恢复.env.before-intake-r36及intake-r36/recovery-images.json保留各服务原镜像，生产未改变。尚须通过本批原任务重试确认实际文件准备，不能以构建称流程已通过。
+
+三书全流程仍进行中：首本书目已保存，其他两本待身份确认；主题/流派/时间线、特别策划和样例发布尚未完成。恢复读取tmp/stl4-samples-20261026/progress.json；不可重复上传，不调用OCR。
+
+
 ## 2026-10-26 三本真实PDF样例进入内网全流程（进行中）
 
 用户新授权上传、填写、主题/流派/时间线关联和特别策划示例，用指定三本真实PDF走实际流程；明确不调用OCR。该授权仅覆盖当前内网样例，原全站收尾继续，公网切换/生产清理仍未授权。已在真实上传界面设置skip，三本上传100%并产生原收件记录，尚未完成编目或策展。来源清单、哈希、页码证据、批次与收件ID留在忽略目录tmp/stl4-samples-20261026/sources.json和progress.json；不提交馆藏文件或正文。

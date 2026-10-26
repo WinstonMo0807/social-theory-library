@@ -47,6 +47,23 @@ def test_transition_is_idempotent_for_same_target():
     assert repeated.changed is False
 
 
+def test_confirmed_intake_resumes_pdf_validation_without_bypassing_publication():
+    item = make_item()
+    set_stage(item, UploadItem.Status.METADATA, 18)
+    set_stage(item, UploadItem.Status.NEEDS_REVIEW, 25)
+    # Intake confirmation requeues the retained file after recording its identity.
+    item.status = UploadItem.Status.RECEIVED
+    item.save(update_fields=["status"])
+
+    set_stage(item, UploadItem.Status.VALIDATING, 5)
+
+    item.refresh_from_db()
+    assert item.workflow_state == UploadItem.WorkflowState.PREFLIGHT
+    assert item.status == UploadItem.Status.VALIDATING
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_upload_item(item, UploadItem.WorkflowState.PUBLISHED)
+
+
 def test_legacy_stage_updates_compatible_workflow_state():
     item = make_item()
 

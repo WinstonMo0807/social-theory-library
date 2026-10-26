@@ -72,6 +72,8 @@ ALLOWED_TRANSITIONS = {
         UploadItem.WorkflowState.FAILED,
     },
     UploadItem.WorkflowState.NEEDS_REVIEW: {
+        # Confirmed intake resumes the same pipeline to validate its retained PDF.
+        UploadItem.WorkflowState.PREFLIGHT,
         UploadItem.WorkflowState.ENRICHING,
         UploadItem.WorkflowState.RESOLVING,
         UploadItem.WorkflowState.READY,
