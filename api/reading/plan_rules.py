@@ -51,6 +51,7 @@ def planning_policy(data):
     if not isinstance(language, str) or len(language) > 160:
         raise ValidationError({"language_preference": "语言偏好最多 160 字符。"})
     return {"version": POLICY_VERSION, "reading_level": level, "budget_minutes": budget, "budget_period": period,
+        "read_book_count": _integer(data.get("read_book_count", 0), "read_book_count", 0, 10000),
         "weekly_minutes": weekly, "duration_weeks": weeks, "language_preference": language.strip(),
         "language_preference_notice": "语言偏好用于导读提示，不自动排除已经选择的材料。",
         "session_minutes": _integer(data.get("session_minutes", 30), "session_minutes", 5, 480),

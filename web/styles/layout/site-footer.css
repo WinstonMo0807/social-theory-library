@@ -74,3 +74,5 @@
 .site-footer.site-footer--research-workspace{display:flex;align-items:center;gap:18px;padding:12px 2.2%;background:var(--night-white,#fff);border-top:1px solid var(--night-line,#e6e9ed);color:var(--night-muted,#607594);font:12px var(--font-serif),serif}.site-footer--research-workspace img{width:271px;height:auto}.site-footer--research-workspace p{margin:0}@media(max-width:860px){.site-footer--research-workspace>a{display:none}}
 
 .site-footer--research-compare img{width:154px}
+
+.site-footer--reading-plan img{width:230px}

@@ -254,6 +254,7 @@ class ItemEstimateInput(serializers.Serializer):
 
 
 class PlanPolicyInput(serializers.Serializer):
+    read_book_count = serializers.IntegerField(min_value=0, max_value=10000, required=False, help_text="本人填写的已读相关书籍数量；不代替逐本阅读记录或阅读基础。")
     time_budget = serializers.CharField(max_length=160, required=False, allow_blank=True)
     budget_minutes = serializers.IntegerField(min_value=1, max_value=100000, allow_null=True, required=False)
     session_minutes = serializers.IntegerField(min_value=5, max_value=480, required=False)

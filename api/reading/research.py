@@ -26,7 +26,7 @@ ACTIVE = {"queued", "running"}
 ANALYSIS_VERSION = "private-claims-v1"
 MAX_REFS = 400
 PLAN_POLICY_FIELDS = ("time_budget", "budget_minutes", "session_minutes", "reading_level", "reading_pace", "prefer_unread",
-    "item_estimates", "weekly_minutes", "duration_weeks", "language_preference")
+    "item_estimates", "weekly_minutes", "duration_weeks", "language_preference", "read_book_count")
 PLAN_MEMORY_FIELDS = ("use_confirmed_memories", "confirmed_memory_ids")
 MEMORY_KINDS = {"concept", "understanding", "question", "method", "observation", "contradiction"}
 PLAN_REQUEST_FIELDS = ("goal", "background", "project_id", "turn_id", "reading_path_id", "references",

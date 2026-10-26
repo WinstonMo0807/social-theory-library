@@ -12266,6 +12266,8 @@ export interface components {
             item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
             /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
             weekly_minutes?: number;
+            /** 本人填写的已读相关书籍数量，不代替逐本阅读记录。 */
+            read_book_count?: number;
             duration_weeks?: number;
             /** @description 用于导读提示，不自动排除已选材料。 */
             language_preference?: string;
@@ -15070,6 +15072,8 @@ export interface components {
             item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
             /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
             weekly_minutes?: number;
+            /** 本人填写的已读相关书籍数量，不代替逐本阅读记录。 */
+            read_book_count?: number;
             duration_weeks?: number;
             /** @description 用于导读提示，不自动排除已选材料。 */
             language_preference?: string;
@@ -16105,6 +16109,8 @@ export interface components {
             item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
             /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
             weekly_minutes?: number;
+            /** 本人填写的已读相关书籍数量，不代替逐本阅读记录。 */
+            read_book_count?: number;
             duration_weeks?: number;
             /** @description 用于导读提示，不自动排除已选材料。 */
             language_preference?: string;

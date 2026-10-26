@@ -6,5 +6,5 @@ export const metadata: Metadata = { title: "我的阅读计划" };
 
 export default async function ReadingPlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <><ReadingPlanDetail id={id} /><SiteFooter /></>;
+  return <><ReadingPlanDetail id={id} /><SiteFooter reference="reading-plan" /></>;
 }

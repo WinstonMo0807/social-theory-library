@@ -515,3 +515,13 @@ e4747d→41fa31及最终bc5923静态类型退出0，site_layout AST完成；编�
 本账号既有研究为空，195–200有数据状态与真实操作B待统一验收，未虚构研究与引用。A字体/精确几何仍需核对；反证对象/地区/时间目前保留原自由输入，PDF中的下拉候选来源尚需按真实数据接入。PDF201–204已逐张读取，继续阅读计划原有规则、顺序与设置。
 
 证据：原ResearchSessionCompare只有单维度table，195全维度行缺失；原counter-evidence.css灰褐10–12px证据及62px封面与198不同；CounterEvidenceEditor无所选封面。仅上述原视图及原资产修改。
+
+## VISUAL-55 阅读计划（PDF201–204）
+
+前置6cfd60c7。唯一PDF201–204逐张读取，原图品牌/页脚提取复用。原计划详情、阶段、手动顺序与完整设置页面按图调整，恢复全部展开/收起。设置每周小时提交原分钟预算，新增本人已读相关书籍数量，沿原private JSON、planning inputs、serializer与契约保存，无迁移。原完成项保护、先修排序、私人笔记逐项授权及预期版本检查保留。
+
+类型dacb0b→f3f683退出0；四个Python AST成功；编译332190→109f78退出0；包2299文件48286633字节SHA73cbea279d5f62fc7dcc0b17cf980239e201ff625bfe4da00173bfc871fce582。部署日志确认Web r56 c3466f464596/API r24 22b9d3045bfb，恢复点.env.before-plans-r56（r55/API23）。部署前四个Celery节点active数量均0，本批worker/ingestion-worker/beat同步API24；数据库与发现检索服务保持。未运行测试、提交计划/生成任务/业务写入/迁移/公网切换。
+
+只读查看/account/plans创建表单桌面/手机，plans-r56-create-desktop/mobile.png保留。已读数量及每周小时确实显示；A截图/DOM证据显示已读数量输入被原:is选择器撑满，PDF202左侧导航仍缺，下一批按此修正。PDF203行内先修冲突呈现与精确字体几何仍A；真实计划状态及保存运行效果B待统一验收。本账号既有计划为空，不虚构示例计划。此前档案r53修正已在archive-r55-recheck-desktop.png只读复核，搜索不再重叠、空态批量栏已收起、侧栏图标与首项高亮可见，关闭这四项开发缺陷，不代表全档案验收。
+
+证据：reading-plan-form.tsx原时间单位/无已读数量、reading-plan-detail.tsx原模态设置与阶段缺少展开控制，不符合201–204。修改限定原表单/原计划服务/契约及图片样式。

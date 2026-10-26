@@ -386,7 +386,7 @@ def update_copy(user, pk, raw):
         "order", "preview", "optimize_order", *research.PLAN_POLICY_FIELDS}
     if not isinstance(raw, dict) or set(raw) - allowed or raw.get("optimize_order") is True or "item_estimates" in raw:
         raise ValidationError("公共路径副本仅支持明确的进度、笔记、阶段内顺序和时间设置；材料时长请按item_id提供。")
-    for key in ("expected_revision", "item_minutes", "budget_minutes", "session_minutes", "weekly_minutes", "duration_weeks"):
+    for key in ("expected_revision", "item_minutes", "budget_minutes", "session_minutes", "weekly_minutes", "duration_weeks", "read_book_count"):
         if isinstance(raw.get(key), bool):
             raise ValidationError({key: "数字不能使用布尔值。"})
     for key in ("preview", "optimize_order", "prefer_unread"):

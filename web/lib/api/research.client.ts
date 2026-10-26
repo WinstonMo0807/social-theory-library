@@ -45,7 +45,7 @@ export type MemoryData = { body: string; kind: "understanding" | "question" | "c
 export type PlanLevel = "beginner" | "intermediate" | "advanced";
 export type PlanPolicy = {
   time_budget?: string; budget_minutes?: number | null; session_minutes?: number; reading_level?: PlanLevel;
-  weekly_minutes?: number; duration_weeks?: number; language_preference?: string;
+  weekly_minutes?: number; duration_weeks?: number; language_preference?: string; read_book_count?: number;
   use_confirmed_memories?: boolean; confirmed_memory_ids?: string[];
   reading_pace?: { cjk_chars_per_minute?: number; words_per_minute?: number; fallback_minutes_per_page?: number };
   prefer_unread?: boolean; item_estimates?: Array<{ work_id: string; difficulty?: PlanLevel; minutes?: number }>;
