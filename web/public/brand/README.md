@@ -304,3 +304,5 @@ Original page 104 brands: desktop (47,32,235,80); mobile (1298,64,1459,96). Page
 - stl-lockup-admin-publication-{desktop,mobile}-final-r2.png：唯一最终 PDF131 原图裁取，原生坐标(34,10,218,56)/(1409,46,1489,74)，无重绘。
 
 - stl-lockup-admin-ledger-{desktop,mobile}-final-r2.png：最终PDF134原图坐标(43,28,221,74)/(1360,57,1472,97)提取，无重绘。
+
+- stl-lockup-admin-people-{desktop,mobile}-final-r2.png：最终PDF138原图坐标(46,27,236,75)/(1360,67,1472,111)提取，无重绘。

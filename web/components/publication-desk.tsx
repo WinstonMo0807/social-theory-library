@@ -136,6 +136,6 @@ export function PublicationDesk() {
     {page && !page.results.length ? <div className="stl4-publication-empty"><Archive size={36}/><h2>暂无发布记录</h2><p>{query||filter!=="all"||source?"当前筛选下没有记录，可调整筛选后继续查看。":"书目保存后，可在此核对公开版本、发布历史与影响范围。"}</p><Link className="button" href="/admin/library">查看馆藏目录 <ArrowRight size={14}/></Link></div> : null}
     {page ? <Pagination className={styles.pagination} label="发布列表分页" page={page.page} totalPages={page.total_pages} previousHref={adminListHref(pathname, search.toString(), { page: Math.max(1, page.page - 1) }, true)} nextHref={adminListHref(pathname, search.toString(), { page: Math.min(page.total_pages, page.page + 1) }, true)} /> : null}
     {page && selectedId && !selected ? <p className={styles.error} role="alert">指定记录不在当前筛选或当前页中，未显示其他作品。请恢复原筛选和页码，或明确重新选择记录。</p> : null}
-    {selected ? <PublicationDetails key={selected.id} item={selected} returnTo={returnTo} /> : page && !selectedId ? <p className={styles.scope}>请选择要查看的文献。</p> : null}
+    {selected ? <PublicationDetails key={selected.id} item={selected} returnTo={returnTo} /> : page && page.results.length>0 && !selectedId ? <p className={styles.scope}>请选择要查看的文献。</p> : null}
   </div>;
 }

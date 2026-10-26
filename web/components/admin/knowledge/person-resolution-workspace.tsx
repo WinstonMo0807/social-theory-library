@@ -1,5 +1,7 @@
 "use client";
 
+import { UserRound, ChevronDown } from "lucide-react";
+import { authorityRequest, type AuthorityDetail } from "@/lib/api/person-authority.client";
 import { RecycleControl } from "@/components/admin/recycle-control";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,7 +10,7 @@ import { ActionButton } from "@/components/action-feedback";
 import { PageHeader } from "@/components/admin-ui";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
-import { ApiRequestError, getServerSessionCredential } from "@/lib/api";
+import { ApiRequestError, getServerSessionCredential, normalizePublicResourceUrl } from "@/lib/api";
 import { createRequestKey } from "@/lib/request-key";
 import { PrivateOwnerVerificationError } from "@/lib/api/private-owner";
 import { useApiResource } from "@/lib/api/use-api-resource";
@@ -128,12 +130,18 @@ function SourceWorkspace({ sourceId, targetId, allowed, credential }: { sourceId
   </>;
 }
 
+function AuthorityPortrait({id,name}:{id:string;name:string}) {
+  const user=useAdminSession(),owner=user?String(user.id):"";
+  const [url,setUrl]=useState("");
+  useEffect(()=>{if(!owner||!isPersonId(id))return;const controller=new AbortController();setUrl("");void authorityRequest<AuthorityDetail>(owner,id+"/workspace/",{signal:controller.signal}).then(value=>{if(!controller.signal.aborted&&value.id===id)setUrl(normalizePublicResourceUrl(value.portrait_url));}).catch(()=>{if(!controller.signal.aborted)setUrl("");});return()=>controller.abort();},[owner,id]);
+  return <div className={styles.portrait}>{url?<img src={url} alt={name+"肖像"} onError={()=>setUrl("")}/>:<UserRound size={42} strokeWidth={1}/>}</div>;
+}
 function PreviewFacts({ preview }: { preview: PersonPreview }) {
   const source = asRecord(preview.source), target = asRecord(preview.target);
   return <>
     <div className={styles.identityCompare}>
-      {[["候选 A · 待归并记录", source], ["候选 B · 保留人物", target]].map(([label, person], index) => <section key={String(label)} className={index ? styles.compareTarget : styles.compareSource}><h3>{String(label)}</h3><h4>{textValue(asRecord(person).preferred_name)}</h4><p>{textValue(asRecord(person).original_name)}</p><dl className={styles.fields}>{["birth_year", "death_year", "country_region", "biography", "external_ids"].map(field => <div key={field}><dt>{field === "country_region" ? "国别／地区" : fieldLabels[field]}</dt><dd>{textValue(asRecord(person)[field])}</dd></div>)}</dl><h4>已保存的异名与来源</h4>{preview.references.filter(group => asRecord(group).model === "catalog.PersonNameVariant").flatMap(group => { const rows = asRecord(group)[index ? "target_rows" : "source_rows"]; return Array.isArray(rows) ? rows : []; }).map((row, at) => <p key={at}>{textValue(asRecord(row).name)} · {asRecord(row).is_verified ? "已核验" : "待核验"}<br /><small>{textValue(asRecord(row).source_note)}</small></p>)}</section>)}
-      <aside className={styles.compareResult}><h3>身份差异核对</h3><p>{preview.identity_conflicts.length ? "身份信息存在差异" : "当前字段未发现明确冲突"}</p>{preview.identity_conflicts.map((item, index) => <p key={index}>{textValue(asRecord(item).field)}：{textValue(asRecord(item).source)} / {textValue(asRecord(item).target)}</p>)}<p>名称相近或字段相同都不能单独证明同一身份。请结合原始署名与来源再判断。</p><strong>保留方向</strong><p>候选 A 的无冲突引用 → 候选 B；双方原始基础资料和历史记录保留。</p></aside>
+      {([{label:"候选 A",note:"保留人物",person:target,rows:"target_rows"},{label:"候选 B",note:"待归并记录",person:source,rows:"source_rows"}] as const).map(({label,note,person,rows},index)=><section key={label} className={index?styles.compareSource:styles.compareTarget}><header><h3>{label}</h3><span>{note}</span></header><div className={styles.compareIdentity}><AuthorityPortrait id={String(person.id)} name={textValue(person.preferred_name)}/><dl className={styles.fields}>{["preferred_name","original_name"].map(field=><div key={field}><dt>{fieldLabels[field]}</dt><dd>{textValue(person[field])}</dd></div>)}<div><dt>常用异名</dt><dd className={styles.aliases}>{preview.references.filter(group=>asRecord(group).model==="catalog.PersonNameVariant").flatMap(group=>{const values=asRecord(group)[rows];return Array.isArray(values)?values:[];}).map((row,at)=><details key={at}><summary>{textValue(asRecord(row).name)}</summary><p>{asRecord(row).is_verified?"已核验":"待核验"} · {textValue(asRecord(row).source_note)}</p></details>)}</dd></div></dl></div><details className={styles.personDetails} open><summary>展开详细信息 <ChevronDown size={12}/></summary><dl className={styles.fields}>{["birth_year","death_year","country_region","biography","external_ids"].map(field=><div key={field}><dt>{field==="country_region"?"国别／地区":fieldLabels[field]}</dt><dd>{textValue(person[field])}</dd></div>)}</dl></details></section>)}
+      <aside className={styles.compareResult}><h3>比对结果</h3><strong>{preview.identity_conflicts.length?"身份信息存在差异":"当前字段未发现明确冲突"}</strong>{preview.identity_conflicts.map((item,index)=><p key={index}>{fieldLabels[textValue(asRecord(item).field)]||textValue(asRecord(item).field)}：{textValue(asRecord(item).source)} / {textValue(asRecord(item).target)}</p>)}<p>请结合原始署名与来源核对，名称相近不能单独证明同一身份。</p><strong>保留方向</strong><p>候选 B 的无冲突引用归入候选 A。双方原始基础资料和历史记录保留。</p></aside>
     </div>
     <p>涉及 {preview.affected_works.length} 部作品、{preview.affected_edition_count} 个版本和 {preview.publication_revision_count} 条历史公开修订。历史修订不会被覆盖。</p>
     {preview.business_impact ? <BusinessImpact impact={preview.business_impact} /> : null}
@@ -159,7 +167,7 @@ export function BusinessImpact({ impact }: { impact: PersonBusinessImpact }) {
 
 export function PreviewLoader({ sourceId, targetId, credential }: { sourceId: string; targetId: string; credential: string }) {
   const resource = useApiResource<PersonPreview>(personApi.preview(sourceId, targetId), credential);
-  return <section className={`admin-panel ${styles.panel}`} aria-label="合并影响预览"><h2>合并影响预览</h2>
+  return <section className={`admin-panel ${styles.panel} ${styles.mergePreview}`} aria-label="合并影响预览"><h2>归并候选比较与影响</h2>
     {resource.error ? <Failure message={resource.error} retry={resource.retry} label="重新预览" /> : resource.loading ? <p role="status">正在核对双方资料与关联…</p> : resource.data ? <MergeReview key={resource.data.fingerprint} preview={resource.data} sourceId={sourceId} targetId={targetId} credential={credential} refresh={resource.retry} /> : null}
   </section>;
 }
