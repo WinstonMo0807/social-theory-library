@@ -19302,6 +19302,7 @@ export interface components {
         };
         RetentionRule: {
             label: string;
+            duration_label: string;
             policy: string;
             detail: string;
         };

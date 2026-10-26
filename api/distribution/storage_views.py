@@ -164,6 +164,7 @@ class RestoreReport(serializers.Serializer):
 
 class RetentionRule(serializers.Serializer):
     label = serializers.CharField()
+    duration_label = serializers.CharField()
     policy = serializers.CharField()
     detail = serializers.CharField()
 

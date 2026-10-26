@@ -25,7 +25,7 @@ export function StorageCleanup({owner,id,revision,disabled,canOperate,onCommand,
   const actionable=plan?.status==="scanned"&&!plan.stale&&plan.execution_supported;
   const expected=`清理 ${selection.length} 个临时文件`;
   const controlsDisabled=disabled||resource.loading||!!resource.error||!canOperate;
-  return <section className={styles.panel} aria-label="清理衍生缓存"><header><h2>清理衍生缓存</h2><button type="button" disabled={disabled||!canOperate} onClick={()=>onCommand({operation:"scan_cleanup"})}>扫描可清理项</button></header>
+  return <section className={`${styles.panel} ${styles.cleanupPanel}`} aria-label="清理衍生缓存"><header><h2>清理衍生缓存</h2><button type="button" disabled={disabled||!canOperate} onClick={()=>onCommand({operation:"scan_cleanup"})}>扫描可清理项</button></header>
     <p className={styles.hint}>只扫描已完成上传的专用临时目录。原件、阅读文件、OCR 成果、媒体历史、读者资料、模型与活动索引继续保护。</p>
     {!canOperate?<p className={styles.hint}>只有具有清理维护权限的账户可以查看和执行清单。</p>:!id?<div className={styles.protection}><ShieldCheck size={18}/><span>尚未扫描，不预估可释放容量。</span></div>:null}
     {resource.loading?<p role="status">正在读取清理清单…</p>:null}
