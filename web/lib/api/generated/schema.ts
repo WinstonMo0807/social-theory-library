@@ -8078,6 +8078,7 @@ export interface components {
          */
         AuthorityValuesAuthorityStatusEnum: "draft" | "needs_review" | "verified";
         AuthorityValuesRequest: {
+            key_concerns?: string[];
             preferred_name: string;
             original_name: string;
             preferred_language: string;

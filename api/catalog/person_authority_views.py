@@ -20,6 +20,7 @@ class StrictInput(serializers.Serializer):
 
 
 class AuthorityValues(StrictInput):
+    key_concerns = serializers.ListField(child=serializers.CharField(max_length=240), max_length=100, required=False)
     preferred_name = serializers.CharField(max_length=240)
     original_name = serializers.CharField(max_length=240, allow_blank=True)
     preferred_language = serializers.CharField(max_length=24, allow_blank=True)

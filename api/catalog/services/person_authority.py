@@ -60,6 +60,14 @@ def audit_rows(person_id):
     return AuditEvent.objects.filter(action=ACTION, object_type="catalog.Person", object_id=str(person_id)).order_by("-created_at", "-pk")
 
 
+def research_concerns(person):
+    profile = ScholarProfile.objects.filter(person=person).first() if person else None
+    if profile is None:
+        return []
+    draft = EditorialRevision.objects.filter(target_type="scholar_profile", target_id=profile.pk, status="draft").order_by("-revision").first()
+    return list((draft.materialized_preview if draft else {}).get("key_concerns", profile.key_concerns) or [])
+
+
 def detail(person, actor):
     snapshot = state(person)
     profile = ScholarProfile.objects.filter(person=person).first()
@@ -79,7 +87,7 @@ def detail(person, actor):
         portrait_url = person.portrait.url
     # A bibliography editor does not gain access to any reader's private records.
     return {"actor_id": str(actor.pk), "id": str(person.pk), "version": digest(snapshot),
-        "updated_at": person.updated_at, "values": {key: getattr(person, key) for key in FIELDS}, "variants": variants,
+        "updated_at": person.updated_at, "values": {**{key: getattr(person, key) for key in FIELDS}, "key_concerns": research_concerns(person)}, "variants": variants,
         "identifiers": describe_external_identifiers(person.external_ids),
         "can_edit": has_capability(actor, Capability.EDIT_DRAFT_AUTHORITY) and person.authority_status not in {"merged", "archived", "rejected"},
         "can_verify": has_capability(actor, Capability.PUBLISH_AUTHORITY),
@@ -123,7 +131,14 @@ def prepare(actor, data, *, person=None, target=None):
         proposed = copy.copy(person) if person else Person()
         proposed._state = copy.copy(proposed._state)
         for key, value in data["values"].items():
-            setattr(proposed, key, value)
+            if key in FIELDS:
+                setattr(proposed, key, value)
+        previous_concerns = research_concerns(person)
+        next_concerns = data["values"].get("key_concerns", previous_concerns)
+        if len(set(next_concerns)) != len(next_concerns):
+            raise ValidationError("研究领域不能重复。")
+        if next_concerns and not before["profiles"] and not has_capability(actor, Capability.CREATE_AUTHORITY):
+            raise PermissionDenied("此人物尚无学者档案，保存研究领域需要建立学者草稿的权限。")
         if proposed.authority_status == "verified" and not has_capability(actor, Capability.PUBLISH_AUTHORITY):
             raise PermissionDenied("核验或更改正式人物资料需要规范发布权限。")
         if person and person.authority_status == "verified" and proposed.authority_status != "verified":
@@ -175,6 +190,8 @@ def prepare(actor, data, *, person=None, target=None):
         changes = [key for key in FIELDS if person is None or getattr(person, key) != getattr(proposed, key)]
         if any(row["changed"] for row in variants):
             changes.append("name_variants")
+        if previous_concerns != next_concerns:
+            changes.append("key_concerns")
         if not changes:
             raise ValidationError("没有需要保存的变更。")
     editions = sorted({str(row["edition_id"]) for row in before["contributions"]})
@@ -182,7 +199,7 @@ def prepare(actor, data, *, person=None, target=None):
         raise AuthorityConflict("关联版本超过500，请先通过书目维护流程缩小本次影响。")
     projection = {"actor_id": str(actor.pk), "person_id": str(person.pk) if person else None,
         "fields": changes, "edition_count": len(editions), "profile_count": len(before["profiles"]),
-        "public_update": operation != "decision" and proposed.authority_status == "verified" and bool(set(changes) - {"authority_note", "identifier_sources"}),
+        "public_update": operation != "decision" and proposed.authority_status == "verified" and bool(set(changes) - {"authority_note", "identifier_sources", "key_concerns"}),
         "reason": data["reason"], "decision": data.get("decision", ""),
         "before": {key: getattr(person, key) for key in FIELDS} if person else None,
         "after": {key: getattr(proposed, key) for key in FIELDS} if proposed else None,
@@ -190,6 +207,10 @@ def prepare(actor, data, *, person=None, target=None):
             "before": {key: previous[str(row["id"])][key] for key in VARIANT_FIELDS} if row.get("id") else None,
             "after": {key: row[key] for key in VARIANT_FIELDS},
         } for row in variants if row["changed"]] if operation != "decision" else []}
+    if operation != "decision":
+        if projection["before"] is not None:
+            projection["before"]["key_concerns"] = previous_concerns
+        projection["after"]["key_concerns"] = next_concerns
     request = {key: value for key, value in data.items() if key not in {"request_id", "confirmed", "preview_hash"}}
     projection["preview_hash"] = digest({"actor": actor.pk, "request": request, "before": before,
         "target": state(target) if target else None, "projection": projection})
@@ -258,6 +279,23 @@ def command(actor, data):
     events = []
     if proposed:
         proposed.save()
+        if "key_concerns" in preview["fields"]:
+            profile = ScholarProfile.objects.filter(person=proposed).first()
+            concerns = preview["after"]["key_concerns"]
+            if profile is None:
+                from types import SimpleNamespace
+                from catalog.serializers import AdminScholarSerializer
+                serializer = AdminScholarSerializer(data={"existing_person_id": str(proposed.pk), "preferred_name": proposed.preferred_name,
+                    "key_concerns": concerns}, context={"request": SimpleNamespace(user=actor)})
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            elif profile.editorial_status == "published":
+                from catalog.services.scholar_media import save_scholar_editorial_patch
+                save_scholar_editorial_patch(profile.pk, {"key_concerns": concerns}, actor=actor,
+                    change_note=data["reason"], request_key=f"person-concerns:{data['request_id']}")
+            else:
+                profile.key_concerns = concerns
+                profile.save(update_fields=["key_concerns", "updated_at"])
         for item in variants:
             if item["changed"]:
                 variant = PersonNameVariant.objects.get(pk=item["id"], person=proposed) if item.get("id") else PersonNameVariant(person=proposed, pk=uuid4())

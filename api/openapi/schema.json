@@ -37504,6 +37504,14 @@
                     },
                     "authority_status": {
                         "$ref": "#/components/schemas/AuthorityValuesAuthorityStatusEnum"
+                    },
+                    "key_concerns": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 240
+                        },
+                        "maxItems": 100
                     }
                 },
                 "required": [

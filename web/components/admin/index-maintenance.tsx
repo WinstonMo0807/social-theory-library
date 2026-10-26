@@ -27,6 +27,8 @@ type Command=Omit<components["schemas"]["IndexMaintenanceCommandRequest"],"reque
 const endpoint="/catalog/admin/index-maintenance/";
 const states:Record<string,string>={ready:"已就绪",active:"当前使用",retired:"已保留",building:"正在建立",pending:"等待处理",running:"处理中",paused:"已暂停",failed:"失败",succeeded:"已完成",partial:"部分就绪",missing:"尚未就绪",private:"未公开",waiting:"等待来源",canceled:"已取消"};
 const tabs=[["overview","总体概览"],["documents","文献检测"],["jobs","增量索引任务"],["versions","旧版索引与切换"],["terms","检索词规则"],["terminology","中英术语"],["names","人名异名"],["models","模型与任务"]];
+const primaryTabs=[["overview","总体概览"],["terms","检索词管理"],["documents","文献检测"],["jobs","索引与任务"],["models","模型与评测"]];
+const termTabs=tabs.filter(([key])=>["terms","terminology","names"].includes(key)),jobTabs=tabs.filter(([key])=>["jobs","versions"].includes(key));
 const date=(value:string|null|undefined)=>value?new Date(value).toLocaleString("zh-CN",{hour12:false}):"未记录";
 const running=(data:Payload)=>data.jobs.some(row=>["pending","running"].includes(row.status))?10000:null;
 function Status({value,label}:{value:string;label?:string}){return <span className={styles.status} data-state={value}>{label?`${label} · `:""}{states[value]||"待核实"}</span>;}
@@ -37,6 +39,7 @@ export function IndexMaintenance(){const user=useAdminSession(),[epoch,setEpoch]
 function Maintenance({owner}:{owner:string}){
   const params=useSearchParams(),router=useRouter(),pathname=usePathname();
   const tab=tabs.some(([key])=>key===params.get("tab"))?params.get("tab")!:"overview";
+  const activeGroup=termTabs.some(([key])=>key===tab)?"terms":jobTabs.some(([key])=>key===tab)?"jobs":tab;
   const [query,setQuery]=useState(params.get("q")||""),[message,setMessage]=useState(""),[confirm,setConfirm]=useState<Command|null>(null);
   const [editor,setEditor]=useState<SourceEditorState|null>(null);
   const search=new URLSearchParams();for(const name of ["q","scope","page","jobs_page","versions_page"])if(params.get(name))search.set(name,params.get(name)!);
@@ -54,7 +57,7 @@ function Maintenance({owner}:{owner:string}){
   return <main className={styles.page} aria-busy={command.busy}>
     <div className={styles.topline}><nav className={styles.breadcrumb} aria-label="当前位置"><Link href="/admin/processing">文件与处理</Link><ChevronRight size={12}/><span>检索索引与查询词维护</span></nav><div className={styles.actions}><span>{editor?.dirty?"有未保存更改":`读取于 ${date(data?.checked_at)}`}</span><button type="button" onClick={queryPreview}>预览测试</button><button type="submit" form="index-term-form" className={styles.primary} disabled={!editor?.saveable}>保存更改</button></div></div>
     <header className={styles.header}><div><h1>检索索引与查询词维护</h1><p>判断材料为什么搜不到，以及索引是否覆盖最新文本。</p></div></header>
-    <nav className={styles.tabs} aria-label="检索维护栏目">{tabs.map(([key,label])=><button key={key} type="button" aria-current={tab===key?"page":undefined} onClick={()=>change({tab:key})}>{label}</button>)}</nav>
+    <nav className={styles.tabs} aria-label="检索维护栏目">{primaryTabs.map(([key,label])=><button key={key} type="button" aria-current={activeGroup===key?"page":undefined} onClick={()=>{if(key!==activeGroup)change({tab:key});}}>{label}</button>)}</nav>{["terms","jobs"].includes(activeGroup)?<nav className={styles.ruleTabs} aria-label={activeGroup==="terms"?"检索词分类":"索引任务分类"}>{(activeGroup==="terms"?termTabs:jobTabs).map(([key,label])=><button key={key} type="button" aria-current={tab===key?"page":undefined} onClick={()=>change({tab:key})}>{label}</button>)}</nav>:null}
     {resource.error?<p role="alert" className={styles.notice}>{resource.error}<button type="button" onClick={resource.reload}>重新读取</button></p>:null}{command.error?<p role="alert" className={styles.notice}>{command.error}</p>:null}{message?<p role="status" className={styles.notice}>{message}</p>:null}
     {command.recovery?<aside className={styles.notice}><p>原操作尚未确认，请先查回结果或停止尚未执行的请求。</p><div className={styles.actions}><button type="button" disabled={command.busy} onClick={()=>void command.lookup().then(accept)}>查回原结果</button>{command.canRetry?<button type="button" disabled={command.busy} onClick={()=>void command.send().then(accept)}>重试原请求</button>:null}<button type="button" disabled={command.busy} onClick={()=>void command.lookup(true).then(accept)}>停止未执行请求</button></div></aside>:null}
     {resource.loading?<p role="status">正在读取实际索引记录…</p>:null}
