@@ -53,7 +53,7 @@ def dispatch_export(job_id, task_id):
         return True
     except (OperationalError, OSError, ConnectionError, TimeoutError):
         ProcessingJob.objects.filter(pk=job_id, task_id=task_id, status="pending").update(
-            status="failed", error_code="queue_unavailable", error_message="书签副本尚未进入队列，可重试；原文件保留。",
+            status="failed", error_code="queue_unavailable", error_message="PDF副本尚未进入队列，可重试；原文件保留。",
             finished_at=timezone.now(), updated_at=timezone.now())
         return False
 
@@ -101,6 +101,13 @@ def write_bookmarked_copy(source, destination, nodes, *, page_count, heartbeat):
                 raise OutlineConflict("书签副本的标题、层级或精确落点未能回读一致，未提供下载。")
 
 
+def current_export_revision(asset, stats):
+    if stats.get("operation") == "page_mapping_export":
+        from catalog.services.page_mapping_exports import export_revision as mapping_revision
+        return mapping_revision(asset, stats.get("mapping_revision_id"))
+    return export_revision(asset, stats.get("outline_revision_id"))
+
+
 def run_export(job_id, *, task_id):
     from ingestion.services.files import materialize_field_file, sha256_file
     from ingestion.services.processing import _claim_processing_job
@@ -116,7 +123,9 @@ def run_export(job_id, *, task_id):
             raise OutlineJobInterrupted()
     try:
         asset = job.asset
-        revision = export_revision(asset, job.stats["outline_revision_id"])
+        revision = current_export_revision(asset, job.stats)
+        mapping = job.stats.get("operation") == "page_mapping_export"
+        processor = "page-mapping-blank-copy" if mapping else PROCESSOR
         if asset.sha256 != job.stats["source_sha256"]:
             raise OutlineConflict("任务绑定的文件已变化，请按当前来源新建任务。")
         source, cleanup = materialize_field_file(asset.file)
@@ -125,7 +134,17 @@ def run_export(job_id, *, task_id):
             raise OutlineConflict("原文件内容与登记指纹不一致，请先校验文件。")
         with TemporaryDirectory(prefix="stl-outline-export-") as temporary:
             output = Path(temporary) / "bookmarked.pdf"
-            write_bookmarked_copy(source, output, revision.nodes, page_count=asset.page_count, heartbeat=heartbeat)
+            if mapping:
+                from catalog.services.page_mapping_exports import write_mapping_copy
+                output_pages = write_mapping_copy(source, output, revision.data, page_count=asset.page_count, heartbeat=heartbeat)
+                details = {"mapping_revision_id": str(revision.pk), "source_sha256": asset.sha256,
+                    "inserted_blank_count": output_pages - asset.page_count, "original_page_identity_roundtrip": True}
+            else:
+                write_bookmarked_copy(source, output, revision.nodes, page_count=asset.page_count, heartbeat=heartbeat)
+                output_pages = asset.page_count
+                details = {"outline_revision_id": str(revision.pk), "source_sha256": asset.sha256,
+                    "document_revision_id": str(revision.document_revision_id or ""), "bookmark_count": len(revision.nodes),
+                    "title_page_position_roundtrip": True}
             digest, size = sha256_file(output)
             if sha256_file(source)[0] != job.stats["source_sha256"]:
                 raise OutlineConflict("生成期间原文件内容发生变化，本次副本未保存。")
@@ -134,21 +153,18 @@ def run_export(job_id, *, task_id):
                 current = ProcessingJob.objects.select_for_update().get(pk=job.pk)
                 if current.task_id != task_id or current.status != "running":
                     return current
-                revision = export_revision(asset, revision.pk)
+                revision = current_export_revision(asset, job.stats)
                 if asset.sha256 != job.stats["source_sha256"]:
                     raise OutlineConflict("原文件已变化，本次副本未采用。")
                 artifact = Asset.objects.filter(sha256=digest, kind=Asset.Kind.WEB_DERIVATIVE).first()
-                if artifact and (artifact.source_asset_id != asset.pk or artifact.processor != PROCESSOR):
+                if artifact and (artifact.source_asset_id != asset.pk or artifact.processor != processor):
                     raise OutlineConflict("存在不属于当前目录的相同派生文件，请核对文件来源。")
                 if not artifact:
                     artifact = Asset(edition=asset.edition, kind=Asset.Kind.WEB_DERIVATIVE, source_asset=asset,
-                        sha256=digest, byte_size=size, page_count=asset.page_count, mime_type="application/pdf",
-                        original_filename=f"{Path(asset.original_filename or 'document.pdf').stem}-校准书签.pdf",
+                        sha256=digest, byte_size=size, page_count=output_pages, mime_type="application/pdf",
+                        original_filename=f"{Path(asset.original_filename or 'document.pdf').stem}-{'补页副本' if mapping else '校准书签'}.pdf",
                         status="ready", validation_status="valid", access_status="private", is_current=False,
-                        processor=PROCESSOR, processor_version="1",
-                        validation_details={"outline_revision_id": str(revision.pk), "source_sha256": asset.sha256,
-                            "document_revision_id": str(revision.document_revision_id or ""), "bookmark_count": len(revision.nodes),
-                            "title_page_position_roundtrip": True})
+                        processor=processor, processor_version="1", validation_details=details)
                     with output.open("rb") as stream:
                         artifact.file.save(f"outline-{artifact.pk}.pdf", File(stream), save=False)
                     created_file = (artifact.file.storage, artifact.file.name)
@@ -156,8 +172,8 @@ def run_export(job_id, *, task_id):
                 current.status, current.progress, current.finished_at = "succeeded", 100, timezone.now()
                 current.stats = {**job.stats, "stage": "complete", "result_asset_id": str(artifact.pk)}
                 current.save(update_fields=["status", "progress", "finished_at", "stats", "updated_at"])
-                AuditEvent.objects.create(actor=job.created_by, action="outline.exported", object_type="Asset", object_id=str(asset.pk),
-                    after={"outline_revision_id": str(revision.pk), "result_asset_id": str(artifact.pk), "job_id": str(job.pk)})
+                AuditEvent.objects.create(actor=job.created_by, action="page_mapping.exported" if mapping else "outline.exported", object_type="Asset", object_id=str(asset.pk),
+                    after={**details, "result_asset_id": str(artifact.pk), "job_id": str(job.pk)})
             committed = True
             return current
     except OutlineJobInterrupted:

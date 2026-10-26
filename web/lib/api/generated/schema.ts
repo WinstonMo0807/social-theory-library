@@ -12714,7 +12714,7 @@ export interface components {
          *     * `publish` - publish
          * @enum {string}
          */
-        MappingCommandActionEnum: "save" | "analyze" | "segment" | "restore" | "prepare" | "publish";
+        MappingCommandActionEnum: "save" | "analyze" | "segment" | "restore" | "prepare" | "publish" | "export";
         MappingCommandRequest: {
             action: components["schemas"]["MappingCommandActionEnum"];
             /** Format: uuid */
@@ -12751,6 +12751,7 @@ export interface components {
             acknowledged: boolean;
         };
         MappingMissing: {
+            action?: components["schemas"]["MappingMissingActionEnum"];
             id: string;
             label: string;
             after_pdf_page: number;
@@ -12760,6 +12761,7 @@ export interface components {
             confirmed: boolean;
         };
         MappingMissingRequest: {
+            action?: components["schemas"]["MappingMissingActionEnum"];
             id: string;
             label: string;
             after_pdf_page: number;
@@ -12884,7 +12886,10 @@ export interface components {
          * @enum {string}
          */
         MappingSegmentStyleEnum: "arabic" | "roman_lower" | "roman_upper" | "custom" | "none";
+        MappingMissingActionEnum: "mark" | "blank";
+        MappingCopyJob: { id: string; status: string; progress: number; updated_at: string; error: string; mapping_revision_id: string; download_url: string; };
         MappingState: {
+            jobs: components["schemas"]["MappingCopyJob"][];
             asset: components["schemas"]["MappingAsset"];
             /** Format: uuid */
             asset_id: string;

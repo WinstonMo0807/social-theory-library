@@ -673,26 +673,26 @@ def dispatch_outline_job(job_id, task_id):
 @transaction.atomic
 def outline_job_action(job_id, *, action, actor):
     # Match extraction's Asset → Job lock order when cancellation races commit.
-    target = ProcessingJob.objects.get(pk=job_id, job_type="text_extraction", stats__operation__in=["outline_rebuild", "outline_export"])
+    target = ProcessingJob.objects.get(pk=job_id, job_type="text_extraction", stats__operation__in=["outline_rebuild", "outline_export", "page_mapping_export"])
     asset = Asset.objects.select_for_update().get(pk=target.asset_id)
     job = ProcessingJob.objects.select_for_update().get(pk=target.pk)
     before = {"status": job.status, "error_code": job.error_code, "error_message": job.error_message, "attempt": job.attempt}
     if action == "cancel":
         if job.status not in {"pending", "running", "failed", "canceled"}:
-            raise OutlineConflict("目录已完成，无需取消。")
+            raise OutlineConflict("任务已完成，无需取消。")
         job.status, job.task_id, job.finished_at = "canceled", "", timezone.now()
     elif action == "retry":
         if job.status in {"pending", "running"}:
             return job
         if job.status != "failed":
-            raise OutlineConflict("只有失败的目录任务可以重试。")
+            raise OutlineConflict("只有失败的任务可以重试。")
         _source_current(asset)
-        if job.stats.get("operation") == "outline_export":
-            from catalog.services.outline_exports import export_revision
-            export_revision(asset, job.stats.get("outline_revision_id"))
+        if job.stats.get("operation") in {"outline_export", "page_mapping_export"}:
+            from catalog.services.outline_exports import current_export_revision
+            current_export_revision(asset, job.stats)
         current_document = asset.document_revisions.filter(is_active=True).first()
         if asset.sha256 != job.stats.get("source_sha256") or str(current_document.pk if current_document else "") != str(job.stats.get("document_revision_id") or ""):
-            raise OutlineConflict("任务绑定的正文已变化，请新建目录重建任务，原失败记录保留。")
+            raise OutlineConflict("任务绑定的正文已变化，请基于当前文件新建任务，原失败记录保留。")
         job.status, job.task_id, job.attempt = "pending", str(uuid4()), 0
         job.error_code, job.error_message, job.finished_at = "", "", None
     else:
@@ -701,7 +701,7 @@ def outline_job_action(job_id, *, action, actor):
     AuditEvent.objects.create(actor=actor, action=f"outline.task.{action}", object_type="ProcessingJob", object_id=str(job.pk), before=before, after={"status": job.status})
     if action == "retry":
         from catalog.services.outline_exports import dispatch_export
-        dispatch = dispatch_export if job.stats.get("operation") == "outline_export" else dispatch_outline_job
+        dispatch = dispatch_export if job.stats.get("operation") in {"outline_export", "page_mapping_export"} else dispatch_outline_job
         transaction.on_commit(lambda: dispatch(str(job.pk), job.task_id))
     return job
 

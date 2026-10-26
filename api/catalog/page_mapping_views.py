@@ -11,6 +11,7 @@ from common.capabilities import Capability, has_capability
 from common.permissions import CanAccessBackOffice
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import Asset
+from catalog.services.document_outline import OutlineConflict
 from catalog.services.page_mapping import (
     MappingConflict, apply_mapping, mapping_state, prepare_mapping, revision_payload, save_mapping,
 )
@@ -38,6 +39,7 @@ class MappingSegmentSerializer(serializers.Serializer):
 
 
 class MappingMissingSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["mark", "blank"], default="mark")
     id = serializers.CharField(max_length=80)
     label = serializers.CharField(max_length=40)
     after_pdf_page = serializers.IntegerField(min_value=1)
@@ -52,7 +54,7 @@ class MappingDataSerializer(serializers.Serializer):
 
 
 class MappingCommandSerializer(serializers.Serializer):
-    action = serializers.ChoiceField(choices=["save", "analyze", "segment", "restore", "prepare", "publish"])
+    action = serializers.ChoiceField(choices=["save", "analyze", "segment", "restore", "prepare", "publish", "export"])
     request_id = serializers.UUIDField(required=False)
     expected_revision = serializers.IntegerField(min_value=0)
     source_fingerprint = serializers.CharField(min_length=64, max_length=64)
@@ -65,7 +67,7 @@ class MappingCommandSerializer(serializers.Serializer):
         action = attrs["action"]
         required = [] if action == "prepare" else ["request_id"]
         required += {"save": ["data"], "segment": ["segment"], "restore": ["revision_id"],
-                     "prepare": ["revision_id"], "publish": ["revision_id", "prepared_fingerprint"]}.get(action, [])
+                     "prepare": ["revision_id"], "export": ["revision_id"], "publish": ["revision_id", "prepared_fingerprint"]}.get(action, [])
         for key in required:
             if key not in attrs:
                 raise serializers.ValidationError({key: "此操作需要该字段。"})
@@ -140,7 +142,18 @@ class MappingPrecedingRevisionSerializer(serializers.Serializer):
     revision = serializers.IntegerField()
 
 
+class MappingCopyJobSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    status = serializers.CharField()
+    progress = serializers.IntegerField()
+    updated_at = serializers.DateTimeField()
+    error = serializers.CharField(allow_blank=True)
+    mapping_revision_id = serializers.CharField()
+    download_url = serializers.CharField(allow_blank=True)
+
+
 class MappingStateSerializer(serializers.Serializer):
+    jobs = MappingCopyJobSerializer(many=True)
     asset = MappingAssetSerializer()
     asset_id = serializers.UUIDField()
     expected_revision = serializers.IntegerField()
@@ -212,6 +225,12 @@ class AdminPageMappingWorkspaceView(AdminPrivateResponseMixin, APIView):
             return Response({"detail": "当前账户没有执行此页码操作的权限。"}, status=403)
         asset = get_object_or_404(Asset.objects.select_related("edition__work"), pk=asset_id, kind="normalized")
         try:
+            if data["action"] == "export":
+                if not has_capability(request.user, Capability.RETRY_JOBS) or not has_capability(request.user, Capability.VIEW_EVIDENCE):
+                    return Response({"detail": "生成副本需要文件查看及任务操作权限。"}, status=403)
+                from catalog.services.page_mapping_exports import queue_export
+                queue_export(asset.pk, data=data, actor=request.user)
+                return Response(mapping_state(asset), status=202)
             if data["action"] == "prepare":
                 from catalog.services.page_mapping import _guard
                 _guard(asset, data)
@@ -222,7 +241,7 @@ class AdminPageMappingWorkspaceView(AdminPrivateResponseMixin, APIView):
             result = mapping_state(asset)
             result["result"] = revision_payload(row)
             return Response(result, status=202 if row.publication_event_id and row.publication_event.status in {"pending", "processing"} else 200)
-        except MappingConflict as exc:
+        except (MappingConflict, OutlineConflict) as exc:
             return Response({"detail": str(exc), "code": "page_mapping_conflict"}, status=409)
         except (ValueError, TypeError) as exc:
             return Response({"detail": str(exc)}, status=400)

@@ -193,7 +193,7 @@ class AdminOutlineJobView(AdminPrivateResponseMixin, APIView):
     def post(self, request, job_id):
         command = OutlineJobCommandSerializer(data=request.data)
         command.is_valid(raise_exception=True)
-        get_object_or_404(ProcessingJob, pk=job_id, job_type="text_extraction", stats__operation__in=["outline_rebuild", "outline_export"])
+        get_object_or_404(ProcessingJob, pk=job_id, job_type="text_extraction", stats__operation__in=["outline_rebuild", "outline_export", "page_mapping_export"])
         try:
             job = outline_job_action(job_id, action=command.validated_data["action"], actor=request.user)
         except OutlineConflict as exc:

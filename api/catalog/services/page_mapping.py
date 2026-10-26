@@ -66,7 +66,7 @@ def current_data(asset, pages=None):
 
 
 def validate_data(asset, data, pages=None):
-    """Every row names an existing physical page; missing labels remain metadata."""
+    """Existing physical pages stay fixed; blank requests apply only to a separate copy."""
     pages = _pages(asset) if pages is None else pages
     actual = {p.index: p for p in pages}
     rows, segments, missing = deepcopy(data.get("pages", [])), deepcopy(data.get("segments", [])), deepcopy(data.get("missing", []))
@@ -102,6 +102,9 @@ def validate_data(asset, data, pages=None):
         if row["id"] in missing_ids or row["after_pdf_page"] not in actual:
             raise ValueError("缺页记录需要唯一标识和真实相邻 PDF 页。")
         missing_ids.add(row["id"])
+        row["action"] = row.get("action", "mark")
+        if row["action"] not in {"mark", "blank"}:
+            raise ValueError("请选择标记缺页或在独立副本中插入空白页。")
         if not str(row["label"]).strip():
             raise ValueError("缺页记录需要印刷页码。")
     return {"pages": sorted(rows, key=lambda r: r["pdf_page"]), "segments": sorted(segments, key=lambda r: r["start"]), "missing": missing}
@@ -143,6 +146,8 @@ def revision_payload(row, *, include_data=True):
 
 
 def mapping_state(asset, *, history_page=1):
+    from ingestion.models import ProcessingJob
+    jobs = ProcessingJob.objects.filter(asset=asset, stats__operation="page_mapping_export").order_by("-created_at")[:10]
     pages = _pages(asset)
     latest = asset.page_mapping_revisions.select_related("publication_event__catalog_revision").first()
     count = asset.page_mapping_revisions.count()
@@ -153,7 +158,12 @@ def mapping_state(asset, *, history_page=1):
     summary["publication_state"] = asset.edition.state
     summary["byte_size"] = asset.byte_size
     preceding = PageMappingRevision.objects.filter(applied_asset=asset).exclude(asset=asset).order_by("-applied_at").first()
-    return {"asset": summary, "asset_id": str(asset.pk), "expected_revision": latest.revision if latest else 0,
+    return {"jobs": [{"id": str(job.pk), "status": job.status, "progress": job.progress,
+                "updated_at": job.updated_at, "error": job.error_message,
+                "mapping_revision_id": job.stats.get("mapping_revision_id", ""),
+                "download_url": f"/catalog/admin/editions/{asset.edition_id}/files/{job.stats['result_asset_id']}/content/?download=1"
+                    if job.status == "succeeded" and job.stats.get("result_asset_id") else ""} for job in jobs],
+            "asset": summary, "asset_id": str(asset.pk), "expected_revision": latest.revision if latest else 0,
             "source_fingerprint": source_fingerprint(asset, pages), "current": current_data(asset, pages),
             "latest": revision_payload(latest), "history": [revision_payload(r, include_data=False) for r in
                 asset.page_mapping_revisions.select_related("publication_event__catalog_revision")[start:start + 20]],

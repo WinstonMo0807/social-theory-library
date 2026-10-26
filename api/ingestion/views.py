@@ -2891,7 +2891,7 @@ class ProcessingCenterView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
             except DiscoveryIndexError as exc:
                 return Response({"detail": str(exc)}, status=409)
             return Response({"job_id": str(job.pk), "status": job.status}, status=202)
-        if job.job_type == "text_extraction" and job.stats.get("operation") in {"outline_rebuild", "outline_export"} and action in {"retry", "cancel"}:
+        if job.job_type == "text_extraction" and job.stats.get("operation") in {"outline_rebuild", "outline_export", "page_mapping_export"} and action in {"retry", "cancel"}:
             from catalog.services.document_outline import outline_job_action
 
             try:

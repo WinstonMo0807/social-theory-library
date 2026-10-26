@@ -52859,10 +52859,11 @@
                     "segment",
                     "restore",
                     "prepare",
-                    "publish"
+                    "publish",
+                    "export"
                 ],
                 "type": "string",
-                "description": "* `save` - save\n* `analyze` - analyze\n* `segment` - segment\n* `restore` - restore\n* `prepare` - prepare\n* `publish` - publish"
+                "description": "* `save` - save\n* `analyze` - analyze\n* `segment` - segment\n* `restore` - restore\n* `prepare` - prepare\n* `publish` - publish\n* `export` - export"
             },
             "MappingCommandRequest": {
                 "type": "object",
@@ -53058,6 +53059,14 @@
                     "confirmed": {
                         "type": "boolean",
                         "default": false
+                    },
+                    "action": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MappingMissingActionEnum"
+                            }
+                        ],
+                        "default": "mark"
                     }
                 },
                 "required": [
@@ -53091,6 +53100,14 @@
                     "confirmed": {
                         "type": "boolean",
                         "default": false
+                    },
+                    "action": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MappingMissingActionEnum"
+                            }
+                        ],
+                        "default": "mark"
                     }
                 },
                 "required": [
@@ -53550,6 +53567,12 @@
                     },
                     "result": {
                         "$ref": "#/components/schemas/MappingRevision"
+                    },
+                    "jobs": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingCopyJob"
+                        }
                     }
                 },
                 "required": [
@@ -53563,7 +53586,8 @@
                     "history_page",
                     "latest",
                     "preceding_revision",
-                    "source_fingerprint"
+                    "source_fingerprint",
+                    "jobs"
                 ]
             },
             "MediaAsset": {
@@ -86645,6 +86669,51 @@
                     "saved_at",
                     "state",
                     "work_id"
+                ]
+            },
+            "MappingMissingActionEnum": {
+                "enum": [
+                    "mark",
+                    "blank"
+                ],
+                "type": "string",
+                "description": "* `mark` - mark\n* `blank` - blank"
+            },
+            "MappingCopyJob": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "progress": {
+                        "type": "integer"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "error": {
+                        "type": "string"
+                    },
+                    "mapping_revision_id": {
+                        "type": "string"
+                    },
+                    "download_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "status",
+                    "progress",
+                    "updated_at",
+                    "error",
+                    "mapping_revision_id",
+                    "download_url"
                 ]
             }
         },
