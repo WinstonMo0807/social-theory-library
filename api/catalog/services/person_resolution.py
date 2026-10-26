@@ -314,6 +314,7 @@ def person_business_impact(edition_ids, person_ids, *, event_ids=()):
         publication = catalog_publication_state(edition)
         rows.append({
             "edition_id": str(edition.pk), "work_id": str(edition.work_id), "title": edition.work.title,
+            "cover_url": f"/api/catalog/admin/media/renditions/{edition.work.cover_rendition_id}/file/" if edition.work.cover_rendition_id else edition.work.cover.url if edition.work.cover else "",
             "edition_label": " · ".join(str(value) for value in (edition.publisher, edition.publication_year, edition.edition_statement) if value) or "出版信息尚未填写",
             "roles": [{"name": row.person.preferred_name, "role": row.role, "role_label": row.get_role_display(), "approved": row.approved}
                       for row in edition.contributions.all() if str(row.person_id) in people],

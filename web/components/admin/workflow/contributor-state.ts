@@ -6,3 +6,15 @@ export function fillContributor(rows: Record<string, unknown>[], person: { id: s
   const linked = { ...(index >= 0 ? rows[index] : {}), person_id: person.id, display_name: person.name, role, resolution_state: "selected", ...extra };
   return index >= 0 ? rows.map((row, i) => i === index ? linked : row) : [...rows, linked];
 }
+
+export const contributorRoleOptions = [
+  { value: "author", label: "作者" },
+  { value: "chief_editor", label: "主编" },
+  { value: "editor", label: "编者" },
+  { value: "translator", label: "译者" },
+  { value: "annotator", label: "校注" },
+  { value: "photographer", label: "摄影" },
+  { value: "advisor", label: "导师" },
+  { value: "subject", label: "研究对象" },
+  { value: "other", label: "其他贡献者" },
+] as const;

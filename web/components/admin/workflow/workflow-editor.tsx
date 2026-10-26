@@ -7,7 +7,7 @@ import { RecycleControl } from "@/components/admin/recycle-control";
 import { ContributorCreate } from "./contributor-input";
 import { ContributionScopeEditor } from "./contribution-scope-editor";
 import { JournalContentsCandidates } from "./journal-contents-candidates";
-import { fillContributor } from "./contributor-state";
+import { fillContributor, contributorRoleOptions } from "./contributor-state";
 import { usePathname, useSearchParams } from "next/navigation";
 import { safeAdminHref, withAdminReturn } from "@/lib/admin-route-context";
 import { fileDraftFromWorkspace, fileKindLabel, pdfValidationPresentation, fileProcessingStatusLabel, fileTextProfileLabel, fileDuplicateLabel } from "./file-presentation";
@@ -104,17 +104,7 @@ const languageOptions = [
   { value: "mixed", label: "多语种" },
 ] as const;
 
-const contributorRoleOptions = [
-  { value: "author", label: "作者" },
-  { value: "chief_editor", label: "主编" },
-  { value: "editor", label: "编者" },
-  { value: "translator", label: "译者" },
-  { value: "annotator", label: "校注" },
-  { value: "photographer", label: "摄影" },
-  { value: "advisor", label: "导师" },
-  { value: "subject", label: "研究对象" },
-  { value: "other", label: "其他贡献者" },
-] as const;
+
 
 function contributorRoleLabel(role: string) {
   return contributorRoleOptions.find((option) => option.value === role)?.label ?? "其他贡献者";
