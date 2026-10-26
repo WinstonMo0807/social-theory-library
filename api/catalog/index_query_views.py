@@ -23,6 +23,7 @@ ACTION = "index.query.preview"
 
 
 class IndexQueryFiltersSerializer(serializers.Serializer):
+    search_scope = serializers.ChoiceField(choices=["all", "title", "body", "notes", "topics", "authors", "terms"], required=False)
     document_types = serializers.ListField(child=serializers.ChoiceField(choices=["book", "journal_article", "journal_issue", "thesis", "report", "chapter", "other"]), required=False, max_length=7)
     languages = serializers.ListField(child=serializers.ChoiceField(choices=["zh", "en", "de", "fr", "ja", "ru", "es", "unknown"]), required=False, max_length=8)
     year_min = serializers.IntegerField(min_value=1, max_value=3000, required=False)

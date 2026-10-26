@@ -10894,6 +10894,7 @@ export interface components {
             filters?: components["schemas"]["IndexQueryFiltersRequest"];
         };
         IndexQueryFiltersRequest: {
+            search_scope?: "all" | "title" | "body" | "notes" | "topics" | "authors" | "terms";
             document_types?: ("book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other")[];
             languages?: ("zh" | "en" | "de" | "fr" | "ja" | "ru" | "es" | "unknown")[];
             year_min?: number;

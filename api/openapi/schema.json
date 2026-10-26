@@ -86785,6 +86785,18 @@
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 3000
+                    },
+                    "search_scope": {
+                        "type": "string",
+                        "enum": [
+                            "all",
+                            "title",
+                            "body",
+                            "notes",
+                            "topics",
+                            "authors",
+                            "terms"
+                        ]
                     }
                 }
             },

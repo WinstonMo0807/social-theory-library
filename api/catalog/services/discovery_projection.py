@@ -356,6 +356,12 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
              "embedding_dimensions": int(generation.dimensions or generation.config_snapshot.get("dimensions") or 0) if generation else None,
              "reranker_artifact": generation.config_snapshot.get("reranker_artifact", "") if generation else "",
              "warnings": warnings, "coverage": coverage}
+    scope = filters.get("search_scope")
+    if scope and channel != "passages":
+        return empty
+    if scope in {"body", "notes", "topics"} and generation and generation.config_snapshot.get("scope_fields_version") != 1:
+        warnings.append({"code": "scope_index_pending", "message": "当前索引尚无正文、注释和主题的独立字段。请在索引与任务中更新索引后使用此范围；全部、书名和作者检索仍可使用。"})
+        return empty
     if warnings:
         return empty
     author_ranges = {}
@@ -387,7 +393,10 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         warnings.append({"code": "normalization_unavailable", "message": "文字规范化服务暂不可用，当前保留输入文字检索。"})
     base = {"limit": limit, "filter": [f"channel = {json.dumps(channel)}",
             f"scope_token IN {json.dumps(scopes)}", f"access_status IN {json.dumps(list(access_statuses))}"],
-            "attributesToRetrieve": ["id", "source_revision"]}
+            "attributesToRetrieve": ["id", "source_revision"], "attributesToSearchOn": ["title", "aliases", "authors", "normalized_text"]}
+    if scope:
+        from catalog.services.discovery_scope import SCOPE_FIELDS
+        base["attributesToSearchOn"] = [SCOPE_FIELDS[scope]]
     if author_ranges and any(ranges is not None for ranges in author_ranges.values()):
         try:
             author_filter = _author_document_filter(generation, author_ranges, access_statuses)
@@ -405,7 +414,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         empty["sparse"] = sparse.get("hits", [])
         from .discovery_query import keyword_question
         keywords = keyword_question(normalized)
-        if channel == "passages" and keywords != normalized:
+        if channel == "passages" and keywords != normalized and not scope:
             extra = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": keywords, "attributesToSearchOn": ["normalized_text"]})
             # Fuse before hydration so each source/text slice is loaded once.
             scores, refs = {}, {}
@@ -418,20 +427,21 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
             empty["sparse"] = [refs[key] for key in sorted(scores, key=lambda key: (-scores[key], key))][:limit]
     except DiscoveryIndexError:
         warnings.append({"code": "keyword_unavailable", "message": "关键词索引暂不可用。"})
-    try:
-        vector_cache = context.setdefault("vectors", {})
-        dimensions = int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384)
-        vector_key = (generation.config_snapshot["embedding_artifact"], dimensions, query)
-        if vector_key not in vector_cache:
-            vector_cache[vector_key] = embed_texts(
-                [query], kind="query", expected_artifact=vector_key[0], expected_dimensions=dimensions,
-            )["vectors"][0]
-        vector = vector_cache[vector_key]
-        dense = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": "", "vector": vector,
-            "hybrid": {"embedder": "discovery", "semanticRatio": 1.0}})
-        empty["dense"] = dense.get("hits", [])
-    except (DiscoveryIndexError, DiscoveryInferenceError, KeyError):
-        warnings.append({"code": "dense_unavailable", "message": "向量检索暂不可用，当前只显示关键词召回的材料。"})
+    if not scope:
+        try:
+            vector_cache = context.setdefault("vectors", {})
+            dimensions = int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384)
+            vector_key = (generation.config_snapshot["embedding_artifact"], dimensions, query)
+            if vector_key not in vector_cache:
+                vector_cache[vector_key] = embed_texts(
+                    [query], kind="query", expected_artifact=vector_key[0], expected_dimensions=dimensions,
+                )["vectors"][0]
+            vector = vector_cache[vector_key]
+            dense = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": "", "vector": vector,
+                "hybrid": {"embedder": "discovery", "semanticRatio": 1.0}})
+            empty["dense"] = dense.get("hits", [])
+        except (DiscoveryIndexError, DiscoveryInferenceError, KeyError):
+            warnings.append({"code": "dense_unavailable", "message": "向量检索暂不可用，当前只显示关键词召回的材料。"})
     hydrated = {row["id"]: row for row in validate_discovery_results(channel, [*empty["sparse"], *empty["dense"]], access_statuses, filters=filters)}
     for branch in ("sparse", "dense"):
         empty[branch] = [hydrated[row["id"]] for row in empty[branch] if row.get("id") in hydrated]

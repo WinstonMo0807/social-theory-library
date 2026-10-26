@@ -274,6 +274,7 @@ def get_source(kind, key, access_statuses=None):
 
 
 def source_units(kind, row, header):
+    from catalog.services.discovery_scope import unit_exclusions
     if kind != "edition":
         if header.get("text", "").strip():
             yield {"unit_id": str(row.pk), "text": header["text"], "metadata": {}}
@@ -281,7 +282,7 @@ def source_units(kind, row, header):
     revision = row.active_catalog_revision
     spans = EvidenceSpan.objects.filter(document_revision_id=revision.document_revision_id,
         page__asset_id=revision.reader_asset_id, page_number=F("page__index"),
-        is_stale=False).select_related("page").order_by("page_number", "start_offset", "id")
+        is_stale=False).select_related("page").prefetch_related("page__blocks").order_by("page_number", "start_offset", "id")
     if spans.exists():
         for span in spans.iterator(chunk_size=100):
             if not span.original_text.strip():
@@ -289,7 +290,8 @@ def source_units(kind, row, header):
             is_ocr = (span.extraction_method.lower() in {"ocr", "hybrid"}
                 or "ocr" in span.extraction_method.lower()
                 or any((span.ocr_provenance or {}).get(key) for key in ("provider", "model", "version")))
-            yield {"unit_id": str(span.pk), "text": span.original_text, "metadata": {
+            yield {"unit_id": str(span.pk), "text": span.original_text,
+                "scope_exclusions": unit_exclusions(span.page, span.original_text, span.start_offset, span.end_offset), "metadata": {
                 "evidence_span_id": str(span.pk), "passage_id": str(span.passage_id) if span.passage_id else None,
                 "page_id": str(span.page_id), "unit_hash": fingerprint(span.original_text),
                 "source_start_offset": span.start_offset,
@@ -300,8 +302,8 @@ def source_units(kind, row, header):
                 "quality_flags": ["ocr_unverified"] if is_ocr else []}}
     else:
         # No inferred coordinates. A page-level source is still a real source.
-        for page in revision.reader_asset.pages.exclude(text="").order_by("index").iterator(chunk_size=50):
-            yield {"unit_id": str(page.pk), "text": page.text, "metadata": {
+        for page in revision.reader_asset.pages.exclude(text="").prefetch_related("blocks").order_by("index").iterator(chunk_size=50):
+            yield {"unit_id": str(page.pk), "text": page.text, "scope_exclusions": unit_exclusions(page, page.text, 0, len(page.text)), "metadata": {
                 "page_id": str(page.pk), "pdf_page": page.index, "page_index": page.index,
                 "printed_page": page.printed_label, "unit_hash": fingerprint(page.text), "source_kind": "page_text", "locator_precision": "page", "bbox": [],
                 "reader_url": f"/reader/{revision.reader_asset_id}?page={page.index}", "quality_flags": ["page_locator_only"]}}

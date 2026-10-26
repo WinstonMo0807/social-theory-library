@@ -94,7 +94,8 @@ def ensure_index(generation, *, extra_filterable=()):
         if exc.code != "index_missing":
             raise
         wait_index_task(meili("POST", "/indexes", {"uid": generation.uid, "primaryKey": "id"}))
-    desired = {"searchableAttributes": ["title", "aliases", "authors", "normalized_text"],
+    scope_fields = ["body_text", "notes_text", "topics_text"] if generation.config_snapshot.get("scope_fields_version") == 1 else []
+    desired = {"searchableAttributes": ["title", "aliases", "authors", "normalized_text", *scope_fields],
         "displayedAttributes": ["*"],
         "filterableAttributes": ["id", "channel", "source_type", "source_id", "source_revision", "scope_token", "access_status", "input_hash", "language", *extra_filterable],
         "pagination": {"maxTotalHits": 10000},
@@ -185,7 +186,7 @@ def _prepare_generation(job):
             pooling="masked_mean_l2", document_template="passage: {title}\n{normalized_text}",
             config_snapshot={"embedding_artifact": embedding["artifact_id"], "reranker_artifact": reranker["artifact_id"],
                 "pipeline": health.get("pipeline"), "normalization": health.get("normalization"), "index_configured": False,
-                "chunk_tokens": 320, "overlap_tokens": 40, "dimensions": embedding_dimensions,
+                "chunk_tokens": 320, "overlap_tokens": 40, "dimensions": embedding_dimensions, "scope_fields_version": 1,
                 "activate": job.stats.get("activate", True)})
         _guard_job(job, stats={**job.stats, "generation_id": str(generation.pk)})
     return generation
@@ -355,6 +356,9 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
         "aliases": header.get("aliases", []), "authors": payload.get("authors", []),
         "normalized_text": child["normalized_text"], "language": payload.get("language") or header.get("language", "unknown"),
         "_vectors": {"discovery": vector}}
+    if generation.config_snapshot.get("scope_fields_version") == 1:
+        from catalog.services.discovery_scope import chunk_fields
+        search_doc.update(chunk_fields(header, unit, child))
     wait_index_task(meili("POST", f"/indexes/{generation.uid}/documents", [search_doc]))
     # Ready is evidence of a successful external task, never merely a dispatched write.
     with transaction.atomic():

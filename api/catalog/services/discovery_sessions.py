@@ -72,6 +72,13 @@ def normalize_filters(raw) -> dict:
     }
     output: dict = {}
     for key, value in raw.items():
+        if key == "search_scope":
+            from catalog.services.discovery_scope import SCOPE_FIELDS
+            if not isinstance(value, str) or value not in {"all", *SCOPE_FIELDS}:
+                raise ValidationError({key: "请选择有效的检索范围。"})
+            if value != "all":
+                output[key] = value
+            continue
         if key in {"year_min", "year_max"}:
             if value in (None, ""):
                 continue
@@ -487,7 +494,24 @@ def retrieve_discovery_channel(query, channel, filters, access_statuses, *, limi
                                   expanded=expanded, request_context=request_context)
     branches = [(result.get("sparse", []), 1.0), (result.get("dense", []), 1.0)]
     warnings = list(result.get("warnings", []))
-    if channel == "passages" and expanded and aliases:
+    if channel == "passages" and filters.get("search_scope") == "terms":
+        from catalog.models import QueryLexiconState
+        from catalog.services.query_lexicon.search import resolve_search_query
+        from catalog.services.query_lexicon.sync import QueryLexiconInvariantError
+        try:
+            resolution = resolve_search_query(query)
+            translations = list(dict.fromkeys(row["query"] for row in resolution["expansion_branches"]
+                if row.get("branch_type") == "verified_translation" and row.get("displayable")
+                and row.get("language", "").split("-")[0] in {"zh", "en"} and not row.get("ambiguous")))[:4]
+            for translated in translations:
+                if is_current and not is_current():
+                    return {"rows": [], "warnings": warnings, "canceled": True, "version": str(result.get("version") or "")}
+                branch = discovery_candidates(translated, channel, filters, access_statuses, limit=limit, request_context=request_context)
+                branches.append((branch.get("sparse", []), 1.0 / max(len(translations), 1)))
+                warnings.extend(branch.get("warnings", []))
+        except (QueryLexiconState.DoesNotExist, QueryLexiconInvariantError):
+            warnings.append(_warning("terms_pending", "已确认的中英文术语索引尚未就绪，本次保留输入词的原文匹配。", channel))
+    if channel == "passages" and expanded and aliases and not filters.get("search_scope"):
         for alias in aliases[:4]:
             if is_current and not is_current():
                 return {"rows": [], "warnings": warnings, "canceled": True, "version": str(result.get("version") or "")}
@@ -791,7 +815,7 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
     statuses = list(channel_states.values())
     terminal = "failed" if all(value == "failed" for value in statuses) else (
         "partial" if any(value in {"failed", "degraded"} for value in statuses) else "completed")
-    deep_enabled = bool(getattr(settings, "STL_DEEP_RETRIEVAL_ENABLED", False))
+    deep_enabled = bool(getattr(settings, "STL_DEEP_RETRIEVAL_ENABLED", False)) and not session.filters.get("search_scope")
     deep_task_id = str(uuid4()) if deep_enabled else ""
     with transaction.atomic():
         current = DiscoverySearchSession.objects.select_for_update().filter(
@@ -820,7 +844,7 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
                 DEEP_CHANNEL: {
                     "status": "disabled" if not deep_enabled else "skipped",
                     "pipeline_version": "stl4-recommended-deep-v1",
-                    "reason": "feature_disabled" if not deep_enabled else "no_baseline_results",
+                    "reason": "field_scope" if current.filters.get("search_scope") else "feature_disabled" if not deep_enabled else "no_baseline_results",
                 },
             }
             current.status = terminal
