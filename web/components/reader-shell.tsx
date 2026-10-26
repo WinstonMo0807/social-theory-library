@@ -229,7 +229,7 @@ function ReaderWorkspace({
     editionId: work.editionId ?? access?.edition_id, page: citationPage, setCopyStatus, setCopyStatusState,
   });
 
-  useReaderProgress({ assetId: work.id, page, totalPages, readerAuthenticated:readerAuthenticated && Boolean(access && currentPagePayload), readerId: readerSession.user?.id });
+  useReaderProgress({ assetId: work.id, page, totalPages, readerAuthenticated:readerAuthenticated && Boolean(access && currentPagePayload), readerId: readerSession.user?.id, guestReady: readerSession.status === "unauthenticated" && Boolean(access && currentPagePayload), revisionId: documentRevisionId });
   const { researchAnchors, researchError, retryResearch } = useReaderResearch({ assetId: work.id, revisionId: documentRevisionId, requestedRevisionId,
     projectId: researchProjectId, turnId: researchTurnId, referenceId: researchReferenceId,
     ownerId: readerSession.status === "authenticated" && readerSession.user ? String(readerSession.user.id) : null, requestPagePayload, jumpToPage });

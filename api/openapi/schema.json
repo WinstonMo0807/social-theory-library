@@ -10699,6 +10699,19 @@
                     },
                     {
                         "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "enum": [
+                                10,
+                                20
+                            ],
+                            "type": "integer",
+                            "default": 20
+                        },
+                        "description": "* `10` - 10\n* `20` - 20"
+                    },
+                    {
+                        "in": "query",
                         "name": "reason",
                         "schema": {
                             "type": "string",
@@ -12825,6 +12838,30 @@
                             "type": "string",
                             "default": "",
                             "maxLength": 200
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "enum": [
+                                "newest",
+                                "oldest",
+                                "title"
+                            ],
+                            "type": "string",
+                            "default": "newest",
+                            "minLength": 1
+                        },
+                        "description": "* `newest` - newest\n* `oldest` - oldest\n* `title` - title"
+                    },
+                    {
+                        "in": "query",
+                        "name": "topic",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 180
                         }
                     },
                     {
@@ -25418,6 +25455,54 @@
                 }
             }
         },
+        "/api/reading/guest-records/import/": {
+            "post": {
+                "operationId": "reading_guest_records_import_create",
+                "tags": [
+                    "reading"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GuestImportInputRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GuestImportInputRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GuestImportInputRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GuestImportOutput"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/reading/history/": {
             "get": {
                 "operationId": "reading_history_list",
@@ -25496,8 +25581,7 @@
                                 "$ref": "#/components/schemas/ReadingHistoryRequest"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "security": [
                     {
@@ -30389,7 +30473,7 @@
                             "type": "string",
                             "minLength": 1
                         },
-                        "description": "* `all` - all\n* `proposed` - proposed\n* `confirmed` - confirmed\n* `ignored` - ignored\n* `needs_revision` - 来源变化/不可用，或修改后待确认\n* `revised` - 存在本人修改历史"
+                        "description": "* `all` - all\n* `proposed` - proposed\n* `confirmed` - confirmed\n* `ignored` - ignored\n* `needs_revision` - needs_revision\n* `revised` - revised"
                     }
                 ],
                 "tags": [
@@ -37314,6 +37398,28 @@
                     "reason"
                 ]
             },
+            "AuthorityMaterialRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "rendition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "caption": {
+                        "type": "string",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "caption",
+                    "id",
+                    "rendition_id"
+                ]
+            },
             "AuthorityNameTypeEnum": {
                 "enum": [
                     "alias",
@@ -37454,6 +37560,21 @@
             "AuthorityValuesRequest": {
                 "type": "object",
                 "properties": {
+                    "biographical_materials": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AuthorityMaterialRequest"
+                        }
+                    },
+                    "key_concerns": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 240
+                        },
+                        "maxItems": 100
+                    },
                     "preferred_name": {
                         "type": "string",
                         "minLength": 1,
@@ -37504,21 +37625,6 @@
                     },
                     "authority_status": {
                         "$ref": "#/components/schemas/AuthorityValuesAuthorityStatusEnum"
-                    },
-                    "key_concerns": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "maxLength": 240
-                        },
-                        "maxItems": 100
-                    },
-                    "biographical_materials": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/AuthorityMaterialRequest"
-                        },
-                        "maxItems": 100
                     }
                 },
                 "required": [
@@ -38225,6 +38331,9 @@
                         "type": "string",
                         "default": "",
                         "maxLength": 2000
+                    },
+                    "publication_mode": {
+                        "$ref": "#/components/schemas/PublicationModeEnum"
                     },
                     "journal_contents": {
                         "type": "array",
@@ -42275,6 +42384,19 @@
                 "type": "string",
                 "description": "* `book` - 图书\n* `journal_article` - 期刊论文\n* `journal_issue` - 整期期刊\n* `thesis` - 学位论文\n* `report` - 研究报告\n* `chapter` - 论文集章节\n* `other` - 其他资料"
             },
+            "DocumentTypesEnum": {
+                "enum": [
+                    "book",
+                    "journal_article",
+                    "journal_issue",
+                    "thesis",
+                    "report",
+                    "chapter",
+                    "other"
+                ],
+                "type": "string",
+                "description": "* `book` - book\n* `journal_article` - journal_article\n* `journal_issue` - journal_issue\n* `thesis` - thesis\n* `report` - report\n* `chapter` - chapter\n* `other` - other"
+            },
             "DuplicatePolicyEnum": {
                 "enum": [
                     "review",
@@ -45566,6 +45688,139 @@
                     "title"
                 ]
             },
+            "GuestImportInputRequest": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 30
+                    },
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GuestRecordInputRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "owner_id",
+                    "records"
+                ]
+            },
+            "GuestImportOutput": {
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GuestImportResult"
+                        }
+                    }
+                },
+                "required": [
+                    "owner_id",
+                    "results"
+                ]
+            },
+            "GuestImportResult": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/GuestImportResultStateEnum"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "message",
+                    "state"
+                ]
+            },
+            "GuestImportResultStateEnum": {
+                "enum": [
+                    "imported",
+                    "already_imported",
+                    "disabled",
+                    "unavailable"
+                ],
+                "type": "string",
+                "description": "* `imported` - imported\n* `already_imported` - already_imported\n* `disabled` - disabled\n* `unavailable` - unavailable"
+            },
+            "GuestRecordInputKindEnum": {
+                "enum": [
+                    "reading",
+                    "article",
+                    "search",
+                    "bookmark"
+                ],
+                "type": "string",
+                "description": "* `reading` - reading\n* `article` - article\n* `search` - search\n* `bookmark` - bookmark"
+            },
+            "GuestRecordInputRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/GuestRecordInputKindEnum"
+                    },
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "asset_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "page_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "revision_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "pdf_page": {
+                        "type": "integer",
+                        "maximum": 100000,
+                        "minimum": 1
+                    },
+                    "issue_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "query": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "filters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 240
+                    }
+                },
+                "required": [
+                    "at",
+                    "id",
+                    "kind"
+                ]
+            },
             "HeadingLevelEnum": {
                 "enum": [
                     1,
@@ -45617,6 +45872,9 @@
                         "type": "string"
                     },
                     "source_image_url": {
+                        "type": "string"
+                    },
+                    "subtitle": {
                         "type": "string"
                     }
                 },
@@ -45675,6 +45933,9 @@
                         "type": "string"
                     },
                     "source_image_url": {
+                        "type": "string"
+                    },
+                    "subtitle": {
                         "type": "string"
                     }
                 },
@@ -46093,13 +46354,35 @@
                         "items": {
                             "$ref": "#/components/schemas/HomeSourceChoice"
                         }
+                    },
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/HomeSourceTopic"
+                        }
                     }
                 },
                 "required": [
                     "count",
                     "page",
                     "results",
+                    "topics",
                     "total_pages"
+                ]
+            },
+            "HomeSourceTopic": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
                 ]
             },
             "HomeTarget": {
@@ -46760,9 +47043,54 @@
                 },
                 "required": [
                     "q",
-                    "request_id",
-                    "work_id"
+                    "request_id"
                 ]
+            },
+            "IndexQueryFiltersLanguagesEnum": {
+                "enum": [
+                    "zh",
+                    "en",
+                    "de",
+                    "fr",
+                    "ja",
+                    "ru",
+                    "es",
+                    "unknown"
+                ],
+                "type": "string",
+                "description": "* `zh` - zh\n* `en` - en\n* `de` - de\n* `fr` - fr\n* `ja` - ja\n* `ru` - ru\n* `es` - es\n* `unknown` - unknown"
+            },
+            "IndexQueryFiltersRequest": {
+                "type": "object",
+                "properties": {
+                    "search_scope": {
+                        "$ref": "#/components/schemas/SearchScopeEnum"
+                    },
+                    "document_types": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DocumentTypesEnum"
+                        },
+                        "maxItems": 7
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IndexQueryFiltersLanguagesEnum"
+                        },
+                        "maxItems": 8
+                    },
+                    "year_min": {
+                        "type": "integer",
+                        "maximum": 3000,
+                        "minimum": 1
+                    },
+                    "year_max": {
+                        "type": "integer",
+                        "maximum": 3000,
+                        "minimum": 1
+                    }
+                }
             },
             "IndexQueryReceipt": {
                 "type": "object",
@@ -50229,15 +50557,6 @@
                     "version"
                 ]
             },
-            "LanguagesEnum": {
-                "enum": [
-                    "ch",
-                    "en",
-                    "chinese_cht"
-                ],
-                "type": "string",
-                "description": "* `ch` - ch\n* `en` - en\n* `chinese_cht` - chinese_cht"
-            },
             "LegacyGlobalFacets": {
                 "type": "object",
                 "properties": {
@@ -51246,6 +51565,12 @@
                         },
                         "maxItems": 200,
                         "minItems": 1
+                    },
+                    "read_book_count": {
+                        "type": "integer",
+                        "maximum": 10000,
+                        "minimum": 0,
+                        "description": "本人填写的已读相关书籍数量；不代替逐本阅读记录或阅读基础。"
                     },
                     "time_budget": {
                         "type": "string",
@@ -52765,6 +53090,9 @@
                     "document_type": {
                         "type": "string"
                     },
+                    "byte_size": {
+                        "type": "integer"
+                    },
                     "page_count": {
                         "type": "integer"
                     },
@@ -52807,6 +53135,7 @@
                 },
                 "required": [
                     "authors",
+                    "byte_size",
                     "cover_url",
                     "document_revision_id",
                     "document_type",
@@ -52835,6 +53164,9 @@
                     "pdf_page": {
                         "type": "integer"
                     },
+                    "new_pdf_page": {
+                        "type": "integer"
+                    },
                     "before": {
                         "type": "array",
                         "items": {
@@ -52856,22 +53188,27 @@
                     "note": {
                         "type": "string"
                     },
+                    "source_note_before": {
+                        "type": "string"
+                    },
+                    "source_note_after": {
+                        "type": "string"
+                    },
                     "manual_before": {
                         "type": "boolean"
-                    },
-                    "new_pdf_page": {
-                        "type": "integer"
                     }
                 },
                 "required": [
                     "after",
                     "before",
                     "manual_before",
+                    "new_pdf_page",
                     "note",
                     "page_type_after",
                     "page_type_before",
                     "pdf_page",
-                    "new_pdf_page"
+                    "source_note_after",
+                    "source_note_before"
                 ]
             },
             "MappingCommandActionEnum": {
@@ -52936,6 +53273,43 @@
                     {
                         "$ref": "#/components/schemas/MappingPreview"
                     }
+                ]
+            },
+            "MappingCopyJob": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "progress": {
+                        "type": "integer"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "error": {
+                        "type": "string"
+                    },
+                    "mapping_revision_id": {
+                        "type": "string"
+                    },
+                    "download_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "download_url",
+                    "error",
+                    "id",
+                    "mapping_revision_id",
+                    "progress",
+                    "status",
+                    "updated_at"
                 ]
             },
             "MappingData": {
@@ -53058,9 +53432,17 @@
                     "pdf_pages"
                 ]
             },
-            "MappingMissing": {
+            "MappingInsertedPage": {
                 "type": "object",
                 "properties": {
+                    "action": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PageLabelActionEnum"
+                            }
+                        ],
+                        "default": "mark"
+                    },
                     "id": {
                         "type": "string",
                         "maxLength": 80
@@ -53082,13 +53464,48 @@
                         "type": "boolean",
                         "default": false
                     },
+                    "pdf_page": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "after_pdf_page",
+                    "id",
+                    "label",
+                    "pdf_page"
+                ]
+            },
+            "MappingMissing": {
+                "type": "object",
+                "properties": {
                     "action": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/MappingMissingActionEnum"
+                                "$ref": "#/components/schemas/PageLabelActionEnum"
                             }
                         ],
                         "default": "mark"
+                    },
+                    "id": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "after_pdf_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    },
+                    "confirmed": {
+                        "type": "boolean",
+                        "default": false
                     }
                 },
                 "required": [
@@ -53100,6 +53517,14 @@
             "MappingMissingRequest": {
                 "type": "object",
                 "properties": {
+                    "action": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PageLabelActionEnum"
+                            }
+                        ],
+                        "default": "mark"
+                    },
                     "id": {
                         "type": "string",
                         "minLength": 1,
@@ -53122,14 +53547,6 @@
                     "confirmed": {
                         "type": "boolean",
                         "default": false
-                    },
-                    "action": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/MappingMissingActionEnum"
-                            }
-                        ],
-                        "default": "mark"
                     }
                 },
                 "required": [
@@ -53164,6 +53581,11 @@
                         "type": "string",
                         "default": "",
                         "maxLength": 1000
+                    },
+                    "source_note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 240
                     },
                     "override_manual": {
                         "type": "boolean",
@@ -53212,6 +53634,11 @@
                         "type": "string",
                         "default": "",
                         "maxLength": 1000
+                    },
+                    "source_note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 240
                     },
                     "override_manual": {
                         "type": "boolean",
@@ -53280,6 +53707,20 @@
                     "prepared_fingerprint": {
                         "type": "string"
                     },
+                    "copy_asset_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "inserted_pages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingInsertedPage"
+                        }
+                    },
+                    "new_page_count": {
+                        "type": "integer"
+                    },
                     "changes": {
                         "type": "array",
                         "items": {
@@ -53327,20 +53768,6 @@
                     },
                     "mode": {
                         "$ref": "#/components/schemas/DocumentRevisionApplyModeEnum"
-                    },
-                    "copy_asset_id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "nullable": true
-                    },
-                    "inserted_pages": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/MappingInsertedPage"
-                        }
-                    },
-                    "new_page_count": {
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -53348,18 +53775,18 @@
                     "can_apply",
                     "changed_page_count",
                     "changes",
+                    "copy_asset_id",
                     "diagnostics",
+                    "inserted_pages",
                     "missing_after",
                     "missing_before",
                     "mode",
+                    "new_page_count",
                     "prepared_fingerprint",
                     "revision_id",
                     "segments_after",
                     "segments_before",
-                    "source_fingerprint",
-                    "copy_asset_id",
-                    "inserted_pages",
-                    "new_page_count"
+                    "source_fingerprint"
                 ]
             },
             "MappingPublication": {
@@ -53556,6 +53983,12 @@
             "MappingState": {
                 "type": "object",
                 "properties": {
+                    "jobs": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MappingCopyJob"
+                        }
+                    },
                     "asset": {
                         "$ref": "#/components/schemas/MappingAsset"
                     },
@@ -53606,12 +54039,6 @@
                     },
                     "result": {
                         "$ref": "#/components/schemas/MappingRevision"
-                    },
-                    "jobs": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/MappingCopyJob"
-                        }
                     }
                 },
                 "required": [
@@ -53623,10 +54050,10 @@
                     "history_count",
                     "history_next_page",
                     "history_page",
+                    "jobs",
                     "latest",
                     "preceding_revision",
-                    "source_fingerprint",
-                    "jobs"
+                    "source_fingerprint"
                 ]
             },
             "MediaAsset": {
@@ -56746,6 +57173,20 @@
             "OCRPageDetail": {
                 "type": "object",
                 "properties": {
+                    "quality_spans": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OCRQualitySpan"
+                        },
+                        "readOnly": true
+                    },
+                    "original_quality_spans": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OCRQualitySpan"
+                        },
+                        "readOnly": true
+                    },
                     "pdf_page": {
                         "type": "integer"
                     },
@@ -56800,20 +57241,6 @@
                     "history_next_page": {
                         "type": "integer",
                         "nullable": true
-                    },
-                    "quality_spans": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/OCRQualitySpan"
-                        },
-                        "readOnly": true
-                    },
-                    "original_quality_spans": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/OCRQualitySpan"
-                        },
-                        "readOnly": true
                     }
                 },
                 "required": [
@@ -56832,6 +57259,29 @@
                     "quality_spans",
                     "source_fingerprint",
                     "text"
+                ]
+            },
+            "OCRQualitySpan": {
+                "type": "object",
+                "properties": {
+                    "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "当前文本中从0开始的Unicode码点偏移。"
+                    },
+                    "end": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "不含末尾的Unicode码点偏移。"
+                    },
+                    "reason": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "end",
+                    "reason",
+                    "start"
                 ]
             },
             "OCRReviewPageRequest": {
@@ -56858,7 +57308,7 @@
                     "languages": {
                         "type": "array",
                         "items": {
-                            "$ref": "#/components/schemas/LanguagesEnum"
+                            "$ref": "#/components/schemas/OCRTaskOptionsLanguagesEnum"
                         },
                         "maxItems": 3,
                         "minItems": 1
@@ -56891,13 +57341,22 @@
                     "skip_reviewed"
                 ]
             },
+            "OCRTaskOptionsLanguagesEnum": {
+                "enum": [
+                    "ch",
+                    "en",
+                    "chinese_cht"
+                ],
+                "type": "string",
+                "description": "* `ch` - ch\n* `en` - en\n* `chinese_cht` - chinese_cht"
+            },
             "OCRTaskOptionsRequest": {
                 "type": "object",
                 "properties": {
                     "languages": {
                         "type": "array",
                         "items": {
-                            "$ref": "#/components/schemas/LanguagesEnum"
+                            "$ref": "#/components/schemas/OCRTaskOptionsLanguagesEnum"
                         },
                         "maxItems": 3,
                         "minItems": 1
@@ -57558,6 +58017,14 @@
                     "pdf_page",
                     "title"
                 ]
+            },
+            "PageLabelActionEnum": {
+                "enum": [
+                    "mark",
+                    "blank"
+                ],
+                "type": "string",
+                "description": "* `mark` - mark\n* `blank` - blank"
             },
             "PageTypeEnum": {
                 "enum": [
@@ -60531,6 +60998,12 @@
                         "type": "integer",
                         "minimum": 1
                     },
+                    "read_book_count": {
+                        "type": "integer",
+                        "maximum": 10000,
+                        "minimum": 0,
+                        "description": "本人填写的已读相关书籍数量；不代替逐本阅读记录或阅读基础。"
+                    },
                     "time_budget": {
                         "type": "string",
                         "maxLength": 160
@@ -63038,6 +63511,18 @@
             "PlacementHistoryPage": {
                 "type": "object",
                 "properties": {
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
                     "count": {
                         "type": "integer"
                     },
@@ -63176,6 +63661,17 @@
             "PlacementRead": {
                 "type": "object",
                 "properties": {
+                    "item_states": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "enum": [
+                                "published",
+                                "saved_unpublished"
+                            ],
+                            "type": "string",
+                            "description": "* `published` - published\n* `saved_unpublished` - saved_unpublished"
+                        }
+                    },
                     "schema_version": {
                         "type": "integer"
                     },
@@ -63650,6 +64146,18 @@
             "PlacementSourcesPage": {
                 "type": "object",
                 "properties": {
+                    "topics": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
                     "count": {
                         "type": "integer"
                     },
@@ -63882,6 +64390,12 @@
             "PlanCreateInputRequest": {
                 "type": "object",
                 "properties": {
+                    "read_book_count": {
+                        "type": "integer",
+                        "maximum": 10000,
+                        "minimum": 0,
+                        "description": "本人填写的已读相关书籍数量；不代替逐本阅读记录或阅读基础。"
+                    },
                     "time_budget": {
                         "type": "string",
                         "maxLength": 160
@@ -66177,6 +66691,12 @@
             "ProjectArticle": {
                 "type": "object",
                 "properties": {
+                    "source_problem_count": {
+                        "type": "integer"
+                    },
+                    "public_url": {
+                        "type": "string"
+                    },
                     "id": {
                         "type": "string",
                         "format": "uuid"
@@ -66226,9 +66746,11 @@
                     "introduction",
                     "position",
                     "public_byline",
+                    "public_url",
                     "published",
                     "saved_at",
                     "saved_by",
+                    "source_problem_count",
                     "title"
                 ]
             },
@@ -69929,6 +70451,14 @@
                     }
                 ]
             },
+            "PublicationModeEnum": {
+                "enum": [
+                    "document",
+                    "bibliographic"
+                ],
+                "type": "string",
+                "description": "* `document` - 书目与文献\n* `bibliographic` - 纯书目"
+            },
             "PublicationPreparation": {
                 "type": "object",
                 "properties": {
@@ -70532,6 +71062,14 @@
             "ReaderMaterialOutput": {
                 "type": "object",
                 "properties": {
+                    "source": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ShareWorkSummary"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "id": {
                         "type": "string",
                         "format": "uuid"
@@ -71274,7 +71812,17 @@
                     },
                     "asset": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "issue": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "article": {
+                        "nullable": true,
+                        "readOnly": true
                     },
                     "work": {
                         "allOf": [
@@ -71308,7 +71856,7 @@
                     }
                 },
                 "required": [
-                    "asset",
+                    "article",
                     "created_at",
                     "id",
                     "title",
@@ -71320,7 +71868,13 @@
                 "properties": {
                     "asset": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "issue": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
                     },
                     "page_index": {
                         "type": "integer",
@@ -71334,10 +71888,7 @@
                         "minimum": 0,
                         "format": "int64"
                     }
-                },
-                "required": [
-                    "asset"
-                ]
+                }
             },
             "ReadingList": {
                 "type": "object",
@@ -72813,6 +73364,15 @@
                     "title": {
                         "type": "string"
                     },
+                    "subtitle": {
+                        "type": "string"
+                    },
+                    "kind_label": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
                     "label": {
                         "type": "string"
                     },
@@ -72900,11 +73460,13 @@
                     "dependencies",
                     "dependencies_limited",
                     "dependency_count",
+                    "description",
                     "destination",
                     "entry_id",
                     "history",
                     "history_count",
                     "kind",
+                    "kind_label",
                     "label",
                     "names",
                     "notice",
@@ -72914,6 +73476,7 @@
                     "record_state",
                     "rename",
                     "storage",
+                    "subtitle",
                     "title",
                     "updated_at",
                     "version"
@@ -73317,6 +73880,15 @@
                     "title": {
                         "type": "string"
                     },
+                    "subtitle": {
+                        "type": "string"
+                    },
+                    "kind_label": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
                     "changed_at": {
                         "type": "string",
                         "format": "date-time"
@@ -73353,13 +73925,16 @@
                     "actor_name",
                     "changed_at",
                     "cover_url",
+                    "description",
                     "destination",
                     "entry_id",
                     "kind",
+                    "kind_label",
                     "label",
                     "object_id",
                     "reason",
                     "record_state",
+                    "subtitle",
                     "title"
                 ]
             },
@@ -74629,6 +75204,9 @@
                     "label": {
                         "type": "string"
                     },
+                    "duration_label": {
+                        "type": "string"
+                    },
                     "policy": {
                         "type": "string"
                     },
@@ -74638,6 +75216,7 @@
                 },
                 "required": [
                     "detail",
+                    "duration_label",
                     "label",
                     "policy"
                 ]
@@ -75653,19 +76232,29 @@
                         "maxLength": 500
                     },
                     "works": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkCard"
+                        },
                         "readOnly": true
                     },
                     "curated": {
-                        "type": "string",
+                        "type": "object",
+                        "additionalProperties": {},
                         "readOnly": true
                     },
                     "curated_claims": {
-                        "type": "string",
+                        "type": "object",
+                        "additionalProperties": {},
                         "readOnly": true
                     },
                     "knowledge_nodes": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "description": "Expose explicit and work-backed normalized knowledge relations.",
                         "readOnly": true
                     }
                 },
@@ -76502,6 +77091,19 @@
                     "recording_enabled",
                     "results"
                 ]
+            },
+            "SearchScopeEnum": {
+                "enum": [
+                    "all",
+                    "title",
+                    "body",
+                    "notes",
+                    "topics",
+                    "authors",
+                    "terms"
+                ],
+                "type": "string",
+                "description": "* `all` - all\n* `title` - title\n* `body` - body\n* `notes` - notes\n* `topics` - topics\n* `authors` - authors\n* `terms` - terms"
             },
             "SelectionEnum": {
                 "enum": [
@@ -78422,6 +79024,9 @@
                         "type": "string"
                     },
                     "source_image_url": {
+                        "type": "string"
+                    },
+                    "subtitle": {
                         "type": "string"
                     },
                     "area": {
@@ -82851,19 +83456,36 @@
                         "nullable": true
                     },
                     "disciplines": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
                         "readOnly": true
                     },
                     "subdisciplines": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
                         "readOnly": true
                     },
                     "linked_theories": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
                         "readOnly": true
                     },
                     "knowledge_nodes": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "description": "Expose published normalized Topic relations without legacy dual-write.",
                         "readOnly": true
                     },
                     "work_count": {
@@ -82871,11 +83493,13 @@
                         "readOnly": true
                     },
                     "curated": {
-                        "type": "string",
+                        "type": "object",
+                        "additionalProperties": {},
                         "readOnly": true
                     },
                     "curated_claims": {
-                        "type": "string",
+                        "type": "object",
+                        "additionalProperties": {},
                         "readOnly": true
                     }
                 },
@@ -83021,16 +83645,16 @@
                     "subtitle": {
                         "type": "string"
                     },
-                    "cover_url": {
-                        "type": "string"
-                    },
-                    "status": {
-                        "type": "string"
-                    },
                     "contributor_label": {
                         "type": "string"
                     },
                     "kind_label": {
+                        "type": "string"
+                    },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "status": {
                         "type": "string"
                     }
                 },
@@ -85400,6 +86024,25 @@
                     "topics"
                 ]
             },
+            "WorkEditionContributorOutput": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "role_label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "role",
+                    "role_label"
+                ]
+            },
             "WorkEditionOutput": {
                 "type": "object",
                 "properties": {
@@ -85429,6 +86072,18 @@
                     "state": {
                         "type": "string"
                     },
+                    "cover_url": {
+                        "type": "string"
+                    },
+                    "contributors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkEditionContributorOutput"
+                        }
+                    },
+                    "searchable": {
+                        "type": "boolean"
+                    },
                     "original_count": {
                         "type": "integer"
                     },
@@ -85442,6 +86097,8 @@
                     }
                 },
                 "required": [
+                    "contributors",
+                    "cover_url",
                     "current_reader_asset_id",
                     "id",
                     "is_primary",
@@ -85451,6 +86108,7 @@
                     "publication_year",
                     "publisher",
                     "reader_count",
+                    "searchable",
                     "state",
                     "version_label"
                 ]
@@ -86724,199 +87382,6 @@
                     "saved_at",
                     "state",
                     "work_id"
-                ]
-            },
-            "MappingMissingActionEnum": {
-                "enum": [
-                    "mark",
-                    "blank"
-                ],
-                "type": "string",
-                "description": "* `mark` - mark\n* `blank` - blank"
-            },
-            "MappingCopyJob": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "status": {
-                        "type": "string"
-                    },
-                    "progress": {
-                        "type": "integer"
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time"
-                    },
-                    "error": {
-                        "type": "string"
-                    },
-                    "mapping_revision_id": {
-                        "type": "string"
-                    },
-                    "download_url": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "id",
-                    "status",
-                    "progress",
-                    "updated_at",
-                    "error",
-                    "mapping_revision_id",
-                    "download_url"
-                ]
-            },
-            "IndexQueryFiltersRequest": {
-                "type": "object",
-                "properties": {
-                    "document_types": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "enum": [
-                                "book",
-                                "journal_article",
-                                "journal_issue",
-                                "thesis",
-                                "report",
-                                "chapter",
-                                "other"
-                            ]
-                        },
-                        "maxItems": 7
-                    },
-                    "languages": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "enum": [
-                                "zh",
-                                "en",
-                                "de",
-                                "fr",
-                                "ja",
-                                "ru",
-                                "es",
-                                "unknown"
-                            ]
-                        },
-                        "maxItems": 8
-                    },
-                    "year_min": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 3000
-                    },
-                    "year_max": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 3000
-                    },
-                    "search_scope": {
-                        "type": "string",
-                        "enum": [
-                            "all",
-                            "title",
-                            "body",
-                            "notes",
-                            "topics",
-                            "authors",
-                            "terms"
-                        ]
-                    }
-                }
-            },
-            "MappingInsertedPage": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "maxLength": 80
-                    },
-                    "label": {
-                        "type": "string",
-                        "maxLength": 40
-                    },
-                    "after_pdf_page": {
-                        "type": "integer",
-                        "minimum": 1
-                    },
-                    "note": {
-                        "type": "string",
-                        "default": "",
-                        "maxLength": 1000
-                    },
-                    "confirmed": {
-                        "type": "boolean",
-                        "default": false
-                    },
-                    "action": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/MappingMissingActionEnum"
-                            }
-                        ],
-                        "default": "mark"
-                    },
-                    "pdf_page": {
-                        "type": "integer"
-                    }
-                },
-                "required": [
-                    "after_pdf_page",
-                    "id",
-                    "label",
-                    "pdf_page"
-                ]
-            },
-            "AuthorityMaterialRequest": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "rendition_id": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "caption": {
-                        "type": "string",
-                        "maxLength": 500
-                    }
-                },
-                "required": [
-                    "caption",
-                    "id",
-                    "rendition_id"
-                ]
-            },
-            "OCRQualitySpan": {
-                "type": "object",
-                "properties": {
-                    "start": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "description": "当前文本中从0开始的Unicode码点偏移。"
-                    },
-                    "end": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "description": "不含末尾的Unicode码点偏移。"
-                    },
-                    "reason": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "end",
-                    "reason",
-                    "start"
                 ]
             }
         },

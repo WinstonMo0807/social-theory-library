@@ -5,15 +5,20 @@ import { CheckCircle2, Eye, EyeOff, LoaderCircle, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest, announceAuthenticatedSession } from "@/lib/api";
+import { useGuestTransfer } from "./auth-guest-records";
 import { authPageHref, safeAuthDestination } from "@/lib/auth-navigation";
 
 export type AuthMode = "login" | "register" | "reset";
 
 export function AuthForm({ mode, next, onModeChange, onSuccess, onGuardChange }: { mode: AuthMode; next?: string; onModeChange?: (mode: AuthMode) => void; onSuccess?: (destination: string) => void; onGuardChange?: (value: boolean) => void }) {
+  const transfer = useGuestTransfer();
+  const [loggedInDestination, setLoggedInDestination] = useState("");
+  const [transferOwner, setTransferOwner] = useState("");
   const params = useSearchParams();
   const destination = safeAuthDestination(next || params.get("next"));
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
+  useEffect(() => { transfer?.setLocked(pending); return () => transfer?.setLocked(false); }, [pending, transfer?.setLocked]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [resetRequested, setResetRequested] = useState(false);
@@ -33,7 +38,7 @@ export function AuthForm({ mode, next, onModeChange, onSuccess, onGuardChange }:
     const signal = AbortSignal.any([request.current!.signal, AbortSignal.timeout(30000)]);
     await apiRequest("/auth/login/", { cache: "no-store", signal });
     signal.throwIfAborted();
-    return apiRequest<{ user?: { role: string }; notice?: string; detail?: string }>(path, { method: "POST", cache: "no-store", signal, body: JSON.stringify(body) });
+    return apiRequest<{ user?: { id: number; role: string }; notice?: string; detail?: string }>(path, { method: "POST", cache: "no-store", signal, body: JSON.stringify(body) });
   };
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -47,7 +52,19 @@ export function AuthForm({ mode, next, onModeChange, onSuccess, onGuardChange }:
         const result = await post("/auth/login/", { email: email.trim(), password, remember_me: form.get("remember") === "on" });
         if (request.current?.signal.aborted) return;
         announceAuthenticatedSession();
-        navigate(next || params.get("next") ? destination : ["admin", "editor", "reviewer"].includes(result.user?.role || "") ? "/admin" : "/account");
+        setTransferOwner(String(result.user?.id ?? ""));
+        const target = next || params.get("next") ? destination : ["admin", "editor", "reviewer"].includes(result.user?.role || "") ? "/admin" : "/account";
+        try {
+          if (transfer?.selected && result.user?.id !== undefined) {
+            const warning = await transfer.importForOwner(String(result.user.id), AbortSignal.any([request.current!.signal, AbortSignal.timeout(30000)]));
+            if (warning) { setMessage(`登录成功。${warning}`); setPassword(""); setLoggedInDestination(target); return; }
+          }
+        } catch (reason) {
+          if (request.current?.signal.aborted) return;
+          setMessage(`登录成功，本机记录转存尚未完成。${reason instanceof Error ? reason.message : "请稍后重试，原记录保留。"}`);
+          setPassword(""); setLoggedInDestination(target); return;
+        }
+        if (!request.current?.signal.aborted) navigate(target);
       } else if (mode === "register") {
         const result = await post("/auth/register/", { email: email.trim(), username: form.get("username"), display_name: form.get("username"), password, next: destination });
         if (request.current?.signal.aborted) return;
@@ -61,6 +78,16 @@ export function AuthForm({ mode, next, onModeChange, onSuccess, onGuardChange }:
     } catch (reason) { if (!request.current?.signal.aborted) setError(reason instanceof Error ? reason.message : "请求未完成，请保留输入并重试。"); }
     finally { submitting.current = false; if (!request.current?.signal.aborted) setPending(false); }
   }
+  async function retryTransfer() {
+    if (pending || !transferOwner || !transfer) return;
+    setPending(true);
+    try {
+      const warning = await transfer.importForOwner(transferOwner, AbortSignal.any([request.current!.signal, AbortSignal.timeout(30000)]));
+      if (warning) setMessage(`登录成功。${warning}`);
+      else navigate(loggedInDestination);
+    } catch (reason) { if (!request.current?.signal.aborted) setMessage(reason instanceof Error ? reason.message : "转存尚未完成，原记录保留。"); }
+    finally { if (!request.current?.signal.aborted) setPending(false); }
+  }
   async function resend() {
     if (pending || cooldown > 0 || submitting.current) return;
     submitting.current = true; setPending(true); setError("");
@@ -69,6 +96,7 @@ export function AuthForm({ mode, next, onModeChange, onSuccess, onGuardChange }:
     finally { submitting.current = false; if (!request.current?.signal.aborted) setPending(false); }
   }
   const tab = (value: AuthMode, title: string) => onModeChange ? <button type="button" disabled={pending} aria-pressed={mode === value} onClick={() => onModeChange(value)}>{title}</button> : <Link aria-current={mode === value ? "page" : undefined} href={authPageHref(value, destination)}>{title}</Link>;
+  if (loggedInDestination) return <div className="auth-form"><h2>已登录</h2><p className="form-message" role="status">{message}</p><p>未转存的记录仍保存在本设备，账户隐私设置保持不变。</p><div className="auth-links"><button type="button" disabled={pending} onClick={() => void retryTransfer()}>{pending ? "正在转存…" : "重试转存"}</button><button className="button auth-submit" type="button" disabled={pending} onClick={() => navigate(loggedInDestination)}>继续原来的阅读</button></div></div>;
   if (registered) return <div className="auth-form"><h2>账户已创建</h2><p className="form-message" role="status">{message}</p><p>验证邮箱为 {email}。请打开最新邮件，并在24小时内由本人确认。登录和邮箱验证是两个独立步骤。</p>{error ? <p className="form-message error" role="alert">{error}</p> : null}<button className="button auth-submit" type="button" disabled={pending || cooldown > 0} onClick={() => void resend()}>{pending ? "正在申请…" : cooldown > 0 ? `${cooldown}秒后重新申请验证` : "重新发送验证链接"}</button><div className="auth-links"><Link href={authPageHref("login", destination)}>登录并继续</Link><Link href="/help/account">账户帮助</Link></div></div>;
   return <form className="auth-form" data-auth-mode={mode} onSubmit={submit} aria-busy={pending} onKeyDown={event => { if (event.key === "Enter" && event.nativeEvent.isComposing) event.preventDefault(); }}>
     <nav className="auth-tabs" aria-label="账户入口">{mode!=="register"?tab("login", "登录"):null}{tab("register", "注册账户")}{tab("reset",mode==="reset"?"找回账户":"找回密码")}</nav>

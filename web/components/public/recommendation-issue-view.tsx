@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, BookOpen, FolderPlus, List, MessageSquare, Quote, Share2, X } from "lucide-react";
 import type { RecommendationIssue, IssueItem, IssueBlock, IssueResolvedSource } from "@/lib/api/recommendation-issues.types";
 import { SaveIssueList } from "@/components/save-issue-list";
@@ -12,6 +12,8 @@ import { EditorialByline, EditorialImage, EditorialRelated } from "./editorial-d
 import { EditorialSource, EditorialSourceContent } from "./editorial-source";
 import { ArticleComments } from "./article-comments";
 import { EditorialReader } from "./editorial-reader";
+import { usePublicSession } from "../public-session-provider";
+import { saveGuestRecord } from "@/lib/guest-records";
 import styles from "./editorial.module.css";
 
 export function IssueItemCard({ item }: { item: IssueItem }) {
@@ -52,6 +54,12 @@ function exhibits(issue: RecommendationIssue): Exhibit[] {
   return rows;
 }
 export function RecommendationIssueView({ issue, preview = false, selectedExhibit = "" }: { issue: RecommendationIssue; preview?: boolean; selectedExhibit?: string }) {
+  const { state: session } = usePublicSession();
+  useEffect(() => {
+    if (preview || session.status !== "unauthenticated" || !issue.public_revision_id) return;
+    const timer = window.setTimeout(() => saveGuestRecord({ kind: "article", issue_id: issue.id, revision_id: issue.public_revision_id! }), 650);
+    return () => window.clearTimeout(timer);
+  }, [preview, session.status, issue.id, issue.public_revision_id]);
   const [commentCount, setCommentCount] = useState<number|null>(null);
   const [notice, setNotice] = useState(""), [citations, setCitations] = useState(false);
   const isExhibition = issue.article_metadata?.kind === "exhibition", headings = issue.body_blocks.flatMap((block,index) => heading(block) ? [{ id:anchor(block,index),text:block.text || "来源暂不可用的章节",level:block.heading_level||1 }] : []);

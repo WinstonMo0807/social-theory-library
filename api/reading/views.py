@@ -329,7 +329,7 @@ class ReadingHistoryViewSet(
 ):
     permission_classes = [IsAuthenticated]
     serializer_class = ReadingHistorySerializer
-    queryset = ReadingHistory.objects.select_related("asset__edition__work")
+    queryset = ReadingHistory.objects.select_related("asset__edition__work", "issue")
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)

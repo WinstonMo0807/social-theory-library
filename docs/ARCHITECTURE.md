@@ -1,5 +1,10 @@
 # Social Theory Library 架构
 
+## 2026-10-27 访客记录与阅读历史来源
+
+本机guest-records版本化存储只记录未登录公开来源，登录后经明确勾选与本人接口导入。ReadingHistory支持asset或recommendation issue恰好一种来源，迁移reading0028；公开修订资格、隐私偏好、读取/导出/清理沿原账户服务。原始本机记录保留，回执防重不覆盖账户已有进度。详docs/stl4/GUEST_RECORDS_20261027.md。
+
+
 ## 2026-10-27 OCR 实施更新
 
 用户选定的 OCR 主链改为 RapidOCR 3.10.0 / ONNX Runtime 1.31.0 / PP-OCRv6 tiny。上传、馆藏任务、读者 OCR 状态、私人引文稿件、可搜索PDF、页码/目录与检索继续共用现有调用链。NAS_URL 改为 RAPIDOCR_SERVICE_URL；默认 nas_only，远端必须返回同一引擎模型身份。详情及当前部署状态见 docs/stl4/OCR_WORKFLOW_REPLACEMENT_20261027.md 和 CURRENT_PROGRESS.md。旧 Paddle 章节仅作历史，不能用于当前构建。

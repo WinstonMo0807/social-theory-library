@@ -112,6 +112,7 @@ urlpatterns = [
         if getattr(getattr(pattern.callback, "cls", None), "__module__", "") in {"reading.research_views", "reading.privacy_views", "reading.parallel_views", "reading.graph_views", "reading.path_views"}
         or pattern.name in {"reading-lists-related", "reading-lists-citation", "reading-lists-undo-citation", "reading-lists-plan-preview", "reading-lists-create-plan", "reading-lists-plan-receipt", "reading-lists-list", "reading-lists-detail", "reading-lists-add-item", "reading-lists-remove-item", "reading-lists-directory", "reading-lists-workspace", "reading-lists-command", "reading-lists-receipt", "reading-lists-export", "annotations-list", "annotations-detail", "bookmarks-list", "bookmarks-detail", "progress-list", "progress-detail", "reading-history-list", "reading-history-detail", "saved-topics-list", "saved-topics-detail", "saved-topics-state", "saved-topics-command"}
     ] + [pattern for pattern in reading_patterns if getattr(pattern, "name", None) in {
+        "reader-guest-import",
         "admin-ai-runtime-profiles", "admin-ai-runtime-profile-test",
         "reader-groups", "reader-group-accept", "reader-group-detail", "reader-group-receipt", "reader-share-selection", "reader-share-preview",
         "reader-share-sources", "reader-share-receipt", "reader-share-notices", "reader-shares", "reader-share-detail", "public-share-link",

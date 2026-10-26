@@ -453,29 +453,50 @@ class ReadingListSerializer(OwnedSerializer):
 class ReadingHistorySerializer(OwnedSerializer):
     title = serializers.SerializerMethodField()
     work = serializers.SerializerMethodField()
+    article = serializers.SerializerMethodField()
 
     class Meta:
         model = ReadingHistory
-        fields = ("id", "asset", "work", "title", "page_index", "session_seconds", "created_at")
+        fields = ("id", "asset", "issue", "article", "work", "title", "page_index", "session_seconds", "created_at")
         read_only_fields = ("id", "created_at")
 
     @extend_schema_field(WorkCardSerializer(allow_null=True))
     def get_work(self, obj):
-        return _reader_work_data(obj.asset.edition.work, self.context)
+        return _reader_work_data(obj.asset.edition.work, self.context) if obj.asset_id else None
+
+    @extend_schema_field(serializers.JSONField(allow_null=True))
+    def get_article(self, obj):
+        if not obj.issue_id:
+            return None
+        from catalog.services.editorial_issues import published_issues, public_issue_revision
+        issue = published_issues().filter(pk=obj.issue_id).first()
+        if issue is None:
+            return None
+        payload = public_issue_revision(issue).materialized_preview
+        return {"id": str(issue.pk), "title": payload.get("title", ""), "href": f"/recommendations/{issue.slug}"}
 
     def get_title(self, obj) -> str:
-        return (self.get_work(obj) or {}).get("title", "来源当前不可用")
+        return (self.get_article(obj) or self.get_work(obj) or {}).get("title", "来源当前不可用")
 
     def validate_asset(self, value):
-        if not _reader_asset_available(value, self.context["request"].user):
+        if value is not None and not _reader_asset_available(value, self.context["request"].user):
             raise serializers.ValidationError("该阅读文件不可用。")
         return value
+
+    def validate(self, attrs):
+        if bool(attrs.get("asset")) == bool(attrs.get("issue")):
+            raise serializers.ValidationError("请选择一个阅读文件或公开文章。")
+        if attrs.get("issue"):
+            from catalog.services.editorial_issues import published_issues
+            if not published_issues().filter(pk=attrs["issue"].pk).exists():
+                raise serializers.ValidationError("该文章当前未公开。")
+        return attrs
 
     def create(self, validated_data):
         user = self.context["request"].user
         recent = ReadingHistory.objects.filter(
             user=user,
-            asset=validated_data["asset"],
+            asset=validated_data.get("asset"), issue=validated_data.get("issue"),
             updated_at__gte=timezone.now() - timedelta(minutes=30),
         ).order_by("-updated_at").first()
         if recent:

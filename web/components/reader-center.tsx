@@ -111,7 +111,9 @@ type ReadingListRow = {
 };
 type HistoryRow = {
   id: string;
-  asset: string;
+  asset: string | null;
+  issue?: string | null;
+  article?: { id: string; title: string; href: string } | null;
   work: ApiWork | null;
   page_index: number;
   session_seconds: number;
@@ -628,8 +630,8 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
             {readerData.history.map((item) => (
               <article className="reader-data-row" key={item.id}>
                 <Clock3 size={17} />
-                <div><strong>{(item.work ? adaptWork(item.work).title : "来源当前不可用")}</strong><p>读到第 {item.page_index} 页</p><small>{new Date(item.created_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</small></div>
-                <CollectionLink href={`/reader/${item.asset}?page=${item.page_index}`}>继续 <ArrowRight size={14} /></CollectionLink>
+                <div><strong>{item.article?.title || (item.work ? adaptWork(item.work).title : "来源当前不可用")}</strong><p>{item.issue ? "专题文章" : `读到第 ${item.page_index} 页`}</p><small>{new Date(item.created_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</small></div>
+                {item.article ? <Link href={item.article.href}>继续 <ArrowRight size={14} /></Link> : item.asset && item.work ? <CollectionLink href={`/reader/${item.asset}?page=${item.page_index}`}>继续 <ArrowRight size={14} /></CollectionLink> : null}
               </article>
             ))}
             {!readerData.history.length ? <p className="empty-state">暂无阅读历史。</p> : null}

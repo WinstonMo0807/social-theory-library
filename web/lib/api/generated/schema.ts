@@ -5225,6 +5225,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reading/guest-records/import/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reading_guest_records_import_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reading/history/": {
         parameters: {
             query?: never;
@@ -8031,6 +8047,13 @@ export interface components {
             decision?: components["schemas"]["PersonIdentityDecisionEnum"];
             reason: string;
         };
+        AuthorityMaterialRequest: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            rendition_id: string;
+            caption: string;
+        };
         /**
          * @description * `alias` - 别名
          *     * `translation` - 译名
@@ -8077,11 +8100,6 @@ export interface components {
          * @enum {string}
          */
         AuthorityValuesAuthorityStatusEnum: "draft" | "needs_review" | "verified";
-        AuthorityMaterialRequest: {
-            id: string;
-            rendition_id: string;
-            caption: string;
-        };
         AuthorityValuesRequest: {
             biographical_materials?: components["schemas"]["AuthorityMaterialRequest"][];
             key_concerns?: string[];
@@ -8310,6 +8328,7 @@ export interface components {
             expected_work_updated_at?: string;
             /** @default  */
             note: string;
+            publication_mode?: components["schemas"]["PublicationModeEnum"];
             journal_contents?: components["schemas"]["JournalIssueArticleRowRequest"][];
             version_label?: string;
             /** Format: date */
@@ -9567,6 +9586,17 @@ export interface components {
          */
         DocumentTypeEnum: "book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other";
         /**
+         * @description * `book` - book
+         *     * `journal_article` - journal_article
+         *     * `journal_issue` - journal_issue
+         *     * `thesis` - thesis
+         *     * `report` - report
+         *     * `chapter` - chapter
+         *     * `other` - other
+         * @enum {string}
+         */
+        DocumentTypesEnum: "book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other";
+        /**
          * @description * `review` - 发现重复时人工确认
          *     * `block_exact` - 阻止完全重复文件
          *     * `allow` - 允许继续入库
@@ -10566,6 +10596,57 @@ export interface components {
             archived: boolean;
             member_count: number;
         };
+        GuestImportInputRequest: {
+            owner_id: string;
+            records: components["schemas"]["GuestRecordInputRequest"][];
+        };
+        GuestImportOutput: {
+            owner_id: string;
+            results: components["schemas"]["GuestImportResult"][];
+        };
+        GuestImportResult: {
+            /** Format: uuid */
+            id: string;
+            state: components["schemas"]["GuestImportResultStateEnum"];
+            message: string;
+        };
+        /**
+         * @description * `imported` - imported
+         *     * `already_imported` - already_imported
+         *     * `disabled` - disabled
+         *     * `unavailable` - unavailable
+         * @enum {string}
+         */
+        GuestImportResultStateEnum: "imported" | "already_imported" | "disabled" | "unavailable";
+        /**
+         * @description * `reading` - reading
+         *     * `article` - article
+         *     * `search` - search
+         *     * `bookmark` - bookmark
+         * @enum {string}
+         */
+        GuestRecordInputKindEnum: "reading" | "article" | "search" | "bookmark";
+        GuestRecordInputRequest: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["GuestRecordInputKindEnum"];
+            /** Format: date-time */
+            at: string;
+            /** Format: uuid */
+            asset_id?: string;
+            /** Format: uuid */
+            page_id?: string;
+            /** Format: uuid */
+            revision_id?: string;
+            pdf_page?: number;
+            /** Format: uuid */
+            issue_id?: string;
+            query?: string;
+            filters?: {
+                [key: string]: unknown;
+            };
+            label?: string;
+        };
         /**
          * @description * `1` - 1
          *     * `2` - 2
@@ -10574,7 +10655,6 @@ export interface components {
          */
         HeadingLevelEnum: 1 | 2 | 3;
         HomeCard: {
-            subtitle?: string;
             curator?: components["schemas"]["PublicEditorialCurator"] | null;
             id: string;
             title: string;
@@ -10587,9 +10667,9 @@ export interface components {
             source_title?: string;
             source_description?: string;
             source_image_url?: string;
+            subtitle?: string;
         };
         HomeCardRequest: {
-            subtitle?: string;
             curator?: components["schemas"]["PublicEditorialCuratorRequest"] | null;
             id: string;
             title: string;
@@ -10602,6 +10682,7 @@ export interface components {
             source_title?: string;
             source_description?: string;
             source_image_url?: string;
+            subtitle?: string;
         };
         HomeLayout: {
             featured: components["schemas"]["HomeSlot"][] | null;
@@ -10692,11 +10773,15 @@ export interface components {
             source: components["schemas"]["HomeCard"];
         };
         HomeSourcePage: {
-            topics: {id:string;name:string}[];
             count: number;
             page: number;
             total_pages: number;
             results: components["schemas"]["HomeSourceChoice"][];
+            topics: components["schemas"]["HomeSourceTopic"][];
+        };
+        HomeSourceTopic: {
+            id: string;
+            name: string;
         };
         HomeTarget: {
             type: components["schemas"]["HomeTargetTypeEnum"];
@@ -10900,10 +10985,22 @@ export interface components {
             work_id?: string;
             filters?: components["schemas"]["IndexQueryFiltersRequest"];
         };
+        /**
+         * @description * `zh` - zh
+         *     * `en` - en
+         *     * `de` - de
+         *     * `fr` - fr
+         *     * `ja` - ja
+         *     * `ru` - ru
+         *     * `es` - es
+         *     * `unknown` - unknown
+         * @enum {string}
+         */
+        IndexQueryFiltersLanguagesEnum: "zh" | "en" | "de" | "fr" | "ja" | "ru" | "es" | "unknown";
         IndexQueryFiltersRequest: {
-            search_scope?: "all" | "title" | "body" | "notes" | "topics" | "authors" | "terms";
-            document_types?: ("book" | "journal_article" | "journal_issue" | "thesis" | "report" | "chapter" | "other")[];
-            languages?: ("zh" | "en" | "de" | "fr" | "ja" | "ru" | "es" | "unknown")[];
+            search_scope?: components["schemas"]["SearchScopeEnum"];
+            document_types?: components["schemas"]["DocumentTypesEnum"][];
+            languages?: components["schemas"]["IndexQueryFiltersLanguagesEnum"][];
             year_min?: number;
             year_max?: number;
         };
@@ -11948,13 +12045,6 @@ export interface components {
             notice: string;
             editor_url: string;
         };
-        /**
-         * @description * `ch` - ch
-         *     * `en` - en
-         *     * `chinese_cht` - chinese_cht
-         * @enum {string}
-         */
-        LanguagesEnum: "ch" | "en" | "chinese_cht";
         LegacyGlobalFacets: {
             document_types: components["schemas"]["CatalogFacet"][];
             authors: components["schemas"]["CatalogFacet"][];
@@ -12272,6 +12362,8 @@ export interface components {
         ListPlanInputRequest: {
             expected_version: string;
             item_ids?: string[];
+            /** @description 本人填写的已读相关书籍数量；不代替逐本阅读记录或阅读基础。 */
+            read_book_count?: number;
             time_budget?: string;
             budget_minutes?: number | null;
             session_minutes?: number;
@@ -12281,8 +12373,6 @@ export interface components {
             item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
             /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
             weekly_minutes?: number;
-            /** 本人填写的已读相关书籍数量，不代替逐本阅读记录。 */
-            read_book_count?: number;
             duration_weeks?: number;
             /** @description 用于导读提示，不自动排除已选材料。 */
             language_preference?: string;
@@ -12394,7 +12484,9 @@ export interface components {
             total_pages: number;
             active_count: number;
             trash_count: number;
-            kind_counts?: { [key: string]: number };
+            kind_counts?: {
+                [key: string]: number;
+            };
         };
         LocalService: {
             id: string;
@@ -12697,6 +12789,7 @@ export interface components {
             edition_label: string;
             publication_year: number | null;
             document_type: string;
+            byte_size: number;
             page_count: number;
             sha256: string;
             status: string;
@@ -12719,6 +12812,8 @@ export interface components {
             page_type_before: string;
             page_type_after: string;
             note: string;
+            source_note_before: string;
+            source_note_after: string;
             manual_before: boolean;
         };
         /**
@@ -12728,6 +12823,7 @@ export interface components {
          *     * `restore` - restore
          *     * `prepare` - prepare
          *     * `publish` - publish
+         *     * `export` - export
          * @enum {string}
          */
         MappingCommandActionEnum: "save" | "analyze" | "segment" | "restore" | "prepare" | "publish" | "export";
@@ -12744,6 +12840,17 @@ export interface components {
             prepared_fingerprint?: string;
         };
         MappingCommandResponse: components["schemas"]["MappingState"] | components["schemas"]["MappingPreview"];
+        MappingCopyJob: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            progress: number;
+            /** Format: date-time */
+            updated_at: string;
+            error: string;
+            mapping_revision_id: string;
+            download_url: string;
+        };
         MappingData: {
             pages: components["schemas"]["MappingPage"][];
             segments: components["schemas"]["MappingSegment"][];
@@ -12766,8 +12873,21 @@ export interface components {
             pdf_pages: number[];
             acknowledged: boolean;
         };
+        MappingInsertedPage: {
+            /** @default mark */
+            action: components["schemas"]["PageLabelActionEnum"];
+            id: string;
+            label: string;
+            after_pdf_page: number;
+            /** @default  */
+            note: string;
+            /** @default false */
+            confirmed: boolean;
+            pdf_page: number;
+        };
         MappingMissing: {
-            action?: components["schemas"]["MappingMissingActionEnum"];
+            /** @default mark */
+            action: components["schemas"]["PageLabelActionEnum"];
             id: string;
             label: string;
             after_pdf_page: number;
@@ -12777,7 +12897,8 @@ export interface components {
             confirmed: boolean;
         };
         MappingMissingRequest: {
-            action?: components["schemas"]["MappingMissingActionEnum"];
+            /** @default mark */
+            action: components["schemas"]["PageLabelActionEnum"];
             id: string;
             label: string;
             after_pdf_page: number;
@@ -12794,6 +12915,8 @@ export interface components {
             confirmed: boolean;
             /** @default  */
             note: string;
+            /** @default  */
+            source_note: string;
             /** @default false */
             override_manual: boolean;
             source?: components["schemas"]["MappingPageSourceEnum"];
@@ -12808,6 +12931,8 @@ export interface components {
             confirmed: boolean;
             /** @default  */
             note: string;
+            /** @default  */
+            source_note: string;
             /** @default false */
             override_manual: boolean;
             source?: components["schemas"]["MappingPageSourceEnum"];
@@ -12832,12 +12957,12 @@ export interface components {
             revision_id: string;
             revision: number;
         };
-        MappingInsertedPage: components["schemas"]["MappingMissing"] & { pdf_page: number };
         MappingPreview: {
             /** Format: uuid */
             revision_id: string;
             source_fingerprint: string;
             prepared_fingerprint: string;
+            /** Format: uuid */
             copy_asset_id: string | null;
             inserted_pages: components["schemas"]["MappingInsertedPage"][];
             new_page_count: number;
@@ -12906,8 +13031,6 @@ export interface components {
          * @enum {string}
          */
         MappingSegmentStyleEnum: "arabic" | "roman_lower" | "roman_upper" | "custom" | "none";
-        MappingMissingActionEnum: "mark" | "blank";
-        MappingCopyJob: { id: string; status: string; progress: number; updated_at: string; error: string; mapping_revision_id: string; download_url: string; };
         MappingState: {
             jobs: components["schemas"]["MappingCopyJob"][];
             asset: components["schemas"]["MappingAsset"];
@@ -13786,13 +13909,6 @@ export interface components {
             height: number;
             replacement_character: boolean;
         };
-        OCRQualitySpan: {
-            /** @description 当前文本中从0开始的Unicode码点偏移。 */
-            start: number;
-            /** @description 不含末尾的Unicode码点偏移。 */
-            end: number;
-            reason: string;
-        };
         OCRPageDetail: {
             readonly quality_spans: components["schemas"]["OCRQualitySpan"][];
             readonly original_quality_spans: components["schemas"]["OCRQualitySpan"][];
@@ -13811,12 +13927,19 @@ export interface components {
             history_page: number;
             history_next_page: number | null;
         };
+        OCRQualitySpan: {
+            /** @description 当前文本中从0开始的Unicode码点偏移。 */
+            start: number;
+            /** @description 不含末尾的Unicode码点偏移。 */
+            end: number;
+            reason: string;
+        };
         OCRReviewPageRequest: {
             pdf_page: number;
             source_fingerprint: string;
         };
         OCRTaskOptions: {
-            languages: components["schemas"]["LanguagesEnum"][];
+            languages: components["schemas"]["OCRTaskOptionsLanguagesEnum"][];
             layout: boolean;
             /** Format: double */
             quality_threshold: number;
@@ -13824,8 +13947,15 @@ export interface components {
             detect_garbled: boolean;
             skip_reviewed: boolean;
         };
+        /**
+         * @description * `ch` - ch
+         *     * `en` - en
+         *     * `chinese_cht` - chinese_cht
+         * @enum {string}
+         */
+        OCRTaskOptionsLanguagesEnum: "ch" | "en" | "chinese_cht";
         OCRTaskOptionsRequest: {
-            languages: components["schemas"]["LanguagesEnum"][];
+            languages: components["schemas"]["OCRTaskOptionsLanguagesEnum"][];
             layout: boolean;
             /** Format: double */
             quality_threshold: number;
@@ -14033,6 +14163,12 @@ export interface components {
             clear_position?: boolean;
             calibration_status?: components["schemas"]["CalibrationStatusEnum"];
         };
+        /**
+         * @description * `mark` - mark
+         *     * `blank` - blank
+         * @enum {string}
+         */
+        PageLabelActionEnum: "mark" | "blank";
         /**
          * @description * `front` - front
          *     * `body` - body
@@ -15098,6 +15234,8 @@ export interface components {
         };
         PatchedPlanUpdateInputRequest: {
             expected_revision?: number;
+            /** @description 本人填写的已读相关书籍数量；不代替逐本阅读记录或阅读基础。 */
+            read_book_count?: number;
             time_budget?: string;
             budget_minutes?: number | null;
             session_minutes?: number;
@@ -15107,8 +15245,6 @@ export interface components {
             item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
             /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
             weekly_minutes?: number;
-            /** 本人填写的已读相关书籍数量，不代替逐本阅读记录。 */
-            read_book_count?: number;
             duration_weeks?: number;
             /** @description 用于导读提示，不自动排除已选材料。 */
             language_preference?: string;
@@ -15863,6 +15999,8 @@ export interface components {
          */
         PlacementHistoryItemStatusEnum: "draft" | "published" | "superseded";
         PlacementHistoryPage: {
+            topics?: string[];
+            languages?: string[];
             count: number;
             next: string | null;
             previous: string | null;
@@ -15904,7 +16042,9 @@ export interface components {
          */
         PlacementParentPreviewKindEnum: "knowledge" | "issue" | "timeline_event";
         PlacementRead: {
-            item_states?: {[key:string]: "published" | "saved_unpublished"};
+            item_states?: {
+                [key: string]: "published" | "saved_unpublished";
+            };
             schema_version: number;
             page_type: string;
             /** Format: uuid */
@@ -16135,6 +16275,8 @@ export interface components {
             action: components["schemas"]["PlanCommandInputActionEnum"];
         };
         PlanCreateInputRequest: {
+            /** @description 本人填写的已读相关书籍数量；不代替逐本阅读记录或阅读基础。 */
+            read_book_count?: number;
             time_budget?: string;
             budget_minutes?: number | null;
             session_minutes?: number;
@@ -16144,8 +16286,6 @@ export interface components {
             item_estimates?: components["schemas"]["ItemEstimateInputRequest"][];
             /** @description 与 duration_weeks 成对提供；相乘为总预算，最多 100000 分钟。 */
             weekly_minutes?: number;
-            /** 本人填写的已读相关书籍数量，不代替逐本阅读记录。 */
-            read_book_count?: number;
             duration_weeks?: number;
             /** @description 用于导读提示，不自动排除已选材料。 */
             language_preference?: string;
@@ -17877,6 +18017,12 @@ export interface components {
             can_rollback: boolean;
         };
         PublicationHistoryResponse: components["schemas"]["PublicationHistoryItem"][] | components["schemas"]["PublicationDesk"];
+        /**
+         * @description * `document` - 书目与文献
+         *     * `bibliographic` - 纯书目
+         * @enum {string}
+         */
+        PublicationModeEnum: "document" | "bibliographic";
         PublicationPreparation: {
             /** Format: uuid */
             edition_id: string;
@@ -18329,7 +18475,10 @@ export interface components {
             /** Format: uuid */
             readonly id: string;
             /** Format: uuid */
-            asset: string;
+            asset?: string | null;
+            /** Format: uuid */
+            issue?: string | null;
+            readonly article: unknown;
             readonly work: components["schemas"]["WorkCard"] | null;
             readonly title: string;
             /** Format: int64 */
@@ -18341,7 +18490,9 @@ export interface components {
         };
         ReadingHistoryRequest: {
             /** Format: uuid */
-            asset: string;
+            asset?: string | null;
+            /** Format: uuid */
+            issue?: string | null;
             /** Format: int64 */
             page_index?: number;
             /** Format: int64 */
@@ -19647,10 +19798,17 @@ export interface components {
             timeline?: unknown;
             featured_quote?: string;
             quote_source?: string;
-            readonly works: string;
-            readonly curated: string;
-            readonly curated_claims: string;
-            readonly knowledge_nodes: string;
+            readonly works: components["schemas"]["WorkCard"][];
+            readonly curated: {
+                [key: string]: unknown;
+            };
+            readonly curated_claims: {
+                [key: string]: unknown;
+            };
+            /** @description Expose explicit and work-backed normalized knowledge relations. */
+            readonly knowledge_nodes: {
+                [key: string]: unknown;
+            }[];
         };
         ScholarRelation: {
             readonly save_receipt: components["schemas"]["ScholarRelationReceipt"];
@@ -19904,6 +20062,17 @@ export interface components {
             results: components["schemas"]["SearchRecordOutput"][];
             notice: string;
         };
+        /**
+         * @description * `all` - all
+         *     * `title` - title
+         *     * `body` - body
+         *     * `notes` - notes
+         *     * `topics` - topics
+         *     * `authors` - authors
+         *     * `terms` - terms
+         * @enum {string}
+         */
+        SearchScopeEnum: "all" | "title" | "body" | "notes" | "topics" | "authors" | "terms";
         /**
          * @description * `related` - related
          *     * `foundational` - foundational
@@ -20377,6 +20546,7 @@ export interface components {
             source_title?: string;
             source_description?: string;
             source_image_url?: string;
+            subtitle?: string;
             area: string;
             target: components["schemas"]["HomeTarget"];
         };
@@ -21652,13 +21822,26 @@ export interface components {
             timeline?: unknown;
             /** Format: uri */
             hero_image?: string | null;
-            readonly disciplines: string;
-            readonly subdisciplines: string;
-            readonly linked_theories: string;
-            readonly knowledge_nodes: string;
+            readonly disciplines: {
+                [key: string]: unknown;
+            }[];
+            readonly subdisciplines: {
+                [key: string]: unknown;
+            }[];
+            readonly linked_theories: {
+                [key: string]: unknown;
+            }[];
+            /** @description Expose published normalized Topic relations without legacy dual-write. */
+            readonly knowledge_nodes: {
+                [key: string]: unknown;
+            }[];
             readonly work_count: number;
-            readonly curated: string;
-            readonly curated_claims: string;
+            readonly curated: {
+                [key: string]: unknown;
+            };
+            readonly curated_claims: {
+                [key: string]: unknown;
+            };
         };
         TopicArticle: {
             curation_note: string;
@@ -22396,6 +22579,11 @@ export interface components {
             readonly disciplines: components["schemas"]["PublicClassificationLink"][];
             readonly subdisciplines: components["schemas"]["PublicClassificationLink"][];
         };
+        WorkEditionContributorOutput: {
+            name: string;
+            role: string;
+            role_label: string;
+        };
         WorkEditionOutput: {
             /** Format: uuid */
             id: string;
@@ -22406,6 +22594,9 @@ export interface components {
             language: string;
             is_primary: boolean;
             state: string;
+            cover_url: string;
+            contributors: components["schemas"]["WorkEditionContributorOutput"][];
+            searchable: boolean;
             original_count: number;
             reader_count: number;
             /** Format: uuid */
@@ -27946,6 +28137,10 @@ export interface operations {
                 kind?: "" | "upload" | "work" | "edition" | "person" | "scholar" | "topic" | "knowledge-node" | "theory-school" | "discipline" | "subdiscipline" | "reading-path" | "timeline-event" | "knowledge-relation" | "evidence-curation" | "scholar-relation" | "recommendation-issue" | "recommendation-item" | "about-block" | "publisher";
                 operator?: string;
                 page?: number;
+                /**
+                 * @description * `10` - 10
+                 *     * `20` - 20
+                 */
                 page_size?: 10 | 20;
                 reason?: string;
                 search?: string;
@@ -28964,9 +29159,14 @@ export interface operations {
         parameters: {
             query?: {
                 page?: number;
-                topic?: string;
-                sort?: "newest" | "oldest" | "title";
                 q?: string;
+                /**
+                 * @description * `newest` - newest
+                 *     * `oldest` - oldest
+                 *     * `title` - title
+                 */
+                sort?: "newest" | "oldest" | "title";
+                topic?: string;
                 /**
                  * @description * `issue` - issue
                  *     * `scholar` - scholar
@@ -34827,6 +35027,31 @@ export interface operations {
             };
         };
     };
+    reading_guest_records_import_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestImportInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["GuestImportInputRequest"];
+                "multipart/form-data": components["schemas"]["GuestImportInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestImportOutput"];
+                };
+            };
+        };
+    };
     reading_history_list: {
         parameters: {
             query?: {
@@ -34860,7 +35085,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["ReadingHistoryRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["ReadingHistoryRequest"];
@@ -37169,6 +37394,8 @@ export interface operations {
                  *     * `proposed` - proposed
                  *     * `confirmed` - confirmed
                  *     * `ignored` - ignored
+                 *     * `needs_revision` - needs_revision
+                 *     * `revised` - revised
                  */
                 state?: "all" | "proposed" | "confirmed" | "ignored" | "needs_revision" | "revised";
             };

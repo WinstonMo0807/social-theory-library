@@ -2,14 +2,22 @@
 
 import { useEffect } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
+import { saveGuestRecord } from "@/lib/guest-records";
 
-export function useReaderProgress({ assetId, page, totalPages, readerAuthenticated, readerId }: {
+export function useReaderProgress({ assetId, page, totalPages, readerAuthenticated, readerId, guestReady = false, revisionId = "" }: {
   assetId: string;
   page: number;
   totalPages: number;
   readerAuthenticated: boolean;
   readerId?: number;
+  guestReady?: boolean;
+  revisionId?: string;
 }) {
+  useEffect(() => {
+    if (!guestReady || !revisionId) return;
+    const timer = window.setTimeout(() => saveGuestRecord({ kind: "reading", asset_id: assetId, revision_id: revisionId, pdf_page: page }), 650);
+    return () => window.clearTimeout(timer);
+  }, [guestReady, revisionId, assetId, page]);
   useEffect(() => {
     if (!readerAuthenticated || readerId === undefined) return;
     const token = getServerSessionCredential();

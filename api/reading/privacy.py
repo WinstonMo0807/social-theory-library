@@ -237,6 +237,10 @@ def export_item(user, category, row):
 
 
 def _export_item(user, category, row):
+    if category == "reading_history":
+        from types import SimpleNamespace
+        from .serializers import ReadingHistorySerializer
+        return dict(ReadingHistorySerializer(row, context={"request": SimpleNamespace(user=user)}).data)
     if category in COLLABORATION_CATEGORIES:
         from .sharing_privacy import export
         return export(user, category, row)
@@ -370,11 +374,10 @@ def describe_item(user, category, row):
             title = payload.get("body", "")[:120] or "个人认识"
         source = next(iter(details.get("source_summaries", [])), {})
     elif category == "reading_history":
-        from catalog.services.discovery_sources import source_queryset
-        edition = source_queryset("edition", research.access_for(user)).filter(pk=row.asset.edition_id).first()
-        snapshot = edition.active_catalog_revision.snapshot if edition else {}
-        source = {"title": (snapshot.get("work") or {}).get("title", "来源当前不可用"),
-                  "edition": (snapshot.get("edition") or {}).get("version_label", ""), "pdf_page": row.page_index}
+        from types import SimpleNamespace
+        from .serializers import ReadingHistorySerializer
+        data = ReadingHistorySerializer(row, context={"request": SimpleNamespace(user=user)}).data
+        source = {"title": data["title"], **({"path": data["article"]["href"]} if data["article"] else {"pdf_page": row.page_index})}
         title = source["title"]
     elif category == "source_follows":
         from .source_follow import resolve_public_source

@@ -103,12 +103,15 @@ class ReadingListItem(UUIDTimeStampedModel):
 
 class ReadingHistory(UUIDTimeStampedModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reading_history")
-    asset = models.ForeignKey("catalog.Asset", on_delete=models.CASCADE, related_name="reading_history")
+    asset = models.ForeignKey("catalog.Asset", null=True, blank=True, on_delete=models.CASCADE, related_name="reading_history")
+    issue = models.ForeignKey("catalog.RecommendationIssue", null=True, blank=True, on_delete=models.CASCADE, related_name="reading_history")
     page_index = models.PositiveIntegerField(default=1)
     session_seconds = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [models.CheckConstraint(condition=(models.Q(asset__isnull=False, issue__isnull=True) |
+            models.Q(asset__isnull=True, issue__isnull=False)), name="reading_history_one_source")]
 
 
 class LibraryConversation(UUIDTimeStampedModel):

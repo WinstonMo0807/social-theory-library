@@ -36,6 +36,7 @@ from .document_preview_views import CitationPreviewFileView, CitationPreviewView
 from .shared_citation_views import PublicCitationPreviewView
 from .source_follow_views import PublicSourceStatusView, SourceFollowsView, SourceFollowDetailView, SourceFollowReceiptView
 from .search_record_views import ReaderSearchRecordsView
+from .guest_records import GuestRecordsImportView
 from .knowledge_save_views import KnowledgeSaveView
 from .sharing_views import (ReaderGroupsView, ReaderGroupDetailView, ReaderGroupAcceptView, ReaderGroupReceiptView, ShareSelectionView,
     SharePreviewView, ShareSourcesView, ReaderSharesView, ShareReceiptView, ShareDetailView, ShareNoticesView, PublicShareView)
@@ -75,6 +76,7 @@ router.register(
 )
 
 urlpatterns = [
+    path("guest-records/import/", GuestRecordsImportView.as_view(), name="reader-guest-import"),
     path("groups/", ReaderGroupsView.as_view(), name="reader-groups"),
     path("groups/accept/", ReaderGroupAcceptView.as_view(), name="reader-group-accept"),
     path("groups/receipt/", ReaderGroupReceiptView.as_view(), name="reader-group-receipt"),

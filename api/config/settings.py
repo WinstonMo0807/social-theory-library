@@ -189,6 +189,7 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
+        "PageLabelActionEnum": ["mark", "blank"],
         "ProviderCredentialOperationEnum": ["set", "delete"],
         "ResearchSourceKeyEnum": "catalog.services.research_sources.SOURCE_KEY_CHOICES",
         "OcrRuntimeModeEnum": ["nas_preferred", "nas_only", "remote_only"],

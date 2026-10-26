@@ -1598,7 +1598,7 @@ class TopicSerializer(serializers.ModelSerializer):
             "curated_claims",
         )
 
-    def get_disciplines(self, obj):
+    def get_disciplines(self, obj) -> list[dict]:
         return [
             {
                 "id": str(relation.discipline_id),
@@ -1612,7 +1612,7 @@ class TopicSerializer(serializers.ModelSerializer):
             ).select_related("discipline")
         ]
 
-    def get_subdisciplines(self, obj):
+    def get_subdisciplines(self, obj) -> list[dict]:
         return [
             {
                 "id": str(relation.subdiscipline_id),
@@ -1626,7 +1626,7 @@ class TopicSerializer(serializers.ModelSerializer):
             ).select_related("subdiscipline")
         ]
 
-    def get_linked_theories(self, obj):
+    def get_linked_theories(self, obj) -> list[dict]:
         return [
             {
                 "id": str(relation.theory_school_id),
@@ -1640,7 +1640,7 @@ class TopicSerializer(serializers.ModelSerializer):
             ).select_related("theory_school")
         ]
 
-    def get_knowledge_nodes(self, obj):
+    def get_knowledge_nodes(self, obj) -> list[dict]:
         """Expose published normalized Topic relations without legacy dual-write."""
 
         return [
@@ -1658,7 +1658,7 @@ class TopicSerializer(serializers.ModelSerializer):
             and link.node.status == KnowledgePublicationStatus.PUBLISHED
         ]
 
-    def get_curated(self, obj):
+    def get_curated(self, obj) -> dict:
         curation = obj.curation if isinstance(obj.curation, dict) else {}
         foundational = _ordered_objects(
             public_work_queryset(),
@@ -1704,7 +1704,7 @@ class TopicSerializer(serializers.ModelSerializer):
             "featured_passage_evidence": curation.get("featured_passage_evidence", {}),
         }
 
-    def get_curated_claims(self, obj):
+    def get_curated_claims(self, obj) -> dict:
         return public_curated_claim_groups(
             target_field="topic",
             target_id=obj.id,
@@ -1741,12 +1741,13 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
             "knowledge_nodes",
         )
 
+    @extend_schema_field(WorkCardSerializer(many=True))
     def get_works(self, obj):
         from catalog.services.public_scholars import scholar_editions
         works = public_work_queryset().filter(pk__in=scholar_editions(obj.person_id).values("work_id"))[:24]
         return WorkCardSerializer(works, many=True, context=self.context).data
 
-    def get_curated(self, obj):
+    def get_curated(self, obj) -> dict:
         curation = obj.curation if isinstance(obj.curation, dict) else {}
         works = _ordered_objects(
             public_work_queryset(),
@@ -1808,7 +1809,7 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
             ],
         }
 
-    def get_curated_claims(self, obj):
+    def get_curated_claims(self, obj) -> dict:
         return public_curated_claim_groups(
             target_field="scholar",
             target_id=obj.id,
@@ -1819,7 +1820,7 @@ class ScholarProfileSerializer(serializers.ModelSerializer):
             ),
         )
 
-    def get_knowledge_nodes(self, obj):
+    def get_knowledge_nodes(self, obj) -> list[dict]:
         """Expose explicit and work-backed normalized knowledge relations."""
 
         values = []

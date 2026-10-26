@@ -14,6 +14,8 @@ import { EvidenceContextBody, EvidenceResultCard, EvidenceSummary } from "./disc
 import { DiscoveryDocumentProgress } from "./discovery-document-progress";
 import { SavedWorkStatusProvider } from "./save-work-button";
 import { Dialog } from "./ui/dialog";
+import { usePublicSession } from "./public-session-provider";
+import { saveGuestRecord } from "@/lib/guest-records";
 import styles from "@/app/explore/opinions/viewpoint-search.module.css";
 
 const running = (status?: string) => status === "queued" || status === "running";
@@ -34,6 +36,8 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   initialQuery: string; initialFilters: DiscoveryFilters; legacyRelation?: boolean;
 }) {
   const { t } = useEvidenceLanguage();
+  const { state: publicSession } = usePublicSession();
+  const savedGuestSearch = useRef("");
   const cacheKey = JSON.stringify([initialQuery, initialFilters]);
   const [selectedId, setSelectedId] = useState("");
   const [queryInput, setQueryInput] = useState(initialQuery);
@@ -66,6 +70,10 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   const createRef = useRef<Promise<DiscoverySearch> | null>(null);
   const refreshInFlight = useRef(false);
   const contextItemRef = useRef<DiscoveryPassage | null>(null);
+  useEffect(() => {
+    if (publicSession.status !== "unauthenticated" || !result?.id || savedGuestSearch.current === result.id) return;
+    if (saveGuestRecord({ kind: "search", query: result.original_query || initialQuery, filters: result.filters || initialFilters })) savedGuestSearch.current = result.id;
+  }, [publicSession.status, result?.id, result?.original_query, result?.filters, initialQuery, initialFilters]);
   const discard = useCallback(() => {
     contextRevision.current += 1;
     contextItemRef.current = null;
