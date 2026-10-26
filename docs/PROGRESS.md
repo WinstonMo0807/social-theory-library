@@ -3807,3 +3807,9 @@ Task 6 源码状态为 IMPLEMENTED。模型选择、真实回答质量、最终 
 - Google第9批已收取到 `output/retrieval-competition-20261014/nas-results/eg2-full-int8-part-09` 并逐文件核验远端/本地SHA，256输入、向量产物和 `quality_metrics=null` 均保留；第10批仍在运行，备份v4因可用内存约1.95GiB未达到2.0GiB真实恢复门槛而等待，没有降低门槛或写成模型失败。
 - 第10批已完成并收取核验，256输入、p50 4.4868秒、p95 5.8432秒、Swap0/OOM0；队列进入第11批等待，前10批产物均保留且不重跑，备份v4仍等待资源门槛。
 - architecture-backup-v4 已完成 NAS 真实隔离验收并归档：JUnit 3/3、0 failure/error/skip，136.0219秒；真实 pg_dump/pg_restore、逐表指纹、私人密文解密、原件SHA不变及四类拒绝边界均通过，生产未改、实验容器已清理。v1—v3证据保留，详见 `docs/implementation/BACKUP_RESTORE_ACCEPTANCE_20261014.md`。
+
+## 2026-10-27 SITE-EDIT-01 品牌编辑预览与 NAS OCR 实书验证
+
+后台已有site_name/wordmark_lines输入，但SiteHeader及各参考页脚的固定品牌资产只把site_name用于替代文字，输入不会改变可视字标。BrandImage在默认文字时保留原PDF矢量资产，明确修改文字时才用SVG文字渲染；公共页头、页脚及阅读器复用同一组件。类型4ccff6、品牌渲染回归894b33、构建0b1219均退出0；未跑全量测试。Web r74 ab61e7e215e0，恢复.env.before-brand-editor-r74；API/worker保持r41。实际/admin/about输入中英文测试文字并查看预览已生效，取消修改后恢复原名称且保存按钮禁用；未保存或发布测试文案。截图tmp/stl4-ocr-editor-20261027/brand-edit-preview-r74.png。SITE-EDIT-01关闭实现项，不代表所有页面几何或整个编排功能验收通过。
+
+用户新授权真实书籍OCR/智能目录测试，且Webflow明确指本站内容编排。选《社会学方法的准则》170页，任务cd28e58a-5b5b-4620-95f4-8a42a9b37da0；其他两书仍无OCR。模型深检实际成功，管理服务页记录可使用；12项OCR单元回归4a0ac3通过。实际识别已保存7/170，安全暂停4/170并从第5页恢复，同任务/同来源/原件哈希保持，当前公开版未变。整本OCR、生成目录和目录落点验证仍进行中，不能以已启动或单元通过称实际完成。NAS监测可用内存约560MiB、交换区约4.6GiB，OCR容器约812MiB/1.5GiB；采样未见OCR或入库worker重启/OOM，仍需后续观察。未开展公网变更。

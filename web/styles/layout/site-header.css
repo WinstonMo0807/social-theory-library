@@ -4,6 +4,7 @@
 .brand-type { display: flex; flex-direction: column; gap: 3px; }
 .brand-name { display: block; font: 14px/1.2 var(--serif); letter-spacing: .08em; }
 .brand-reference-type { display: none; }
+:root[data-theme="dark"] .brand-configured { filter:invert(1) hue-rotate(180deg); mix-blend-mode:screen; }
 .reader-logo .reader-brand-lockup { display: inline-flex; align-items: center; gap: 9px; }
 .reader-logo .reader-brand-lockup .brand-mark { width: 30px; height: 24px; }
 .reader-logo .reader-brand-lockup .brand-lockup { display: contents; }
