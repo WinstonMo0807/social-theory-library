@@ -121,6 +121,8 @@ class PlacementSourceChoiceSerializer(serializers.Serializer):
 
 
 class PlacementSourcesPageSerializer(serializers.Serializer):
+    topics = serializers.ListField(child=serializers.CharField(), required=False)
+    languages = serializers.ListField(child=serializers.CharField(), required=False)
     count = serializers.IntegerField()
     next = serializers.CharField(allow_null=True)
     previous = serializers.CharField(allow_null=True)
@@ -174,6 +176,7 @@ class PublicConceptDetailSerializer(serializers.Serializer):
 
 
 class PlacementReadSerializer(serializers.Serializer):
+    item_states = serializers.DictField(child=serializers.ChoiceField(choices=["published", "saved_unpublished"]), required=False)
     schema_version = serializers.IntegerField()
     page_type = serializers.CharField()
     page_id = serializers.UUIDField()
@@ -287,7 +290,11 @@ class PlacementSourcesView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
             def serialize(row):
                 reference, source = service._source({"type": kind, "id": str(row.work_id if kind == "work" else row.pk), "edition_id": str(row.pk)})
                 return {"target": reference, "source": source, **({"version_count": row.version_count} if grouped else {})}
-            return Response(_page(request, rows, serialize))
+            page = _page(request, rows, serialize)
+            if grouped:
+                page["topics"] = list(WorkTopicRelation.objects.filter(review_status="approved", work__editions__isnull=False).order_by("topic__name").values_list("topic__name", flat=True).distinct())
+                page["languages"] = list(Edition.objects.exclude(work__language="").order_by("work__language").values_list("work__language", flat=True).distinct())
+            return Response(page)
         if kind == "node":
             rows = KnowledgeNode.objects.all()
             if query:

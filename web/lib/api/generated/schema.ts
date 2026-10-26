@@ -15865,6 +15865,7 @@ export interface components {
          */
         PlacementParentPreviewKindEnum: "knowledge" | "issue" | "timeline_event";
         PlacementRead: {
+            item_states?: {[key:string]: "published" | "saved_unpublished"};
             schema_version: number;
             page_type: string;
             /** Format: uuid */
@@ -16019,6 +16020,8 @@ export interface components {
          */
         PlacementSourceKindEnum: "work" | "edition" | "node" | "span" | "scholar" | "issue";
         PlacementSourcesPage: {
+            topics?: string[];
+            languages?: string[];
             count: number;
             next: string | null;
             previous: string | null;

@@ -384,6 +384,8 @@ def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
     if public and page_type == "node":
         result["public_detail"] = public_concept_detail(result, data.get("items", []))
     if not public:
+        published_items = {str(item["id"]): item for item in (published.materialized_preview.get("items", []) if published and not published.materialized_preview.get("withdrawn") else [])}
+        result["item_states"] = {str(item["id"]): "published" if published_items.get(str(item["id"])) == item else "saved_unpublished" for item in data.get("items", [])}
         blockers = list(problems)
         try:
             parent_object(page_type, page_id, public=True)
