@@ -562,12 +562,12 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
 
   return (
     <AdminPageFrame
-      eyebrow="知识组织"
-      title={mode === "theory" ? "理论流派" : mode === "topic" ? "主题" : "理论流派与主题"}
+      eyebrow={mode === "topic" ? "内容　›　学者与知识　›　主题、学科与分类组织" : "知识组织"}
+      title={mode === "theory" ? "理论流派" : mode === "topic" ? "主题、学科与分类组织" : "理论流派与主题"}
       description={mode === "theory"
         ? "管理理论流派的公开页面、关键主题和馆藏关系。"
         : mode === "topic"
-          ? "管理主题的公开页面、关键概念、时间线和馆藏关系。"
+          ? "整理读者进入社会理论的内容方向和层次。"
           : "自动识别提出候选，人工确认后写入作品关系。流派和主题保持为不同对象。"}
     >
       {draft.kind === "topic" && command.recovery ? <aside role="status" className="form-message"><p>上次主题保存需要核对，刷新后只读取原回执，不重新建档。</p><button type="button" disabled={Boolean(pendingAction)} onClick={()=>void command.lookup().then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但主题后来已删除；未重新创建。");})}>读取原保存回执</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)} onClick={()=>void save(undefined,true)}>按原请求重试</button>:null}<button type="button" disabled={Boolean(pendingAction)} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原主题后来已删除，未重复创建。");});}}>停止未确认保存</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
@@ -618,16 +618,16 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
         </section> : null}
         {editorOnly ? <KnowledgeVisualEditor objectType={draft.kind === "topic" ? "topic" : "theory"} objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} mediaFile={heroFile} dirty={hasUnsaved || Boolean(heroFile)} refreshKey={message}><form className="admin-panel admin-side-editor taxonomy-editor-page" onSubmit={(event) => void save(event, true)} onChangeCapture={event => { if (event.target instanceof Element && event.target.closest("[data-editor-transient]")) return; unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={Boolean(pendingAction)}>
           <fieldset disabled={!canEdit||Boolean(pendingAction)||(draft.kind==="topic"&&(!command.ready||Boolean(command.recovery)))} style={{display:"contents"}}>
-          <p>保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
+          <p data-editor-section="publication">保存本页主题名称、说明和人工编排，不保存其他主题。已有公开内容的修改需另行发布。新建成功后只更新当前编辑页地址。</p>
           <EditorialPrefillNotice state={prefills} />
-          <header>
+          <header data-editor-section="publication">
             <div>
               <Link href={draft.kind === "theory" ? "/admin/theories" : "/admin/topics"}>返回列表</Link>
               <h2>{draft.id ? "编辑" : "新建"}{draft.kind === "theory" ? "理论流派" : "主题"}</h2>{draft.id ? <RecycleControl kind={draft.kind === "theory" ? "theory-school" : "topic"} id={draft.id} name={draft.name} onDeleted={() => window.location.assign(draft.kind === "theory" ? "/admin/theories" : "/admin/topics")} /> : null}
             </div>
           </header>
-          <ResourceState loading={detail.loading} error={detail.error} empty={false} />
-          <label><span>名称</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
+          <div data-editor-section="identity" className="topic-status"><ResourceState loading={detail.loading} error={detail.error} empty={false} /></div>
+          <label className="topic-name-field"><span>{draft.kind==="topic"?"主题名称":"名称"}</span><input autoComplete="off" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
           <CurationFieldAssistant
             label="名称"
             scopeId={draft.id || "new"}
@@ -716,7 +716,7 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
             ]}
             onChange={(value) => setDraft({ ...draft, timeline: formatEditorRows(value, ["year", "node", "description"]) })}
           /> : null}
-          <label><span>{draft.kind === "topic" ? "主题说明" : "理论说明"}</span><textarea rows={7} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+          <label className="topic-description-field"><span>{draft.kind === "topic" ? "导读（简要描述）" : "理论说明"}</span><textarea rows={draft.kind==="topic"?4:7} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
           {draft.kind === "theory" ? <fieldset className="curation-fieldset">
             <legend>系统建议与人工编排</legend>
             <p>候选来自已确认的 PDF 作者、流派和主题关系。选中后才会进入公开页面。</p>
@@ -755,7 +755,7 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
               />
             ) : null}
           </fieldset> : null}
-          {draft.kind === "topic" ? ["identity", "questions", "works", "scholars", "concepts", "articles", "paths", "sources"].map(section => <div data-editor-section={section} key={section}><TopicFieldsEditor topicId={draft.id} name={draft.name} section={section} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></div>) : null}
+          {draft.kind === "topic" ? ["identity", "questions", "works", "scholars", "concepts", "articles", "paths", "sources"].map(section => <div className={section==="identity"?"topic-identity-fields":undefined} data-editor-section={section} key={section}><TopicFieldsEditor topicId={draft.id} name={draft.name} section={section} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></div>) : null}
           {draft.kind === "theory" ? <StructuredRowsEditor focused
             label="概念关系图"
             rowLabel="关系"

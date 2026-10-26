@@ -17,6 +17,8 @@ class TopicAssociationRowSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     subtitle = serializers.CharField(allow_blank=True)
+    contributor_label = serializers.CharField(allow_blank=True)
+    kind_label = serializers.CharField(allow_blank=True)
     cover_url = serializers.CharField(allow_blank=True)
     status = serializers.CharField(allow_blank=True)
 
@@ -46,7 +48,7 @@ def association_queryset(field, actor):
 
 
 def association_row(row, field, request):
-    subtitle, cover = "", ""
+    subtitle, cover, people, kind = "", "", "", ""
     if field.endswith("edition_ids"):
         name = row.work.title
         version = " · ".join(str(value) for value in (row.version_label, row.publication_year, row.publisher) if value)
@@ -58,15 +60,18 @@ def association_row(row, field, request):
             from catalog.cover_views import cover_state
             cover = cover_state(row, request)[0]["image_url"]
         status = row.state
+        kind = row.work.get_document_type_display()
     elif field == "related_scholar_ids":
         name, subtitle = row.person.preferred_name, row.short_description
+        kind = "学者"
         rendition, status = row.person.portrait_rendition_id, row.editorial_status
     else:
         name = row.canonical_name_zh if CURATION_IDS[field][1] else row.title
         rendition, status = getattr(row, "cover_rendition_id", None), getattr(row, "status", "")
+        kind = row.get_node_type_display() if CURATION_IDS[field][1] else "专题" if field == "issue_ids" else "阅读路径"
     if rendition:
         cover = f"/api/catalog/admin/media/renditions/{rendition}/file/"
-    return {"id": str(row.pk), "name": name, "subtitle": subtitle, "cover_url": cover, "status": status}
+    return {"id": str(row.pk), "name": name, "subtitle": subtitle, "contributor_label": people, "kind_label": kind, "cover_url": cover, "status": status}
 
 
 class TopicAssociationChoicesView(AdminPrivateResponseMixin, APIView):

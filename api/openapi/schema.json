@@ -82938,11 +82938,19 @@
                     },
                     "status": {
                         "type": "string"
+                    },
+                    "contributor_label": {
+                        "type": "string"
+                    },
+                    "kind_label": {
+                        "type": "string"
                     }
                 },
                 "required": [
+                    "contributor_label",
                     "cover_url",
                     "id",
+                    "kind_label",
                     "name",
                     "status",
                     "subtitle"

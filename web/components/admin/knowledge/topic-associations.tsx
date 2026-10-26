@@ -56,7 +56,7 @@ function SelectionRows({ field, ids, labels, notes, sorting = false, onOrder, on
   return <>
     {resource.error ? <p role="alert">关联资料读取失败，已选编号和输入仍保留。<button type="button" onClick={resource.reload}>重新读取</button></p> : null}
     <span className={styles.liveNotice} role="status">{announcement}</span>
-    <ol className={styles.associationRows} start={(page - 1) * pageSize + 1}>{visible.map((id, localIndex) => {
+    <div className={styles.associationTableHead}><span>排序</span><span>作品 / 内容</span><span>作者</span><span>类型</span><span>操作</span></div><ol data-sorting={sorting} className={styles.associationRows} start={(page - 1) * pageSize + 1}>{visible.map((id, localIndex) => {
       const index = (page - 1) * pageSize + localIndex, row = details.get(id), name = row?.name || labels[id] || `原条目 ${id.slice(0, 8)}`;
       return <li key={id} onDragOver={event => { if (sorting && dragging.current) event.preventDefault(); }} onDrop={event => {
         if (!sorting || !dragging.current) return; event.preventDefault(); move(dragging.current, index); dragging.current = null;
@@ -69,12 +69,13 @@ function SelectionRows({ field, ids, labels, notes, sorting = false, onOrder, on
               onChange={event => onNote?.(id, event.target.value)} aria-label={`${name}的关联说明`} /></label><small>{(notes[id] || "").length} / 600</small>
           </details> : null}
         </div>
+        <span className={styles.associationAuthor}>{row?.contributor_label||"—"}</span><span className={styles.associationKind}>{row?.kind_label||"—"}</span>
         <div className={styles.associationActions}>
           {sorting ? <button type="button" draggable onDragStart={event => {
-            dragging.current = id; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", id);
+            dragging.current = id; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-stl-topic-association", id);
           }} onDragEnd={() => { dragging.current = null; }} aria-label={`拖动${name}排序；也可使用上下移和位置选择`} title="拖动排序">⠿</button> : null}
-          {sorting ? <><button type="button" disabled={index === 0} aria-label={`上移${name}`} onClick={() => move(id, index - 1)}>上移</button>
-          <button type="button" disabled={index === ids.length - 1} aria-label={`下移${name}`} onClick={() => move(id, index + 1)}>下移</button></> : null}
+          {sorting ? <details className={styles.sortMenu}><summary aria-label={name+"排序操作"}>···</summary><div><button type="button" disabled={index === 0} aria-label={`上移${name}`} onClick={() => move(id, index - 1)}>上移</button>
+          <button type="button" disabled={index === ids.length - 1} aria-label={`下移${name}`} onClick={() => move(id, index + 1)}>下移</button></div></details> : null}
           {sorting ? <select aria-label={`${name}的位置`} value={index} onChange={event => move(id, Number(event.target.value))}>
             {ids.map((_, position) => <option key={position} value={position}>第 {position + 1} 项</option>)}
           </select> : <button type="button" onClick={() => {
@@ -97,7 +98,7 @@ export function TopicAssociations({ field, label, ids, labels, notes, onChange, 
   const changed = Boolean(sort && sort.base !== JSON.stringify(ids)), maximum = field === "issue_ids" ? 50 : 200;
   useUnsavedForm(Boolean(sort && sort.base !== JSON.stringify(sort.ids)), false);
   function closeSort() { if (!sort || JSON.stringify(sort.ids) === sort.base || window.confirm("放弃此次尚未应用的排序？")) setSort(null); }
-  return <section className={styles.associations}>
+  return <section className={styles.associations} data-association-field={field}>
     <header><h3>{label} <small>{ids.length}</small></h3><div>
       <button type="button" onClick={() => setPicker(true)}>＋ 关联已有内容</button>
       <button type="button" disabled={ids.length < 2} onClick={() => setSort({ base: JSON.stringify(ids), ids: [...ids] })}>批量排序</button>

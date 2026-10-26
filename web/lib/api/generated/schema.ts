@@ -21639,6 +21639,8 @@ export interface components {
             id: string;
             name: string;
             subtitle: string;
+            contributor_label: string;
+            kind_label: string;
             cover_url: string;
             status: string;
         };

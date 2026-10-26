@@ -27,8 +27,8 @@ export function TopicTreeBranch({ parent = "", owner, selected, ancestors = [], 
 }
 
 export function TopicOrganizationTree({ selected }: { selected?: string | null }) {
-  const owner = String(useAdminSession()?.id || ""), [input,setInput]=useState(""), [query,setQuery]=useState("");
-  return <aside className={styles.structure}><header><h2>主题结构</h2><Link href="/admin/topics/new">＋新建主题</Link></header><div className={styles.treeSearch}><input aria-label="查找主题结构" maxLength={240} value={input} placeholder="查找名称或别名" onChange={event=>setInput(event.target.value)} onKeyDown={event=>{if(event.key === "Enter" && !event.nativeEvent.isComposing && event.keyCode !== 229){event.preventDefault();setQuery(input.trim());}}}/><button type="button" onClick={()=>setQuery(input.trim())}>查找</button></div><TopicTreeBranch key={`${owner}:${query}`} owner={owner} selected={selected || undefined} query={query}/><p className={styles.muted}>显示当前主题层级；已公开主题的层级草稿在发布后生效。</p></aside>;
+  const owner = String(useAdminSession()?.id || ""), [input,setInput]=useState(""), [query,setQuery]=useState(""),[expanded,setExpanded]=useState(false);
+  return <aside className={styles.structure} data-expanded={expanded}><header><h2>主题结构</h2><button type="button" className={styles.treeToggle} aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>展开 / 收起</button><Link href="/admin/topics/new">＋新建主题</Link></header><div className={styles.structureBody}><div className={styles.treeSearch}><input aria-label="查找主题结构" maxLength={240} value={input} placeholder="查找名称或别名" onChange={event=>setInput(event.target.value)} onKeyDown={event=>{if(event.key === "Enter" && !event.nativeEvent.isComposing && event.keyCode !== 229){event.preventDefault();setQuery(input.trim());}}}/><button type="button" onClick={()=>setQuery(input.trim())}>查找</button></div><TopicTreeBranch key={`${owner}:${query}`} owner={owner} selected={selected || undefined} query={query}/><p className={styles.muted}>显示当前主题层级；已公开主题的层级草稿在发布后生效。</p></div></aside>;
 }
 
 export function TopicOrganizationChecks({ topicId, name, value }: { topicId: string | null; name: string; value: TopicCurationFields }) {

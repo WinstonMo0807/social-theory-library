@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAdminSession } from "@/lib/admin-session";
 import { TopicAssociations } from "./topic-associations";
-import { StringListEditor } from "@/components/structured-editors";
+import { ScholarTagInput } from "./scholar-tag-input";
 import { TopicOrganizationChecks } from "./topic-organization";
 import { getServerSessionCredential } from "@/lib/api";
 import { useApiResource } from "@/lib/api/use-api-resource";
@@ -41,7 +41,7 @@ const choices = [
   ["questions", "questionNodeIds", "核心问题"],
   ["questions", "debateNodeIds", "相关争论"],
   ["concepts", "conceptNodeIds", "规范概念条目"],
-  ["works", "editionIds", "相关作品的出版版本"],
+  ["works", "editionIds", "关联作品"],
   ["works", "foundationalEditionIds", "基础阅读版本"],
   ["works", "disputedEditionIds", "争议阅读版本"],
   ["scholars", "topicScholarIds", "相关学者档案"],
@@ -54,14 +54,15 @@ export function TopicFieldsEditor({ topicId, name, section, value, onChange }: {
 }) {
   const owner = String(useAdminSession()?.id || "");
   return <section>
-    {section === "identity" ? <><StringListEditor label="主题别名" itemLabel="别名" addLabel="添加别名" value={value.topicAliases} onChange={topicAliases=>onChange({topicAliases})}/><TopicHierarchy topicId={topicId} name={name} value={value} onChange={onChange} />
-      <p>一级主题没有上级。不能以自身或后代为上级；上级未公开时不对读者展示其名称。</p><TopicOrganizationChecks topicId={topicId} name={name} value={value}/></> : null}
+    {section === "identity" ? <><ScholarTagInput label="别名" addLabel="添加别名" value={value.topicAliases} onChange={topicAliases=>onChange({topicAliases})}/><TopicHierarchy topicId={topicId} name={name} value={value} onChange={onChange} />
+      <details className="topic-organization-checks"><summary>层级规则与相似主题</summary><p>一级主题没有上级。不能以自身或后代为上级；上级未公开时不对读者展示其名称。</p><TopicOrganizationChecks topicId={topicId} name={name} value={value}/></details></> : null}
     {choices.filter(row => row[0] === section).map(([, field, label]) => {
       const key = topicSelectionFields[field];
-      return <TopicAssociations key={`${owner}:${topicId}:${field}`} field={key} label={label} ids={value[field]} labels={value.preview_labels}
+      const editor=<TopicAssociations key={`${owner}:${topicId}:${field}`} field={key} label={label} ids={value[field]} labels={value.preview_labels}
         notes={value.associationNotes[key] || {}} onChange={(ids, labels) => onChange({ [field]: ids, preview_labels: { ...value.preview_labels, ...labels },
           associationNotes: { ...value.associationNotes, [key]: Object.fromEntries(ids.flatMap(id => value.associationNotes[key]?.[id] ? [[id, value.associationNotes[key][id]]] : [])) } })}
         onNote={(id, text) => onChange({ associationNotes: { ...value.associationNotes, [key]: { ...value.associationNotes[key], [id]: text } } })} />;
+      return field==="foundationalEditionIds"||field==="disputedEditionIds"?<details key={field} className="topic-additional-readings"><summary>{label}</summary>{editor}</details>:editor;
     })}
     {section === "questions" ? <p>问题与争论关联规范条目；导读中的文字问题不会自动创建条目或生成讨论数量。</p> : null}
     {section === "works" ? <p>每项固定到准确出版版本。没有全文只显示书目；待购状态来自已发布策划中的明确计划记录。</p> : null}
