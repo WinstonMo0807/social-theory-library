@@ -392,3 +392,12 @@ e4bc57与3029db静态类型退出0；e9ba21→d1dcfa编译退出0。包2113文�
 
 只读查看/admin/topics/new与/admin/theories桌面/手机，截图topic-r42-*、concept-r42-*。主题真实空库呈现；概念分组和资料栏已改。A截图与DOM确定概念标题继承min-height:110px产生额外留白，旧保存footer负margin越界，解释对象的标签被旧紧凑编辑器隐藏且格式栏常显；下一批仅修正这些实际差异。原字体/有数据精确几何仍A，实际业务B待统一验收，不称全组通过。PDF149–151时间线已逐张读取。
 
+
+## VISUAL-42 时间线（PDF149–151）及VISUAL-40修正
+
+前置d7bd4677。唯一PDF149–151逐张读取；时间线原图品牌、三栏、类型/日期精度、作品版本/人物/概念、书目与引用位置、人工确认及真实顺序预览已更新。复用原保存、发布、权限、冲突、回执、多人、来源图片及归并服务。主要出处此前没有类型，现原editorial_details.primary_kind支持book/article/archive/other，历史缺值按other，不猜书籍类型；核对失效与归并保留同步，无迁移。概念标题留白、旧footer负margin、解释对象标签/常显格式栏同步修正。
+
+首次静态类型发现更新时间不在事件类型中，改用原editorial_revision.updated_at；8396fc及8a3852最终类型退出0，043a31完成两个Python AST。a164bf→e64422编译退出0。最终包2135文件46675698字节，SHA ec8e04af8ad2fc72f2a2381596ec8743d9f07cf2046be0b2d49d782bcd8032ce。NAS89eb4b→2f2546退出0；Web r43 1a6073db31ab、API r18 1cfffebce14a。恢复点.env.before-timeline-r43（r42/API17）。未测试、业务提交、迁移或公网切换。
+
+只读查看/admin/theories/timeline和/admin/theories桌面/手机，timeline-r43-*、concept-r43-*已保存。概念标题min-height为0、旧footer为none且解释对象标签可见；手机仍有scrollWidth423/viewport390，定位到横向页签里的绝对定位sr-only标签，下一批移除冗余标签并保留select的aria-label。时间线分组h2被旧规则覆盖为23px，实体选择器间距偏大，下一批按图收紧；未填草稿显示空时间节点也需用真实空态呈现。原字体、有数据精确几何和相关作品封面卡仍A，不称整组复刻完成。B实际保存/来源/归并/发布待统一验收。PDF152–154阅读路径已逐张读取，继续原阶段/材料/先修与候选服务。
+

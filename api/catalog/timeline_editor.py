@@ -40,7 +40,7 @@ def timeline_for_scholar(queryset, identifier):
 
 
 def validate_timeline_details(value, target=None):
-    allowed = {"sources", "time_note", "conflict_note", "editor_note", "confirmed", "duplicate_reason", "primary_image_rendition_id"}
+    allowed = {"sources", "time_note", "conflict_note", "editor_note", "confirmed", "duplicate_reason", "primary_image_rendition_id", "primary_kind"}
     if not isinstance(value, dict) or set(value) - allowed:
         raise ValidationError("事件核对资料格式无效。")
     clean = {}
@@ -53,6 +53,10 @@ def validate_timeline_details(value, target=None):
     if not isinstance(confirmed, bool):
         raise ValidationError("请明确是否已人工核对出处。")
     clean["confirmed"] = confirmed
+    primary_kind = value.get("primary_kind", "other")
+    if not isinstance(primary_kind, str) or primary_kind not in {"book", "article", "archive", "other"}:
+        raise ValidationError("主要出处类型无效。")
+    clean["primary_kind"] = primary_kind
     rows = value.get("sources", [])
     if not isinstance(rows, list) or len(rows) > 20:
         raise ValidationError("同一事件最多记录 20 条补充出处。")

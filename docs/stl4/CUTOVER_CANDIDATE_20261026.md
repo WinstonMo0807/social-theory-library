@@ -1,5 +1,7 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+2026-10-26当前：Web r43 1a6073db31ab、API r18 1cfffebce14a。恢复点.env.before-timeline-r43（r42/API17）。未公网切换。
+
 2026-10-26当前：Web r42 cf212589bdae、API r17 f2e053e02288。恢复点.env.before-topic-r42（r41/API16）。未公网切换。
 
 2026-10-26当前：Web r41 528ad31ab305、API r16 f20c1c710e00。恢复点.env.before-concept-r41（r40/API16）。未公网切换。

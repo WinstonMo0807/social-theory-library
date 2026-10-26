@@ -112,7 +112,7 @@ def _proposal(source, target):
     known = {row["id"]: row for row in rows}
     candidates = deepcopy((source.editorial_details or {}).get("sources", []))
     if source.source or source.evidence_text or source.evidence_asset_id or (source.editorial_details or {}).get("primary_image_rendition_id"):
-        candidates.insert(0, {"id": str(uuid5(source.pk, "merged-primary-evidence")), "kind": "other",
+        candidates.insert(0, {"id": str(uuid5(source.pk, "merged-primary-evidence")), "kind": (source.editorial_details or {}).get("primary_kind", "other"),
             "citation": source.source or source.title, "locator": source.evidence_printed_label,
             "quote": source.evidence_text, "asset_id": str(source.evidence_asset_id) if source.evidence_asset_id else None,
             "page": source.evidence_page, "status": "related",

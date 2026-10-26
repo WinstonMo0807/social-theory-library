@@ -26,17 +26,19 @@ export function TheoryTimelinePublicList({
   events,
   pagination = null,
   detailLinks = true,
+  currentEventId,
 }: {
   events: NormalizedTimelineEvent[];
   pagination?: ReactNode;
   detailLinks?: boolean;
+  currentEventId?: string;
 }) {
   return (
     <section className="theory-timeline-list" data-module-id="theory-development">
       {events.length ? events.map((event) => {
         const nodeNames = event.relations.filter((item) => item.type === "node").map((item) => item.name);
         const hasWork = event.relations.some((item) => item.type === "work");
-        return <article id={`timeline-event-${event.id}`} key={event.id}>
+        return <article id={`timeline-event-${event.id}`} key={event.id} data-current={currentEventId === event.id || undefined}>
           <time>{timelineDate(event)}</time>
           <span className="event-icon">{hasWork ? <BookOpen size={21} /> : <CalendarDays size={21} />}</span>
           <div className="event-main"><small>{timelineDate(event)}</small><h2>{detailLinks ? <Link href={`/theories/events/${event.id}`}>{event.title}</Link> : event.title}</h2><p>{event.description}</p></div>

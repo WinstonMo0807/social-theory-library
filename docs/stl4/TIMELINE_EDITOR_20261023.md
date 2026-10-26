@@ -1,5 +1,9 @@
 # M23 时间线事件编辑源码接入
 
+## 2026-10-26 PDF149–151 视觉同步
+
+主要出处的类型随原 editorial_details.primary_kind 保存，取 book/article/archive/other；历史记录缺值按 other 保留，不自动猜成图书。校验进入原 validate_timeline_details，改变类型使人工核对失效，归并转为补充出处时保留原类型。接口继续原事件草稿/版本/发布/归并服务，无数据库迁移。JSON 字段仍沿既有 OpenAPI 契约，前端 TimelineEditorialDetails 同步。版式及实际预览状态见本批 CURRENT_PROGRESS。
+
 ## 2026-10-26 M23补充出处输入保持展开与索引校正
 
 前置f63fc9c0。重新实际读取唯一final-r2 PDF149–151，回查时间线多人物、版本责任、证据图片、重复归并及当前表单。补充出处原用citation是否为空决定details展开，导致新卡片输入第一个字便收起；现按卡片身份独立保存展开状态，新增默认展开，人工收起同时关闭该卡片选材。沿原内容保存/人工确认失效规则，不改正文或关系。

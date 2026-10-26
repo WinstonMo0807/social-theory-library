@@ -10,8 +10,8 @@ import { TimelineEvidenceImage } from "./timeline-evidence-image";
 import styles from "./timeline-editor.module.css";
 
 export type TimelineSourceRecord = { id: string; kind: "book"|"article"|"archive"|"other"; citation: string; locator: string; quote: string; status: "adopted"|"disputed"|"related"; asset_id: string|null; page: number|null; image_rendition_id?: string|null };
-export type TimelineEditorialDetails = { sources: TimelineSourceRecord[]; time_note: string; conflict_note: string; editor_note: string; confirmed: boolean; duplicate_reason: string; primary_image_rendition_id?: string|null };
-export const emptyTimelineDetails = (): TimelineEditorialDetails => ({ sources: [], time_note: "", conflict_note: "", editor_note: "", confirmed: false, duplicate_reason: "" });
+export type TimelineEditorialDetails = { sources: TimelineSourceRecord[]; time_note: string; conflict_note: string; editor_note: string; confirmed: boolean; duplicate_reason: string; primary_kind?: TimelineSourceRecord["kind"]; primary_image_rendition_id?: string|null };
+export const emptyTimelineDetails = (): TimelineEditorialDetails => ({ sources: [], time_note: "", conflict_note: "", editor_note: "", confirmed: false, duplicate_reason: "", primary_kind: "other" });
 
 export function TimelineSupplementalSources({ owner, value, onChange }: { owner: string; value: TimelineEditorialDetails; onChange: (value: TimelineEditorialDetails) => void }) {
   const [picking, setPicking] = useState("");
