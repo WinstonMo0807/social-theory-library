@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type DragEvent } from "react";
-import { GripVertical } from "lucide-react";
+import { GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { normalizePublicResourceUrl } from "@/lib/api";
 import type { PublicReadingPath } from "@/lib/api/reading-paths.types";
 import styles from "../knowledge/path-editor.module.css";
@@ -14,10 +14,10 @@ export function PathStageIndex({ stages, active, onSelect, onMoveStage, onMoveIt
   stages: Stage[]; active: number; onSelect: (index: number) => void; onMoveStage: (key: string, before?: string) => void;
   onMoveItem: (key: string, stage: string, before?: string) => void; dragRef: React.RefObject<PathDrag>;
 }) {
-  return <nav className={styles.stageIndex} aria-label="阅读阶段">{stages.map((stage, index) => <button key={stage.key} type="button" aria-current={index === active ? "true" : undefined}
+  return <nav className={styles.stageIndex} aria-label="阅读阶段">{stages.map((stage, index) => <button key={stage.key} style={{order:index*2}} type="button" aria-current={index === active ? "true" : undefined}
     draggable onDragStart={event => { dragRef.current = { kind: "stage", key: stage.key }; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", stage.key); }} onDragEnd={() => { dragRef.current = null; }}
     onDragOver={event => { if (dragRef.current) event.preventDefault(); }} onDrop={event => { event.preventDefault(); const current = dragRef.current; dragRef.current = null; if (current?.kind === "stage") onMoveStage(current.key, stage.key); else if (current) onMoveItem(current.key, stage.key); }} onClick={() => onSelect(index)}>
-    <GripVertical size={13} aria-hidden="true"/><span className={styles.stageNumber}>{index + 1}</span><span><strong>{stage.name || "未命名阶段"}</strong><small>{stage.estimated_reading || "用时未设置"} · {stage.items.length} 项</small><small>{stage.description}</small></span>
+    <GripVertical size={13} aria-hidden="true"/><span className={styles.stageNumber}>{index + 1}</span><span><strong>{stage.name || "未命名阶段"}</strong><small>{stage.estimated_reading || "用时未设置"} · {stage.items.length} 项</small><small>{stage.description}</small></span>{index===active?<ChevronDown size={13}/>:<ChevronRight size={13}/>}
   </button>)}</nav>;
 }
 
