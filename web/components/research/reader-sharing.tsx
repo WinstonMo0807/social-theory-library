@@ -2,6 +2,7 @@
 
 import { writeClipboardText } from "@/lib/clipboard";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
 import { destinationLabels, publicShare, sharingRequest, shareLink, type ShareBrief, type ShareContent, type ShareDetail,
@@ -18,7 +19,8 @@ export function ReaderSharing() {
 }
 
 function Records({ owner, reviewer }: { owner: string; reviewer: boolean }) {
-  const [tab, setTab] = useState<"own" | "received" | "proposals" | "notices">("own"), [page, setPage] = useState(1);
+  const location=useSearchParams();
+  const [tab, setTab] = useState<"own" | "received" | "proposals" | "notices">(location.get("tab")==="notices"?"notices":"own"), [page, setPage] = useState(1);
   const [revoke, setRevoke] = useState<ShareBrief | null>(null), [confirmed, setConfirmed] = useState(false);
   const action = useSharingAction(owner);
   const load = useCallback((path: string, signal: AbortSignal) => sharingRequest<ShareDirectory>(owner, path, { signal }), [owner]);

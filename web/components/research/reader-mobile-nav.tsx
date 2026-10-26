@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { BookOpen, House, NotebookPen, Search, UserRound } from "lucide-react";
+import { Bell, BookOpen, House, Menu, NotebookPen, Search, UserRound } from "lucide-react";
 import styles from "./reader-mobile-nav.module.css";
 
-export function ReaderMobileNav({ variant = "research" }: { variant?: "research" | "privacy" | "booklist" }) {
+export function ReaderMobileNav({ variant = "research" }: { variant?: "research" | "privacy" | "booklist" | "memory" | "memory-review" }) {
+  if(variant==="memory"||variant==="memory-review") return <nav className={styles.nav} aria-label="读者快捷导航"><Link href="/"><House size={20}/><span>首页</span></Link><Link href="/explore"><Search size={20}/><span>探索</span></Link><Link href="/account/confirmed-notes" aria-current="page"><NotebookPen size={20}/><span>{variant==="memory"?"读者中心":"我的笔记"}</span></Link><Link href="/account/sharing?tab=notices"><Bell size={20}/><span>通知</span></Link><Link href="/account"><Menu size={20}/><span>更多</span></Link></nav>;
   return <nav className={styles.nav} aria-label="读者快捷导航">
     <Link href="/"><House size={20}/><span>首页</span></Link>
     <Link href="/explore"><Search size={20}/><span>探索</span></Link>

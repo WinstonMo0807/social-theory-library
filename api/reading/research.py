@@ -1177,18 +1177,24 @@ def list_memories(user, filters):
     """Exact encrypted owner search, counted before state filter, never page-local counts."""
     query = filters.get("q", "").casefold().strip()
     rows = ResearchMemory.objects.filter(user=user).order_by("-created_at" if filters.get("order") == "newest" else "-updated_at", "id")
-    matches, counts = [], {"total": 0, "confirmed": 0, "proposed": 0, "ignored": 0}
+    matches, counts = [], {"total": 0, "confirmed": 0, "proposed": 0, "ignored": 0, "needs_revision": 0, "revised": 0}
     for row in rows.iterator(chunk_size=100):
         payload = unpack(row)
         if filters.get("kind", "all") != "all" and payload.get("kind") != filters["kind"]:
             continue
         if query and query not in payload.get("body", "").casefold():
             continue
-        if filters.get("source_status", "all") != "all" and memory_source_details(user, payload)["source_status"] != filters["source_status"]:
+        source_status = memory_source_details(user, payload)["source_status"]
+        revised = bool(payload.get("history"))
+        needs_revision = source_status in {"updated", "unavailable"} or row.state == "proposed" and revised
+        if filters.get("source_status", "all") != "all" and source_status != filters["source_status"]:
             continue
         counts["total"] += 1
         counts[row.state] = counts.get(row.state, 0) + 1
-        if filters.get("state", "all") in {"all", row.state}:
+        counts["needs_revision"] += int(needs_revision)
+        counts["revised"] += int(revised)
+        state = filters.get("state", "all")
+        if state in {"all", row.state} or state == "needs_revision" and needs_revision or state == "revised" and revised:
             matches.append(row)
     return matches, counts
 

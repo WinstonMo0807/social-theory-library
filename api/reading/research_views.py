@@ -79,7 +79,7 @@ class MemoryListOutput(serializers.Serializer):
     previous = serializers.URLField(read_only=True, allow_null=True, required=False)
     results = PrivateRecordSerializer(many=True, read_only=True)
     counts = serializers.DictField(child=serializers.IntegerField(), read_only=True,
-        help_text="q/kind/source_status 范围内、state 过滤前的 total/confirmed/proposed/ignored 真实总数。")
+        help_text="q/kind/source_status 范围内、state 过滤前的 total/confirmed/proposed/ignored/needs_revision/revised 真实总数。")
 
 
 class PrivateResponses(PrivateAccountResponses):

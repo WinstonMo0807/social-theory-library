@@ -13181,7 +13181,7 @@ export interface components {
             /** Format: uri */
             readonly previous: string | null;
             readonly results: components["schemas"]["PrivateRecord"][];
-            /** @description q/kind/source_status 范围内、state 过滤前的 total/confirmed/proposed/ignored 真实总数。 */
+            /** @description q/kind/source_status 范围内、state 过滤前的 total/confirmed/proposed/ignored/needs_revision/revised 真实总数。 */
             readonly counts: {
                 [key: string]: number;
             };
@@ -37136,7 +37136,7 @@ export interface operations {
                  *     * `confirmed` - confirmed
                  *     * `ignored` - ignored
                  */
-                state?: "all" | "proposed" | "confirmed" | "ignored";
+                state?: "all" | "proposed" | "confirmed" | "ignored" | "needs_revision" | "revised";
             };
             header?: never;
             path?: never;

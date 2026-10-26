@@ -222,7 +222,7 @@ class MemoryUsageInput(RevisionInput):
 
 class MemoryListInput(serializers.Serializer):
     q = serializers.CharField(max_length=1200, required=False, allow_blank=True)
-    state = serializers.ChoiceField(choices=["all", "proposed", "confirmed", "ignored"], required=False)
+    state = serializers.ChoiceField(choices=["all", "proposed", "confirmed", "ignored", "needs_revision", "revised"], required=False)
     kind = serializers.ChoiceField(choices=["all", "concept", "understanding", "question", "method", "observation", "contradiction"], required=False)
     source_status = serializers.ChoiceField(choices=["all", "available", "updated", "unavailable", "no_source"], required=False)
     order = serializers.ChoiceField(choices=["updated_at", "newest"], required=False)

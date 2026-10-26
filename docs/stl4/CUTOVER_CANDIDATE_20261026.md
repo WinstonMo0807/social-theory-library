@@ -1,5 +1,7 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+2026-10-26 当前Web r62 e395bd9ad6bd/API r27 0fc4693adbb0，恢复点.env.before-reader-r62；其余视觉A及业务B仍保留，不可公网切换。
+
 2026-10-26 当前Web r61 a5ecd8c18c3d/API r26 d67210db72a0，恢复点.env.before-private-r61。视觉A与业务B未全关闭，不可公网切换。
 
 2026-10-26 当前Web r60 9982905f64a6/API r26 d67210db72a0，恢复点.env.before-booklists-r60。视觉A和业务B仍有剩余，不可公网切换。
