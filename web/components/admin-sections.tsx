@@ -1177,9 +1177,9 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
           /></section>
           <section data-editor-section="assistance"><ScholarMaterialFields value={draft} onChange={patch=>{prefills.fill("",current=>({...current,...patch}));}}/></section>
           <label data-editor-section="identity-original"><span>外文名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
-          <StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" />
+          <section data-editor-section="sources"><StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" /></section>
 
-          <div data-editor-section="identity-years" className="scholar-years"><label><span>出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><label><span>逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div>
+          <div data-editor-section="identity-years" className="scholar-years"><span>生卒年</span><div><label><span className="sr-only">出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><span aria-hidden="true">–</span><label><span className="sr-only">逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div></div>
           <section data-editor-section="biography"><h2>二、导读</h2><ScholarProseEditor label="导读" value={draft.description} format={draft.prose.short_description} recommendedLength={300} maxLength={400} disabled={!canEdit||saving||!command.ready||Boolean(command.recovery)} onChange={(text,format)=>setDraft(current=>({...current,description:text,prose:{...current.prose,short_description:format}}))}/></section>
           <section data-editor-section="biography"><h2>三、生平说明</h2><ScholarProseEditor label="生平说明" value={draft.biography} format={draft.prose.biography} recommendedLength={1000} maxLength={30000} disabled={!canEdit||saving||!command.ready||Boolean(command.recovery)} onChange={(text,format)=>setDraft(current=>({...current,biography:text,prose:{...current.prose,biography:format}}))}/><small>正式生平事件在时间线中绑定来源，并单独发布。</small></section>
           <section data-editor-section="assistance"><CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
@@ -1197,7 +1197,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             }}
             onAccepted={refreshScholarSuggestion}
           /></section>
-          <StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" />
+          <section data-editor-section="sources"><StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" /></section>
           <section data-editor-section="assistance"><CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="外部标识"
             targetType="person"
@@ -1226,7 +1226,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             }}
             onAccepted={refreshScholarSuggestion}
           /></section>
-          <StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" />
+          <section data-editor-section="sources"><StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" /></section>
           <StructuredRowsEditor focused
             label="生平与重要发表"
             description="这里保留历史生平笔记，不自动成为公开事件。新版时间线使用已绑定人物、日期与准确来源并正式发布的事件。"
