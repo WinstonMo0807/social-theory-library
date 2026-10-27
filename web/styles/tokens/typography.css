@@ -1,0 +1,207 @@
+/* B comparison edition, 2026-10-27. A keeps the pre-existing cascade.
+   Brand/navigation/PDF text layers are deliberately outside the content scope. */
+html[data-typeset="B"] {
+  --type-display: "STL Display Serif", "Source Han Serif SC", "Songti SC", SimSun, serif;
+  --type-text: "STL Text Sans", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --type-ui: calc(.875rem + var(--font-bump, 1px));
+  --type-body: calc(1rem + var(--font-bump, 1px));
+  --type-meta: .8125rem;
+  --type-card: clamp(1.125rem, 1.45vw, 1.5rem);
+  --type-section: clamp(1.5rem, 2.2vw, 2rem);
+  --type-title: clamp(2rem, 3.5vw, 3rem);
+  --type-interface-title: clamp(1.5rem, 2.5vw, 2rem);
+  --type-gutter: clamp(1rem, 3.4vw, 3rem);
+  --type-container: 1280px;
+  --type-measure: 40ic;
+  --type-section-gap: clamp(2rem, 4vw, 3.5rem);
+}
+html[data-typeset="B"][data-font-family="serif"] { --type-text: var(--type-display); }
+
+/* Scope aliases to actual content roots, never the global body or site chrome. */
+html[data-typeset="B"] #main-content :is(
+  [data-type-mode="expressive"] > :not(footer),
+  [data-type-mode="reading"] > :not(footer),
+  [data-type-mode="productive"] > :not(footer),
+  .admin-content
+) {
+  --sans: var(--type-text);
+  --serif: var(--type-display);
+  --font-sans: var(--type-text);
+  --font-serif: var(--type-display);
+  --stl-type-sans: var(--type-text);
+  --stl-type-serif: var(--type-display);
+  font-family: var(--type-text);
+  font-size: var(--type-ui);
+  line-height: 1.65;
+  text-underline-offset: .2em;
+}
+
+/* Brand lockups sometimes appear inside auth/content pages: preserve A's fonts. */
+html[data-typeset="B"] #main-content .brand-reference-lockup {
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --sans: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+}
+
+html[data-typeset="B"] #main-content :is(
+  [data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], .admin-content
+) :is(h1, h2, h3, h4) {
+  font-family: var(--type-display);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"]) h1 { font-size: var(--type-title); line-height: 1.3; }
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"]) h1 { text-wrap: balance; }
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"]) h2 { font-size: var(--type-section); }
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"]) h3 { font-size: var(--type-card); }
+html[data-typeset="B"] #main-content [data-type-mode="productive"] h1 { font-size: var(--type-interface-title); }
+html[data-typeset="B"] #main-content [data-type-mode="productive"] h2 { font-size: 1.25rem; }
+html[data-typeset="B"] #main-content [data-type-mode="productive"] h3 { font-size: 1.125rem; }
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"]) :is(p, dt, dd, small):not(blockquote *) { font-family: var(--type-text); }
+html[data-typeset="B"] #main-content [data-type-mode="productive"] h1 + p { font: var(--type-ui)/1.75 var(--type-text); }
+html[data-typeset="B"] #main-content .stl4-explore-entry-body > strong { font: 600 var(--type-card)/1.5 var(--type-display); }
+
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], .admin-content) :is(button, input, select, textarea, label, legend, summary) {
+  font-family: var(--type-text);
+  letter-spacing: 0;
+}
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], .admin-content) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  font-size: var(--type-ui);
+  line-height: 1.5;
+  max-width: 100%;
+}
+html[data-typeset="B"] #main-content :is([data-type-mode="productive"], .admin-content) :is(table, [role="table"], time, output) { font-variant-numeric: tabular-nums; }
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"]) blockquote {
+  font-family: var(--type-display);
+  font-size: clamp(1.125rem, 1.65vw, 1.375rem);
+  line-height: 1.85;
+  letter-spacing: 0;
+}
+
+/* Home: opening spread, then distinct issue/person/topic/collection rhythms. */
+html[data-typeset="B"] #main-content .stl4-home { max-width: 1440px; padding: 0 var(--type-gutter) 48px; }
+html[data-typeset="B"] #main-content .stl4-home-hero { min-height: 410px; grid-template-columns: 46% 54%; margin: 0 calc(-1 * var(--type-gutter)) 0; }
+html[data-typeset="B"] #main-content .stl4-hero-copy { padding: 40px 0 40px var(--type-gutter); }
+html[data-typeset="B"] #main-content .stl4-hero-copy h1 { font-size: clamp(2.25rem, 4.2vw, 3.75rem); line-height: 1.3; font-weight: 600; margin-bottom: 20px; }
+html[data-typeset="B"] #main-content .stl4-hero-intro { font-family: var(--type-text); font-size: 1.125rem; line-height: 1.8; margin-bottom: 24px; }
+html[data-typeset="B"] #main-content .stl4-home-kicker { font-size: .75rem; margin-bottom: 16px; letter-spacing: .08em; }
+html[data-typeset="B"] #main-content .stl4-home-search { min-height: 50px; margin-right: 0; max-width: 540px; }
+html[data-typeset="B"] #main-content .stl4-home-search input[type="search"] { font-size: .9375rem; }
+html[data-typeset="B"] #main-content .stl4-hero-picture img { min-height: 410px; }
+html[data-typeset="B"] #main-content .stl4-home-section { margin-top: var(--type-section-gap); padding-top: 24px; }
+html[data-typeset="B"] #main-content .stl4-home-heading { margin-bottom: 24px; gap: 16px; }
+html[data-typeset="B"] #main-content .stl4-home-heading h2 { font-size: var(--type-section); font-weight: 600; white-space: normal; }
+html[data-typeset="B"] #main-content .stl4-home-heading h2 small { font-size: .6875rem; letter-spacing: .08em; }
+html[data-typeset="B"] #main-content .stl4-home-heading :is(a, button),
+html[data-typeset="B"] #main-content .stl4-issue-count { font-size: var(--type-meta); }
+html[data-typeset="B"] #main-content .stl4-issue-copy p { font-family: var(--type-text); font-size: .9375rem; line-height: 1.8; }
+html[data-typeset="B"] #main-content .stl4-issue-lead h3 { font-size: clamp(1.5rem, 2.4vw, 2rem); }
+html[data-typeset="B"] #main-content .stl4-issue-copy { padding: 20px; }
+html[data-typeset="B"] #main-content .stl4-issue-lead[data-no-image] .stl4-issue-copy { padding: 32px; }
+html[data-typeset="B"] #main-content .stl4-issue-grid:has(> :only-child) .stl4-issue-lead[data-no-image] .stl4-issue-copy { display: grid; grid-template-columns: 1.05fr 1fr; column-gap: 48px; align-items: start; }
+html[data-typeset="B"] #main-content .stl4-issue-grid:has(> :only-child) .stl4-issue-label { justify-self: start; grid-column: 1; margin-bottom: 20px; }
+html[data-typeset="B"] #main-content .stl4-issue-grid:has(> :only-child) .stl4-issue-copy h3 { grid-column: 1; grid-row: 2 / 4; max-width: 17ic; }
+html[data-typeset="B"] #main-content .stl4-issue-grid:has(> :only-child) .stl4-issue-copy > p { grid-column: 2; grid-row: 1 / 3; -webkit-line-clamp: 4; }
+html[data-typeset="B"] #main-content .stl4-issue-grid:has(> :only-child) .stl4-issue-byline { grid-column: 2; grid-row: 3; margin-top: 20px; }
+html[data-typeset="B"] #main-content :is(.stl4-scholar-card, .stl4-topic-card) > div:last-child { padding: 16px; }
+html[data-typeset="B"] #main-content :is(.stl4-scholar-card, .stl4-topic-card) h3 { font-size: var(--type-card); }
+html[data-typeset="B"] #main-content :is(.stl4-scholar-card, .stl4-topic-card) p { font: var(--type-meta)/1.7 var(--type-text); }
+html[data-typeset="B"] #main-content .stl4-continue { margin-top: 32px; padding: 24px; }
+html[data-typeset="B"] #main-content .stl4-continue h2 { font-size: 1.5rem; }
+html[data-typeset="B"] #main-content .stl4-continue p { font: var(--type-meta)/1.7 var(--type-text); }
+
+/* Productive catalog: retain cover and publication identity, gain scanning room. */
+html[data-typeset="B"] #main-content .stl4-catalog-page { max-width: 1360px; padding-inline: var(--type-gutter); }
+html[data-typeset="B"] #main-content .stl4-catalog-hero { margin-inline: calc(-1 * var(--type-gutter)); min-height: 232px; }
+html[data-typeset="B"] #main-content .stl4-catalog-hero-copy { width: 63%; padding: 24px 0 24px var(--type-gutter); }
+html[data-typeset="B"] #main-content .stl4-catalog-hero h1 { font-size: var(--type-interface-title); white-space: normal; margin-bottom: 12px; }
+html[data-typeset="B"] #main-content .stl4-catalog-hero p { font: 1rem/1.75 var(--type-text); }
+html[data-typeset="B"] #main-content .stl4-catalog-hero nav { font: var(--type-meta)/1.5 var(--type-text); margin-bottom: 16px; }
+html[data-typeset="B"] #main-content .stl4-catalog-hero-media { left: 55%; }
+html[data-typeset="B"] #main-content .stl4-catalog-layout { grid-template-columns: 212px minmax(0, 1fr); gap: 28px; }
+html[data-typeset="B"] #main-content .stl4-catalog-filter-title h2,
+html[data-typeset="B"] #main-content .stl4-catalog-toolbar h2 { font: 500 1rem/1.6 var(--type-text); }
+html[data-typeset="B"] #main-content .stl4-catalog-filter-group :is(label, p, a, legend),
+html[data-typeset="B"] #main-content :is(.stl4-catalog-sort, .stl4-catalog-filter-title) { font-family: var(--type-text); font-size: var(--type-meta); }
+html[data-typeset="B"] #main-content .stl4-catalog-filter-group summary { font: 500 .9375rem/1.6 var(--type-text); }
+html[data-typeset="B"] #main-content .stl4-catalog-filter-group label { min-height: 32px; }
+html[data-typeset="B"] #main-content .stl4-catalog-result { padding: 24px 0; }
+html[data-typeset="B"] #main-content .stl4-catalog-result-main { grid-template-columns: 96px minmax(0, 1fr) minmax(160px, 26%); gap: 24px; }
+html[data-typeset="B"] #main-content .stl4-catalog-cover .book-cover.small { width: 96px; height: 140px; }
+html[data-typeset="B"] #main-content .stl4-catalog-result-copy h3 { font: 600 1.375rem/1.5 var(--type-display); }
+html[data-typeset="B"] #main-content .stl4-catalog-result-copy > p,
+html[data-typeset="B"] #main-content .stl4-catalog-publication > p { font: var(--type-meta)/1.8 var(--type-text); }
+html[data-typeset="B"] #main-content .stl4-catalog-abstract { font: .9375rem/1.8 var(--type-text); }
+html[data-typeset="B"] #main-content :is(.stl4-catalog-result-actions, .stl4-catalog-version-actions) :is(a, button) { font-family: var(--type-text); min-height: 34px; }
+html[data-typeset="B"] #main-content .stl4-catalog-versions { margin-left: 120px; }
+html[data-typeset="B"] #main-content .stl4-catalog-results.is-grid .stl4-catalog-result-main { grid-template-columns: 72px minmax(0, 1fr); gap: 16px; }
+
+/* Reading and personal workspaces: text preference is still respected. */
+html[data-typeset="B"] #main-content :is(.work-detail, #article-body) { font-size: var(--type-body); line-height: 1.8; }
+html[data-typeset="B"] #main-content #article-body { max-width: var(--type-measure); margin-inline: auto; }
+html[data-typeset="B"] #main-content #article-body :is(p, li) { font-family: var(--type-text); font-size: var(--type-body); line-height: 1.85; overflow-wrap: break-word; }
+html[data-typeset="B"] #main-content #article-body p { margin-block: 0 1.25em; }
+html[data-typeset="B"] #main-content #article-body :is(h2, h3) { margin-block: 1.8em .75em; }
+html[data-typeset="B"] #main-content [data-editorial-kind] h1 { font-size: clamp(2rem, 3vw, 2.75rem); }
+html[data-typeset="B"] #main-content [data-type-mode="reading"] aside h2 { font: 500 1.125rem/1.6 var(--type-text); }
+html[data-typeset="B"] #main-content [data-type-mode="productive"] aside h2 { font: 500 1rem/1.6 var(--type-text); }
+html[data-typeset="B"] #main-content .work-detail h1 { max-width: 22ic; }
+html[data-typeset="B"] #main-content [data-type-mode="productive"] :is(.reader-center, .page-shell) { font-family: var(--type-text); }
+html[data-typeset="B"] #main-content [data-type-mode="productive"] :is(.reader-center h2, .reader-center h3) { font-family: var(--type-display); }
+
+/* Admin content only. The sidebar, topbar and their brand remain untouched. */
+html[data-typeset="B"] #main-content .admin-content { padding: 28px 32px 48px; }
+html[data-typeset="B"] #main-content .admin-content :is(h1, h2, h3, h4) { font-family: var(--type-text); font-weight: 500; }
+html[data-typeset="B"] #main-content .admin-content h1 { font-size: clamp(1.375rem, 2.2vw, 1.75rem); line-height: 1.45; }
+html[data-typeset="B"] #main-content .admin-content h2 { font-size: 1.125rem; }
+html[data-typeset="B"] #main-content .admin-content h3 { font-size: 1rem; }
+html[data-typeset="B"] #main-content .admin-content :is(label, legend, th) { font-family: var(--type-text); font-size: .875rem; font-weight: 500; line-height: 1.6; }
+html[data-typeset="B"] #main-content .admin-content :is(p, td) { font-family: var(--type-text); line-height: 1.7; }
+html[data-typeset="B"] #main-content .admin-content :is(small, .helper-text, .field-hint) { font-family: var(--type-text); font-size: var(--type-meta); line-height: 1.6; }
+html[data-typeset="B"] #main-content .admin-content :is(input:not([type="checkbox"]):not([type="radio"]), select) { height: auto; min-height: 40px; }
+html[data-typeset="B"] #main-content .admin-content textarea { line-height: 1.75; }
+
+@media (max-width: 1000px) {
+  html[data-typeset="B"] #main-content .stl4-catalog-result-main { grid-template-columns: 80px minmax(0, 1fr); gap: 18px; }
+  html[data-typeset="B"] #main-content .stl4-catalog-publication { grid-column: 2; border-left: 0; padding-left: 0; }
+  html[data-typeset="B"] #main-content .stl4-catalog-cover .book-cover.small { width: 80px; height: 116px; }
+  html[data-typeset="B"] #main-content .stl4-catalog-versions { margin-left: 98px; }
+  html[data-typeset="B"] #main-content .stl4-home-hero { min-height: 360px; }
+  html[data-typeset="B"] #main-content .stl4-hero-picture img { min-height: 360px; }
+  html[data-typeset="B"] #main-content .stl4-hero-intro { font-size: 1rem; }
+}
+@media (max-width: 700px) {
+  html[data-typeset="B"] #main-content .stl4-home-hero { min-height: 0; }
+  html[data-typeset="B"] #main-content .stl4-hero-copy { padding: 28px var(--type-gutter) 24px; }
+  html[data-typeset="B"] #main-content .stl4-hero-copy h1 { font-size: clamp(2rem, 8.5vw, 2.625rem); margin-bottom: 16px; }
+  html[data-typeset="B"] #main-content .stl4-hero-picture img { min-height: 0; aspect-ratio: 2.1; }
+  html[data-typeset="B"] #main-content .stl4-hero-intro { font-size: 1rem; }
+  html[data-typeset="B"] #main-content .stl4-home-heading { align-items: start; flex-wrap: wrap; margin-bottom: 20px; }
+  html[data-typeset="B"] #main-content .stl4-home-heading h2 { font-size: 1.625rem; }
+  html[data-typeset="B"] #main-content .stl4-home-heading > div { gap: 8px; flex-wrap: wrap; }
+  html[data-typeset="B"] #main-content .stl4-issue-grid:has(> :only-child) .stl4-issue-lead[data-no-image] .stl4-issue-copy { display: block; padding: 24px 20px 36px; }
+  html[data-typeset="B"] #main-content .stl4-issue-copy h3 { font-size: 1.5rem; margin-bottom: 16px; }
+  html[data-typeset="B"] #main-content .stl4-continue { padding: 16px; flex-wrap: wrap; }
+  html[data-typeset="B"] #main-content .stl4-continue > div { min-width: 160px; }
+  html[data-typeset="B"] #main-content .stl4-continue h2 { font-size: 1.25rem; }
+  html[data-typeset="B"] #main-content .stl4-continue > a { margin-left: auto; }
+  html[data-typeset="B"] #main-content .stl4-catalog-page { padding-inline: 16px; }
+  html[data-typeset="B"] #main-content .stl4-catalog-hero { margin-inline: -16px; min-height: 0; }
+  html[data-typeset="B"] #main-content .stl4-catalog-hero-copy { width: 100%; padding: 20px 16px; }
+  html[data-typeset="B"] #main-content .stl4-catalog-hero h1 { font-size: 1.5rem; }
+  html[data-typeset="B"] #main-content .stl4-catalog-hero p { font-size: .9375rem; }
+  html[data-typeset="B"] #main-content .stl4-catalog-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  html[data-typeset="B"] #main-content .stl4-catalog-result-main { grid-template-columns: 64px minmax(0, 1fr); gap: 16px; }
+  html[data-typeset="B"] #main-content .stl4-catalog-cover .book-cover.small { width: 64px; height: 94px; }
+  html[data-typeset="B"] #main-content .stl4-catalog-result-copy h3 { font-size: 1.25rem; }
+  html[data-typeset="B"] #main-content .stl4-catalog-publication { grid-column: 1 / -1; }
+  html[data-typeset="B"] #main-content .stl4-catalog-versions { margin-left: 0; }
+  html[data-typeset="B"] #main-content .stl4-catalog-result-actions { display: flex; flex-direction: row; flex-wrap: wrap; width: 100%; gap: 8px; }
+  html[data-typeset="B"] #main-content .stl4-catalog-result-actions :is(button, a) { white-space: nowrap; flex: 0 0 auto; }
+  html[data-typeset="B"] #main-content .admin-content { padding: 20px 16px 40px; }
+  html[data-typeset="B"] #main-content :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { font-size: 1rem; }
+}
+
+html[data-typeset="B"] #main-content .stl4-topic-card > .stl4-image-missing {width:48px;height:48px;min-height:0;margin:20px 16px 0;border-radius:2px;}

@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-27 18:42 排版A/B，Web90
+
+活动Web90 f1a7350eef6b37efbe72779d15ac507961801d10fa3c98d06adca46b7b7be478；NAS预览根typography-b-r90-recovery保存前Web89，r89保存前Web88，r88保存前Web87。A另有typography-a-20261027受限环境、独立镜像标签social-theory-library-web:stl4-typography-a-20261027及本机A源码归档（包括原未提交前端工作）。回退仅按保存的LIBRARY_WEB_IMAGE更新预览Web/edge，不覆盖完整.env、不重启API/worker/模型/数据。源码比较基线Git标签codex/stl4-typography-a-20261027；原未提交工作不得reset/clean。当前预览默认B，#typography=A/B只改本标签呈现，不重建数据库；细节TYPOGRAPHY_AB_20261027.md。自动任务已删除。
+
 ## 2026-10-27 14:25 Web87悬浮反馈检查点
 
 活动Web87 f15845a667f1a41c2216e1c648df4ac3e44c8bccb569aff316214c434c31edfc。NAS /volume2/library/stl-previews/20261026-r1/motion-r87-recovery保存前Web86受限.env及images.json；仅使用其中原LIBRARY_WEB_IMAGE通过既有预览Compose恢复Web/edge，不覆盖其他环境或重启后端。API/四worker、Postgres、RapidOCR、inference容器ID保持。脚本、构建部署日志、截图在忽略tmp/stl4-rapidocr-20261027/motion-*与build_motion_r87.py/deploy_motion_r87.py/run_motion_r87_deploy.py。VISUAL-81已关闭，不重复开发；系统减少动态效果仅静态核对，不宣称已切换系统实测。用户首页保持白昼，临时核对标签关闭，自动任务保持删除。

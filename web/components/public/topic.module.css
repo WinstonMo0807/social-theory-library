@@ -65,3 +65,25 @@
 }
 .heroCopy h1,.profileCopy h1{font-weight:700}
 .resultToolbar>a{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+
+/* B: topic pages share the type scale; their existing image hierarchy stays local. */
+:global(html[data-typeset="B"]) .featuredCard:has(>.imageBlank){grid-template-columns:minmax(0,1fr) 80px 48px;min-height:150px}
+:global(html[data-typeset="B"]) .featuredCard:has(>.imageBlank) p{max-width:58ic}
+:global(html[data-typeset="B"]) .featuredCard p{font-size:.875rem;line-height:1.8}
+:global(html[data-typeset="B"]) .featuredCard>.imageBlank{width:64px;height:64px;justify-self:center}
+:global(html[data-typeset="B"]) .page{max-width:1360px;padding-inline:var(--type-gutter)}
+:global(html[data-typeset="B"]) .directoryHero,:global(html[data-typeset="B"]) .hubPage .directoryHero{margin-inline:calc(-1 * var(--type-gutter));min-height:320px;padding:0}
+:global(html[data-typeset="B"]) .heroCopy{width:55%;max-width:700px;padding:44px var(--type-gutter) 36px}
+:global(html[data-typeset="B"]) .heroCopy>p{font:1.125rem/1.8 var(--type-text)}
+:global(html[data-typeset="B"]) .hubSection{margin-top:var(--type-section-gap);padding-bottom:32px}
+:global(html[data-typeset="B"]) .filterForm label{font-size:var(--type-meta);line-height:1.7}
+:global(html[data-typeset="B"]) .hubPage .directoryHero{display:flex;flex-direction:column}
+:global(html[data-typeset="B"]) .hubPage .directoryHero>picture{position:relative;inset:auto;order:0;z-index:auto;width:100%;height:210px;margin:0;mask-image:none}
+:global(html[data-typeset="B"]) .hubPage .heroCopy{order:1;width:100%;max-width:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 48px;padding:28px var(--type-gutter) 32px}
+:global(html[data-typeset="B"]) .hubPage .heroCopy h1{grid-column:1;margin:0}
+:global(html[data-typeset="B"]) .hubPage .heroCopy>p{grid-column:1;margin:0}
+:global(html[data-typeset="B"]) .hubPage .heroCopy>form{grid-column:2;grid-row:1/3;width:100%;align-self:center;margin:0}
+@media(max-width:760px){:global(html[data-typeset="B"]) .directoryHero,:global(html[data-typeset="B"]) .hubPage .directoryHero{min-height:0}:global(html[data-typeset="B"]) .heroCopy{width:100%;padding:24px var(--type-gutter)}:global(html[data-typeset="B"]) .heroCopy>p{font-size:1rem}}
+@media(max-width:760px){:global(html[data-typeset="B"]) .hubPage .directoryHero>picture{height:150px}:global(html[data-typeset="B"]) .hubPage .heroCopy{display:block;padding:24px var(--type-gutter)}:global(html[data-typeset="B"]) .hubPage .heroCopy>p{margin:12px 0 20px}}
+
+@media(max-width:760px){:global(html[data-typeset="B"]) .featuredCard:has(>.imageBlank){grid-template-columns:minmax(0,1fr) 32px;min-height:0}:global(html[data-typeset="B"]) .featuredCard:has(>.imageBlank)>div{grid-column:1;grid-row:1;padding:20px 12px 20px 20px}:global(html[data-typeset="B"]) .featuredCard>.imageBlank{display:none}}

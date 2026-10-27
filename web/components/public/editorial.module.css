@@ -134,3 +134,18 @@
  .card:not([data-lead]) h2{font-size:16px}.card:not([data-lead]) .cardCopy>p{-webkit-line-clamp:2;font-size:11px}.card:not([data-lead]) .byline{margin-top:4px;min-height:0}.card:not([data-lead]) .byline .avatar,.card:not([data-lead]) .byline strong,.card:not([data-lead]) .byline span{display:none}.card:not([data-lead]) .badge{display:none}
  .card[data-lead]{display:block;border:1px solid var(--line);border-radius:3px;padding:0;overflow:hidden}.card[data-lead] .cardArrow{right:12px}.card:not([data-lead]) .cardArrow{right:8px;bottom:8px}
 }
+
+/* B: an editorial index and a separate, narrower article reading measure. */
+:global(html[data-typeset="B"]) .articleIntro{font:1rem/1.85 var(--type-text)}
+:global(html[data-typeset="B"]) .directory{max-width:1360px;padding-inline:var(--type-gutter)}
+:global(html[data-typeset="B"]) .heroCopy{max-width:600px}
+:global(html[data-typeset="B"]) .subtitle{font:1.125rem/1.75 var(--type-text)}
+:global(html[data-typeset="B"]) .description{font:1rem/1.8 var(--type-text)}
+:global(html[data-typeset="B"]) .article{max-width:1360px;padding-inline:var(--type-gutter)}
+:global(html[data-typeset="B"]) .articleHero h1{max-width:22ic;margin-block:20px}
+:global(html[data-typeset="B"]) .prose{font:var(--type-body)/1.85 var(--type-text)}
+:global(html[data-typeset="B"]) .articleLayout{grid-template-columns:180px minmax(0,1fr) 240px;gap:32px}
+@media(max-width:1100px){:global(html[data-typeset="B"]) .articleLayout{grid-template-columns:160px minmax(0,1fr);gap:24px}}
+@media(max-width:760px){:global(html[data-typeset="B"]) .articleLayout{display:block}:global(html[data-typeset="B"]) .heroCopy{max-width:none}:global(html[data-typeset="B"]) .articleHero h1{font-size:1.875rem}}
+
+:global(html[data-typeset="B"]) .directory .hero{margin-inline:calc(-1 * var(--type-gutter));padding-inline:var(--type-gutter)}

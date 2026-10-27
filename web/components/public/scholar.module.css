@@ -88,3 +88,19 @@
  .profilePage .overviewGrid .workCover{width:58px;min-width:58px}
  .profilePage .overviewGrid .workCover img,.profilePage .overviewGrid .workCover>span{height:88px}
 }
+
+/* B: editorial directory with bounded headings and readable catalogue cards. */
+:global(html[data-typeset="B"]) .page{max-width:1360px;padding:28px var(--type-gutter) 64px}
+:global(html[data-typeset="B"]) .directoryHero{margin:-28px calc(-1 * var(--type-gutter)) 32px;min-height:320px}
+:global(html[data-typeset="B"]) .heroCopy{max-width:650px;padding:44px var(--type-gutter) 36px}
+:global(html[data-typeset="B"]) .hubPage .heroCopy{padding-top:48px}
+:global(html[data-typeset="B"]) .heroCopy>p{font:1.125rem/1.8 var(--type-text)}
+:global(html[data-typeset="B"]) .hubSection{margin-top:var(--type-section-gap);padding-bottom:32px}
+:global(html[data-typeset="B"]) .hubGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+:global(html[data-typeset="B"]) .hubGrid .portrait{aspect-ratio:1.7}
+:global(html[data-typeset="B"]) .cardCopy,:global(html[data-typeset="B"]) .hubGrid .cardCopy{padding:16px}
+:global(html[data-typeset="B"]) .cardCopy>p,:global(html[data-typeset="B"]) .cardFooter{font-size:var(--type-meta);line-height:1.7}
+:global(html[data-typeset="B"]) .hubGrid .cardFooter{margin:12px -16px -16px;padding:10px 16px}
+:global(html[data-typeset="B"]) .filterForm label{font-size:var(--type-meta);line-height:1.7}
+@media(max-width:900px){:global(html[data-typeset="B"]) .hubGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}}
+@media(max-width:700px){:global(html[data-typeset="B"]) .page{padding-top:20px}:global(html[data-typeset="B"]) .directoryHero{margin-top:-20px;min-height:0}:global(html[data-typeset="B"]) .heroCopy,:global(html[data-typeset="B"]) .hubPage .heroCopy{padding:24px var(--type-gutter)}:global(html[data-typeset="B"]) .heroCopy>p{font-size:1rem}:global(html[data-typeset="B"]) .hubGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}:global(html[data-typeset="B"]) .cardCopy,:global(html[data-typeset="B"]) .hubGrid .cardCopy{padding:12px}:global(html[data-typeset="B"]) .hubGrid .cardFooter{margin:10px -12px -12px;padding:8px 12px}}

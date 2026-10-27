@@ -11,6 +11,8 @@ import "../styles/knowledge-v307.css";
 import "../styles/features/home/home-stl4.css";
 import "../styles/tokens/appearance.css";
 import "../styles/layout/brand-identity.css";
+import "../styles/tokens/type-fonts.css";
+import "../styles/tokens/typography.css";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { SiteHeader } from "@/components/site-header";
 import { loadSiteChromeConfig } from "@/lib/api/site.server";
@@ -51,10 +53,11 @@ export default async function RootLayout({
 }>) {
   const { config, unavailable } = await loadSiteChromeConfig();
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="zh-CN" data-typeset="B" suppressHydrationWarning>
       <head>
         <Script src="/runtime-config.js" strategy="beforeInteractive" />
         <Script src="/appearance-init.js" strategy="beforeInteractive" />
+        <Script src="/typography-init.js" strategy="beforeInteractive" />
       </head>
       <body>
         <PublicSessionProvider>

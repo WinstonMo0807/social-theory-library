@@ -261,3 +261,7 @@
 .article .summaryDisclosure summary > span { -webkit-line-clamp:4; }
 
 .primaryList > button > svg:last-child { margin-left:auto; }
+
+/* B keeps the reading action intact while long edition labels wrap separately. */
+:global(html[data-typeset="B"]) .primaryAction{white-space:nowrap}
+:global(html[data-typeset="B"]) .primaryAction small{white-space:normal;min-width:0;line-height:1.6}
