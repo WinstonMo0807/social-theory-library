@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-27 10:20 当前Web84
+
+Web84 19e67126a76e、API/四worker r53、RapidOCR3。MEMORY-PICKER-01已实际修复，VISUAL-76与205–207/216–217空态证据已保存，不重开VISUAL-59/61。NAS reader-r84-recovery为本次前Web83环境/镜像恢复点，只有Web/edge改变。DB/模型/索引/原件/私人记录未写入；勿按旧脚本重跑补写或深度查询。接续原PDF218–222集合/回放与既定验收，不伪造有记录状态；PUBLIC-CONFIG-01仍待安全配置。
+
 ## 2026-10-27 09:50 当前Web83与接续范围
 
 Web83 8efb3bf8409a、API/四worker r53、RapidOCR3，深度true、API512MiB。NAS privacy-r83-recovery保存Web82前配置/镜像，privacy-r81-recovery为本批前Web80；仅按需要恢复Web并刷新edge解析，不覆盖当前后端配置或重启索引。后端及模型容器未重建。最新DB包仍deep-timeout-r53-recovery/candidate-after-deep-r53.dump，文件身份与恢复限制同09:10记录。

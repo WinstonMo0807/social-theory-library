@@ -1,5 +1,9 @@
 # 开发进度
 
+## 2026-10-27 10:20 笔记入口与视觉收尾
+
+Web84/API53/RapidOCR3，生产不变。MEMORY-PICKER-01原始笔记选择参数冲突已恢复，VISUAL-76真实计数与桌面密度更新；类型/构建和实际空态读回完成，无私人写入。原完整状态验收继续B，详CURRENT_PROGRESS及docs/stl4/VISUAL_FIDELITY。
+
 ## 2026-10-27 09:50 内网视觉与公网前配置
 
 当前Web83/API53/RapidOCR3，生产不变。PDF223–225实际复核修复手机导出概览、主要删除分类顺序与桌面密度，类型/构建通过，原私人资料未写入；详docs/stl4/VISUAL_FIDELITY_20261026.md VISUAL-75。已完成OCR/目录、2404条独立深度投影及真实深度接续以CURRENT_PROGRESS顶部为准，不受下方旧在途记录覆盖。公网邮件凭据缺失作为PUBLIC-CONFIG-01单列，其他既有验收继续。

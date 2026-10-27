@@ -101,7 +101,7 @@ function MemoryCollection({ ownerId }: { ownerId: string }) {
         {workspace.error ? <div className={styles.error} role="alert">{workspace.error}<button onClick={workspace.reload}><RefreshCw size={14} />重新读取</button></div> : null}
         {workspace.loading ? <div className={styles.empty} role="status">正在读取你的笔记…</div> : null}
         {selected.length && workspace.data ? <div className={styles.selection}><span>已选择 {selected.length} 条</span><button onClick={() => setInspect(selected[0])}>逐条核对</button><button onClick={() => void exportSelection()} disabled={exporting}><Download size={14} />{exporting ? "正在导出…" : "导出所选"}</button><button onClick={() => setSelected([])}>清空选择</button></div> : null}
-        {workspace.data ? <><div className={styles.mobileTabs}>{[["", "全部"], ["confirmed", "我确认的笔记"], ["proposed", "待确认的笔记"]].map(([value, label]) => <button key={value} className={state === value ? styles.active : ""} onClick={() => filter(() => setState(value))}>{label}</button>)}</div>
+        {workspace.data ? <><div className={styles.mobileTabs}>{[["", "全部笔记", "total"], ["confirmed", "我确认的笔记", "confirmed"], ["proposed", "待确认的笔记", "proposed"]].map(([value, label, key]) => <button key={value} className={state === value ? styles.active : ""} aria-current={state === value ? "page" : undefined} onClick={() => filter(() => setState(value))}>{label}<span>{safeCount(counts, key) ?? ""}</span></button>)}</div>
           {rows.length ? <div>{rows.map(record => <MemoryRow key={record.id} record={record} checked={selected.includes(record.id)} disabled={selected.length >= 40 && !selected.includes(record.id)} onCheck={checked => setSelected(previous => checked ? [...previous, record.id] : previous.filter(id => id !== record.id))} onInspect={() => setInspect(record.id)} onUsage={() => setUsage(record.id)} />)}</div> : <div className={styles.empty}><img className={styles.emptyIllustration} src="/brand/stl-confirmed-notes-empty-final-r2.png" alt="" width={53} height={63}/><h2>{search || state || kind || source ? "当前条件下没有笔记" : "还没有已确认笔记"}</h2><p>从阅读笔记中选择内容，核对后保存为自己的认识。确认不会自动授权给研究或计划。</p><button className={styles.primary} onClick={() => setCreate(true)}>从笔记选择</button></div>}
           <footer className={styles.pagination}><span>共 {workspace.data.count} 条</span><button disabled={page === 1} onClick={() => { setPage(value => value - 1); setSelected([]); }}>上一页</button><span>第 {page} 页</span><button disabled={!workspace.data.next} onClick={() => { setPage(value => value + 1); setSelected([]); }}>下一页</button></footer></> : null}
       </section>
@@ -220,7 +220,7 @@ function MemoryEditor({ record, workspace, ownerId, onDirty, onClose, onUsage, o
 
 function MemoryProposal({ ownerId, onClose, onInvalid, onSaved }: { ownerId: string; onClose: () => void; onInvalid: () => void; onSaved: (record: ConfirmedMemory) => void }) {
   const [page, setPage] = useState(1);
-  const notes = usePersistentWorkspace<Paginated<AnnotationChoice>>(`/reading/annotations/?page=${page}`, ownerId);
+  const notes = usePersistentWorkspace<Paginated<AnnotationChoice>>(`/reading/annotations/?p=${page}`, ownerId);
   const [note, setNote] = useState<AnnotationChoice | null>(null);
   const [body, setBody] = useState("");
   const [kind, setKind] = useState<MemoryKind>("understanding");

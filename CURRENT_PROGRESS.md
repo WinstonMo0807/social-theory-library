@@ -1,5 +1,15 @@
 # Social Theory Library 当前进度
 
+## 2026-10-27 10:20 笔记选择故障修复与读者五视图收尾
+
+内网Web84（19e67126a76e）、API/四worker r53、RapidOCR3；仅更新Web/预览edge，非Web容器ID一致，生产未变。继续沿用2404条独立投影、原真实深度会话与OCR/目录证据，不再重跑。
+
+MEMORY-PICKER-01已关闭D：实际打开“从笔记选择”出现page=1不是UUID，阻断原始笔记列表。confirmed-notes-workspace.tsx误用page分页，但AnnotationViewSet既有ReaderRecordPagination使用p，page是原文页UUID过滤。仅调用改p，不改后端/权限。Web84同一窗口读回真实“当前还没有阅读笔记”，无报错且无写入。VISUAL-76同时补PDF205手机真实数量/单一选中线、205及216–217桌面标题密度；手机390px无横向溢出。类型、构建、镜像及部署均退出0，无全量测试。
+
+唯一PDF205–207/216–217均已读图；当前真实0笔记只能验证集合/选择空态，206确认详情及有记录编辑/授权/来源变化继续B。五行索引中VISUAL-59/61已修过的全宽、手机折叠、确认队列控件描述已更正，不再当新A。详细证据见VISUAL_FIDELITY的76及PRE_CUTOVER_VERIFICATION顶部。
+
+恢复点NAS reader-r84-recovery保留Web83环境/镜像；本批无schema或业务写入，不重复备份。当前唯一已确认外部配置门槛仍PUBLIC-CONFIG-01邮件凭据缺失，不擅改生产/发信。继续原集合/研究回放PDF218–222与已有验收清单；不把缺少真实记录的B重开开发。
+
 ## 2026-10-27 09:50 隐私页实际视觉收尾与公网配置读回
 
 内网Web83（8efb3bf8409a）、API/四worker r53（3f81aeeaec33）、RapidOCR3；深度开关true、API512MiB。仅更新Web与重启预览edge，后端/数据库/模型容器身份保持。生产仍3.0.9.1，未改配置、数据或公网路由。2404条独立投影和原362d1468真实查询已完成，禁止重写/重测。

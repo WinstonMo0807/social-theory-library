@@ -747,3 +747,19 @@ VISUAL-74最小修改文件：home-stl4.css、scholar.module.css、topic.module.
 类型检查privacy-r81/r82/r83-types.log及构建privacy-r81/r82/r83-build.log退出0。r81部署脚本检查127.0.0.1失败，实际edge仅绑定192.168.5.6；读取启动日志与端口配置后改用真实LAN地址读回200，没有更改服务监听或重复后端部署。原privacy-r81-deploy.log失败保留，独立privacy-r81-readback.log记录原因与当前容器。最终privacy-r83-deploy.log退出0，Web83 8efb3bf8409a、API/四worker仍r53，非Web容器ID逐项一致；未动生产。
 
 实际截图：privacy-desktop-r83.png；privacy-export-mobile-r83.png；privacy-mobile-r83.png；privacy-status-desktop-r83.png、privacy-status-mobile-r83.png，均在忽略tmp/stl4-rapidocr-20261027中。中间r81/r82截图与失败日志保留。D仅关闭以上明确差异；PDF225的真实运行/部分失败/删除中四种任务、导出实际文件、全部字体与像素一致仍B，不伪造任务以填满参考卡片。私有权限既有108项检查不重跑。未使用新视觉源或新增依赖。
+
+## VISUAL-76 · 2026-10-27 确认笔记与笔记书签组（PDF205–207、216–217）
+
+本组逐张读取唯一最终PDF提取图205/206/207/216/217，查看当前账户桌面及390px实际空态，并打开只读筛选和原始笔记选择窗口。没有创建私人记录、提交确认/授权/导出/删除；206有记录确认详情仅核对已有源码与VISUAL-61，不伪造数据以填满参考图。
+
+| 证据、触发与影响 | 最小修复与读回 |
+|---|---|
+| MEMORY-PICKER-01：confirmed-notes-workspace.tsx的MemoryProposal请求annotations/?page=1；正常点击“从笔记选择”实际显示“page：1不是一个有效的UUID”，无法选择原始笔记。api/reading/views.py的AnnotationViewSet保留page为原文页过滤，ReaderRecordPagination已用p | 仅前端请求改?p=，保留owner检查及所有写入契约。Web84同一窗口正常显示“当前还没有阅读笔记”，原错误消失。后端无改动 |
+| PDF205手机状态标签有真实数量与单一金色选中线；原手机标签省略数量，通用按钮样式覆盖标签底边 | 从原counts读取total/confirmed/proposed；局部提高标签规则优先级，aria-current与当前状态一致。实看0/0/0，只有全部笔记选中线，不用PDF示例计数 |
+| PDF205与216–217桌面页头/标题区密度低于参考，实际notebook标题top124.15px、列表top238.70px | 只收紧对应路由桌面masthead、标题间距和字号；Web84 notebook标题top98.95px、列表top200.60px、header52.80px。手机已有独立样式和四项折叠保持，未改变字段或业务布局 |
+
+Web84镜像19e67126a76e1d27b83a53bb057297d020660fca48cbc64f8a526e06dd7bd417，类型/构建/镜像/部署退出0，日志reader-r84-types/build/image/deploy.log。仅Web与预览edge更新；API、四worker、Postgres、RapidOCR、inference容器ID与更新前一致。NAS reader-r84-recovery保存Web83前环境与镜像身份。没有生产修改或全量测试。
+
+证据位于忽略tmp/stl4-rapidocr-20261027：memory-proposal-page-error-r83.png保留原失败；memory-proposal-empty-r84.png为修复后同一入口；confirmed-notes-desktop/mobile-r84.png及notebook-desktop/mobile-r84.png为真实空态。390px两页无横向溢出，notebook四筛选默认折叠。旧r83截图保留。D关闭以上具体修复；所有有记录确认、修订、使用范围、来源失效、笔记编辑/导出状态及精确字体/像素仍B。
+
+同步更正205–207/216–217五行旧状态：VISUAL-59已完成全宽/移动筛选，VISUAL-61已完成确认队列与手机底栏；这些旧措辞不能继续作为A。223手机箭头已在VISUAL-62和75解决，也不属于本组新缺陷。不推广为206视图通过。
