@@ -1,5 +1,17 @@
 # 中断恢复最短路径
 
+## 2026-10-27 09:02 当前真实深度查询重试
+
+API/四worker现r53（3f81aeeaec33）、Web80、RapidOCR3；总开关true、API512MiB。2404条索引已完整核对，禁止重复补写。原实际会话362d1468首轮因30秒客户端超时及随后模型槽429降级，正常retry已进入generation2。客户端250秒、服务端240秒，Celery600秒保留；恢复点NAS deep-timeout-r53-recovery保存原.env、深度compose和镜像。模型与索引未改，beat已恢复，生产不变。
+
+先查本机tmp/stl4-rapidocr-20261027/deep-live-query-r2.log。只轮询原会话可运行check_deep_live_query.py，令牌仍在忽略tmp的deep-integration-session.json，不回显/提交。初轮报告deep-live-query-attempt1.json不得覆盖；最终只以deep-live-query-readback.json及真实接口状态判定，不能把原work_ids限制产生的passage_facets提示当作新缺陷或改业务状态。
+
+## 2026-10-27 08:53 深度索引已完成并启用
+
+API/四worker仍r52、Web80、RapidOCR3，仅预览总开关true；原补写全部2404条完成并逐条核对正式来源、hash与向量。无需再启动补写或接续器。旧容器日志已归档NAS deep-enable-r52-recovery/backfill.log；恢复点同目录有启用前.env、镜像及历史OOM记录。API临时内存已恢复512MiB，回执在deep-backfill-memory-recovery/restored.json。beat已恢复，生产不变。
+
+当前真实查询362d1468-dc49-4a76-a44d-82bfe0f74c3b仍在途。本机tmp/stl4-rapidocr-20261027/check_deep_live_query.py复用deep-integration-session.json令牌/会话，禁止重复创建或回显令牌；结果仅记录运行身份和状态，不做质量测评。查看deep-live-query.log后继续结果核对。下方PID26/768MiB/false仅为历史。
+
 ## 2026-10-27 06:47 当前后台补写与临时资源
 
 内网API/四worker r52（41f9a5647a89）、Web80、RapidOCR3，生产不变。原PID26退出137；现有接续器已跳过453条并继续写入，06:47前实际读回890/2404，总开关false。当前日志在API容器/tmp/stl4-deep-backfill-resume.log；不要按旧PID26或旧session83208判断仍有原进程，也不要重复启动。

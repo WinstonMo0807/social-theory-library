@@ -2,6 +2,20 @@
 
 当前工作继续至公网切换前。只有本记录明确列出的运行行为经过验证，不能将其推广为206视图全部验收。生产未更改。
 
+## 09:02 真实深度查询的等待预算修正
+
+DEEP-RUN-02（A，运行复核中）：正常样书查询362d1468第一轮基础原文141条、EG2稀疏/向量各40条、邻文读取成功。query worker在08:54:52开始BGE，08:55:22客户端30秒后ValueError降级；08:55:25 ConvMemory返回429，inference仍占用串行模型槽。首轮结果和状态保存在deep-live-query-attempt1.json及deep-live-query.log。后续deep/status显示BGE inference_completed=false，但没有服务错误正文，不能仅由该状态确定原服务端失败原因。
+
+最小范围为config.settings的BGE/ConvMemory HTTP预算与上限（250秒）、.env.example相应值、compose.stl4-deep现有INFERENCE_REQUEST_SECONDS上限240秒；原600秒任务、模型制品、输入截断、20/10候选数和串行CPU不变。r53 3f81aeeaec33已更新API/四worker，原Inference镜像仅重读配置，恢复点deep-timeout-r53-recovery。原正常retry接口进入generation2，尚待结果，不把部署成功记成问题已解决。
+
+本次work_ids限定原文，基础entities/curation按既有passage_facets返回提示，可能使总会话为partial；验收必须分别记录真实总状态与deep状态，不能修改业务代码强行改绿。
+
+## 08:53 完整深度投影与启用
+
+2404条独立投影全部完成，接续段按原hash跳过453条、新写1951条。只读逐条核对当前原文资格和准确文字片段、source_revision、scope_token、input_hash、768维向量有限性与L2归一化，2404条全部通过；既定三模型制品/代次一致。当前三版本原文分别1300/719/385条，样书仍指向e0ec49b2/5bc8a288。证据deep-enable-runtime-r3.log。首次探针没有显式分页limit导致取回数量不足，修正探针后通过，非索引数据缺失；原失败日志保留。
+
+仅内网启用总开关，API/四worker仍r52、Web80保持，API临时768MiB已恢复512MiB。首次部署因已有worker任务未修改环境，等待空闲后成功；beat恢复。deep-enable-r52-recovery保留.env、镜像、补写和OOM历史，未改模型、原件、生产或基础索引。实际匿名查询362d1468在途；其成功/降级状态另记，当前不宣称实际深度检索验证完成。
+
 ## 06:47 索引运行中断与恢复
 
 DEEP-RUN-01：原补写PID26在453条后退出137，现有接续器自动按input_hash跳过453条后继续；实际读回890/2404。API容器cgroup记录oom=2/oom_kill=2，容器未重启；当前主进程、请求进程、补写进程RSS约76/187/186MiB，共享512MiB。该限额下额外完整Django诊断进程会再占用同一预算，后续常规统计改为stdlib只读探针。未获得各次OOM精确时刻，不推断每次受害进程或宣称全部根因已证明。

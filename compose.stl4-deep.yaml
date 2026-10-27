@@ -6,5 +6,8 @@ services:
       DEEP_INFERENCE_ENABLED: "1"
       DEEP_INFERENCE_MODEL_ROOT: /models/stl4-deep
       DEEP_INFERENCE_GENERATION: ${STL_DEEP_RETRIEVAL_GENERATION:?Set the prepared bundle generation}
+      # Real NAS BGE calls outlasted the former 30s client and left the shared
+      # slot busy. Keep a 240s service ceiling inside the 250s client / 600s task.
+      INFERENCE_REQUEST_SECONDS: "240"
     volumes:
       - ${STL_DEEP_MODEL_ROOT:?Set the verified deep bundle directory}:/models/stl4-deep:ro

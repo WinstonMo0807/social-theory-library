@@ -2,6 +2,10 @@
 
 ## 2026-10-27 当前运行接续
 
+09:02：原会话第一轮基础原文141条与EG2召回通过，BGE客户端30秒后退出，下一阶段因模型槽仍忙返回429。最小修正两个客户端等待预算250秒及原服务上限240秒，Celery600秒保留；API/四worker r53（3f81aeeaec33），模型、输入、索引与topK未变。现同一会话generation2重试中，真实BGE/ConvMemory完成仍待结果。恢复点deep-timeout-r53-recovery，首轮回执和日志保留，不称质量测评或运行成功。
+
+08:53：2404条全部完成并逐条核对当前公开来源、正式修订、scope、输入hash、768维有限归一化向量。基线代次571ea40b、深度代次a8b6434b及三模型制品一致，来源分布1300/719/385。已在原r52 API/四worker启用总开关，BGE/ConvMemory子开关保持原配置，API临时限额恢复512MiB。当前真实HTTP/Celery会话362d1468仍在途，不能提前记查询成功；证据deep-enable-runtime-r3.log及deep-live-query.log，恢复点deep-enable-r52-recovery。下方在途/false记录均为历史。
+
 06:47更新：原补写进程退出137，现有脱离会话接续器跳过453条匹配输入后续写，实际索引890/2404。预览API内cgroup有两次OOM kill记录；仅为当前API与维护进程并存临时热调768MiB/禁Swap，未重启容器，Compose保持512MiB。恢复参数在NAS deep-backfill-memory-recovery/limits.json；完成后恢复512MiB，再进行全覆盖和启用核对。常规进度改用tmp/stl4-rapidocr-20261027/read_deep_progress_light.py，不再在忙API加载额外Django探针。总开关仍false，既定模型、基础索引和生产不变。
 
 实际沿API既有客户端验证同一NAS服务：EG2返回768维、身份及归一化校验通过（7.67秒）；BGE两条合成材料完成（4.24秒）；ConvMemory同输入顺序与身份保留（1.27秒）。/deep/status为ready，三个模型inference_completed为true。只检查运行契约，不评价相关性、准确率或比较模型。日志tmp/stl4-rapidocr-20261027/deep-functional-runtime.log。

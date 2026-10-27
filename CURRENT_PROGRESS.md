@@ -1,5 +1,15 @@
 # Social Theory Library 当前进度
 
+## 2026-10-27 08:53 深度索引完整覆盖，内网总开关已启用
+
+09:02更新：实际会话首轮基础原文141条、EG2 sparse/dense各40成功；BGE在客户端30秒超时，随后ConvMemory在同一串行服务返回429。新A为DEEP-RUN-02，最小范围是两个深度HTTP等待预算和已有服务执行上限。API/四worker现r53（3f81aeeaec33），深度客户端250秒、服务端240秒、原Celery600秒保持；模型/索引/候选数均未变。原会话362d1468通过正常retry进入generation2，仍在途。第一轮证据deep-live-query-attempt1.json保留；第二轮deep-live-query-r2.log，恢复点deep-timeout-r53-recovery。不要重复启动当前查询或重建索引。
+
+独立EG2补写2404/2404完成，接续段写入1951条、跳过原453条；原日志已归档到NAS deep-enable-r52-recovery/backfill.log。逐条核对2404个当前ID、正式来源修订、scope、输入hash、768维有限归一化向量及既定模型制品/代次通过。三本当前版本分别1300/719/385条；样书仍为正式快照e0ec49b2、阅读文件5bc8a288。不是相关性/模型质量测评。
+
+API/四worker同r52、Web80、RapidOCR3；仅预览STL_DEEP_RETRIEVAL_ENABLED=true，API内存恢复512MiB且禁Swap，beat已恢复。恢复点deep-enable-r52-recovery保存启用前.env/镜像/历史OOM与完整补写日志；旧临时内存恢复回执在deep-backfill-memory-recovery/restored.json。首次核对探针遗漏Meili分页limit已修正；第二次因已有worker任务未动环境，待空闲后第三次启用成功。没有应用源码/迁移/生产变更。
+
+一次实际匿名HTTP查询362d1468-dc49-4a76-a44d-82bfe0f74c3b沿原Celery链（社会事实，限定样书），当前轮次见本节09:02更新，尚不记为查询通过。接续运行本机tmp/stl4-rapidocr-20261027/check_deep_live_query.py只轮询已保存会话，禁止重复创建；令牌文件位于忽略tmp，不提交/回显。全覆盖/启用证据deep-enable-runtime-r3.log。下方补写中状态均为历史。
+
 ## 2026-10-27 06:47 索引中断已自动续跑，临时内存限额已调整
 
 08:10自动接续核对：轻量只读查询实际返回1944/2404条，较07:40的1561条继续增长。memory.current=425517056，上限805306368，oom/oom_kill仍2，未见新增；总开关仍false。证据tmp/stl4-rapidocr-20261027/deep-heartbeat-0810.log。没有重启、重复补写或新开发缺陷；继续原任务，完整覆盖后再核对来源并启用。
