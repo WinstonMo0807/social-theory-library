@@ -2,6 +2,8 @@
 
 ## 2026-10-27 当前运行接续
 
+09:10最终读回：原HTTP会话362d1468 generation2的query_lexicon/embedding/bge/context/convmemory全部completed，ranking_applied=true，40条深度结果均回到当前5bc8a288正式阅读文件，source_changed=false。整体会话partial只保留work_ids限定的passage_facets；未把总体状态改绿。基础任务59.69秒，深度任务243.52秒，BGE阶段约220秒。这是同一真实查询的运行接续，不是模型质量评测或高负载稳定性证明。DEEP-RUN-02转D；r53客户端250秒/服务240秒保持，所有既定制品、代次、topK和CPU串行策略未变。下方在途记录不再代表当前状态。
+
 09:02：原会话第一轮基础原文141条与EG2召回通过，BGE客户端30秒后退出，下一阶段因模型槽仍忙返回429。最小修正两个客户端等待预算250秒及原服务上限240秒，Celery600秒保留；API/四worker r53（3f81aeeaec33），模型、输入、索引与topK未变。现同一会话generation2重试中，真实BGE/ConvMemory完成仍待结果。恢复点deep-timeout-r53-recovery，首轮回执和日志保留，不称质量测评或运行成功。
 
 08:53：2404条全部完成并逐条核对当前公开来源、正式修订、scope、输入hash、768维有限归一化向量。基线代次571ea40b、深度代次a8b6434b及三模型制品一致，来源分布1300/719/385。已在原r52 API/四worker启用总开关，BGE/ConvMemory子开关保持原配置，API临时限额恢复512MiB。当前真实HTTP/Celery会话362d1468仍在途，不能提前记查询成功；证据deep-enable-runtime-r3.log及deep-live-query.log，恢复点deep-enable-r52-recovery。下方在途/false记录均为历史。

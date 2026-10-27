@@ -1,5 +1,13 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-27 09:10 深度真实查询完成，新候选备份已保存
+
+当前API/四worker r53（3f81aeeaec33）、Web80、RapidOCR3，总开关true、API512MiB、beat正常；生产不变。2404条独立索引已完整逐条核对，禁止再次启动旧补写。原会话362d1468 generation2已结束：query_lexicon/EG2/BGE/邻文/ConvMemory全部completed、ranking_applied=true、40条深度结果均指向校准阅读文件5bc8a288，source_changed=false。整体session=partial仅保留原work_ids筛选的passage_facets提示；未改业务状态。原基础检索任务59.69秒、深度任务243.52秒（BGE约220秒），证明本次可运行，不能称快速或长期稳定。证据deep-live-query-r2.log、deep-live-query-readback.json、deep-query-worker-r53.log。DEEP-RUN-02转D；不再重复此查询或模型质量评测。
+
+09:09:46新候选备份位于NAS deep-timeout-r53-recovery/candidate-after-deep-r53.dump，16,007,416字节，SHA256 82c782c47d97027288f13d12ce7cb00acd9ba5c5ab284a17d2d9593aac361c8e。归档目录可读，182迁移/3作品/3版本/13资产/4账号；账号身份/密码/权限摘要与原基线一致。新包未再执行恢复，先前r80包的独立恢复证明仍保留。原失败回执、OOM和补写日志保留在既有恢复点。
+
+继续原有视觉与业务统一验收、切换前材料收尾，206视图按B逐项保留待验收，已有D不重做。/admin/visual-review可画图、批注、保存，预览就是当前实际候选。字体身份、全站逐像素一致、模型质量和NAS长期稳定未证明。不得部署生产、切换公网或清理数据；最终切换仍须用户批准。下方08:53/09:02在途记录为历史。
+
 ## 2026-10-27 08:53 深度索引完整覆盖，内网总开关已启用
 
 09:02更新：实际会话首轮基础原文141条、EG2 sparse/dense各40成功；BGE在客户端30秒超时，随后ConvMemory在同一串行服务返回429。新A为DEEP-RUN-02，最小范围是两个深度HTTP等待预算和已有服务执行上限。API/四worker现r53（3f81aeeaec33），深度客户端250秒、服务端240秒、原Celery600秒保持；模型/索引/候选数均未变。原会话362d1468通过正常retry进入generation2，仍在途。第一轮证据deep-live-query-attempt1.json保留；第二轮deep-live-query-r2.log，恢复点deep-timeout-r53-recovery。不要重复启动当前查询或重建索引。

@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-27 09:10 当前恢复入口
+
+API/四worker r53（3f81aeeaec33）、Web80/RapidOCR3，深度true、API512MiB、beat正常。2404条完整索引和原会话362d1468 generation2真实深度链均已完成，不再启动补写、重复查询或模型质量评测。来源40条均当前5bc8a288，结果/阶段证据deep-live-query-readback.json；整体partial的passage_facets原因见PRE_CUTOVER_VERIFICATION。
+
+NAS deep-timeout-r53-recovery保存前r52的.env、compose.stl4-deep.yaml与镜像；更早deep-enable-r52-recovery为总开关false的基线恢复点，包含完整补写及历史OOM日志。恢复只按需要选择准确配置/镜像，不删索引或数据库。新candidate-after-deep-r53.dump位于deep-timeout-r53-recovery，16,007,416字节，SHA256 82c782c47d97027288f13d12ce7cb00acd9ba5c5ab284a17d2d9593aac361c8e，目录读回成功；新包未再次恢复，r80独立恢复记录保留。后续只接续既定视觉/业务验收和公网前准备。
+
 ## 2026-10-27 09:02 当前真实深度查询重试
 
 API/四worker现r53（3f81aeeaec33）、Web80、RapidOCR3；总开关true、API512MiB。2404条索引已完整核对，禁止重复补写。原实际会话362d1468首轮因30秒客户端超时及随后模型槽429降级，正常retry已进入generation2。客户端250秒、服务端240秒，Celery600秒保留；恢复点NAS deep-timeout-r53-recovery保存原.env、深度compose和镜像。模型与索引未改，beat已恢复，生产不变。

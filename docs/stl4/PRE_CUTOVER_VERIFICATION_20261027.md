@@ -2,6 +2,14 @@
 
 当前工作继续至公网切换前。只有本记录明确列出的运行行为经过验证，不能将其推广为206视图全部验收。生产未更改。
 
+## 09:10 深度链真实完成与新候选备份
+
+原会话362d1468第二轮通过正常HTTP retry接续，EG2/BGE/邻文/ConvMemory及QueryLexicon全部completed，ranking_applied=true，40条深度结果全部对应当前校准资产5bc8a288及有效文档修订、PDF页和reader_url，source_changed=false。整体status仍partial，唯一提示passage_facets来自明确的work_ids范围，不是本次深度失败。未放宽归属/来源核验或改业务状态。原基础任务59.694秒；深度任务243.521秒，BGE约220秒、ConvMemory约13秒。DEEP-RUN-02关闭D，真实查询运行通过；模型质量、负载容量及长期稳定仍B。
+
+证据tmp/stl4-rapidocr-20261027/deep-live-query-r2.log、deep-live-query-readback.json、deep-query-worker-r53.log，原失败deep-live-query-attempt1.json保留。API/四worker r53（3f81aeeaec33）、Web80/RapidOCR3，API512MiB、总开关true、beat已恢复。未进行新的质量测评。
+
+新候选备份deep-timeout-r53-recovery/candidate-after-deep-r53.dump于09:09:46生成，16,007,416字节，SHA256 82c782c47d97027288f13d12ce7cb00acd9ba5c5ab284a17d2d9593aac361c8e。pg_restore --list退出0；当前182迁移/3作品/3版本/13资产/4账号，账号摘要与原基线一致。本包只核对归档目录，未重新恢复；之前r80备份已单独恢复验证，不混称同一包。证据deep-candidate-backup.log。生产未变。
+
 ## 09:02 真实深度查询的等待预算修正
 
 DEEP-RUN-02（A，运行复核中）：正常样书查询362d1468第一轮基础原文141条、EG2稀疏/向量各40条、邻文读取成功。query worker在08:54:52开始BGE，08:55:22客户端30秒后ValueError降级；08:55:25 ConvMemory返回429，inference仍占用串行模型槽。首轮结果和状态保存在deep-live-query-attempt1.json及deep-live-query.log。后续deep/status显示BGE inference_completed=false，但没有服务错误正文，不能仅由该状态确定原服务端失败原因。
