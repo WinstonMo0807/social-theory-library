@@ -1,5 +1,25 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+## 2026-10-27 12:55 待批准发布覆盖、当前增量与文件归档
+
+`compose.stl4-cutover.yaml`为新准备的最末覆盖，仅用于public → cloudflare → discovery → docx-preview → stl4-deep之后；严禁与stl4-preview覆盖混用。没有应用到活动容器、生产、DNS或隧道。API/四worker/beat统一HTTPS地址和公共安全会话，RapidOCR服务地址一致；批注台继续留在独立内网，公网仍DENY。API保留public collectstatic，不执行migrate；进程预算按已运行候选1进程/2线程。队列、原600秒任务、既定模型/topK和深度240/250秒预算不变。
+
+`cutover-overlay-config.log`：沿上一批只读解析方式叠加第六层，config退出0；六类客户端公开URL、public mode、OCR URL、深度开关及无宿主端口，10项资源限额/无Swap、DOCX无网络和direct-caddy排除均定向断言通过。已验证的候选预算包含PG512/API及四worker512/Redis128/Meili768/Web768/OCR1536MiB；inference保持原覆盖。**更正12:45表述：public基础的RapidOCR已经有deploy.resources.memory=1536m，上轮输出只看mem_limit漏列了它；本次只是补显式无Swap等一致性，不是发现OCR内存无限制。**最终仍需使用准确的受限发布env和文件落位，混合解析输入不是可直接使用的发布环境。未跑功能或全量测试。
+
+只读生产/候选增量证据`cutover-account-delta-r2.log`：
+
+- 各4账号，ID集合、密码哈希/角色/启用/权限标志/token版本、用户名/邮箱/显示名/语言/邮件验证时间及ReaderProfile偏好一致。没有打印值、个人字段或凭据摘要。新增生产账号0；生产已撤销的7个token在候选均存在。候选自身新增撤销记录必须保留。
+- 比较50张选定账户、reading、作品/版本/资产及迁移表的行数；生产现有reading表均0，馆藏0；候选3作品/3版本/13资产，reading_history7、reading_progress5，其余已统计reading表0。生产128迁移、候选182。候选新增表的生产不存在不记为故障。
+- 这不是全库逐行等价或最终增量冻结；会话/令牌数字及阅读记录允许继续变化，不能据此直接覆盖生产或删除当前资料。切换前须再次取得新鲜比较和一致快照，任何新差异先保留双方数据。
+
+文件证据`cutover-file-scope-r2.log`与`cutover-files-archive.log`：生产archive/public/private/incoming四根当前均0文件；候选分别3/10/0/15文件，合计99,953,690字节。初次普通用户os.walk未报告权限错误而漏记，首轮0计数无效；已改遇错即停并用现有sudo只读权限完成，未改源权限。没有据初轮结果删除或修复任何数据。
+
+NAS `/volume2/library/stl-previews/20261026-r1/cutover-files-20261027/candidate-files.tar` 为28文件的新副本，100,014,080字节，SHA256 `236bafd697633711ada71e291588bedaaf73c4717932fce43897756699e0f99f`；目录0700、归档及manifest/verification0600。13个资产的登记路径/字节/hash均匹配；归档成员重新散列与源一致；前后源文件清单和资产登记未改变。没有覆盖原件、私人文件或其他备份。
+
+此归档只覆盖四文件根，不包含DB、模型、Meilisearch/Redis卷、旧备份及最终PDF。09:09 r53 DB包与r80独立恢复证据保持；不要把本次文件校验冒充数据库和文件的同一时点完整恢复。最终方案应在停止业务写入的明确窗口取得最新DB和必要文件增量，保留生产稳定加密/签名配置、原账号/撤销记录及候选人工修订与批注；当前未停写或迁移。
+
+当前已完成的是配置覆盖准备和该时点数据/文件证据；仍需定稿准确发布env/模型挂载/数据落位、绑定最终一致恢复点，以及原邮件配置、B验收与用户最终批准。生产和内网运行版本均未变化。
+
 ## 2026-10-27 12:45 公网配置组合只读解析
 
 当前候选源码检查点4be4c9f2、内网Web85/API53/RapidOCR3。把当前仓库五份非敏感Compose复制到NAS候选目录public-config-review-20261027，仅运行docker compose config，项目名stl4-cutover-config-review；没有up/run/create/migrate/生产修改。组合顺序为compose.public.yaml → compose.cloudflare.yaml → compose.discovery.yaml → compose.docx-preview.yaml → compose.stl4-deep.yaml，启用ocr/docx-preview，direct-caddy未启用。

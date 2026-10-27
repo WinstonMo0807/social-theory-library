@@ -1,5 +1,15 @@
 # Social Theory Library 当前进度
 
+## 2026-10-27 12:55 发布覆盖与数据/文件准备
+
+新增compose.stl4-cutover.yaml仅为待批准发布覆盖，未应用。公网六类API/worker/beat统一HTTPS公开URL、安全Cookie、RapidOCR入口；沿候选的API单进程/双线程及PG512、API/四worker512、Web768、Meili768、Redis128、OCR1536MiB无Swap边界，保留public collectstatic与原队列/模型/端口。叠加六份Compose仅config解析和定向断言退出0；活动Web85/API53/beat33不变。
+
+新鲜只读比较：生产与候选各4账号，ID、密码/角色/启用/token版本、账号资料及ReaderProfile偏好一致；无新增生产账号，生产7个已撤销token均已包含于候选。50张选定账户/reading/馆藏/迁移表统计：生产reading既有表均0、馆藏0；候选3作品/3版本/13资产、阅读历史7/进度5。生产128迁移、候选182。不是全库内容逐行比较，也不保证未来增量不变；不清理或覆盖生产。
+
+候选四文件根已形成新归档cutover-files-20261027/candidate-files.tar，28文件/源99,953,690字节，tar100,014,080字节。13条catalog_asset与真实文件路径/字节/hash逐项相符，归档成员全部重新散列，前后源清单及资产登记保持。此包只含archive/public/private/incoming，不含DB、模型/索引、备份或最终PDF；不是同一时点全栈恢复证明。详情CUTOVER_CANDIDATE顶部。旧DB及r80恢复证据沿用，不重复恢复或索引写入。
+
+下一步收口既有受限发布环境的准确值、镜像/模型路径与最终数据落位方案；需要与生产稳定密钥和新鲜冻结快照配对，不能直接部署混合解析env。邮件凭据A、206完整状态B与最终生产批准保持。文件核对初次普通用户遍历漏报的0计数已作废，权限充足且遇错即停的r2结果为准。
+
 ## 2026-10-27 12:45 切换材料接续点
 
 Web85源码检查点4be4c9f2。公网五层Compose仅只读解析完成（config退出0），未启动服务或改生产；解析输入为生产插值默认与候选镜像/模型，不是最终发布env，worker仍带18084 URL、部分已验证资源限制仅在预览覆盖中，需在既有发布配置材料中明确收口。详CUTOVER_CANDIDATE顶部与public-candidate-config-r5.log，不将工具初轮解析错误登记为新产品故障。用户登录和批注台已恢复，现有1条验证批注保持；390px iframe集合目录空态实看，218–222详情仍B。下一步仅准备既有发布环境/资源差异和新鲜数据恢复安排，不重做已关闭视觉、OCR或深度查询。

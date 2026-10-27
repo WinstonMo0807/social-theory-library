@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-27 12:55 当前未应用切换材料
+
+活动仍Web85/API53/四worker53/RapidOCR3/beat33；新增compose.stl4-cutover.yaml只解析未部署，不将拟发布beat53当活动镜像。NAS public-config-review-20261027保存非敏感六份Compose，cutover-overlay-config.log有白名单解析结果。新cutover-files-20261027/candidate-files.tar和manifest.json/verification.json为受限文件备份，28成员及13资产hash已读回，未与新DB做同一时点恢复。12:55账户/偏好和撤销token比较无生产增量缺失，只反映该时点。接续准确发布env/数据落位及冻结时恢复安排，别重跑文件打包覆盖现有归档；源有变化才另建新点。邮件凭据和B验收保持。
+
 ## 2026-10-27 12:45 切换材料接续点
 
 Web85源码检查点4be4c9f2。公网五层Compose仅只读解析完成（config退出0），未启动服务或改生产；解析输入为生产插值默认与候选镜像/模型，不是最终发布env，worker仍带18084 URL、部分已验证资源限制仅在预览覆盖中，需在既有发布配置材料中明确收口。详CUTOVER_CANDIDATE顶部与public-candidate-config-r5.log，不将工具初轮解析错误登记为新产品故障。用户登录和批注台已恢复，现有1条验证批注保持；390px iframe集合目录空态实看，218–222详情仍B。下一步仅准备既有发布环境/资源差异和新鲜数据恢复安排，不重做已关闭视觉、OCR或深度查询。

@@ -1,0 +1,64 @@
+# Prepared release overlay; not applied to any running project.
+# Layer last after public + cloudflare + discovery + docx-preview + stl4-deep.
+# Never combine with compose.stl4-preview.yaml. Final approval, a reconciled
+# release .env, current data/file recovery evidence, and explicit images remain
+# required. This file does not move data, migrate a database, or switch traffic.
+
+x-public-client: &public-client
+  PUBLIC_DEPLOYMENT_MODE: "true"
+  DJANGO_DEBUG: "false"
+  DJANGO_SECURE_COOKIES: "true"
+  DJANGO_SECURE_SSL_REDIRECT: "true"
+  DJANGO_X_FRAME_OPTIONS: DENY
+  JWT_COOKIE_AUTH_ENABLED: "true"
+  JWT_RETURN_TOKENS_IN_BODY: "false"
+  PUBLIC_WEB_URL: https://${LIBRARY_DOMAIN:?Set the approved public domain}
+  PUBLIC_API_URL: https://${LIBRARY_DOMAIN:?Set the approved public domain}
+  RAPIDOCR_SERVICE_URL: http://rapidocr:8010
+  # The interactive atlas remains in the separate, authenticated LAN preview.
+  STL_VISUAL_REVIEW_ENABLED: "false"
+
+x-worker-budget: &worker-budget
+  environment: *public-client
+  mem_limit: 512m
+  memswap_limit: 512m
+
+services:
+  postgres:
+    mem_limit: 512m
+    memswap_limit: 512m
+  redis:
+    mem_limit: 128m
+    memswap_limit: 128m
+  meilisearch:
+    environment:
+      MEILI_MAX_INDEXING_MEMORY: 128Mb
+    mem_limit: 768m
+    memswap_limit: 768m
+  api:
+    <<: *worker-budget
+    # Match the running candidate's process budget; retain public static setup.
+    command: >
+      sh -c "python manage.py collectstatic --noinput &&
+             gunicorn --config python:config.gunicorn config.wsgi:application
+             --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120
+             --access-logfile - --error-logfile -"
+  worker:
+    <<: *worker-budget
+  ingestion-worker:
+    <<: *worker-budget
+  discovery-query-worker:
+    <<: *worker-budget
+  discovery-index-worker:
+    <<: *worker-budget
+  beat:
+    environment: *public-client
+  web:
+    mem_limit: 768m
+    memswap_limit: 768m
+  rapidocr:
+    # The public base already has the 1536m deploy limit. Also keep the tested
+    # no-swap ceiling explicit, as in the candidate; no engine/model change.
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    cpus: 1.0
