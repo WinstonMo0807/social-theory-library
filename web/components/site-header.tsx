@@ -175,7 +175,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       <div className="header-actions">
         {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label={t("返回原页面")} title={t("返回原页面")} href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>{t("返回原页面")}</span></Link> : null}
         {evidenceRoute || theoryDetailRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label={t("搜索馆藏")}><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">{t("搜索书名、作者、概念")}</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder={t("搜索书名、作者、概念…")} /></form> : null}
-        <Link className="header-search" href="/explore" prefetch={false} aria-label={t(config.navigation.search)}>
+        <Link className="icon-button header-search" href="/explore" prefetch={false} aria-label={t(config.navigation.search)}>
           <Search size={18} strokeWidth={1.7} />
         </Link>
         <ThemeToggle />

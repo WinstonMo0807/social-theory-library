@@ -1,16 +1,16 @@
 @media (hover: hover) and (pointer: fine) {
-  .icon-button:hover {
-    background: var(--wash);
+  .icon-button:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in srgb, var(--wash) 56%, transparent);
   }
 
-  .button:hover {
-    background: transparent;
-    color: var(--ink);
-  }
-
-  .button.secondary:hover {
-    background: var(--ink);
+  .button:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in srgb, var(--ink) 88%, var(--surface));
     color: var(--stl-ink-inverse);
+  }
+
+  .button.secondary:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in srgb, var(--wash) 56%, transparent);
+    color: var(--ink);
   }
 }
 

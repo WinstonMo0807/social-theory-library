@@ -58,6 +58,9 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     clearPendingNavigation();
+  }, [clearPendingNavigation, routeKey]);
+
+  useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const container = containerRef.current;
     if (!container) return;
@@ -68,16 +71,16 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
         : container;
     const animation = target?.animate(
       [
-        { opacity: 0, transform: "translateY(8px)" },
-        { opacity: 1, transform: "translateY(0)" },
+        { opacity: 0.6 },
+        { opacity: 1 },
       ],
       {
-        duration: 220,
+        duration: 140,
         easing: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
     );
     return () => animation?.cancel();
-  }, [clearPendingNavigation, pathname, routeKey, readerRoute]);
+  }, [pathname, readerRoute]);
 
   return (
     <div

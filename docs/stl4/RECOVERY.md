@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-27 14:25 Web87悬浮反馈检查点
+
+活动Web87 f15845a667f1a41c2216e1c648df4ac3e44c8bccb569aff316214c434c31edfc。NAS /volume2/library/stl-previews/20261026-r1/motion-r87-recovery保存前Web86受限.env及images.json；仅使用其中原LIBRARY_WEB_IMAGE通过既有预览Compose恢复Web/edge，不覆盖其他环境或重启后端。API/四worker、Postgres、RapidOCR、inference容器ID保持。脚本、构建部署日志、截图在忽略tmp/stl4-rapidocr-20261027/motion-*与build_motion_r87.py/deploy_motion_r87.py/run_motion_r87_deploy.py。VISUAL-81已关闭，不重复开发；系统减少动态效果仅静态核对，不宣称已切换系统实测。用户首页保持白昼，临时核对标签关闭，自动任务保持删除。
+
 ## 2026-10-27 13:35 Web86品牌批注检查点
 
 活动Web86 afdb324c6bb04c51cdaa45626fc3cf98e94bb571a3ed7fb60676ad8dbf8720fb，API/四worker r53、RapidOCR3等容器ID未变。NAS /volume2/library/stl-previews/20261026-r1/brand-r86-recovery/.env及images.json保存前Web85；恢复仅沿受限.env原LIBRARY_WEB_IMAGE和预览Compose更新Web/edge，不覆盖其他环境或重启后端。构建/部署脚本与证据在忽略tmp/stl4-rapidocr-20261027/brand-r86-*，新图形来源副本output/reference/brand-board-20261027.png保留且未入Git。

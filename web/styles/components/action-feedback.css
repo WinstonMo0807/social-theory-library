@@ -20,28 +20,20 @@
   box-shadow: inset 0 0 0 1px currentColor;
 }
 .action-feedback.button:not(.secondary)[data-pressed="true"] { background: #171717; color: #fff; }
-.action-feedback[data-physical-press="true"]:not([aria-disabled="true"]) {
-  filter: brightness(.94);
-  transform: translateY(1px) scale(.99);
-}
 
 :where(button, a[href], summary, [role="button"]):not([aria-disabled="true"]):focus-visible {
-  outline: var(--stl-border-focus) solid #171717;
+  outline: var(--stl-border-focus) solid var(--stl-accent-focus);
   outline-offset: 3px;
 }
 
-@media (hover: hover) {
-  :where(button, a[href], summary, [role="button"]):not(:disabled):not([aria-disabled="true"]) {
-    transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 80ms ease, filter 80ms ease;
-  }
-  :where(button, a[href], summary, [role="button"]):not(:disabled):not([aria-disabled="true"]):hover {
-    filter: brightness(.96);
-  }
+:where(button, a[href], summary, [role="button"]):not(:disabled):not([aria-disabled="true"]) {
+  transition: color var(--stl-motion-control) ease, background-color var(--stl-motion-control) ease, border-color var(--stl-motion-control) ease, box-shadow var(--stl-motion-control) ease, opacity var(--stl-motion-control) ease, transform var(--stl-motion-press) var(--ease-out);
 }
 
-:where(button, a[href], summary, [role="button"]):not(:disabled):not([aria-disabled="true"]):active {
-  filter: brightness(.92);
-  transform: translateY(1px) scale(.99);
+/* Press feedback belongs to controls, not entire linked cards or text passages. */
+:is(.button, .icon-button, .book-actions a, .book-actions button, .tag-list a, .tag-list button):not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]):not(:focus-visible):active,
+.action-feedback[data-physical-press="true"]:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]):not(:focus-visible) {
+  transform: scale(.98);
 }
 
 a[data-route-pending="true"] {

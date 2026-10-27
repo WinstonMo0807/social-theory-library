@@ -39,8 +39,7 @@
   --stl2-ink-soft: #c9c0b3;
   --stl2-accent: #d3ae6b;
 }
-.theme-toggle { position: relative; display: inline-grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; padding: 0; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 50%; cursor: pointer; }
-.theme-toggle:hover { border-color: var(--line); background: var(--wash); }
+.theme-toggle { position: relative; display: inline-grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; padding: 0; color: var(--ink); background: transparent; border: 0; cursor: pointer; }
 .theme-toggle:focus-visible { outline: 2px solid var(--stl-accent-focus); outline-offset: 3px; }
 .theme-toggle svg { grid-area: 1/1; }
 .theme-toggle .theme-sun { display: none; }

@@ -71,13 +71,13 @@
   min-height: 44px;
   padding: 9px 10px;
   border-radius: 3px;
-  transition: padding var(--stl-motion-control) var(--ease-out), background var(--stl-motion-control) var(--ease-out);
+  transition: background-color var(--stl-motion-control) ease, color var(--stl-motion-control) ease;
 }
 
-.site-menu-nav a:hover {
-  padding-right: 10px;
-  padding-left: 10px;
-  background: var(--surface);
+@media (hover: hover) and (pointer: fine) {
+  .site-menu-nav a:hover {
+    background: color-mix(in srgb, var(--wash) 56%, transparent);
+  }
 }
 
 .site-menu-nav a > span {
@@ -122,9 +122,11 @@
   transition: background var(--stl-motion-control) var(--ease-out);
 }
 
-.site-menu-tools a:hover,
-.site-menu-tools button:hover {
-  background: var(--surface);
+@media (hover: hover) and (pointer: fine) {
+  .site-menu-tools a:hover,
+  .site-menu-tools button:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in srgb, var(--wash) 56%, transparent);
+  }
 }
 
 .site-menu-tools span {

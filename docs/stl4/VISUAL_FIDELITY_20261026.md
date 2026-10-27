@@ -797,3 +797,19 @@ Web86镜像afdb324c6bb04c51cdaa45626fc3cf98e94bb571a3ed7fb60676ad8dbf8720fb；�
 实际截图：brand-home-before-r85.png；brand-home-r86.png（1440）；brand-home-1066-r86.png（原批注宽度1066）；brand-admin-r86.png及brand-admin-lockup-r86.png；brand-home-dark-r86.png；brand-mobile-review-r86.png和brand-mobile-issue-r86.png（既有批注台iframe实际390×844，分别查看页头和策划卡片）。1440px首页grid1353/card1351加两像素边框相等，未预留空槽。390截图显示两行品牌和三个图标完整，iframe跨sandbox未读内部scrollWidth，不宣称全页无溢出。浏览器viewport覆盖对旧标签未生效，改用原1066标签导航及批注台390选择器取得上述真实证据，覆盖已reset。
 
 主题已恢复原白昼，临时查看标签关闭，用户当前首页已刷新。未操作业务提交/发布/批注保存，原账号、原件、私人资料、历史失败和批注保持。NAS brand-r86-recovery保留Web85受限.env和镜像；API/四worker/Postgres/RapidOCR/inference容器ID与前值一致，生产与公网未动。其他206视图完整状态、精确字体几何及长期服务质量仍B；本轮不重复OCR、EG2索引或质量测评。
+
+## VISUAL-81 · 2026-10-27 14:25 页头悬浮与共用动效
+
+用户附件codex-clipboard-c3a72eee-9f56-436d-b7c5-336dba26e7a1.png已读取。本次明确授权改善全局共用交互反馈，未改PDF静态布局或新增动效依赖。
+
+| 修改前与具体证据 | 修改后 | 目的与最小范围 |
+|---|---|---|
+| site-header.tsx搜索未复用icon-button；icon-button.css无圆角；appearance.css单独给月亮50%圆角和描边。Web86实际搜索36px/0圆角、月亮40px/50%、菜单40px/0，菜单hover为实色暖灰 | 三者共享icon-button，桌面40×40px、手机36px、10px圆角；160ms背景/颜色、130ms轻按压，hover为56%暖灰混合。搜索仅保留放大镜及原aria-label/href | 消除三套反馈与中心线不齐；不增加标签或改变导航目的地。原Web86hover截图保留 |
+| action-feedback.css给全部button/a/summary统一brightness过滤和translateY(1px) scale(.99)，会连整张内容卡片和文本一起变暗移动 | 去掉全量过滤/按压；仅button/icon-button/tag/book-actions及原ActionFeedback控件保留scale(.98)，禁止disabled/aria-disabled/busy/focus-visible按压。主按钮轻提亮、次按钮轻铺底，取消黑白反转 | 高频阅读内容保持稳定；原状态、权限与事件处理不变，减少动态效果覆盖保留 |
+| site-menu.css声明padding过渡；RouteTransition按含query的routeKey执行220ms整页上移8px及全透明入场 | 菜单仅背景/颜色；路径改变140ms由.6到1淡入，无位移；完整URL仍清除等待，仅pathname触发入场 | 菜单文字位置固定；同页筛选不反复整页动画，不移除原路由等待清理 |
+
+Web87 f15845a667f1a41c2216e1c648df4ac3e44c8bccb569aff316214c434c31edfc，类型tsc --noEmit、vinext build、NAS镜像/仅Web部署退出0，motion-r87-types/build/image/deploy.log保留于忽略tmp/stl4-rapidocr-20261027；未运行测试套件/E2E。NAS motion-r87-recovery保存前Web86环境/镜像；API/四worker/Postgres/RapidOCR/inference容器ID一致，生产未改。
+
+实际浏览器读回：原1066px首页scrollWidth1051，三个控件均40×40、top10.30、radius10；真实指针置于各控件后读取:hover=true（使用原生右键移入，不执行导航/业务动作），搜索/月亮/菜单均同一56%底色、transform:none；菜单导航hover时padding仍9px 10px、filter:none。键盘Tab到月亮，focus-visible=true、有清晰outline、无缩放；切换夜间后同形状/深色暖灰，随后恢复白昼。菜单展开和Escape关闭正常。批注台390×844 iframe实际页头品牌及三图标完整；跨sandbox未读内部scrollWidth，不推广为所有手机状态无溢出。管理端月亮同10px/160ms/56%底色；临时标签已关闭，用户首页已更新并保留。未保存业务表单或批注。
+
+截图motion-header-before-r86.png、motion-search-hover-r87.png、motion-theme-hover-r87.png、motion-menu-hover-r87.png、motion-keyboard-focus-r87.png、motion-dark-hover-r87.png、motion-menu-panel-r87.png、motion-mobile-r87.png、motion-admin-hover-r87.png。减少动态效果和同页query不入场为源码/构建核对，没有修改系统设置或运行筛选业务全量验收。D关闭本批明确需求；206视图完整交互、精确字体/像素与主观长期舒适性仍B，不称全站动效已逐项验收。

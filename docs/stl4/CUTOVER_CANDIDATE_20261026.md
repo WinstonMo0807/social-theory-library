@@ -1,5 +1,9 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+## 2026-10-27 14:25 候选Web87
+
+当前内网Web为social-theory-library-web:stl4-preview-20261027-r87（f15845a667f1a41c2216e1c648df4ac3e44c8bccb569aff316214c434c31edfc），完成用户本次悬浮/共用动效批注。恢复点motion-r87-recovery保留Web86；API/四worker r53及OCR、数据、模型容器ID未变，生产未改。拟发布环境应选最新候选；旧12:55配置解析仍仅证明当时覆盖结构和输入，不冒充Web87发布环境核验。既有备份时间、邮件配置、B验收及最终生产批准保持。
+
 ## 2026-10-27 13:35 候选前端更新
 
 仅内网Web更新为social-theory-library-web:stl4-preview-20261027-r86（afdb324c6bb04c51cdaa45626fc3cf98e94bb571a3ed7fb60676ad8dbf8720fb），处理用户品牌/导航/首页单期布局批注，恢复点brand-r86-recovery保留Web85。最终受限发布环境应选此新候选；12:55六层配置解析使用当时Web85，只证明覆盖结构与当时输入，不冒充Web86部署或最终发布env已核验。后端、数据、模型及公网未变，原备份时点与邮件凭据/最终批准限制保持。

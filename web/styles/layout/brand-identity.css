@@ -7,7 +7,7 @@
 .brand-identity[data-custom-brand] .brand-identity-words > span { white-space:normal; overflow-wrap:anywhere; }
 :root[data-theme=dark] .brand-identity, .reader.dark .brand-identity { color:#f7f4ee; }
 .site-header[data-ui-scope=stl4] .logo-link { min-width:0; }
-.site-header[data-ui-scope=stl4] .header-search { align-items:center; justify-content:center; width:36px; height:36px; flex:none; }
+.site-header[data-ui-scope=stl4] :is(.header-search,.theme-toggle,.menu-button) { align-items:center; justify-content:center; min-width:40px; width:40px; height:40px; flex:none; }
 .site-header[data-ui-scope=stl4] .header-search svg { width:20px; height:20px; }
 
 /* Restore the six home links at the reported 1066px width. */
@@ -46,6 +46,7 @@
   .stl4-mobile-brand .brand-identity-cn { font-size:16px; }
 }
 @media(max-width:700px) {
+  .site-header[data-ui-scope=stl4] :is(.header-search,.theme-toggle,.menu-button) { min-width:36px; width:36px; height:36px; }
   .site-header .brand-identity { gap:7px; }
   .site-header .brand-identity-symbol { width:36px; }
   .site-header .brand-identity-words { padding-left:7px; gap:3px; }
