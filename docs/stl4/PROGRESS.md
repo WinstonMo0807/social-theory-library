@@ -1,5 +1,15 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-27 09:50 隐私页实际视觉收尾与公网配置读回
+
+内网Web83（8efb3bf8409a）、API/四worker r53（3f81aeeaec33）、RapidOCR3；深度开关true、API512MiB。仅更新Web与重启预览edge，后端/数据库/模型容器身份保持。生产仍3.0.9.1，未改配置、数据或公网路由。2404条独立投影和原362d1468真实查询已完成，禁止重写/重测。
+
+VISUAL-75关闭具体开发项D：重读唯一PDF223–225，实际发现手机导出概览被CSS隐藏、删除主分类被额外类型挤走、桌面标题和首段过高。现在同一真实计数在手机导出后/删除前显示，四主分类按PDF排列，其余类型保留折叠入口；标题区及连续分区收紧，笔记选择入口融入原说明文字。桌面首段实际146.95px、起点196.40px；390px页面无横向溢出。查看真实0笔记/0授权/0导出与现有阅读记录，未造图中计数，未提交导出、删除或隐私修改。类型/编译成功；本轮不跑全量测试。详情与截图见VISUAL_FIDELITY_20261026.md及tmp/stl4-rapidocr-20261027/privacy-*-r83.png（r82概览截图同结构）。这不表示三页所有任务态或206图像素一致通过。
+
+PUBLIC-CONFIG-01为A环境配置项：生产容器与受限.env均选择Brevo但BREVO_API_KEY为空；新版email_links.mail_available据此返回不可用，不能把邮箱验证/恢复标为可发送。内网locmem后端是明确的不外发设置，GET /api/auth/login/实际email_delivery_available=false。需要上线前由凭据持有人在受限环境配置有效Brevo凭据；不在聊天传密钥、不发送试验邮件、不擅改生产。已有密码登录不受此项影响。配置差异和切换材料已补到CUTOVER_CANDIDATE_20261026.md。
+
+恢复：NAS privacy-r83-recovery保留Web82配置/镜像；privacy-r81-recovery保留本批前Web80。09:09候选DB备份仍有效于其记录时点；本批无schema/业务写入，未重复备份。继续原读者类PDF205–207、216–217的实际页面状态核对，再接已有业务/公网前材料清单；不重新审计已关闭索引/OCR。邮件配置依赖外部凭据，仅阻塞邮件相关验收和最终上线，不阻塞其他收尾。
+
 ## 2026-10-27 09:10 深度真实查询完成，新候选备份已保存
 
 当前API/四worker r53（3f81aeeaec33）、Web80、RapidOCR3，总开关true、API512MiB、beat正常；生产不变。2404条独立索引已完整逐条核对，禁止再次启动旧补写。原会话362d1468 generation2已结束：query_lexicon/EG2/BGE/邻文/ConvMemory全部completed、ranking_applied=true、40条深度结果均指向校准阅读文件5bc8a288，source_changed=false。整体session=partial仅保留原work_ids筛选的passage_facets提示；未改业务状态。原基础检索任务59.69秒、深度任务243.52秒（BGE约220秒），证明本次可运行，不能称快速或长期稳定。证据deep-live-query-r2.log、deep-live-query-readback.json、deep-query-worker-r53.log。DEEP-RUN-02转D；不再重复此查询或模型质量评测。

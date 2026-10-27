@@ -167,3 +167,31 @@
 @media(max-width:760px){.page .main[data-mobile-tab] .settingsSections,.page .main[data-mobile-tab] .exportSection,.page .main[data-mobile-tab] .eraseSection{display:block}.page[data-status-view=true] .main .exportSection,.page[data-status-view=true] .main .eraseSection{display:none}.page .statusSidebar{display:none}.page .section{border:1px solid var(--night-line,#e3e7ed);padding:12px 10px;margin-bottom:12px;gap:10px}.page .sectionBody>header{margin-bottom:10px}.page .sectionBody>header p{font-size:11px}.page .retention{gap:0}.page .retention label{min-height:36px;padding:8px;gap:9px}.page .retention small{display:none}.page .retention strong{font-size:13px}.page .retention label>span{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px}.page .retention label>span::after{content:"›";flex-shrink:0}.page .exportOptions label{min-height:49px;padding:8px;gap:10px}.page .exportOptions strong{font-size:14px}.page .exportOptions small{font-size:11px}.page .scope{padding:12px;font-size:13px}.page .moreOptions{font-size:11px}.page .info{font-size:11px}.page .notices{margin-top:16px}}
 
 @media(min-width:901px) and (max-width:1150px){.taskCards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* PDF224 keeps the selected export counts between export and erase on phones. */
+.mobileExportOverview { display: none; }
+.scope p a { display: inline; margin: 0; font: inherit; color: inherit; }
+.scope p a:hover { text-decoration: underline; }
+.overview > div > span { font-weight: 700; }
+@media (min-width: 1160px) {
+  .page { padding: 12px 4.6% 40px; }
+  .heading { margin: 12px 0; }
+  .heading h1 { line-height: 1.2; }
+  .heading > p { font-size: 20px; margin-top: 4px; }
+  .layout { grid-template-columns: 170px minmax(0, 1fr) 240px; gap: 16px; }
+  .page:not([data-status-view=true]):not([data-export-view=true]) .main { border: 1px solid var(--night-line, #e5e8ed); }
+  .page:not([data-status-view=true]):not([data-export-view=true]) .section { border: 0; border-bottom: 1px solid var(--night-line, #e5e8ed); margin: 0; padding-block: 14px; }
+  .page:not([data-status-view=true]):not([data-export-view=true]) .sectionBody > header { margin-bottom: 8px; }
+  .scope { padding-block: 10px; line-height: 1.6; }
+  .scope p:last-child { margin-bottom: 0; }
+}
+@media (max-width: 760px) {
+  .page[data-export-view=true] .mobileTabs { display: none; }
+  .mobileExportOverview { display: block; padding: 14px; margin-bottom: 18px; border: 1px solid var(--night-line, #e3e7ed); }
+  .mobileExportOverview h2 { margin: 0 0 10px; font: 700 17px/1.5 var(--font-serif), serif; }
+  .mobileExportOverview dl { margin: 0; font-size: 13px; }
+  .mobileExportOverview dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--night-line, #e3e7ed); }
+  .mobileExportOverview dt { display: flex; align-items: center; gap: 8px; }
+  .mobileExportOverview dd { margin: 0; white-space: nowrap; }
+  .mobileExportOverview > p { margin: 10px 0 0; font-size: 13px; }
+}

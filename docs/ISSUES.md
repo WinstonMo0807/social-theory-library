@@ -1,5 +1,11 @@
 # 当前问题
 
+## 2026-10-27 09:50 当前具体收尾问题
+
+- D VISUAL-75：隐私页手机概览隐藏/主分类挤出和桌面密度已修复，Web83实际读回。三视图其他任务状态及全站206图仍B，不自动重开开发。
+- A PUBLIC-CONFIG-01（环境配置）：新版accounts.email_links.mail_available及common.email_backend.BrevoEmailBackend均要求有效BREVO_API_KEY；实际生产容器和受限源.env均为空，沿此配置接续上线时邮件验证/恢复无法受理。最小范围仅补受限环境中的有效邮件凭据并在另获邮件发送授权后验收，不新增邮件框架或更换账号方案。预览locmem不外发为正常边界。证据cutover-config-readback.log、cutover-mail-config-source.log、cutover-mail-entry.log。
+- OCR-RAPID-01、OCR-TOC-01和DEEP-RUN-02已按2026-10-27真实记录关闭具体开发项，旧段落只保留发现时点；精度、长期稳定和全站验收不因此宣称通过。
+
 ## 2026-10-27 OCR 实施更新
 
 OCR-RAPID-01：用户授权全链替换，已完成源码及调用映射，NAS预览部署进行中。OCR-TOC-01：真实第7页“目录”被拆块、右栏数字漏读，有原图/识别输出证据；正在验证同一行关联和局部识别。目录落点仍须正式规则/人工校准，不因引擎替换自动标正确。其他全站范围按原 A/B/C/D，不新增泛化阻塞。

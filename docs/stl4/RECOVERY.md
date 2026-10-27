@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-27 09:50 当前Web83与接续范围
+
+Web83 8efb3bf8409a、API/四worker r53、RapidOCR3，深度true、API512MiB。NAS privacy-r83-recovery保存Web82前配置/镜像，privacy-r81-recovery为本批前Web80；仅按需要恢复Web并刷新edge解析，不覆盖当前后端配置或重启索引。后端及模型容器未重建。最新DB包仍deep-timeout-r53-recovery/candidate-after-deep-r53.dump，文件身份与恢复限制同09:10记录。
+
+VISUAL-75开发关闭；接着看原PDF205–207/216–217对应真实笔记页面，已读过223–225的当前空态不重复当缺功能。PUBLIC-CONFIG-01是已证实的Brevo凭据缺失，仅记录配置门槛，禁止回显密钥、发送邮件或擅改生产。切换材料见CUTOVER_CANDIDATE顶部。2404条和真实深度接续已完成，不再启动旧补写/查询。
+
 ## 2026-10-27 09:10 当前恢复入口
 
 API/四worker r53（3f81aeeaec33）、Web80/RapidOCR3，深度true、API512MiB、beat正常。2404条完整索引和原会话362d1468 generation2真实深度链均已完成，不再启动补写、重复查询或模型质量评测。来源40条均当前5bc8a288，结果/阶段证据deep-live-query-readback.json；整体partial的passage_facets原因见PRE_CUTOVER_VERIFICATION。

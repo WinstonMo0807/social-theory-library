@@ -1,5 +1,11 @@
 # 2026-10-27 内网候选收尾验证
 
+## 09:50 隐私三视图与切换配置读回
+
+VISUAL-75具体差异已修复并运行Web83 8efb3bf8409a；API/四worker r53、RapidOCR3不变，非Web容器ID一致。实际桌面/390px读取PDF223–225对应设置、导出空态及无任务状态；手机概览与分类已显示，未执行私人导出/删除/设置写入。类型/构建退出0；截图和精确范围见VISUAL_FIDELITY最新项。全状态、字体身份及206视图像素验收仍B。
+
+公网配置只读比较发现PUBLIC-CONFIG-01：生产EMAIL_PROVIDER=brevo且容器与源.env均无BREVO_API_KEY；新版邮件入口mail_available明确因此不可用。预览用locmem且DEBUG=false，实际只读登录契约email_delivery_available=false，符合不外发隔离。未发送邮件/取得邮件成功回执，不将缺配置写成新源码缺陷。公网前须补受限环境凭据，详CUTOVER_CANDIDATE最新配置表。生产配置、域名与隧道未改。
+
 当前工作继续至公网切换前。只有本记录明确列出的运行行为经过验证，不能将其推广为206视图全部验收。生产未更改。
 
 ## 09:10 深度链真实完成与新候选备份

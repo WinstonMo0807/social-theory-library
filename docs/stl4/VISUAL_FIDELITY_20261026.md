@@ -733,3 +733,17 @@ VISUAL-74最小修改文件：home-stl4.css、scholar.module.css、topic.module.
 验证：23项聚焦用例通过(aa5125)，Web类型与构建ae86aa退出0，严格契约生成d5ce41退出0。截图和日志tmp/stl4-rapidocr-20261027。API46/Web78镜像准备中；当前仍r45/r77，部署及更新后页面须另记。字体文件身份和全站逐像素一致仍未证明，不能称视觉终稿全部验收。
 
 后续实际读回（2026-10-27 05:30）：上述修改已运行Web80/API51。r78新品牌变体宽度问题已补桌面210/手机190；PDF73副标题24px/说明18px只在桌面生效。实际r80策划页截图editorial-r80.png显示新品牌、四项筛选和真实1篇策划；未虚构12篇或人物照片。目录首节点原稿预览现同步到PDF14（outline-preview-r80.png）。批注台原PDF权限修复后已画线、文字、保存、刷新读回，review-saved-r77.png记录。D关闭上述具体开发缺口；字体文件身份和206视图完整运行验收继续按证据登记，不把全部未验收页面视为需重做。
+
+## VISUAL-75 · 2026-10-27 隐私三视图的手机概览与桌面密度
+
+本轮从唯一最终PDF直接提取并读取223、224、225页图像。以现有登录账户查看同一路由桌面1280px和手机390px，不创建导出/删除任务、修改隐私偏好或写入私人内容。
+
+| 证据、触发和影响 | 最小修正与结果 |
+|---|---|
+| privacy.module.css在760px以下无条件隐藏statusSidebar；/account/settings/privacy/export实际没有PDF224要求的导出内容概览 | 复用原exportOverview JSX及同一export_counts/selectedTotal，在手机导出区与删除区之间显示。桌面原概览继续使用；真实0保持0，按钮仍禁用。未新增接口或数据 |
+| PrivacyContent按eraseLabels对象顺序把小组/文章评论放在阅读历史前；手机首屏分类被挤走，源码和实际DOM均可见 | 四个PDF主分类置前，短标题为阅读历史/搜索记录/个人笔记/研究计划；完整权限类别保留aria-label/title，其他五类仍可展开，不移除功能 |
+| site-header的70px高度、PrivacyWorkspace标题间距及额外独占一行的说明链接使桌面主体从约252px开始、第一段约209px；PDF223主体约195px、首段约150px | 限隐私路由收紧头部与标题；默认页连续分区；原笔记选择链接融入同一句说明。Web83实际header56.4px、主体196.4px、首段146.95px；入口仍指向/account/confirmed-notes |
+
+类型检查privacy-r81/r82/r83-types.log及构建privacy-r81/r82/r83-build.log退出0。r81部署脚本检查127.0.0.1失败，实际edge仅绑定192.168.5.6；读取启动日志与端口配置后改用真实LAN地址读回200，没有更改服务监听或重复后端部署。原privacy-r81-deploy.log失败保留，独立privacy-r81-readback.log记录原因与当前容器。最终privacy-r83-deploy.log退出0，Web83 8efb3bf8409a、API/四worker仍r53，非Web容器ID逐项一致；未动生产。
+
+实际截图：privacy-desktop-r83.png；privacy-export-mobile-r83.png；privacy-mobile-r83.png；privacy-status-desktop-r83.png、privacy-status-mobile-r83.png，均在忽略tmp/stl4-rapidocr-20261027中。中间r81/r82截图与失败日志保留。D仅关闭以上明确差异；PDF225的真实运行/部分失败/删除中四种任务、导出实际文件、全部字体与像素一致仍B，不伪造任务以填满参考卡片。私有权限既有108项检查不重跑。未使用新视觉源或新增依赖。
