@@ -1,5 +1,23 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+## 2026-10-27 12:45 公网配置组合只读解析
+
+当前候选源码检查点4be4c9f2、内网Web85/API53/RapidOCR3。把当前仓库五份非敏感Compose复制到NAS候选目录public-config-review-20261027，仅运行docker compose config，项目名stl4-cutover-config-review；没有up/run/create/migrate/生产修改。组合顺序为compose.public.yaml → compose.cloudflare.yaml → compose.discovery.yaml → compose.docx-preview.yaml → compose.stl4-deep.yaml，启用ocr/docx-preview，direct-caddy未启用。
+
+解析使用已有生产环境提供插值必填项和候选环境提供镜像/模型值；服务env_file仍为候选环境，故这是结构及差异核对，不是最终发布环境。最终命令退出0，只输出白名单非敏感字段，没有保存/回显解析后的全部环境。证据tmp/stl4-rapidocr-20261027/public-candidate-config-r5.log。最初工具不支持no-env-resolution、仅预览输入缺REDIS_PASSWORD、未插值卷短语法不兼容、探针错误读取被profile排除的gateway均保留旧日志；这些是解析方式/探针问题，不据此登记产品故障。
+
+| 已核对项 | 结果与剩余准备 |
+|---|---|
+| 版本组合 | API/四worker/拟发布beat引用r53，Web85，RapidOCR 20261027-r3，inference 20261026-r2，DOCX 20261026-r1；这是解析目标，活动beat仍原r33，未更换。 |
+| HTTPS与端口 | API的PUBLIC_DEPLOYMENT_MODE/安全Cookie/HTTPS重定向为true，公开URL指向books.winstonmo.com，X_FRAME_OPTIONS=DENY。API/Web/OCR/inference/DOCX无宿主端口；edge沿既有LAN3000/18080/18082，direct-caddy未纳入。 |
+| 服务能力 | 原Discovery已启用；深度服务开启、请求上限240秒；DOCX只经worker Unix socket，转换器network_mode=none。没有更换选定模型或启动任务。 |
+| 环境一致性 | worker/ingestion/query/index/beat仍从候选env_file取得18084内网URL，不能将此次混合解析直接部署。最终应以生产稳定密钥/身份设置为基础，将候选的已选模型代次、镜像、任务预算和RapidOCR配置明确合入一份受限发布环境；API与所有worker的公开URL需一致。现有功能代码无须为此重写。 |
+| 资源与存储 | 公网基础组合尚未携带预览已验证的API512MiB、PG512MiB及OCR1536MiB限制；这些是最终配置待定稿项，不代表已证明公网运行失败。当前存储仍须按既有新鲜生产增量/一致候选/恢复点方案确定，不能只替换镜像后混用数据库和文件。 |
+| 验收入口 | 现有内网批注台可继续绘图、保存与回读。本次重新读取原1条验证批注且在390px iframe查看集合目录空态，未修改任何批注。公网DENY保持，不能把预览SAMEORIGIN覆盖直接复制到正式链。 |
+
+下一步仍在已有切换材料范围内：定稿受限发布环境的非敏感差异清单和资源覆盖；与新鲜生产账户/数据及完整文件恢复安排共同审阅。PUBLIC-CONFIG-01邮件凭据、206视图完整状态和最终批准保持原状态。本次不证明最终发布配置、生产数据迁移或全站验收通过。
+
+
 ## 2026-10-27 12:40 候选Web85
 
 Web85 4b764481c1f722d0d1c78a697400577faffe58dc45f78b31f53d2841d68ba38d。API/四worker r53、RapidOCR3、深度true、API512MiB保持；生产未改。集合入口页签及PDF218手机导航已部署；当前账户0书单/0研究，相关详情仍B，详VISUAL-77。恢复点collections-r85-recovery（前Web84）；无新业务或迁移，不重复数据库备份/恢复。下方公网配置、邮件凭据、安全会话、全状态验收与最终批准门槛继续有效。

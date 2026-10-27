@@ -779,3 +779,5 @@ Web84镜像19e67126a76e1d27b83a53bb057297d020660fca48cbc64f8a526e06dd7bd417，�
 Web85镜像4b764481c1f722d0d1c78a697400577faffe58dc45f78b31f53d2841d68ba38d。collections-r85-types/build/image/deploy.log退出0；内网HTTP200，更新后真实集合空态可读。仅Web/edge改变，API/四worker/Postgres/RapidOCR/inference容器ID保持。NAS collections-r85-recovery保留Web84环境与镜像，旧Paddle停止容器保留历史，不清理。生产未修改，无全量测试。
 
 218–222索引旧“字体几何、详细状态A”没有具体未修证据，按用户收尾规则改为B待验收；VISUAL-59/60已完成布局保持，77仅关闭本表两项源码开发。不表示206视图像素一致通过。
+
+12:45补充：用户登录后/admin/visual-review可直接进入，原已保存1条验证批注可读。本次未新增/修改批注。用工作台既有“手机390×844”选择器替代未生效的浏览器视口工具，iframe实际clientWidth=390，截图collections-review-board-r85.png显示集合目录手机空态。跨sandbox不能读取内页scrollWidth，未声称无溢出或详情底栏通过；PDF218详情与当前无书单目录不是同一状态。已恢复可交互批注入口供用户验收。
