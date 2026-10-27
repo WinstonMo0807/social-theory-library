@@ -763,3 +763,19 @@ Web84镜像19e67126a76e1d27b83a53bb057297d020660fca48cbc64f8a526e06dd7bd417，�
 证据位于忽略tmp/stl4-rapidocr-20261027：memory-proposal-page-error-r83.png保留原失败；memory-proposal-empty-r84.png为修复后同一入口；confirmed-notes-desktop/mobile-r84.png及notebook-desktop/mobile-r84.png为真实空态。390px两页无横向溢出，notebook四筛选默认折叠。旧r83截图保留。D关闭以上具体修复；所有有记录确认、修订、使用范围、来源失效、笔记编辑/导出状态及精确字体/像素仍B。
 
 同步更正205–207/216–217五行旧状态：VISUAL-59已完成全宽/移动筛选，VISUAL-61已完成确认队列与手机底栏；这些旧措辞不能继续作为A。223手机箭头已在VISUAL-62和75解决，也不属于本组新缺陷。不推广为206视图通过。
+
+## VISUAL-77 · 2026-10-27 集合与研究回放组（PDF218–222）
+
+唯一PDF218/219/220/221/222的内嵌原图逐张读取，文件位于忽略tmp/stl4-rapidocr-20261027/visual-reference/pdf-218.jpeg至pdf-222.jpeg。沿读者整类普通操作核对现有书单/笔记返回与回放入口，不逐图创建新审计任务。
+
+| 具体证据与影响 | 最小范围与状态 |
+|---|---|
+| BOOKLIST-TAB-01：reader-booklists.tsx初始化view读取URL，但table恒true；正文条件!detail或table或view=works使?tab=notes/plans/related仍显示作品。reader-notebook.tsx已有带tab=notes的正常返回入口 | table初始与view一致；show非works时关闭表格。现有BooklistLinkedPanel、本人接口、回执、版本及所有写入行为不变。D源码修复；真实详情效果B |
+| PDF218详细布局手机页底有书单导航；ReaderMobileNav已有booklist变体，但ReaderBooklists未渲染 | 复用已有组件，仅detail且非table显示，并留底部空间。PDF219/220表格布局不新增底栏。D源码修复；实际390px详情B |
+| PDF221–222轮次、问题/范围、材料对比、快照及分支 | research-replay现有实现和ReaderMobileNav保持，未发现新的明确开发缺口，不重复实现 |
+
+用户重新登录后实际/account/collections为0书单；/account/research选全部研究仍0。空态截图collections-empty-r84.png、research-all-empty-r84.png及更新后collections-empty-r85.png。没有创建私有书单/研究/笔记，也没有借匿名深度会话充当本人研究。无法展开真实详情，因此有数据排版、移动底栏、编辑/导出/回收、轮次/分支完整交互与精确字体继续B。本轮视口请求390px后实际innerWidth仍1280，collections-viewport-unapplied-r85.png保留为工具未生效记录，不能作为手机验收。
+
+Web85镜像4b764481c1f722d0d1c78a697400577faffe58dc45f78b31f53d2841d68ba38d。collections-r85-types/build/image/deploy.log退出0；内网HTTP200，更新后真实集合空态可读。仅Web/edge改变，API/四worker/Postgres/RapidOCR/inference容器ID保持。NAS collections-r85-recovery保留Web84环境与镜像，旧Paddle停止容器保留历史，不清理。生产未修改，无全量测试。
+
+218–222索引旧“字体几何、详细状态A”没有具体未修证据，按用户收尾规则改为B待验收；VISUAL-59/60已完成布局保持，77仅关闭本表两项源码开发。不表示206视图像素一致通过。

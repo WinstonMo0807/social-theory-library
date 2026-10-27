@@ -1,5 +1,9 @@
 # 开发进度
 
+## 2026-10-27 12:40 集合与研究回放组
+
+Web85 4b764481c1f7/API53/RapidOCR3，生产保持。BOOKLIST-TAB-01和VISUAL-77具体源码修正关闭D，类型/编译/内网部署退出0。PDF218–222逐张读图；当前本人0书单、全部范围0研究会话，实际空态有证据，有数据详情/手机底栏/业务操作仍B。没有创建私人资料。恢复点collections-r85-recovery（前Web84），详情VISUAL_FIDELITY最新项。后续沿原公网配置与统一验收范围，不重跑索引/OCR/质量评测。
+
 ## 2026-10-27 10:20 笔记入口与视觉收尾
 
 Web84/API53/RapidOCR3，生产不变。MEMORY-PICKER-01原始笔记选择参数冲突已恢复，VISUAL-76真实计数与桌面密度更新；类型/构建和实际空态读回完成，无私人写入。原完整状态验收继续B，详CURRENT_PROGRESS及docs/stl4/VISUAL_FIDELITY。

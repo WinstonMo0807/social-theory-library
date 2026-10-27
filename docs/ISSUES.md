@@ -1,5 +1,11 @@
 # 当前问题
 
+## 2026-10-27 12:40 集合明确缺口修正
+
+- D BOOKLIST-TAB-01：reader-booklists.tsx的table恒true覆盖?tab=notes/plans/related，reader-notebook返回集合笔记的正常链接不能呈现指定内容。最小修复仅初始布局与页签一致、切换非作品标签关闭表格。后端/权限/写入不变。
+- D VISUAL-77：PDF218详细布局手机底栏未挂载；接已有ReaderMobileNav(booklist)，限定详细布局。Web85编译部署完成，当前无真实书单，底栏和详情运行仍B，不冒充验收通过。
+- B 当前0书单、全部范围0研究已实看；218–222有记录完整状态/精确字体未验收。A PUBLIC-CONFIG-01外部邮件配置保持。
+
 ## 2026-10-27 10:20 笔记选择实际故障已关闭
 
 - D MEMORY-PICKER-01：MemoryProposal误将分页1传为Annotation原文页UUID，正常打开选择窗口失败。仅前端改既有p参数；Web84同一入口实际恢复，无后端/权限变更，原失败截图保留。

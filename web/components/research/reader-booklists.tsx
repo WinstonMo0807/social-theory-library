@@ -19,6 +19,7 @@ import { BooklistTopicPicker } from "./booklist-topic-picker";
 import { BooklistPlanForm } from "./booklist-plan-form";
 import { BooklistLinkedPanel, BooklistPublicSidebar } from "./booklist-related";
 import { ResearchCenterNav } from "./research-center-nav";
+import { ReaderMobileNav } from "./reader-mobile-nav";
 import styles from "./reader-booklists.module.css";
 
 const stamp = (value: string) => new Date(value).toLocaleDateString("zh-CN");
@@ -46,9 +47,10 @@ function BooklistsWorkspace({ owner, name, id }: { owner: string; name: string; 
   });
   function show(value: "works" | "plans" | "notes" | "related") {
     setView(value); setSelected([]); setTrash(false); setPage(1);
+    if (value !== "works") setTable(false);
     const url = new URL(window.location.href); url.searchParams.set("tab", value); window.history.replaceState(null, "", url);
   }
-  const [table, setTable] = useState(true);
+  const [table, setTable] = useState(view === "works");
   const [page, setPage] = useState(1), [q, setQ] = useState(""), [kind, setKind] = useState(""), [order, setOrder] = useState("manual"), [trash, setTrash] = useState(false);
   const [selected, setSelected] = useState<string[]>([]), [modal, setModal] = useState<"edit" | "create" | "add" | "export" | "delete" | "remove" | "purge" | "plan" | "topics" | null>(null);
   const [message, setMessage] = useState(""), [busy, setBusy] = useState(false), [recovery, setRecovery] = useState<Recovery | null>(null), [broken, setBroken] = useState(false);
@@ -145,6 +147,7 @@ function BooklistsWorkspace({ owner, name, id }: { owner: string; name: string; 
       {modal === "delete" || modal === "remove" || modal === "purge" ? <><p>{modal === "delete" ? "将删除整份私人书单、作品顺序和回收站关联。这项操作不可撤销；馆藏、阅读进度、独立笔记和计划保留。" : modal === "remove" ? `将${selected.length}部作品移到书单回收站，30天内可恢复。` : `将彻底移除回收站中所选${selected.length}条关联，不能恢复；馆藏和笔记保留。`}</p><button className={styles.danger} disabled={blocked} onClick={() => void execute({ action: modal === "delete" ? "delete" : modal, ...(modal !== "delete" ? { item_ids: selected } : {}) })}>确认{modal === "delete" ? "删除书单" : "移除"}</button></> : null}
       {message ? <p role="status">{message}</p> : null}{recovery ? <button disabled={busy} onClick={() => void execute(undefined, true)}>核对原结果</button> : null}
     </Dialog>
+    {detail && !table ? <div className={styles.mobileNav}><ReaderMobileNav variant="booklist" /></div> : null}
   </Frame>;
 }
 

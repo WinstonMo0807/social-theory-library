@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-27 12:40 当前Web85
+
+Web85 4b764481c1f7、API/四worker r53、RapidOCR3。两项集合源码修正已部署，详情运行仍B（当前本人0书单/0研究）。collections-r85-recovery保存本批前Web84配置与镜像；仅Web/edge变化，不重建后端或索引。不重做218–222读图，不把空账户当缺开发。继续既有公网配置材料和用户批注；PUBLIC-CONFIG-01仍待安全凭据。
+
 ## 2026-10-27 10:20 当前Web84
 
 Web84 19e67126a76e、API/四worker r53、RapidOCR3。MEMORY-PICKER-01已实际修复，VISUAL-76与205–207/216–217空态证据已保存，不重开VISUAL-59/61。NAS reader-r84-recovery为本次前Web83环境/镜像恢复点，只有Web/edge改变。DB/模型/索引/原件/私人记录未写入；勿按旧脚本重跑补写或深度查询。接续原PDF218–222集合/回放与既定验收，不伪造有记录状态；PUBLIC-CONFIG-01仍待安全配置。
