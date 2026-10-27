@@ -10,6 +10,7 @@ import "../styles/features/admin/evidence-curation.css";
 import "../styles/knowledge-v307.css";
 import "../styles/features/home/home-stl4.css";
 import "../styles/tokens/appearance.css";
+import "../styles/layout/brand-identity.css";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { SiteHeader } from "@/components/site-header";
 import { loadSiteChromeConfig } from "@/lib/api/site.server";

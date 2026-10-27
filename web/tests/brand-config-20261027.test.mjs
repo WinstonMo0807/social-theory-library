@@ -13,12 +13,13 @@ const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKi
 const exports = {};
 new Function("require", "exports", code)(name => name === "@/lib/site-config" ? { defaultSiteConfig } : require(name), exports);
 
-test("default PDF artwork stays intact; edited brand wording renders as escaped vector text", () => {
-  const render = config => renderToStaticMarkup(createElement(exports.BrandImage, { config, src: "/brand/reference.svg", width: 236, height: 51 }));
-  assert.match(render(defaultSiteConfig), /<img[^>]+src="\/brand\/reference.svg"/);
+test("shared brand uses the approved emblem and escapes editable bilingual wording", () => {
+  const render = config => renderToStaticMarkup(createElement(exports.BrandImage, { config }));
+  assert.match(render(defaultSiteConfig), /stl-symbol-20261027.svg#mark/);
+  assert.match(render(defaultSiteConfig), /Social Theory Library<\/span>/);
   const changed = render({ ...defaultSiteConfig, site_name: "研究 & 阅读 <测试>", wordmark_lines: ["OPEN", "READING"] });
   assert.match(changed, /<svg/);
-  assert.match(changed, /OPEN READING<\/text>/);
-  assert.match(changed, /研究 &amp; 阅读 &lt;测试&gt;<\/text>/);
-  assert.doesNotMatch(changed, /SOCIAL THEORY LIBRARY<\/text>/);
+  assert.match(changed, /OPEN READING<\/span>/);
+  assert.match(changed, /研究 &amp; 阅读 &lt;测试&gt;<\/span>/);
+  assert.doesNotMatch(changed, /Social Theory Library<\/span>/);
 });

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowUpRight,
   ArrowLeft,
@@ -30,29 +29,10 @@ import { EvidenceLanguageSwitch, useEvidenceLanguage } from "./evidence-language
 import { usePublicSession } from "./public-session-provider";
 import { Drawer } from "./ui/dialog";
 import { IconButton } from "./ui/controls";
-import { BrandImage, hasCustomBrand } from "./brand-image";
+import { BrandImage } from "./brand-image";
 
-export function LibraryMark({ className = "" }: { className?: string }) {
-  return <Image aria-hidden="true" alt="" className={`brand-mark ${className}`.trim()}
-    src="/brand/stl-mark-final-r2.svg" width={61} height={45} unoptimized />;
-}
-
-const referenceBrandSize = { "editorial-home":[210,40], "privacy":[298,32],"privacy-export":[285,33],"privacy-status":[257,28], "research-replay":[214,32], "booklists":[204,33], "notebook":[205,32], "citation-parse":[309,37], "citation-report":[217,35], "citation-issue":[215,36], "confirmed-notes":[198,44], "reading-plan":[313,41], "research-compare":[196,42], "research-counter":[282,39], "research-workspace":[356,44], "auth":[236,51], "auth-recovery":[210,42], "reader-center":[305,39], "research-directory":[100,37], "reader-archive":[239,35], "sharing": [217,54], "admin-placement": [211,51], "admin-home": [193,48], "admin-recovery": [194,48], "admin-storage": [195,46], "admin-services": [186,45], "admin-accounts": [202,53], "admin-path": [190,50], "admin-timeline": [197,49], "admin-topic": [182,47], "admin-concept": [185,45], "admin-scholar": [190,48], "admin-people": [190,48], "admin-ledger": [178,46], "admin-publication": [184,46], "admin-selection": [195,51], "admin-article": [193,49], "admin-curation": [187,47], "admin-index": [179,47], "admin-mapping": [183,48], "admin-outline": [186,47], "admin-ocr": [206,55], "admin-processing": [183,48], "admin-media": [188,48], "admin-assistant": [198,51], "admin-files": [195,49], "admin-editor": [195,48], "admin-manual": [193,48], "admin-intake": [187,51], "admin-upload": [188,48], admin: [205,52], "editorial-directory": [224,37], "editorial-article": [195,45], "editorial-exhibition": [219,47], "editorial-exhibit": [218,45], topics: [264,57], "topic-directory": [242,35], "topic-profile": [210,47], scholars: [262,60], "scholar-directory": [180,40], "scholar-profile": [226,31], "reading-paths": [175,45], "reading-path": [233,36], graph: [112,38], "graph-topic": [147,52], "graph-scholar": [120,39], "theory-directory": [246,53], "theory-timeline": [172,34], "theory-concept": [235,35], "theory-tradition": [132,35], subdisciplines: [245,55], "subdiscipline-detail": [204,53], "theory-overview": [241,54], about: [195,60], support: [222,42], article: [191,44], explore: [264,59], catalog: [293,44], opinion: [116,38], evidence: [220,54], work: [121,42], journal: [247,38], "work-readable": [182,31], reader: [133,45], "reader-outline": [216,47], "reader-search": [232,42], "reader-notes": [242,40], parallel: [264,36], "parallel-manual": [264,37] } as const;
-export function Wordmark({ config = defaultSiteConfig, home = false, reference }: { config?: SiteConfig; home?: boolean; reference?: keyof typeof referenceBrandSize }) {
-  if (hasCustomBrand(config)) return reference
-    ? <span className="brand-reference-lockup" data-brand-variant={reference}><BrandImage config={config} src="" width={referenceBrandSize[reference][0]} height={referenceBrandSize[reference][1]} /></span>
-    : <span className="brand-lockup" aria-label={config.site_name}><LibraryMark /><span className="brand-type"><span className="brand-reference-type"><BrandImage config={config} src="" textOnly alt="" width={home ? 192 : 259} height={home ? 38 : 45} /></span></span></span>;
-  if (reference) return <picture className="brand-reference-lockup" data-brand-variant={reference}><source media="(max-width: 700px)" srcSet={`/brand/stl-lockup-${reference}-mobile-final-r2.svg`} /><Image src={`/brand/stl-lockup-${reference}-desktop-final-r2.svg`} alt={config.site_name} width={referenceBrandSize[reference][0]} height={referenceBrandSize[reference][1]} unoptimized /></picture>;
-  return (
-    <span className="brand-lockup" aria-label={config.site_name}>
-      <LibraryMark />
-      <span className="brand-type" aria-hidden="true"><picture className="brand-reference-type"><source media="(max-width: 700px)" srcSet="/brand/stl-wordmark-mobile-final-r2.svg" /><Image src={home ? "/brand/stl-wordmark-home-final-r2.svg" : "/brand/stl-wordmark-desktop-final-r2.svg"} alt="" width={home ? 192 : 259} height={home ? 38 : 45} unoptimized /></picture><span className="wordmark">
-        {config.wordmark_lines.map((line) => (
-          <span key={line}>{line}</span>
-        ))}
-      </span><span className="brand-name">{config.site_name}</span></span>
-    </span>
-  );
+export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }) {
+  return <BrandImage config={config} />;
 }
 
 export function SiteHeader({ config = defaultSiteConfig, preview = false, reader = false, readerReference = "reader", beforeLogout }: { config?: SiteConfig; preview?: boolean; reader?: boolean; readerReference?: "reader" | "reader-outline" | "reader-search" | "reader-notes" | "parallel" | "parallel-manual"; beforeLogout?: () => boolean }) {
@@ -174,7 +154,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-ui-scope="stl4"
     >
       <Link className="logo-link" href="/" prefetch={false}>
-        {editorialDetailRoute ? <span className="brand-editorial-variants"><Wordmark config={config} reference="editorial-article" /><Wordmark config={config} reference="editorial-exhibition" /><Wordmark config={config} reference="editorial-exhibit" /></span> : graphRoute ? <span className="brand-graph-variants"><Wordmark config={config} reference="graph" /><Wordmark config={config} reference="graph-topic" /><Wordmark config={config} reference="graph-scholar" /></span> : theoryDetailRoute ? <span className="brand-theory-variants"><Wordmark config={config} reference="theory-concept" /><Wordmark config={config} reference="theory-tradition" /></span> : workRoute ? <span className="brand-work-variants"><Wordmark config={config} reference="work" /><Wordmark config={config} reference="work-readable" /><Wordmark config={config} reference="journal" /></span> : <Wordmark config={config} home={pathname === "/" || preview} reference={brandReference} />}
+        <Wordmark config={config} />
       </Link>
       <nav className="desktop-nav" aria-label={t("主导航")}>
         {headerNavigation.map(([href, label]) => {
@@ -197,7 +177,6 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
         {evidenceRoute || theoryDetailRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label={t("搜索馆藏")}><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">{t("搜索书名、作者、概念")}</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder={t("搜索书名、作者、概念…")} /></form> : null}
         <Link className="header-search" href="/explore" prefetch={false} aria-label={t(config.navigation.search)}>
           <Search size={18} strokeWidth={1.7} />
-          <span>{t(config.navigation.search)}</span>
         </Link>
         <ThemeToggle />
         {evidenceRoute ? <EvidenceLanguageSwitch /> : null}

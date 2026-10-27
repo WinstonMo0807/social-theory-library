@@ -781,3 +781,19 @@ Web85镜像4b764481c1f722d0d1c78a697400577faffe58dc45f78b31f53d2841d68ba38d。co
 218–222索引旧“字体几何、详细状态A”没有具体未修证据，按用户收尾规则改为B待验收；VISUAL-59/60已完成布局保持，77仅关闭本表两项源码开发。不表示206视图像素一致通过。
 
 12:45补充：用户登录后/admin/visual-review可直接进入，原已保存1条验证批注可读。本次未新增/修改批注。用工作台既有“手机390×844”选择器替代未生效的浏览器视口工具，iframe实际clientWidth=390，截图collections-review-board-r85.png显示集合目录手机空态。跨sandbox不能读取内页scrollWidth，未声称无溢出或详情底栏通过；PDF218详情与当前无书单目录不是同一状态。已恢复可交互批注入口供用户验收。
+
+## VISUAL-78/79/80 · 2026-10-27 用户品牌板与首页四条批注
+
+最新品牌参考为用户附件codex-clipboard-98935ca5-eb72-460a-b328-7e1196f0de1e.png，已实看并保留同字节副本output/reference/brand-board-20261027.png（SHA256 8e62b6a1c61bcb1d702a4b7178308294a461866a5154231fb703913a3fa2127a）。此项按用户明确要求替代旧PDF的Logo排版，其他内容仍以最终PDF为准；本轮重看最终PDF10首页图，不引入另一套全站设计。
+
+| 编号 | 文件、触发条件、影响 | 最小修正与状态 |
+|---|---|---|
+| VISUAL-78 | site-header.tsx的referenceBrandSize/Wordmark按每页加载不同SVG；admin-shell的多套品牌分支导致/admin/theories出现STL加碎行英文。BrandImage默认返回各自图片，页脚/阅读器各用不同版本；favicon仍为旧蓝色图标。用户提供新统一品牌板 | 共用BrandImage渲染一个SVG符号+实际HTML英文/中文上下两行，按页头紧凑横版、后台侧栏居中竖版、手机/页脚小尺寸适配，深色改白金；删除运行组件的旧图片选择分支，不删除原参考资产。favicon同步为同一符号。D实现关闭；没有声称字体身份或轮廓与参考逐像素相同 |
+| VISUAL-79 | site-header.css的max-width1120隐藏desktop-nav。用户1066截图导航消失，搜索文字仍占位 | 首页821–1120显示六链接，821–960两行防挤；700以下保持手机菜单。去掉header-search可见文字，保留aria-label/原href与36px点击区域。D，原批注1066px窗口实读nav=flex，6链接完整，搜索textContent为空，scrollWidth1051<innerWidth1066 |
+| VISUAL-80 | home-stl4.css固定2.35fr+3空列；home-public-view缺cover_url仍输出全卡灰占位，主文案78%宽且顶空34px，真实只有1期时大半行留空。HomeCuratedSection同一布局 | 按1/2/3/4真实子项分配列，不渲染不存在的策划配图占位；无图主卡100%正文、暖纸底，保留有cover_url真实图文分支。默认和人工编排两入口一致。D实现关闭；1期当前状态实看，2/3/4期运行效果B，不创建假数据 |
+
+Web86镜像afdb324c6bb04c51cdaa45626fc3cf98e94bb571a3ed7fb60676ad8dbf8720fb；类型、最终vinext构建、NAS镜像和仅Web部署均退出0。日志brand-r86-types.log、brand-r86-build-final.log、brand-r86-image.log、brand-r86-deploy.log位于忽略tmp/stl4-rapidocr-20261027。首轮类型替换脚本留下三个模板字面量片段导致TS语法诊断，已修正后再执行类型检查；不是产品运行故障。已有品牌单元断言按新组件调整，按用户本轮要求未运行测试套件或全量E2E。静态差异检查通过。
+
+实际截图：brand-home-before-r85.png；brand-home-r86.png（1440）；brand-home-1066-r86.png（原批注宽度1066）；brand-admin-r86.png及brand-admin-lockup-r86.png；brand-home-dark-r86.png；brand-mobile-review-r86.png和brand-mobile-issue-r86.png（既有批注台iframe实际390×844，分别查看页头和策划卡片）。1440px首页grid1353/card1351加两像素边框相等，未预留空槽。390截图显示两行品牌和三个图标完整，iframe跨sandbox未读内部scrollWidth，不宣称全页无溢出。浏览器viewport覆盖对旧标签未生效，改用原1066标签导航及批注台390选择器取得上述真实证据，覆盖已reset。
+
+主题已恢复原白昼，临时查看标签关闭，用户当前首页已刷新。未操作业务提交/发布/批注保存，原账号、原件、私人资料、历史失败和批注保持。NAS brand-r86-recovery保留Web85受限.env和镜像；API/四worker/Postgres/RapidOCR/inference容器ID与前值一致，生产与公网未动。其他206视图完整状态、精确字体几何及长期服务质量仍B；本轮不重复OCR、EG2索引或质量测评。

@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-27 13:35 Web86品牌批注检查点
+
+活动Web86 afdb324c6bb04c51cdaa45626fc3cf98e94bb571a3ed7fb60676ad8dbf8720fb，API/四worker r53、RapidOCR3等容器ID未变。NAS /volume2/library/stl-previews/20261026-r1/brand-r86-recovery/.env及images.json保存前Web85；恢复仅沿受限.env原LIBRARY_WEB_IMAGE和预览Compose更新Web/edge，不覆盖其他环境或重启后端。构建/部署脚本与证据在忽略tmp/stl4-rapidocr-20261027/brand-r86-*，新图形来源副本output/reference/brand-board-20261027.png保留且未入Git。
+
+用户已删除自动接续任务stl-4-0；不得因旧进度文本而重建。新品牌板只取代Logo，其他视觉仍遵循最终PDF。后续从CURRENT_PROGRESS顶部接续公网前材料/B验收，不重开这四条已修批注。
+
 ## 2026-10-27 12:55 当前未应用切换材料
 
 活动仍Web85/API53/四worker53/RapidOCR3/beat33；新增compose.stl4-cutover.yaml只解析未部署，不将拟发布beat53当活动镜像。NAS public-config-review-20261027保存非敏感六份Compose，cutover-overlay-config.log有白名单解析结果。新cutover-files-20261027/candidate-files.tar和manifest.json/verification.json为受限文件备份，28成员及13资产hash已读回，未与新DB做同一时点恢复。12:55账户/偏好和撤销token比较无生产增量缺失，只反映该时点。接续准确发布env/数据落位及冻结时恢复安排，别重跑文件打包覆盖现有归档；源有变化才另建新点。邮件凭据和B验收保持。

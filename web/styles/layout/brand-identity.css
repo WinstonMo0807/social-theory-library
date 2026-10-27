@@ -1,0 +1,63 @@
+/* User's 2026-10-27 brand board: compact horizontal and centered vertical. */
+.brand-identity { display:inline-flex; align-items:center; gap:11px; max-width:100%; color:#242424; text-align:left; vertical-align:middle; }
+.brand-identity-symbol { display:block; flex:none; width:54px; height:auto; aspect-ratio:230/154; overflow:visible; }
+.brand-identity-words { display:flex; flex-direction:column; gap:3px; min-width:0; border-left:1px solid currentColor; padding-left:11px; }
+.brand-identity-en { font:700 18px/1.1 "Times New Roman",Georgia,serif; white-space:nowrap; letter-spacing:-.02em; }
+.brand-identity-cn { font:700 22px/1.2 var(--serif); white-space:nowrap; letter-spacing:.05em; }
+.brand-identity[data-custom-brand] .brand-identity-words > span { white-space:normal; overflow-wrap:anywhere; }
+:root[data-theme=dark] .brand-identity, .reader.dark .brand-identity { color:#f7f4ee; }
+.site-header[data-ui-scope=stl4] .logo-link { min-width:0; }
+.site-header[data-ui-scope=stl4] .header-search { align-items:center; justify-content:center; width:36px; height:36px; flex:none; }
+.site-header[data-ui-scope=stl4] .header-search svg { width:20px; height:20px; }
+
+/* Restore the six home links at the reported 1066px width. */
+@media(min-width:821px) and (max-width:1120px) {
+  .site-header[data-stl-home=true] { grid-template-columns:auto minmax(0,1fr) auto; gap:18px; padding-inline:24px; }
+  .site-header[data-stl-home=true] .desktop-nav { display:flex; gap:18px; font-size:14px; }
+  .site-header[data-stl-home=true] .header-actions { gap:6px; }
+  .site-header[data-stl-home=true] .brand-identity { gap:9px; }
+  .site-header[data-stl-home=true] .brand-identity-symbol { width:46px; }
+  .site-header[data-stl-home=true] .brand-identity-en { font-size:16px; }
+  .site-header[data-stl-home=true] .brand-identity-cn { font-size:20px; }
+}
+@media(min-width:821px) and (max-width:960px) {
+  .site-header[data-stl-home=true] { grid-template-columns:1fr auto; row-gap:3px; padding-block:9px 0; }
+  .site-header[data-stl-home=true] .desktop-nav { grid-row:2; grid-column:1/-1; justify-content:space-between; }
+  .site-header[data-stl-home=true] .header-actions { grid-column:2; grid-row:1; }
+}
+
+.admin-shell.stl4-admin-shell .admin-logo { justify-content:center; padding:15px 12px; min-height:116px; }
+.admin-logo .brand-identity { flex-direction:column; gap:7px; text-align:center; }
+.admin-logo .brand-identity-symbol { width:62px; }
+.admin-logo .brand-identity-words { border:0; padding:0; gap:4px; align-items:center; }
+.admin-logo .brand-identity-en { font-size:16px; }
+.admin-logo .brand-identity-cn { font-size:22px; }
+.site-footer .brand-identity, .reader-footer-brand .brand-identity, .parallel-brand-footer .brand-identity { gap:9px; }
+.site-footer .brand-identity-symbol, .reader-footer-brand .brand-identity-symbol, .parallel-brand-footer .brand-identity-symbol { width:40px; }
+.site-footer .brand-identity-en, .reader-footer-brand .brand-identity-en, .parallel-brand-footer .brand-identity-en { font-size:15px; }
+.site-footer .brand-identity-cn, .reader-footer-brand .brand-identity-cn, .parallel-brand-footer .brand-identity-cn { font-size:18px; }
+.reader-footer-brand > .brand-identity { border:0; padding:0; }
+@media(max-width:900px) {
+  .admin-shell.stl4-admin-shell .stl4-mobile-brand { max-width:none; min-width:0; }
+  .stl4-mobile-brand .brand-identity { gap:7px; }
+  .stl4-mobile-brand .brand-identity-symbol { width:34px; }
+  .stl4-mobile-brand .brand-identity-words { padding-left:7px; }
+  .stl4-mobile-brand .brand-identity-en { font-size:12px; }
+  .stl4-mobile-brand .brand-identity-cn { font-size:16px; }
+}
+@media(max-width:700px) {
+  .site-header .brand-identity { gap:7px; }
+  .site-header .brand-identity-symbol { width:36px; }
+  .site-header .brand-identity-words { padding-left:7px; gap:3px; }
+  .site-header .brand-identity-en { font-size:13px; }
+  .site-header .brand-identity-cn { font-size:17px; }
+  .site-header[data-ui-scope=stl4] .header-actions { gap:2px; }
+}
+@media(max-width:380px) {
+  .site-header[data-ui-scope=stl4]:not([data-stl-explore=evidence]) { padding-inline:12px; gap:8px; }
+  .site-header .brand-identity { gap:6px; }
+  .site-header .brand-identity-symbol { width:28px; }
+  .site-header .brand-identity-words { padding-left:6px; }
+  .site-header .brand-identity-en { font-size:11px; }
+  .site-header .brand-identity-cn { font-size:15px; }
+}

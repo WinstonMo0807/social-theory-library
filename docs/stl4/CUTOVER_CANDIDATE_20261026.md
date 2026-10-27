@@ -1,5 +1,9 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+## 2026-10-27 13:35 候选前端更新
+
+仅内网Web更新为social-theory-library-web:stl4-preview-20261027-r86（afdb324c6bb04c51cdaa45626fc3cf98e94bb571a3ed7fb60676ad8dbf8720fb），处理用户品牌/导航/首页单期布局批注，恢复点brand-r86-recovery保留Web85。最终受限发布环境应选此新候选；12:55六层配置解析使用当时Web85，只证明覆盖结构与当时输入，不冒充Web86部署或最终发布env已核验。后端、数据、模型及公网未变，原备份时点与邮件凭据/最终批准限制保持。
+
 ## 2026-10-27 12:55 待批准发布覆盖、当前增量与文件归档
 
 `compose.stl4-cutover.yaml`为新准备的最末覆盖，仅用于public → cloudflare → discovery → docx-preview → stl4-deep之后；严禁与stl4-preview覆盖混用。没有应用到活动容器、生产、DNS或隧道。API/四worker/beat统一HTTPS地址和公共安全会话，RapidOCR服务地址一致；批注台继续留在独立内网，公网仍DENY。API保留public collectstatic，不执行migrate；进程预算按已运行候选1进程/2线程。队列、原600秒任务、既定模型/topK和深度240/250秒预算不变。
