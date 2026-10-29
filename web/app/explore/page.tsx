@@ -587,7 +587,7 @@ function SemanticExplorePage({
               {results.service_unavailable || results.fallback_reason === "api_unavailable"
                 ? results.notice
                 : results.fallback_used
-                  ? "服务端已确认本次查询使用关键词检索。下面的顺序不代表语义相关程度。"
+                  ? "当前使用关键词检索，排序不表示语义相关程度。"
                   : results.notice}
             </p>
             {query ? (
@@ -646,7 +646,7 @@ function SemanticExplorePage({
               ) : null}
               {topEvidence.length > 1 ? (
                 <section className="semantic-comparison">
-                  <header><span>3</span><div><h2>并排核对</h2><p>这里只并排呈现真实证据，不推断作者支持或反对某一立场。</p></div></header>
+                  <header><span>3</span><div><h2>并排核对</h2><p>请结合原文判断作者立场。</p></div></header>
                   <div>
                     {topEvidence.slice(0, 2).map((item) => (
                       <article key={item.id}>

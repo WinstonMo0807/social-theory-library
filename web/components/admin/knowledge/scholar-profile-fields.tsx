@@ -9,7 +9,7 @@ import type { PublishedEvidenceCuration } from "@/lib/api/evidence-curation.type
 import type { ScholarProfileSource } from "@/lib/api/scholars.types";
 import { EntityPicker, RepeatableField } from "../forms/workflow-fields";
 
-const sourceFields = { preferred_name: "规范名", original_name: "原名", birth_year: "出生年", death_year: "逝世年", biography: "传记", short_description: "页面简介", nationalities: "国别", occupations: "研究身份", affiliations: "机构", key_concerns: "关注领域" };
+const sourceFields = { preferred_name: "标准名称", original_name: "原名", birth_year: "出生年", death_year: "逝世年", biography: "传记", short_description: "页面简介", nationalities: "国别", occupations: "研究身份", affiliations: "机构", key_concerns: "关注领域" };
 export type ScholarProfileFields = { profileSources: ScholarProfileSource[]; nationalities: string[]; occupations: string[]; featuredSourceId: string; readingPathIds: string[] };
 export function ScholarProfileFieldsEditor({ profileId, value, onChange, section = "all" }: { section?: "all" | "identity" | "sources" | "paths"; profileId: string | null; value: ScholarProfileFields; onChange: (patch: Partial<ScholarProfileFields>) => void }) {
   const evidence = useApiResource<PublishedEvidenceCuration>(profileId && (section === "all" || section === "sources") ? `/catalog/evidence-curation/scholar/${profileId}/` : "", getServerSessionCredential());

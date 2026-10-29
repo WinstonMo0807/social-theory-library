@@ -25,7 +25,7 @@ const CHECK_COPY: Record<string, { label: string; description: string }> = {
 };
 const SCOPE_COPY: Record<string, { label: string; description: string }> = {
   private_materials: { label: "馆藏及本人选定材料", description: "在本馆藏资源范围内，并包含您选定的个人文献（不对外公开）。" },
-  public_library: { label: "仅馆藏资源", description: "仅使用本馆藏资源进行检查。" },
+  public_library: { label: "仅馆藏资源", description: "仅使用本馆藏资源检查。" },
 };
 
 function fileSize(bytes: number) {

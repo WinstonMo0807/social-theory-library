@@ -26,12 +26,12 @@ type PendingMerge={source:string;input:MergeInput};
 function pendingMerge(owner:string):PendingMerge|null{
   const raw=sessionStorage.getItem(mergeKey(owner));if(!raw)return null;
   const row=asRecord(JSON.parse(raw)),input=asRecord(row.input);
-  if(typeof row.source!=="string"||!isPersonId(row.source)||typeof input.target_person!=="string"||!isPersonId(input.target_person)||typeof input.idempotency_key!=="string"||!isPersonId(input.idempotency_key)||typeof input.fingerprint!=="string"||! /^[a-f0-9]{64}$/.test(input.fingerprint)||input.confirmed!==true)throw Error("原归并请求记录不完整，请保留本页并核对操作历史。");
+  if(typeof row.source!=="string"||!isPersonId(row.source)||typeof input.target_person!=="string"||!isPersonId(input.target_person)||typeof input.idempotency_key!=="string"||!isPersonId(input.idempotency_key)||typeof input.fingerprint!=="string"||! /^[a-f0-9]{64}$/.test(input.fingerprint)||input.confirmed!==true)throw Error("原合并请求记录不完整，请保留本页并核对操作历史。");
   return {source:row.source,input:{target_person:input.target_person,fingerprint:input.fingerprint,idempotency_key:input.idempotency_key,confirmed:true}};
 }
 function retainMerge(owner:string,source:string,input:MergeInput){
   const previous=pendingMerge(owner);
-  if(previous&&(previous.source!==source||previous.input.idempotency_key!==input.idempotency_key))throw Error("另一次归并尚未确认，请先使用上方的原请求核对入口。");
+  if(previous&&(previous.source!==source||previous.input.idempotency_key!==input.idempotency_key))throw Error("另一次合并尚未确认，请先使用上方的原请求核对入口。");
   sessionStorage.setItem(mergeKey(owner),JSON.stringify({source,input}));window.dispatchEvent(new Event("stl-person-merge-request"));
 }
 function clearMerge(owner:string,id:string){
@@ -46,16 +46,16 @@ export function PersonMergeRecovery({owner}:{owner:string}){
   async function recover(){if(!original||sending.current)return;sending.current=true;setBusy(true);setMessage("");try{
     const result=await mergePerson(original.source,original.input,getServerSessionCredential()??"",owner);
     if(!active.current)return;
-    if(result.source_person_id!==original.source||result.target_person_id!==original.input.target_person)throw Error("归并回执与原人物不一致，请保留请求继续核对。");
+    if(result.source_person_id!==original.source||result.target_person_id!==original.input.target_person)throw Error("合并操作结果与原人物不一致，请保留请求继续核对。");
     clearMerge(owner,original.input.idempotency_key);router.push(personPage(original.source,"",result.id));router.refresh();
   }catch(reason){if(!active.current)return;if(mergeRejected(reason)){try{clearMerge(owner,original.input.idempotency_key);}catch{setMessage("请求已被拒绝，浏览器暂不能清除原编号，请核对操作记录。");return;}}setMessage(reason instanceof Error?reason.message:"原请求暂未确认。");}finally{sending.current=false;if(active.current)setBusy(false);}}
   if(!original&&!message)return null;
-  return <aside className={styles.notice} role="status"><strong>人物归并结果核对</strong>{original?<><p>上次确认的归并尚未收到完整回执。只保留人物编号、核对版本和原请求号；继续时使用同一请求，已执行的操作不会再次归并。</p><button type="button" disabled={busy} onClick={()=>void recover()}>{busy?"正在核对…":"按原编号核对并继续"}</button></>:null}{message?<p>{message}</p>:null}</aside>;
+  return <aside className={styles.notice} role="status"><strong>人物合并结果核对</strong>{original?<><p>上次确认的合并尚未收到完整操作结果。只保留人物编号、核对版本和原请求号；继续时使用同一请求，已执行的操作不会再次合并。</p><button type="button" disabled={busy} onClick={()=>void recover()}>{busy?"正在核对…":"按原编号核对并继续"}</button></>:null}{message?<p>{message}</p>:null}</aside>;
 }
 
 const statusLabels: Record<string, string> = { verified: "已核验", draft: "草稿", needs_review: "待核验", merged: "已合并", archived: "已归档", rejected: "未采用" };
 const fieldLabels: Record<string, string> = {
-  id: "记录编号", person_id: "人物编号", scholar_id: "学者档案编号", preferred_name: "规范名称", original_name: "原文名称",
+  id: "记录编号", person_id: "人物编号", scholar_id: "学者档案编号", preferred_name: "标准名称称", original_name: "原文名称",
   birth_year: "出生年", death_year: "逝世年", authority_status: "核验状态", biography: "人物介绍", aliases: "原始别名",
   external_ids: "外部标识符", short_description: "档案简介", slug: "页面名称", name: "名称", title: "标题", term: "词条",
   role: "署名职责", approved: "已确认", is_verified: "已核验", language: "语言", variant_type: "名称类型", source_kind: "来源类型",
@@ -140,7 +140,7 @@ function PreviewFacts({ preview }: { preview: PersonPreview }) {
   const source = asRecord(preview.source), target = asRecord(preview.target);
   return <>
     <div className={styles.identityCompare}>
-      {([{label:"候选 A",note:"保留人物",person:target,rows:"target_rows"},{label:"候选 B",note:"待归并记录",person:source,rows:"source_rows"}] as const).map(({label,note,person,rows},index)=><section key={label} className={index?styles.compareSource:styles.compareTarget}><header><h3>{label}</h3><span>{note}</span></header><div className={styles.compareIdentity}><AuthorityPortrait id={String(person.id)} name={textValue(person.preferred_name)}/><dl className={styles.fields}>{["preferred_name","original_name"].map(field=><div key={field}><dt>{fieldLabels[field]}</dt><dd>{textValue(person[field])}</dd></div>)}<div><dt>常用异名</dt><dd className={styles.aliases}>{preview.references.filter(group=>asRecord(group).model==="catalog.PersonNameVariant").flatMap(group=>{const values=asRecord(group)[rows];return Array.isArray(values)?values:[];}).map((row,at)=><details key={at}><summary>{textValue(asRecord(row).name)}</summary><p>{asRecord(row).is_verified?"已核验":"待核验"} · {textValue(asRecord(row).source_note)}</p></details>)}</dd></div></dl></div><details className={styles.personDetails} open><summary>展开详细信息 <ChevronDown size={12}/></summary><dl className={styles.fields}>{["birth_year","death_year","country_region","biography","external_ids"].map(field=><div key={field}><dt>{field==="country_region"?"国别／地区":fieldLabels[field]}</dt><dd>{textValue(person[field])}</dd></div>)}</dl></details></section>)}
+      {([{label:"候选 A",note:"保留人物",person:target,rows:"target_rows"},{label:"候选 B",note:"待合并记录",person:source,rows:"source_rows"}] as const).map(({label,note,person,rows},index)=><section key={label} className={index?styles.compareSource:styles.compareTarget}><header><h3>{label}</h3><span>{note}</span></header><div className={styles.compareIdentity}><AuthorityPortrait id={String(person.id)} name={textValue(person.preferred_name)}/><dl className={styles.fields}>{["preferred_name","original_name"].map(field=><div key={field}><dt>{fieldLabels[field]}</dt><dd>{textValue(person[field])}</dd></div>)}<div><dt>常用异名</dt><dd className={styles.aliases}>{preview.references.filter(group=>asRecord(group).model==="catalog.PersonNameVariant").flatMap(group=>{const values=asRecord(group)[rows];return Array.isArray(values)?values:[];}).map((row,at)=><details key={at}><summary>{textValue(asRecord(row).name)}</summary><p>{asRecord(row).is_verified?"已核验":"待核验"} · {textValue(asRecord(row).source_note)}</p></details>)}</dd></div></dl></div><details className={styles.personDetails} open><summary>展开详细信息 <ChevronDown size={12}/></summary><dl className={styles.fields}>{["birth_year","death_year","country_region","biography","external_ids"].map(field=><div key={field}><dt>{field==="country_region"?"国别／地区":fieldLabels[field]}</dt><dd>{textValue(person[field])}</dd></div>)}</dl></details></section>)}
       <aside className={styles.compareResult}><h3>比对结果</h3><strong>{preview.identity_conflicts.length?"身份信息存在差异":"当前字段未发现明确冲突"}</strong>{preview.identity_conflicts.map((item,index)=><p key={index}>{fieldLabels[textValue(asRecord(item).field)]||textValue(asRecord(item).field)}：{textValue(asRecord(item).source)} / {textValue(asRecord(item).target)}</p>)}<p>请结合原始署名与来源核对，名称相近不能单独证明同一身份。</p><strong>保留方向</strong><p>候选 B 的无冲突引用归入候选 A。双方原始基础资料和历史记录保留。</p></aside>
     </div>
     <p>涉及 {preview.affected_works.length} 部作品、{preview.affected_edition_count} 个版本和 {preview.publication_revision_count} 条历史公开修订。历史修订不会被覆盖。</p>
@@ -161,13 +161,13 @@ function PreviewFacts({ preview }: { preview: PersonPreview }) {
 }
 
 export function BusinessImpact({ impact }: { impact: PersonBusinessImpact }) {
-  return <section aria-label="作品职责与公开位置"><h3>作品、职责与公开位置</h3><p>只归并人物身份；下列作者、译者及编者职责保持不变。相似名称不等于同一人物。</p><ul className={styles.rows}>{impact.editions.map((row) => <li key={row.edition_id}><strong>{row.title}</strong><span>{row.edition_label}</span><p>{row.roles.map((role) => `${role.name}：${role.role_label}${role.approved ? "（已确认）" : "（待确认）"}`).join("；") || "此版本通过其他规范关系受到影响"}</p><p>{row.publication.detail}</p><div className={styles.actions}><Link prefetch={false} href={row.editor_url}>核对当前版本与署名</Link><Link prefetch={false} href={row.publication_url}>查看发布更新</Link>{row.publication.public_url ? <Link prefetch={false} href={row.publication.public_url} target="_blank">核验公开位置</Link> : null}</div></li>)}</ul>{!impact.editions.length ? <p>没有需要更新的作品版本；人物和学者关系仍按影响预览处理。</p> : null}
+  return <section aria-label="作品职责与公开位置"><h3>作品、职责与公开位置</h3><p>只合并人物身份；下列作者、译者及编者职责保持不变。相似名称不等于同一人物。</p><ul className={styles.rows}>{impact.editions.map((row) => <li key={row.edition_id}><strong>{row.title}</strong><span>{row.edition_label}</span><p>{row.roles.map((role) => `${role.name}：${role.role_label}${role.approved ? "（已确认）" : "（待确认）"}`).join("；") || "此版本通过其他条目关系受到影响"}</p><p>{row.publication.detail}</p><div className={styles.actions}><Link prefetch={false} href={row.editor_url}>核对当前版本与署名</Link><Link prefetch={false} href={row.publication_url}>查看发布更新</Link>{row.publication.public_url ? <Link prefetch={false} href={row.publication.public_url} target="_blank">核验公开位置</Link> : null}</div></li>)}</ul>{!impact.editions.length ? <p>没有需要更新的作品版本；人物和学者关系仍按影响预览处理。</p> : null}
     {impact.events.length ? <details open><summary>公开更新的实际处理结果</summary>{impact.events.map((event) => <article key={event.id}><strong>{event.title} · {event.status_label}</strong><p>{event.deliveries.map((row) => `${row.label}：${row.status}（来源修订${row.source_revision}）`).join("；")}</p>{event.error_code ? <p>异常 {event.error_code}，请从原发布记录检查并恢复。</p> : null}<Link prefetch={false} href={event.inspect_url}>查看关联处理</Link><small> 事件 {event.id}</small></article>)}</details> : null}</section>;
 }
 
 export function PreviewLoader({ sourceId, targetId, credential }: { sourceId: string; targetId: string; credential: string }) {
   const resource = useApiResource<PersonPreview>(personApi.preview(sourceId, targetId), credential);
-  return <section className={`admin-panel ${styles.panel} ${styles.mergePreview}`} aria-label="合并影响预览"><h2>归并候选比较与影响</h2>
+  return <section className={`admin-panel ${styles.panel} ${styles.mergePreview}`} aria-label="合并影响预览"><h2>合并候选比较与影响</h2>
     {resource.error ? <Failure message={resource.error} retry={resource.retry} label="重新预览" /> : resource.loading ? <p role="status">正在核对双方资料与关联…</p> : resource.data ? <MergeReview key={resource.data.fingerprint} preview={resource.data} sourceId={sourceId} targetId={targetId} credential={credential} refresh={resource.retry} /> : null}
   </section>;
 }
@@ -186,14 +186,14 @@ function MergeReview({ preview, sourceId, targetId, credential, refresh }: { pre
   async function submit() {
     if (sending.current || !eligible || (!confirm && !attempt.current)) return;
     const input = attempt.current ?? { target_person: targetId, fingerprint: preview.fingerprint, confirmed: true, idempotency_key: createRequestKey() };
-    try { retainMerge(String(user?.id||""),sourceId,input); } catch(reason) { setFailure(reason instanceof Error?reason.message:"无法保存原归并请求，尚未提交。"); return; }
+    try { retainMerge(String(user?.id||""),sourceId,input); } catch(reason) { setFailure(reason instanceof Error?reason.message:"无法保存原合并请求，尚未提交。"); return; }
     attempt.current = input;
     sending.current = true;
     setBusy(true); setFailure("");
     try {
       const result = await mergePerson(sourceId, input, credential, String(user?.id || ""));
       if (!active.current) return;
-      if(result.source_person_id!==sourceId||result.target_person_id!==targetId)throw Error("归并回执与当前人物不一致，请查回原请求。");
+      if(result.source_person_id!==sourceId||result.target_person_id!==targetId)throw Error("合并操作结果与当前人物不一致，请查询原请求。");
       clearMerge(String(user?.id||""),input.idempotency_key);
       router.replace(personPage(sourceId, "", result.id));
     } catch (reason) {
@@ -201,7 +201,7 @@ function MergeReview({ preview, sourceId, targetId, credential, refresh }: { pre
       // An HTTP error after a committed write or a lost response is not proof
       // of failure. Reuse the exact body/key until the outcome is known.
       const knownRejection = mergeRejected(reason);
-      if(knownRejection){try{clearMerge(String(user?.id||""),input.idempotency_key);attempt.current=null;}catch{setFailure("归并被拒绝，但浏览器暂不能清除原请求，请保留本页。");setUncertain(true);return;}}
+      if(knownRejection){try{clearMerge(String(user?.id||""),input.idempotency_key);attempt.current=null;}catch{setFailure("合并被拒绝，但浏览器暂不能清除原请求，请保留本页。");setUncertain(true);return;}}
       setUncertain(!knownRejection);
       setFailure(reason instanceof Error ? reason.message : "未收到完整操作结果。");
       setConfirm(false);

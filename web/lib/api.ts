@@ -339,7 +339,7 @@ export async function apiUpload<T>(
 ): Promise<T> {
   if (typeof window === "undefined") throw new Error("上传只能在浏览器中进行。");
   return new Promise<T>((resolve, reject) => {
-    if (options.signal?.aborted) { reject(new ApiRequestError("上传传输已取消，服务器可能已接收请求，请先查回结果。", 0)); return; }
+    if (options.signal?.aborted) { reject(new ApiRequestError("上传传输已取消，服务器可能已接收请求，请先查询结果。", 0)); return; }
     const request = new XMLHttpRequest();
     request.open("POST", apiEndpoint(path), true);
     request.withCredentials = true;
@@ -360,12 +360,12 @@ export async function apiUpload<T>(
           : 0,
       });
     };
-    request.onerror = () => { cleanup(); reject(new ApiRequestError("上传连接中断，服务器可能已接收请求，请先查回结果。", 0)); };
-    request.onabort = () => { cleanup(); reject(new ApiRequestError("上传传输已取消，服务器可能已接收请求，请先查回结果。", 0)); };
-    request.ontimeout = () => { cleanup(); reject(new ApiRequestError("上传等待超时，服务器可能已接收请求，请先查回结果。", 0)); };
+    request.onerror = () => { cleanup(); reject(new ApiRequestError("上传连接中断，服务器可能已接收请求，请先查询结果。", 0)); };
+    request.onabort = () => { cleanup(); reject(new ApiRequestError("上传传输已取消，服务器可能已接收请求，请先查询结果。", 0)); };
+    request.ontimeout = () => { cleanup(); reject(new ApiRequestError("上传等待超时，服务器可能已接收请求，请先查询结果。", 0)); };
     request.onload = async () => {
       cleanup();
-      if (options.signal?.aborted) { reject(new ApiRequestError("上传传输已取消，请先查回服务器结果。", 0)); return; }
+      if (options.signal?.aborted) { reject(new ApiRequestError("上传传输已取消，请先查询服务器结果。", 0)); return; }
       if (request.status === 401 && token && allowRefresh) {
         try {
           const nextToken = await refreshAccessToken();

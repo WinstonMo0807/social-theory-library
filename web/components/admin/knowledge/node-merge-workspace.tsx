@@ -39,7 +39,7 @@ export function NodeMergeWorkspace({ owner, nodeId, disabled, onChanged }: {
   async function act(work: () => Promise<void>) {
     if (acting.current || composing.current) return;
     acting.current = true; setBusy(true); setError("");
-    try { await work(); } catch (reason) { if (!life.current?.signal.aborted) setError(reason instanceof Error ? reason.message : "操作结果尚未确认，请查回原记录。"); }
+    try { await work(); } catch (reason) { if (!life.current?.signal.aborted) setError(reason instanceof Error ? reason.message : "操作结果尚未确认，请查询原记录。"); }
     finally { acting.current = false; if (!life.current?.signal.aborted) setBusy(false); }
   }
   function close() { if (!pending && !composing.current) { setOpen(false); setConfirmed(false); } }
@@ -89,7 +89,7 @@ export function NodeMergeWorkspace({ owner, nodeId, disabled, onChanged }: {
   const modal = <Dialog open={open || Boolean(command.recovery)} onRequestClose={close} aria-labelledby={titleId} className={`${styles.mergeDialog} ${styles.mergeWorkspace}`} onCompositionStartCapture={() => { composing.current = true; }} onCompositionEndCapture={() => { composing.current = false; }}>
     <header><h2 id={titleId}>重复理论或概念的合并与恢复</h2><button type="button" disabled={pending} onClick={close}>关闭</button></header>
     {notice ? <p role="status">{notice}</p> : null}{error || command.error ? <p role="alert">{error || command.error}</p> : null}
-    {command.recovery ? <div><p>上次合并结果尚未核对，先查回原请求，再继续编辑。</p><button type="button" disabled={busy} onClick={() => void recover()}>查回原合并请求</button><button type="button" disabled={busy} onClick={() => void recover(true)}>停止尚未执行的请求</button></div> : null}
+    {command.recovery ? <div><p>上次合并结果尚未核对，先查询原请求，再继续编辑。</p><button type="button" disabled={busy} onClick={() => void recover()}>查询原合并请求</button><button type="button" disabled={busy} onClick={() => void recover(true)}>停止尚未执行的请求</button></div> : null}
     {knownId ? <p role="status">已保留原记录编号。<button type="button" disabled={pending} onClick={() => void act(async () => { await readRecord(knownId); await onChanged(); })}>重新读取原合并记录</button></p> : null}
     <fieldset disabled={pending || Boolean(knownId) || !command.ready} style={{ border: 0, padding: 0 }}>
       <button type="button" onClick={() => void readHistory()}>读取合并历史</button>

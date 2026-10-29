@@ -86,7 +86,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
 
       <div className="stl4-catalog-layout">
         <aside className="stl4-catalog-sidebar" aria-label="馆藏筛选">
-          <div className="stl4-catalog-filter-title"><h2>筛选条件</h2><Link href={clear}><Undo2 size={14} />删除全部</Link></div>
+          <div className="stl4-catalog-filter-title"><h2>筛选条件</h2><Link href={clear}><Undo2 size={14} />清除筛选</Link></div>
           {activeFilters.length || query ? <div className="stl4-catalog-selected"><header>当前筛选<Link href={clear}>清除全部</Link></header><CatalogFilterChips params={params} facets={facets} /></div> : null}
           <form onSubmit={submitFilters} action="/explore/original" key={`desktop:${key}`}>
             <CatalogFilterFields params={params} facets={facets} />

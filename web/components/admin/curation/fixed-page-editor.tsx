@@ -100,7 +100,7 @@ export function FixedPageEditor({ sections, activeSection, onSectionChange, onPr
     <aside className="fixed-editor-panel"><nav className="fixed-editor-sections" aria-label="编辑区域">{sections.map(section => <button type="button" key={section.id} aria-current={activeSection === section.id ? "true" : undefined} onClick={() => select(section.id)}>{section.label}</button>)}</nav>
       <div className="fixed-editor-fields" ref={fieldRef}><h2>{sections.find(section => section.id === activeSection)?.label}</h2><p>{sections.find(section => section.id === activeSection)?.description}</p>{fields}</div>{toolbar}
     </aside>
-    <section className="fixed-editor-preview" aria-label="当前输入实时预览"><header><strong>实时预览</strong><span>{dirty ? "有未保存修改 · 仅当前浏览器可见" : "已保存草稿 · 尚不代表公开"}</span>{previewHref ? dirty ? <span>保存后可打开完整预览</span> : <a href={previewHref} target="_blank" rel="noopener">完整预览 ↗</a> : null}</header>
+    <section className="fixed-editor-preview" aria-label="当前输入实时预览"><header><strong>实时预览</strong><span>{dirty ? "有未保存修改 · 仅当前浏览器可见" : "草稿已保存，尚未发布"}</span>{previewHref ? dirty ? <span>保存后可打开完整预览</span> : <a href={previewHref} target="_blank" rel="noopener">完整预览 ↗</a> : null}</header>
       <PreviewViewport><div ref={element => {
         previewRef.current = element;
         element?.querySelectorAll<HTMLElement>("[data-edit-section]").forEach(section => {

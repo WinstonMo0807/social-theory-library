@@ -94,12 +94,12 @@ function EditionCoverEditorState({ editionId, workId, documentType, token, canEd
   </article>;
   return <section className={styles.editor} aria-label="当前版本封面">
     <header className={styles.header}><h3>封面（可选）</h3><button type="button" disabled={Boolean(busy)} onClick={() => void reload().catch((error) => { setFailed(true); setMessage(String(error.message)); })}>刷新封面</button></header>
-    <p>PDF入队后会先校验文件并准备候选，不用等全文OCR。候选仅供选择，不会自动替换你选好的封面。{!["book", "journal_issue"].includes(documentType) ? "论文等没有独立封面时，可以直接保持默认样式。" : "没有合适封面也可正常上架。"}</p>
+    <p>上传 PDF 后即可选择封面，无需等待全文识别；已选封面保持不变。{!["book", "journal_issue"].includes(documentType) ? "论文等没有独立封面时，可以直接保持默认样式。" : "没有合适封面也可正常上架。"}</p>
     {message ? <p className={styles.message} role={failed ? "alert" : "status"}>{message}</p> : null}
     <div className={styles.current}><div>{data?.image_url ? <CoverImage url={data.image_url} alt="当前保存的封面" token={token} /> : <div className={styles.placeholder}>默认样式<br />按题名显示，无需封面图片</div>}</div><div>
       <p>{data?.has_unpublished_cover ? "已保存封面修改，正式发布后读者才会看到。" : data?.is_default ? "当前使用默认样式。" : data ? "当前保存的封面" : "正在读取当前版本…"}</p>
       <label><span>上传封面图片</span><input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={locked} onChange={(event) => { setFile(event.target.files?.[0] ?? null); retry.current = null; }} /></label>
-      <p>支持 JPEG、PNG、WebP，最多12 MB。这里只保存封面，不会发布书目。</p>
+      <p>支持 JPEG、PNG、WebP，最大 12 MB。保存封面后仍需发布书目。</p>
       <div className={styles.actions}><button type="button" disabled={locked || !file} onClick={() => void command("upload")}>{busy === "upload" ? "正在保存封面…" : "上传并保存封面"}</button><button type="button" disabled={locked} onClick={() => void command("default")}>使用默认样式，不选封面</button><Link href={`/admin/media?edition=${encodeURIComponent(editionId)}&slot=cover`}>从媒体库选封面</Link></div>
     </div></div>
     <h4>系统推荐的PDF页面</h4>

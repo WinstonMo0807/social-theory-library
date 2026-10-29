@@ -40,7 +40,7 @@ export function topicCuration(value: TopicCurationFields): Record<string, unknow
 const choices = [
   ["questions", "questionNodeIds", "核心问题"],
   ["questions", "debateNodeIds", "相关争论"],
-  ["concepts", "conceptNodeIds", "规范概念条目"],
+  ["concepts", "conceptNodeIds", "概念条目"],
   ["works", "editionIds", "关联作品"],
   ["works", "foundationalEditionIds", "基础阅读版本"],
   ["works", "disputedEditionIds", "争议阅读版本"],

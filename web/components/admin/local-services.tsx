@@ -71,11 +71,11 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
       const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(60000)]);
       const receipt=await withPrivateOwner(owner,()=>apiRequest<CheckReceipt>(`${path}receipts/${value.request_id}/`,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner},...(cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{})},getServerSessionCredential()),signal);
       if(controller.signal.aborted)return;
-      if(receipt.request_id!==value.request_id||receipt.actor_id!==owner)throw Error("回执与当前账户或原编号不一致，请保留记录。");
+      if(receipt.request_id!==value.request_id||receipt.actor_id!==owner)throw Error("操作结果与当前账户或原编号不一致，请保留记录。");
       if(receipt.state==="applied"){
         const result=receipt.observation;
-        if(!result||result.id!==value.request_id||result.service_id!==value.service_id||result.configuration_version!==value.configuration_version)throw Error("原检查回执与已确认配置不一致，请保留编号并核对历史。");
-        setMessage(`${cancel?"原检查已完成，取消不会撤销它。":"已查回原检查结果。"}${result.detail} 此结果对应原配置与检查时间。`);
+        if(!result||result.id!==value.request_id||result.service_id!==value.service_id||result.configuration_version!==value.configuration_version)throw Error("原检查操作结果与已确认配置不一致，请保留编号并核对历史。");
+        setMessage(`${cancel?"原检查已完成，取消不会撤销它。":"已查询原检查结果。"}${result.detail} 此结果对应原配置与检查时间。`);
       }else if(receipt.state==="cancelled")setMessage("此编号尚未执行的检查已取消，迟到请求不会调用服务。");
       else throw Error("原检查状态不能确认，请保留编号。");
       preserve(null);setCancelOpen(false);resource.reload();
@@ -108,14 +108,14 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
           const result=await withPrivateOwner(owner,()=>apiRequest<Observation>(path+"check/",{method:"POST",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},
             body:JSON.stringify(command)},getServerSessionCredential()),signal);
           if(controller.signal.aborted)throw new DOMException("Session changed","AbortError");
-          if(result.id!==command.request_id||result.service_id!==command.service_id||result.configuration_version!==command.configuration_version)throw Error("检查回执与原编号或配置不一致，请查回原结果。");
+          if(result.id!==command.request_id||result.service_id!==command.service_id||result.configuration_version!==command.configuration_version)throw Error("检查操作结果与原编号或配置不一致，请查询原结果。");
           preserve(null);
         }
         return load(path,AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]));
       });
       if(!controller.signal.aborted)setMessage(stop.current?"已停止后续检查，当前已发出的检查结果保留。":"检查记录已更新。模型与业务效果仍以正式验收为准。");
     } catch(reason) {
-      if(!controller.signal.aborted)setMessage((reason instanceof Error?reason.message:"检查暂未完成。")+" 如有未确认编号，请先查回或取消；不会自动再次调用服务。");
+      if(!controller.signal.aborted)setMessage((reason instanceof Error?reason.message:"检查暂未完成。")+" 如有未确认编号，请先查询或取消；不会自动再次调用服务。");
     } finally {if(!controller.signal.aborted){busy.current=false;setChecking("");}}
   }
 
@@ -127,8 +127,8 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
     {resource.error?<div className={styles.error} role="alert"><CircleAlert size={18}/><p>{resource.error}</p><button onClick={()=>resource.reload()}>重新读取</button></div>:null}
     {message?<p className={styles.message} role="status">{message}</p>:null}
     {recordError?<p className={styles.error} role="alert">{recordError}</p>:null}
-    {unknown?<aside className={styles.notice}><CircleAlert size={18}/><div><strong>上次服务检查尚未确认</strong><p>服务标识 {unknown.service_id} · 请求编号 {unknown.request_id}</p><p>刷新后不会自动继续检查。查回只读取原结果；未查到仍可能在途，取消只阻止尚未执行的原请求。</p><div className={styles.actions}><button disabled={!!checking||reconciling} onClick={()=>void readReceipt()}>查回原结果</button><button disabled={!!checking||reconciling} onClick={()=>setCancelOpen(true)}>取消未执行请求</button></div></div></aside>:null}
-    <ConfirmDialog open={cancelOpen} title="取消尚未执行的服务检查" description="服务端会先查回原编号。已完成的检查保留原结果；尚未执行的检查将登记取消，迟到请求不会调用服务。" details={message?[message]:[]} confirmLabel={reconciling?"正在核对…":"取消未执行检查"} pending={reconciling} onCancel={()=>{if(!reconciling)setCancelOpen(false);}} onConfirm={()=>void readReceipt(true)}/>
+    {unknown?<aside className={styles.notice}><CircleAlert size={18}/><div><strong>上次服务检查尚未确认</strong><p>服务标识 {unknown.service_id} · 请求编号 {unknown.request_id}</p><p>刷新后不会自动继续检查。查询只读取原结果；未查到仍可能在途，取消只阻止尚未执行的原请求。</p><div className={styles.actions}><button disabled={!!checking||reconciling} onClick={()=>void readReceipt()}>查询原结果</button><button disabled={!!checking||reconciling} onClick={()=>setCancelOpen(true)}>取消未执行请求</button></div></div></aside>:null}
+    <ConfirmDialog open={cancelOpen} title="取消尚未执行的服务检查" description="服务端会先查询原编号。已完成的检查保留原结果；尚未执行的检查将登记取消，迟到请求不会调用服务。" details={message?[message]:[]} confirmLabel={reconciling?"正在核对…":"取消未执行检查"} pending={reconciling} onCancel={()=>{if(!reconciling)setCancelOpen(false);}} onConfirm={()=>void readReceipt(true)}/>
 
     {data&&selected&&!current?<p className={styles.message} role="alert">原链接中的服务已不在当前配置中。请从服务列表重新选择，未自动改为检查其他服务。</p>:null}
     {resource.loading?<div className={styles.empty} role="status"><RefreshCw size={22}/><p>正在读取服务配置与已有检查记录</p></div>:null}

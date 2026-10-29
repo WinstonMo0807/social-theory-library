@@ -152,7 +152,7 @@ export function TheoryDirectory({
         {failure ? <div className={styles.resultState} role="alert">
           <TriangleAlert size={31} strokeWidth={1.3} aria-hidden="true" />
           <h3>{failure === "unavailable" ? "目录来源当前不可用" : failure === "invalid" ? "目录条件无法识别" : "目录暂时无法加载"}</h3>
-          <p>{failure === "unavailable" ? "所选学科、上级条目或页码当前不可用。可以返回现有公开目录。" : failure === "invalid" ? "请清除筛选，再从公开目录重新选择。" : "请稍后重试。读取错误不会被当作没有匹配结果。"}</p>
+          <p>{failure === "unavailable" ? "所选学科、上级条目或页码当前不可用。可以返回现有公开目录。" : failure === "invalid" ? "请清除筛选，再从公开目录重新选择。" : "请稍后重试。"}</p>
           <div><button type="button" onClick={retry} disabled={pending} className={styles.secondary}>重新加载</button><Link className={styles.secondary} href="/theories/directory">显示已有内容</Link></div>
         </div> : directory?.count === 0 ? <div className={styles.resultState} role="status">
           <FileQuestion size={34} strokeWidth={1.3} aria-hidden="true" /><h3>没有匹配结果</h3>

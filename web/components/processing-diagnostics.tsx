@@ -192,10 +192,10 @@ export function ProcessingDiagnosticsPanel({
   const description = view === "overview"
     ? "从持久化 revision、任务需求和脱敏 Provider 配置判断下游是否真的可用。"
     : view === "ai-models"
-      ? "查看模型 profile、Provider 状态、Prompt 和真实人工接受表现。Secret 不会返回前端。"
+      ? "查看模型配置、服务状态、提示词和人工采纳记录。"
       : view === "workers"
         ? "查看 capability 缺口、executor heartbeat、当前负载和可领取 backlog。"
-        : "比较 source revision 与 projected revision，定位落后或失败的公开投影。";
+        : "比较内容版本与索引版本，查找尚未同步的内容。";
   const titleId = `processing-diagnostics-title-${view}`;
 
   return (
@@ -216,7 +216,7 @@ export function ProcessingDiagnosticsPanel({
       </header>
 
       {view === "overview" ? <div className="processing-diagnostics-summary" aria-label="处理中心诊断摘要">
-        <div><DatabaseZap size={17} /><span>落后投影</span><strong>{diagnostics.summary.stale_projection_count}</strong></div>
+        <div><DatabaseZap size={17} /><span>待同步索引</span><strong>{diagnostics.summary.stale_projection_count}</strong></div>
         <div><Cpu size={17} /><span>缺少能力</span><strong>{diagnostics.summary.missing_capability_count}</strong></div>
         <div><ServerCog size={17} /><span>Provider 降级</span><strong>{diagnostics.summary.provider_degradation_count}</strong></div>
         <div>{diagnostics.summary.blocking_count ? <AlertTriangle size={17} /> : <CheckCircle2 size={17} />}<span>发布阻断</span><strong>{diagnostics.summary.blocking_count}</strong></div>
@@ -328,7 +328,7 @@ export function ProcessingDiagnosticsPanel({
 
       {view === "ai-models" ? <div className="processing-runtime-inventory">
         <p className="processing-configuration-boundary" role="note">
-          此处只显示脱敏状态和可安全修改的入口。Provider Secret、AI endpoint 与运行时敏感配置需由 System Owner 在服务器环境或受保护设置中完成，页面不会读取或回显密钥。
+          模型地址和密钥由系统所有者在服务器或受保护设置中配置。此处仅显示配置状态。
         </p>
         <details id="processing-ai-runtime" open>
           <summary>AI Runtime profiles <strong>{diagnostics.provider_profiles.length}</strong></summary>

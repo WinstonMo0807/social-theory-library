@@ -68,10 +68,10 @@ export function KnowledgeNodePublicView({
             {section !== "overview" ? <h2>{({timeline: "流派脉络", concepts: "概念与人物", works: "代表作品与阅读路径", evidence: "相关原文", relations: "学术关系", propositions: "基本命题与理论边界"} as Record<string, string>)[section]}</h2> : null}
             {node.canonical_name_en ? <h2>{node.canonical_name_en}</h2> : null}
             {disciplineLinks.length ? <div className="theory-discipline-pills" data-module-id="theory-disciplines">{disciplineLinks.map((discipline, index) => discipline ? <Link className={index === 0 ? "primary" : ""} href={`/theories/disciplines/${discipline.slug}`} key={discipline.id}>{discipline.name}</Link> : null)}</div> : null}
-            {subdisciplines.length ? <div className="theory-discipline-pills" data-module-id="theory-disciplines" aria-label="规范子学科">
+            {subdisciplines.length ? <div className="theory-discipline-pills" data-module-id="theory-disciplines" aria-label="子学科">
               {subdisciplines.map((item) => <Link href={`/subdisciplines/${item.slug}`} key={`subdiscipline-${item.id}`}>{item.name}</Link>)}
             </div> : null}
-            {topics.length ? <div className="theory-discipline-pills" data-module-id="theory-topics" aria-label="规范研究主题">
+            {topics.length ? <div className="theory-discipline-pills" data-module-id="theory-topics" aria-label="研究主题">
               {topics.map((item) => <Link href={`/topics/${item.slug}`} key={`topic-${item.id}`}>{item.name}</Link>)}
             </div> : null}
             {node.definition || node.summary ? <p className="definition" data-module-id="theory-definition">{node.definition || node.summary}</p> : null}
@@ -90,7 +90,7 @@ export function KnowledgeNodePublicView({
           </div>
         </section>
 
-        {section === "overview" && node.node_type === "theory_tradition" ? <section className="knowledge-section"><TheorySectionHeading title={`深入了解${node.canonical_name_zh}`} /><div className="knowledge-three-grid">{[{id: "timeline", title: "流派脉络", text: "沿真实事件与来源，了解形成与发展。"}, {id: "concepts", title: "概念与人物", text: "从核心概念、相关人物与学术关系继续。"}, {id: "works", title: "代表作品与阅读路径", text: "回到馆藏文献，沿策展路径深入阅读。"}].map(item => <Link className="knowledge-entry-card" href={`/theories/nodes/${slug}/${item.id}`} key={item.id}><TheoryBanner image={node.cover_url} media={node.cover_media}/><h2>{item.title}</h2><p>{item.text}</p><span>进入页面 <ArrowRight size={16}/></span></Link>)}</div></section> : null}
+        {section === "overview" && node.node_type === "theory_tradition" ? <section className="knowledge-section"><TheorySectionHeading title={`深入了解${node.canonical_name_zh}`} /><div className="knowledge-three-grid">{[{id: "timeline", title: "流派脉络", text: "查看发展历程与文献来源。"}, {id: "concepts", title: "概念与人物", text: "从核心概念、相关人物与学术关系继续。"}, {id: "works", title: "代表作品与阅读路径", text: "回到馆藏文献，沿策展路径深入阅读。"}].map(item => <Link className="knowledge-entry-card" href={`/theories/nodes/${slug}/${item.id}`} key={item.id}><TheoryBanner image={node.cover_url} media={node.cover_media}/><h2>{item.title}</h2><p>{item.text}</p><span>进入页面 <ArrowRight size={16}/></span></Link>)}</div></section> : null}
         {(section === "propositions" || (section === "overview" && node.node_type !== "theory_tradition")) && (node.basic_propositions.length || node.theoretical_boundary) ? <section className="theory-node-foundations" data-module-id="theory-propositions" data-edit-section="content">
           {node.basic_propositions.length ? <article><TheorySectionHeading title="基本命题" /> <ol>{node.basic_propositions.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol></article> : null}
           {node.theoretical_boundary ? <article><TheorySectionHeading title="理论边界" /><p>{node.theoretical_boundary}</p></article> : null}

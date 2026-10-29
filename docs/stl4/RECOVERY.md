@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-10-29 13:33 Web95字体与用语
+
+活动镜像social-theory-library-web:stl4-preview-20261029-r95，SHA a8414d4d6f669da7bc3606c5b98b5bf883393f04682971ee244311291b47ef10。默认A/推荐宋黑组合；#typography=A&font=balanced|song|sans|wenkai仅作用于标签页。NAS预览根font-copy-r91-recovery保存本轮前Web90，r92/r93/r94/r95分别保存前Web91/92/93/94；只恢复原Web镜像及预览Web/edge，不整份覆盖.env或重启后端。
+
+本机tmp/stl4-font-copy-20261029/before含本轮前源码/已有修改；inherited-files-copy-only.patch和final-preserved保留两个原脏文件中的本轮删文，未将其他任务新增实现混入提交。其他本轮源码与文档形成Git检查点。字体来源/许可证在web/public/fonts/stl-type；截图output/font-copy-20261029，精确验证范围FONT_COPY_REVIEW_20261029.md。全部日志、源码临时副本、构建与恢复资料忽略。继续保护现有未提交修改，禁止reset/clean；生产未改、自动任务未重建。
+
 ## 2026-10-27 18:42 排版A/B，Web90
 
 活动Web90 f1a7350eef6b37efbe72779d15ac507961801d10fa3c98d06adca46b7b7be478；NAS预览根typography-b-r90-recovery保存前Web89，r89保存前Web88，r88保存前Web87。A另有typography-a-20261027受限环境、独立镜像标签social-theory-library-web:stl4-typography-a-20261027及本机A源码归档（包括原未提交前端工作）。回退仅按保存的LIBRARY_WEB_IMAGE更新预览Web/edge，不覆盖完整.env、不重启API/worker/模型/数据。源码比较基线Git标签codex/stl4-typography-a-20261027；原未提交工作不得reset/clean。当前预览默认B，#typography=A/B只改本标签呈现，不重建数据库；细节TYPOGRAPHY_AB_20261027.md。自动任务已删除。

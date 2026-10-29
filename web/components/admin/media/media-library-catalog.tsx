@@ -121,7 +121,7 @@ function LibraryEditor({ owner, mediaId, canEdit, initial, onDirtyChange, onBloc
         const metadata = metadataOf(next.media); setDraft(metadata); setSaved(metadata); setBase(next.media.updated_at);
         setMessage("图片来源资料已保存。已选用图片的裁切、出处快照和公开页面保持原修订；请到具体使用对象核对后更新。");
       } else setMessage("原请求已完成，但这张图片后来又有修改。你的填写保留，请核对最新资料后继续。");
-    } catch (reason) { if (!lifetime.current?.signal.aborted) setError(`已查回保存回执，但最新资料未读回。${reason instanceof Error ? reason.message : "请重新读取。"}`); }
+    } catch (reason) { if (!lifetime.current?.signal.aborted) setError(`已查询保存结果，但最新资料未读回。${reason instanceof Error ? reason.message : "请重新读取。"}`); }
     finally { if (!lifetime.current?.signal.aborted) setBusy(false); }
   }
   function save(event?: FormEvent) { event?.preventDefault(); if (locked || !dirty || conflict) return; setError(""); void command.send({ expected_updated_at: base, metadata: draft }).then(accept); }
@@ -144,7 +144,7 @@ function LibraryEditor({ owner, mediaId, canEdit, initial, onDirtyChange, onBloc
     </section>
     <section className={frame.information}><h2>图片信息</h2><p className={frame.note}>这里只修改素材来源。已保存的封面、肖像和页面图片修订各自保留出处与裁切。</p>
       {message || error || command.error ? <div className={frame.feedback} role={error || command.error ? "alert" : "status"}>{error || command.error || message}<button disabled={busy || command.busy} onClick={() => void reload()}>读取最新资料</button></div> : null}
-      {command.recovery ? <aside className={frame.feedback}><p>上次保存结果尚未确认，先核对原请求。</p><button disabled={busy || command.busy} onClick={() => void command.lookup().then(accept)}>查回原结果</button>{command.canRetry ? <button disabled={busy || command.busy} onClick={() => void command.send().then(accept)}>重试原请求</button> : null}<button disabled={busy || command.busy} onClick={() => setStopping(true)}>停止未执行请求</button></aside> : null}
+      {command.recovery ? <aside className={frame.feedback}><p>上次保存结果尚未确认，先核对原请求。</p><button disabled={busy || command.busy} onClick={() => void command.lookup().then(accept)}>查询原结果</button>{command.canRetry ? <button disabled={busy || command.busy} onClick={() => void command.send().then(accept)}>重试原请求</button> : null}<button disabled={busy || command.busy} onClick={() => setStopping(true)}>停止未执行请求</button></aside> : null}
       {conflict ? <aside className={frame.feedback}><strong>来源资料已有更新，当前填写保留</strong><dl className={styles.latest}>{textFields.filter(key => draft[key] !== data.media[key]).map(key => <div key={key}><dt>{fieldLabels[key]} · 最新保存</dt><dd>{data.media[key] || "未填写"}</dd></div>)}</dl><button disabled={locked} onClick={() => { setBase(data.media.updated_at); setSaved(metadataOf(data.media)); setMessage("已按最新版本继续，请核对本次填写后保存。"); }}>已核对，保留填写继续</button></aside> : null}
       <form className={styles.form} onSubmit={save}><fieldset disabled={locked}>
         {textFields.map(key => <label key={key}>{fieldLabels[key]}{key === "alt_text" || key === "rights" ? <textarea value={draft[key]} rows={key === "rights" ? 3 : 4} maxLength={key === "rights" ? 4000 : 1000} onChange={event => update(key, event.target.value)} /> : <input type={key === "source_url" ? "url" : "text"} value={draft[key]} maxLength={key === "source_label" ? 300 : key === "license" ? 200 : key === "credit" ? 500 : 1000} onChange={event => update(key, event.target.value)} />}</label>)}

@@ -41,7 +41,7 @@ export function DiscoveryDocumentProgress({ data, busy, onRemove, onView, onAdju
       <div className={styles.documentCover}>{row.bibliography?.cover_url ? <MediaPlacement uses={row.bibliography.cover_media?.display_uses} fallback={<BookOpen size={25} aria-hidden="true"/>}><img src={normalizePublicResourceUrl(row.bibliography.cover_url)} alt="" loading="lazy" /></MediaPlacement> : <BookOpen size={25} aria-hidden="true" />}</div>
       <div><h4>{row.title}</h4><p>{[row.authors.join("、"), row.bibliography?.publication_year, row.bibliography?.version_label].filter(Boolean).join(" · ")}</p>
         <div className={styles.documentState} data-state={row.status}>{row.status === "unreadable" ? <LockKeyhole size={16} /> : ["failed", "changed"].includes(row.status) ? <CircleAlert size={16} /> : null}<strong>{t(labels[row.status])}</strong>{row.material_count ? <span>{t("已获得 {count} 段原文", { count: row.material_count })}</span> : null}</div>
-        {row.status === "no_returned" ? <p>{t("本轮有限候选中没有返回该版本的材料，可调整问题或筛选。此状态不判定相关性高低。")}</p> : null}
+        {row.status === "no_returned" ? <p>{t("本次未找到该版本的材料，请调整问题或筛选。")}</p> : null}
         {row.status === "unreadable" ? <p>{t("当前全文不可访问或尚未就绪，其他文献的已有结果继续保留。")}</p> : null}
         <div className={styles.documentActions}>{row.material_count ? <button type="button" disabled={busy} onClick={() => onView(row.edition_id)}>{t("查看结果 →")}</button> : null}
           {row.available_versions.length ? <button type="button" onClick={() => setVersionId(row.edition_id)}>{t("查看公开版本")}</button> : null}

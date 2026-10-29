@@ -34,7 +34,7 @@ export function ReaderMaterialActions({ ownerId, selection, blocked, onApplied, 
       try {
         const key = sessionStorage.getItem(storageKey);
         if (key && !uuid.test(key)) throw Error("原操作编号无法核对，请保留记录并重新读取本人资料。");
-        setPending(key); if (key) setMessage("上次操作结果尚未核实，请查回原请求。重命名内容仅保存在提交时的内存中。");
+        setPending(key); if (key) setMessage("上次操作结果尚未核实，请查询原请求。重命名内容仅保存在提交时的内存中。");
       } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "无法读取原操作编号。"); }
       finally { setReady(true); }
     });
@@ -73,7 +73,7 @@ export function ReaderMaterialActions({ ownerId, selection, blocked, onApplied, 
       sessionStorage.removeItem(storageKey); setPending(null); setOriginal(null); setEditor(null);
       setMessage(result.state === "applied" ? `已${labels[result.action as Action] || "处理"} ${result.applied.length} 项资料，原请求不会重复执行。` : "尚未执行的原请求已停止。已经完成的更改不会被撤销。");
       onApplied();
-    } catch (reason) { if (!active.signal.aborted) setMessage(reason instanceof Error ? reason.message : "尚未取得结果，请查回或重试原操作。"); }
+    } catch (reason) { if (!active.signal.aborted) setMessage(reason instanceof Error ? reason.message : "尚未取得结果，请查询或重试原操作。"); }
     finally { sending.current = false; if (!active.signal.aborted) { setBusy(false); setStopping(false); } }
   }
   function submit() {
@@ -82,7 +82,7 @@ export function ReaderMaterialActions({ ownerId, selection, blocked, onApplied, 
     if (!targets.length) { setMessage("名称没有变化。"); return; }
     void dispatch("submit", { request_id: createRequestKey(), action: editor.action, targets });
   }
-  const feedback = <>{message ? <p role="status">{message}</p> : null}{pending ? <div><button type="button" disabled={busy} onClick={() => void dispatch("read")}>查回原请求</button>{original ? <button type="button" disabled={busy} onClick={() => void dispatch("submit")}>重试原操作</button> : null}<button type="button" disabled={busy} onClick={() => setStopping(true)}>停止尚未执行的请求</button></div> : null}</>;
+  const feedback = <>{message ? <p role="status">{message}</p> : null}{pending ? <div><button type="button" disabled={busy} onClick={() => void dispatch("read")}>查询原请求</button>{original ? <button type="button" disabled={busy} onClick={() => void dispatch("submit")}>重试原操作</button> : null}<button type="button" disabled={busy} onClick={() => setStopping(true)}>停止尚未执行的请求</button></div> : null}</>;
   return <>
     <button type="button" disabled={blocked || locked || !canRename} onClick={() => open("rename")}><Pencil size={14} />重命名</button>
     <button type="button" disabled={blocked || locked || !canArchive || selection.every(row => row.status === "archived")} onClick={() => open("archive")}><Archive size={14} />归档</button>
@@ -92,6 +92,6 @@ export function ReaderMaterialActions({ ownerId, selection, blocked, onApplied, 
       <form onSubmit={event => { event.preventDefault(); submit(); }}><ul>{editor.rows.map((row, i) => <li key={row.key}><label><span>{row.kind_label} · {row.title}</span>{editor.action === "rename" ? <input aria-label={`新的名称：${row.title}`} value={editor.titles[i]} maxLength={240} required disabled={busy || Boolean(pending)} onChange={event => setEditor(current => current ? { ...current, titles: current.titles.map((title, index) => index === i ? event.target.value : title) } : current)} /> : <small>{row.status === "archived" ? "已归档" : "已保存"}</small>}</label></li>)}</ul>
         {feedback}<footer><button type="button" disabled={busy} onClick={close}>{pending ? "稍后核对" : "取消"}</button><button type="submit" disabled={busy || Boolean(pending) || (editor.action === "rename" && editor.titles.some(title => !title.trim()))}>{busy ? "正在保存…" : "确认并保存"}</button></footer>
       </form></Dialog> : null}
-    <ConfirmDialog open={stopping} title="核对并停止原操作？" description="已经完成的操作返回原回执，不重复执行或撤销；尚未执行的原请求将被停止，迟到请求也不会更改资料。" confirmLabel={busy ? "正在核对…" : "核对并停止"} pending={busy} onCancel={() => setStopping(false)} onConfirm={() => dispatch("stop")} />
+    <ConfirmDialog open={stopping} title="核对并停止原操作？" description="已经完成的操作返回原操作结果，不重复执行或撤销；尚未执行的原请求将被停止，迟到请求也不会更改资料。" confirmLabel={busy ? "正在核对…" : "核对并停止"} pending={busy} onCancel={() => setStopping(false)} onConfirm={() => dispatch("stop")} />
   </>;
 }

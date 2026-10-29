@@ -51,7 +51,7 @@ export function ArticleComments({issueId,revisionId,slug,onCount}:{issueId:strin
       if("submit" in command){
         const result=await withPrivateOwner(owner,()=>apiRequest<{owner_id:string;request_id:string;comment:ArticleComment|null;notice:string}>(lookup?`${base}requests/${command.submit.request_id}/`:base,
           {method:lookup?"GET":"POST",cache:"no-store",headers:{"X-Reader-Owner":owner},body:lookup?undefined:JSON.stringify(command.submit)},getServerSessionCredential()));
-        if(result.owner_id!==owner||result.request_id!==command.submit.request_id)throw new Error("提交回执与当前账户不一致，请重新核对。");
+        if(result.owner_id!==owner||result.request_id!==command.submit.request_id)throw new Error("提交结果与当前账户不一致，请重新核对。");
         if(alive.current){setDraft({owner,body:"",byline:"",confirmed:false});setMessage({owner,text:result.notice});}
       }else{
         const result=await withPrivateOwner(owner,()=>apiRequest<{owner_id:string;deleted:boolean}>(`${base}${command.remove.id}/`,{method:"DELETE",headers:{"X-Reader-Owner":owner},body:JSON.stringify({expected_revision:command.remove.expected_revision})},getServerSessionCredential()));
@@ -64,7 +64,7 @@ export function ArticleComments({issueId,revisionId,slug,onCount}:{issueId:strin
   }
   function begin(){if(!owner||!currentDraft.confirmed||!currentDraft.byline.trim()||!currentDraft.body.trim())return;void send({owner,submit:{request_id:createRequestKey(),public_revision_id:revisionId,byline:currentDraft.byline.trim(),body:currentDraft.body.trim(),confirm_public:true}});}
   function pager(data:ArticleCommentPage|null|undefined,current:number,change:(value:number)=>void,label:string){return data && (data.previous||data.next)?<nav aria-label={label}><button disabled={!data.previous} onClick={()=>change(current-1)}>上一页</button><span>第 {data.page} / {data.total_pages} 页</span><button disabled={!data.next} onClick={()=>change(current+1)}>下一页</button></nav>:null;}
-  return <section id="article-comments" className={styles.comments}><header><h2>读者评论{shown?.data?`（${shown.data.count}）`:""}</h2><button type="button" onClick={()=>setAttempt(value=>value+1)}>刷新评论</button></header><p>此处展示当前文章版本经审核公开的评论。读者观点由本人署名，不代表馆藏原文或策划者结论。</p>
+  return <section id="article-comments" className={styles.comments}><header><h2>读者评论{shown?.data?`（${shown.data.count}）`:""}</h2><button type="button" onClick={()=>setAttempt(value=>value+1)}>刷新评论</button></header><p>评论经审核后公开，观点由评论者负责。</p>
     {shown?.error?<p role="alert">{shown.error}</p>:shown?.data?shown.data.results.length?shown.data.results.map(row=><article key={row.id}><strong>{row.byline}</strong><time dateTime={row.created_at}>{new Date(row.created_at).toLocaleDateString("zh-CN")}</time><p>{row.body}</p></article>):<p>当前版本还没有公开评论。</p>:<p role="status">正在读取公开评论…</p>}
     {pager(shown?.data,page,setPage,"公开评论分页")}
     {owner?<><h3>我的评论</h3>{mine?.error?<p role="alert">{mine.error}</p>:mine?.data?mine.data.results.map(row=><article key={row.id}><strong>{row.byline}</strong><span>{statusLabels[row.status!]}{row.public_revision_id!==revisionId?" · 针对旧版文章":""}</span><p>{row.body}</p>{row.moderation_reason?<p>审核说明：{row.moderation_reason}</p>:null}<button disabled={busy||Boolean(pending)} onClick={()=>{if(window.confirm("删除这条本人评论？已公开内容也会撤下。"))void send({owner,remove:{id:row.id,expected_revision:row.revision!}});}}>删除本人评论</button></article>):<p role="status">正在读取本人评论…</p>}{mine?.data?.count===0?<p>尚未提交评论。</p>:null}{pager(mine?.data,minePage,setMinePage,"本人评论分页")}

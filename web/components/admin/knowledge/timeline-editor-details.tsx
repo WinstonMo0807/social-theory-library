@@ -64,7 +64,7 @@ export function TimelineSimilarCheck({ owner, input, reason, onReason, onMerge, 
   }
   return <section className={styles.similar}><header><h3>相似事件</h3><button type="button" disabled={busy} onClick={()=>void lookup()}>{busy?"正在读取…":"核对已有事件"}</button></header>
     <p>按关联对象、事件类型与相近年份查找，由编辑确认是否为同一事件。</p>{error?<p role="alert">{error}</p>:null}
-    {onMerge && (!input.exclude || mergeDisabled)?<p>先保存当前事件，再读取归并影响。未保存的输入不参与归并。</p>:null}
-    {visible?<><p>{visible.count ? `找到 ${visible.count} 条可能相关的事件` : "没有符合当前条件的事件。"}{visible.truncated?"，先显示前 50 条。":""}</p><ul>{visible.results.map(row=><li key={row.id}><strong>{row.date_label||row.start_year||"时间待确认"} · {row.title}</strong><Link href={`/admin/theories/timeline?event=${row.id}`} target="_blank" rel="noopener noreferrer">打开原事件核对</Link>{onMerge?<button type="button" disabled={mergeDisabled || !input.exclude} onClick={()=>onMerge(row.id)}>查看归并影响</button>:null}</li>)}</ul>{visible.count?<label>保留为独立事件的说明<textarea rows={2} maxLength={2000} value={reason} onChange={event=>onReason(event.target.value)}/></label>:null}</>:null}
+    {onMerge && (!input.exclude || mergeDisabled)?<p>先保存当前事件，再读取合并影响。未保存的输入不参与合并。</p>:null}
+    {visible?<><p>{visible.count ? `找到 ${visible.count} 条可能相关的事件` : "没有符合当前条件的事件。"}{visible.truncated?"，先显示前 50 条。":""}</p><ul>{visible.results.map(row=><li key={row.id}><strong>{row.date_label||row.start_year||"时间待确认"} · {row.title}</strong><Link href={`/admin/theories/timeline?event=${row.id}`} target="_blank" rel="noopener noreferrer">打开原事件核对</Link>{onMerge?<button type="button" disabled={mergeDisabled || !input.exclude} onClick={()=>onMerge(row.id)}>查看合并影响</button>:null}</li>)}</ul>{visible.count?<label>保留为独立事件的说明<textarea rows={2} maxLength={2000} value={reason} onChange={event=>onReason(event.target.value)}/></label>:null}</>:null}
   </section>;
 }

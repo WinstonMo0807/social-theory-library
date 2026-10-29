@@ -41,7 +41,7 @@ export function usePathPlanCommand(owner: string, id: string, pendingRef: RefObj
       if (operation.dispatched) {
         try {
           const result = await findPathFollowReceipt(operation.payload.request_id, owner, controller.signal);
-          if (result.receipt?.request_id !== operation.payload.request_id || result.receipt.deleted !== (result.record === null) || result.record && result.record.id !== id) throw new Error("保存回执与当前计划不一致，已保留待核对操作。");
+          if (result.receipt?.request_id !== operation.payload.request_id || result.receipt.deleted !== (result.record === null) || result.record && result.record.id !== id) throw new Error("保存结果与当前计划不一致，已保留待核对操作。");
           if (result.receipt.deleted) { clear(); throw new ApiRequestError("此计划已删除，旧保存请求不会重新创建它。", 410); }
           confirmed = true;
         } catch (reason) {

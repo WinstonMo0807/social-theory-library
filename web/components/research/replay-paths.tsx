@@ -40,10 +40,10 @@ export function ProjectBranches({ id, owner, ancestors = [] }: { id: string; own
   const resource = usePersistentWorkspace<ProjectPage>(`/reading/research-projects/${id}/replay-tree/?view=projects&page=${page}`, owner, undefined, load);
   const data = resource.error ? null : resource.data;
   if (resource.error) return <p role="alert">{resource.error}<button onClick={resource.reload}>重新读取研究关联</button></p>;
-  if (!data) return <p role="status">正在核对本人派生研究…</p>;
+  if (!data) return <p role="status">正在加载研究分支…</p>;
   return <div className={styles.projectBranches}>
     {!ancestors.length ? data.parent ? <p>来自研究 <Link href={`/account/research/${data.parent.id}/history${data.parent.turn_id ? `?turn=${data.parent.turn_id}` : ""}`}>{data.parent.title}</Link>{!data.parent.turn_id ? "（原轮次已不存在）" : ""}</p> : data.origin_unavailable ? <p>原研究当前不可用，这份研究与已保存笔记仍保留。</p> : <p>这份研究没有记录其他研究的分支来源。</p> : null}
-    <p className={styles.branchHint}>直接派生研究 {data.count} 份 · 仅本人可见</p>
+    <p className={styles.branchHint}>由此创建的研究 {data.count} 份 · 仅本人可见</p>
     <ul>{data.results.map(project => {
       const open = expanded.includes(project.id), circular = [...ancestors, id].includes(project.id), deep = ancestors.length >= 12;
       return <li key={project.id}><Link href={`/account/research/${project.id}/history`}>{project.title}</Link><small>{project.archived ? "已归档 · " : ""}{date(project.created_at)}</small>

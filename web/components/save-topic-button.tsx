@@ -73,7 +73,7 @@ export function SaveTopicButton({ topicId, onChange, commands: sharedCommands }:
       result ??= await commandTopicSave(operation.input, owner, controller.signal, () => { operation.dispatched = true; });
       if (controller.signal.aborted || epoch.current !== generation) return;
       if (result.topic_id !== operation.input.topic || result.receipt?.request_id !== operation.input.request_id
-        || result.receipt.applied_saved !== operation.input.saved || result.saved !== Boolean(result.record)) throw new Error("原收藏回执无法核对，请保留原请求。");
+        || result.receipt.applied_saved !== operation.input.saved || result.saved !== Boolean(result.record)) throw new Error("原收藏操作结果无法核对，请保留原请求。");
       commands.memory.current.delete(topicId); commands.changed(); setUnknown(false); setData(result); onChange?.(result.saved);
     } catch (reason) {
       if (epoch.current !== generation) return;

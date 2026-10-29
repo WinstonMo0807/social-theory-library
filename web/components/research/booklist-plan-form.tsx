@@ -35,7 +35,7 @@ export function BooklistPlanForm({ owner, row, selected, onBusy, onClose }: { ow
         const id = sessionStorage.getItem(key);
         if (!id) return;
         if (!/^[\da-f-]{36}$/i.test(id)) throw Error("原计划请求记录格式异常，请先核对我的阅读计划。");
-        setRequestId(id); setMessage("上次计划请求尚未取得明确回执，请先查回原结果。");
+        setRequestId(id); setMessage("上次计划请求尚未取得明确操作结果，请先查询原结果。");
       } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "原计划请求不可用。"); }
     });
     return () => { abort.abort(); off(); };
@@ -56,14 +56,14 @@ export function BooklistPlanForm({ owner, row, selected, onBusy, onClose }: { ow
       const result = await withPrivateOwner(owner, () => booklistRequest<Result>(owner, lookup
         ? `/reading/lists/plan-receipt/?request_id=${encodeURIComponent(id)}` : `/reading/lists/${row.id}/create-plan/`,
       { signal, ...(lookup ? {} : { method: "POST", body: JSON.stringify(command) }) }), signal);
-      if (result.owner_id !== owner || result.request_id !== id) throw Error("计划回执与当前账户或原请求不符。");
+      if (result.owner_id !== owner || result.request_id !== id) throw Error("计划操作结果与当前账户或原请求不符。");
       clear();
       if (result.record_id) router.push(`/account/plans/${result.record_id}`);
       else setMessage("原请求已经完成，但计划后来被删除。本次核对没有重新创建计划。");
     } catch (reason) {
       if (parent.signal.aborted) return;
       if (!lookup && reason instanceof ApiRequestError && [400, 403, 404, 409].includes(reason.status)) { clear(); source.reload(); }
-      setMessage(reason instanceof Error ? reason.message : "计划结果尚未确认，请查回原结果。");
+      setMessage(reason instanceof Error ? reason.message : "计划结果尚未确认，请查询原结果。");
     } finally { sending.current = false; if (!parent.signal.aborted) { setBusy(false); onBusy(false); } }
   }
   return <div>

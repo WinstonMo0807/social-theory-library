@@ -46,7 +46,7 @@ function LinksWorkspace({ scholarId, kind, blocked, onChanged, derived = [], own
   function open(id: string) { if (blocked) return; guard.current = { dirty: false, pending: false, composing: false }; setNotice(""); setSelection(id); }
   function close() {
     if (ime.current || guard.current.composing) return;
-    if (guard.current.pending) { setNotice("请先查回原请求结果，或停止未执行的请求，再关闭编辑。"); return; }
+    if (guard.current.pending) { setNotice("请先查询原请求结果，或停止未执行的请求，再关闭编辑。"); return; }
     if (guard.current.dirty && !window.confirm("有未保存的关联输入，放弃这些输入并返回学者页吗？")) return;
     setSelection(null); setNotice(""); setAttempt(value => value + 1); onChanged();
   }
@@ -92,7 +92,7 @@ function LinkEditor({ owner, scholarId, kind, initialId, fixedTarget, personName
     const controller = new AbortController(), signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]);
     queueMicrotask(() => { if (!controller.signal.aborted) { setLoading(true); setRow(null); setError(""); } });
     withPrivateOwner(owner, () => apiRequest<LinkPage>(`${endpoint(scholarId, kind)}?id=${encodeURIComponent(id)}`, { signal, cache: "no-store", headers: { "X-Editor-Owner": owner } }, getServerSessionCredential(), false), signal)
-      .then(value => { if (controller.signal.aborted) return; const current = value.results.find(item => item.id === id); if (!current || fixedTargetId && current.target_id !== fixedTargetId) throw Error("原记录不在当前人物与条目的关联中；可能已归并，请从原页面核对。不会据此新建记录。"); setRow(current); setDraft(fields(current)); setSaved(fields(current)); })
+      .then(value => { if (controller.signal.aborted) return; const current = value.results.find(item => item.id === id); if (!current || fixedTargetId && current.target_id !== fixedTargetId) throw Error("原记录不在当前人物与条目的关联中；可能已合并，请从原页面核对。不会据此新建记录。"); setRow(current); setDraft(fields(current)); setSaved(fields(current)); })
       .catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "原记录暂不可读。"); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [id, owner, scholarId, kind, attempt, fixedTargetId]);
@@ -111,7 +111,7 @@ function LinkEditor({ owner, scholarId, kind, initialId, fixedTarget, personName
       const payload = action === "withdraw" ? { action, id, edit_version: row?.edit_version } : { action, target_id: draft.target_id, relation_label: draft.relation_label, source: draft.source, featured: draft.featured, sort_order: draft.sort_order, relation_type:draft.relation_type,direction:draft.direction,node_is_source:draft.node_is_source, source_anchor:draft.source_anchor, ...(id ? { id, edit_version: row?.edit_version } : {}) };
       const result = await command.save<Association>(endpoint(scholarId, kind), JSON.stringify(payload), {}, "POST");
       if (!mounted.current) return;
-      apply(result); setMessage(action === "retry" ? "原请求已查回，显示当前保存版本。" : action === "confirm" ? "关联已明确确认。" : action === "withdraw" ? "关联已撤回，原记录保留。" : "已保存待核对记录，尚未确认公开。");
+      apply(result); setMessage(action === "retry" ? "原请求已查询，显示当前保存版本。" : action === "confirm" ? "关联已明确确认。" : action === "withdraw" ? "关联已撤回，原记录保留。" : "已保存待核对记录，尚未确认公开。");
     } catch (reason) { if (mounted.current) setError(reason instanceof Error ? reason.message : "操作结果待核对，输入仍保留。"); } finally { finishAction(action); }
   }
   async function recover(cancel = false) {
@@ -120,7 +120,7 @@ function LinkEditor({ owner, scholarId, kind, initialId, fixedTarget, personName
   }
   return <form className={styles.linkForm} onSubmit={event => { event.preventDefault(); void act("save"); }} onCompositionStartCapture={() => { composing.current = true; setIme(true); }} onCompositionEndCapture={() => { composing.current = false; setIme(false); }}>
     {error || command.error ? <p role="alert">{error || command.error}</p> : null}{message ? <p role="status">{message}</p> : null}{loading ? <p role="status">正在读取原关联…</p> : null}
-    {command.recovery ? <section aria-label="查回未确认操作"><p>上次操作的结果尚未确认。查回或停止后才能修改输入。</p><button type="button" disabled={busy || ime} onClick={() => void recover()}>查回原请求</button><button type="button" disabled={busy || ime} onClick={() => void recover(true)}>停止未执行的请求</button>{command.canRetry ? <button type="button" disabled={busy || ime} onClick={() => void act("retry")}>重试同一请求</button> : null}</section> : null}
+    {command.recovery ? <section aria-label="查询未确认操作"><p>上次操作的结果尚未确认。查询或停止后才能修改输入。</p><button type="button" disabled={busy || ime} onClick={() => void recover()}>查询原请求</button><button type="button" disabled={busy || ime} onClick={() => void recover(true)}>停止未执行的请求</button>{command.canRetry ? <button type="button" disabled={busy || ime} onClick={() => void act("retry")}>重试同一请求</button> : null}</section> : null}
     <fieldset disabled={locked}>
       {id || fixedTarget ? <div><strong>{draft.target_name || "原关联对象"}</strong><p>{row ? stateLabel(row) : id ? "等待读取" : "新关联 · 尚未保存"}{row && !row.target_published ? " · 对象尚未公开，不能确认" : ""}</p>{row ? <Link href={row.target_href} target="_blank" rel="noopener">查看对象资料 ↗</Link> : null}</div> : <EntityPicker owner={owner} label={`选择已有${label(kind)}`} endpoint={kind === "node" ? "/catalog/admin/theory-system/nodes/" : "/catalog/admin/topics/"} queryParam={kind === "node" ? "q" : "search"} nameField={kind === "node" ? "canonical_name_zh" : "name"} values={draft.target_id ? [{ id: draft.target_id, name: draft.target_name }] : []} onChange={values => { const item = values.at(-1); setDraft(value => ({ ...value, target_id: item?.id || "", target_name: item?.name || "" })); }} />}
       {kind==="node"?<><label>关系类型<select value={draft.relation_type} onChange={event=>{const value=event.target.value as Fields["relation_type"];setDraft(current=>({...current,relation_type:value,direction:value==="related"?current.direction:"directed",node_is_source:["proposes","defines","develops","interprets","uses"].includes(value)?false:current.node_is_source}));}}>{Object.entries(relationTypes).map(([value,name])=><option key={value} value={value}>{name}</option>)}</select></label><label>来源与目标<select value={draft.direction==="undirected"?"undirected":draft.node_is_source?"node":"person"} onChange={event=>setDraft(value=>({...value,direction:event.target.value==="undirected"?"undirected":"directed",node_is_source:event.target.value==="node"}))}><option value="undirected">无方向关联</option><option value="person">学者 → 概念或理论</option><option value="node" disabled={["proposes","defines","develops","interprets","uses"].includes(draft.relation_type)}>概念或理论 → 学者</option></select></label><p aria-live="polite">{draft.node_is_source?draft.target_name:row?.person_name||personName||"当前学者"} {draft.direction==="undirected"?"—":"→"} {draft.node_is_source?row?.person_name||personName||"当前学者":draft.target_name||"待选概念"} · {relationTypes[draft.relation_type]}</p></>:null}

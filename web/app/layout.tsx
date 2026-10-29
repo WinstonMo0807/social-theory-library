@@ -13,6 +13,7 @@ import "../styles/tokens/appearance.css";
 import "../styles/layout/brand-identity.css";
 import "../styles/tokens/type-fonts.css";
 import "../styles/tokens/typography.css";
+import "../styles/tokens/typeface.css";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { SiteHeader } from "@/components/site-header";
 import { loadSiteChromeConfig } from "@/lib/api/site.server";
@@ -53,11 +54,11 @@ export default async function RootLayout({
 }>) {
   const { config, unavailable } = await loadSiteChromeConfig();
   return (
-    <html lang="zh-CN" data-typeset="B" suppressHydrationWarning>
+    <html lang="zh-CN" data-typeset="A" data-typeface="balanced" suppressHydrationWarning>
       <head>
         <Script src="/runtime-config.js" strategy="beforeInteractive" />
         <Script src="/appearance-init.js" strategy="beforeInteractive" />
-        <Script src="/typography-init.js" strategy="beforeInteractive" />
+        <Script src="/typography-init.js?v=20261029" strategy="beforeInteractive" />
       </head>
       <body>
         <PublicSessionProvider>

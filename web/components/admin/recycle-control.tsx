@@ -42,7 +42,7 @@ function RecycleButton({kind,id,name,onDeleted,disabled=false,owner}:Props&{owne
       setDeleted(true); setOpen(false); onDeleted?.();
     } catch (error) { if(!controller.signal.aborted){
       if(error instanceof ApiRequestError&&error.status>=400&&error.status<500)intent.current=null;
-      setMessage((error instanceof Error ? error.message : "删除暂未确认。")+(intent.current?" 再次确认将按原请求及原原因查回。":""));
+      setMessage((error instanceof Error ? error.message : "删除暂未确认。")+(intent.current?" 再次确认将按原请求及原原因查询。":""));
     } }
     finally { if(!controller.signal.aborted){busyRef.current=false;setBusy(false);} }
   }

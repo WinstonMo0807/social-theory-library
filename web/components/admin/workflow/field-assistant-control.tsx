@@ -45,7 +45,7 @@ const FIELD_COPY = {
 } as const;
 
 export const ASSISTED_WORK_FIELDS = {
-  title: "作品题名", subtitle: "副题名", original_title: "原题名", uniform_title: "规范题名",
+  title: "作品题名", subtitle: "副题名", original_title: "原题名", uniform_title: "标准题名",
   language: "作品语言", original_language: "原作语言", first_publication_date: "首次出版日期", abstract: "简介",
 } as const;
 export const ASSISTED_BIBLIOGRAPHY_FIELDS = {

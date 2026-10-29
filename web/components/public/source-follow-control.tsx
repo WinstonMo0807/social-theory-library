@@ -73,7 +73,7 @@ export function SourceFollowControl({ ownerId, path, scholarProfileId, topicId, 
       const current = result.record;
       if (result.receipt.request_id !== input.request_id || result.receipt.deleted !== (current === null)
         || current && (current.owner_id !== ownerId || (input.scholar_profile_id ? current.scholar_profile_id !== input.scholar_profile_id : input.topic_id ? current.topic_id !== input.topic_id : current.path !== input.path))) {
-        throw new Error("原操作回执身份无法核对，请保留原请求后重试。");
+        throw new Error("暂未查到操作结果，请保留请求编号后重试。");
       }
       commands.memory.current.delete(key); commands.changed(); setState("idle"); onSaved(current);
       setMessage(result.receipt.deleted ? "原操作已处理，记录随后已删除。不会重新建立关注。" : input.action === "subscribe" ? "已保存关注，可在我的资料中查看更新。" : input.action === "unsubscribe" ? "已取消关注，已有记录保留。" : "已将当前更新标记为已读。");

@@ -1,0 +1,14 @@
+{
+  "family": "LXGW WenKai",
+  "alias": "STL Reading Kai",
+  "version": "v1.530",
+  "retrieved": "2026-10-29",
+  "source": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.530/LXGWWenKai-Regular.ttf",
+  "license": "SIL Open Font License 1.1",
+  "license_source": "https://raw.githubusercontent.com/lxgw/LxgwWenKai/v1.530/OFL.txt",
+  "conversion": "WOFF2 web delivery only; all glyphs, names and metrics retained; fontTools 4.68.0",
+  "source_sha256": "2d73eea94ad808999d90c0000c239a84a33b09d4bc6ab6c5b8bbf1eda8a7fc8b",
+  "file": "wenkai-regular.woff2",
+  "bytes": 8099112,
+  "sha256": "5b96834e7607dc6a5ab6268a2245f8dd823cbb6b1fa123c911f49d14754f635c"
+}

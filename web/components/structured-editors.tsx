@@ -320,7 +320,7 @@ export function AuthoritySuggestions({ entityType, query }: AuthoritySuggestions
     <section className="authority-suggestions" aria-label="联网权威候选">
       <header>
         <div><strong>联网身份候选</strong><span>只用于确认“查的是谁”。当前检索词为 {normalizedQuery}；字段写入必须进入候选审核。</span></div>
-        <button type="button" disabled={loading} onClick={() => setRequest({ query: normalizedQuery, nonce: (request?.nonce ?? 0) + 1 })}>查找权威对象</button>
+        <button type="button" disabled={loading} onClick={() => setRequest({ query: normalizedQuery, nonce: (request?.nonce ?? 0) + 1 })}>查找正式条目</button>
       </header>
       <div aria-live="polite" aria-atomic="true">
         {loading && currentRequest ? <p className="authority-suggestion-status"><LoaderCircle className="spin" size={15} />正在核对来源……</p> : null}

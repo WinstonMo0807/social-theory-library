@@ -32,7 +32,7 @@ export function useReaderOcrStatus({ assetId, documentRevisionId, ownerId, canMa
     // Same account, new capabilities: hide management content, but never discard
     // a command whose response may have been lost while permissions changed.
     setState(previous => previous?.identity === identity ? { ...previous, permissions, data: null, pending: false,
-      unknown: Boolean(operation.current), error: operation.current ? "当前账户权限已变化，原命令结果仍未确认。请在权限恢复后查回，或明确放弃本页核对。" : "" } : previous);
+      unknown: Boolean(operation.current), error: operation.current ? "当前账户权限已变化，原命令结果仍未确认。请在权限恢复后查询，或明确放弃本页核对。" : "" } : previous);
   }, [identity, permissions]);
   useEffect(() => subscribeToSessionChanges(() => {
     identityRef.current = ""; controller.current?.abort(); dataRef.current = null; operation.current = null;
@@ -97,7 +97,7 @@ export function useReaderOcrStatus({ assetId, documentRevisionId, ownerId, canMa
         const found = await readReaderOcrStatus(assetId, ownerId, lifetime.signal, command.request_id);
         if (lifetime.signal.aborted || identityRef.current !== identity || generation !== mutationGeneration.current) return;
         if (readerOcrReceiptMatches(found, command)) result = found;
-        else if (found.receipt !== null) throw new Error("处理回执尚不能对应本次命令，请保留原请求继续核对。");
+        else if (found.receipt !== null) throw new Error("处理操作结果尚不能对应本次命令，请保留原请求继续核对。");
         else if (!sameReaderOcrCommandSource(found, command)) {
           operation.current = null;
           apply(found, { pending: false, unknown: false, conflict: true, error: "任务或原文已变化，未重新发送旧命令。请读取并核对当前任务后继续。" });
@@ -106,7 +106,7 @@ export function useReaderOcrStatus({ assetId, documentRevisionId, ownerId, canMa
       }
       result ??= await commandReaderOcr(assetId, ownerId, command, lifetime.signal);
       if (lifetime.signal.aborted || identityRef.current !== identity || generation !== mutationGeneration.current) return;
-      if (!readerOcrReceiptMatches(result, command)) throw new Error("尚未确认处理结果，请使用原请求查回。");
+      if (!readerOcrReceiptMatches(result, command)) throw new Error("尚未确认处理结果，请使用原请求查询。");
       operation.current = null;
       apply(result, { pending: false, unknown: false, conflict: false, error: "",
         message: command.action === "pause" ? "暂停请求已确认，请以下方实际任务状态为准。已保存页面保留。" : "继续处理请求已确认，请以下方实际任务状态为准。" });
@@ -119,7 +119,7 @@ export function useReaderOcrStatus({ assetId, documentRevisionId, ownerId, canMa
       if (clear) dataRef.current = null;
       setState(previous => ({ ...(previous?.identity === identity ? previous : initial(identity, permissions)), pending: false, unknown,
         conflict: error instanceof ApiRequestError && error.status === 409, ...(clear ? { data: null } : {}),
-        error: error instanceof Error ? error.message : "本次处理结果尚未确认，请查回原请求。" }));
+        error: error instanceof Error ? error.message : "本次处理结果尚未确认，请查询原请求。" }));
     } finally { if (identityRef.current === identity && generation === mutationGeneration.current) pending.current = false; }
   }
   function command(action: ReaderOcrAction) {

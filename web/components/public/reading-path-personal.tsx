@@ -53,9 +53,9 @@ export function usePathPersonal(path: PublicReadingPath, preview = false, initia
     return () => readOperation.current?.abort();
   }, [owner, preview, reload]);
   function accept(value: PathFollowResponse, command: PathFollowCommand) {
-    if (value.receipt?.request_id !== command.request_id || value.receipt.deleted !== (value.record === null)) throw new Error("未能核对原操作回执。");
-    if (command.action === "copy-plan" && value.record && value.record.type !== "personal_plan") throw new Error("私人计划回执不匹配。");
-    if (command.action !== "create" && command.action !== "copy-plan" && value.record && value.record.id !== command.id) throw new Error("跟读记录回执不匹配。");
+    if (value.receipt?.request_id !== command.request_id || value.receipt.deleted !== (value.record === null)) throw new Error("未能核对原操作结果。");
+    if (command.action === "copy-plan" && value.record && value.record.type !== "personal_plan") throw new Error("私人计划操作结果不匹配。");
+    if (command.action !== "create" && command.action !== "copy-plan" && value.record && value.record.id !== command.id) throw new Error("跟读记录操作结果不匹配。");
     if (command.action === "delete" && !value.receipt.deleted) throw new Error("未能确认删除结果。");
     memory.current = null; setPending(null); setUpgrade(null); setRecordOwner(owner);
     if (command.action === "copy-plan") {
@@ -84,7 +84,7 @@ export function usePathPersonal(path: PublicReadingPath, preview = false, initia
       if (!live.current || version !== epoch.current || controller.signal.aborted) return null;
       const definite = checked && !(failure instanceof PrivateOwnerVerificationError) && failure instanceof ApiRequestError && [400, 401, 403, 404, 409, 422].includes(failure.status);
       if (definite) { memory.current = null; setPending(null); }
-      setError(definite ? failure instanceof Error ? failure.message : "操作未完成，请重新读取记录。" : memory.current?.dispatched ? "原操作结果尚未确认。请核对原请求后再继续，离开本页将失去查回入口。" : "当前账户尚未核对，写入请求还未发出。原请求标识已保留。");
+      setError(definite ? failure instanceof Error ? failure.message : "操作未完成，请重新读取记录。" : memory.current?.dispatched ? "原操作结果尚未确认。请核对原请求后再继续，离开本页将失去查询入口。" : "当前账户尚未核对，写入请求还未发出。原请求标识已保留。");
       return null;
     } finally { if (operation.current === controller) { operation.current = null; lock.current = false; if (live.current) setBusy(false); } }
   }

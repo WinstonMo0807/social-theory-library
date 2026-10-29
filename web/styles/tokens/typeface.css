@@ -1,0 +1,50 @@
+/* A's geometry, sizes and spacing are unchanged. Only content font families vary.
+   Local comparison: #font=balanced | song | sans | wenkai. */
+@font-face {
+  font-family: "STL Reading Kai";
+  src: url("/fonts/stl-type/wenkai-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+html[data-typeset="A"] {
+  --content-display: "STL Display Serif", "Noto Serif SC", "Songti SC", SimSun, serif;
+  --content-text: "STL Text Sans", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+html[data-typeset="A"][data-font-family="serif"],
+html[data-typeset="A"][data-typeface="song"] { --content-text: var(--content-display); }
+html[data-typeset="A"][data-typeface="sans"] { --content-display: "STL Text Sans", "Microsoft YaHei", sans-serif; }
+html[data-typeset="A"][data-typeface="wenkai"] {
+  --content-display: "STL Reading Kai", "STL Display Serif", serif;
+  --content-text: "STL Reading Kai", "STL Text Sans", sans-serif;
+}
+html[data-typeset="A"] #main-content :is(
+  [data-type-mode="expressive"] > :not(footer),
+  [data-type-mode="reading"] > :not(footer),
+  [data-type-mode="productive"] > :not(footer),
+  .admin-content,
+  .reader-toolbar, .reader-sidebar, .reader-panel
+) {
+  --sans: var(--content-text);
+  --serif: var(--content-display);
+  --font-sans: var(--content-text);
+  --font-serif: var(--content-display);
+  --stl-type-sans: var(--content-text);
+  --stl-type-serif: var(--content-display);
+  font-family: var(--content-text);
+}
+/* Some page styles set serif families directly on controls and descriptions. */
+html[data-typeset="A"] #main-content :is(
+  [data-type-mode="expressive"] > :not(footer),
+  [data-type-mode="reading"] > :not(footer),
+  [data-type-mode="productive"] > :not(footer),
+  .admin-content,
+  .reader-toolbar, .reader-sidebar, .reader-panel
+) :is(button, input, select, textarea, label, legend, summary, p, dt, dd, small, .stl4-catalog-result-actions a, .stl4-catalog-version-actions a):not(blockquote *, .brand-identity *, .brand-reference-lockup *) {
+  font-family: var(--content-text);
+}
+/* Keep the approved lockup and navigation out of the font trial, including auth pages. */
+html[data-typeset="A"] #main-content :is(.brand-identity, .brand-reference-lockup) {
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --sans: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+}

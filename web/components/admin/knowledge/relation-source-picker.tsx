@@ -32,7 +32,7 @@ export function RelationSourcePicker({ owner, value, saved, material, onChange, 
     setPicked(choice); setOpen(false); setError("");
   }
   return <section ref={section} tabIndex={-1} className={`${styles.panel} ${styles.sourceAnchor}`} aria-label="关系的原文依据">
-    <h3>依据来源与原文锚点</h3>
+    <h3>依据来源与原文位置</h3>
     {value ? <>
       {details?.available ? <><strong>{details.title || "原题名待补"}</strong><p>{details.edition_label}{details.pdf_page ? ` · PDF 第 ${details.pdf_page} 页` : ""}</p><blockquote>{details.quote}</blockquote>{details.reader_href ? <a href={details.reader_href} target="_blank" rel="noopener">查看准确版本与原文 ↗</a> : null}</> : <p>原引用仍保留，当前不能核对原文。请重新读取或选择准确材料。</p>}
       {details?.detail ? <p role="status">{details.detail}</p> : null}{details && !details.public_eligible ? <small>当前不能作为公开关系的原文依据。</small> : null}

@@ -32,7 +32,7 @@ const fieldLabels: Record<string, string> = {
   quote_source: "引文来源", aliases: "别名", alias: "别名", name_variants: "别名与译名", name_variant: "别名与译名",
   birth_year: "出生年份", death_year: "逝世年份", period: "时期", primary_discipline: "所属学科", foreign_name: "外文名",
   discipline: "所属学科", subdiscipline: "子学科", parent: "上级分类", research_object: "研究对象", formation_period: "形成时期",
-  research_directions: "研究方向", representative_issues: "代表议题", title: "标题", canonical_title: "规范标题", uniform_title: "规范标题",
+  research_directions: "研究方向", representative_issues: "代表议题", title: "标题", canonical_title: "标准标题", uniform_title: "标准标题",
   subtitle: "副标题", original_title: "原文标题", abstract: "简介", document_type: "资源类型", language: "语言", original_language: "原文语言",
   first_publication_date: "首次出版日期", editions: "版本", audience: "适合读者", difficulty: "阅读难度",
   estimated_reading: "预计阅读量", stages: "阅读阶段", introduction: "路径介绍", learning_goal: "学习目标", relation: "相关理论与概念",

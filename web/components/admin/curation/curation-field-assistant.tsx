@@ -255,11 +255,11 @@ export function CurationFieldAssistant({
     const result=retry?await command.send():await command.lookup(cancel);
     if(!result||scope!==objectRef.current)return;
     expected.current=null;setStopping(false);setReview(null);setResults([]);
-    setOutcome(result.state==="cancelled"?"尚未执行的原决定已停止。已保存内容保持不变。":"已查回原决定，没有重复保存。请核对当前资料，候选不会自动填入后来修改的表单。");
+    setOutcome(result.state==="cancelled"?"尚未执行的原决定已停止。已保存内容保持不变。":"已查询原决定，没有重复保存。请核对当前资料，候选不会自动填入后来修改的表单。");
     if(result.state==="applied"&&result.action!=="reject")setRefreshFailed(true);
     await lookup(false);
   }
-  const recoveryNotice=<>{command.error?<p role="alert">{command.error}</p>:null}{command.recovery?<section className="field-assistant-message"><p>{label}有一项尚待核对的决定。请查回原请求，或停止尚未执行的请求后继续。</p><button type="button" disabled={command.busy} onClick={()=>void recover()}>查回原决定</button>{command.canRetry?<button type="button" disabled={command.busy} onClick={()=>void recover(false,true)}>重试原决定</button>:null}<button type="button" disabled={command.busy} onClick={()=>setStopping(true)}>停止尚未执行的请求</button></section>:null}</>;
+  const recoveryNotice=<>{command.error?<p role="alert">{command.error}</p>:null}{command.recovery?<section className="field-assistant-message"><p>{label}有一项尚待核对的决定。请查询原请求，或停止尚未执行的请求后继续。</p><button type="button" disabled={command.busy} onClick={()=>void recover()}>查询原决定</button>{command.canRetry?<button type="button" disabled={command.busy} onClick={()=>void recover(false,true)}>重试原决定</button>:null}<button type="button" disabled={command.busy} onClick={()=>setStopping(true)}>停止尚未执行的请求</button></section>:null}</>;
 
   const visible = showMore ? results : results.slice(0, 3);
   const moreCount = Math.max(0, results.length - 3);

@@ -258,7 +258,7 @@ export function FunctionalHealthPanel({
         setError("");
       } catch (reason) {
         if (!mountedRef.current || controller.signal.aborted) return;
-        setError(reason instanceof Error ? reason.message : "功能健康快照读取失败。");
+        setError(reason instanceof Error ? reason.message : "服务检查记录加载失败，请刷新重试。");
       } finally {
         if (snapshotAbortRef.current === controller) snapshotAbortRef.current = null;
         if (mountedRef.current && !controller.signal.aborted) setLoading(false);

@@ -116,12 +116,12 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
       const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
       const result=await withPrivateOwner(owner,()=>apiRequest<Result>(base,{method:"POST",signal,cache:"no-store",headers:{"X-Editor-Owner":owner},body:JSON.stringify(values)},getServerSessionCredential()),signal);
       if(controller.signal.aborted)return;
-      if(result.request_id!==values.request_id||result.kind!==values.kind||result.object_id!==values.object_id)throw Error("恢复回执与原对象不一致，请保留原请求继续核对。");
+      if(result.request_id!==values.request_id||result.kind!==values.kind||result.object_id!==values.object_id)throw Error("恢复操作结果与原对象不一致，请保留原请求继续核对。");
       preserve(null);setMessage(result.detail);setPreview(null);pending.current=null;setUnknown(null);onLock(false);resource.reload();onChanged();
     }catch(reason){
       if(controller.signal.aborted)return;
       setPreview(null);
-      setMessage(reason instanceof Error?reason.message:"恢复暂未确认，请查回原请求。");
+      setMessage(reason instanceof Error?reason.message:"恢复暂未确认，请查询原请求。");
 
     }finally{if(!controller.signal.aborted){busy.current=false;setSubmitting(false);}}
   }
@@ -133,16 +133,16 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
       const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
       const receipt=await withPrivateOwner(owner,()=>apiRequest<Receipt>(`${base}receipts/${values.request_id}/`,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner},...(cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{})},getServerSessionCredential()),signal);
       if(controller.signal.aborted)return;
-      if(receipt.request_id!==values.request_id||receipt.actor_id!==owner)throw Error("回执与当前账户或请求不一致，请保留原编号继续核对。");
+      if(receipt.request_id!==values.request_id||receipt.actor_id!==owner)throw Error("操作结果与当前账户或请求不一致，请保留原编号继续核对。");
       if(receipt.state==="applied"){
         const result=receipt.result;
-        if(!result||result.request_id!==values.request_id||result.kind!==values.kind||result.object_id!==values.object_id||!result.restored||result.public_restored)throw Error("恢复回执与原对象不一致，请保留编号并核对历史。");
+        if(!result||result.request_id!==values.request_id||result.kind!==values.kind||result.object_id!==values.object_id||!result.restored||result.public_restored)throw Error("恢复操作结果与原对象不一致，请保留编号并核对历史。");
         preserve(null);setMessage(`${cancel?"原恢复已经完成，取消不会撤销它。":""}${result.detail}`);
       }else if(receipt.state==="cancelled"){
         preserve(null);setMessage("已阻止此编号尚未执行的恢复。迟到请求不会执行；原对象状态以最新详情为准。");
-      }else throw Error("回执状态尚不能确认，请保留原编号。");
+      }else throw Error("操作结果状态尚不能确认，请保留原编号。");
       pending.current=null;setUnknown(null);setPreview(null);setCancelOpen(false);onLock(false);resource.reload();onChanged();
-    }catch(reason){if(!controller.signal.aborted)setMessage(reason instanceof Error?reason.message:"尚未查到可确认的回执，请保留原请求。");}
+    }catch(reason){if(!controller.signal.aborted)setMessage(reason instanceof Error?reason.message:"尚未查到可确认的操作结果，请保留原请求。");}
     finally{if(!controller.signal.aborted){busy.current=false;setSubmitting(false);}}
   }
   const disabled=submitting||checking||!!unknown;
@@ -151,8 +151,8 @@ function ObjectDetail({owner,target,initialCommand,preserve,onSelect,onClose,onL
     {resource.error?<div className={styles.error} role="alert">{resource.error}<button onClick={()=>resource.reload()}>重新读取</button></div>:null}
     {resource.loading?<div className={styles.empty} role="status">正在读取对象与关联…</div>:null}
     {message?<p className={styles.message} role="status">{message}</p>:null}
-    {unknown?<div className={styles.notice}><CircleAlert size={17}/><div><strong>原请求尚未确认</strong><p>查回只读取已登记结果，不再次提交恢复。查不到时，请求仍可能在途；可以取消尚未执行的原请求。</p><small>请求编号 {unknown.request_id}</small><div className={styles.relatedTools}><button disabled={submitting} onClick={()=>void readReceipt()}>{submitting?"正在处理原请求…":"查回原恢复结果"}</button><button disabled={submitting} onClick={()=>setCancelOpen(true)}>取消未执行请求</button></div></div></div>:null}
-    <ConfirmDialog open={cancelOpen} title="取消尚未执行的恢复" description="服务端会先查回原结果。若恢复已完成，将返回原回执；若尚未执行，将阻止此编号之后到达的恢复请求。" details={["取消不会撤销已经完成的恢复，也不会删除原对象。",...(message?[message]:[])]} confirmLabel={submitting?"正在核对…":"取消未执行请求"} pending={submitting} onCancel={()=>{if(!submitting)setCancelOpen(false);}} onConfirm={()=>void readReceipt(true)}/>
+    {unknown?<div className={styles.notice}><CircleAlert size={17}/><div><strong>原请求尚未确认</strong><p>查询只读取已登记结果，不再次提交恢复。查不到时，请求仍可能在途；可以取消尚未执行的原请求。</p><small>请求编号 {unknown.request_id}</small><div className={styles.relatedTools}><button disabled={submitting} onClick={()=>void readReceipt()}>{submitting?"正在处理原请求…":"查询原恢复结果"}</button><button disabled={submitting} onClick={()=>setCancelOpen(true)}>取消未执行请求</button></div></div></div>:null}
+    <ConfirmDialog open={cancelOpen} title="取消尚未执行的恢复" description="服务端会先查询原结果。若恢复已完成，将返回原操作结果；若尚未执行，将阻止此编号之后到达的恢复请求。" details={["取消不会撤销已经完成的恢复，也不会删除原对象。",...(message?[message]:[])]} confirmLabel={submitting?"正在核对…":"取消未执行请求"} pending={submitting} onCancel={()=>{if(!submitting)setCancelOpen(false);}} onConfirm={()=>void readReceipt(true)}/>
     {data?<><header className={styles.objectHeader}>{data.cover_url?<img src={normalizePublicResourceUrl(data.cover_url)} alt={`${data.title}封面`}/>:<div className={styles.detailIcon}><BookOpen size={34}/><span>{data.label}</span></div>}<div><h2>{data.title}</h2><p>{[data.subtitle,data.kind_label].filter(Boolean).join(" ｜ ")}</p><span className={styles.state} data-state={data.record_state}>{labels[data.record_state]}</span><p>{date(data.changed_at)} · {data.operator}</p><p>原因：{data.reason}</p><button className={styles.primary} disabled={!data.can_restore||disabled} onClick={()=>void previewRestore()}>{checking?"正在核对关联与文件…":"预览恢复影响"}</button></div></header><div className={styles.notice}><CircleAlert size={17}/><p>{data.notice}</p></div>
       {data.names.count?<div className={styles.notice}><CircleAlert size={17}/><div><strong>另有 {data.names.count} 个同名对象</strong><p>同名可能是不同版本或身份。请先比较，恢复时保留各自内容与原身份。</p><button onClick={()=>setComparison(true)}>比较同名对象</button></div></div>:null}
       <nav className={styles.tabs} aria-label="对象详情栏目">{[["basic","基本信息"],["dependencies",`关联依赖（${data.dependency_count}）`],["history",`变更历史（${data.history_count}）`]].map(([key,label])=><button key={key} aria-current={tab===key?"page":undefined} onClick={()=>setTab(key)}>{label}</button>)}</nav>

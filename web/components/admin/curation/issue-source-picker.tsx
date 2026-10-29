@@ -20,7 +20,7 @@ export function IssueSourcePicker({issueId, type, conceptOnly=false, disabled=fa
   const user=useAdminSession(),owner=user?String(user.id):null;
   const load=useCallback((url:string,signal:AbortSignal)=>apiRequest<Page>(url,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner||""}},getServerSessionCredential(),false),[owner]);
   const resource=usePersistentWorkspace<Page>(`/catalog/admin/recommendation-issues/${issueId}/sources/?${params}`,owner,undefined,load);
-  return <section className={styles.sourcePicker} aria-label="选择真实材料">
+  return <section className={styles.sourcePicker} aria-label="选择材料">
     <div className={styles.sourceSearch}>{!type?<label><span className="sr-only">来源类型</span><select value={kind} onChange={event=>{setKind(event.target.value as IssueSourceReference["type"]);setPage(1);}}>{kinds.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>:null}
       <label><Search size={15}/><input type="search" maxLength={200} aria-label="查找来源" placeholder={kind==="span"?"查找原文文字…":"查找资料名称…"} value={query} onChange={event=>setQuery(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.nativeEvent.isComposing&&event.nativeEvent.keyCode!==229){event.preventDefault();setSearch(query.trim());setPage(1);}}}/></label><button type="button" onClick={()=>{setSearch(query.trim());setPage(1);}}>查找</button></div>
     <p>核对作品、准确版本和来源位置后加入。尚未公开的资料可留作草稿，发布时会重新核对。</p>

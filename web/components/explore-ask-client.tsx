@@ -195,7 +195,7 @@ function ReaderConnectionForm({
       <label><span>服务类型</span><select value={draft.provider} onChange={(event) => onChange("provider", event.target.value)}><option value="openai_compatible">OpenAI 兼容接口</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option></select></label>
       <label><span>服务地址</span><input type="url" name="reader-ai-base-url" autoComplete="url" placeholder="https://api.example.com" value={draft.base_url} onChange={(event) => onChange("base_url", event.target.value)} /></label>
       <label><span>模型名称</span><input type="text" name="reader-ai-model" autoComplete="off" placeholder="例如 gpt-4o-mini" value={draft.model} onChange={(event) => onChange("model", event.target.value)} /></label>
-      <label><span>API Key（Ollama 可留空）</span><input type="password" name="reader-ai-key" autoComplete="new-password" placeholder="只在保存时提交，不会回显" value={draft.api_key} onChange={(event) => onChange("api_key", event.target.value)} /></label>
+      <label><span>API Key（Ollama 可留空）</span><input type="password" name="reader-ai-key" autoComplete="new-password" placeholder="保存后不再显示密钥" value={draft.api_key} onChange={(event) => onChange("api_key", event.target.value)} /></label>
       <div className="ask-reader-connection-actions"><button className="button" type="button" disabled={Boolean(busy) || !draft.base_url || !draft.model} onClick={onSave}>{busy === "save" ? "正在测试…" : "保存并测试"}</button><button className="button secondary" type="button" disabled={Boolean(busy)} onClick={onDelete}>删除个人配置</button></div>
     </div>
   );
@@ -710,7 +710,7 @@ function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRA
           <SearchModeSwitch mode="ask" query={initialQuestion} />
           <h1 id="ask-configuration-heading">向书库提问</h1>
           <span aria-hidden="true" />
-          <p>注册读者可以在本页配置自己的云端模型。密钥只会在本次请求中提交给书库服务器，并以加密形式保存，页面不会回显。</p>
+          <p>登录后可配置自己的云端模型。密钥加密保存，保存后不再显示。</p>
           <p className="ask-configuration-step-label">启用步骤</p>
           <ol>
             <li><UserRound size={20} aria-hidden="true" /><p><strong>第 1 步　准备模型服务</strong><span>确认服务账户、使用范围与数据处理边界。</span></p></li>
@@ -719,7 +719,7 @@ function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRA
             <li><Activity size={20} aria-hidden="true" /><p><strong>第 4 步　测试连接</strong><span>测试通过后即可直接询问已发布馆藏。</span></p></li>
             <li><CheckCircle2 size={20} aria-hidden="true" /><p><strong>第 5 步　开始馆藏问答</strong><span>回答保留馆藏来源，并允许返回原文。</span></p></li>
           </ol>
-          <div className="ask-configuration-policy"><ShieldCheck size={18} aria-hidden="true" /><p><strong>安全边界</strong><span>密钥不会写入 Local Storage、会话正文或公开 API。书库只保存加密凭据摘要。</span></p></div>
+          <div className="ask-configuration-policy"><ShieldCheck size={18} aria-hidden="true" /><p><strong>安全边界</strong><span>密钥不会保存在浏览器中。</span></p></div>
         </aside>
 
         <div className="ask-configuration-panel">

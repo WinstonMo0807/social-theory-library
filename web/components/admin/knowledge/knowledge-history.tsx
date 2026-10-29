@@ -74,7 +74,7 @@ function HistoryWorkspace({objectType,objectId}:{objectType:string;objectId:stri
     try{
       if(!recover){sessionStorage.setItem(key,JSON.stringify(value));setPending(value);}
       const receipt=await request<Receipt>(endpoint,{method:"POST",body:JSON.stringify(value.command)});
-      if(receipt.object_type!==objectType||receipt.object_id!==objectId||!uuid.test(receipt.revision_id))throw Error("原操作回执不完整，请重新核对。");
+      if(receipt.object_type!==objectType||receipt.object_id!==objectId||!uuid.test(receipt.revision_id))throw Error("原操作结果不完整，请重新核对。");
       clear();setConfirm(null);setSelected(receipt.revision_id);setPage(1);
       setMessage(receipt.status==="draft"?`第 ${receipt.revision} 版草稿已保存。请进入发布前检查后确认，公开内容尚未改变。`:`原操作对应第 ${receipt.revision} 版，${receipt.status==="published"?"已经处理":"已被后续修改替代"}。请核对当前记录。`);
       reload();
@@ -97,7 +97,7 @@ function HistoryWorkspace({objectType,objectId}:{objectType:string;objectId:stri
     <nav className={styles.breadcrumb} aria-label="面包屑"><a href="/admin/knowledge">学者与知识</a><span>› 发布台 › 历史与撤回</span></nav>
     <header className={styles.heading}><div><h1>发布台、历史与撤回</h1><p>管理当前公开内容，核对历史修订与关联记录。</p></div><button type="button" disabled={busy||loading} onClick={reload}><RefreshCw size={15}/>重新读取</button></header>
     {error?<p role="alert" className={styles.warning}>{error}</p>:null}{message?<p role="status" className={styles.notice}>{message}</p>:null}
-    {pending?<section className={styles.warning}><h2>原操作结果待核对</h2><p>本标签页保留了原请求。重试将核对同一回执，不会自动公开或生成第二份草稿。</p><button disabled={busy} type="button" onClick={()=>void send(pending,true)}>核对原请求</button></section>:null}
+    {pending?<section className={styles.warning}><h2>原操作结果待核对</h2><p>本标签页保留了原请求。重试将核对同一操作结果，不会自动公开或生成第二份草稿。</p><button disabled={busy} type="button" onClick={()=>void send(pending,true)}>核对原请求</button></section>:null}
     {recordProblem?<p role="alert" className={styles.warning}>本标签页记录不可用。请在历史中核对最新草稿和操作人。</p>:null}
     {pending||recordProblem?<button type="button" disabled={busy||loading||!data} onClick={()=>{setClearAgreed(false);setClearOpen(true);}}>已核对历史，清除本标签页记录</button>:null}
     {loading?<p role="status">正在读取保存版本与历史记录…</p>:null}

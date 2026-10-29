@@ -404,7 +404,7 @@ export function SemanticIndexAdmin() {
   return (
     <div className="admin-page">
       <header className="admin-page-title">
-        <div><p>观点检索</p><h1>语义索引管理</h1><span>查看分块与向量进度，重试失败项目，并用真实查询检查排序。</span></div>
+        <div><p>观点检索</p><h1>语义索引管理</h1><span>查看分块与向量进度，重试失败项目，并用查询检查排序。</span></div>
         <button className="button secondary" type="button" onClick={refresh} disabled={Boolean(busy)}><RefreshCw size={16} />刷新</button>
       </header>
       {error ? <p className="form-message error" role="alert">{error}</p> : null}
@@ -498,7 +498,7 @@ export function SemanticIndexAdmin() {
         <div className="search-evaluation-workspace">
           <form className="search-evaluation-editor" onSubmit={saveEvaluationQuery}>
             <h3>保存当前测试查询</h3>
-            <p>先在上方运行真实查询，再给结果标注相关性。至少需要一个相关结果。</p>
+            <p>先在上方运行查询，再给结果标注相关性。至少需要一个相关结果。</p>
             <label>
               <span>保存位置</span>
               <select

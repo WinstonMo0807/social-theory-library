@@ -208,7 +208,7 @@ export function useReaderRecords({
     }
     if (pendingAction) return false;
     if (annotationSaveRequest.current?.identity === identity) {
-      setCopyStatus("上次批注保存状态尚未确认，请先查回原请求。");
+      setCopyStatus("上次批注保存状态尚未确认，请先查询原请求。");
       setCopyStatusState("error");
       return false;
     }
@@ -258,7 +258,7 @@ export function useReaderRecords({
       return false;
     }
     if (annotationSaveRequest.current?.identity === identity) {
-      setCopyStatus("上次批注保存状态尚未确认，请先查回原请求。");
+      setCopyStatus("上次批注保存状态尚未确认，请先查询原请求。");
       setCopyStatusState("error");
       return false;
     }
@@ -300,7 +300,7 @@ export function useReaderRecords({
       }, token, false);
       if (activeIdentity.current !== operation.identity) return false;
       if (!annotationReceiptMatches(created, operation.payload)) {
-        throw new ApiRequestError("保存回执与本次批注不一致，请保留输入并继续核对原请求。", 409);
+        throw new ApiRequestError("保存结果与本次批注不一致，请保留输入并继续核对原请求。", 409);
       }
       annotationSaveRequest.current = null;
       setAnnotationSaveState({ identity, unknown: false });
@@ -319,7 +319,7 @@ export function useReaderRecords({
       operation.unknown = operation.unknown || !(error instanceof ApiRequestError) || error.status === 0 || error.status >= 500 || error.status === 409;
       if (!operation.unknown) annotationSaveRequest.current = null;
       setAnnotationSaveState({ identity, unknown: operation.unknown });
-      setCopyStatus(`${error instanceof Error ? error.message : "批注保存失败"}${operation.unknown ? " 上次保存尚未确认，原输入与请求已保留，请查回后继续。" : ""}`);
+      setCopyStatus(`${error instanceof Error ? error.message : "批注保存失败"}${operation.unknown ? " 上次保存尚未确认，原输入与请求已保留，请查询后继续。" : ""}`);
       setCopyStatusState("error");
       return false;
     } finally {

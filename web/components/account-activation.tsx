@@ -67,7 +67,7 @@ export function AccountActivation() {
         <label className="auth-consent"><input type="checkbox" required disabled={busy || uncertain} checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />这是本人账户，我已阅读<Link href="/help/account">账户与隐私说明</Link>。</label>
         <button className="button auth-submit" type="submit" disabled={busy || !confirmed}>{busy ? "正在核对…" : uncertain ? "重试原激活" : "设置密码并激活"}</button></> : null}
       {error ? <p className="form-message error" role="alert">{error}</p> : null}
-      {uncertain ? <p className="field-help">原激活结果待确认，请保留刚才设置的密码。查回或重试不会修改已经生效的密码。</p> : null}
+      {uncertain ? <p className="field-help">原激活结果待确认，请保留刚才设置的密码。查询或重试不会修改已经生效的密码。</p> : null}
       {result?.state === "activated" ? <Link className="button auth-submit" href="/login?next=%2Faccount">登录并前往读者中心</Link> : <button type="button" disabled={busy} onClick={() => void act("inspect")}>重新核对邀请与激活结果</button>}
     </form></div><AuthReturnContext destination="/account" /></div><div className="auth-guest"><Link href="/explore">继续以访客身份浏览</Link><p>公开检索、阅读、下载、复制与引用保持开放。</p></div>
   </div>;

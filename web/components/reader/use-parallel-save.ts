@@ -42,7 +42,7 @@ export function useParallelSave(ownerId: number | undefined, onSaved: (record: P
       }
       receipt ??= await parallelRequest<Receipt>(op.path, { method: op.method, body: op.body, signal: lifetime.current?.signal }, ownerId);
       if (lifetime.current?.signal.aborted) return;
-      if (!receipt?.id || op.taskId && receipt.id !== op.taskId) throw new ApiRequestError("保存回执不属于当前对齐任务，请保留输入并再次核对。", 0);
+      if (!receipt?.id || op.taskId && receipt.id !== op.taskId) throw new ApiRequestError("保存结果不属于当前对齐任务，请保留输入并再次核对。", 0);
       operation.current = null;
       if (receipt.applied_revision && receipt.applied_revision !== receipt.revision) {
         setState({ pending: false, unknown: false, conflict: true, conflictTaskId: receipt.id, error: "本次保存已完成，但任务随后又有修改。当前输入仍保留，请读取最新版本后继续。" });

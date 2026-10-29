@@ -20,7 +20,7 @@ export function authorityRequest<T extends { actor_id: string }>(actor: string, 
   const signal = AbortSignal.any([AbortSignal.timeout(30000), ...(options.signal ? [options.signal] : [])]);
   return withPrivateOwner(actor, async () => {
     const value = await apiRequest<T>(`/catalog/admin/people/${path}`, { ...options, signal, cache: "no-store", headers: { ...Object.fromEntries(new Headers(options.headers)), "X-Editor-Owner": actor } }, getServerSessionCredential(), false);
-    if (value.actor_id !== actor) throw Error("操作账户已变化，请重新读取人物规范。");
+    if (value.actor_id !== actor) throw Error("操作账户已变化，请重新读取人物资料。");
     return value;
   }, signal);
 }

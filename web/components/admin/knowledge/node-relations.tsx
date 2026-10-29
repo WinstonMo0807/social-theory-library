@@ -50,7 +50,7 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
   }, [owner, directoryPath, page, filters, attempt]);
   function canLeave() {
     if (ime.current || guard.current.composing) return false;
-    if (guard.current.pending) { setNotice("请先查回原请求，或停止未执行的请求，再切换关系。"); return false; }
+    if (guard.current.pending) { setNotice("请先查询原请求，或停止未执行的请求，再切换关系。"); return false; }
     return !guard.current.dirty || window.confirm("关系还有未保存输入，放弃这些输入并切换吗？");
   }
   function open(value: Selection) {

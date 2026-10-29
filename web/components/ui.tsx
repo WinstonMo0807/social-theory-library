@@ -131,7 +131,7 @@ export function ScholarPortrait({ scholar, large = false }: { scholar: Scholar; 
     <div
       className={`scholar-portrait ${large ? "large" : ""} ${scholar.portrait ? "has-image" : ""}`}
       style={scholar.portrait && !scholar.portraitSources?.length ? { backgroundImage: `url("${scholar.portrait}")` } : undefined}
-      aria-label={scholar.portrait ? `${scholar.name}肖像` : `${scholar.name}肖像占位`}
+      aria-label={scholar.portrait ? `${scholar.name}肖像` : `${scholar.name}暂无肖像`}
     >
       {scholar.portrait && scholar.portraitSources?.length ? <ResponsivePortraitImage scholar={scholar} large={large} /> : !scholar.portrait ? <span>{initials}</span> : null}
     </div>

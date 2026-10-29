@@ -104,8 +104,8 @@ function previewProblem(payload:KnowledgePreviewPayload):string {
   const data=payload.perspective.data as Record<string,unknown>|null;
   if(!data||typeof data!=="object"||Array.isArray(data))return "当前对象没有可渲染的草稿或公开内容。";
   if(payload.object_type==="scholar"&&(!data.person||typeof data.person!=="object"))return "学者预览缺少身份，已保留草稿。";
-  if(payload.object_type==="topic"&&(!data.id||!data.slug||!data.name))return "主题预览缺少规范身份，已保留草稿。";
-  if(["theory","concept","debate","research_problem"].includes(payload.object_type)&&(!data.id||!data.slug||!data.canonical_name_zh))return "理论预览缺少规范身份，已保留草稿。";
+  if(payload.object_type==="topic"&&(!data.id||!data.slug||!data.name))return "缺少主题编号，无法预览。草稿已保留。";
+  if(["theory","concept","debate","research_problem"].includes(payload.object_type)&&(!data.id||!data.slug||!data.canonical_name_zh))return "缺少理论编号，无法预览。草稿已保留。";
   if(!["discipline","subdiscipline","scholar","topic","reading_path","theory","concept","debate","research_problem"].includes(payload.object_type))return "该对象请使用专用预览。";
   return "";
 }
@@ -161,7 +161,7 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
         },
       } as KnowledgeNodeDetail;
       if (payload.object_type === "theory" && pageId === "graph") {
-        return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><p className="eyebrow">局部关系浏览</p><h1>{node.canonical_name_zh}的理论图谱</h1><p>使用当前草稿身份和已经发布的规范关系生成。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
+        return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><p className="eyebrow">局部关系浏览</p><h1>{node.canonical_name_zh}的理论图谱</h1><p>使用当前草稿身份和已经发布的条目关系生成。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
       }
       if (payload.object_type === "theory" && pageId === "timeline") {
         return <main className="page-shell theory-system-page theory-timeline-page"><section className="theory-timeline-hero"><div><p className="eyebrow">历史时间轴</p><h1>{node.canonical_name_zh}的发展脉络</h1><p>这里只显示已经审核并关联到该理论的真实时间轴事件。</p></div></section><div className="theory-timeline-layout"><TheoryTimelinePublicList events={payload.secondary_preview?.timeline ?? []} /></div></main>;

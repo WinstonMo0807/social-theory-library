@@ -66,7 +66,7 @@ export function ReviewQueue() {
           <div>{destination ? <Link className="button" href={withAdminReturn(destination, returnTo,item.current_step)}>继续处理 <ArrowRight size={14} /></Link> : <span role="status">操作位置待核实，请刷新。</span>}</div>
         </article>;
       })}
-      {page && !page.results.length ? <p className="admin-list-state">当前条件下没有待办。可调整筛选，不代表其他来源没有异常。</p> : null}
+      {page && !page.results.length ? <p className="admin-list-state">没有匹配的待办，请调整筛选。</p> : null}
     </section>
     {page ? <Pagination className={styles.pagination} label="待办分页" page={page.page} totalPages={page.total_pages} previousHref={adminListHref(pathname, search.toString(), { page: Math.max(1, page.page - 1) })} nextHref={adminListHref(pathname, search.toString(), { page: Math.min(page.total_pages, page.page + 1) })} /> : null}
     </>}

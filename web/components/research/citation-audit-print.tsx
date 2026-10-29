@@ -75,9 +75,9 @@ export function CitationAuditPrint({ record }: { record: ResearchRecord<AuditDat
       <p>稿件版本 {data.manuscript_revision || 1} · 报告修订 {record.revision} · {auditStatuses[record.status || ""] || "已保存"}</p>
       <p>最后保存：{timestamp(record.updated_at)} · 本快照包含全部 {data.occurrences.length} 处引文和 {data.bibliography.length} 条参考文献。</p></header>
     <section><h2>检查范围与使用限制</h2><p>已选择：{data.checks?.map(check => checkNames[check] || check).join("、") || "检查项尚未记录"}</p>
-      <p>{data.report_notice || "文字匹配、来源身份和人工决定分别记录；未找到原文不等于引文错误。"}</p>
+      <p>{data.report_notice || "未找到原文的引文需要人工核对。"}</p>
       {data.location_notice ? <p>{data.location_notice}</p> : null}
-      <p>本文件是保存时的报告快照。处理中的任务可能还有未完成结果；原文权限与内容仍须在回读时重新核验。人工修正仅作为个人记录保存，不改写上传原稿。</p>
+      <p>报告记录导出时的结果，处理中的任务可能尚未完成。原文以打开时的内容和权限为准。人工修正保存在报告中，原稿不变。</p>
       {data.warnings?.map((warning, index) => <p key={index}>{warning.message}</p>)}
     </section>
     <section><h2>全部引文核验</h2>{data.occurrences.length ? <Occurrences rows={data.occurrences} entries={data.bibliography} /> : <p>尚未识别到可展示的引文位置，不能据此判断稿件没有问题。</p>}</section>

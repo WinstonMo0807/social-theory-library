@@ -5,7 +5,7 @@ import { theoryDirectoryKinds, type TheoryDirectoryFailure, type TheoryDirectory
 import { ServerApiError } from "@/lib/api/server-request";
 import { searchPage } from "@/lib/search-context";
 
-export const metadata: Metadata = { title: "理论目录", description: "按真实学科、条目层级与理论关系查找已公开资料。" };
+export const metadata: Metadata = { title: "理论目录", description: "按学科、条目层级与理论关系查找已公开资料。" };
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)?.trim() || "";
 
 export default async function TheoryDirectoryPage({ searchParams }: {

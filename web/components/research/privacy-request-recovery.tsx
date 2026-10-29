@@ -37,7 +37,7 @@ export function usePrivacyPreparation(ownerId: string, storageKey: string) {
       if (controller.signal.aborted) return;
       try {
         const raw = sessionStorage.getItem(storageKey);
-        if (raw) { setIntent(readIntent(raw)); setMessage("上次请求尚未取得明确回执。请查回原请求，或使用原选择重试。"); }
+        if (raw) { setIntent(readIntent(raw)); setMessage("上次请求尚未取得明确操作结果。请查询原请求，或使用原选择重试。"); }
       } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "无法读取原请求，请保留记录。"); }
       finally { setReady(true); }
     });
@@ -49,7 +49,7 @@ export function usePrivacyPreparation(ownerId: string, storageKey: string) {
     const controller = request.current;
     if (!ready || broken || sending.current || !controller || controller.signal.aborted) return null;
     // A new selection must never replace an unresolved request.
-    if (input && intent) { setMessage("请先查回或停止原请求，再提交新的选择。"); return null; }
+    if (input && intent) { setMessage("请先查询或停止原请求，再提交新的选择。"); return null; }
     const command = intent ?? (input ? { requestId: createRequestKey(), input } : null);
     if (!command) return null;
     sending.current = true; setBusy(true); setMessage("");
@@ -70,9 +70,9 @@ export function usePrivacyPreparation(ownerId: string, storageKey: string) {
       if (controller.signal.aborted) return null;
       // A failed owner check can happen after an accepted POST. Never discard that receipt.
       if (!recovery && saved && !(reason instanceof PrivateOwnerVerificationError) && reason instanceof ApiRequestError && [400, 422].includes(reason.status)) {
-        try { clear(); } catch { setMessage("无法清除本机恢复记录，请保留并查回原请求。"); return null; }
+        try { clear(); } catch { setMessage("无法清除本机恢复记录，请保留并查询原请求。"); return null; }
       }
-      setMessage(reason instanceof Error ? reason.message : "尚未收到明确回执，请查回或重试原请求。");
+      setMessage(reason instanceof Error ? reason.message : "尚未收到明确操作结果，请查询或重试原请求。");
       return null;
     } finally { sending.current = false; if (!controller.signal.aborted) setBusy(false); }
   }
@@ -89,7 +89,7 @@ export function PrivacyRequestRecovery({ preparation, onOpen, className }: { pre
     if (id) onOpen(id);
   }
   return <>
-    {message || pending ? <div className={className} role="status"><p>{message || "正在处理原请求…"}</p>{pending ? <><button type="button" disabled={busy} onClick={() => void recover()}>查回原请求</button><button type="button" disabled={busy} onClick={() => void recover(false, true)}>重试原请求</button><button type="button" disabled={busy} onClick={() => setStopping(true)}>停止尚未创建的请求</button></> : null}</div> : null}
+    {message || pending ? <div className={className} role="status"><p>{message || "正在处理原请求…"}</p>{pending ? <><button type="button" disabled={busy} onClick={() => void recover()}>查询原请求</button><button type="button" disabled={busy} onClick={() => void recover(false, true)}>重试原请求</button><button type="button" disabled={busy} onClick={() => setStopping(true)}>停止尚未创建的请求</button></> : null}</div> : null}
     <ConfirmDialog open={stopping} title="停止尚未创建的请求？" description="系统会先核对原编号。已经创建的任务将打开原详情，不会重复创建或自动取消；尚未创建的请求会被停止，迟到的同一请求也不会生效。" confirmLabel={busy ? "正在核对…" : "核对并停止"} pending={busy} onCancel={() => setStopping(false)} onConfirm={() => recover(true)} />
   </>;
 }

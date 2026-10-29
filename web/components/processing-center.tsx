@@ -717,7 +717,7 @@ function LegacyProcessingCenter() {
   return (
     <div className="admin-page processing-center-page" aria-busy={loading || Boolean(pendingOperation)}>
       <header className="admin-page-title">
-        <div><p>管理后台 / 文档与任务</p><h1>Processing Center</h1><span>管理文档处理，查看真实任务进度和需要处理的问题。</span></div>
+        <div><p>管理后台 / 文档与任务</p><h1>Processing Center</h1><span>查看文件处理进度，处理失败任务。</span></div>
         <div className="admin-action-row">
           <ActionLink className="button secondary" href="/admin/review?category=publication_ready">待发布馆藏 <ChevronRight size={15} /></ActionLink>
           <ActionButton
@@ -763,7 +763,7 @@ function LegacyProcessingCenter() {
         <article><CheckCircle2 size={18} /><strong>{summary.succeeded ?? "—"}</strong><span>成功</span></article>
       </section> : null}
       {activeSurface === "documents" ? <section className="processing-list admin-panel processing-v307-documents">
-        <header><div><h2>文档处理</h2><p>每一步来自实际上传与后台任务记录；未记录的阶段不会标记成功。</p></div><span>{itemMeta?.count ?? "—"} 个文档</span></header>
+        <header><div><h2>文档处理</h2></div><span>{itemMeta?.count ?? "—"} 个文档</span></header>
         <div className="admin-v307-table-scroll"><table><thead><tr><th>文档</th><th>文件与识别</th><th>OCR</th><th>索引</th><th>最近更新</th><th>操作</th></tr></thead><tbody>{items.map(item => {
           const stageCell = (stage: DocumentStage | null | undefined) => stage ? <><span className={`processing-v307-state state-${stage.status}`}>{statusLabels[stage.status] ?? stageLabels[stage.status] ?? stage.status}</span>{stage.progress !== null ? <progress value={stage.progress} max={100} aria-label={`${stage.kind}任务进度`} /> : null}{stage.error ? <small className="processing-v307-stage-error">{stage.error}</small> : null}</> : <span className="muted">尚无任务记录</span>;
           return <tr key={item.id}><td><strong>{item.review_data?.title || item.source_filename}</strong><small>{item.source_filename}</small></td><td>{stageCell(item.document_stages?.file)}</td><td>{stageCell(item.document_stages?.ocr)}</td><td>{stageCell(item.document_stages?.index)}</td><td>{timeLabel(item.updated_at)}</td><td><button type="button" className="button secondary" onClick={() => setSelectedDocumentId(item.id)}>查看详情</button></td></tr>;        })}</tbody></table></div>

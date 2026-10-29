@@ -87,7 +87,7 @@ function Actions({ node, owner, ready, initialCommand, retain }: { node: NodeIde
       const value = await knowledgeSaveRequest(node.id, owner, controller.signal, operation);
       if (!live.current || controller.signal.aborted) return;
       if (value.receipt?.request_id !== operation.request_id || value.receipt.applied_saved !== operation.saved) {
-        throw new Error("暂时无法确认原操作的回执。");
+        throw new Error("暂时无法确认原操作的操作结果。");
       }
       retain(null); setState(value); setUnknown(null); setNotice(value.saved ? "已收藏此条目。" : "已取消收藏。");
     } catch (error) {
@@ -135,7 +135,7 @@ function Actions({ node, owner, ready, initialCommand, retain }: { node: NodeIde
       <button type="button" onClick={() => { setShareUrl(new URL(`/theories/nodes/${encodeURIComponent(node.slug)}`, window.location.origin).href); setPanel("share"); }}><Share2 size={15} />分享</button>
     </div>
     {saveError ? <p className={styles.message} role="alert">{saveError}</p> : null}
-    {unknown && !saveError ? <p className={styles.message} role="alert">原收藏操作尚未确认，请先核对原操作；离开本页会失去查回入口。</p> : null}
+    {unknown && !saveError ? <p className={styles.message} role="alert">原收藏操作尚未确认，请先核对原操作；离开本页会失去查询入口。</p> : null}
     {notice ? <p className={styles.message} role="status">{notice}</p> : null}
     <Dialog open={panel !== null} onRequestClose={() => { setPanel(null); citationAbort.current?.abort(); }}
       className={styles.dialog} aria-labelledby={`knowledge-actions-${node.id}`}>

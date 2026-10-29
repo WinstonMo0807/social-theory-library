@@ -26,18 +26,18 @@ export function IssueAssistanceReview({owner,onApplied,issueId,version,selection
   useUnsavedForm({pending,recovery,edits},{pending:null,recovery:"",edits:{}});
   useEffect(()=>{onDirty(Boolean(Object.keys(edits).length));return()=>onDirty(false);},[edits,onDirty]);
   useEffect(()=>{const controller=new AbortController();lifetime.current=controller;queueMicrotask(()=>{if(controller.signal.aborted)return;try{const saved=sessionStorage.getItem(storageKey)||"";if(saved&&!/^[0-9a-f-]{36}$/i.test(saved))throw Error("原操作编号格式异常，请保留本页并核对助手任务历史。");setRecovery(saved);onPending(Boolean(saved));setReady(true);}catch(reason){setError(reason instanceof Error?reason.message:"浏览器不能保留请求编号，请保留当前页面。");}});return()=>controller.abort();},[storageKey,onPending]);
-  function clearRecovery(){try{sessionStorage.removeItem(storageKey);}catch{setError("原结果已收到，但浏览器不能清除恢复标记。请保留此页并稍后查回。");return false;}setRecovery("");setPending(null);onPending(false);return true;}
+  function clearRecovery(){try{sessionStorage.removeItem(storageKey);}catch{setError("原结果已收到，但浏览器不能清除恢复标记。请保留此页并稍后查询。");return false;}setRecovery("");setPending(null);onPending(false);return true;}
   async function lookup(cancel=false){
     if(!ready||!recovery||inFlight.current)return;inFlight.current=true;setBusy(true);setError("");
     try{
       const value=await request<Receipt>(`${endpoint}commands/${recovery}/`,cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{});
       if(lifetime.current?.signal.aborted)return;
-      if(value.owner_id!==owner||value.issue_id!==issueId||value.request_id!==recovery||!["applied","cancelled"].includes(value.state))throw Error("原操作回执与当前页面不一致，请重新核对。");
+      if(value.owner_id!==owner||value.issue_id!==issueId||value.request_id!==recovery||!["applied","cancelled"].includes(value.state))throw Error("原操作结果与当前页面不一致，请重新核对。");
       if(value.state==="applied"&&value.operation==="adopt")await onApplied();
       if(lifetime.current?.signal.aborted)return;
       if(value.task){setTask(value.task);setEdits(previous=>Object.fromEntries(Object.entries(previous).filter(([id])=>!value.task!.adopted_ids.includes(id)&&!value.task!.dismissed_ids.includes(id))));}
-      if(!clearRecovery())return;setAttempt(n=>n+1);setMessage(value.state==="cancelled"?"已停止未执行的原操作；已运行任务和已采用文字没有撤销。":"已查回原操作，任务和文章按现有结果继续。");
-    }catch(reason){if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"原操作暂时无法查回，请保留原编号后重试。");}
+      if(!clearRecovery())return;setAttempt(n=>n+1);setMessage(value.state==="cancelled"?"已停止未执行的原操作；已运行任务和已采用文字没有撤销。":"已查询原操作，任务和文章按现有结果继续。");
+    }catch(reason){if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"原操作暂时无法查询，请保留原编号后重试。");}
     finally{inFlight.current=false;if(!lifetime.current?.signal.aborted)setBusy(false);}
   }
   useEffect(()=>{
@@ -62,7 +62,7 @@ export function IssueAssistanceReview({owner,onApplied,issueId,version,selection
   const locked=!ready||disabled||dirty||busy||Boolean(pending)||Boolean(recovery);
   async function send(command:Pending){
     if(!ready||inFlight.current)return;
-    try{const id=String(JSON.parse(command.body).request_id||"");if(!id||recovery&&recovery!==id)throw Error("请先查回原操作。");sessionStorage.setItem(storageKey,id);setRecovery(id);}catch(reason){setError(reason instanceof Error?reason.message:"无法保留原请求编号，请保留当前页面。");return;}
+    try{const id=String(JSON.parse(command.body).request_id||"");if(!id||recovery&&recovery!==id)throw Error("请先查询原操作。");sessionStorage.setItem(storageKey,id);setRecovery(id);}catch(reason){setError(reason instanceof Error?reason.message:"无法保留原请求编号，请保留当前页面。");return;}
     inFlight.current=true;generation.current+=1;setBusy(true);setPending(command);onPending(true);setError("");setMessage("");
     try{const result=await auxiliary<Task>(command.path,command.body,command.refresh);if(lifetime.current?.signal.aborted)return;setTask(result);if(!clearRecovery())return;setEdits(previous=>Object.fromEntries(Object.entries(previous).filter(([id])=>!result.adopted_ids.includes(id)&&!result.dismissed_ids.includes(id))));setAttempt(value=>value+1);setMessage(command.refresh?"已追加到文章草稿，原有人工段落保留。":"操作已保存。");}
     catch(reason){if(lifetime.current?.signal.aborted)return;const definite=reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,409].includes(reason.status);if(definite&&!clearRecovery())return;setError(definite?(reason as Error).message:"暂时无法确认操作结果。请重试同一请求，或读取任务历史核对；已选材料保持原样。");}
@@ -82,7 +82,7 @@ export function IssueAssistanceReview({owner,onApplied,issueId,version,selection
     <p>依据已选公开材料生成待审阅文字。采用只追加草稿，原文和人工段落保持原样。</p><button type="button" className={styles.gold} disabled={locked||!selectedReady||!selection.question.trim()||Boolean(taskPollDelay(task||{}))||Boolean(Object.keys(edits).length)} onClick={start}>生成{names[operation]}</button>
     {dirty?<p>请先保存当前选材与问题，再生成或采用建议。</p>:!selectedReady?<p>请选择并保存至少一项当前可公开的材料。</p>:null}
     {error?<p role="alert" className={styles.warning}>{error}</p>:null}{message?<p role="status">{message}</p>:null}
-    {recovery?<section className={styles.warning} role="status"><p>上次操作尚未确认，原编号已按账户保留。先查回结果，再继续生成或采用。</p><button type="button" disabled={busy} onClick={()=>void lookup()}>查回原操作</button>{pending?<button type="button" disabled={busy||disabled||dirty} onClick={()=>void send(pending)}>重试同一请求</button>:null}<button type="button" disabled={busy} onClick={()=>void lookup(true)}>停止未执行请求</button></section>:null}
+    {recovery?<section className={styles.warning} role="status"><p>上次操作尚未确认，原编号已按账户保留。先查询结果，再继续生成或采用。</p><button type="button" disabled={busy} onClick={()=>void lookup()}>查询原操作</button>{pending?<button type="button" disabled={busy||disabled||dirty} onClick={()=>void send(pending)}>重试同一请求</button>:null}<button type="button" disabled={busy} onClick={()=>void lookup(true)}>停止未执行请求</button></section>:null}
     {showHistory?<section aria-label="助手任务历史"><h3>任务历史</h3>{history.map(row=><button type="button" key={row.id} disabled={!ready||busy||Boolean(recovery)} onClick={()=>{if(Object.keys(edits).length&&!window.confirm("尚有未采用的审阅修改，切换任务会放弃这些修改。是否继续？"))return;generation.current+=1;setTask(row);setEdits({});}}>{names[row.operation]} · {new Date(row.created_at).toLocaleString("zh-CN")} · {row.created_by}</button>)}{!history.length?<p>尚无助手任务。</p>:null}<nav><button type="button" disabled={historyPage===1} onClick={()=>setHistoryPage(n=>n-1)}>上一页</button><span>{historyPage} / {pages}</span><button type="button" disabled={historyPage>=pages} onClick={()=>setHistoryPage(n=>n+1)}>下一页</button></nav></section>:null}
     {task?<section aria-label="当前助手任务"><header><h3>{names[task.operation]}</h3><button type="button" disabled={busy} onClick={()=>void refresh()}>读取进度</button></header><p>{task.question}</p>
       {taskPollDelay(task)?<><p role="status">{task.status==="pending"?"任务已排队":"正在生成候选…"}</p><progress max={100} value={task.progress}/><button type="button" disabled={locked} onClick={()=>act("cancel")}>取消当前任务</button></>:null}
@@ -93,6 +93,6 @@ export function IssueAssistanceReview({owner,onApplied,issueId,version,selection
       {task.suggestions.map((row,index)=>{const adopted=task.adopted_ids.includes(row.id),dismissed=task.dismissed_ids?.includes(row.id),done=adopted||dismissed,current=blocks.find(block=>block.id===row.target_block_id);return <article key={row.id} className={styles.suggestion} data-level={row.kind==="heading"?row.level||1:undefined} aria-label={`${labels[index]}建议`}><header><span>{labels[index]}{done?adopted?" · 已采用":" · 已忽略":""}</span><small>{row.source_keys.length} 项依据</small></header>
         {row.target_block_id?<section className={styles.proseComparison} aria-label="人工正文对比"><h4>涉及已有段落，请核对</h4><p>建议关联到当前文章中的人工段落。是否存在观点冲突，由编辑依据材料判断。</p><strong>生成时的人工文字</strong><blockquote>{row.original_text||"当时该段尚未填写文字。"}</blockquote>{!current?<p className={styles.warning}>当前正文已没有这一段，请重新生成后再处理。</p>:current.text!==row.original_text?<><strong>当前人工文字</strong><blockquote>{current.text||"当前该段为空。"}</blockquote><p className={styles.warning}>这一段在生成后已有变化。</p></>:null}<strong>助手建议{edits[row.id]!==undefined?" · 审阅修改中":""}</strong></section>:null}
         {edits[row.id]===undefined?<p className={styles.suggestionText}>{row.text}</p>:<label>审阅修改<textarea maxLength={6000} value={edits[row.id]} disabled={locked} onChange={event=>setEdits(value=>({...value,[row.id]:event.target.value}))}/></label>}{row.gap?<p className={styles.warning}>材料缺口：{row.gap}</p>:null}<details><summary>查看依据与原文对比</summary>{row.source_keys.map(key=>{const source=task.sources.find(value=>value.source_key===key)?.source;return source?<div key={key}><strong>{source.title}</strong><p>{source.edition_label}</p>{source.text?<blockquote>{source.text}</blockquote>:<p>{source.summary || "这条依据为资料记录，尚无直接原文。"}</p>}{source.reader_url?.startsWith("/reader/")?<a href={source.reader_url} target="_blank" rel="noopener">查看原文 ↗</a>:null}</div>:<p key={key}>该来源当前不可读。</p>;})}{!row.source_keys.length?<p>本项没有直接原文依据，请核对其标题或材料缺口。</p>:null}</details>{row.target_block_id?<p>采用后追加为新草稿段落；原段落保留，可继续在编辑区整理。</p>:null}<footer><button type="button" className={styles.gold} disabled={locked||done||stale||!task.can_adopt||edits[row.id]?.trim()===""||Boolean(row.target_block_id&&!current)} onClick={()=>act("adopt",row.id)}>采用</button><button type="button" disabled={locked||done} onClick={()=>setEdits(value=>({...value,[row.id]:value[row.id]??row.text}))}>修改</button><button type="button" disabled={locked||done} onClick={()=>act("dismiss",row.id)}>忽略</button></footer></article>;})}
-    </section>:<p className={styles.empty}>尚未生成建议。先确定策划问题，再选择真实材料。</p>}
+    </section>:<p className={styles.empty}>尚未生成建议。先确定策划问题，再选择材料。</p>}
   </aside>;
 }

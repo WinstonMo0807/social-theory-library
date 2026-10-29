@@ -16,13 +16,13 @@ export function useScholarSave<K extends SaveKind = "scholar">(actor: string, ki
   const [recovery, setRecovery] = useState(""), [ready, setReady] = useState(false), [error, setError] = useState(""), [canRetry, setCanRetry] = useState(false);
   useEffect(() => {
     const request = new AbortController(); controller.current = request;
-    queueMicrotask(() => { if (request.signal.aborted) return; try { setRecovery(sessionStorage.getItem(key(actor,kind)) || ""); setReady(true); } catch { setError("保存回执暂不可读，请先核对操作记录。"); } });
+    queueMicrotask(() => { if (request.signal.aborted) return; try { setRecovery(sessionStorage.getItem(key(actor,kind)) || ""); setReady(true); } catch { setError("保存结果暂不可读，请先核对操作记录。"); } });
     return () => request.abort();
   }, [actor,kind]);
   async function save<T>(path: string, body: string, headers: Record<string, string>, method: string): Promise<T> {
     const request = controller.current; if (!actor || !ready || !request || request.signal.aborted) throw Error("正在核对编辑账户及原请求，请稍后。");
     if (!pending.current) {
-      if (sessionStorage.getItem(key(actor,kind))) throw Error("存在未核对的保存，请先读取原请求回执。");
+      if (sessionStorage.getItem(key(actor,kind))) throw Error("存在未核对的保存，请先读取原请求结果。");
       pending.current = { id: createRequestKey(), path, body, headers, method };
       sessionStorage.setItem(key(actor,kind), pending.current.id); setRecovery(pending.current.id); setCanRetry(true);
     }
@@ -34,7 +34,7 @@ export function useScholarSave<K extends SaveKind = "scholar">(actor: string, ki
       const result = await withPrivateOwner(actor, () => apiRequest<T & { save_receipt: Receipt<K> }>(original.path, {
         method: original.method, body: original.body, headers: { ...original.headers, "X-Editor-Owner": actor, "Idempotency-Key": original.id }, signal,
       }, getServerSessionCredential(), false), signal);
-      if (result.save_receipt?.actor_id !== actor || result.save_receipt.request_id !== original.id) throw Error("回执与原请求不匹配，请核对记录。");
+      if (result.save_receipt?.actor_id !== actor || result.save_receipt.request_id !== original.id) throw Error("操作结果与原请求不匹配，请核对记录。");
       sessionStorage.removeItem(key(actor,kind)); pending.current = null; setRecovery(""); setCanRetry(false); setError(""); return result;
     } catch (reason) {
       // A later rejection does not prove an earlier timed-out write rolled back.
@@ -53,7 +53,7 @@ export function useScholarSave<K extends SaveKind = "scholar">(actor: string, ki
       const result = await withPrivateOwner(actor, () => apiRequest<Receipt<K>>(`/catalog/admin/${kind === "topic" ? "topics" : kind === "node_merge" ? "theory-system/merges" : kind === "timeline_merge" ? "theory-timeline/merges" : kind === "timeline" ? "theory-timeline" : kind === "path_route" ? "theory-system/reading-paths/routes" : kind === "path" ? "theory-system/reading-paths" : kind === "relation" ? "scholar-relations" : kind === "review" ? "theory-system/review-tasks" : kind === "knowledge_relation" ? "theory-system/relations" : kind === "node" ? "theory-system/nodes" : kind === "node_link" ? "scholar-links/node" : kind === "topic_link" ? "scholar-links/topic" : "scholars"}/commands/${recovery}/`, {
         cache: "no-store", signal, headers: { "X-Editor-Owner": actor },...(cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{}),
       }, getServerSessionCredential(), false), signal);
-      if (result.actor_id !== actor || result.request_id !== recovery) throw Error("原请求回执不匹配。");
+      if (result.actor_id !== actor || result.request_id !== recovery) throw Error("原请求结果不匹配。");
       sessionStorage.removeItem(key(actor,kind)); pending.current = null; setRecovery(""); setCanRetry(false); setError(""); return result;
     } catch (reason) { if (!request.signal.aborted) setError(reason instanceof Error ? reason.message : "原请求暂不可读取。"); return null; } finally { acting.current = false; }
   }

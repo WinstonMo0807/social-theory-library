@@ -265,8 +265,8 @@
  .stl4-catalog-result-tags span { font-size:12px; }
  .stl4-catalog-result-copy > p { font-size:13px; line-height:1.5; }
  .stl4-catalog-abstract,.stl4-catalog-result-copy .stl4-catalog-detail-link { display:none !important; }
- .stl4-catalog-result-actions { flex-direction:row; width:100%; max-width:none; justify-content:start; gap:6px; }
- .stl4-catalog-result-actions :is(button,a) { min-height:33px; font-size:13px; padding:5px 10px; }
+ .stl4-catalog-result-actions { flex-direction:row; flex-wrap:wrap; width:100%; max-width:none; justify-content:start; gap:6px; }
+ .stl4-catalog-result-actions :is(button,a) { min-height:33px; font-size:13px; padding:5px 10px; white-space:nowrap; flex:0 0 auto; }
  .stl4-catalog-more { margin-left:auto; }
  .stl4-catalog-version-previews > div { margin:5px 0; }
  .stl4-catalog-version-previews span { font-size:12px; }

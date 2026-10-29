@@ -66,7 +66,7 @@ function SavedViews({ view, title: defaultTitle, onRestore, disabled, owner, rea
   function accept(result: GraphViewResponse, command: GraphViewCommand) {
     if (result.receipt?.request_id !== command.request_id || result.receipt.deleted !== (result.record === null)
         || command.method === "DELETE" && !result.receipt.deleted
-        || command.id && result.record && result.record.id !== command.id) throw new Error("未能确认原操作回执。");
+        || command.id && result.record && result.record.id !== command.id) throw new Error("未能确认原操作结果。");
     if (memoryRef.current?.owner === owner && memoryRef.current.command.request_id === command.request_id) memoryRef.current = null;
     onPendingChange(false);
     setUnknown(null); setDeleteId("");
@@ -104,7 +104,7 @@ function SavedViews({ view, title: defaultTitle, onRestore, disabled, owner, rea
       if (definite) { memoryRef.current = null; onPendingChange(false); }
       setUnknown(definite ? null : command);
       setError(definite ? failure instanceof Error ? failure.message : "操作未能完成，请重新读取视图。"
-        : sent ? "尚未确认原操作的结果。服务器可能已保存，请先核对原请求；离开本页会失去查回入口。"
+        : sent ? "尚未确认原操作的结果。服务器可能已保存，请先核对原请求；离开本页会失去查询入口。"
         : "当前账户尚未核对，保存请求还未发送。原请求标识已保留，请重新核对后继续。");
     } finally { if (request.current === controller) { request.current = null; lock.current = false; if (live.current) setBusy(false); } }
   }
@@ -129,7 +129,7 @@ function SavedViews({ view, title: defaultTitle, onRestore, disabled, owner, rea
 
   return <>
     {!owner && ready ? <Link className={styles.outlineButton} href={`/login?${new URLSearchParams({ next: initialSavedView ? `/theories/graph?saved_view=${encodeURIComponent(initialSavedView)}` : view ? graphHref(graphParamsForView(view)) : "/theories/graph" })}`}><Bookmark size={15} />{initialSavedView ? "登录后恢复本人视图" : "保存当前视图"}</Link> : <button className={styles.outlineButton} type="button" disabled={!ready || !owner} onClick={() => { setOpen(true); if (!list) void readPage(1); }}><Bookmark size={15} />{unknown ? "核对未确认的保存" : "保存当前视图"}</button>}
-    {unknown && !open ? <p role="alert" className={styles.status}>原操作尚未核对，本页仍保留查回入口；请核对后再离开。</p> : null}
+    {unknown && !open ? <p role="alert" className={styles.status}>原操作尚未核对，本页仍保留查询入口；请核对后再离开。</p> : null}
     <Dialog open={open} onRequestClose={() => { if (!busy) setOpen(false); }} className={styles.savedDialog} aria-labelledby="saved-graph-title">
       <header><h2 id="saved-graph-title">我的图谱视图</h2><button type="button" aria-label="关闭保存视图" disabled={busy} onClick={() => setOpen(false)}><X size={19} /></button></header>
       <p>保存当前中心、范围与显示位置。打开时重新读取公开关系与来源。</p>

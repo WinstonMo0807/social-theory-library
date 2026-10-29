@@ -26,10 +26,10 @@ const trustLabels: Record<string, string> = {
   low: "低信任",
 };
 const sourceLabels: Record<string, string> = {
-  authority: "权威对象",
-  canonical: "规范名称",
+  authority: "正式条目",
+  canonical: "标准名称称",
   verified_alias: "已验证别名",
-  generated: "系统派生",
+  generated: "自动生成",
   legacy: "历史映射",
 };
 
@@ -92,17 +92,17 @@ export function QueryLexiconWorkspace() {
   return (
     <div className="admin-page">
       <header className="admin-page-title">
-        <div><p>搜索与智能</p><h1>QueryLexicon 派生词典</h1><span>这里查看由学者、理论节点、学科和主题等权威对象派生的检索词典。它不会自行创造权威对象，词条不能直接编辑；权威修改会通过变更事件同步。</span></div>
+        <div><p>搜索与智能</p><h1>检索词典</h1><span>词条来自学者、理论、学科和主题。请到对应条目修改，词典会同步更新。</span></div>
         <div className="admin-title-actions"><button className="button secondary" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} />刷新</button>{payload?.permissions?.can_manage ? <><button className="button" type="button" onClick={() => void run("dry_run")} disabled={Boolean(busy)}><WandSparkles size={15} />预演</button><button className="button" type="button" onClick={() => void run("reconcile")} disabled={Boolean(busy)}><WandSparkles size={15} />正式同步</button></> : null}</div>
       </header>
-      <div className="admin-toolbar"><label><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="检索 term、规范化 term……" aria-label="检索 QueryLexicon term" /></label></div>
+      <div className="admin-toolbar"><label><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索词条……" aria-label="搜索词条" /></label></div>
       {message ? <p className="form-message" role="status">{message}</p> : null}
       {payload && !payload.permissions?.can_manage ? <p className="form-message" role="status">当前账户为只读权限。正式同步由超级管理员执行。</p> : null}
       {loading && !payload ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取词典状态……</p> : null}
       {payload ? <>
-        <section className="admin-panel"><header><h2>当前派生状态</h2></header><dl className="admin-stats-grid"><div><dt>内容版本</dt><dd>{payload.revision ?? "未初始化"}</dd></div><div><dt>活动生成批次</dt><dd translate="no">{payload.generation?.id ?? "—"}</dd></div><div><dt>活动词条</dt><dd>{payload.entries ?? 0}</dd></div><div><dt>公开可用词条</dt><dd>{payload.public_active_entries ?? 0}</dd></div><div><dt>后台可解析词条</dt><dd>{payload.admin_resolvable_entries ?? 0}</dd></div><div><dt>待处理变更</dt><dd>{payload.pending_events ?? 0}</dd></div><div><dt>失败同步</dt><dd>{payload.failed_events ?? 0}</dd></div></dl><p className="admin-help">公开搜索只读公开可用词条；后台候选解析可以读取后台可解析词条。草稿权威对象不会因此暴露到公网。</p></section>
-        <section className="admin-panel"><header><h2>实体覆盖</h2></header><div className="admin-table-wrap"><table><thead><tr><th>实体类型</th><th>词条</th><th>公开</th><th>后台</th></tr></thead><tbody>{(payload.entities ?? []).map((row) => <tr key={row.entity_type}><td>{({ person: "学者", knowledge_node: "理论节点", discipline: "学科", subdiscipline: "子学科", topic: "主题", theory_school: "理论流派", concept: "概念" } as Record<string, string>)[row.entity_type] ?? row.entity_type}</td><td>{row.entries}</td><td>{row.public_active_entries}</td><td>{row.admin_resolvable_entries}</td></tr>)}</tbody></table></div></section>
-        <section className="admin-panel"><header><h2>词条检查器</h2><span>只读派生数据</span></header><div className="admin-table-wrap"><table><thead><tr><th>词条</th><th>实体</th><th>语言 / 类型</th><th>信任等级</th><th>可见范围</th><th>来源</th></tr></thead><tbody>{(payload.terms ?? []).map((row) => <tr key={row.id}><td><strong>{row.term}</strong><small translate="no">{row.normalized_term}</small></td><td>{row.entity_label}<small>{({ person: "学者", knowledge_node: "理论节点", discipline: "学科", subdiscipline: "子学科", topic: "主题", theory_school: "理论流派", concept: "概念" } as Record<string, string>)[row.entity_type] ?? row.entity_type}</small></td><td>{row.language} · {({ canonical: "规范名称", alias: "别名", translation: "译名", search_variant: "检索变体", historical: "历史名称", transliteration: "音译" } as Record<string, string>)[row.term_type] ?? row.term_type}</td><td>{trustLabels[row.trust_level] ?? row.trust_level}</td><td>{row.public_active ? "公开" : ""}{row.admin_resolvable ? " 后台" : ""}</td><td>{sourceLabels[row.source_kind] ?? row.source_kind}</td></tr>)}</tbody></table></div></section>
+        <section className="admin-panel"><header><h2>同步状态</h2></header><dl className="admin-stats-grid"><div><dt>内容版本</dt><dd>{payload.revision ?? "未初始化"}</dd></div><div><dt>当前生成批次</dt><dd translate="no">{payload.generation?.id ?? "—"}</dd></div><div><dt>当前词条</dt><dd>{payload.entries ?? 0}</dd></div><div><dt>公开可用词条</dt><dd>{payload.public_active_entries ?? 0}</dd></div><div><dt>后台可用词条</dt><dd>{payload.admin_resolvable_entries ?? 0}</dd></div><div><dt>待处理变更</dt><dd>{payload.pending_events ?? 0}</dd></div><div><dt>失败同步</dt><dd>{payload.failed_events ?? 0}</dd></div></dl><p className="admin-help">公开搜索只使用已公开词条，草稿仅供后台处理。</p></section>
+        <section className="admin-panel"><header><h2>条目覆盖</h2></header><div className="admin-table-wrap"><table><thead><tr><th>条目类型</th><th>词条</th><th>公开</th><th>后台</th></tr></thead><tbody>{(payload.entities ?? []).map((row) => <tr key={row.entity_type}><td>{({ person: "学者", knowledge_node: "理论节点", discipline: "学科", subdiscipline: "子学科", topic: "主题", theory_school: "理论流派", concept: "概念" } as Record<string, string>)[row.entity_type] ?? row.entity_type}</td><td>{row.entries}</td><td>{row.public_active_entries}</td><td>{row.admin_resolvable_entries}</td></tr>)}</tbody></table></div></section>
+        <section className="admin-panel"><header><h2>词条列表</h2><span>自动生成，只读</span></header><div className="admin-table-wrap"><table><thead><tr><th>词条</th><th>实体</th><th>语言 / 类型</th><th>信任等级</th><th>可见范围</th><th>来源</th></tr></thead><tbody>{(payload.terms ?? []).map((row) => <tr key={row.id}><td><strong>{row.term}</strong><small translate="no">{row.normalized_term}</small></td><td>{row.entity_label}<small>{({ person: "学者", knowledge_node: "理论节点", discipline: "学科", subdiscipline: "子学科", topic: "主题", theory_school: "理论流派", concept: "概念" } as Record<string, string>)[row.entity_type] ?? row.entity_type}</small></td><td>{row.language} · {({ canonical: "标准名称称", alias: "别名", translation: "译名", search_variant: "检索变体", historical: "历史名称", transliteration: "音译" } as Record<string, string>)[row.term_type] ?? row.term_type}</td><td>{trustLabels[row.trust_level] ?? row.trust_level}</td><td>{row.public_active ? "公开" : ""}{row.admin_resolvable ? " 后台" : ""}</td><td>{sourceLabels[row.source_kind] ?? row.source_kind}</td></tr>)}</tbody></table></div></section>
       </> : null}
       {dryRun ? <section className="admin-panel"><header><h2>最近一次预演</h2><span>只读结果</span></header><pre className="admin-readable-json">{dryRunText(dryRun)}</pre></section> : null}
     </div>

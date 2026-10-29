@@ -93,7 +93,7 @@ export function TheoryTimelineWorkspace({ page, selected, selectionError, group,
     </div>
     <div className={`${styles.workspace} ${filters.view === "list" ? styles.listView : ""}`}>
       <section className={styles.eventList} aria-label="时间线事件">
-        {page.results.length ? <ul>{page.results.map(event => <li key={event.id}><EventLink event={event} path={actionPath} filters={filters} selected={event.id === selected?.id} /></li>)}</ul> : <p role="status" className={styles.empty}>没有符合条件的公开事件。<span>请调整筛选条件；仅已发布的真实事件会出现在这里。</span></p>}
+        {page.results.length ? <ul>{page.results.map(event => <li key={event.id}><EventLink event={event} path={actionPath} filters={filters} selected={event.id === selected?.id} /></li>)}</ul> : <p role="status" className={styles.empty}>没有符合条件的公开事件。<span>没有匹配的已发布事件，请调整筛选。</span></p>}
         {page.count ? <nav className={styles.pagination} aria-label="时间线分页">{page.previous ? <Link href={timelineHref(actionPath, filters, { page: page.page - 1, focus: null })}>上一页</Link> : <span>上一页</span>}<span>第 {page.page} / {page.total_pages} 页</span>{page.next ? <Link href={timelineHref(actionPath, filters, { page: page.page + 1, focus: null })}>下一页</Link> : <span>下一页</span>}</nav> : null}
       </section>
       {filters.view !== "list" ? <div className={styles.axisColumn}>

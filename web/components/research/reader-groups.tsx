@@ -48,7 +48,7 @@ function Groups({ owner }: { owner: string }) {
   function remember(value: Recovery | null) {
     setRecovery(value);
     try { if (value) sessionStorage.setItem(key, JSON.stringify(value)); else sessionStorage.removeItem(key); }
-    catch { action.setMessage("浏览器未保存恢复标识，请保持本页直到取得回执。"); }
+    catch { action.setMessage("浏览器未保存恢复标识，请保持本页直到取得操作结果。"); }
   }
   function finish(value: GroupResult) {
     pending.current = null; setRetryReady(false); remember(null); setConfirm(null); setConfirmed(false);
@@ -86,18 +86,18 @@ function Groups({ owner }: { owner: string }) {
       const invite = current.invitations.find(row => row.id === invitationId);
       if (!invite?.token) throw Error("邀请已接受、撤回或到期，请重新读取当前邀请。");
       return groupInviteLink(invite.token);
-    }, value => { void writeClipboardText(value).then(() => { setManual(""); action.setMessage("邀请链接已复制，请自行交给对应账户。链接不会授予其他账户成员身份。"); }).catch(() => setManual(value)); });
+    }, value => { void writeClipboardText(value).then(() => { setManual(""); action.setMessage("邀请链接已复制，请发送给受邀者。仅指定账户可以接受邀请。"); }).catch(() => setManual(value)); });
   }
   if (action.invalid) return <div className={styles.empty} role="alert"><p>当前账户或权限需要重新核对，已隐藏原账户的小组资料。</p><button onClick={() => window.location.reload()}>重新核对账户</button></div>;
   return <>
     <header className={styles.heading}><div><h1>我的小组</h1><p>邀请明确的账户，一起阅读和讨论。</p></div><span className={styles.privacy}>仅成员可见</span></header>
     {action.message ? <p className={styles.feedback} role="status">{action.message}</p> : null}
-    {recovery ? <section className={styles.recovery}><h2>核对上次小组操作</h2><p>先查回原请求，避免重复创建或发出邀请。没有保存账户资料或邀请内容到浏览器。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<GroupResult>(owner, `/reading/groups/receipt/?${new URLSearchParams({ request_id: recovery.request_id, ...(recovery.group_id ? { group_id: recovery.group_id } : {}) })}`, { signal }), finish)}>查回原结果</button>{retryReady ? <button disabled={action.busy} onClick={() => { if (pending.current) submit(pending.current); }}>重试原操作</button> : <><label><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />我已核对现有小组与邀请</label><button disabled={action.busy || !reviewed} onClick={() => { remember(null); setReviewed(false); }}>结束恢复</button></>}</div></section> : null}
+    {recovery ? <section className={styles.recovery}><h2>核对上次小组操作</h2><p>先查询原请求，避免重复创建或发出邀请。没有保存账户资料或邀请内容到浏览器。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<GroupResult>(owner, `/reading/groups/receipt/?${new URLSearchParams({ request_id: recovery.request_id, ...(recovery.group_id ? { group_id: recovery.group_id } : {}) })}`, { signal }), finish)}>查询原结果</button>{retryReady ? <button disabled={action.busy} onClick={() => { if (pending.current) submit(pending.current); }}>重试原操作</button> : <><label><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />我已核对现有小组与邀请</label><button disabled={action.busy || !reviewed} onClick={() => { remember(null); setReviewed(false); }}>结束恢复</button></>}</div></section> : null}
     {inviteToken ? <section className={styles.panel}><h2>收到一份小组邀请</h2><p>只有邀请指定的账户可以接受。接受后可查看成员；不自动获得以前分享的资料。</p><button disabled={blocked} onClick={() => accept({ token: inviteToken })}>接受本账户的邀请</button></section> : null}
     <div className={styles.groupLayout}>
       <aside>
         <section className={styles.panel}><h2>已加入的小组</h2>{directory.error ? <p role="alert">{directory.error}<button onClick={directory.reload}>重新读取</button></p> : !rows ? <p role="status">正在读取…</p> : rows.groups.results.length ? <><div className={styles.objectList}>{rows.groups.results.map(row => <button key={row.id} aria-pressed={row.id === id} onClick={() => { setId(row.id); setRename(""); }}><strong>{row.title}</strong><small>{row.kind === "campus" ? "学术小组" : "合作研究团队"} · {row.member_count} 人{row.is_owner ? " · 我创建的" : ""}</small></button>)}</div><SharingPagination page={page} total={rows.groups.total_pages} onPage={setPage} /></> : <p className={styles.muted}>还没有加入小组。</p>}</section>
-        <section className={styles.panel}><h2>创建小组</h2><form onSubmit={event => { event.preventDefault(); create(); }}><label>小组名称<input value={title} onChange={event => setTitle(event.target.value)} maxLength={80} required disabled={blocked} /></label><label>小组类型<select value={kind} onChange={event => setKind(event.target.value as typeof kind)} disabled={blocked}><option value="campus">学术小组</option><option value="team">合作研究团队</option></select></label><p className={styles.muted}>按账号邀请成员。学术小组不代表已验证院校身份。</p><button type="submit" disabled={blocked || !title.trim()}>创建</button></form></section>
+        <section className={styles.panel}><h2>创建小组</h2><form onSubmit={event => { event.preventDefault(); create(); }}><label>小组名称<input value={title} onChange={event => setTitle(event.target.value)} maxLength={80} required disabled={blocked} /></label><label>小组类型<select value={kind} onChange={event => setKind(event.target.value as typeof kind)} disabled={blocked}><option value="campus">学术小组</option><option value="team">合作研究团队</option></select></label><p className={styles.muted}>按账号邀请成员。成员的院校身份未经验证。</p><button type="submit" disabled={blocked || !title.trim()}>创建</button></form></section>
         {rows?.invitations.results.length ? <section className={styles.panel}><h2>待处理的邀请</h2>{rows.invitations.results.map(invite => <article className={styles.invitation} key={invite.id}><strong>{invite.title}</strong><small>有效至 {new Date(invite.expires_at).toLocaleDateString("zh-CN")}</small><button disabled={blocked} onClick={() => accept({ invitation_id: invite.id })}>接受邀请</button></article>)}<SharingPagination page={invitePage} total={rows.invitations.total_pages} onPage={setInvitePage} /></section> : null}
       </aside>
       <section className={styles.panel}>

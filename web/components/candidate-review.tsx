@@ -78,7 +78,7 @@ function kindLabel(kind: Candidate["review_kind"]) {
   return ({
     query_lexicon: "PDF 词典候选",
     field_enrichment: "字段补全候选",
-    new_authority: "新权威对象候选",
+    new_authority: "新条目建议",
     metadata: "元数据候选",
     theory: "理论 / 关系审核",
   } as Record<Candidate["review_kind"], string>)[kind];
@@ -190,15 +190,15 @@ export function CandidateReview() {
   return (
     <section className="admin-section candidate-review" aria-label="统一候选审核">
       <header className="admin-section-heading">
-        <div><p className="eyebrow">审核工作流</p><h1>候选审核中心</h1><span>这里管理待审核的字段补全、PDF 词典和新权威对象候选。它不是词典本身；接受动作仍写入各自的权威来源。</span></div>
+        <div><p className="eyebrow">审核工作流</p><h1>候选审核中心</h1><span>这里管理待审核的字段补全、PDF 词典和新条目候选。它不是词典本身；接受动作仍写入各自的权威来源。</span></div>
         <div className="admin-section-actions"><button type="button" onClick={() => void load()} disabled={loading}><Filter size={15} />刷新</button></div>
       </header>
       <div className="admin-toolbar candidate-review-toolbar">
         <label><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="pending">待审核</option><option value="accepted">已接受</option><option value="rejected">已拒绝</option><option value="all">全部</option></select></label>
-        <label><span>候选类型</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">全部审核来源</option><option value="field_enrichment">字段补全</option><option value="query_lexicon">PDF 词典</option><option value="new_authority">新权威对象</option><option value="metadata">书目元数据</option><option value="theory">理论 / 关系</option></select></label>
-        {data ? <small>待审核队列共 {data.counts.total ?? data.results.length} 条 · 字段补全 {data.counts.field_enrichment ?? 0} · PDF 词典 {data.counts.query_lexicon ?? 0} · 新权威对象 {data.counts.new_authority ?? 0}{data.truncated ? " · 当前只显示排序靠前的一页" : ""}</small> : null}
+        <label><span>候选类型</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">全部审核来源</option><option value="field_enrichment">字段补全</option><option value="query_lexicon">PDF 词典</option><option value="new_authority">新条目</option><option value="metadata">书目元数据</option><option value="theory">理论 / 关系</option></select></label>
+        {data ? <small>待审核队列共 {data.counts.total ?? data.results.length} 条 · 字段补全 {data.counts.field_enrichment ?? 0} · PDF 词典 {data.counts.query_lexicon ?? 0} · 新条目 {data.counts.new_authority ?? 0}{data.truncated ? " · 当前只显示排序靠前的一页" : ""}</small> : null}
       </div>
-      <p className="admin-help candidate-review-explanation">“全部审核来源”只是把不同领域的待审记录集中展示，不是会自动更新的社会科学词典。QueryLexicon 是由已确认 authority 派生的检索词典；这里的接受、拒绝或匹配动作仍分别写回各自的来源对象。</p>
+      <p className="admin-help candidate-review-explanation">审核结果保存到对应条目。检索词典会根据已确认条目更新。</p>
       {message ? <p className="form-message" role="status">{message}</p> : null}
       {loading ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取候选……</p> : null}
       {!loading && !data?.results.length ? <p className="admin-list-state">当前筛选没有候选。0 也是有效状态。</p> : null}

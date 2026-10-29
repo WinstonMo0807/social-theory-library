@@ -44,7 +44,7 @@ export function usePersistentWorkspace<T>(path: string, ownerId: string | null, 
     const load = async (automatic = false) => {
       if (request.signal.aborted || pendingRef.current || loading) return;
       if (automatic && pollBudgetExpired(startedAt)) {
-        setState(previous => previous?.key === identity ? { ...previous, pollPaused: true, error: "自动刷新已暂停，后台任务可能仍在继续。请重新读取进度，不会重新提交任务。" } : previous);
+        setState(previous => previous?.key === identity ? { ...previous, pollPaused: true, error: "自动刷新已暂停，后台任务可能仍在继续。请刷新进度。" } : previous);
         return;
       }
       if (automatic && document.visibilityState !== "visible") {

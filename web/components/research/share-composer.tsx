@@ -113,9 +113,9 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
     });
   }
   function finish(value: ShareReceipt) {
-    if(value.owner_id!==owner||(pending.current&&value.request_id!==pending.current.request_id)||(recovery&&value.request_id!==recovery))throw Error("提交回执与当前账户或原编号不一致，请保留记录。");
+    if(value.owner_id!==owner||(pending.current&&value.request_id!==pending.current.request_id)||(recovery&&value.request_id!==recovery))throw Error("提交结果与当前账户或原编号不一致，请保留记录。");
     remember(null);pending.current = null; setRetryReady(false); setReceipt(value); setPhase(4);
-    setActionMessage(value.share.revoked ? "原提交后来已撤回，旧请求不会重新建立授权。" : "已取得真实提交回执，请查看接收范围与有效期。");
+    setActionMessage(value.share.revoked ? "原提交后来已撤回，旧请求不会重新建立授权。" : "已提交，请核对接收范围与有效期。");
   }
   function send(original?: ShareCreateInput) {
     if (pending.current && original !== pending.current) return;
@@ -125,16 +125,16 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
     pending.current = body; setRetryReady(true);
     void action.run(signal => sharingRequest<ShareReceipt>(owner, "/reading/shares/", { method: "POST", body: JSON.stringify(body), signal }), finish, reason => {
       setConfirmed(false);
-      setActionMessage(`${reason instanceof Error?reason.message:"提交尚未确认。"} 原编号已保留；请先查回结果，或取消尚未执行的原提交。`);
+      setActionMessage(`${reason instanceof Error?reason.message:"提交尚未确认。"} 原编号已保留；请先查询结果，或取消尚未执行的原提交。`);
     });
   }
   function stopPending(){
     if(!recovery)return;
     const expected=recovery;
     void action.run(signal=>sharingRequest<ShareRecoveryResult>(owner,"/reading/shares/receipt/",{method:"POST",signal,body:JSON.stringify({request_id:expected,action:"cancel_pending"})}),value=>{
-      if(value.owner_id!==owner||value.request_id!==expected)throw Error("取消回执与当前账户或原编号不一致，请保留记录。");
+      if(value.owner_id!==owner||value.request_id!==expected)throw Error("取消操作结果与当前账户或原编号不一致，请保留记录。");
       if(value.state==="applied"){
-        if(!value.receipt||value.receipt.request_id!==expected||value.receipt.owner_id!==owner)throw Error("原提交回执不完整，请保留编号。");
+        if(!value.receipt||value.receipt.request_id!==expected||value.receipt.owner_id!==owner)throw Error("原提交结果不完整，请保留编号。");
         finish(value.receipt);setActionMessage("原分享已建立，停止待提交请求不会撤回它；可进入内容与授权查看，必要时另行撤回。");
       }else if(value.state==="cancelled"){
         remember(null);pending.current=null;setRetryReady(false);invalidate();setActionMessage("已在服务器取消原提交，迟到请求不会建立分享。内容选择保留，重新预览确认后才可发起新提交。");
@@ -155,14 +155,14 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
     <header className={styles.heading}><div><h1>分享或提交策划的内容范围</h1><p>选择要分享或提交的内容，预览将公开的范围，明确目的地或接收范围。默认不包含您的私人正文及 PDF 原件。</p></div><aside className={styles.scopeNote}><Info size={17}/><div><strong>说明</strong><p>仅分享您选择的内容。不会包含您的私人正文、未勾选的个人笔记及 PDF 原件。来源文献的全文需由接收方通过本馆访问或自行获取，状态为“尚未核实”。</p><small>本次主动勾选的本人笔记会列入范围。</small></div></aside></header>
     {action.message ? <p className={styles.feedback} role="status">{action.message}</p> : null}
     {storageError?<p className={styles.feedback} role="alert">{storageError} <Link href="/account/sharing">查看本人分享记录</Link></p>:null}
-    {recovery ? <section className={styles.recovery}><h2>核对原提交结果</h2><p>原编号：{recovery}。尚未确认时不能另起提交，刷新后仍可查回；取消只阻止尚未执行的请求。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${recovery}`, { signal }), finish)}>查回原结果</button>{retryReady?<button disabled={action.busy} onClick={()=>{if(pending.current)send(pending.current);}}>重试原提交</button>:null}<button disabled={action.busy} onClick={()=>setStopOpen(true)}>取消尚未执行的提交</button><Link href="/account/sharing">查看分享记录</Link></div></section>:null}
-    <ConfirmDialog open={stopOpen} title="取消尚未执行的分享提交" description="服务器先核对原编号。已经建立的分享会返回原回执，不会被撤回；尚未执行的请求会登记取消，迟到后也不会建立授权。" confirmLabel="核对并取消待提交请求" pending={action.busy} onCancel={()=>setStopOpen(false)} onConfirm={stopPending}/>
+    {recovery ? <section className={styles.recovery}><h2>核对原提交结果</h2><p>原编号：{recovery}。尚未确认时不能另起提交，刷新后仍可查询；取消只阻止尚未执行的请求。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareReceipt>(owner, `/reading/shares/receipt/?request_id=${recovery}`, { signal }), finish)}>查询原结果</button>{retryReady?<button disabled={action.busy} onClick={()=>{if(pending.current)send(pending.current);}}>重试原提交</button>:null}<button disabled={action.busy} onClick={()=>setStopOpen(true)}>取消尚未执行的提交</button><Link href="/account/sharing">查看分享记录</Link></div></section>:null}
+    <ConfirmDialog open={stopOpen} title="取消尚未执行的分享提交" description="服务器先核对原编号。已经建立的分享会返回原操作结果，不会被撤回；尚未执行的请求会登记取消，迟到后也不会建立授权。" confirmLabel="核对并取消待提交请求" pending={action.busy} onCancel={()=>setStopOpen(false)} onConfirm={stopPending}/>
 
     <nav className={styles.mobileSteps} aria-label="分享步骤">{["选择内容", "预览", "选择目的地", "确认提交"].map((label, index) => <button key={label} aria-current={phase === index + 1 ? "step" : undefined} disabled={action.busy} onClick={() => setPhase(index + 1)}><span>{index + 1}</span>{label}</button>)}</nav>
     <div className={styles.steps} data-phase={phase}>
       <section className={styles.step}><h2><span>1</span><b className={styles.desktopStepTitle}>选择当前研究或书单对象</b><b className={styles.mobileStepTitle}>选择对象</b></h2><div className={styles.stepBody}>
         <div className={styles.tabs}>{(["research", "booklist"] as const).map(value => <button key={value} aria-pressed={kind === value} disabled={blocked} onClick={() => { chooseSource(value); setSourcePage(1); }}>{value === "research" ? "我的研究" : "我的书单"}</button>)}</div>
-        {sources.error ? <p role="alert">{sources.error}<button onClick={sources.reload}>重新读取</button></p> : sources.data ? <><div className={styles.objectList}>{sources.data.results.map(row=>{const chosen=objects.some(item=>item.kind===kind&&item.id===row.id);return <div className={styles.sourceRow} key={row.id}><input type="checkbox" aria-label={`选择${row.title}`} checked={chosen} disabled={blocked||!chosen&&objects.length>=5} onChange={event=>toggleSource(row,event.target.checked)}/><button type="button" aria-pressed={id===row.id} disabled={blocked} onClick={()=>chooseSource(kind,row.id)}><SharingCover work={row.first_material}/><span><strong>{row.title}</strong>{row.first_material?<small>首条选材：{row.first_material.title}{row.first_material.authors?.length?` · ${row.first_material.authors.join("、")}`:""}{row.first_material.year?` · ${row.first_material.year} 年`:""}</small>:<small>{row.material_count?"首条选材当前无公开书目信息":"尚未添加选材"}</small>}<small>共 {row.material_count} 条选材</small><small>{chosen?"已加入范围 · 查看并勾选具体内容":"查看内容 · 不会自动分享"}</small></span></button></div>;})}</div>{!sources.data.results.length ? <p className={styles.muted}>没有可选择的{kind === "research" ? "研究" : "书单"}。</p> : null}<SharingPagination page={sourcePage} total={sources.data.total_pages} disabled={blocked} onPage={setSourcePage} /></> : <p role="status">正在读取本人对象…</p>}
+        {sources.error ? <p role="alert">{sources.error}<button onClick={sources.reload}>重新读取</button></p> : sources.data ? <><div className={styles.objectList}>{sources.data.results.map(row=>{const chosen=objects.some(item=>item.kind===kind&&item.id===row.id);return <div className={styles.sourceRow} key={row.id}><input type="checkbox" aria-label={`选择${row.title}`} checked={chosen} disabled={blocked||!chosen&&objects.length>=5} onChange={event=>toggleSource(row,event.target.checked)}/><button type="button" aria-pressed={id===row.id} disabled={blocked} onClick={()=>chooseSource(kind,row.id)}><SharingCover work={row.first_material}/><span><strong>{row.title}</strong>{row.first_material?<small>首条选材：{row.first_material.title}{row.first_material.authors?.length?` · ${row.first_material.authors.join("、")}`:""}{row.first_material.year?` · ${row.first_material.year} 年`:""}</small>:<small>{row.material_count?"首条选材当前无公开书目信息":"尚未添加选材"}</small>}<small>共 {row.material_count} 条选材</small><small>{chosen?"已加入范围 · 查看并勾选具体内容":"预览分享内容"}</small></span></button></div>;})}</div>{!sources.data.results.length ? <p className={styles.muted}>没有可选择的{kind === "research" ? "研究" : "书单"}。</p> : null}<SharingPagination page={sourcePage} total={sources.data.total_pages} disabled={blocked} onPage={setSourcePage} /></> : <p role="status">正在读取本人对象…</p>}
         {data?<p className={styles.muted}>当前查看：{data.source.title}</p>:null}
         {objects.length?<><p className={styles.muted}>已选 {objects.length}/5 个对象。每类内容跨对象合计最多20项；每个对象至少勾选一项才能预览。</p><ul className={styles.scopeList}>{objects.map(object=><li key={`${object.kind}:${object.id}`}><button type="button" disabled={blocked} onClick={()=>chooseSource(object.kind,object.id)}>{object.title} · {Object.values(object.values).reduce((sum,items)=>sum+items.length,0)} 项</button><button type="button" disabled={blocked} onClick={()=>removeSource(object)}>移除</button></li>)}</ul></>:null}
       </div></section>
@@ -191,12 +191,12 @@ function Composer({ owner, initialId, initialKind }: { owner: string; initialId:
         <div className={styles.actions}><Link href="/account/sharing">取消</Link><button className={styles.primary} disabled={blocked || !ready || !confirmed} onClick={() => send()}>确认提交</button></div>
       </div></section>
       <section className={styles.step}><h2><span>6</span>提交结果 · 返回原位置</h2><div className={styles.stepBody}>
-        {receipt ? <><div className={styles.receipt}><CheckCircle2 size={40} /><h3>{receipt.share.revoked ? "原分享已撤回" : "已取得提交回执"}</h3><p>有效至 {new Date(receipt.share.expires_at).toLocaleString("zh-CN")}。接收方仅能查看确认范围内的内容。</p></div><div className={styles.objectList}>
+        {receipt ? <><div className={styles.receipt}><CheckCircle2 size={40} /><h3>{receipt.share.revoked ? "原分享已撤回" : "已取得提交结果"}</h3><p>有效至 {new Date(receipt.share.expires_at).toLocaleString("zh-CN")}。接收方仅能查看确认范围内的内容。</p></div><div className={styles.objectList}>
           {receipt.token ? <button disabled={action.busy} onClick={copyLink}><Copy size={15} />复制分享链接</button> : null}
           {receipt.share.destination === "group" && !receipt.share.revoked ? <button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<ShareNotifyResult>(owner, `/reading/shares/${receipt.share.id}/`, { method: "POST", signal, body: JSON.stringify({ action: "notify", expected_revision: receipt.share.revision }) }), value => setActionMessage(`${value.message} 新增 ${value.created} 条，共 ${value.total} 位接收者已有通知。`))}><Mail size={15} />发送站内通知</button> : null}
           <Link href={`/account/sharing/${receipt.share.id}`}>查看内容与授权</Link><Link href="/account/sharing">查看提交记录</Link>
           {receipt.share.source_id ? <Link href={receipt.share.source_kind === "research" ? `/account/research/${receipt.share.source_id}` : `/account/collections/${receipt.share.source_id}`}>{receipt.share.source_count>1?"返回首个原对象":"返回原位置"}</Link> : null}
-        </div></> : <p className={styles.muted}>确认提交后，这里显示真实回执、链接与后续操作。</p>}
+        </div></> : <p className={styles.muted}>提交后，可在这里查看结果和分享链接。</p>}
         {manual ? <label className={styles.manual}>手动复制分享链接<textarea readOnly value={manual} onFocus={event => event.currentTarget.select()} /></label> : null}
       </div></section>
     </div>

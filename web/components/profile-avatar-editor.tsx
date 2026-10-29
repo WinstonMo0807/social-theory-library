@@ -60,11 +60,11 @@ function AvatarEditor({ owner, name }: { owner: string; name: string }) {
     if (sending.current || !controller.current || controller.current.signal.aborted) return;
     sending.current = true; setBusy(true); setMessage("");
     try { await action(); }
-    catch (reason) { if (!controller.current.signal.aborted) setMessage(reason instanceof Error ? reason.message : "操作结果尚未确认，请查回原请求。"); }
+    catch (reason) { if (!controller.current.signal.aborted) setMessage(reason instanceof Error ? reason.message : "操作结果尚未确认，请查询原请求。"); }
     finally { sending.current = false; if (!controller.current?.signal.aborted) setBusy(false); }
   }
   function accept(value: Receipt, id: string) {
-    if (value.request_id !== id || !["applied", "cancelled"].includes(value.state)) throw Error("头像回执与原请求不一致。");
+    if (value.request_id !== id || !["applied", "cancelled"].includes(value.state)) throw Error("头像操作结果与原请求不一致。");
     sessionStorage.removeItem(key(owner)); setRecovery(""); pending.current = null; setCanRetry(false); setFile(null); setPreview(""); setSnapshot(value); setConfirmation(null);
     if (fileInput.current) fileInput.current.value = "";
     setMessage(value.state === "cancelled" ? "原请求已停止，迟到的提交不会更改头像。" : "原头像操作已保存，当前资料已同步。");
@@ -109,7 +109,7 @@ function AvatarEditor({ owner, name }: { owner: string; name: string }) {
       setFile(chosen); setMessage(""); setPreview("");
     }} /></label>{file && preview ? <div className={styles.actions}><img className={styles.preview} src={preview} alt="待保存头像的居中裁切预览" /></div> : null}
     <div className={styles.actions}><button disabled={blocked || !file || !snapshot} onClick={() => setConfirmation("set")}>保存头像</button>{file ? <button disabled={blocked} onClick={() => { setFile(null); setPreview(""); if (fileInput.current) fileInput.current.value = ""; }}>取消选择</button> : null}<button disabled={blocked || !snapshot?.has_avatar} onClick={() => setConfirmation("remove")}>移除头像</button><button disabled={busy || !snapshot?.has_avatar} onClick={download}>导出本人头像</button><button disabled={busy || Boolean(file)} onClick={() => void run(async () => setSnapshot(await request<Snapshot>()))}>重新读取</button></div>
-    {recovery ? <><p>原头像操作结果尚未确认，原请求编号已保留。查回或停止后再开始其他修改。</p><div className={styles.actions}><button disabled={busy} onClick={() => recover()}>查回原操作</button><button disabled={busy} onClick={() => setConfirmation("stop")}>停止未执行的原操作</button>{canRetry ? <button disabled={busy} onClick={() => void submit(pending.current!.body.get("action") === "set" ? "set" : "remove")}>重试原操作</button> : null}</div></> : null}
+    {recovery ? <><p>原头像操作结果尚未确认，原请求编号已保留。查询或停止后再开始其他修改。</p><div className={styles.actions}><button disabled={busy} onClick={() => recover()}>查询原操作</button><button disabled={busy} onClick={() => setConfirmation("stop")}>停止未执行的原操作</button>{canRetry ? <button disabled={busy} onClick={() => void submit(pending.current!.body.get("action") === "set" ? "set" : "remove")}>重试原操作</button> : null}</div></> : null}
     {message ? <p role="status">{message}</p> : null}
     <Dialog open={confirmation !== null} onRequestClose={() => { if (!busy) setConfirmation(null); }} className={styles.dialog} aria-label="确认头像操作"><h3>{confirmation === "stop" ? "核对并停止原操作" : confirmation === "remove" ? "移除本人头像？" : "保存这张头像？"}</h3><p>{confirmation === "stop" ? "已保存的操作返回原结果，尚未执行的请求会被停止。" : confirmation === "remove" ? "移除当前头像并恢复姓名首字，不影响账户、笔记或馆藏。备份按既有保留规则处理。" : "保存处理后的头像，替换当前头像。只有本人和获准管理账户的管理员可查看。"}</p><div className={styles.actions}><button disabled={busy} onClick={() => setConfirmation(null)}>返回</button><button disabled={busy} onClick={() => { if (confirmation === "stop") recover(true); else if (confirmation) void submit(confirmation); }}>{busy ? "正在保存…" : "确认"}</button></div>{message ? <p role="status">{message}</p> : null}</Dialog>
   </section>;

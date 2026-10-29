@@ -49,7 +49,7 @@ export async function recoverPrivacyRequest(ownerId: string, requestId: string, 
   const result = await privacyOwnerRequest<PrivacyRequestReceipt>(ownerId, `${privacyPath}requests/${encodeURIComponent(requestId)}/`,
     { method: stop ? "POST" : "GET", signal, ...(stop ? { body: JSON.stringify({ action: "cancel_pending" }) } : {}) });
   if (result.request_id !== requestId || !["applied", "cancelled"].includes(result.state) || (result.state === "applied" && !result.operation_id)) {
-    throw new PrivateOwnerVerificationError("原请求回执不匹配，请保留编号并重新核对。", 409);
+    throw new PrivateOwnerVerificationError("原请求结果不匹配，请保留编号并重新核对。", 409);
   }
   return result;
 }

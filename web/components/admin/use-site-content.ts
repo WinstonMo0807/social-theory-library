@@ -38,16 +38,16 @@ export function useSiteContent(owner:string) {
     const revoked=error instanceof PrivateOwnerVerificationError||error instanceof ApiRequestError&&[401,403].includes(error.status);
     if(revoked)setBlocked(true);
     if(writing&&!revoked&&error instanceof ApiRequestError&&error.status>=400&&error.status<500&&error.status!==408){remember(null);if(error.status===409)resource.reload();}
-    setMessage(error instanceof Error?error.message:"请求未确认，请查回原结果。");
+    setMessage(error instanceof Error?error.message:"请求未确认，请查询原结果。");
   }
   async function persist(publish=false, expectedFingerprint?:string, restore?:{revision_id:string;expected_fingerprint:string;reason:string}){
     if(running.current||!draft||blocked||((publish||restore)&&dirty))return;
     const original=pending.current;
-    if(original&&!original.body){setMessage("请先查回上次操作，或停止尚未执行的原请求。");return;}
+    if(original&&!original.body){setMessage("请先查询上次操作，或停止尚未执行的原请求。");return;}
     const value=original||{id:createRequestKey(),action:restore?"restore" as const:publish?"publish" as const:"save" as const,body:JSON.stringify(restore?{...restore,edit_version:draft.edit_version,confirm:true}:publish?{edit_version:draft.edit_version,confirm:true,...(expectedFingerprint?{expected_fingerprint:expectedFingerprint}:{})}:{config:draft.config,about_blocks:draft.about_blocks,home_layout:draft.home_layout,edit_version:draft.edit_version})};
     remember(value);running.current=true;setBusy(true);setMessage("");
     try{const data=await request<SiteContentDraft>(`${siteBase}${value.action==="save"?"":`${value.action}/`}`,{method:value.action==="save"?"PUT":"POST",headers:{"Idempotency-Key":value.id},body:value.body});
-      if(active.current?.signal.aborted)return;remember(null);setDraft(data);setSaved(data);resource.reload();setMessage(data.replayed?"已查回原操作；当前显示服务器最新内容。":value.action==="publish"?"网站内容已发布。":value.action==="restore"?"已从所选历史恢复为新草稿，当前公开内容保持原版本。请核对来源后再发布。":"已保存草稿，公开首页在确认发布后更新。");
+      if(active.current?.signal.aborted)return;remember(null);setDraft(data);setSaved(data);resource.reload();setMessage(data.replayed?"已查询原操作；当前显示服务器最新内容。":value.action==="publish"?"网站内容已发布。":value.action==="restore"?"已从所选历史恢复为新草稿，当前公开内容保持原版本。请核对来源后再发布。":"已保存草稿，公开首页在确认发布后更新。");
       return true;
     }catch(error){failure(error,true);return false;}finally{running.current=false;if(!active.current?.signal.aborted)setBusy(false);}
   }
@@ -56,9 +56,9 @@ export function useSiteContent(owner:string) {
     running.current=true;setBusy(true);
     try{const row=await request<NonNullable<SiteContentDraft["receipt"]>>(`${siteBase}commands/${pending.current.id}/`,stop?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{method:"GET"});
       if(active.current?.signal.aborted)return;
-      if(row.actor_id!==owner||row.request_id!==pending.current?.id)throw new Error("回执与当前账户或原请求不一致，请保留页面并重新核对。");
-      if(row.action!=="cancelled"){const data=await request<SiteContentDraft>(siteBase,{});setDraft(data);setSaved(data);}remember(null);resource.reload();setMessage(row.action==="cancelled"?"已停止原请求，未保存输入仍在当前页面。":"已找到原操作回执，已重新读取当前网站内容。");
-    }catch(error){failure(error);if(error instanceof ApiRequestError&&error.status===404)setMessage("尚未找到完成回执。可以重试原请求，或停止尚未执行的原请求；这不代表操作已失败。");}
+      if(row.actor_id!==owner||row.request_id!==pending.current?.id)throw new Error("操作结果与当前账户或原请求不一致，请保留页面并重新核对。");
+      if(row.action!=="cancelled"){const data=await request<SiteContentDraft>(siteBase,{});setDraft(data);setSaved(data);}remember(null);resource.reload();setMessage(row.action==="cancelled"?"已停止原请求，未保存输入仍在当前页面。":"已找到原操作结果，已重新读取当前网站内容。");
+    }catch(error){failure(error);if(error instanceof ApiRequestError&&error.status===404)setMessage("尚未找到完成操作结果。可以重试原请求，或停止尚未执行的原请求；这不代表操作已失败。");}
     finally{running.current=false;if(!active.current?.signal.aborted)setBusy(false);}
   }
   const remoteRevision=resource.data?.history[0],localRevision=draft?.history[0];

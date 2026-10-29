@@ -114,9 +114,9 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     } catch(reason) {
       if(lifetime?.signal.aborted)return;
       setAutoBlocked(true);
-      if(reason instanceof PrivateOwnerVerificationError){setMessage("暂时无法核对原登录账户。请恢复同一账户后查回这次保存。");}
+      if(reason instanceof PrivateOwnerVerificationError){setMessage("暂时无法核对原登录账户。请恢复同一账户后查询这次保存。");}
       else if(reason instanceof ApiRequestError && reason.status>0 && reason.status<500){setPending(null);setConflict(reason.status===409);setMessage(`${reason.message} 当前输入已保留。`);}
-      else setMessage("暂时无法确认保存结果，当前输入已保留。请先查回这次保存，再决定重试。");
+      else setMessage("暂时无法确认保存结果，当前输入已保留。请先查询这次保存，再决定重试。");
     } finally {if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   },[draft,sessionInvalid,conflict,recovery,pending,dirty,key,owner,issueId,request,endpoint,accept,manualRequired]);
   useEffect(()=>{
@@ -131,10 +131,10 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
       const next=await request<IssueDraft>(`${endpoint}?request_id=${encodeURIComponent(pending.requestId)}`);
       if(lifetime?.signal.aborted)return;
       if(next.request_found){
-        if(next.is_current_revision){accept(next);setMessage("已查回，原保存已完成。");}
+        if(next.is_current_revision){accept(next);setMessage("已查询，原保存已完成。");}
         else{setPending(null);setSaved(next);setConflict(true);setMessage("原保存已完成，此后已有新的修订。请比较后继续。");}
-      }else setMessage("尚未查到这次保存。可以再次查回，或重试原请求；不会重复建立计划书目。");
-    }catch(reason){if(!lifetime?.signal.aborted)setMessage(reason instanceof Error?reason.message:"保存结果暂时无法查回。");}
+      }else setMessage("尚未查到这次保存。可以再次查询，或重试原请求；不会重复建立计划书目。");
+    }catch(reason){if(!lifetime?.signal.aborted)setMessage(reason instanceof Error?reason.message:"保存结果暂时无法查询。");}
     finally{if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   }
   async function command(path:string, body:unknown, success:string) {
@@ -156,7 +156,7 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     setDraft(restoredDraft(saved,recovery.draft));setPending(recovery.pending);setRecovery(null);setAutoBlocked(true);
     setManualRequired(true);
     setConflict(!recovery.pending && recovery.draft.edit_version!==saved.edit_version);
-    setMessage(recovery.pending?"已恢复未确认的保存，请先查回结果。":"已恢复本标签页输入；请重新核对来源并保存。");
+    setMessage(recovery.pending?"已恢复未确认的保存，请先查询结果。":"已恢复本标签页输入；请重新核对来源并保存。");
   }
   function restoreHistory(value:IssueDraft) {
     if(action.current || compositionActive.current || dirty || pending || recovery || !saved)return;
@@ -169,12 +169,12 @@ export function useIssueDraft(issueId:string, owner:string, fullPreview:boolean)
     const lifetime=active.current;action.current=true;setBusy("assistant");
     try {
       const result=await request<T>(url,{method:"POST",body});
-      if(refresh){try{const next=await request<IssueDraft>(endpoint);if(!lifetime?.signal.aborted)accept(next);}catch(reason){throw new Error("助手操作已提交，但文章最新状态读取失败，请查回原操作后继续。",{cause:reason});}}
+      if(refresh){try{const next=await request<IssueDraft>(endpoint);if(!lifetime?.signal.aborted)accept(next);}catch(reason){throw new Error("助手操作已提交，但文章最新状态读取失败，请查询原操作后继续。",{cause:reason});}}
       return result;
     } finally {if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}
   }
   async function refreshAfterAssistance() {
-    if(action.current||compositionActive.current||dirty||pending||conflict||recovery||sessionInvalid)throw new Error("当前文章还有输入或状态待核对，请先保留并核对，再查回助手操作。");
+    if(action.current||compositionActive.current||dirty||pending||conflict||recovery||sessionInvalid)throw new Error("当前文章还有输入或状态待核对，请先保留并核对，再查询助手操作。");
     const lifetime=active.current;action.current=true;setBusy("assistant-refresh");
     try{const next=await request<IssueDraft>(endpoint);if(lifetime?.signal.aborted)throw new DOMException("Session changed","AbortError");accept(next);}
     finally{if(active.current===lifetime){action.current=false;if(!lifetime?.signal.aborted)setBusy("");}}

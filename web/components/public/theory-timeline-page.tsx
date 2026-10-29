@@ -15,7 +15,7 @@ export async function TheoryTimelinePage({ searchParams, actionPath = "/theories
     page = await loadTimelinePage(filters);
   } catch (error) {
     const invalid = error instanceof ServerApiError && [400, 404].includes(error.status);
-    return <><div className={styles.page}><TimelineHero scope={scope} /><section className={styles.error} role="alert"><h2>{invalid ? "当前时间线条件无法使用" : "时间线暂时无法读取"}</h2><p>{invalid ? "所选事件、年份或页码已不在当前公开范围内，或筛选条件格式不正确。请调整条件后重新读取。" : "未能取得实际事件数据，请稍后重试。这里不会用示例内容填充。"}</p><Link href={timelineHref(actionPath, filters)}>重试当前条件</Link><Link href={timelineHref(actionPath, scope ? { node: scope.slug } : {})}>清空筛选</Link></section></div><SiteFooter reference="theory-timeline" /></>;
+    return <><div className={styles.page}><TimelineHero scope={scope} /><section className={styles.error} role="alert"><h2>{invalid ? "当前时间线条件无法使用" : "时间线暂时无法读取"}</h2><p>{invalid ? "所选事件、年份或页码已不在当前公开范围内，或筛选条件格式不正确。请调整条件后重新读取。" : "事件加载失败，请稍后重试。"}</p><Link href={timelineHref(actionPath, filters)}>重试当前条件</Link><Link href={timelineHref(actionPath, scope ? { node: scope.slug } : {})}>清空筛选</Link></section></div><SiteFooter reference="theory-timeline" /></>;
   }
   let selected: TimelineEventDetail | null = null, group: TimelinePage | null = null;
   let selectionError = "", groupError = "";

@@ -109,7 +109,7 @@ function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: st
           {row.kind === "bookmark" ? <button onClick={() => { setAdding(true); setEditing(row); }}>在此位置添加笔记</button> : null}</>}
           <DetailActions owner={owner} row={row} onPreview={() => setPreview(value => !value)} />
           {preview ? <CitationSourcePreview reference={row.source} /> : null}
-          <p className={styles.privateNote}>独立笔记不会自动进入学术记忆或模型上下文。加入研究仅关联所选来源及你明确填写的备注。</p>
+          <p className={styles.privateNote}>独立笔记不会自动进入学术记忆或模型参考内容。加入研究仅关联所选来源及你明确填写的备注。</p>
         </> : <div className={styles.empty}><BookOpen size={28} /><p>{focus ? "正在核对这条记录…" : "选择一条记录，查看摘录、笔记与来源。"}</p></div>}
       </aside>
     </div>
@@ -156,7 +156,7 @@ function NoteEditor({ owner, original, addNote = false, onSaved, onCancel }: { o
       if (!active) return;
       try {
         const id = sessionStorage.getItem(storageKey);
-        if (id) { if (!/^[\da-f-]{36}$/i.test(id)) throw Error("原请求标识无法读取，请先在我的笔记核对。"); setRecovery(id); setMessage("上次新增笔记的结果尚未确认，请先查回原结果。"); }
+        if (id) { if (!/^[\da-f-]{36}$/i.test(id)) throw Error("原请求标识无法读取，请先在我的笔记核对。"); setRecovery(id); setMessage("上次新增笔记的结果尚未确认，请先查询原结果。"); }
       } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "原请求无法读取。"); }
       setReady(true);
     });
@@ -169,7 +169,7 @@ function NoteEditor({ owner, original, addNote = false, onSaved, onCancel }: { o
     sending.current = true; setBusy(true); setMessage("");
     try {
       const result = await withPrivateOwner(owner, () => notebookRequest<{ owner_id: string; id: string; exists: boolean; retired: boolean; record: NotebookRecord | null }>(owner, `${notebookRecordPath(original)}note/?${new URLSearchParams({ request_id: recovery })}`, { signal: request.signal }), request.signal);
-      if (result.id !== recovery) throw Error("回执与原请求不符，请保留请求并重新核对。");
+      if (result.id !== recovery) throw Error("操作结果与原请求不符，请保留请求并重新核对。");
       if (!request.signal.aborted) { clear(); if (result.exists && result.record) onSaved(result.record); else setMessage("原笔记已经删除，旧请求不会重新创建。可以关闭，或明确填写另一条新笔记。"); }
     } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "原笔记暂时无法核对。"); }
     finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
@@ -186,13 +186,13 @@ function NoteEditor({ owner, original, addNote = false, onSaved, onCancel }: { o
     } catch (reason) {
       if (request.signal.aborted) return;
       if (addNote && reason instanceof ApiRequestError && [400, 403, 404, 409].includes(reason.status)) clear();
-      setMessage(reason instanceof Error ? reason.message : "保存未确认，请保留输入并查回原结果。");
+      setMessage(reason instanceof Error ? reason.message : "保存未确认，请保留输入并查询原结果。");
     } finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
   }
   const dirty = useUnsavedForm({ body, tags }, { body: addNote ? "" : labelOnly ? original.label : original.body, tags: original.tags.join("，") });
   const locked = busy || !ready || Boolean(recovery) || broken;
   return <form className={styles.editor} onSubmit={event => void save(event)}><fieldset disabled={locked}><label>{labelOnly ? "名称" : "我的笔记"}<textarea value={body} maxLength={limit} rows={7} onChange={event => setBody(event.target.value)} /></label><small>{body.length} / {limit}</small>{!labelOnly ? <label>标签（逗号分隔，最多12个）<input value={tags} onChange={event => setTags(event.target.value)} /></label> : null}</fieldset>{message ? <p role="alert">{message}</p> : null}
-    {recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>查回原笔记</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的笔记核对原操作。确认结束本次恢复？已保存内容不会删除。")) clear(); }}>已核对，结束恢复</button> : null}
+    {recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>查询原笔记</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的笔记核对原操作。确认结束本次恢复？已保存内容不会删除。")) clear(); }}>已核对，结束恢复</button> : null}
     <footer><button type="button" disabled={busy} onClick={() => { if (!dirty || window.confirm("当前笔记尚未保存，确定放弃修改吗？")) onCancel(); }}>取消</button><button className={styles.primary} disabled={busy || !ready || broken || Boolean(recovery && !canRetry)}>{busy ? "正在保存…" : recovery ? "重试原请求" : "保存"}</button></footer></form>;
 }
 
@@ -286,7 +286,7 @@ function ProjectForm({ owner, rows, onDone }: { owner: string; rows: NotebookRec
       if (!active) return;
       try { const raw = sessionStorage.getItem(storageKey); if (!raw) return; const value = JSON.parse(raw) as { project_id: string; request_id: string };
         if (!/^[\da-f-]{36}$/i.test(value?.project_id) || !/^[\da-f-]{36}$/i.test(value?.request_id)) throw Error("原请求身份无法读取，请到我的研究核对。");
-        setRecovery(value); setUncertain(true); setMessage("上次操作结果未确认，请先核对原回执。");
+        setRecovery(value); setUncertain(true); setMessage("上次操作结果未确认，请先核对原操作结果。");
       } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "原请求无法读取。"); }
     }); return () => { active = false; };
   }, [storageKey]);
@@ -296,9 +296,9 @@ function ProjectForm({ owner, rows, onDone }: { owner: string; rows: NotebookRec
     sending.current = true; setBusy(true);
     try {
       const result = await withPrivateOwner(owner, () => notebookRequest<{ owner_id: string; project_id: string; exists: boolean }>(owner, `${notebookPath}add-to-project/?${new URLSearchParams(recovery)}`, { signal: request.signal }), request.signal);
-      if (result.project_id !== recovery.project_id) throw Error("回执与原研究不符。");
+      if (result.project_id !== recovery.project_id) throw Error("操作结果与原研究不符。");
       if (!request.signal.aborted) { clear(); setMessage(result.exists ? "原操作已保存，可在我的研究查看。" : "原操作已完成，该研究随后已删除，不会重新创建。"); }
-    } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "原回执暂时无法核对。"); }
+    } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "原操作结果暂时无法核对。"); }
     finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
   }
   async function submit(event: FormEvent) {
@@ -318,7 +318,7 @@ function ProjectForm({ owner, rows, onDone }: { owner: string; rows: NotebookRec
       setMessage(reason instanceof Error ? reason.message : "结果未确认，请使用原请求重试。");
     } finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
   }
-  return <form className={styles.editor} onSubmit={event => void submit(event)}><p>将明确选择的 {rows.length} 条记录对应的原文加入研究，并关联这些记录。私人笔记正文不会自动复制或授权给模型。</p><fieldset disabled={busy || uncertain || broken}><ChoicePicker owner={owner} kind="projects" label="选择我的研究" value={project?.id || ""} onChange={(_, row) => setProject(row || null)} /><label>新增选材备注（已有材料备注保留）<textarea maxLength={200} value={note} onChange={event => setNote(event.target.value)} /></label></fieldset>{message ? <p role="alert">{message}</p> : null}<button className={styles.primary} disabled={busy || broken || !project?.revision}>{busy ? "正在保存…" : uncertain ? "重试原请求" : "加入研究"}</button>{recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>核对原回执</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的研究核对原操作。确认结束此请求的恢复？已保存内容不会删除。")) { clear(); setBroken(false); } }}>已核对，结束恢复</button> : null}<Link href="/account/research">管理我的研究</Link></form>;
+  return <form className={styles.editor} onSubmit={event => void submit(event)}><p>将明确选择的 {rows.length} 条记录对应的原文加入研究，并关联这些记录。私人笔记正文不会自动复制或授权给模型。</p><fieldset disabled={busy || uncertain || broken}><ChoicePicker owner={owner} kind="projects" label="选择我的研究" value={project?.id || ""} onChange={(_, row) => setProject(row || null)} /><label>新增选材备注（已有材料备注保留）<textarea maxLength={200} value={note} onChange={event => setNote(event.target.value)} /></label></fieldset>{message ? <p role="alert">{message}</p> : null}<button className={styles.primary} disabled={busy || broken || !project?.revision}>{busy ? "正在保存…" : uncertain ? "重试原请求" : "加入研究"}</button>{recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>核对原操作结果</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的研究核对原操作。确认结束此请求的恢复？已保存内容不会删除。")) { clear(); setBroken(false); } }}>已核对，结束恢复</button> : null}<Link href="/account/research">管理我的研究</Link></form>;
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) { return <Dialog open onRequestClose={onClose} className={styles.modal} aria-label={title}><header><h2>{title}</h2><button type="button" aria-label="关闭" onClick={onClose}><X size={18} /></button></header>{children}</Dialog>; }

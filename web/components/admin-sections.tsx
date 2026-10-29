@@ -570,14 +570,14 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
           ? "整理读者进入社会理论的内容方向和层次。"
           : "自动识别提出候选，人工确认后写入作品关系。流派和主题保持为不同对象。"}
     >
-      {draft.kind === "topic" && command.recovery ? <aside role="status" className="form-message"><p>上次主题保存需要核对，刷新后只读取原回执，不重新建档。</p><button type="button" disabled={Boolean(pendingAction)} onClick={()=>void command.lookup().then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但主题后来已删除；未重新创建。");})}>读取原保存回执</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)} onClick={()=>void save(undefined,true)}>按原请求重试</button>:null}<button type="button" disabled={Boolean(pendingAction)} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原主题后来已删除，未重复创建。");});}}>停止未确认保存</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
+      {draft.kind === "topic" && command.recovery ? <aside role="status" className="form-message"><p>上次主题保存需要核对，刷新后只读取原操作结果，不重新建档。</p><button type="button" disabled={Boolean(pendingAction)} onClick={()=>void command.lookup().then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但主题后来已删除；未重新创建。");})}>读取原保存结果</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)} onClick={()=>void save(undefined,true)}>按原请求重试</button>:null}<button type="button" disabled={Boolean(pendingAction)} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原主题后来已删除，未重复创建。");});}}>停止未确认保存</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
       <div className={`taxonomy-layout ${editorOnly ? "editor-only" : ""}`}>
         {!editorOnly ? <section>
           {showTheories ? (
             <>
               <div className="admin-list-toolbar">
                 <h2>理论流派</h2>
-                <Link href="/admin/theories?node_type=theory_tradition"><Plus size={15} />新建规范理论</Link>
+                <Link href="/admin/theories?node_type=theory_tradition"><Plus size={15} />新建理论</Link>
               </div>
               <ResourceState loading={theories.loading} error={theories.error} empty={!theories.data?.results.length} />
               <div className="taxonomy-admin-grid">
@@ -1083,7 +1083,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             editorial_status: draftOnly ? (detail.data?.editorial_status ?? "draft") : draft.status,
           }), draft.id ? editorialHeaders(draft) : {}, draft.id ? "PATCH" : "POST",
       );
-      if (saved.save_replayed) { unsaved.current = false; setHasUnsaved(false); edit(saved); detail.refresh(); router.replace(`/admin/scholars/${saved.id}`); setMessage("已查回原保存，并重新读取当前版本，没有重复写入。"); return true; }
+      if (saved.save_replayed) { unsaved.current = false; setHasUnsaved(false); edit(saved); detail.refresh(); router.replace(`/admin/scholars/${saved.id}`); setMessage("已查询原保存，并重新读取当前版本，没有重复写入。"); return true; }
       setDraftState((current) => ({
         ...current,
         id: saved.id,
@@ -1135,7 +1135,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
   }
 
   return (
-    <AdminPageFrame eyebrow="页面编排 / 学者与知识" title={editorOnly ? "学者公开页编辑" : "学者"} description={editorOnly ? "编辑人物的公共学术面貌，同时保留规范身份和出处。" : "中文名、原名、译名和作者身份分别保存。学者馆藏作品从真实作者关系汇总。"}>
+    <AdminPageFrame eyebrow="页面编排 / 学者与知识" title={editorOnly ? "学者公开页编辑" : "学者"} description={editorOnly ? "编辑学者介绍、姓名及文献来源。" : "填写姓名、译名及作者信息。馆藏作品按已确认的贡献关系汇总。"}>
       {!editorOnly ? <Toolbar query={query} onQueryChange={setQuery} onSubmit={() => { const normalized = query.trim(); setSubmittedQuery(normalized); router.replace(normalized ? `/admin/scholars?q=${encodeURIComponent(normalized)}` : "/admin/scholars"); }} onCreate={() => router.push("/admin/scholars/new")} createLabel="新建学者" /> : null}
       <div className={`admin-master-detail ${editorOnly ? "editor-only" : ""}`}>
         {!editorOnly ? <section className="admin-entity-table scholar-admin-table admin-panel">
@@ -1150,10 +1150,10 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
               <span className="admin-row-actions"><Link href={`/admin/scholars/${scholar.id}`}>编辑</Link><RecycleControl kind="scholar" id={scholar.id} name={scholar.preferred_name} onDeleted={resource.refresh} />{scholar.public_eligible ? <Link href={`/scholars/${scholar.slug}`}>查看</Link> : null}</span>
             </article>
           ))}
-          {!visible.length ? <p className="empty-state">没有匹配的真实学者档案。</p> : null}
+          {!visible.length ? <p className="empty-state">未找到匹配的学者。</p> : null}
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{ q: submittedQuery }} />
         </section> : null}
-        {command.recovery ? <aside className="form-message" role="status"><p>有一次保存需要核对。表单正文只在当前页面内存中，刷新后只读取回执，不重复创建。</p><button type="button" disabled={saving} onClick={() => void command.lookup().then(receipt => { if (receipt?.exists) { unsaved.current = false; setHasUnsaved(false); detail.refresh(); router.replace(`/admin/scholars/${receipt.scholar_id}`); } else if (receipt) setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但学者后来已删除；未重复创建。"); })}>读取原保存回执</button>{command.canRetry ? <button type="button" disabled={saving} onClick={() => void save(undefined, true)}>按原请求重试保存</button> : null}<button type="button" disabled={saving} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/scholars/${receipt.scholar_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原学者后来已删除，未重复创建。");});}}>停止未确认保存</button></aside> : null}{command.error ? <p role="alert">{command.error}</p> : null}
+        {command.recovery ? <aside className="form-message" role="status"><p>有一次保存需要核对。表单正文只在当前页面内存中，刷新后只读取操作结果，不重复创建。</p><button type="button" disabled={saving} onClick={() => void command.lookup().then(receipt => { if (receipt?.exists) { unsaved.current = false; setHasUnsaved(false); detail.refresh(); router.replace(`/admin/scholars/${receipt.scholar_id}`); } else if (receipt) setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但学者后来已删除；未重复创建。"); })}>读取原保存结果</button>{command.canRetry ? <button type="button" disabled={saving} onClick={() => void save(undefined, true)}>按原请求重试保存</button> : null}<button type="button" disabled={saving} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/scholars/${receipt.scholar_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原学者后来已删除，未重复创建。");});}}>停止未确认保存</button></aside> : null}{command.error ? <p role="alert">{command.error}</p> : null}
 
         {editorOnly ? <KnowledgeVisualEditor portrait={draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => { setPortraitRevision(value => value + 1); detail.refresh(); }} /> : null} objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onCompositionStartCapture={()=>{composing.current=true;}} onCompositionEndCapture={()=>{composing.current=false;}} onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
 
@@ -1322,7 +1322,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             />
           </fieldset>
           <section data-editor-section="identity-tags"><ScholarProfileFieldsEditor section="identity" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
-          <section data-editor-section="sources"><h2>四、规范信息与来源</h2><details className="scholar-normative-fields"><summary>研究领域、机构与其他名称</summary><StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" /><StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" /><StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" /></details><ScholarProfileFieldsEditor section="sources" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
+          <section data-editor-section="sources"><h2>四、条目信息与来源</h2><details className="scholar-normative-fields"><summary>研究领域、机构与其他名称</summary><StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" /><StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" /><StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" /></details><ScholarProfileFieldsEditor section="sources" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
           <section data-editor-section="paths"><ScholarProfileFieldsEditor section="paths" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
           <section data-editor-section="sources"><details><summary>历史语录文字（保留原记录）</summary><p>这些自由文字继续保存供编辑核对；新版公开页的引语只使用上方绑定的正式原文。</p>
           <label><span>代表语录</span><textarea rows={3} value={draft.quote} onChange={(event) => setDraft({ ...draft, quote: event.target.value })} /></label>
@@ -1515,7 +1515,7 @@ export function DistributionAdmin() {
         <StatusCard icon={HardDrive} title="NAS 主副本" value="部署目录" description="原始归档和规范副本不从后台删除" />
         <StatusCard icon={Cloud} title="对象存储" value={resource.data?.results.some((item) => item.enabled && item.is_default) ? "已启用" : "未启用"} description={`${resource.data?.count ?? 0} 个服务商配置`} />
         <StatusCard icon={Server} title="云端阅读副本" value={String(totalReady)} description="已完成校验的 PDF 副本" />
-        <StatusCard icon={Database} title="最近月份估算" value={`¥ ${totalCost.toFixed(2)}`} description="来自服务商账单或人工用量快照" />
+        <StatusCard icon={Database} title="最近月份估算" value={`¥ ${totalCost.toFixed(2)}`} description="来自服务商账单或人工用量记录" />
       </section>
       <div className="distribution-layout">
         <section className="admin-panel provider-list">
@@ -1542,7 +1542,7 @@ export function DistributionAdmin() {
           <button className="button" type="button" onClick={save}><Save size={15} />保存配置</button>
         </section>
         <form className="admin-panel usage-editor" onSubmit={addUsage}>
-          <header><h2>月度用量快照</h2></header>
+          <header><h2>月度用量记录</h2></header>
           <p>服务商账单适配器尚未接入时，可以记录账单估算值。达到阈值会发送告警并阻止新的公开同步，现有阅读保持可用。</p>
           <label><span>月份</span><input type="month" value={usagePeriod} onChange={(event) => setUsagePeriod(event.target.value)} /></label>
           <label><span>估算费用</span><input type="number" min="0" step="0.01" value={usageCost} onChange={(event) => setUsageCost(event.target.value)} /></label>
@@ -1768,7 +1768,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
   }
 
   return (
-    <AdminPageFrame eyebrow={scope === "processing" ? "Processing Center" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? "处理服务设置" : "设置兼容入口"} description="查看已保存的配置与真实记录。各部分明确保存，敏感操作仍受权限保护。">
+    <AdminPageFrame eyebrow={scope === "processing" ? "Processing Center" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? "处理服务设置" : "设置兼容入口"} description="管理网站设置、备份与操作记录。">
       <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} disabled={ocrBusy&&activeSection!==key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(ocrBusy||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>
       <section className="settings-grid settings-tabbed">
         <form className="admin-panel settings-content-form" hidden={activeSection!=='public-display'} role="tabpanel" aria-labelledby="settings-tab-public-display" id="public-display" onSubmit={saveConfig}>
@@ -1942,7 +1942,7 @@ function StatusCard({ icon: Icon, title, value, description }: { icon: typeof Cl
 }
 
 function ResourceState({ loading, error, empty }: { loading: boolean; error: string; empty: boolean }) {
-  if (loading) return <p className="admin-resource-state"><LoaderCircle className="spin" size={17} />正在读取真实数据……</p>;
+  if (loading) return <p className="admin-resource-state"><LoaderCircle className="spin" size={17} />正在加载……</p>;
   if (error) return <p className="admin-resource-state error"><AlertCircle size={17} />{error}</p>;
   if (empty) return <p className="admin-resource-state">当前没有记录。</p>;
   return null;

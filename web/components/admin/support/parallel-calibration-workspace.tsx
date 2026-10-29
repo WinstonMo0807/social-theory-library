@@ -41,7 +41,7 @@ function Workspace({ ownerId, canPublish }: { ownerId: string; canPublish: boole
   };
   return <main className={styles.workspace}>
     <header className={styles.heading}><div><p className={styles.eyebrow}>网站内容 / 并读校准</p><h1>公共校准</h1><p>核对不同版本的对应关系，按投稿范围审核与发布。</p></div><button onClick={resource.reload}><RefreshCw size={15} />刷新列表</button></header>
-    <div className={styles.notice}><GitCompareArrows size={18} /><p>这里只处理读者明确提交的校准。私人笔记与术语说明不会进入投稿；通过审核后仍需有发布权限的管理员确认公开。</p></div>
+    <div className={styles.notice}><GitCompareArrows size={18} /><p>审核读者提交的校准。私人笔记不在投稿中，通过审核后仍需确认发布。</p></div>
     <nav className={styles.tabs} aria-label="校准状态">
       <button aria-current={!status ? "page" : undefined} onClick={() => change({ status: null, page: 1, item: null })}>全部校准</button>
       {Object.entries(calibrationStatuses).map(([key, label]) => <button key={key} aria-current={status === key ? "page" : undefined} onClick={() => change({ status: key, page: 1, item: null })}>{label}</button>)}
@@ -141,7 +141,7 @@ function Editor({ row, resource, canPublish, onSaved, onDirty, onBusy }: {
       <label>本次处理说明<textarea rows={4} maxLength={2000} value={note} disabled={pending || Boolean(unknown)} onChange={event => setNote(event.target.value)} placeholder="记录核对依据或退回原因，最多 2000 字" /></label>
       <p className={styles.muted}>退回时必须说明原因。已公开内容退回后停止公开；私人并读记录继续保留。</p>
       {stale && !unknown ? <div className={styles.warning}><p>校准已有新修订，你的说明仍保留。请核对上方最新状态和处理说明。</p><button onClick={() => { setBase(row); setMessage(""); }}>已核对，采用最新修订继续</button></div> : null}
-      {unknown ? <div className={styles.warning} role="status"><p>尚未确认“{actionLabels[unknown]}”的处理结果。说明和原请求仍保留，请重试查回。</p><button disabled={pending} onClick={() => void command(unknown)}>{pending ? "正在查回…" : "重试原请求"}</button></div> : null}
+      {unknown ? <div className={styles.warning} role="status"><p>尚未确认“{actionLabels[unknown]}”的处理结果。说明和原请求仍保留，请重试查询。</p><button disabled={pending} onClick={() => void command(unknown)}>{pending ? "正在查询…" : "重试原请求"}</button></div> : null}
       {message ? <p role="status" className={styles.success}>{message}</p> : null}
       <div className={parallel.actions}>
         <button disabled={blocked || !row.source_available || !["submitted", "rejected"].includes(row.status)} onClick={() => void command("review")}><Check size={15} />确认审核</button>
@@ -150,7 +150,7 @@ function Editor({ row, resource, canPublish, onSaved, onDirty, onBusy }: {
       </div>
       {!canPublish ? <p className={styles.muted}>当前账户可以审核和退回，发布需具有公开发布权限的管理员处理。</p> : null}
       <Dialog open={confirm} aria-labelledby="calibration-publish-title" className={parallel.dialog} initialFocusRef={cancelRef} onRequestClose={() => { if (!pending) setConfirm(false); }}>
-        <h2 id="calibration-publish-title">确认公开这条校准</h2><p>将按“{calibrationScopes[row.scope]}”范围公开当前修订的书目、投稿依据{row.scope === "passages" ? "与所选段落对应" : ""}。</p><p>私人笔记与术语说明不会公开。来源或修订发生变化时，发布将被阻止。</p>
+        <h2 id="calibration-publish-title">确认公开这条校准</h2><p>将按“{calibrationScopes[row.scope]}”范围公开当前修订的书目、投稿依据{row.scope === "passages" ? "与所选段落对应" : ""}。</p><p>私人笔记不公开。来源或修订已变化时，请重新核对后发布。</p>
         <footer><button ref={cancelRef} disabled={pending} onClick={() => setConfirm(false)}>继续核对</button><button className={styles.primary} disabled={blocked || row.status !== "reviewed" || !row.source_available || !canPublish} onClick={() => void command("publish")}>{pending ? "正在发布…" : "确认发布"}</button></footer>
       </Dialog>
     </section>

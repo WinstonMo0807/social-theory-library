@@ -109,7 +109,7 @@ function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLoc
         if(revision.id!==phase.revisionId||revision.target_id!==objectId||revision.target_type!==target.type||!["draft","published"].includes(revision.status))throw Error("原修订已变化或不属于当前对象，请核对记录。");
         if(revision.status!=="published"){
           const result=await request<typeof revision>(`/catalog/admin/editorial-revisions/${phase.revisionId}/publish/`,{method:"POST",body:"{}"});
-          if(result.id!==phase.revisionId||result.target_id!==objectId||result.target_type!==target.type||result.status!=="published")throw Error("原修订的发布回执不完整，请核对历史。");
+          if(result.id!==phase.revisionId||result.target_id!==objectId||result.target_type!==target.type||result.status!=="published")throw Error("原修订的发布操作结果不完整，请核对历史。");
         }
       }
       stage="storage";clear();setSettledVersion(savedVersion);setMessage("发布操作已确认。公开内容与后续检索处理请在原记录中继续核对。");refresh();

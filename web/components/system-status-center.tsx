@@ -33,7 +33,7 @@ const keyLabels: Record<string, string> = {
   uid: "活动 UID", db_ready_chunks: "数据库 ready 分块", meilisearch_document_count: "Meilisearch 文档",
   expected_document_count: "预期文档", model: "模型", model_revision: "模型 revision",
   local_path: "本地路径", offline_mode: "离线模式", revision: "词典 revision",
-  generation: "活动 generation", entries: "活动词条", public_active_entries: "公开词条",
+  generation: "活动 generation", entries: "当前词条", public_active_entries: "公开词条",
   admin_resolvable_entries: "后台词条", pending_events: "待处理事件", failed_events: "失败事件",
   provider: "服务商", capability: "能力", profile: "配置档", health: "健康检查",
   last_success: "最近成功", last_successful_check: "最近成功检查", error_category: "错误类别",

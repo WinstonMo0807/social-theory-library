@@ -28,7 +28,7 @@ export function SaveIssueList({ slug, revisionId }: { slug:string;revisionId?:st
     try{
       const endpoint=`/catalog/recommendation-issues/${encodeURIComponent(slug)}/save-list/`;
       const value=await withPrivateOwner(owner,()=>apiRequest<Result>(`${endpoint}${lookup?`?${new URLSearchParams(data)}`:""}`,{method:lookup?"GET":"POST",headers:{"X-Reader-Owner":owner},cache:"no-store",body:lookup?undefined:JSON.stringify(data)},getServerSessionCredential()));
-      if(value.owner_id!==owner||value.receipt?.request_id!==original.request_id)throw new Error("保存回执未能对应当前账户和请求，请重新核对。");
+      if(value.owner_id!==owner||value.receipt?.request_id!==original.request_id)throw new Error("保存结果未能对应当前账户和请求，请重新核对。");
       if(alive.current){setCommand(null);setResult(value);setMessage(value.saved?`已保存私人书单，共 ${value.item_count} 部作品。` : "原保存已完成，但书单后来被删除；本次核对没有重新创建书单。");}
     }catch(reason){if(alive.current){const rejected=!lookup && reason instanceof ApiRequestError && [400,409].includes(reason.status);if(rejected)setCommand(null);setMessage(`${reason instanceof Error?reason.message:"保存结果尚未确认。"}${rejected?" 本次保存未执行，请核对公开版本和隐私设置。":" 原请求已保留，请先核对结果。"}`);retry();}}
     finally{busy.current=false;if(alive.current)setPending(false);}

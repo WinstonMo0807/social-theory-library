@@ -116,7 +116,7 @@ function ParallelWorkspace({ assetId, initialPage, initialRevision, initialFocus
   function canLeave() {
     if (save.pending || submitState.pending) return false;
     return !(inputDirty || save.unknown || submitState.unknown) || window.confirm(save.unknown || submitState.unknown
-      ? "保存结果尚未核对，离开会失去本页的查回入口。仍要离开吗？"
+      ? "保存结果尚未核对，离开会失去本页的查询入口。仍要离开吗？"
       : "有尚未保存的对齐或笔记，离开会丢失本次输入。仍要离开吗？");
   }
   useEffect(() => {
@@ -282,7 +282,7 @@ function ParallelWorkspace({ assetId, initialPage, initialRevision, initialFocus
       }
       receipt ??= await parallelRequest<Calibration>("/reading/parallel-calibrations/", { method: "POST", body: operation.body, signal: lifetime.current?.signal }, ownerId);
       if (lifetime.current?.signal.aborted) return;
-      if (!receipt?.id || receipt.request_id && receipt.request_id !== operation.requestId) throw new ApiRequestError("投稿回执未能核对，请保留输入并查回原请求。", 0);
+      if (!receipt?.id || receipt.request_id && receipt.request_id !== operation.requestId) throw new ApiRequestError("投稿操作结果未能核对，请保留输入并查询原请求。", 0);
       submission.current = null; setBasis(""); setSubmitOpen(false); setSubmitState({ pending: false, unknown: false, error: "" });
       setNotice(`公共校准已提交，等待审核。${receipt.notice || "私人笔记与术语未随提交公开。"}`);
     } catch (reason) {

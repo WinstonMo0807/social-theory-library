@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "decisions": [
+    {
+      "id": "88192e554eb429c743a0753b65dceff5a1e47ddb780d77c843c0758adbf8318b",
+      "decision": "keep",
+      "reason": "这是编排编辑器的页签名称，区分当前页面文案与共享馆藏元数据；不是制作过程说明。"
+    },
+    {
+      "id": "e8a97eacac24d2e46a0c4d8d06012704dc5a5b5a1fc68ff5c31cb36e09661936",
+      "decision": "keep",
+      "reason": "管理员为章节作者确定署名范围，删掉会混淆整本书作者与章节作者。"
+    },
+    {
+      "id": "ecc6aa4df8ba717049492d9d813fca2dea494b6529d0aa8788a819cb3cb1eb2d",
+      "decision": "keep",
+      "reason": "标出无法打开的来源，避免读者把不可用材料当可核验原文。"
+    },
+    {
+      "id": "a67c63b14accfe0d9dad3f1ac18626519eeb8dbb4f47f3bf0773b03c5a1cf1bf",
+      "decision": "keep",
+      "reason": "提交个人材料前告知使用范围，属于用户作出上传决定需要的信息。"
+    },
+    {
+      "id": "dcf9d448c1dda8953b675b913c3bbc473d6dfd67a1635c3104046c6e8dfef450",
+      "decision": "keep",
+      "reason": "导出体检报告不包含上传稿件原件，读者需要知道下载包范围。"
+    },
+    {
+      "id": "bd24aef137bec2b0cdb40d016c0c65223fb98b45364389fae0e26654389709bb",
+      "decision": "keep",
+      "reason": "关注记录导出不包含书籍原文，读者需要知道下载包范围。"
+    }
+  ]
+}

@@ -224,7 +224,7 @@ export async function sendResearchTurnCommand(command: ResearchTurnCommand, owne
 export async function lookupResearchTurnRequest(projectId: string, requestId: string, ownerId: string) {
   return withPrivateOwner(ownerId, async () => {
     const page = await privateRequest<Paginated<ResearchRecord<TurnData>>>(`${researchRecordPath("research-projects", projectId)}turns/?request_id=${encodeURIComponent(requestId)}`, { headers: { "X-Reader-Owner": ownerId } });
-    if (page.results.length > 1 || page.next || page.results.some(row => row.request_id !== requestId || row.project_id !== projectId)) throw new Error("原请求回执身份无法核对，请保留输入后重试查回。");
+    if (page.results.length > 1 || page.next || page.results.some(row => row.request_id !== requestId || row.project_id !== projectId)) throw new Error("原请求操作结果无法核对，请保留输入后重试查询。");
     return page.results[0] || null;
   });
 }

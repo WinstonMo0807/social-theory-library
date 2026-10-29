@@ -35,7 +35,7 @@ export function RecoveryBatch({owner,targets,initial,onPersist,onClose,onChanged
     setMessage(reason instanceof Error?reason.message:fallback);
   }
   function validResult(result:Result,command:Command){
-    if(result.request_id!==command.request_id||result.kind!==command.kind||result.object_id!==command.object_id||!result.restored||result.public_restored)throw Error("回执与原对象不一致，请保留原编号核对。");
+    if(result.request_id!==command.request_id||result.kind!==command.kind||result.object_id!==command.object_id||!result.restored||result.public_restored)throw Error("操作结果与原对象不一致，请保留原编号核对。");
   }
   async function readPreviews(){
     if(busy.current||!live())return;
@@ -71,7 +71,7 @@ export function RecoveryBatch({owner,targets,initial,onPersist,onClose,onChanged
         validResult(result,item.command);update(index,"applied");onChanged();
       }
       if(live())setMessage(stop.current?"已停止后续提交，当前已完成的恢复保留。":"本次已确认项目已处理，请核对逐项结果。恢复均保持未发布。");
-    }catch(reason){failure(reason,"当前结果尚未确认，后续项目已暂停。请先查回原请求。");}
+    }catch(reason){failure(reason,"当前结果尚未确认，后续项目已暂停。请先查询原请求。");}
     finally{if(live()){busy.current=false;setWorking(false);}}
   }
   function confirm(){
@@ -96,13 +96,13 @@ export function RecoveryBatch({owner,targets,initial,onPersist,onClose,onChanged
         const currentSignal=signal();
         const receipt=await withPrivateOwner(owner,()=>apiRequest<Receipt>(`${base}receipts/${item.command.request_id}/`,{signal:currentSignal,cache:"no-store",headers:{"X-Editor-Owner":owner},...(cancel?{method:"POST",body:JSON.stringify({action:"cancel_pending"})}:{})},getServerSessionCredential()),currentSignal);
         if(!live())return;
-        if(receipt.request_id!==item.command.request_id||receipt.actor_id!==owner)throw Error("回执与本次账户或原请求不一致。");
+        if(receipt.request_id!==item.command.request_id||receipt.actor_id!==owner)throw Error("操作结果与本次账户或原请求不一致。");
         if(receipt.state==="applied"&&receipt.result){validResult(receipt.result,item.command);update(index,"applied");}
         else if(receipt.state==="cancelled")update(index,"cancelled");
         else throw Error("原请求状态尚不能确认，请保留编号。");
         onChanged();
       }
-      if(live()){setCancelOpen(false);setMessage(stop.current?"已暂停后续核对，尚未核对的项目仍保留。":cancel?"已核对并阻止尚未执行的剩余请求。已经完成的恢复不会撤销。":"原请求已查回。后续项目保持暂停，由你决定是否继续已确认项目。");}
+      if(live()){setCancelOpen(false);setMessage(stop.current?"已暂停后续核对，尚未核对的项目仍保留。":cancel?"已核对并阻止尚未执行的剩余请求。已经完成的恢复不会撤销。":"原请求已查询。后续项目保持暂停，由你决定是否继续已确认项目。");}
     }catch(reason){failure(reason,"原请求仍待核对，未继续后续恢复。");}
     finally{if(live()){busy.current=false;setWorking(false);}}
   }
@@ -118,9 +118,9 @@ export function RecoveryBatch({owner,targets,initial,onPersist,onClose,onChanged
     {previews.length===targets.length&&!working?<div className={styles.notice}><p>本次可恢复 {eligible.length} 项，另有 {targets.length-eligible.length} 项需单独处理。确认只恢复上述可恢复对象，保持未发布。</p></div>:null}
     <button className={styles.primary} disabled={working||previews.length!==targets.length||!eligible.length} onClick={confirm}>确认恢复 {eligible.length} 项（保持未发布）</button></>:<>
     {!previews.length?<button disabled={working} onClick={()=>void readPreviews()}>读取对象名称</button>:null}
-    <div className={styles.batchItems}>{batch.items.map((item,index)=>{const preview=previews.find(row=>row.target.kind===item.command.kind&&row.target.object_id===item.command.object_id);return <article key={item.command.request_id}><strong>{index+1}. {preview?.data?.title||`${item.command.kind} · ${item.command.object_id}`}</strong><p>{({ready:"已确认，尚未提交",pending:"当前请求待核对，确认前不提交下一项",applied:"原回执确认已恢复，后续状态以对象最新记录为准",cancelled:"未执行请求已取消"})[item.state]}</p><small>请求编号 {item.command.request_id}</small></article>;})}</div>
-    <div className={styles.relatedTools}>{working?<button onClick={()=>{stop.current=true;setMessage("已请求停止后续项目，当前请求仍需返回或查回结果。");}}>停止后续项目</button>:<>{pending?<button onClick={()=>void reconcile()}>查回当前原请求</button>:remaining?<button className={styles.primary} onClick={()=>void submitRemaining()}>继续已确认项目</button>:null}{remaining?<button onClick={()=>setCancelOpen(true)}>取消尚未执行的剩余项目</button>:<button className={styles.primary} onClick={close}>完成并返回列表</button>}</>}</div>
-    <ConfirmDialog open={cancelOpen} title="取消剩余恢复请求" description="逐项查回原结果，阻止尚未执行的请求。已经完成的恢复保留，不会撤销。" details={[`仍需核对 ${remaining} 项。`,...(message?[message]:[])]} pending={working} confirmLabel={working?"正在核对…":"取消未执行项目"} onCancel={()=>{if(!working)setCancelOpen(false);}} onConfirm={()=>void reconcile(true)}/>
+    <div className={styles.batchItems}>{batch.items.map((item,index)=>{const preview=previews.find(row=>row.target.kind===item.command.kind&&row.target.object_id===item.command.object_id);return <article key={item.command.request_id}><strong>{index+1}. {preview?.data?.title||`${item.command.kind} · ${item.command.object_id}`}</strong><p>{({ready:"已确认，尚未提交",pending:"当前请求待核对，确认前不提交下一项",applied:"原操作结果确认已恢复，后续状态以对象最新记录为准",cancelled:"未执行请求已取消"})[item.state]}</p><small>请求编号 {item.command.request_id}</small></article>;})}</div>
+    <div className={styles.relatedTools}>{working?<button onClick={()=>{stop.current=true;setMessage("已请求停止后续项目，当前请求仍需返回或查询结果。");}}>停止后续项目</button>:<>{pending?<button onClick={()=>void reconcile()}>查询当前原请求</button>:remaining?<button className={styles.primary} onClick={()=>void submitRemaining()}>继续已确认项目</button>:null}{remaining?<button onClick={()=>setCancelOpen(true)}>取消尚未执行的剩余项目</button>:<button className={styles.primary} onClick={close}>完成并返回列表</button>}</>}</div>
+    <ConfirmDialog open={cancelOpen} title="取消剩余恢复请求" description="逐项查询原结果，阻止尚未执行的请求。已经完成的恢复保留，不会撤销。" details={[`仍需核对 ${remaining} 项。`,...(message?[message]:[])]} pending={working} confirmLabel={working?"正在核对…":"取消未执行项目"} onCancel={()=>{if(!working)setCancelOpen(false);}} onConfirm={()=>void reconcile(true)}/>
     </>}
   </Dialog>;
 }

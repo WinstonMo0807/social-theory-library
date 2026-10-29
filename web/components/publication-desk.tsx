@@ -65,7 +65,7 @@ function PublicationDetails({ item, returnTo }: { item: WorkflowQueueItem; retur
     <header><div><h2>{asString(context.title || work.title, item.title)}</h2><p>{sourceLabels[item.source_type] || item.source_type} · 当前出版版本{asString(bibliography.version_label) ? `：${asString(bibliography.version_label)}` : ""}</p></div><StatusBadge {...publication} /></header>
     <p className={styles.scope}>{item.publication?.detail} 此处读取已保存内容。编辑、候选复核、文件处理与明确发布在同一共同工作页完成，保存后仍保留旧公开版本直到新修订生效。</p>
     <div className={styles.actions}>{destination ? <Link className="button" href={withAdminReturn(destination, returnTo, "publication")}>继续复核与发布 <ArrowRight size={14} /></Link> : null}
-      {item.edition_id ? <Link className="button secondary" href={withAdminReturn(`/admin/preview/works/${encodeURIComponent(item.edition_id)}`, returnTo)} target="_blank">真实公开样式预览 <ExternalLink size={14} /></Link> : null}
+      {item.edition_id ? <Link className="button secondary" href={withAdminReturn(`/admin/preview/works/${encodeURIComponent(item.edition_id)}`, returnTo)} target="_blank">查看发布预览 <ExternalLink size={14} /></Link> : null}
       {publicHref ? <Link className="button secondary" href={publicHref} target="_blank">核验当前公开结果 <ExternalLink size={14} /></Link> : null}
       <button className="button secondary" onClick={result.retry} type="button">刷新此版本结果</button>
     </div>

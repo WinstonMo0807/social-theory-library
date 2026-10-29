@@ -76,7 +76,7 @@ function BooklistsWorkspace({ owner, name, id }: { owner: string; name: string; 
         if (!raw) return;
         const value = JSON.parse(raw) as Recovery;
         if (!value || !/^[\da-f-]{36}$/i.test(value.list_id) || !/^[\da-f-]{36}$/i.test(value.request_id)) throw Error("原请求记录无法读取，请先核对服务端书单。 ");
-        setRecovery(value); setMessage("上次操作尚未取得明确回执，请先核对原结果。");
+        setRecovery(value); setMessage("上次操作尚未取得明确操作结果，请先核对原结果。");
       } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "恢复信息不可用。"); }
     });
     return () => { request.abort(); off(); };
@@ -103,7 +103,7 @@ function BooklistsWorkspace({ owner, name, id }: { owner: string; name: string; 
       const result = await withPrivateOwner(owner, () => booklistRequest<BooklistResult>(owner,
         lookup ? `/reading/lists/receipt/?${new URLSearchParams({ list_id: identity.list_id, request_id: identity.request_id })}` : "/reading/lists/command/",
         { signal, ...(lookup ? {} : { method: "POST", body: JSON.stringify(original) }) }), signal);
-      if (result.owner_id !== owner || result.id !== identity.list_id || result.receipt.request_id !== identity.request_id) throw Error("回执与原操作不符，请先核对原结果。");
+      if (result.owner_id !== owner || result.id !== identity.list_id || result.receipt.request_id !== identity.request_id) throw Error("操作结果与原操作不符，请先核对原结果。");
       clear(); setModal(null); setSelected([]); resource.reload();
       setMessage(result.exists ? "书单操作已保存。" : "书单已删除，馆藏、阅读进度和独立笔记仍保留。");
       if (!result.exists && id) router.push("/account/collections");
@@ -111,7 +111,7 @@ function BooklistsWorkspace({ owner, name, id }: { owner: string; name: string; 
     } catch (reason) {
       if (controller.current.signal.aborted) return;
       if (!lookup && reason instanceof ApiRequestError && [400, 403, 404, 409].includes(reason.status)) { clear(); resource.reload(); }
-      setMessage(reason instanceof Error ? reason.message : "操作结果暂未确认，请核对原回执。");
+      setMessage(reason instanceof Error ? reason.message : "操作结果暂未确认，请核对原操作结果。");
     } finally { sending.current = false; if (!controller.current.signal.aborted) setBusy(false); }
   }
   function removeTopic(topic_id: string) { if (!blocked && window.confirm("只移除本书单的主动关联，主题与馆藏正式关系保留。是否继续？")) void execute({ action: "topic_remove", topic_id }); }
@@ -160,7 +160,7 @@ function WorkPicker({ owner, busy, onAdd, presentWorkIds }: { owner: string; pre
   const [q, setQ] = useState(""), [page, setPage] = useState(1);
   const load = useCallback((path: string, signal: AbortSignal) => apiRequest<{ results: ApiWork[]; next: string | null; previous: string | null }>(path, { signal, cache: "no-store" }, getServerSessionCredential()), []);
   const resource = usePersistentWorkspace(`/catalog/works/?q=${encodeURIComponent(q)}&page=${page}`, owner, undefined, load);
-  return <div><form onSubmit={event => { event.preventDefault(); setPage(1); setQ(String(new FormData(event.currentTarget).get("q") || "")); }}><label>在公开馆藏中查找<input name="q" type="search" maxLength={180} placeholder="输入作品题名或作者" /></label><button type="submit">查找</button></form><p>同一作品重复加入不会产生第二条记录。</p>{resource.error ? <p role="alert">{resource.error}<button onClick={resource.reload}>重试</button></p> : !resource.data ? <p role="status">正在读取馆藏…</p> : <><div className={styles.picker}>{resource.data.results.map(raw => { const work = adaptApiWork(raw); return <article key={raw.id}><BookCover work={work} /><div><strong>{work.title}</strong><small>{work.author} · {work.year}</small></div><button disabled={busy||presentWorkIds.includes(raw.id)} onClick={() => onAdd(raw.id)}>{presentWorkIds.includes(raw.id)?"已在书单中":"加入"}</button></article>; })}{!resource.data.results.length ? <p>没有找到公开作品。</p> : null}</div><div className={styles.paging}><button disabled={busy || !resource.data.previous} onClick={() => setPage(value => value - 1)}>上一页</button><span>{page}</span><button disabled={busy || !resource.data.next} onClick={() => setPage(value => value + 1)}>下一页</button></div></>}</div>;
+  return <div><form onSubmit={event => { event.preventDefault(); setPage(1); setQ(String(new FormData(event.currentTarget).get("q") || "")); }}><label>在公开馆藏中查找<input name="q" type="search" maxLength={180} placeholder="输入作品题名或作者" /></label><button type="submit">查找</button></form><p>同一作品只保留一条。</p>{resource.error ? <p role="alert">{resource.error}<button onClick={resource.reload}>重试</button></p> : !resource.data ? <p role="status">正在读取馆藏…</p> : <><div className={styles.picker}>{resource.data.results.map(raw => { const work = adaptApiWork(raw); return <article key={raw.id}><BookCover work={work} /><div><strong>{work.title}</strong><small>{work.author} · {work.year}</small></div><button disabled={busy||presentWorkIds.includes(raw.id)} onClick={() => onAdd(raw.id)}>{presentWorkIds.includes(raw.id)?"已在书单中":"加入"}</button></article>; })}{!resource.data.results.length ? <p>没有找到公开作品。</p> : null}</div><div className={styles.paging}><button disabled={busy || !resource.data.previous} onClick={() => setPage(value => value - 1)}>上一页</button><span>{page}</span><button disabled={busy || !resource.data.next} onClick={() => setPage(value => value + 1)}>下一页</button></div></>}</div>;
 }
 
 function ExportForm({ owner, row, selected, controllerRef, busy, onBusy, onMessage }: { owner: string; row: BooklistSummary; selected: string[]; controllerRef: RefObject<AbortController | null>; busy: boolean; onBusy: (value: boolean) => void; onMessage: (value: string) => void }) {

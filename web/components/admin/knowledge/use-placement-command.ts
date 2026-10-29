@@ -18,20 +18,20 @@ export function usePlacementCommand(owner: string, nodeId: string, pageType: Pla
     sending.current = true; setBusy(true); setError("");
     try {
       if (!original.current) {
-        if (!body || sessionStorage.getItem(key)) throw Error("请先查回原请求，不能用新内容覆盖未知结果。");
+        if (!body || sessionStorage.getItem(key)) throw Error("请先查询原请求，不能用新内容覆盖未知结果。");
         original.current = { ...body, request_id: createRequestKey() };
         uncertain.current = false;
         sessionStorage.setItem(key, original.current.request_id); setRecovery(original.current.request_id); setCanRetry(true);
       }
       const signal = AbortSignal.any([lifetime.current!.signal, AbortSignal.timeout(60000)]);
       const result = await withPrivateOwner(owner, () => apiRequest<PlacementState>(path, { method: "POST", body: JSON.stringify(original.current), signal, headers: { "X-Editor-Owner": owner } }, getServerSessionCredential(), false), signal);
-      if (result.page_id !== nodeId || result.page_type !== pageType || !result.applied_revision_id) throw Error("编排回执与当前对象不一致，请核对记录。");
+      if (result.page_id !== nodeId || result.page_type !== pageType || !result.applied_revision_id) throw Error("编排操作结果与当前对象不一致，请核对记录。");
       sessionStorage.removeItem(key); original.current = null; uncertain.current = false; setRecovery(""); setCanRetry(false); return result;
     } catch (reason) {
       // A rejection of a retry cannot prove a timed-out original was not saved.
       if (!uncertain.current && reason instanceof ApiRequestError && !(reason instanceof PrivateOwnerVerificationError) && [400,401,403,404,409,422,428].includes(reason.status)) { sessionStorage.removeItem(key); original.current = null; if (!lifetime.current?.signal.aborted) { setRecovery(""); setCanRetry(false); } }
       else uncertain.current = true;
-      if (!lifetime.current?.signal.aborted) setError(reason instanceof Error ? reason.message : "未收到操作结果，请查回原请求。");
+      if (!lifetime.current?.signal.aborted) setError(reason instanceof Error ? reason.message : "未收到操作结果，请查询原请求。");
       return null;
     } finally { sending.current = false; if (!lifetime.current?.signal.aborted) setBusy(false); }
   }
@@ -41,7 +41,7 @@ export function usePlacementCommand(owner: string, nodeId: string, pageType: Pla
     try {
       const signal = AbortSignal.any([lifetime.current!.signal, AbortSignal.timeout(30000)]);
       const result = await withPrivateOwner(owner, () => apiRequest<Receipt>(`${path}commands/${recovery}/`, { signal, cache: "no-store", headers: { "X-Editor-Owner": owner }, ...(cancel ? { method:"POST",body:JSON.stringify({action:"cancel_pending"}) } : {}) }, getServerSessionCredential(), false), signal);
-      if (result.actor_id !== owner || result.page_id !== nodeId || result.page_type !== pageType || result.request_id !== recovery || !["applied", "cancelled"].includes(result.state)) throw Error("原请求回执不匹配。");
+      if (result.actor_id !== owner || result.page_id !== nodeId || result.page_type !== pageType || result.request_id !== recovery || !["applied", "cancelled"].includes(result.state)) throw Error("原请求结果不匹配。");
       sessionStorage.removeItem(key); original.current = null; uncertain.current = false; setRecovery(""); setCanRetry(false); return result;
     } catch (reason) { if (!lifetime.current?.signal.aborted) setError(reason instanceof Error ? reason.message : "原请求暂不可读取。"); return null; }
     finally { sending.current = false; if (!lifetime.current?.signal.aborted) setBusy(false); }

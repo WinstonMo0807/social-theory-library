@@ -270,7 +270,7 @@ export function PromptRegistryAdmin() {
             <label className="prompt-registry-wide"><span>Prompt 内容</span><textarea required rows={10} value={draft.content} onChange={(event) => setDraft({ ...draft, content: event.target.value })} /></label>
             <label><span>输出 schema，JSON 对象</span><textarea rows={8} value={draft.outputSchema} onChange={(event) => setDraft({ ...draft, outputSchema: event.target.value })} /></label>
             <label><span>Provider 指引，JSON 对象</span><textarea rows={8} value={draft.providerGuidance} onChange={(event) => setDraft({ ...draft, providerGuidance: event.target.value })} /></label>
-            <div className="prompt-registry-wide prompt-registry-form-actions"><ActionButton className="button" type="submit" state={pending === "create" ? "pending" : "idle"} pendingLabel="正在建立修订" disabled={Boolean(pending) || !draft.key.trim() || !draft.content.trim()}><Plus size={14} />建立草稿修订</ActionButton><small>保存草稿不会切换 active Prompt，也不会静默改变已经运行的任务。</small></div>
+            <div className="prompt-registry-wide prompt-registry-form-actions"><ActionButton className="button" type="submit" state={pending === "create" ? "pending" : "idle"} pendingLabel="正在建立修订" disabled={Boolean(pending) || !draft.key.trim() || !draft.content.trim()}><Plus size={14} />建立草稿修订</ActionButton><small>草稿启用后才用于新任务。正在运行的任务保持原配置。</small></div>
           </form>
           <div className="prompt-registry-revisions">
             {payload.results.map((row) => (
@@ -288,10 +288,10 @@ export function PromptRegistryAdmin() {
       <ConfirmDialog
         open={Boolean(activationTarget)}
         title={`启用 ${activationTarget?.key || "Prompt"} v${activationTarget?.version || ""}`}
-        description="新任务会开始使用这一不可变修订，同 key 的当前 active 版本会进入 retired。已有 DerivedClaim 不会被改写。"
+        description="新任务将使用此版本，当前启用版本将停用。已有分析结果保留。"
         confirmLabel="确认启用"
         pending={Boolean(activationTarget && pending === `activate:${activationTarget.id}`)}
-        details={["不会修改 Canonical Knowledge", "不会自动重跑全馆 Claim", "需要重算时由增量任务明确触发"]}
+        details={["保留正式知识条目", "已有分析结果保留", "需要重算时由增量任务明确触发"]}
         onCancel={() => setActivationTarget(null)}
         onConfirm={() => void activateRevision()}
       />

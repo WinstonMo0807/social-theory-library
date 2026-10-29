@@ -32,13 +32,13 @@ function Workspace({ scholarId, owner }: { scholarId: string; owner: string }) {
   const profile = usePersistentWorkspace<Profile>(`/catalog/admin/scholars/${scholarId}/`, owner, undefined, load);
   function leave(event: MouseEvent<HTMLAnchorElement>) {
     const values=[guard.current,materialGuard.current];
-    if (values.some(value=>value.composing||value.pending)) { event.preventDefault(); setNotice("请先完成输入或查回原请求，再离开关系工作区。"); return; }
+    if (values.some(value=>value.composing||value.pending)) { event.preventDefault(); setNotice("请先完成输入或查询原请求，再离开关系工作区。"); return; }
     if (values.some(value=>value.dirty) && !window.confirm("还有未保存输入，放弃这些输入并离开吗？")) event.preventDefault();
   }
   function changeTab(tab:Tab){
     if(tab===active)return;
     const current=active==="relations"?guard.current:active==="usages"?clearGuard:materialGuard.current;
-    if(current.pending||current.composing||current.dirty){setNotice("请先完成当前输入、保存或关闭编辑，并查回未确认请求，再切换栏目。");return;}
+    if(current.pending||current.composing||current.dirty){setNotice("请先完成当前输入、保存或关闭编辑，并查询未确认请求，再切换栏目。");return;}
     setActive(tab);setNotice("");const url=new URL(window.location.href);url.searchParams.set("section",tab);window.history.replaceState(null,"",url.pathname+url.search);
   }
   const data = profile.error ? null : profile.data;

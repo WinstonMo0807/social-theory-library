@@ -84,7 +84,7 @@ function Workspace({owner}:{owner:string}) {
   function clearCommand(){sessionStorage.removeItem(recoveryKey);pending.current=null;setUnresolved(null);}
 
   function applyReply(reply:Reply, values:Command) {
-    if(reply.request_id!==values.request_id||reply.operation!==values.operation)throw Error("回执与原请求不一致，请保留编号并核对记录。");
+    if(reply.request_id!==values.request_id||reply.operation!==values.operation)throw Error("操作结果与原请求不一致，请保留编号并核对记录。");
     clearCommand();setConfirmCancel(false);setPage(1);setAsOf("");
     if(reply.cleanup_id){setCleanupId(reply.cleanup_id);setMessage(values.operation==="scan_cleanup"?"扫描清单已保存，尚未清理。":values.operation==="cancel_cleanup"?"停止请求已登记，请查看逐项结果。":"清理请求已登记，实际结果以逐项任务记录为准。");}
     else if(reply.retention_saved){setEditRetention(null);setMessage("保留规则已保存，没有自动删除；请重新扫描可清理项。");}
@@ -107,7 +107,7 @@ function Workspace({owner}:{owner:string}) {
       if(receipt.request_id!==values.request_id||receipt.actor_id!==owner)throw Error("返回的记录不属于当前账户的原请求，请保留编号。");
       if(receipt.state==="cancelled") {clearCommand();setConfirmCancel(false);setMessage("原请求已取消。迟到请求不会执行；已有任务、归档与计划保持原结果。");}
       else if(receipt.result)applyReply(receipt.result,values);
-      else throw Error("回执缺少操作结果，请保留编号并继续核对。");
+      else throw Error("操作结果缺少操作结果，请保留编号并继续核对。");
       resource.reload();
     } catch(reason) {
       if(controller.signal.aborted)return;
@@ -135,7 +135,7 @@ function Workspace({owner}:{owner:string}) {
     } catch(reason) {
       if(controller.signal.aborted)return;
       if(reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,401,403,404,409,410,422].includes(reason.status)){try{clearCommand();}catch{setMessage("操作被拒绝，但原请求记录暂不能清除，请保留本页并恢复浏览器存储。");return;}}
-      setMessage(reason instanceof Error?reason.message:"操作暂未确认，请使用原请求查回。");
+      setMessage(reason instanceof Error?reason.message:"操作暂未确认，请使用原请求查询。");
     } finally {if(!controller.signal.aborted)busy.current=false;}
   }
 
@@ -146,7 +146,7 @@ function Workspace({owner}:{owner:string}) {
   const closeStalled=(row:Verification)=>void command({operation:"close_stalled_verification",backup_id:row.backup_id,expected_checksum:row.expected_checksum,verification_id:row.id});
 
   const commandFeedback=<>{message?<p className={styles.message} role="status">{message}</p>:null}
-    {unresolved&&!resource.pending?<div className={styles.notice} aria-busy={recovering}><CircleAlert size={18}/><p>上次操作尚未确认。原编号 {unresolved.request_id} 已保留。查询只读取结果；取消只拦住尚未登记的迟到请求，不能终止已登记的任务。</p><button type="button" disabled={!ready||recovering} onClick={()=>void recover()}>查回原请求</button><button type="button" disabled={!ready||recovering} onClick={()=>setConfirmCancel(true)}>取消未执行请求</button></div>:null}</>;
+    {unresolved&&!resource.pending?<div className={styles.notice} aria-busy={recovering}><CircleAlert size={18}/><p>上次操作尚未确认。原编号 {unresolved.request_id} 已保留。查询只读取结果；取消只拦住尚未登记的迟到请求，不能终止已登记的任务。</p><button type="button" disabled={!ready||recovering} onClick={()=>void recover()}>查询原请求</button><button type="button" disabled={!ready||recovering} onClick={()=>setConfirmCancel(true)}>取消未执行请求</button></div>:null}</>;
 
   return <main className={styles.page} aria-busy={resource.loading||resource.pending||recovering}>
     <div className={styles.breadcrumb}><Link href="/admin">系统</Link><ChevronRight size={12}/><Link href="/admin/processing/status">运行维护</Link><ChevronRight size={12}/><span>存储、备份与恢复准备</span></div>

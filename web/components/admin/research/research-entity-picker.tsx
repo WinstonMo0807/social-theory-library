@@ -428,7 +428,7 @@ export function ResearchEntityPicker({
     }
     if (!workspace?.itemId) {
       if (action === "reject") hideCandidate(candidate);
-      const message = "馆藏维护模式不会直接创建外部实体。请先到权威数据维护页建立或核对实体，再返回关联。";
+      const message = "馆藏维护模式不会直接创建外部实体。请先到知识管理页建立或核对实体，再返回关联。";
       setAnnouncement(message);
       workspace?.onMessage?.(message);
       return;
@@ -471,7 +471,7 @@ export function ResearchEntityPicker({
       workspace?.onMessage?.(message);
     } catch (reason) {
       const base = reason instanceof Error ? reason.message : "实体决定失败。";
-      const message = `${base} 如需建立实体，请到权威数据维护页继续处理。`;
+      const message = `${base} 如需建立实体，请到知识管理页继续处理。`;
       setAnnouncement(message);
       workspace?.onMessage?.(message);
     } finally {
