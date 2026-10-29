@@ -85,10 +85,11 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   const replayRoute=/^\/account\/research\/[^/]+\/history$/.test(pathname);
   const privacyReference=pathname==="/account/settings/privacy"?(searchParams.get("view")==="status"?"privacy-status":"privacy"):pathname==="/account/settings/privacy/export"?"privacy-export":undefined;
   const brandReference = privacyReference?privacyReference:replayRoute?"research-replay":booklistsRoute?"booklists":notebookRoute?"notebook":citationDetailReference?citationDetailReference:pathname==="/account/confirmed-notes"?"confirmed-notes":readingPlanRoute?"reading-plan": researchAnalysisReference ? researchAnalysisReference : researchWorkspaceRoute ? "research-workspace" : authRoute ? pathname === "/reset-password" ? "auth-recovery" : "auth" : archiveRoute ? "reader-archive" : readerCenterRoute ? "reader-center" : pathname === "/account/research" ? "research-directory" : pathname === "/account/sharing/new" ? "sharing" : reader ? readerReference : editorialRoute ? (["q","topic","theory","kind","curator","year_from","year_to","page","layout"].some(key => !!searchParams.get(key)) ? "editorial-directory" : "editorial-home") : topicReference ? topicReference : scholarReference ? scholarReference : theoryWorkspaceReference ? theoryWorkspaceReference : subdisciplineReference ? subdisciplineReference : theoryOverviewRoute ? "theory-overview" : pathname === "/about" ? "about" : pathname.startsWith("/help/") ? "article" : supportRoute ? "support" : exploreLandingRoute ? "explore" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined;
-  const headerNavigation = readerCenterRoute ? [
+  const readerNavigation = [
     ["/account/research", "我的研究"], ["/account/notes", "笔记"], ["/account/plans", "阅读计划"],
     ["/account/collections", "书单"], ["/account/citation-audits", "引文体检"], ["/account/confirmed-notes", "已确认笔记"],
-  ] : supportRoute ? [...navigation, ["/about", "关于"]] : navigation;
+  ];
+  const headerNavigation = supportRoute ? [...navigation, ["/about", "关于"]] : navigation;
 
   useEffect(() => {
     document.body.classList.toggle("menu-open", open);
@@ -150,7 +151,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-stl-reader={reader ? readerReference : undefined}
       data-stl-support={supportRoute ? brandReference : undefined}
       data-stl-explore={exploreLandingRoute ? "landing" : pathname === "/explore/original" ? "catalog" : pathname === "/explore/opinions" ? "opinion" : evidenceRoute ? "evidence" : undefined}
-      className="site-header"
+      className="site-header site-masthead"
       data-ui-scope="stl4"
     >
       <Link className="logo-link" href="/" prefetch={false}>
@@ -173,15 +174,10 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
         })}
       </nav>
       <div className="header-actions">
-        {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label={t("返回原页面")} title={t("返回原页面")} href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>{t("返回原页面")}</span></Link> : null}
-        {evidenceRoute || theoryDetailRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label={t("搜索馆藏")}><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">{t("搜索书名、作者、概念")}</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder={t("搜索书名、作者、概念…")} /></form> : null}
         <Link className="icon-button header-search" href="/explore" prefetch={false} aria-label={t(config.navigation.search)}>
           <Search size={18} strokeWidth={1.7} />
         </Link>
         <ThemeToggle />
-        {evidenceRoute ? <EvidenceLanguageSwitch /> : null}
-        {evidenceRoute ? <Link className="header-reference-account" href={user ? "/account" : "/login?next=%2Faccount"} onClick={enterAccount} aria-label={t(user ? "读者中心" : "读者登录")}><CircleUserRound size={28} strokeWidth={1.6} /></Link> : null}
-        {(readerCenterRoute || archiveRoute) && user ? <ReaderAccountMenu key={user.id} user={user} onLogout={logout} onPreferences={() => setOpen(true)} pending={pendingAction === "logout"} error={logoutError} /> : null}
         <IconButton
           ref={menuButtonRef}
           className={`icon-button menu-button${(readerCenterRoute || archiveRoute) && user ? " reader-account-menu-toggle" : ""}`}
@@ -191,8 +187,16 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
           aria-controls="site-menu"
           onClick={() => setOpen((value) => !value)}
         >
-          {open ? <X size={25} /> : reader && readerReference === "reader-notes" ? <CircleUserRound size={25} /> : <Menu size={25} />}
+          {open ? <X size={21} /> : reader && readerReference === "reader-notes" ? <CircleUserRound size={21} /> : <Menu size={21} />}
         </IconButton>
+      </div>
+      <div className="header-context-actions">
+        {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label={t("返回原页面")} title={t("返回原页面")} href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>{t("返回原页面")}</span></Link> : null}
+        {evidenceRoute || theoryDetailRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label={t("搜索馆藏")}><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">{t("搜索书名、作者、概念")}</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder={t("搜索书名、作者、概念…")} /></form> : null}
+        {readerCenterRoute ? <nav className="reader-center-nav" aria-label={t("读者中心导航")}>{readerNavigation.map(([href, label]) => <Link key={href} href={href} prefetch={false}>{t(label)}</Link>)}</nav> : null}
+        {evidenceRoute ? <EvidenceLanguageSwitch /> : null}
+        {evidenceRoute ? <Link className="header-reference-account" href={user ? "/account" : "/login?next=%2Faccount"} onClick={enterAccount} aria-label={t(user ? "读者中心" : "读者登录")}><CircleUserRound size={24} strokeWidth={1.6} /></Link> : null}
+        {(readerCenterRoute || archiveRoute) && user ? <ReaderAccountMenu key={user.id} user={user} onLogout={logout} onPreferences={() => setOpen(true)} pending={pendingAction === "logout"} error={logoutError} /> : null}
       </div>
       {logoutError && !open ? <p className="site-navigation-returned" role="alert">{logoutError}</p> : null}
       {navigationReturn.returned ? <p className="site-navigation-returned" role="status">{t("已返回先前页面")}</p> : null}

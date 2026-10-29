@@ -1,5 +1,9 @@
 # 中断恢复最短路径
 
+## 2026-10-29 17:45 Web96主导航
+
+活动镜像social-theory-library-web:stl4-preview-20261029-r96，SHA ae523e63825525f5aa00ceead4cb07d0ad2a9d6d78a924053c1f445b49ef83c3。NAS预览根navigation-r96-recovery保存前Web95受限.env和images.json。回退只取原LIBRARY_WEB_IMAGE更新预览Web/edge，禁止整份覆盖.env或重启后端。当前仍A主体、原Logo，主导航按用户新要求解除冻结并共用布局。源码、实际检查与限制见NAVIGATION_20261029.md；日志tmp/stl4-navigation-20261029，截图output/visual-review-20261029-navigation。原未提交工作保留，生产和自动任务边界不变。
+
 ## 2026-10-29 13:33 Web95字体与用语
 
 活动镜像social-theory-library-web:stl4-preview-20261029-r95，SHA a8414d4d6f669da7bc3606c5b98b5bf883393f04682971ee244311291b47ef10。默认A/推荐宋黑组合；#typography=A&font=balanced|song|sans|wenkai仅作用于标签页。NAS预览根font-copy-r91-recovery保存本轮前Web90，r92/r93/r94/r95分别保存前Web91/92/93/94；只恢复原Web镜像及预览Web/edge，不整份覆盖.env或重启后端。

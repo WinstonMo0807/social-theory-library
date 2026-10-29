@@ -1,0 +1,101 @@
+/* Shared navigation, including narrow viewports. Brand artwork stays unchanged. */
+.site-header.site-masthead[data-ui-scope="stl4"] {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: auto;
+  min-height: 82px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: clamp(20px, 2.4vw, 36px);
+  row-gap: 0;
+  padding: 14px clamp(20px, 3vw, 44px);
+  background: var(--night-white, #fff);
+}
+.site-masthead[data-ui-scope="stl4"] > .logo-link { grid-column: 1; grid-row: 1; }
+.site-header.site-masthead[data-ui-scope="stl4"] > .desktop-nav {
+  display: flex;
+  grid-column: 2;
+  grid-row: 1;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 clamp(18px, 1.7vw, 26px);
+  min-width: 0;
+  font: 500 15px/1.5 "STL Text Sans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  letter-spacing: 0;
+}
+.site-header.site-masthead[data-ui-scope="stl4"] > .desktop-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 8px 2px;
+  font: inherit;
+  white-space: nowrap;
+}
+.site-header.site-masthead[data-ui-scope="stl4"] > .header-actions {
+  grid-column: 3;
+  grid-row: 1;
+  gap: 4px;
+}
+.site-header.site-masthead[data-ui-scope="stl4"] .header-actions > :is(.header-search, .theme-toggle, .menu-button) {
+  display: inline-flex;
+  position: static;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  flex: 0 0 40px;
+  padding: 0;
+}
+.site-header.site-masthead[data-ui-scope="stl4"] :is(.header-search, .theme-toggle) svg { width: 18px; height: 18px; }
+.site-header.site-masthead[data-ui-scope="stl4"] .menu-button svg { width: 21px; height: 21px; }
+.site-masthead > .header-context-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 16px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--night-line, #e8e6e2);
+  font: 14px/1.5 "STL Text Sans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+}
+.site-masthead > .header-context-actions:empty { display: none; }
+.site-masthead[data-stl-theory="detail"] > .header-context-actions { display: none; }
+@media (min-width: 701px) {
+  body:has([data-theory-kind="tradition"]) .site-masthead[data-stl-theory="detail"] > .header-context-actions { display: flex; }
+}
+.site-masthead .reader-center-nav { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-right: auto; }
+.site-masthead .reader-center-nav a { display: inline-flex; align-items: center; min-height: 36px; }
+.site-header.site-masthead .header-return span { display: inline; }
+.site-masthead .header-reference-search { max-width: 100%; }
+/* The document itself scrolls inside the reader; its masthead is a natural grid row. */
+.reader.stl4-reader .reader-site-header { display: block; }
+.reader-site-header .site-header.site-masthead[data-ui-scope="stl4"] { position: static; }
+
+@media (max-width: 1200px) {
+  .site-header.site-masthead[data-ui-scope="stl4"] {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-block: 12px 4px;
+  }
+  .site-header.site-masthead[data-ui-scope="stl4"] > .header-actions { grid-column: 2; }
+  .site-header.site-masthead[data-ui-scope="stl4"] > .desktop-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: space-evenly;
+    margin-top: 10px;
+    border-top: 1px solid var(--night-line, #e8e6e2);
+  }
+  .site-masthead > .header-context-actions { margin-top: 4px; padding-block: 8px; }
+}
+@media (max-width: 700px) {
+  .site-header.site-masthead[data-ui-scope="stl4"] { column-gap: 8px; padding: 10px 12px 4px; }
+  .site-header.site-masthead[data-ui-scope="stl4"] > .desktop-nav { gap: 0; font-size: 14px; }
+  .site-header.site-masthead[data-ui-scope="stl4"] > .desktop-nav a { flex: 0 0 33.333%; min-height: 36px; padding: 6px 2px; }
+  .site-header.site-masthead[data-ui-scope="stl4"] > .header-actions { gap: 0; }
+  .site-header.site-masthead[data-ui-scope="stl4"] .header-actions > :is(.header-search, .theme-toggle, .menu-button) { width: 36px; min-width: 36px; height: 36px; min-height: 36px; flex-basis: 36px; }
+  .site-header.site-masthead[data-ui-scope="stl4"] > .desktop-nav a::after { right: 25%; left: 25%; bottom: 3px; }
+  .site-masthead .reader-center-nav { width: 100%; gap: 0; }
+  .site-masthead .reader-center-nav a { flex: 0 0 33.333%; justify-content: center; font-size: 13px; }
+}
