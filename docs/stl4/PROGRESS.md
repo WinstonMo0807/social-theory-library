@@ -1,5 +1,11 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-29 18:45 Web98交互和预览代理
+
+当前Web98 92d4fd4ddf31；OVERLAY-01、SOURCE-TEXT-01、HOVER-PREVIEW-01、SEARCH-ENTER-01开发D，运行读取范围见INTERACTION_REVIEW_20261029.md。其余原B/公网批准清单保持，三套悬浮样式供用户比较。
+
+REDIRECT-PORT-01已修复：Web代理保留18084，HTTP与浏览器观点Enter返回书库证据页。预览edge仅热加载、容器ID及生产模板hash不变。NAS/Cloudflare只读边界和未验证外围访问见NAS_REDIRECT_REVIEW_20261029.md。保留原文、私人数据、失败记录、所有继承修改；没有生产部署或重建自动任务。
+
 ## 2026-10-29 17:45 全站主导航，Web96
 
 NAV-01关闭D：统一SiteHeader的持续可见导航、响应式排版、Noto黑体及18/18/21px图标。移动阅读器页头保留；读者中心原私人入口另行保留。内网Web96 ae523e638255；类型/构建/部署退出0，实际窗口及四档iframe范围见NAVIGATION_20261029.md。Logo/A主体/生产/后端保持，原B验收范围不扩大，前Web95恢复点navigation-r96-recovery。

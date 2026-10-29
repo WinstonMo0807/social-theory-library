@@ -1,5 +1,13 @@
 # 中断恢复最短路径
 
+## 2026-10-29 18:45 Web98及预览Host修复
+
+活动Web98 social-theory-library-web:stl4-preview-20261029-r98，SHA 92d4fd4ddf31fc909671bcdfeea45848646aadf1e05768bad4e32dedad3d128c。NAS预览根interaction-r97-recovery保存前Web96；interaction-r98-recovery保存前Web97；只取原LIBRARY_WEB_IMAGE恢复预览Web/edge，不整份覆盖.env或重启API/worker/数据/OCR。
+
+18:38额外仅Web代理Host改$http_host保留端口。interaction-redirect-recovery有原template、容器ID、操作日志和结果，目录0700/文件0600。回退仅恢复该预览模板内容，envsubst+既有40-stl4-preview-frames.sh、nginx -t后reload；不要动生产模板，旧模板会重新引入误跳NAS问题。此次全部容器ID与生产模板hash保持。
+
+本机源码/定向测试和完整边界见INTERACTION_REVIEW_20261029.md、NAS_REDIRECT_REVIEW_20261029.md。日志tmp/stl4-interaction-20261029、截图output/visual-review-20261029-interaction均忽略不提交。路由器/WAN未验证，不凭旧记录宣称无公网暴露；不再无目的扫描或擅改NAS网络。自动接续仍删除，继承未提交修改全部保留。
+
 ## 2026-10-29 17:45 Web96主导航
 
 活动镜像social-theory-library-web:stl4-preview-20261029-r96，SHA ae523e63825525f5aa00ceead4cb07d0ad2a9d6d78a924053c1f445b49ef83c3。NAS预览根navigation-r96-recovery保存前Web95受限.env和images.json。回退只取原LIBRARY_WEB_IMAGE更新预览Web/edge，禁止整份覆盖.env或重启后端。当前仍A主体、原Logo，主导航按用户新要求解除冻结并共用布局。源码、实际检查与限制见NAVIGATION_20261029.md；日志tmp/stl4-navigation-20261029，截图output/visual-review-20261029-navigation。原未提交工作保留，生产和自动任务边界不变。

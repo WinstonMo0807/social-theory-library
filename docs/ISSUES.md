@@ -1,5 +1,13 @@
 # 当前问题
 
+## 2026-10-29 18:45 用户交互批注与NAS误跳
+
+- D OVERLAY-01 / SOURCE-TEXT-01：共用dialog居中、220ms入场；展示和核验后引用导出整理OCR硬换行，可回原始换行；原件/索引不变。具体原截图长文/特殊弹窗完整状态仍B。
+- D HOVER-PREVIEW-01：/interaction-preview三套可互动方案，业务全站尚未选定应用，不算缺业务开发。
+- D SEARCH-ENTER-01：五个问题textarea共用原生requestSubmit，保留Shift换行、IME选词与忙状态；Web98首页/观点实际回车已读回，其他研究动态状态B。
+- D REDIRECT-PORT-01：带q的opinions 307漏18084，经NAS80/9999进入管理登录；Web location Host由$host改$http_host，预览已热加载并实际验证。源码/条件/影响/最小修复与截图详docs/stl4/NAS_REDIRECT_REVIEW_20261029.md。
+- B 网络外围可达性：NAS管理端口双栈监听、存在全局单播IPv6，已读主机规则未阻断管理端口；未核实路由器转发/UPnP/DMZ、IPv6入站或外网访问。不据此声称已入侵，不自动改网络或扩展理论开发。Cookie跨端口与查询词影响按证据限制报告。
+
 ## 2026-10-29 17:45 主导航
 
 - D NAV-01：site-header.css的1120px断点隐藏主导航，brand-identity.css只给首页例外，1066px理论页实读display:none。共用masthead修正所有SiteHeader页面的显示与间距，滚动固定；手机阅读器隐藏规则也由共用规则覆盖。Web96已实际读回，范围见docs/stl4/NAVIGATION_20261029.md。

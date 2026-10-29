@@ -1,5 +1,6 @@
 import type { components } from "./generated/schema";
 import { apiRequest } from "../api";
+import { formatSourceText } from "../source-text";
 import type { EvidenceReference, ResolvedEvidence } from "./research.client";
 
 export type SharedCitationInput = { editionId?: string; reference?: EvidenceReference; selectedText?: string };
@@ -21,7 +22,7 @@ export function previewSharedCitation(input: SharedCitationInput, signal?: Abort
 }
 export function citationText(preview: SharedCitationPreview, format: CitationFormat) {
   if (format === "csl") return JSON.stringify(preview.citations.csl, null, 2);
-  if (format === "quote") return [preview.reference?.quote, preview.citations["gbt7714-2025"]].filter(Boolean).join("\n\n");
+  if (format === "quote") return [formatSourceText(preview.reference?.quote || ""), preview.citations["gbt7714-2025"]].filter(Boolean).join("\n\n");
   return preview.citations[format];
 }
 export function citationDownload(text: string, filename = "书库引用.txt") {

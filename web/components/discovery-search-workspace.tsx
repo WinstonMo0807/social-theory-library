@@ -1,5 +1,6 @@
 "use client";
 import { useEvidenceLanguage } from "./evidence-language";
+import { SourceText } from "./source-text";
 import { MediaPlacement } from "./media-placement";
 
 import Link from "next/link";
@@ -405,7 +406,7 @@ export function DiscoveryPassageCard({ item, index, onContext }: { item: Discove
   const isOcr = /ocr/i.test(item.source_kind);
   return <article className={styles.evidenceCard} id={`material-${item.id}`}>
     <header><span className={styles.resultNumber}>{String(index + 1).padStart(2, "0")}</span><div><p>{item.authors?.length ? item.authors.join("、") : t("责任者待核对")}</p><h3>{item.work.slug ? <CollectionLink href={`/works/${encodeURIComponent(item.work.slug)}`}>{item.work.title}</CollectionLink> : item.work.title}</h3></div><span className={styles.sourceTag}>{isOcr ? t("OCR 原文") : t("原文材料")}</span></header>
-    <blockquote><Quote size={18} aria-hidden="true" /><p>{item.excerpt}</p></blockquote>
+    <blockquote><Quote size={18} aria-hidden="true" /><p><SourceText text={item.excerpt} /></p></blockquote>
     <div className={styles.locator}><span>{t("PDF 第 {page} 页", { page: item.pdf_page })}</span>{item.printed_page && item.printed_page !== String(item.pdf_page) ? <span>{t("印刷页 {page}", { page: item.printed_page })}</span> : null}<span>{item.locator_precision === "exact" ? t("原文定位") : t("按页定位")}</span></div>
     {isOcr ? <p className={styles.help}>{t("文字来自 OCR 识别，可回到扫描画面核对。")}</p> : null}
     {item.match_basis?.length ? <p className={styles.reason}>{item.match_basis.join(" · ")}</p> : null}

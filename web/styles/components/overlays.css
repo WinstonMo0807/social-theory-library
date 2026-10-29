@@ -1,4 +1,26 @@
 /* Shared native overlays. Feature-specific cards and menu panels keep their styles. */
+/* Preflight clears the UA auto margin. Restore it without overriding sheets/drawers. */
+:where(dialog) {
+  margin: auto;
+}
+
+@keyframes stl-dialog-enter {
+  from { opacity: 0; translate: 0 8px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes stl-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :where(dialog[open]:not(.site-menu-layer)) {
+    animation: stl-dialog-enter var(--stl-motion-panel, 220ms) var(--stl-motion-ease-out, ease-out);
+  }
+  :where(dialog[open]:not(.site-menu-layer))::backdrop {
+    animation: stl-backdrop-enter var(--stl-motion-control, 160ms) ease-out;
+  }
+}
+
 .ui-drawer {
   position: fixed;
   inset: 0 0 0 auto;

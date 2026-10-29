@@ -1,4 +1,5 @@
 "use client";
+import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,7 +57,7 @@ export function OpinionSearchEntry({ initialFilters = {} }: { initialFilters?: D
     <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><Link href="/explore">探索</Link><ChevronRight size={12} /><span>观点检索</span></nav>
     <header className={styles.header}><h1>观点检索：问题起点</h1><p>用你自己的话提出问题，发现来自经典文献的思想、论证与不同视角。</p></header>
     <form className={styles.queryForm} onSubmit={submit} action="/explore/evidence">
-      <div className={styles.queryBox}><label className="sr-only" htmlFor="opinion-question">你的研究问题</label><textarea ref={field} id="opinion-question" name="q" value={query} onChange={event => { setQuery(event.target.value); setMessage(""); }} maxLength={500} rows={1} placeholder="请输入你的问题…" aria-describedby="opinion-count" />
+      <div className={styles.queryBox}><label className="sr-only" htmlFor="opinion-question">你的研究问题</label><textarea onKeyDown={submitSearchOnEnter} enterKeyHint="search" title="回车检索，Shift + 回车换行" ref={field} id="opinion-question" name="q" value={query} onChange={event => { setQuery(event.target.value); setMessage(""); }} maxLength={500} rows={1} placeholder="请输入你的问题…" aria-describedby="opinion-count" />
         {query ? <button type="button" className={styles.clear} aria-label="清除问题" onClick={() => { setQuery(""); field.current?.focus(); }}><X size={15} /></button> : null}<span className={styles.counter} id="opinion-count" aria-live="polite">{query.length}/500</span></div>
       <button type="submit" className={styles.searchButton} disabled={!ready || pending}><Search size={22} />{pending ? "正在进入检索…" : "检索原文"}</button>
     </form>

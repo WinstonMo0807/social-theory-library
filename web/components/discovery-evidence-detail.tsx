@@ -11,6 +11,7 @@ import { citationText, previewSharedCitation } from "@/lib/api/shared-citation.c
 import Link from "next/link";
 import { SaveWorkButton } from "./save-work-button";
 import { SharedCitationButton } from "./shared-citation-overlay";
+import { SourceText } from "./source-text";
 import styles from "@/app/explore/opinions/viewpoint-search.module.css";
 
 export function discoveryReaderHref(item: DiscoveryPassage, returnTo?: string) {
@@ -38,7 +39,7 @@ export function EvidenceBook({ item, compact = false, onSelect }: { item: Discov
 
 export function EvidenceQuote({ item }: { item: DiscoveryPassage }) {
   const { t } = useEvidenceLanguage();
-  return <blockquote className={styles.passageQuote}><Quote size={18} aria-hidden="true" /><div><strong>{t("原文节选")}{/ocr/i.test(item.source_kind) ? " · OCR" : ""}</strong><p>{item.excerpt}</p><small>{item.printed_page ? `${t("印刷页 {page}", { page: item.printed_page })} · ` : ""}{t("PDF 第 {page} 页", { page: item.pdf_page })}</small></div></blockquote>;
+  return <blockquote className={styles.passageQuote}><Quote size={18} aria-hidden="true" /><div><strong>{t("原文节选")}{/ocr/i.test(item.source_kind) ? " · OCR" : ""}</strong><p><SourceText text={item.excerpt} /></p><small>{item.printed_page ? `${t("印刷页 {page}", { page: item.printed_page })} · ` : ""}{t("PDF 第 {page} 页", { page: item.pdf_page })}</small></div></blockquote>;
 }
 
 export function EvidenceResultCard({ item, index, selected, fresh, onSelect, onContext }: {
@@ -93,6 +94,7 @@ export function EvidenceContextBody({ item, context, returnTo, onOpenCandidate }
 }) {
   const { t } = useEvidenceLanguage();
   const [sameBook, setSameBook] = useState(false);
+  const [originalLines, setOriginalLines] = useState(false);
   const source = context.source || item;
   const blocks = context.blocks?.length ? context.blocks : [{ text: context.before, role: "before", pdf_page: source.pdf_page }, { text: context.excerpt, role: "hit", pdf_page: source.pdf_page }, { text: context.after, role: "after", pdf_page: source.pdf_page }].filter(block => block.text);
   const blockIndex = useRef(Math.max(0, blocks.findIndex(block => ["hit", "match"].includes(block.role))));
@@ -103,12 +105,12 @@ export function EvidenceContextBody({ item, context, returnTo, onOpenCandidate }
   };
   const reader = discoveryReaderHref(source, returnTo);
   return <div className={styles.contextColumns}><div><EvidenceBook item={source} compact />
-    <div className={styles.contextNavigation}><h3>{t("上下文")}<small>{t("共 {count} 段", { count: blocks.length })}</small></h3><button type="button" onClick={() => scrollBlock(-1)}><ChevronLeft size={14} />{t("上一段")}</button><button type="button" onClick={() => scrollBlock(1)}>{t("下一段")}<ChevronRight size={14} /></button></div>
+    <div className={styles.contextNavigation}><h3>{t("上下文")}<small>{t("共 {count} 段", { count: blocks.length })}</small></h3><button type="button" aria-pressed={originalLines} onClick={() => setOriginalLines(value => !value)}>{t("原始换行")}</button><button type="button" onClick={() => scrollBlock(-1)}><ChevronLeft size={14} />{t("上一段")}</button><button type="button" onClick={() => scrollBlock(1)}>{t("下一段")}<ChevronRight size={14} /></button></div>
     {context.notice ? <p className={styles.help}>{context.notice}</p> : null}
-    {blocks.map((block, index) => <section key={`${context.result_id}-${index}`} tabIndex={-1} data-discovery-context-block className={["hit", "match"].includes(block.role) ? styles.contextMatch : styles.contextBlock}><small>{["hit", "match"].includes(block.role) ? t("命中原文") : block.role === "before" ? t("前段") : block.role === "after" ? t("后段") : t("相邻原文")}  · {t("PDF 第 {page} 页", { page: block.pdf_page })}</small><p>{block.text}</p></section>)}
+    {blocks.map((block, index) => <section key={`${context.result_id}-${index}`} tabIndex={-1} data-discovery-context-block className={["hit", "match"].includes(block.role) ? styles.contextMatch : styles.contextBlock}><small>{["hit", "match"].includes(block.role) ? t("命中原文") : block.role === "before" ? t("前段") : block.role === "after" ? t("后段") : t("相邻原文")}  · {t("PDF 第 {page} 页", { page: block.pdf_page })}</small><p><SourceText text={block.text} original={originalLines} /></p></section>)}
     </div><aside><section><h3>{t("作者自述或转引角色")}</h3><strong>{source.attribution?.label || t("待人工核对")}</strong><p>{source.attribution?.notice || t("请核对上下文中的作者自述、转引和评论关系。")}</p></section>
     <section><h3>{t("本段信息")}</h3><dl><div><dt>{t("出处位置")}</dt><dd>{source.printed_page ? `${t("印刷页 {page}", { page: source.printed_page })} · ` : ""}{t("PDF 第 {page} 页", { page: source.pdf_page })}</dd></div>{source.section_title ? <div><dt>{t("所属章节")}</dt><dd>{source.section_title}</dd></div> : null}<div><dt>{t("版本信息")}</dt><dd>{[source.bibliography?.publication_year, source.bibliography?.publisher, source.bibliography?.version_label].filter(Boolean).join(" · ") || t("待补充")}</dd></div></dl></section>
     <div className={styles.contextActions}>{reader ? <Link href={reader} className="button"><BookOpen size={16} />{t("打开阅读器")}</Link> : null}<SharedCitationButton className="button secondary" reference={passageReference(source)} selectedText={source.excerpt}>{t("加入当前研究")}</SharedCitationButton><button type="button" className="button secondary" onClick={() => setSameBook(value => !value)} aria-expanded={sameBook}>{t("查看同书更多段落")}{typeof context.same_work_count === "number" ? `（${context.same_work_count}）` : ""}<ChevronRight size={14} /></button></div>
-    {sameBook ? <section className={styles.sameBook}><h3>{t("本次检索的同书材料")}</h3>{context.same_work_results?.length ? context.same_work_results.map(row => <button type="button" key={row.id} disabled={row.id === source.id} onClick={() => onOpenCandidate(row)}><span>{t("PDF 第 {page} 页", { page: row.pdf_page })}{row.id === source.id ? t(" · 当前") : ""}</span><p>{row.excerpt}</p></button>) : <p>{t("本次检索没有其他可展示的同书材料。")}</p>}{(context.same_work_count || 0) > (context.same_work_results?.length || 0) ? <p>{t("这里显示前 {count} 条，可返回结果继续读取。", { count: context.same_work_results?.length || 0 })}</p> : null}</section> : null}
+    {sameBook ? <section className={styles.sameBook}><h3>{t("本次检索的同书材料")}</h3>{context.same_work_results?.length ? context.same_work_results.map(row => <button type="button" key={row.id} disabled={row.id === source.id} onClick={() => onOpenCandidate(row)}><span>{t("PDF 第 {page} 页", { page: row.pdf_page })}{row.id === source.id ? t(" · 当前") : ""}</span><p><SourceText text={row.excerpt} /></p></button>) : <p>{t("本次检索没有其他可展示的同书材料。")}</p>}{(context.same_work_count || 0) > (context.same_work_results?.length || 0) ? <p>{t("这里显示前 {count} 条，可返回结果继续读取。", { count: context.same_work_results?.length || 0 })}</p> : null}</section> : null}
     </aside></div>;
 }

@@ -1,4 +1,5 @@
 "use client";
+import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
@@ -48,7 +49,7 @@ export function ResearchComparisonSearch({ workspace, target, onClose }: { works
         <h2 id="comparison-search-title">扩展寻找新证据</h2>
         {target.dimension ? <p>比较维度：{target.dimension}{target.title ? ` · ${target.title}` : ""}</p> : null}
         <label htmlFor="comparison-search-question">需要补充什么材料？</label>
-        <textarea id="comparison-search-question" value={question} onChange={event => setQuestion(event.target.value)} minLength={2} maxLength={1200} rows={4} required disabled={pending}/>
+        <textarea onKeyDown={submitSearchOnEnter} enterKeyHint="search" title="回车检索，Shift + 回车换行" id="comparison-search-question" value={question} onChange={event => setQuestion(event.target.value)} minLength={2} maxLength={1200} rows={4} required disabled={pending}/>
         <fieldset className="stl4-comparison-search-scope"><legend>本轮检索范围</legend>
           <label><input type="radio" name="comparison-search-scope" checked={scope === "library"} disabled={pending} onChange={() => setScope("library")}/>全馆可访问文献</label>
           <label><input type="radio" name="comparison-search-scope" checked={scope === "works"} disabled={pending || !works.length} onChange={() => setScope("works")}/>已选作品的可访问版本（{works.length}部）</label>

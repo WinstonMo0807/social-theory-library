@@ -1,5 +1,17 @@
 # Social Theory Library 当前进度
 
+## 2026-10-29 18:45 弹窗/原文/回车及误跳NAS修复，Web98
+
+OVERLAY-01、SOURCE-TEXT-01、SEARCH-ENTER-01已实现D；HOVER-PREVIEW-01三方案比较页已交付，未擅自全站套用。共用dialog恢复居中并加轻入场；OCR引文纯展示/已核验引用导出整理硬换行，原文/定位/索引不改。五个问题框Enter走原表单，Shift+Enter换行，输入法选词不触发。记录见docs/stl4/INTERACTION_REVIEW_20261029.md；/interaction-preview供比较。
+
+内网Web98 92d4fd4ddf31，API/四worker r53、RapidOCR3和数据/模型保持，生产未改。定向4项测试、类型、构建、部署通过；实际比较页三方案、共同弹窗、真实引用侧窗、四档视口、首页Enter及观点Enter已读回。具体私人/研究状态、全部特殊弹窗及206视图仍B，不做完成夸大。
+
+用户新要求报告NAS登录误跳：REDIRECT-PORT-01有实际307链及截图。Web代理$host去掉18084，浏览器从默认80跳NAS9999；18:38仅预览模板改$http_host，nginx检查/reload成功，同一路径及浏览器已保持18084。所有容器ID、生产模板hash保持。详docs/stl4/NAS_REDIRECT_REVIEW_20261029.md。未输入NAS密码，未改变路由器/防火墙/DNS/Cloudflare。
+
+预览edge只绑定内网18084，内部服务无宿主发布；既有Cloudflare最新可读配置仍生产域名到生产edge。NAS管理80/443/9999双栈监听、虚拟网桥有全局单播IPv6且已读主机链未阻断管理端口；路由器转发/IPv6入站及外网可达仍B待核实。错误请求可携带搜索词；同IP Cookie不按端口隔离的可能影响已报告，未捕获Cookie或证明外泄/入侵。
+
+NAS interaction-r97-recovery保留前Web96，interaction-r98-recovery保留前Web97；interaction-redirect-recovery保留代理修复前模板和日志。原脏文件保留，自动任务保持删除。继续以用户具体批注和原公网前清单收口，不重做已完成索引/OCR。
+
 ## 2026-10-29 17:45 全站主导航显示与排版，Web96
 
 NAV-01按最新用户批注关闭D。原1120px共用规则隐藏主导航、仅首页有例外，已用统一masthead布局修正。所有使用SiteHeader的公开、研究、读者及阅读器页面保留主导航；宽屏横排、窄屏独立行、手机六栏分两行，普通页面滚动时固定顶部。Noto黑体15px/500、手机14px；搜索/月亮18px、菜单21px，点击区40/36px。读者中心私人导航及原搜索/账户/语言入口保留，Logo、A主体、后台工作导航不变。

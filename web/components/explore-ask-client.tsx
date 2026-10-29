@@ -1,4 +1,5 @@
 "use client";
+import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
@@ -842,7 +843,7 @@ function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRA
         {error ? <p className="ask-error" role="alert">{error}</p> : null}
         <form className="ask-composer" onSubmit={submitQuestion}>
           <label htmlFor="library-question">继续提问</label>
-          <textarea
+          <textarea onKeyDown={submitSearchOnEnter} enterKeyHint="search" title="回车检索，Shift + 回车换行"
             id="library-question"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
