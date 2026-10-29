@@ -193,7 +193,7 @@
 .summaryActions { display: grid; gap: 9px; margin-top: 20px; }
 .summaryActions > :global(.button) { justify-content: center; background: #b28a48; border-color: #b28a48; color: white; border-radius: 3px; }
 .summaryActions > div { display: flex; flex-wrap: wrap; gap: 6px; }
-.summaryActions button, .summaryActions :global(.button.secondary) { display: inline-flex; justify-content: center; align-items: center; gap: 4px; flex: 1; min-height: 38px; padding: 5px 7px; background: transparent; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); font-size: 11px; cursor: pointer; }
+.summaryActions > div > button, .summaryActions > :global(.button.secondary) { display: inline-flex; justify-content: center; align-items: center; gap: 4px; flex: 1; min-height: 38px; padding: 5px 7px; background: transparent; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); font-size: 11px; cursor: pointer; }
 .page > .inspector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 32px 0 0 214px; }
 .page > .inspector > section { border-radius: 3px; background: transparent; }
 .page .notice, .page .error { border-radius: 3px; }
@@ -216,8 +216,9 @@
 .contextColumns aside section + section { margin-top: 22px; }
 .contextColumns dt { font-weight: 600; color: var(--ink); }
 .contextColumns dd { margin: 4px 0 14px; }
-.contextNavigation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 22px 0 12px; }
+.contextNavigation { position: sticky; top: -1px; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 22px 0 12px; padding: 10px 0; background: var(--surface); border-bottom: 1px solid var(--line); }
 .contextNavigation h3 { flex: 1; margin: 0; }
+.contextNavigation::before { content: ""; position: absolute; inset: auto 0 100%; height: 24px; background: var(--surface); }
 .contextNavigation small { color: var(--muted); font: 12px/1.5 var(--sans); }
 .viewControls select { max-width: 148px; min-height: 34px; padding: 5px 20px 5px 7px; border: 1px solid var(--line); border-radius: 3px; background: var(--white, #fff); color: var(--ink); font: 11px/1.5 var(--sans); }
 .contextNavigation button { display: flex; align-items: center; gap: 4px; min-height: 34px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: transparent; cursor: pointer; font-size: 11px; }
@@ -324,6 +325,15 @@
 .contextDialog { background:var(--surface); }
 .contextColumns { grid-template-columns:minmax(0,1.7fr) minmax(230px,1fr); }
 .contextBlock p,.contextMatch p { font-size:16px; line-height:1.8; }
+.contextBlock,.contextMatch { scroll-margin-top: 72px; }
+.contextColumns > div { min-width: 0; }
+.contextNavigation button { font-size: 12px; }
+@media (max-width:480px) {
+ .contextBody { padding: 16px; }
+ .contextNavigation { gap: 6px; }
+ .contextNavigation h3 { flex-basis: 100%; }
+ .contextBlock,.contextMatch { padding: 12px; scroll-margin-top: 110px; }
+}
 .contextNavigation button[aria-pressed="true"] { background: var(--paper); border-color: var(--ink); }
 @media (min-width:801px) {
  .contextColumns > aside { position: sticky; top: 0; align-self: start; max-height: calc(min(85dvh, 1000px) - 128px); overflow-y: auto; }

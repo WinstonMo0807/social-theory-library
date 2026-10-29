@@ -1,5 +1,15 @@
 # Social Theory Library 当前进度
 
+## 2026-10-29 19:24 第一套文字反馈、长引文弹窗与引用页码
+
+用户选定01书刊细线。HOVER-01、CONTEXT-02、CITATION-LAYOUT-01/02、CITATION-PAGE-01开发D：文字入口共用1px/160ms细线；长上下文直接定位命中段并保留滚动导航；引用侧窗按钮不再受外层摘要样式拉伸，窗口独立挂页面根层避免手机断点隐藏；无印刷页码的引用明确附PDF页序，不再冒充书本页码。
+
+当前内网Web101 e93a89b7372b，API r54 ca45017317c5，四worker仍r53，RapidOCR3及beat/数据/模型保持；生产未改。前端类型/构建与4项后端引用定向检查通过；真实五段长引文非空白字符一致，实际复制结果已附“PDF 第20页”。上下文1440/768/390/320已查看，Web100工具栏半行漏出和引用按钮拉宽已读回修正。Web101桌面引用窗口切320仍可见、原文/来源正常，手机摘要再开引用及关闭已实看；最终上下文截图/几何见INTERACTION_REVIEW_20261029.md。不扩大为全部206视图或全业务验收。
+
+恢复点NAS citation-r54-recovery保留API前r53，interaction-r99/r100/r101-recovery分别保留前Web98/99/100；环境与回退按服务单项取值，不整份覆盖.env。预览Host保留18084，原NAS网络边界报告不变。所有原件、索引、私人内容、人工修订、失败记录与继承脏文件保留，自动安排仍删除。日志tmp/stl4-line-20261029、截图output/visual-review-20261029-line忽略不提交。
+
+当前HTTP内网自动Clipboard未成功，既有手动复制入口可读；公网HTTPS仍待验收。OCR错字、跨栏顺序、诗行等不由此次空白整理自动推断。后续仅按用户具体批注及既有公网前批准/B清单接续，不重开已完成OCR和索引。
+
 ## 2026-10-29 18:45 弹窗/原文/回车及误跳NAS修复，Web98
 
 OVERLAY-01、SOURCE-TEXT-01、SEARCH-ENTER-01已实现D；HOVER-PREVIEW-01三方案比较页已交付，未擅自全站套用。共用dialog恢复居中并加轻入场；OCR引文纯展示/已核验引用导出整理硬换行，原文/定位/索引不改。五个问题框Enter走原表单，Shift+Enter换行，输入法选词不触发。记录见docs/stl4/INTERACTION_REVIEW_20261029.md；/interaction-preview供比较。

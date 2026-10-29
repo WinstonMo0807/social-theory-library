@@ -87,7 +87,11 @@ class PublicCitationPreviewView(APIView):
         edition_values = snapshot.get("edition") or {}
         printed = reference.get("printed_label") or "" if reference else ""
         page = reference.get("pdf_page") if reference else None
-        label = printed or (str(page) if page else "")
+        citations = citation_bundle(edition, printed, snapshot=snapshot)
+        if page and not printed:
+            # PDF position is a locator, not an unverified printed page number.
+            citations = {key: f"{value}（PDF 第 {page} 页）" if isinstance(value, str) else value
+                         for key, value in citations.items()}
         source = {"edition_id": str(edition.id), "work_id": str(edition.work_id), "title": work.get("title") or "未题名",
             "authors": [str((row.get("person") or {}).get("preferred_name") or row.get("name") or "")
                 for row in snapshot.get("contributions", []) if isinstance(row, dict) and row.get("role") == "author"],
@@ -95,6 +99,6 @@ class PublicCitationPreviewView(APIView):
             **snapshot_cover(edition), "work_url": f"/works/{edition_values.get('public_slug') or edition.id}",
             "reader_url": reference.get("reader_url") if reference else None,
             "pdf_page": page, "printed_label": printed, "source_status": "available"}
-        response = Response({"source": source, "reference": reference, "citations": citation_bundle(edition, label, snapshot=snapshot)})
+        response = Response({"source": source, "reference": reference, "citations": citations})
         response["Cache-Control"] = "no-store"
         return response

@@ -93,6 +93,26 @@ def test_metadata_citation_remains_available_without_fulltext(api_client):
     assert response.data["source"]["pdf_page"] is None
 
 
+@pytest.mark.parametrize("printed", ["", "xv"])
+def test_pdf_position_is_not_exported_as_a_printed_page(api_client, printed):
+    _, asset, spans, _ = fixture_source(count=1)
+    page = spans[0].page
+    page.printed_label = printed
+    page.save(update_fields=["printed_label"])
+    response = api_client.post("/api/reading/citation-preview/", {"reference": raw_page(asset, spans[0])}, format="json")
+    assert response.status_code == 200
+    assert response.data["reference"]["quote"] == page.text
+    assert response.data["source"]["printed_label"] == printed
+    citations = response.data["citations"]
+    for key in ["gbt7714-2025", "apa", "mla", "chicago", "harvard"]:
+        if printed:
+            assert printed in citations[key] and "PDF 第" not in citations[key]
+        else:
+            assert citations[key].endswith("（PDF 第 1 页）")
+            assert "：1." not in citations[key] and "p. 1." not in citations[key]
+    assert "page" not in citations["csl"]
+
+
 def test_retry_request_is_idempotent_and_changed_body_conflicts(reader_user):
     _, _, spans, _ = fixture_source(count=1)
     project = research.create_project(reader_user, {"request_id": str(uuid4()), "title": "选材重试"})

@@ -22,7 +22,7 @@ export default function InteractionPreviewPage() {
   const [feedback, setFeedback] = useState("");
   const current = options.find(option => option.id === variant)!;
   return <div className={styles.page}>
-    <header className={styles.intro}><p className={styles.kicker}>交互设计预览 · 三种方案</p><h1>让可点击的地方，更清楚。</h1><p>把鼠标移到文字、卡片和按钮上，比较不同的反馈。也可以按 Tab 查看键盘焦点。</p></header>
+    <header className={styles.intro}><p className={styles.kicker}>当前采用 01 · 书刊细线</p><h1>让可点击的地方，更清楚。</h1><p>文字入口已采用第一套细线反馈。这里保留三种方案供比较，也可以按 Tab 查看键盘焦点。</p></header>
     <div className={styles.choices} role="group" aria-label="悬浮方案">{options.map(option => <button key={option.id} type="button" aria-pressed={variant === option.id} onClick={() => { setVariant(option.id); setFeedback(""); }}><span className={styles.number}>{option.number}</span><strong>{option.title}</strong><span>{option.copy}</span></button>)}</div>
     <div className={styles.toolbar}><p>{current.use}</p><label><input type="checkbox" checked={showHover} onChange={event => setShowHover(event.target.checked)} />显示悬浮状态</label></div>
     <section className={styles.preview} data-variant={variant} data-show-hover={showHover} aria-label={`${current.title}交互示例`}>
@@ -38,7 +38,7 @@ export default function InteractionPreviewPage() {
       </div>
       <p className={styles.feedback} role="status">{feedback || "示例内容，仅用于比较样式，不会修改馆藏或阅读记录。"}</p>
     </section>
-    <section className={styles.notes}><h2>按用途组合，会比全站套用一种更自然。</h2><p>书名与正文链接用细线，管理入口用底色，策展入口用轻移的箭头。纯正文不动，禁用按钮不响应；一行有多个操作时，只强调对应按钮。</p><p className={styles.sources}>方法参考：<a href="https://carbondesignsystem.com/components/link/usage/" target="_blank" rel="noreferrer">Carbon · 链接</a><a href="https://spectrum.adobe.com/page/motion/" target="_blank" rel="noreferrer">Spectrum · 动效</a><a href="https://designsystem.gov.scot/components/card" target="_blank" rel="noreferrer">Scottish Government · 卡片</a></p></section>
+    <section className={styles.notes}><h2>细线跟随文字，不打断阅读。</h2><p>书名、学者姓名、栏目入口和后台文字导航使用细线。普通正文保持不动，图标与实心按钮保留原有反馈；一行有多个操作时，只强调对应入口。</p><p className={styles.sources}>方法参考：<a href="https://carbondesignsystem.com/components/link/usage/" target="_blank" rel="noreferrer">Carbon · 链接</a><a href="https://spectrum.adobe.com/page/motion/" target="_blank" rel="noreferrer">Spectrum · 动效</a><a href="https://designsystem.gov.scot/components/card" target="_blank" rel="noreferrer">Scottish Government · 卡片</a></p></section>
     <Dialog open={open} onRequestClose={() => setOpen(false)} className={styles.dialog} aria-labelledby="interaction-dialog-title"><header><div><p className={styles.meta}>交互预览</p><h2 id="interaction-dialog-title">原文排版示例</h2></div><button type="button" className={styles.iconButton} aria-label="关闭预览" onClick={() => setOpen(false)}><X size={19} /></button></header><div className={styles.dialogBody}><button type="button" className={styles.outlineButton} aria-pressed={original} onClick={() => setOriginal(value => !value)}>原始换行</button><blockquote><SourceText text={sample} original={original} /></blockquote><p className={styles.meta}>这是自写的排版示例，不是检索结果。按 Esc 或点窗口外侧可关闭。</p></div></Dialog>
   </div>;
 }

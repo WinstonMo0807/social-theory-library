@@ -15,6 +15,7 @@ import "../styles/tokens/type-fonts.css";
 import "../styles/tokens/typography.css";
 import "../styles/tokens/typeface.css";
 import "../styles/layout/site-masthead.css";
+import "../styles/components/editorial-links.css";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { SiteHeader } from "@/components/site-header";
 import { loadSiteChromeConfig } from "@/lib/api/site.server";

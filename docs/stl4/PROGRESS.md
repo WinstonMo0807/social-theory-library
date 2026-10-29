@@ -1,5 +1,9 @@
 # STL 4.0 当前执行状态
 
+## 2026-10-29 19:20 采用01与引用页码修正
+
+当前Web101 e93a89b7372b、API r54 ca45017317c5；四worker保持r53，beat/RapidOCR/数据/模型及生产保持。HOVER-01、CONTEXT-02、CITATION-LAYOUT-01/02和CITATION-PAGE-01开发D，详细证据及实际运行范围见INTERACTION_REVIEW_20261029.md最新节。用户A版布局/品牌保留，01细线覆盖真实文字入口。五段原文整理前后非空白字符相同，无印刷页码的引用明确附PDF页序。未做OCR、索引补写、检索质量评测、私人写入或生产操作。原B/公网最终批准仍有效，自动任务保持删除。
+
 ## 2026-10-29 18:45 Web98交互和预览代理
 
 当前Web98 92d4fd4ddf31；OVERLAY-01、SOURCE-TEXT-01、HOVER-PREVIEW-01、SEARCH-ENTER-01开发D，运行读取范围见INTERACTION_REVIEW_20261029.md。其余原B/公网批准清单保持，三套悬浮样式供用户比较。

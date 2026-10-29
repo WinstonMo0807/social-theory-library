@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Check, Copy, Download, Info, LoaderCircle, MoreHorizontal, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ApiRequestError, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { readAllPages } from "@/lib/api/read-all-pages";
 import { booklistRequest, type BooklistDirectory, type BooklistSummary, type BooklistResult, type BooklistWorkspace, type CitationBooklistInput, type CitationBooklistResult } from "@/lib/api/booklists.client";
@@ -34,9 +35,11 @@ export function SharedCitationOverlay({ open, onClose, ...input }: Props) {
   const [epoch, setEpoch] = useState(0);
   const [locked, setLocked] = useState(false);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return <Dialog open={open} onRequestClose={() => { if (!locked) onClose(); }} className={styles.dialog} aria-label={t("引用、选材与导出")}>
+  // Keep the modal visible when its source inspector hides at a mobile breakpoint.
+  if (typeof document === "undefined") return null;
+  return createPortal(<Dialog open={open} onRequestClose={() => { if (!locked) onClose(); }} className={styles.dialog} aria-label={t("引用、选材与导出")}>
     <Workspace key={`${JSON.stringify(input)}:${epoch}`} input={input} onClose={onClose} onLocked={setLocked} />
-  </Dialog>;
+  </Dialog>, document.body);
 }
 
 function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; onClose: () => void; onLocked: (value: boolean) => void }) {

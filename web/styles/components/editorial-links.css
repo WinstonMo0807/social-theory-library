@@ -1,0 +1,46 @@
+/* Chosen treatment 01: underline only the text that names an actual destination. */
+:is(.editorial-link, .text-link,
+  main :is(h2,h3,h4) a[href], .admin-content :is(h2,h3,h4) a[href],
+  main a[href] :is(h2,h3,h4),
+  .stl4-home-heading a, .stl4-hot-searches a, .book-actions a,
+  .site-footer nav a, .breadcrumb a, .breadcrumbs a,
+  .admin-nav-primary > span, .admin-nav-children a) {
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .25em;
+  text-decoration-skip-ink: auto;
+  transition: text-decoration-color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :is(.editorial-link, .text-link,
+    main :is(h2,h3,h4) a[href], .admin-content :is(h2,h3,h4) a[href],
+    .stl4-home-heading a, .stl4-hot-searches a, .book-actions a,
+    .site-footer nav a, .breadcrumb a, .breadcrumbs a,
+    .admin-nav-children a):not(:disabled):not([aria-disabled="true"]):hover,
+  main a[href]:hover :is(h2,h3,h4),
+  .admin-nav-primary:hover > span {
+    text-decoration-color: currentColor;
+  }
+}
+
+:is(.editorial-link, .text-link,
+  main :is(h2,h3,h4) a[href], .admin-content :is(h2,h3,h4) a[href],
+  .stl4-home-heading a, .stl4-hot-searches a, .book-actions a,
+  .site-footer nav a, .breadcrumb a, .breadcrumbs a,
+  .admin-nav-children a):focus-visible,
+main a[href]:focus-visible :is(h2,h3,h4),
+.admin-nav-primary:focus-visible > span {
+  text-decoration-color: currentColor;
+  transition-duration: 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.editorial-link, .text-link,
+    main :is(h2,h3,h4) a[href], .admin-content :is(h2,h3,h4) a[href],
+    main a[href] :is(h2,h3,h4),
+    .stl4-home-heading a, .stl4-hot-searches a, .book-actions a,
+    .site-footer nav a, .breadcrumb a, .breadcrumbs a,
+    .admin-nav-primary > span, .admin-nav-children a) { transition: none; }
+}

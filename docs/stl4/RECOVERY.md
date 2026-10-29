@@ -1,5 +1,13 @@
 # 中断恢复最短路径
 
+## 2026-10-29 19:20 Web101与API r54
+
+活动Web101 social-theory-library-web:stl4-preview-20261029-r101，SHA e93a89b7372b8893762d0de492bb5b9180441524295545a156006d1c51870dc7。API r54 social-theory-library-api:stl4-preview-20261029-r54，SHA ca45017317c52e3abcf4658a7ad7e76989c5b02e82b0c372765091305fed9baa；只替换shared_citation_views.py，不含工作区其他后端脏改动，无迁移。四worker仍r53，环境LIBRARY_API_IMAGE为r54，后续不能误称worker已更新。
+
+NAS预览根/volume2/library/stl-previews/20261026-r1下citation-r54-recovery保留API前r53；interaction-r99-recovery保留Web98，interaction-r100-recovery保留Web99，interaction-r101-recovery保留Web100。回退只取对应镜像变量到预览.env并对指定服务up --no-deps，不整份覆盖环境。API回退后需edge nginx检查/reload；Web按原Web/edge流程。预览Web代理Host $http_host保留端口的修复不得丢失；interaction-redirect-recovery是独立网络恢复点。
+
+类型/构建、引用pytest4项、实际长原文与窗口检查及边界见INTERACTION_REVIEW_20261029.md最新节。日志tmp/stl4-line-20261029、截图output/visual-review-20261029-line均忽略，真实原文比较JSON不可提交。既有账号/原件/私人数据/模型/索引/失败记录和全部脏文件保持；生产与删除的自动安排不变。
+
 ## 2026-10-29 18:45 Web98及预览Host修复
 
 活动Web98 social-theory-library-web:stl4-preview-20261029-r98，SHA 92d4fd4ddf31fc909671bcdfeea45848646aadf1e05768bad4e32dedad3d128c。NAS预览根interaction-r97-recovery保存前Web96；interaction-r98-recovery保存前Web97；只取原LIBRARY_WEB_IMAGE恢复预览Web/edge，不整份覆盖.env或重启API/worker/数据/OCR。
