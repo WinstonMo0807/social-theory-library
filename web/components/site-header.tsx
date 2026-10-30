@@ -48,7 +48,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const navigationReturn = usePublicNavigationReturn(`${pathname}${searchParams.size ? `?${searchParams}` : ""}`, menuButtonRef);
   const [menuSearch, setMenuSearch] = useState("");
-  const isActive = (href: string) => href === "/" ? pathname === "/"
+  const isActive = (href: string) => href === "/" ? pathname === "/" || pathname === "/layout-preview"
     : ["/theories/graph", "/theories/timeline"].includes(pathname) || pathname.startsWith("/theories/reading-paths") ? href === "/explore"
     : href === "/theories" ? /^\/(theories|theory-schools|subdisciplines)(\/|$)/.test(pathname)
     : pathname === href || pathname.startsWith(`${href}/`);
@@ -138,7 +138,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-stl-privacy={privacyReference}
       data-stl-confirmed-notes={pathname==="/account/confirmed-notes"||undefined}
       data-stl-auth={authRoute ? pathname === "/reset-password" ? "recovery" : "true" : undefined}
-      data-stl-home={pathname === "/" || preview ? "true" : undefined}
+      data-stl-home={pathname === "/" || pathname === "/layout-preview" || preview ? "true" : undefined}
       data-stl-sharing={pathname === "/account/sharing/new" ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : archiveRoute ? "archive" : undefined}
       data-stl-research={pathname === "/account/research" ? "true" : undefined}

@@ -108,8 +108,11 @@ test("related page normalization strips secrets and removal sends no context", a
   const state = await setup(page); await page.goto("/feedback?path=%2Faccount%2Fnotes", { waitUntil: "domcontentloaded" });
   await expect(feedback(page)).toContainText("未关联该地址");
   await feedback(page).getByRole("button", { name: "关联公开页面", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "关联公开页面" });
-  await dialog.getByLabel("站内公开页面路径").fill("/reader/70000000-0000-4000-8000-000000000001?page=8&token=secret&q=private");
+  const dialog = page.getByRole("dialog", { name: "选择相关页面" });
+  await dialog.getByRole("button", { name: "首页", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "首页", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await dialog.getByText("手动填写网址", { exact: true }).click();
+  await dialog.getByLabel("本站页面地址").fill("/reader/70000000-0000-4000-8000-000000000001?page=8&token=secret&q=private");
   await dialog.getByRole("button", { name: "关联页面", exact: true }).click();
   await expect(page.locator(".stl4-feedback-related")).toContainText("?page=8");
   await expect(page.locator(".stl4-feedback-related")).not.toContainText("secret");

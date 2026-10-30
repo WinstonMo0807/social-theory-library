@@ -26,12 +26,12 @@ export function usePublicSource(path: string) {
 }
 
 /** Metadata always comes from the anonymous-public resolver, never the referring page. */
-export function FeedbackSourceCard({ path }: { path: string }) {
+export function FeedbackSourceCard({ path, title }: { path: string; title?: string }) {
   const state = usePublicSource(path);
   return <div className={styles.related} aria-live="polite">
     {state.source?.cover_url ? <MediaPlacement uses={state.source.cover_media?.display_uses} fallback={<FileText size={30} aria-hidden="true" />}><img src={normalizePublicResourceUrl(state.source.cover_url)} alt="" width={42} height={60} /></MediaPlacement> : <FileText size={30} aria-hidden="true" />}
-    <div><strong>{state.source?.title || (state.loading ? "正在读取相关页面…" : "相关页面尚未核对")}</strong>
-      {state.source ? <span>{[state.source.authors.join("、"), state.source.version_label, state.source.location, sourceStatusLabel[state.source.status]].filter(Boolean).join(" · ")}</span> : null}
+    <div><strong>{(state.source?.status !== "unavailable" ? state.source?.title : title) || (state.loading ? "正在读取相关页面…" : "相关页面尚未核对")}</strong>
+      {state.source && (state.source.source_type || state.source.status === "page") ? <span>{[state.source.authors.join("、"), state.source.version_label, state.source.location, sourceStatusLabel[state.source.status]].filter(Boolean).join(" · ")}</span> : null}
       {state.error ? <span role="alert">{state.error}<button type="button" onClick={state.reload}>重新读取</button></span> : null}
       <small>{path}</small>
     </div>
