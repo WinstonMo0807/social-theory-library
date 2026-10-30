@@ -268,7 +268,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
 
             {logoutError ? <AsyncStatus state="error" message={logoutError} /> : null}
 
-            <DisplayPreferences />
+            <details className="site-menu-appearance"><summary>{t("外观与字体")}</summary><DisplayPreferences /></details>
 
             <footer className="site-menu-foot">
               <span>{user ? `${user.display_name} · ${user.role === "reader" ? t("读者") : t("馆员")}` : t("访客可直接阅读、下载、复制与引用")}</span>

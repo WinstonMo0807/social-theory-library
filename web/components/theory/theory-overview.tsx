@@ -10,7 +10,7 @@ export type TheoryOverviewSearchParams = {
   q?: string | string[]; discipline?: string | string[]; page?: string | string[];
 };
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value)?.trim() || "";
-const photos = "/visual/stl4/theory";
+const photos = "/editorial/generated-20261030";
 const disciplinePhotos = ["bookshelf", "globe", "branches"];
 const theoryPhotos = ["open-book", "book-spines", "stone-wall"];
 const nodeLabels: Record<string, string> = { theory_tradition: "理论传统", subdiscipline: "子学科", concept: "核心概念", debate: "关键争论", research_problem: "研究问题" };
@@ -48,8 +48,7 @@ export async function TheoryOverviewPage({ searchParams, actionPath = "/theory-s
     <div className={styles.page}>
       <section className={styles.hero} aria-labelledby="theory-overview-title">
         <picture className={styles.heroPhoto}>
-          <source media="(max-width: 700px)" srcSet={`${photos}/hero-mobile.webp`} />
-          <Image src={`${photos}/hero-desktop.webp`} alt="" width={686} height={338} priority unoptimized sizes="(max-width: 700px) 100vw, 55vw" />
+          <Image src="/editorial/generated-20261030/theories.webp" alt="" width={1536} height={1024} priority unoptimized sizes="(max-width: 700px) 100vw, 55vw" />
         </picture>
         <div className={styles.heroCopy}>
           <h1 id="theory-overview-title">理论流派</h1>

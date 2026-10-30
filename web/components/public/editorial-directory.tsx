@@ -77,7 +77,7 @@ export function EditorialDirectoryView({ data, params, error }: { data: Editoria
   return <main className={styles.directory}>
     <header className={styles.hero}><nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><span>特别策划</span><span>›</span><span>专题文章索引</span></nav>
       <div className={styles.heroCopy}><h1>专题文章索引</h1><p className={styles.subtitle}>发现策划文章、阅读专题和原文展览。</p><p className={styles.description}>汇聚社会理论的经典与当代，<br />从不同视角理解人、社会与世界。</p></div>
-      <img className={styles.heroImage} src="/visual/stl4/editorial/directory-hero-final-r2.png" alt="" />
+      <img className={styles.heroImage} src="/editorial/generated-20261030/editorial.webp" alt="" />
       <form id="editorial-filter" action="/recommendations" className={styles.search}><Search size={19} /><input name="q" aria-label="搜索专题文章" placeholder="搜索文章、作者、概念、主题…" defaultValue={q} /><button type="submit">搜索</button>{list ? <input type="hidden" name="layout" value="list" /> : null}</form>
     </header>
     <div className={styles.directoryToolbar}>

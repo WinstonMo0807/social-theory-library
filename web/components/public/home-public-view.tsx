@@ -32,7 +32,7 @@ export function HomePublicView({ config, works, scholars, topics, randomWorks, i
   return <div className="stl4-home">
     <section className="stl4-home-hero" data-edit-section="home" aria-labelledby="home-title">
       <div className="stl4-hero-picture">
-        <picture><source media="(max-width: 700px)" srcSet={config.home_hero_image || "/editorial/stl4-home-mobile-final-r2.png"} /><img src={config.home_hero_image || "/editorial/stl4-home-desktop-final-r2.png"} alt={config.home_hero_alt || "阳光下的书桌、书籍与书架。更好地理解世界，为了更好地参与世界。"} width={643} height={278} fetchPriority="high" /></picture>
+        <picture><img src={config.home_hero_image || "/editorial/generated-20261030/home.webp"} alt={config.home_hero_alt || "公共阅览室中的书籍、书架与读者"} width={643} height={278} fetchPriority="high" /></picture>
       </div>
       <div className="stl4-hero-copy">
         <p className="stl4-home-kicker">Social Theory Library</p>

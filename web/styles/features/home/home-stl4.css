@@ -28,7 +28,7 @@
 .stl4-hero-intro p { margin: 0; }
 .stl4-hero-picture { grid-area: 1 / 2; min-width: 0; position: relative; }
 .stl4-hero-picture picture, .stl4-hero-picture img { display: block; width: 100%; height: 100%; }
-.stl4-hero-picture img { min-height: 298px; object-fit: cover; object-position: center; }
+.stl4-hero-picture img { min-height: 298px; aspect-ratio: 643 / 278; object-fit: cover; object-position: center; }
 .stl4-hero-picture::before { position: absolute; inset: 0 auto 0 0; width: 70px; background: linear-gradient(90deg, var(--night-white, #fff), transparent); content: ""; pointer-events: none; }
 .stl4-hero-motto { position: absolute; right: 15%; top: 12%; margin: 0; font: 13px/1.9 var(--serif); letter-spacing: .12em; color: #24221f; }
 .stl4-hero-motto small { display: block; font: 8px/2 Georgia, serif; margin-top: 8px; text-transform: uppercase; letter-spacing: .15em; }

@@ -1,5 +1,9 @@
 # 开发进度
 
+## 2026-10-30 13:45 页脚/抽屉/21张配图，Web106
+
+FOOTER-LAYOUT-01、DRAWER-LAYOUT/PREVIEW/WIDTH-01、EDITORIAL-ART-01、HERO-CROP-01已实现D。页脚完整链接、共享抽屉固定关闭区/滚动与外观设置收纳；/drawer-preview三方案待用户选择；21张独立生成图片接入首页及入口，原件和旧资源保留。类型/构建退出0，九个首页桌面、主要手机裁切与定向抽屉读回完成，未做全站/业务测试。Web106 e6c859ae5c63，仅内网，其他容器/生产不变；layout-r106-recovery保存前Web105。实际范围和B限制见stl4/DRAWER_ART_20261030.md，图片清单见stl4/EDITORIAL_ART_20261030.csv。
+
 ## 2026-10-30 共用导航同行，Web103
 
 NAV-INLINE-01完成：1000px及以上六入口在品牌与图标之间，窄屏保持可见分行。反馈目录动态公开来源、Enter搜索及服务器分页已定向读回；当前数据不足8项，不能称大库UI翻页已验收。Web103 d2a032961a20、构建退出0，恢复点layout-r103-recovery。详CURRENT_PROGRESS及stl4/LAYOUT_FEEDBACK_20261030.md。

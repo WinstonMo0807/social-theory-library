@@ -25,6 +25,7 @@
   position: fixed;
   inset: 0 0 0 auto;
   width: min(28rem, 100%);
+  max-width: 100%;
   height: 100dvh;
   max-height: none;
   margin: 0;
@@ -36,9 +37,17 @@
   color: var(--ink);
 }
 
+html:has(.ui-drawer[open]) { overflow: hidden; }
+
 .ui-drawer::backdrop {
   background: rgb(10 10 10 / 34%);
 }
+
+.ui-drawer:not(.site-menu-layer) { --drawer-padding: clamp(18px,3vw,28px); padding: var(--drawer-padding); padding-bottom: max(var(--drawer-padding),env(safe-area-inset-bottom)); overscroll-behavior: contain; scrollbar-gutter: stable; overflow-wrap: anywhere; }
+.ui-drawer:not(.site-menu-layer) > header { position: sticky; top: calc(-1 * var(--drawer-padding)); z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: calc(-1 * var(--drawer-padding)) calc(-1 * var(--drawer-padding)) 20px; padding: 16px var(--drawer-padding); border-bottom: 1px solid var(--line); background: var(--night-white,var(--surface)); }
+.ui-drawer:not(.site-menu-layer) > header :is(h2,strong) { min-width: 0; margin: 0; font: 500 22px/1.4 var(--serif); }
+.ui-drawer:not(.site-menu-layer) > header > button { display: grid; place-items: center; flex: 0 0 40px; width: 40px; min-height: 40px; padding: 8px; }
+.ui-drawer:not(.site-menu-layer) > nav { flex-wrap: wrap; row-gap: 10px; }
 
 .ui-drawer.site-menu-layer {
   inset: 0;
