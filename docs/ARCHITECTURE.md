@@ -1,5 +1,9 @@
 # Social Theory Library 架构
 
+## 2026-11-03 政策库研究预览边界
+
+新增`web/app/policy`同域名候选页面与`/policy/query`接口，`web/lib/policy-demo`保存有限真实公开样本与检索逻辑，未建政策生产数据库或爬虫。查询可通过显式`POLICY_DEMO_INFERENCE_URL`调用原`/rerank`模型，保留原文位置与模型身份核验，异常时明确使用关键词结果。独立Vite/Node预览复用同一页面与查询服务代码，NAS仅绑定内网18086并加入原预览模型内部网络；不改现有STL入库、馆藏或生产代理。未来政策模块独立表/队列/索引、以证据契约连接STL仍为建议，未实施。详情及部署/恢复记录见`stl4/POLICY_DEMO_20261103.md`。
+
 ## 2026-10-27 访客记录与阅读历史来源
 
 本机guest-records版本化存储只记录未登录公开来源，登录后经明确勾选与本人接口导入。ReadingHistory支持asset或recommendation issue恰好一种来源，迁移reading0028；公开修订资格、隐私偏好、读取/导出/清理沿原账户服务。原始本机记录保留，回执防重不覆盖账户已有进度。详docs/stl4/GUEST_RECORDS_20261027.md。
