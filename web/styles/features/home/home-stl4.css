@@ -22,7 +22,6 @@
 .stl4-home :is(button, a) > svg { flex: 0 0 auto; }
 .stl4-home-hero { position: relative; min-height: 298px; display: grid; grid-template-columns: 44% 56%; margin: 0 -36px 10px; overflow: hidden; }
 .stl4-hero-copy { grid-area: 1 / 1; padding: 24px 0 16px 5.6vw; z-index: 1; align-self: center; min-width: 0; }
-.stl4-home-kicker { font: 11px/1.5 Georgia, serif; letter-spacing: .12em; margin: 0 0 10px; text-transform: uppercase; }
 .stl4-home .stl4-hero-copy h1 { margin: 0 0 8px; font-size: clamp(32px, 3.5vw, 48px); font-weight: 700; line-height: 1.24; letter-spacing: .02em; }
 .stl4-hero-intro { font: 17px/1.6 var(--serif); margin: 0 0 15px; }
 .stl4-hero-intro p { margin: 0; }
@@ -44,7 +43,6 @@
 .stl4-home-section { padding: 19px 0 0; margin-top: 14px; border-top: 1px solid var(--line); }
 .stl4-home-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 13px; }
 .stl4-home .stl4-home-heading h2 { margin: 0; font-size: clamp(22px, 2.3vw, 30px); font-weight: 700; line-height: 1.3; white-space: nowrap; }
-.stl4-home-heading h2 small { font: 10px Georgia, serif; margin-left: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 400; color: var(--muted); vertical-align: middle; }
 .stl4-home-heading > div, .stl4-home-heading a, .stl4-home-heading button { display: flex; align-items: center; gap: 10px; }
 .stl4-home-heading > div { gap: 24px; }
 .stl4-home-heading :is(a, button), .stl4-issue-count { font-size: 12px; }

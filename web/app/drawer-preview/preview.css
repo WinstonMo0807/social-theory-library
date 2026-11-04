@@ -3,13 +3,11 @@
 .drawer-layout-preview h1 { font:500 clamp(30px,4vw,46px)/1.3 var(--serif); margin:12px 0 20px; }
 .drawer-layout-preview p { font:15px/1.8 var(--sans); color:var(--muted); }
 .drawer-layout-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
-.drawer-layout-options > button { text-align:left; padding:28px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; }
+.drawer-layout-options > button { display:flex; align-items:center; justify-content:space-between; gap:16px; text-align:left; padding:28px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; }
 .drawer-layout-options > button[aria-pressed=true] { border-color:var(--gold); background:var(--wash); }
-.drawer-layout-options > button > span { font:13px var(--sans); color:var(--muted); }
-.drawer-layout-options h2 { font:500 25px/1.4 var(--serif); margin:20px 0 12px; }
-.drawer-layout-options strong { display:block; font:500 14px var(--sans); margin-top:24px; }
+.drawer-layout-options > button > span { font:500 25px/1.4 var(--serif); }
+.drawer-layout-options > button > svg { flex:none; }
 .drawer-layout-note { margin-top:40px; padding-top:28px; border-top:1px solid var(--line); }
-.drawer-layout-note h2 { font:500 24px var(--serif); }
 .drawer-layout-note button,.drawer-layout-content > button { border:1px solid var(--line); background:var(--surface); padding:10px 16px; color:var(--ink); margin:12px 0; cursor:pointer; }
 .drawer-layout-content > p { color:var(--muted); font:13px/1.7 var(--sans); }
 .drawer-layout-content section { padding:16px 0; border-bottom:1px solid var(--line); }

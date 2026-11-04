@@ -19,18 +19,17 @@ export function LayoutPreview({ data }: { data: HomeViewData }) {
   const [notice, setNotice] = useState("");
   const issues: RecommendationIssue[] = examples.slice(0, count).map(([title, introduction, cover], index) => ({
     id: `layout-example-${index}`, slug: `layout-example-${index}`, title, introduction,
-    issue_label: `第 ${String(count - index).padStart(2, "0")} 期 · 排版示例`, cover_url: pictures ? cover : "",
+    issue_label: `第 ${String(count - index).padStart(2, "0")} 期`, cover_url: pictures ? cover : "",
     body_blocks: [], public_byline: "", display_from: null, published_at: null, items: [], edit_version: "",
   }));
   return <div className="stl-layout-preview" data-navigation={navigation}>
     <details className="stl-layout-controls" open>
-      <summary>首页排版参考<span>导航位置 · 策划期数 · 配图</span></summary>
+      <summary>首页排版参考</summary>
       <div className="stl-layout-options">
-        <fieldset><legend>导航位置</legend>{[["current", "当前布局"], ["top", "最上方独立一行"], ["inline", "与 Logo 同行"]].map(([value, label]) => <label key={value}><input type="radio" name="navigation-position" value={value} checked={navigation === value} onChange={() => setNavigation(value)} />{label}</label>)}</fieldset>
+        <fieldset><legend>导航位置</legend>{[["current", "当前布局"], ["top", "顶行"], ["inline", "与 Logo 同行"]].map(([value, label]) => <label key={value}><input type="radio" name="navigation-position" value={value} checked={navigation === value} onChange={() => setNavigation(value)} />{label}</label>)}</fieldset>
         <fieldset><legend>特别策划</legend><label><span>期数</span><select value={count} onChange={event => { setCount(Number(event.target.value)); setNotice(""); }}>{[1,2,3,4].map(value => <option key={value} value={value}>{value} 期</option>)}</select></label><label><input type="checkbox" checked={pictures} onChange={event => setPictures(event.target.checked)} />显示配图</label></fieldset>
       </div>
-      <p>策划标题与配图仅用于排版演示，未发布到书库。<Link href="/">返回实际首页</Link></p>
-      <p>宽屏最多展示四期，中屏三期，手机先展示主推一期，其余从“查看全部”进入。窄屏导航会自动换行。</p>
+      <footer><span>策划内容为示例</span><Link href="/">返回首页</Link></footer>
     </details>
     {notice ? <p className="stl-layout-notice" role="status">{notice} <Link href="/recommendations">查看已发布策划</Link></p> : null}
     <div onClickCapture={event => {

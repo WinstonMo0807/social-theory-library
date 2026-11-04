@@ -244,11 +244,11 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
                   <>
                     <Link href="/login?next=/account" prefetch={false} onClick={enterAccount}>
                       <CircleUserRound size={18} />
-                      <span><strong>{t("登录")}</strong><small>{t("同步个人阅读资料")}</small></span>
+                      <span><strong>{t("登录")}</strong></span>
                     </Link>
                     <Link href="/register" prefetch={false} onClick={enterAccount}>
                       <UserPlus size={18} />
-                      <span><strong>{t("注册")}</strong><small>{t("创建免费读者账户")}</small></span>
+                      <span><strong>{t("注册")}</strong></span>
                     </Link>
                   </>
                 ) : (
