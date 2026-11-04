@@ -24,7 +24,7 @@ export function TimelineHero({ scope }: { scope?: { name: string; href: string }
     <div className={styles.heroCopy}>
       <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/explore">探索</Link><span>/</span>{scope ? <><Link href={scope.href}>{scope.name}</Link><span>/</span></> : null}<span>学科与概念时间线</span></nav>
       <h1>学科与概念时间线</h1>
-      <p>按时间理解作品、概念使用和学术事件的变化。</p>
+
     </div>
     <img className={styles.heroPhoto} src="/visual/stl4/timeline/hero-final-r2.png" alt="" width={800} height={180} />
   </header>;

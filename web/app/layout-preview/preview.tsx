@@ -13,7 +13,7 @@ const examples = [
 ];
 
 export function LayoutPreview({ data }: { data: HomeViewData }) {
-  const [navigation, setNavigation] = useState("top");
+  const [navigation, setNavigation] = useState("inline");
   const [count, setCount] = useState(4);
   const [pictures, setPictures] = useState(true);
   const [notice, setNotice] = useState("");
@@ -26,7 +26,7 @@ export function LayoutPreview({ data }: { data: HomeViewData }) {
     <details className="stl-layout-controls" open>
       <summary>首页排版参考</summary>
       <div className="stl-layout-options">
-        <fieldset><legend>导航位置</legend>{[["current", "当前布局"], ["top", "顶行"], ["inline", "与 Logo 同行"]].map(([value, label]) => <label key={value}><input type="radio" name="navigation-position" value={value} checked={navigation === value} onChange={() => setNavigation(value)} />{label}</label>)}</fieldset>
+        <fieldset><legend>导航位置</legend>{[["inline", "与 Logo 同行"], ["top", "顶行"]].map(([value, label]) => <label key={value}><input type="radio" name="navigation-position" value={value} checked={navigation === value} onChange={() => setNavigation(value)} />{label}</label>)}</fieldset>
         <fieldset><legend>特别策划</legend><label><span>期数</span><select value={count} onChange={event => { setCount(Number(event.target.value)); setNotice(""); }}>{[1,2,3,4].map(value => <option key={value} value={value}>{value} 期</option>)}</select></label><label><input type="checkbox" checked={pictures} onChange={event => setPictures(event.target.checked)} />显示配图</label></fieldset>
       </div>
       <footer><span>策划内容为示例</span><Link href="/">返回首页</Link></footer>

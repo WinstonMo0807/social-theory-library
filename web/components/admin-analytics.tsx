@@ -28,7 +28,7 @@ export function AdminAnalytics() {
   ] as const;
   return (
     <div className="admin-page analytics-page">
-      <header className="admin-page-title"><div><p>数据分析</p><h1>阅读与搜索统计</h1><span>只使用第一方匿名会话做聚合，不以 IP 标识读者，也不与注册账号永久关联。</span></div></header>
+      <header className="admin-page-title"><div><h1>阅读与搜索统计</h1><span>只使用第一方匿名会话做聚合，不以 IP 标识读者，也不与注册账号永久关联。</span></div></header>
       {error ? <p className="review-error" role="alert">{error}<button type="button" onClick={retry}>重试统计</button></p> : null}
       <section className="metric-grid">{cards.map(([label, value, Icon]) => <article key={label}><header><span>{label}</span><Icon size={15} /></header><div><strong>{value}</strong></div><p>最近 30 天</p></article>)}</section>
       <div className="admin-grid top">

@@ -150,7 +150,7 @@ function Workspace({owner}:{owner:string}) {
 
   return <main className={styles.page} aria-busy={resource.loading||resource.pending||recovering}>
     <div className={styles.breadcrumb}><Link href="/admin">系统</Link><ChevronRight size={12}/><Link href="/admin/processing/status">运行维护</Link><ChevronRight size={12}/><span>存储、备份与恢复准备</span></div>
-    <header className={styles.title}><div><h1>存储、备份与恢复准备</h1><p>管理原件、衍生文件和备份，知道恢复是否经过验证。</p></div><div className={styles.actions}><small>上次更新：{date(data?.checked_at)}</small><button onClick={refresh} disabled={resource.pending||resource.loading}><RefreshCw size={15}/>刷新</button><button className={styles.primary} onClick={()=>setShowCreate(true)} disabled={!data?.permissions.can_backup||disabled}><Database size={15}/>发起备份</button></div></header>
+    <header className={styles.title}><div><h1>存储、备份与恢复准备</h1></div><div className={styles.actions}><small>上次更新：{date(data?.checked_at)}</small><button onClick={refresh} disabled={resource.pending||resource.loading}><RefreshCw size={15}/>刷新</button><button className={styles.primary} onClick={()=>setShowCreate(true)} disabled={!data?.permissions.can_backup||disabled}><Database size={15}/>发起备份</button></div></header>
     {resource.error?<div className={styles.alert} role="alert"><CircleAlert size={18}/><p>{resource.error}</p><button onClick={refresh}>重新读取第一页</button></div>:null}
     {commandFeedback}
     {resource.loading?<div className={styles.empty} role="status"><HardDrive size={28}/><p>正在读取存储用量与备份记录</p></div>:null}

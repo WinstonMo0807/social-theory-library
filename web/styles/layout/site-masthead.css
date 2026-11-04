@@ -6,7 +6,7 @@
   height: auto;
   min-height: 82px;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  column-gap: clamp(20px, 2.4vw, 36px);
+  column-gap: 20px;
   row-gap: 0;
   padding: 14px clamp(20px, 3vw, 44px);
   background: var(--night-white, #fff);
@@ -18,9 +18,9 @@
   grid-row: 1;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0 clamp(18px, 1.7vw, 26px);
+  gap: 0 clamp(12px, 1.6vw, 24px);
   min-width: 0;
-  font: 500 15px/1.5 "STL Text Sans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font: 500 14px/1.5 "STL Text Sans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   letter-spacing: 0;
 }
 .site-header.site-masthead[data-ui-scope="stl4"] > .desktop-nav a {
@@ -74,10 +74,6 @@
 .reader.stl4-reader .reader-site-header { display: block; }
 .reader-site-header .site-header.site-masthead[data-ui-scope="stl4"] { position: static; }
 
-@media (min-width: 1000px) and (max-width: 1200px) {
-  .site-header.site-masthead[data-ui-scope="stl4"] { column-gap: 20px; }
-  .site-header.site-masthead[data-ui-scope="stl4"] > .desktop-nav { gap: 0 clamp(12px, 1.6vw, 20px); font-size: 14px; }
-}
 @media (max-width: 999px) {
   .site-header.site-masthead[data-ui-scope="stl4"] {
     grid-template-columns: minmax(0, 1fr) auto;

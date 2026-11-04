@@ -95,7 +95,7 @@ function HistoryWorkspace({objectType,objectId}:{objectType:string;objectId:stri
   }
   return <main className={styles.ledger}>
     <nav className={styles.breadcrumb} aria-label="面包屑"><a href="/admin/knowledge">学者与知识</a><span>› 发布台 › 历史与撤回</span></nav>
-    <header className={styles.heading}><div><h1>发布台、历史与撤回</h1><p>管理当前公开内容，核对历史修订与关联记录。</p></div><button type="button" disabled={busy||loading} onClick={reload}><RefreshCw size={15}/>重新读取</button></header>
+    <header className={styles.heading}><div><h1>发布台、历史与撤回</h1></div><button type="button" disabled={busy||loading} onClick={reload}><RefreshCw size={15}/>重新读取</button></header>
     {error?<p role="alert" className={styles.warning}>{error}</p>:null}{message?<p role="status" className={styles.notice}>{message}</p>:null}
     {pending?<section className={styles.warning}><h2>原操作结果待核对</h2><p>本标签页保留了原请求。重试将核对同一操作结果，不会自动公开或生成第二份草稿。</p><button disabled={busy} type="button" onClick={()=>void send(pending,true)}>核对原请求</button></section>:null}
     {recordProblem?<p role="alert" className={styles.warning}>本标签页记录不可用。请在历史中核对最新草稿和操作人。</p>:null}

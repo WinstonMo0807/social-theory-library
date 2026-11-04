@@ -61,7 +61,7 @@ function Catalog({ owner, initialMediaId, canEdit }: { owner: string; initialMed
   }
   return <div className={frame.workspace}>
     <div className={frame.toolbar}><nav aria-label="媒体位置"><Link href="/admin/editorial">内容</Link><span>›</span><span>封面与媒体资料</span></nav><span>{dirty ? "有未保存的资料" : "原件与已发布修订保留"}</span></div>
-    <header className={frame.header}><div><h1>封面与媒体资料</h1><p>为材料和内容选择合适图片，保留来源与用途。</p></div><div><span>素材库</span><strong>{collection.data ? `${collection.data.count} 张图片` : "正在读取"}</strong></div></header>
+    <header className={frame.header}><div><h1>封面与媒体资料</h1></div><div><span>素材库</span><strong>{collection.data ? `${collection.data.count} 张图片` : "正在读取"}</strong></div></header>
     <nav className={frame.tabs} aria-label="媒体来源"><button aria-current={tab === "library" ? "page" : undefined} onClick={() => setTab("library")}>复用媒体</button><button aria-current={tab === "upload" ? "page" : undefined} onClick={() => setTab("upload")}>上传或来源</button></nav>
     {message ? <p className={frame.feedback} role="status">{message}</p> : null}
     {!canEdit ? <p className={frame.note}>当前账户可查看媒体，修改需要材料编辑权限。</p> : null}

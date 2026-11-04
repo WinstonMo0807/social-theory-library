@@ -51,13 +51,13 @@ export function EditorialRelated({ related }: { related: EditorialDirectory["rel
 
 function DirectoryRelated({related}:{related:EditorialDirectory["related"]}){
   return <div className={styles.directoryRelated}>
-    <section aria-labelledby="directory-related-scholars"><header><h2 id="directory-related-scholars">相关学者 <small lang="en">SCHOLARS</small></h2><Link href="/scholars">学者目录 <ArrowRight size={13}/></Link></header>
+    <section aria-labelledby="directory-related-scholars"><header><h2 id="directory-related-scholars">相关学者 </h2><Link href="/scholars">学者目录 <ArrowRight size={13}/></Link></header>
       {related.scholars.length?<div className={styles.directoryScholars}>{related.scholars.map(row=><Link key={row.id} href={row.href}>
         <EditorialImage src={row.person.portrait} displayUses={row.person.portrait_media?.display_uses} className={styles.directoryPortrait} portrait/>
         <div><h3>{row.person.preferred_name}</h3>{row.person.birth_year!=null||row.person.death_year!=null?<small>{row.person.birth_year==null?"出生年未详":row.person.birth_year}{row.person.death_year!=null?`—${row.person.death_year}`:""}</small>:null}<p>{row.short_description||row.fields.map(field=>field.name).join("、")||"公开资料待补充"}</p><ArrowRight size={13}/></div>
       </Link>)}</div>:<p className={styles.directoryRelatedEmpty}>当前文章尚未编入公开学者档案。</p>}
     </section>
-    <section aria-labelledby="directory-related-materials"><header><h2 id="directory-related-materials">相关材料与阅读路线 <small lang="en">RELATED RESOURCES</small></h2><Link href="/explore">探索馆藏 <ArrowRight size={13}/></Link></header>
+    <section aria-labelledby="directory-related-materials"><header><h2 id="directory-related-materials">相关材料与阅读路线 </h2><Link href="/explore">探索馆藏 <ArrowRight size={13}/></Link></header>
       {related.materials.length?<ol className={styles.directoryMaterials}>{related.materials.map(row=><li key={row.id}><Link href={row.href}>
         <EditorialImage src={row.cover_url} displayUses={row.cover_display_uses} className={styles.relatedCover}/><span><strong>{row.title}</strong>{row.authors?<small>{row.authors}</small>:null}<small>{row.source_status==="available"?"馆藏原文":"公开书目"}</small></span><ArrowRight size={13}/>
       </Link></li>)}</ol>:<p className={styles.directoryRelatedEmpty}>当前文章暂无可公开的关联材料。</p>}
@@ -76,7 +76,7 @@ export function EditorialDirectoryView({ data, params, error }: { data: Editoria
   const submit = (event: ChangeEvent<HTMLSelectElement>) => event.currentTarget.form?.requestSubmit();
   return <main className={styles.directory}>
     <header className={styles.hero}><nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><span>特别策划</span><span>›</span><span>专题文章索引</span></nav>
-      <div className={styles.heroCopy}><h1>专题文章索引</h1><p className={styles.subtitle}>发现策划文章、阅读专题和原文展览。</p><p className={styles.description}>汇聚社会理论的经典与当代，<br />从不同视角理解人、社会与世界。</p></div>
+      <div className={styles.heroCopy}><h1>专题文章索引</h1><p className={styles.subtitle}>发现策划文章、阅读专题和原文展览。</p></div>
       <img className={styles.heroImage} src="/editorial/generated-20261030/editorial.webp" alt="" />
       <form id="editorial-filter" action="/recommendations" className={styles.search}><Search size={19} /><input name="q" aria-label="搜索专题文章" placeholder="搜索文章、作者、概念、主题…" defaultValue={q} /><button type="submit">搜索</button>{list ? <input type="hidden" name="layout" value="list" /> : null}</form>
     </header>

@@ -80,7 +80,7 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
   }
   function filter(field: keyof typeof filters, value: string) { setFilters(current => ({ ...current, [field]: value })); setPage(1); }
   return <section className={`${shared.canonical} ${styles.workspace}`} aria-label="理论与人物关系" onCompositionStartCapture={() => { ime.current = true; }} onCompositionEndCapture={() => { ime.current = false; }}>
-    <header><div><h2>关系类型、方向与来源 <small>{data?.count ?? "…"}</small></h2><p>核对人物、概念与理论之间的关系，以及原记录的出处。</p></div><div className={styles.relationActions}><button ref={createButton} type="button" disabled={blocked || !canCreate} onClick={() => open({ kind: "choose", id: "" })}>＋ 新建关系</button><button type="button" disabled={blocked || !selection && !canCreate} onClick={selectSource}>从材料选原文</button></div></header>
+    <header><div><h2>关系类型、方向与来源 <small>{data?.count ?? "…"}</small></h2></div><div className={styles.relationActions}><button ref={createButton} type="button" disabled={blocked || !canCreate} onClick={() => open({ kind: "choose", id: "" })}>＋ 新建关系</button><button type="button" disabled={blocked || !selection && !canCreate} onClick={selectSource}>从材料选原文</button></div></header>
     {blocked ? <p>请先保存主体草稿并核对未完成的操作，再编辑关联。</p> : null}
     {notice ? <p role="status">{notice}</p> : null}
     <div className={styles.columns}>

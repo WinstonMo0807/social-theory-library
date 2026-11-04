@@ -190,7 +190,7 @@ export function CandidateReview() {
   return (
     <section className="admin-section candidate-review" aria-label="统一候选审核">
       <header className="admin-section-heading">
-        <div><p className="eyebrow">审核工作流</p><h1>候选审核中心</h1><span>这里管理待审核的字段补全、PDF 词典和新条目候选。它不是词典本身；接受动作仍写入各自的权威来源。</span></div>
+        <div><h1>候选审核中心</h1><span>审核字段补全、新条目和 PDF 词典候选。</span></div>
         <div className="admin-section-actions"><button type="button" onClick={() => void load()} disabled={loading}><Filter size={15} />刷新</button></div>
       </header>
       <div className="admin-toolbar candidate-review-toolbar">

@@ -14,7 +14,7 @@ import { safeAuthDestination } from "@/lib/auth-navigation";
 
 export function AuthReturnContext({ destination, recovery=false, compact=false }: { destination: string; recovery?:boolean; compact?:boolean }) {
   return <aside className="auth-context" data-recovery={recovery||undefined} data-compact={compact||undefined}><section><h2>{recovery?"即将返回的任务":"登录后，你将返回"}</h2><AuthReturnCard key={destination} destination={destination} /></section>
-    <section className="auth-research-benefits"><h3>保留你的研究内容</h3><p>登录后可以在不同设备继续查看已保存的资料。</p><div className="auth-benefits"><span><Bookmark size={24} /><strong>书签</strong><small>保存与同步</small></span><span><NotebookPen size={24} /><strong>笔记</strong><small>梳理与复习</small></span><span><Clock3 size={24} /><strong>阅读历史</strong><small>随时继续</small></span></div></section>
+    <section className="auth-research-benefits"><h3>保留你的研究内容</h3><p>登录后可以在不同设备继续查看已保存的资料。</p><div className="auth-benefits"><span><Bookmark size={24} /><strong>书签</strong></span><span><NotebookPen size={24} /><strong>笔记</strong></span><span><Clock3 size={24} /><strong>阅读历史</strong></span></div></section>
     <GuestTransferChoice recovery={recovery} />
     {recovery?<p className="auth-private-note"><LockKeyhole size={17}/><span><strong>安全提示</strong>我们会向您的注册邮箱发送重置链接，链接24小时内有效。若长时间未收到，请检查垃圾邮件或稍后重试。</span></p>:null}
   </aside>;

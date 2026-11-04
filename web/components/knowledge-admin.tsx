@@ -73,8 +73,8 @@ function useResource<T>(path: string | null, owner?: string) {
   return { data: loadedPath === path ? data : null, error: loadedPath === path ? error : "", loading: Boolean(path) && (loading || loadedPath !== path), refresh };
 }
 
-function Frame({ eyebrow, title, description, children, embedded=false }: { eyebrow: string; title: string; description: string; children: ReactNode; embedded?: boolean }) {
-  return <div className="admin-page knowledge-admin-page">{embedded?null:<header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div></header>}{children}</div>;
+function Frame({ eyebrow, title, description, children, embedded=false }: { eyebrow: string; title: string; description?: string; children: ReactNode; embedded?: boolean }) {
+  return <div className="admin-page knowledge-admin-page">{embedded?null:<header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1>{description ? <span>{description}</span> : null}</div></header>}{children}</div>;
 }
 
 function Notice({ children }: { children?: string }) {
@@ -266,7 +266,7 @@ export function DisciplinesAdmin() {
   }
 
   return (
-    <Frame eyebrow="知识管理" title="学科" description="社会学、人类学和民族学是初始数据。新增学科后，同一套理论、子学科、主题和馆藏关系会自动形成新的学科入口。">
+    <Frame eyebrow="知识管理" title="学科" >
       <div className="knowledge-admin-layout knowledge-admin-workspace">
         <section className="admin-panel knowledge-admin-list">
           <header><h2>学科列表</h2><button type="button" onClick={() => start()}><Plus size={15} />新增学科</button></header>
@@ -799,7 +799,7 @@ export function AboutAdmin() {
     }
   }
   return (
-    <Frame eyebrow="网站内容" title="关于书库" description="可见文字、图标、步骤、入口和显示顺序均由固定区块控制。统计值、更新时间和版本号由系统实时读取，标签仍可在这里修改。">
+    <Frame eyebrow="网站内容" title="关于书库" description="统计、更新时间和版本号由系统生成。">
       <div className="knowledge-admin-layout">
         <nav className="admin-panel about-block-list">
           {resource.data?.results.map((row) => <button className={current?.id === row.id ? "active" : ""} type="button" onClick={() => setEditing({ ...row })} key={row.id}><strong>{row.title || row.key}</strong><small>{row.block_type} · {row.visible ? "显示" : "隐藏"}</small><Pencil size={14} /></button>)}

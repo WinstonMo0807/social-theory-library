@@ -717,7 +717,7 @@ function LegacyProcessingCenter() {
   return (
     <div className="admin-page processing-center-page" aria-busy={loading || Boolean(pendingOperation)}>
       <header className="admin-page-title">
-        <div><p>管理后台 / 文档与任务</p><h1>Processing Center</h1><span>查看文件处理进度，处理失败任务。</span></div>
+        <div><p>管理后台 / 文档与任务</p><h1>处理中心</h1></div>
         <div className="admin-action-row">
           <ActionLink className="button secondary" href="/admin/review?category=publication_ready">待发布馆藏 <ChevronRight size={15} /></ActionLink>
           <ActionButton

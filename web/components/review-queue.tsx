@@ -39,7 +39,7 @@ export function ReviewQueue() {
     change({ q: String(new FormData(event.currentTarget).get("q") || "").trim() });
   }
   return <div className="admin-page review-queue-page">
-    <PageHeader eyebrow="管理后台" title="待办与复核" description="继续处理馆藏待办与知识、网站和推荐草稿，保存后再明确发布。" actions={<Link className="button" href="/admin/uploads">上传文件</Link>} />
+    <PageHeader eyebrow="管理后台" title="待办与复核"  actions={<Link className="button" href="/admin/uploads">上传文件</Link>} />
     <nav className="v307-admin-tabs" aria-label="待办工作区"><Link aria-current={!curation ? "page" : undefined} href={adminListHref(pathname, search.toString(), { workspace: null, ordering: null, page: 1 })}>馆藏待办</Link><Link aria-current={curation ? "page" : undefined} href={adminListHref(pathname, search.toString(), { workspace: "curation", ordering: "-updated_at", page: 1 })}>策展草稿</Link></nav>
     {curation ? <CurationDraftQueue /> : <>
     <nav className="admin-v307-review-counts" aria-label="待办筛选">{Object.entries(categories).map(([key,label])=><button type="button" className={category===key?"active":""} key={key} onClick={()=>change({category:key})}><span>{label}</span><strong>{page?.counts[key as keyof WorkflowQueuePage["counts"]]??"—"}</strong></button>)}</nav>

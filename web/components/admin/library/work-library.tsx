@@ -40,7 +40,7 @@ export function WorkLibrary({ initialQuery = "", initialView = "all" }: { initia
     change({ q: String(new FormData(event.currentTarget).get("q") || "").trim() });
   }
   return <div className="admin-page work-library-page">
-    <PageHeader eyebrow="全局搜索" title={view === "editions" ? "出版版本与文件" : view === "quality" ? "需要检查的馆藏" : "馆藏搜索"} description="查找文献，修改资料或处理文件。同一作品的不同出版版本可以分别查看。" actions={<Link className="button" href={withAdminReturn("/admin/uploads", returnTo)}>上传文件</Link>} />
+    <PageHeader eyebrow="全局搜索" title={view === "editions" ? "出版版本与文件" : view === "quality" ? "需要检查的馆藏" : "馆藏搜索"}  actions={<Link className="button" href={withAdminReturn("/admin/uploads", returnTo)}>上传文件</Link>} />
     <form className={styles.toolbar} onSubmit={submit}>
       <label>题名、责任者、ISBN或DOI<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部馆藏" /></label>
       <label>馆藏视图<select value={view} onChange={(event) => change({ view: event.target.value, work_id: null })}>{Object.entries(viewLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>

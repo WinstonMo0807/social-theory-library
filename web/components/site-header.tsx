@@ -238,7 +238,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
                 </Link>
                 {user ? <Link data-auth-full-page href="/login?next=%2Faccount" onClick={closeMenu}><CircleUserRound size={18} /><span><strong>{t("切换账户")}</strong><small>{t("登录另一账户，私人资料不会合并")}</small></span><ChevronRight size={15} /></Link> : null}
                 {user?.capabilities?.includes("access_back_office") ? <Link href="/admin" prefetch={false} onClick={closeMenu}><Settings size={18} /><span><strong>{t("管理后台")}</strong></span><ChevronRight size={15} /></Link> : null}
-                <Link href="/help" prefetch={false} onClick={closeMenu} aria-current={isActive("/help") ? "page" : undefined}><CircleHelp size={18} /><span><strong>{t("帮助与支持")}</strong></span><ChevronRight size={15} /></Link>
+                <Link href="/help" prefetch={false} onClick={closeMenu} aria-current={isActive("/help") ? "page" : undefined}><CircleHelp size={18} /><span><strong>{t("使用帮助")}</strong></span><ChevronRight size={15} /></Link>
                 <Link href="/about" prefetch={false} onClick={closeMenu} aria-current={isActive("/about") ? "page" : undefined}><ArrowUpRight size={18} /><span><strong>{t("关于我们")}</strong></span><ChevronRight size={15} /></Link>
                 {!user ? (
                   <>
@@ -268,7 +268,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
 
             {logoutError ? <AsyncStatus state="error" message={logoutError} /> : null}
 
-            <details className="site-menu-appearance"><summary>{t("外观与字体")}</summary><DisplayPreferences /></details>
+            <div className="site-menu-appearance"><DisplayPreferences /></div>
 
             <footer className="site-menu-foot">
               <span>{user ? `${user.display_name} · ${user.role === "reader" ? t("读者") : t("馆员")}` : t("访客可直接阅读、下载、复制与引用")}</span>

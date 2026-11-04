@@ -168,7 +168,7 @@ export function EntityRelationsAdmin({
   return (
     <section className="admin-panel entity-relations-admin">
       <header>
-        <div><p className="eyebrow">条目关系</p><h2>知识归位与前台去向</h2><span>这里管理实体关系。保存后，学科页、理论页、子学科页和主题页会从同一条关系记录自动生成。</span></div>
+        <div><h2>知识归位与前台去向</h2><span>修改关系会影响相关学科、理论、子学科和主题页面。</span></div>
         {previewHref ? <Link className="admin-outline-button" href={previewHref} target="_blank">预览公开页面 <ExternalLink size={14} /></Link> : null}
       </header>
       <div className="entity-relations-grid">

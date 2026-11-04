@@ -565,7 +565,7 @@ function SemanticExplorePage({
           <main className="semantic-results">
             <header className="semantic-results-header">
               <div>
-                <p>馆藏原文候选</p>
+
                 <h2>{query ? `${results.work_count} 部馆藏 · ${results.count} 个候选段落` : "等待检索"}</h2>
               </div>
               <form className="sort-form" action="/explore/opinions">

@@ -113,7 +113,7 @@ export function PublicationDesk() {
   }
   if(selected?.edition_id)return <PublicationLedger key={selected.edition_id} editionId={selected.edition_id} backHref={adminListHref(pathname,search.toString(),{selection:null})} onChanged={result.retry}/>;
   return <div className="admin-page publication-desk-page">
-    <PageHeader eyebrow="内容" title="发布台、历史与撤回" description="管理当前公开版本，知道变更会影响哪些读者页面。" />
+    <PageHeader eyebrow="内容" title="发布台、历史与撤回"  />
     <form className={styles.toolbar} onSubmit={submit}>
       <label>题名或来源<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部出版版本" /></label>
       <label>公开状态<select value={filter} onChange={(event) => change({ publication: event.target.value })}>{Object.entries(publicFilters).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>

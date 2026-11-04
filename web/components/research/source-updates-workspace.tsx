@@ -27,7 +27,7 @@ function SourceUpdatesContent({ ownerId, commands }: { ownerId: string; commands
   const records = usePersistentWorkspace<SourceFollowsPage>(`${sourceFollowsPath}?page=${page}`, ownerId);
   const data = records.data;
   return <div className={styles.page}><div className={styles.breadcrumb}><Link href="/account">我的资料</Link><ChevronRight size={13} /><span>来源订阅</span></div>
-    <header className={styles.header}><div><span>MY LIBRARY</span><h1>来源订阅</h1><p>查看来源、已关注学者与主题档案的公开状态及正式更新。</p></div><Link href="/account/settings/privacy">隐私与资料</Link></header>
+    <header className={styles.header}><div><h1>来源订阅</h1></div><Link href="/account/settings/privacy">隐私与资料</Link></header>
     <ResearchCenterNav active="sources" />
     <div className={styles.toolbar}><p>{data ? `共 ${data.count} 项来源记录` : "正在读取来源记录"}</p><button onClick={records.reload}><RefreshCw size={15} />刷新当前页</button></div>
     <p className={styles.notice}>{data?.notice || "订阅仅保存在本人账户中。不会自动发送邮件，也不会保存原文内容。"}</p>

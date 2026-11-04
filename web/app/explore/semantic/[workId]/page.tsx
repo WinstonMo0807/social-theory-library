@@ -35,7 +35,7 @@ export default async function SemanticWorkResultsPage({
           <Link href={`/explore?mode=semantic&q=${encodeURIComponent(query)}`}><ArrowLeft size={15} /> 返回全部观点结果</Link>
         </nav>
         <header className="semantic-work-detail-hero">
-          <p>馆藏内观点结果</p>
+
           <h1>{first?.title ?? "查看馆藏相关段落"}</h1>
           {first?.authors.length ? <p>{first.authors.join("、")}</p> : null}
           <dl>

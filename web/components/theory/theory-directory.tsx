@@ -106,7 +106,7 @@ export function TheoryDirectory({
 
   return <article className={styles.page} aria-busy={pending}>
     <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/theories">理论流派</Link><ChevronRight size={14} /><span>理论目录</span></nav>
-    <header className={styles.header}><h1>理论目录</h1><p>按领域与理论关系查找。</p></header>
+    <header className={styles.header}><h1>理论目录</h1></header>
     <form className={styles.search} action="/theories/directory" role="search" aria-label="搜索理论目录">
       <input type="hidden" name="type" value={filters.type} />
       {filters.discipline ? <input type="hidden" name="discipline" value={filters.discipline} /> : null}

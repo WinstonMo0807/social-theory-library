@@ -113,7 +113,7 @@ function Comparison({ workspace }: { workspace: ReturnType<typeof useResearchPro
   }
   return <Frame>
     <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><Link href={`/account/research/${record.id}`}>持续研究</Link><span>/</span><strong>证据比较</strong></nav>
-    <header className="stl4-research-heading"><h1>选材比较与证据矩阵</h1><p>把不同作者或文献放到同一问题的比较维度中。</p><span className="stl4-research-privacy">仅本人可见</span></header>
+    <header className="stl4-research-heading"><h1>选材比较与证据矩阵</h1><span className="stl4-research-privacy">仅本人可见</span></header>
     <section className="stl4-research-workspace stl4-research-compare-surface" data-matrix-layout={matrixLayout}>
       <div className="stl4-research-compare-head"><div><p className="stl4-research-kicker">当前研究</p><h2>{record.data.title || record.data.question || "未命名研究"}</h2></div><Link href={`/account/research/${record.id}`}><ArrowLeft size={14} />返回工作区</Link></div>
       <div className="stl4-comparison-layout"><aside className="stl4-comparison-selected" aria-label="当前选材">

@@ -161,7 +161,7 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
 
   return <AuditFrame className="stl4-audit-upload-page">
     <AuditBreadcrumb />
-    <header className="stl4-audit-upload-heading"><h1>引文体检：提交与任务</h1><p>按需检查稿件，完成后查看报告。</p></header>
+    <header className="stl4-audit-upload-heading"><h1>引文体检：提交与任务</h1></header>
     <div className="stl4-audit-upload-grid">
       <form className="stl4-audit-upload-form" onSubmit={submit} aria-busy={busy}>
         <section aria-labelledby="audit-upload-title">

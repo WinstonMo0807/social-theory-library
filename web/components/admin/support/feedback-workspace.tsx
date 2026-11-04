@@ -46,7 +46,7 @@ function Workspace({ ownerId }: { ownerId: string }) {
   };
   const state = resource.data;
   return <main className={styles.workspace}>
-    <header className={styles.heading}><div><p className={styles.eyebrow}>网站内容 / 读者反馈</p><h1>反馈处理</h1><p>查看使用中的问题，记录处理进展与改进结果。</p></div><button onClick={resource.reload}><RefreshCw size={15} />刷新列表</button></header>
+    <header className={styles.heading}><div><p className={styles.eyebrow}>网站内容 / 读者反馈</p><h1>反馈处理</h1></div><button onClick={resource.reload}><RefreshCw size={15} />刷新列表</button></header>
     <div className={styles.notice}><MessageSquare size={18} /><p>反馈和联系方式仅供管理员处理本次问题。标记待回复不会发送邮件，处理说明不会公开展示。账户找回申请中的用户名和联系方式尚未经核实；先核对归属，再由有账户管理权限的人员在原用户管理中处理。</p></div>
     <nav className={styles.tabs} aria-label="反馈状态">
       {([["", "全部反馈", Inbox], ["submitted", "待处理", Clock3], ["reviewing", "处理中", MessageSquare], ["resolved", "已处理", Check]] as const).map(([key, label, Icon]) => <button key={key} aria-current={status === key ? "page" : undefined} onClick={() => change({ status: key || null, page: 1, item: null })}><Icon size={16} />{label}<span>{state ? state.counts[key || "total"] : "—"}</span></button>)}

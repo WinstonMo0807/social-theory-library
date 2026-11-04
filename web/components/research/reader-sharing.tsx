@@ -30,7 +30,7 @@ function Records({ owner, reviewer }: { owner: string; reviewer: boolean }) {
   const current = tab === "notices" ? notices : records;
   if (action.invalid) return <div className={styles.empty}><p>账户或权限已变化，已隐藏原账户的分享记录。</p><button onClick={() => window.location.reload()}>重新核对账户</button></div>;
   return <>
-    <header className={styles.heading}><div><h1>分享与提交记录</h1><p>管理明确分享的摘要、接收内容与站内通知。</p></div><Link href="/account/sharing/new">分享或提交策划</Link></header>
+    <header className={styles.heading}><div><h1>分享与提交记录</h1></div><Link href="/account/sharing/new">分享或提交策划</Link></header>
     <div className={styles.tabs}>{([...["own", "received", "notices"] as const, ...(reviewer ? ["proposals" as const] : [])]).map(value => <button key={value} aria-pressed={tab === value} onClick={() => { setTab(value); setPage(1); }}>{({ own: "我的分享", received: "收到的分享", notices: "站内通知", proposals: "策划提案" })[value]}</button>)}</div>
     {action.message ? <p className={styles.feedback} role="status">{action.message}</p> : null}
     {current.error ? <p role="alert">{current.error}<button onClick={current.reload}>重新读取</button></p> : current.loading ? <p role="status">正在读取…</p> : tab === "notices" && notices.data ? <>

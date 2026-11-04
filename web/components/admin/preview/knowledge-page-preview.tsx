@@ -161,19 +161,19 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
         },
       } as KnowledgeNodeDetail;
       if (payload.object_type === "theory" && pageId === "graph") {
-        return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><p className="eyebrow">局部关系浏览</p><h1>{node.canonical_name_zh}的理论图谱</h1><p>使用当前草稿身份和已经发布的条目关系生成。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
+        return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><h1>{node.canonical_name_zh}的理论图谱</h1><p>使用当前草稿身份和已经发布的条目关系生成。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
       }
       if (payload.object_type === "theory" && pageId === "timeline") {
-        return <main className="page-shell theory-system-page theory-timeline-page"><section className="theory-timeline-hero"><div><p className="eyebrow">历史时间轴</p><h1>{node.canonical_name_zh}的发展脉络</h1><p>这里只显示已经审核并关联到该理论的真实时间轴事件。</p></div></section><div className="theory-timeline-layout"><TheoryTimelinePublicList events={payload.secondary_preview?.timeline ?? []} /></div></main>;
+        return <main className="page-shell theory-system-page theory-timeline-page"><section className="theory-timeline-hero"><div><h1>{node.canonical_name_zh}的发展脉络</h1><p>这里只显示已经审核并关联到该理论的真实时间轴事件。</p></div></section><div className="theory-timeline-layout"><TheoryTimelinePublicList events={payload.secondary_preview?.timeline ?? []} /></div></main>;
       }
       if (payload.object_type === "theory" && pageId === "reading-path") {
         const path = payload.secondary_preview?.reading_paths?.[0];
         return path
           ? <ReadingPathPublicView preview path={path} footer={footer} />
-          : <main className="page-shell secondary-detail-page"><header><p className="eyebrow">Reading Path</p><h1>{node.canonical_name_zh}的阅读路径</h1></header><p className="empty-state" data-module-id="theory-reading-paths">当前没有包含该理论的已发布阅读路径。</p></main>;
+          : <main className="page-shell secondary-detail-page"><header><h1>{node.canonical_name_zh}的阅读路径</h1></header><p className="empty-state" data-module-id="theory-reading-paths">当前没有包含该理论的已发布阅读路径。</p></main>;
       }
       if (payload.object_type === "theory" && pageId !== "overview" && !["concepts", "works", "evidence", "relations", "propositions"].includes(pageId)) {
-        return <main className="page-shell secondary-detail-page"><header><p className="eyebrow">公开关系入口</p><h1>{node.canonical_name_zh}</h1></header><p className="empty-state">该位置由学科、学者或主题页面消费。请从对应对象的受保护预览核对具体页面。</p></main>;
+        return <main className="page-shell secondary-detail-page"><header><h1>{node.canonical_name_zh}</h1></header><p className="empty-state">该位置由学科、学者或主题页面消费。请从对应对象的受保护预览核对具体页面。</p></main>;
       }
       return <KnowledgeNodePublicView
         node={node}

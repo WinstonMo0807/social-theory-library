@@ -202,7 +202,7 @@ export function ProcessingDiagnosticsPanel({
     <section className="processing-diagnostics admin-panel" aria-labelledby={titleId}>
       <header>
         <div>
-          <p>Processing Center 3.0</p>
+
           <h2 id={titleId}>{title}</h2>
           <span>{description}</span>
         </div>
@@ -224,7 +224,7 @@ export function ProcessingDiagnosticsPanel({
 
       {view === "overview" && (diagnostics.functional_impacts ?? []).length ? (
         <section className="processing-diagnostic-section" id="processing-overview" aria-labelledby="processing-functional-impact-title">
-          <header><div><AlertTriangle size={17} /><h3 id="processing-functional-impact-title">当前用户功能影响</h3></div><span>先判断读者和编辑者会遇到什么，再查看依赖详情。</span><strong>{diagnostics.functional_impacts?.length ?? 0}</strong></header>
+          <header><div><AlertTriangle size={17} /><h3 id="processing-functional-impact-title">当前用户功能影响</h3></div><strong>{diagnostics.functional_impacts?.length ?? 0}</strong></header>
           <div className="processing-diagnostic-list">
             {(diagnostics.functional_impacts ?? []).map((impact) => (
               <article className={`processing-diagnostic-item ${impact.severity}`} key={impact.id}>

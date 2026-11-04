@@ -43,7 +43,7 @@ function Workspace({ scholarId, owner }: { scholarId: string; owner: string }) {
   }
   const data = profile.error ? null : profile.data;
   return <div className={`admin-page ${styles.workspace}`}>
-    <header className="admin-page-title"><p>学者与知识</p><h1>理论、概念与关系编辑</h1><p>维护有来源的知识关系，核对方向、依据与发布状态。</p></header>
+    <header className="admin-page-title"><h1>理论、概念与关系编辑</h1></header>
     {notice ? <p role="status">{notice}</p> : null}
     {profile.error ? <p role="alert">{profile.error}<button type="button" onClick={profile.reload}>重新读取学者</button></p> : !data ? <p role="status">正在读取原学者资料…</p> : <>
       <section className={`${styles.nodeHero} ${relationStyles.scholarHero}`} aria-label="当前学者">

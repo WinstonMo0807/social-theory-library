@@ -297,14 +297,14 @@ function useAdminData<T>(path: string | null) {
 function AdminFrame({ eyebrow, title, description, actions, children }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="admin-page theory-system-admin">
       <header className="admin-page-title theory-admin-title">
-        <div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div>
+        <div><p>{eyebrow}</p><h1>{title}</h1>{description ? <span>{description}</span> : null}</div>
         {actions ? <div className="theory-admin-title-actions">{actions}</div> : null}
       </header>
       {children}
@@ -749,7 +749,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     <AdminFrame
       eyebrow="学者与知识　›　理论、概念与关系编辑"
       title="理论、概念与关系编辑"
-      description="维护概念用法、理论争论和有证据的知识关系。"
+
       actions={<details className="node-page-tools"><summary aria-label="更多页面操作">···</summary><div><Link className="admin-outline-button" href="/admin/theories/timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></div></details>}
     >
       {command.recovery || knownSavedId || command.error ? <section className="admin-panel" aria-label="核对理论与概念保存">
@@ -1515,7 +1515,7 @@ function TimelineSubjectEdition({ work, value, onChange }: {
   );
   const chosen = listed || selected.data?.results.find(row => row.id === value);
   return <section className="timeline-evidence-fields" aria-label="事件涉及的出版版本">
-    
+
     <ErrorNotice message={editions.error || selected.error} retry={() => { editions.refresh(); selected.refresh(); }} />
     <label><span>版本</span><select name="subject_edition" value={value}
       disabled={Boolean(work && editions.loading)} onChange={event => onChange(event.target.value)}>
@@ -1523,7 +1523,7 @@ function TimelineSubjectEdition({ work, value, onChange }: {
       {value && !listed ? <option value={value}>{chosen?.label || (selected.error ? "已保存版本，暂无法读取" : "已保存版本，正在核对")}</option> : null}
       {editions.data?.results.map(row => <option key={row.id} value={row.id}>{row.label || row.title || "出版信息待补"}{row.is_primary ? "（主版本）" : ""}</option>)}
     </select></label>
-    
+
     {work && (editions.data?.next || editions.data?.previous) ? <nav aria-label="事件出版版本分页">
       <span>{editions.data ? `共 ${editions.data.count} 个版本，第 ${page} 页` : "正在读取版本…"}</span>
       <button type="button" disabled={editions.loading || !editions.data?.previous} onClick={() => setPage(current => current - 1)}>上一页事件版本</button>
@@ -1829,7 +1829,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
   const timelineWorkName = (id: string) => works.data?.results.find((item) => item.id === id)?.title || entityLabels[id] || "已选择馆藏";
 
   return (
-    <div data-scholar-timeline={Boolean(embedded)} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}><AdminFrame eyebrow={`页面编排 › ${previewScholar.data?.preferred_name || selectedNode.data?.canonical_name_zh || "时间线"} › 时间线事件编辑`} title="时间线事件编辑" description="把历史时间写清楚，避免把出版、翻译、上传混为一谈。">
+    <div data-scholar-timeline={Boolean(embedded)} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}><AdminFrame eyebrow={`页面编排 › ${previewScholar.data?.preferred_name || selectedNode.data?.canonical_name_zh || "时间线"} › 时间线事件编辑`} title="时间线事件编辑" description="出版、翻译与上传时间请分别填写。">
       {!embedded?<nav aria-label="时间线返回位置"><Link href={safeAdminHref(location.search.get("returnTo"), nodeId ? `/admin/theories/${nodeId}` : "/admin/theories")}>返回{selectedNode.data?.canonical_name_zh || "理论管理"}</Link>{nodeId ? <> · <Link href="/admin/theories/timeline">查看全部理论事件</Link></> : null}</nav>:null}
       <ErrorNotice message={selectedNode.error} retry={selectedNode.refresh} />
       {nodeId && !selectedNode.data ? <p>所选理论加载失败，请刷新后再新建事件。</p> : null}

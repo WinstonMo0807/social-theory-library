@@ -32,7 +32,7 @@ export function DisciplinePublicView({
         <div className="theory-breadcrumb"><Link href="/theories">理论流派</Link><span>/</span><strong>{discipline.name}</strong></div>
         <section className="theory-discipline-hero" data-edit-section="identity">
           <div>
-            <p className="eyebrow">学科详情</p>
+
             <h1>{discipline.name}</h1>
             {discipline.foreign_name ? <h2>{discipline.foreign_name}</h2> : null}
             {discipline.description ? <p>{discipline.description}</p> : null}

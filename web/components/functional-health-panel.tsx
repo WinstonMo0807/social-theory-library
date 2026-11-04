@@ -463,7 +463,7 @@ export function FunctionalHealthPanel({
       </details>)}</section> : null}
       <header>
         <div>
-          <p className="functional-health-kicker">功能健康</p>
+
           <h2 id="functional-health-title">{surfaceCopy[0]}</h2>
           <span>{surfaceCopy[1]}</span>
         </div>

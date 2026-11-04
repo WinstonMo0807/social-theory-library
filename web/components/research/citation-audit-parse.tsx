@@ -43,7 +43,7 @@ function ParseWorkspace({ id, ownerId, retrySession, initialSelection }: { id: s
   const shownRows = rows.filter(item => !term || `${item.raw} ${item.quote || ""} ${item.context}`.toLocaleLowerCase().includes(term));
   const shownEntries = entries.filter(item => !term || item.raw.toLocaleLowerCase().includes(term));
   function choose(key: string, preview = false) { setSelected(key); if (preview) setMobilePane("preview"); }
-  return <AuditFrame className="stl4-audit-detail-page stl4-audit-parse-page"><AuditBreadcrumb id={id} parse /><header className="stl4-audit-heading"><div><h1>引文解析与核对</h1><p>核对稿件中的引文与书目，已生成的结果可随时查看和完善。</p></div><Link className="stl4-audit-button" href={`/account/citation-audits/${id}`}>查看体检报告</Link></header>
+  return <AuditFrame className="stl4-audit-detail-page stl4-audit-parse-page"><AuditBreadcrumb id={id} parse /><header className="stl4-audit-heading"><div><h1>引文解析与核对</h1></div><Link className="stl4-audit-button" href={`/account/citation-audits/${id}`}>查看体检报告</Link></header>
     <ol className="stl4-audit-parse-steps" aria-label="稿件检查流程">{steps.map((label, index) => <li key={label} aria-current={index === stage ? "step" : undefined} data-passed={index < stage || undefined}><span>{index + 1}</span><strong>{label}</strong></li>)}</ol>
     <AuditMessages workspace={workspace} />
     <nav className="stl4-audit-parse-mobile" aria-label="解析工作区域">{[["settings", "文件设置"], ["preview", "解析预览"], ["results", "识别结果"]].map(([value, label]) => <button type="button" key={value} aria-pressed={mobilePane === value} onClick={() => setMobilePane(value)}>{label}</button>)}</nav>

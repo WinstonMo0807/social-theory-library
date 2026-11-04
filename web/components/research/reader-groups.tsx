@@ -90,7 +90,7 @@ function Groups({ owner }: { owner: string }) {
   }
   if (action.invalid) return <div className={styles.empty} role="alert"><p>当前账户或权限需要重新核对，已隐藏原账户的小组资料。</p><button onClick={() => window.location.reload()}>重新核对账户</button></div>;
   return <>
-    <header className={styles.heading}><div><h1>我的小组</h1><p>邀请明确的账户，一起阅读和讨论。</p></div><span className={styles.privacy}>仅成员可见</span></header>
+    <header className={styles.heading}><div><h1>我的小组</h1></div><span className={styles.privacy}>仅成员可见</span></header>
     {action.message ? <p className={styles.feedback} role="status">{action.message}</p> : null}
     {recovery ? <section className={styles.recovery}><h2>核对上次小组操作</h2><p>先查询原请求，避免重复创建或发出邀请。没有保存账户资料或邀请内容到浏览器。</p><div className={styles.actions}><button disabled={action.busy} onClick={() => void action.run(signal => sharingRequest<GroupResult>(owner, `/reading/groups/receipt/?${new URLSearchParams({ request_id: recovery.request_id, ...(recovery.group_id ? { group_id: recovery.group_id } : {}) })}`, { signal }), finish)}>查询原结果</button>{retryReady ? <button disabled={action.busy} onClick={() => { if (pending.current) submit(pending.current); }}>重试原操作</button> : <><label><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />我已核对现有小组与邀请</label><button disabled={action.busy || !reviewed} onClick={() => { remember(null); setReviewed(false); }}>结束恢复</button></>}</div></section> : null}
     {inviteToken ? <section className={styles.panel}><h2>收到一份小组邀请</h2><p>只有邀请指定的账户可以接受。接受后可查看成员；不自动获得以前分享的资料。</p><button disabled={blocked} onClick={() => accept({ token: inviteToken })}>接受本账户的邀请</button></section> : null}

@@ -1177,7 +1177,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
           /></section>
           <section data-editor-section="assistance"><ScholarMaterialFields value={draft} onChange={patch=>{prefills.fill("",current=>({...current,...patch}));}}/></section>
           <label data-editor-section="identity-original"><span>外文名</span><input value={draft.originalName} onChange={(event) => setDraft({ ...draft, originalName: event.target.value })} /></label>
-          
+
 
           <div data-editor-section="identity-years" className="scholar-years"><span>生卒年</span><div><label><span className="sr-only">出生年</span><input type="number" value={draft.birthYear} onChange={(event) => setDraft({ ...draft, birthYear: event.target.value })} /></label><span aria-hidden="true">–</span><label><span className="sr-only">逝世年</span><input type="number" value={draft.deathYear} onChange={(event) => setDraft({ ...draft, deathYear: event.target.value })} /></label></div></div>
           <section data-editor-section="biography"><h2>二、导读</h2><ScholarProseEditor label="导读" value={draft.description} format={draft.prose.short_description} recommendedLength={300} maxLength={400} disabled={!canEdit||saving||!command.ready||Boolean(command.recovery)} onChange={(text,format)=>setDraft(current=>({...current,description:text,prose:{...current.prose,short_description:format}}))}/></section>
@@ -1197,7 +1197,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             }}
             onAccepted={refreshScholarSuggestion}
           /></section>
-          
+
           <section data-editor-section="assistance"><CurationFieldAssistant hasUnsavedChanges={hasUnsaved}
             label="外部标识"
             targetType="person"
@@ -1226,7 +1226,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             }}
             onAccepted={refreshScholarSuggestion}
           /></section>
-          
+
           <StructuredRowsEditor focused
             label="生平与重要发表"
             description="这里保留历史生平笔记，不自动成为公开事件。新版时间线使用已绑定人物、日期与准确来源并正式发布的事件。"
@@ -1768,7 +1768,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
   }
 
   return (
-    <AdminPageFrame eyebrow={scope === "processing" ? "Processing Center" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? "处理服务设置" : "设置兼容入口"} description="管理网站设置、备份与操作记录。">
+    <AdminPageFrame eyebrow={scope === "processing" ? "Processing Center" : "系统管理"} title={scope === "backups" ? "备份" : scope === "processing" ? "处理服务设置" : "设置兼容入口"} >
       <div className="settings-section-tabs" role="tablist" aria-label="设置栏目">{sections.map(([key,label])=><button type="button" role="tab" key={key} disabled={ocrBusy&&activeSection!==key} id={`settings-tab-${key}`} aria-selected={activeSection===key} aria-controls={key} tabIndex={activeSection===key?0:-1} onKeyDown={event=>{if(ocrBusy||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=sections.findIndex(([value])=>value===key);const next=sections[event.key==='Home'?0:event.key==='End'?sections.length-1:(index+(event.key==='ArrowRight'?1:-1)+sections.length)%sections.length][0];setActiveSection(next);window.history.replaceState(null,'',`#${next}`);document.getElementById(`settings-tab-${next}`)?.focus();}} onClick={()=>{setActiveSection(key);window.history.replaceState(null,'',`#${key}`);}}>{label}</button>)}</div>
       <section className="settings-grid settings-tabbed">
         <form className="admin-panel settings-content-form" hidden={activeSection!=='public-display'} role="tabpanel" aria-labelledby="settings-tab-public-display" id="public-display" onSubmit={saveConfig}>
@@ -1910,8 +1910,8 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
   );
 }
 
-function AdminPageFrame({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
-  return <div className="admin-page"><header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div></header>{children}</div>;
+function AdminPageFrame({ eyebrow, title, description, children }: { eyebrow: string; title: string; description?: string; children: React.ReactNode }) {
+  return <div className="admin-page"><header className="admin-page-title"><div><p>{eyebrow}</p><h1>{title}</h1>{description ? <span>{description}</span> : null}</div></header>{children}</div>;
 }
 
 function Toolbar({

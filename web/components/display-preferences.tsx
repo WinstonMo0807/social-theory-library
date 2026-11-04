@@ -19,7 +19,7 @@ export function DisplayPreferences() {
         <button className={preferences.text_size === value ? "active" : ""} aria-pressed={preferences.text_size === value} type="button" key={value} onClick={() => update({ text_size: value })}>{label}{preferences.text_size === value ? <Check size={12} /> : null}</button>)}
     </div>
     <div role="group" aria-label={t("字体")}><span>{t("字体")}</span>
-      {([["sans", t("现代无衬线")], ["serif", t("人文宋体")]] as const).map(([value, label]) =>
+      {([["sans", t("无衬线")], ["serif", t("宋体")]] as const).map(([value, label]) =>
         <button className={preferences.font_family === value ? "active" : ""} aria-pressed={preferences.font_family === value} type="button" key={value} onClick={() => update({ font_family: value })}>{label}{preferences.font_family === value ? <Check size={12} /> : null}</button>)}
     </div>
   </section>;

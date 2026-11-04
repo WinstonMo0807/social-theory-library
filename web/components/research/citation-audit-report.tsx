@@ -110,7 +110,7 @@ function Report({ id, ownerId, retrySession }: { id: string; ownerId: string; re
   function toggle(ids: string[], checked: boolean) {
     setSelection({ ids: checked ? Array.from(new Set([...(selection.revision === record?.revision ? selection.ids : []), ...ids])) : selection.ids.filter(key => !ids.includes(key)), revision: record!.revision });
   }
-  return <AuditFrame className="stl4-audit-detail-page stl4-audit-report-page"><AuditBreadcrumb id={id} /><header className="stl4-audit-heading"><div><h1>论文体检报告总览</h1><p>逐项理解哪里已核对，哪里仍需回到原文。</p></div><div className="stl4-audit-manuscript"><FileText size={27} /><div><strong>{data.filename}</strong><span>稿件版本 {data.manuscript_revision || 1} · {data.filetype.toUpperCase()}</span><time dateTime={record.updated_at}>更新于 {new Date(record.updated_at).toLocaleString("zh-CN")}</time></div></div></header>
+  return <AuditFrame className="stl4-audit-detail-page stl4-audit-report-page"><AuditBreadcrumb id={id} /><header className="stl4-audit-heading"><div><h1>论文体检报告总览</h1></div><div className="stl4-audit-manuscript"><FileText size={27} /><div><strong>{data.filename}</strong><span>稿件版本 {data.manuscript_revision || 1} · {data.filetype.toUpperCase()}</span><time dateTime={record.updated_at}>更新于 {new Date(record.updated_at).toLocaleString("zh-CN")}</time></div></div></header>
     <AuditMessages workspace={workspace} />
     <CitationAuditVersions key={record.id} record={record} ownerId={ownerId} disabled={workspace.busy} onRefresh={workspace.reload} retrySession={retrySession} />
     {running ? <AuditProgress record={record} /> : <details className="stl4-audit-task-details"><summary>任务状态与进度</summary><AuditProgress record={record} /></details>}

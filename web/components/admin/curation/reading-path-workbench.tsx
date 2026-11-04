@@ -512,7 +512,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
 
   return (
     <div className={`admin-page reading-path-v280-page ${pathStyles.workspace}`}>
-      <PageHeader eyebrow="内容 › 页面编排 › 公共阅读路径编排" title="公共阅读路径编排" description="策划适合不同基础的学习路线，并保持推荐理由有依据。" actions={<details className={pathStyles.pageTools}><summary aria-label="更多路径操作">⋮</summary><button type="button" onClick={()=>start()}><Plus size={14}/>新建路径</button></details>} />
+      <PageHeader eyebrow="内容 › 页面编排 › 公共阅读路径编排" title="公共阅读路径编排"  actions={<details className={pathStyles.pageTools}><summary aria-label="更多路径操作">⋮</summary><button type="button" onClick={()=>start()}><Plus size={14}/>新建路径</button></details>} />
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
       <div className="reading-path-v280-layout">
         <details className={pathStyles.directory}><summary>查找与切换阅读路径</summary><aside className="admin-panel reading-path-v280-list">
