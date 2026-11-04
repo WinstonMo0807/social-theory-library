@@ -1,5 +1,9 @@
 # Social Theory Library 当前进度
 
+## 2026-11-04 15:50 本机预览访问恢复
+
+用户反馈两个5181预览链接均打不开。实查5181/5182无监听，原临时预览进程已退出；具体退出原因未留存，不能推断为网络或NAS故障。复用tmp/stl4-copy-20261104/preview.mjs，通过PowerShell Start-Process -WindowStyle Hidden启动独立后台进程，PID14796，两端口均仅绑定127.0.0.1。日志preview-detached.stdout.log/stderr.log位于同一忽略目录。实际浏览器重新打开/layout-preview与/drawer-preview成功，菜单及直接展开的外观设置显示正常，截图output/copy-site-20261104/menu-restored.png；已留可操作标签。未改应用源码、NAS、生产或网络配置，未设开机任务。此入口仍为本机排版预览，不接真实馆藏业务；电脑重启或该进程退出后需重新启动。
+
 ## 2026-11-04 全站辅助文案、双栏菜单与同行导航
 
 COPY-LEAN-02、DRAWER-COLUMNS-01、NAV-INLINE-02开发D。盘点149路由入口/572页面组件，审阅641处辅助文案候选，118处删除或改写，文案76文件/本批UI共84文件。共享菜单双栏，外观/字号/字体直接可用；公共导航采用Logo同行，窄屏分行保持可见，后台保留工作导航。真实简介、来源页码、权限、状态错误、表单与发布条件保留。全部前后对照docs/stl4/COPY_LEAN_20261104.csv，覆盖表COPY_ROUTE_COVERAGE_20261104.csv，详情COPY_LEAN_20261104.md。
