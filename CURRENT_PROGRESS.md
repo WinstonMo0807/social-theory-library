@@ -1,5 +1,13 @@
 # Social Theory Library 当前进度
 
+## 2026-11-05 欢迎页五张大卡片，内网 Web112
+
+WELCOME-CARDS-01开发D。用户要求欢迎页在一个视区内上下滑动切换，最后第五张进入首页。复用既有HomeFeatureStory四段内容与图示，改为原生纵向scroll-snap大卡片；第五张复用已授权首页配图及原欢迎语，提供进入书库按钮。底部页码、五个可点击圆点及上下箭头；键盘触发按钮即时定位，减少动态效果偏好取消平滑和吸附。旧欢迎首屏/独立样式移除，无新依赖。首页源码保持完全不变，公共导航/Logo未改。
+
+Web111实际观察旧editorial-v2路由容器min-height覆盖欢迎局部高度，1280×720时body scrollHeight742，390×844时919，切换按钮越出视口并造成标题遮挡。最小修复仅提高欢迎页容器选择器优先级，清除继承最小高度；Web112实际body高度720/844/640与各视口一致，控制区完整。真实1280桌面滚轮从第1张到第2张、键盘圆点切到第3张、390第4张、320原文/最终卡片已实看；第五张进入/成功，首页body恢复block/overflow visible、正常长页滚动。未提交业务数据，非全站验收或实体手机触屏实测。
+
+内网入口http://192.168.5.6:18084/welcome，Web112 d389d1bcaca3（完整ID见专项记录），类型检查及两次Vinext构建/镜像/发布成功。仅预览Web/edge更新；API r54、其他容器/挂载/启动时间、生产与模型保持，四worker/beat/RapidOCR/docx仍停止。NAS welcome-cards-r112-recovery保存前Web111，welcome-cards-r111-recovery保存本批前Web110。源码基于2f2bd42f工作区，既有脏文件保留，未提交无关修改。日志tmp/stl4-copy-20261104/*r111*与*r112*；截图output/welcome-20261105/cards-*。原全站B不重开，下一步按实际批注接续。
+
 ## 2026-11-05 13:06 欢迎页与首页分开，内网 Web110
 
 WELCOME-SPLIT-01开发D。依用户最新决定，四段滚动介绍移至独立 `/welcome`，新增简短欢迎语与“进入书库”按钮；`/` 的 HomePublicView 主体与加入介绍前的提交完全一致（`git diff 701ac8e2^ -- web/components/public/home-public-view.tsx` 无差异）。欢迎页复用原功能介绍和公开作品数据，其“浏览馆藏”改为返回首页；无首页重定向或首次访问拦截。此前精简文案、双栏菜单、展开外观和Logo同行导航继续保留。

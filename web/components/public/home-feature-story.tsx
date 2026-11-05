@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { ArrowRight, BookOpen, FileText, FolderOpen, NotebookPen, Search } from "lucide-react";
+import { useRef, useState } from "react";
+import { ArrowDown, ArrowUp, ArrowRight, BookOpen, FileText, FolderOpen, NotebookPen, Search } from "lucide-react";
 import styles from "./home-feature-story.module.css";
 
 type StoryBook = { id: string; title: string; author: string; coverImage?: string };
@@ -46,41 +46,44 @@ function StoryScene({ chapter, books }: { chapter: number; books: StoryBook[] })
   </div>;
 }
 
-export function HomeFeatureStory({ books }: { books: StoryBook[] }) {
+export function HomeFeatureStory({ books, closingTitle, closingImage }: { books: StoryBook[]; closingTitle: string[]; closingImage: string }) {
   const [active, setActive] = useState(0);
+  const viewport = useRef<HTMLDivElement>(null);
   const chapterRefs = useRef<(HTMLElement | null)[]>([]);
+  const labels = [...chapters.map(chapter => chapter.title), "进入书库"];
 
-  useEffect(() => {
-    const desktop = window.matchMedia("(min-width: 900px) and (min-height: 650px)");
-    let observer: IntersectionObserver | undefined;
-    const observe = () => {
-      observer?.disconnect();
-      if (!desktop.matches) return;
-      const midpoint = Math.round(window.innerHeight / 2);
-      observer = new IntersectionObserver(entries => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActive(Number((entry.target as HTMLElement).dataset.chapter));
-        }
-      }, { rootMargin: `-${midpoint}px 0px -${window.innerHeight - midpoint - 1}px 0px`, threshold: 0 });
-      chapterRefs.current.forEach(element => { if (element) observer!.observe(element); });
-    };
-    observe();
-    desktop.addEventListener("change", observe);
-    window.addEventListener("resize", observe);
-    return () => { observer?.disconnect(); desktop.removeEventListener("change", observe); window.removeEventListener("resize", observe); };
-  }, []);
+  function goTo(index: number, keyboard: boolean) {
+    const target = chapterRefs.current[index];
+    if (!target || !viewport.current) return;
+    viewport.current.scrollTo({ top: target.offsetTop, behavior: keyboard || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  }
 
-  return <section id="library-features" className={styles.story} aria-labelledby="library-features-title">
-    <header className={styles.heading}><h2 id="library-features-title">让阅读成为研究</h2><Link href="/">浏览馆藏 <ArrowRight size={16} aria-hidden="true" /></Link></header>
-    <div className={styles.layout}>
-      <div className={styles.chapters}>{chapters.map((chapter, index) => <article className={styles.chapter} key={chapter.href} data-chapter={index} data-active={active === index || undefined} ref={element => { chapterRefs.current[index] = element; }}>
-        <div className={styles.chapterCopy}><span className={styles.chapterNumber} aria-hidden="true">0{index + 1}</span><h3>{chapter.title}</h3><p>{chapter.text}</p><Link href={chapter.href} onFocus={() => setActive(index)}>{chapter.action} <ArrowRight size={17} aria-hidden="true" /></Link></div>
-        <div className={styles.mobileScene}><StoryScene chapter={index} books={books} /></div>
-      </article>)}</div>
-      <div className={styles.stageRail} aria-hidden="true"><div className={styles.stage}>
-        {chapters.map((chapter, index) => <div key={chapter.href} className={styles.sceneLayer} data-active={active === index || undefined}><StoryScene chapter={index} books={books} /></div>)}
-        <div className={styles.stageFoot}><span>功能演示</span><span>0{active + 1} / 04</span></div>
-      </div></div>
+  return <section id="library-features" className={styles.story} data-welcome-deck aria-labelledby="welcome-title">
+    <h1 id="welcome-title" className="sr-only">欢迎来到社会理论书库</h1>
+    <div className={styles.viewport} ref={viewport} tabIndex={0} role="region" aria-label="书库介绍，向下滚动查看下一张卡片" onScroll={() => {
+      const node = viewport.current;
+      if (!node) return;
+      const midpoint = node.scrollTop + node.clientHeight / 2;
+      const index = chapterRefs.current.findIndex(element => element && midpoint >= element.offsetTop && midpoint < element.offsetTop + element.offsetHeight);
+      if (index >= 0) setActive(index);
+    }}>
+      {chapters.map((chapter, index) => <article className={styles.slide} key={chapter.href} aria-labelledby={`welcome-chapter-${index}`} ref={element => { chapterRefs.current[index] = element; }}>
+        <div className={styles.card}>
+          <div className={styles.chapterCopy}><h2 id={`welcome-chapter-${index}`}>{chapter.title}</h2><p>{chapter.text}</p><Link href={chapter.href}>{chapter.action} <ArrowRight size={18} aria-hidden="true" /></Link></div>
+          <div className={styles.visual}><StoryScene chapter={index} books={books} /><span className={styles.sceneCaption}>功能示意</span></div>
+        </div>
+      </article>)}
+      <article className={styles.slide} aria-labelledby="welcome-enter-title" ref={element => { chapterRefs.current[4] = element; }}>
+        <div className={`${styles.card} ${styles.closing}`}>
+          <div className={styles.chapterCopy}><h2 id="welcome-enter-title">{closingTitle.map((line, index) => <span key={index}>{line}</span>)}</h2><p>从这里，开始你的阅读与研究。</p><Link href="/" className={styles.enter}>进入书库 <ArrowRight size={20} aria-hidden="true" /></Link></div>
+          <div className={styles.closingImage}><img src={closingImage} alt="" width={1536} height={1024} loading="lazy" /></div>
+        </div>
+      </article>
+    </div>
+    <div className={styles.controls}>
+      <span className={styles.count} aria-hidden="true">0{active + 1}<span> / 05</span></span>
+      <nav className={styles.pagination} aria-label="欢迎页卡片">{labels.map((label, index) => <button key={label} type="button" aria-label={`第${index + 1}张：${label}`} aria-current={active === index ? "step" : undefined} onClick={event => goTo(index, event.detail === 0)}><span /></button>)}</nav>
+      <div className={styles.arrows}><button type="button" aria-label="上一张" disabled={active === 0} onClick={event => goTo(active - 1, event.detail === 0)}><ArrowUp size={18} /></button><button type="button" aria-label="下一张" disabled={active === 4} onClick={event => goTo(active + 1, event.detail === 0)}><ArrowDown size={18} /></button></div>
     </div>
   </section>;
 }

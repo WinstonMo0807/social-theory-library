@@ -1,3 +1,8 @@
+/* The welcome page alone fits below the existing, naturally sized masthead. */
+:global(body):has(.story) { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+:global(body):has(.story) > :global(.site-header) { flex: none; }
+:global(body):has(.story) > :global(main) { flex: 1; min-height: 0; }
+:global(#main-content) > :global(.route-content-transition):has(> .story) { height: 100%; min-height: 0; display: block; }
 .story {
   --story-ink: var(--night-ink, #282722);
   --story-muted: var(--night-muted, #716d64);
@@ -5,28 +10,42 @@
   --story-paper: var(--night-paper, #f7f4ee);
   --story-sheet: var(--night-white, #fffefa);
   --story-gold: var(--night-gold, #a67b3b);
-  color: var(--story-ink);
-  padding: 76px 0 36px;
-  scroll-margin-top: 150px;
+  color: var(--story-ink); background: var(--story-paper);
+  height: 100%; display: grid; grid-template-rows: minmax(0, 1fr) 48px;
+  padding: clamp(16px, 3vh, 32px) clamp(16px, 3vw, 48px) 8px;
 }
-.heading { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding-bottom: 36px; border-bottom: 1px solid var(--story-line); }
-.story .heading h2 { margin: 0; color: var(--story-ink); font-size: clamp(28px, 3.2vw, 44px); line-height: 1.35; font-weight: 600; letter-spacing: -.025em; }
-.heading a { display: inline-flex; align-items: center; gap: 9px; flex: none; font: 14px/1.5 var(--sans); }
-.layout { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); column-gap: 6%; position: relative; }
-.chapter { min-height: 390px; display: flex; align-items: center; padding: 60px 0; }
-.chapterCopy { max-width: 360px; }
-.chapterNumber { display: block; color: var(--story-gold); font: italic 18px/1.5 Georgia, serif; margin-bottom: 22px; }
-.story .chapter h3 { color: var(--story-ink); font-size: clamp(26px, 2.5vw, 34px); font-weight: 600; line-height: 1.45; margin: 0 0 18px; text-wrap: balance; letter-spacing: -.02em; }
-.chapter p { font: 16px/1.85 var(--sans); margin: 0 0 26px; color: var(--story-muted); text-wrap: pretty; }
-.chapter a { display: inline-flex; align-items: center; gap: 18px; padding: 7px 0; border-bottom: 1px solid var(--story-gold); font: 15px/1.6 var(--sans); }
-.chapter a svg { transition: transform 180ms ease-out; }
-@media (hover: hover) { .chapter a:hover svg { transform: translateX(4px); } }
-.stageRail { padding: 46px 0; min-width: 0; }
-.stage { position: sticky; top: 175px; aspect-ratio: 1.28; max-height: 560px; min-height: 390px; background: var(--story-paper); border: 1px solid var(--story-line); overflow: hidden; }
-.sceneLayer { position: absolute; inset: 0 0 44px; opacity: 0; transform: translateY(14px); transition: opacity 260ms ease-out, transform 320ms cubic-bezier(.22, 1, .36, 1); pointer-events: none; }
-.sceneLayer[data-active] { opacity: 1; transform: none; }
-.scene { height: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8%; font-family: var(--sans); overflow: hidden; }
-.stageFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: absolute; inset: auto 22px 15px; font: 11px/1.4 var(--sans); color: var(--story-muted); font-variant-numeric: tabular-nums; }
+.viewport { position: relative; overflow-y: auto; overscroll-behavior-y: contain; scroll-snap-type: y mandatory; scrollbar-width: none; border-radius: 12px; }
+.viewport::-webkit-scrollbar { display: none; }
+.viewport:focus-visible { outline-offset: 4px; }
+.slide { min-height: 100%; display: grid; scroll-snap-align: start; scroll-snap-stop: always; padding: 2px; }
+.card { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); background: var(--story-sheet); border: 1px solid var(--story-line); border-radius: 12px; overflow: hidden; }
+.chapterCopy { align-self: center; padding: clamp(28px, 4.6vw, 80px); }
+.story .chapterCopy h2 { color: var(--story-ink); font: 600 clamp(28px, 3.3vw, 52px)/1.4 var(--serif); letter-spacing: -.025em; margin: 0 0 24px; text-wrap: balance; }
+.chapterCopy p { max-width: 27em; color: var(--story-muted); font: calc(16px + var(--font-bump, 0px))/1.8 var(--sans); margin: 0 0 32px; text-wrap: pretty; }
+.chapterCopy a { display: inline-flex; align-items: center; gap: 18px; padding: 10px 0; border-bottom: 1px solid var(--story-gold); font: 15px/1.6 var(--sans); }
+.chapterCopy a svg { flex: none; transition: transform 180ms cubic-bezier(.22,1,.36,1); }
+.visual { min-width: 0; min-height: 360px; position: relative; background: color-mix(in srgb, var(--story-paper) 80%, var(--story-sheet)); }
+.scene { height: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 9%; font-family: var(--sans); overflow: hidden; }
+.sceneCaption { position: absolute; right: 20px; bottom: 14px; color: var(--story-muted); font: 11px/1.5 var(--sans); }
+.closing .chapterCopy h2 { font-size: clamp(30px, 3.5vw, 56px); }
+.closing h2 span { display: block; }
+.story .enter { background: var(--story-ink); color: var(--story-sheet); border: 1px solid var(--story-ink); border-radius: 3px; padding: 14px 25px; }
+.closingImage { min-width: 0; min-height: 320px; position: relative; }
+.closingImage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 56% center; }
+.controls { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding-inline: 8px; }
+.count { font: 14px/1.5 var(--sans); font-variant-numeric: tabular-nums; }
+.count > span { color: var(--story-muted); }
+.pagination, .arrows { display: flex; align-items: center; }
+.pagination button { display: grid; place-items: center; width: 32px; height: 40px; padding: 0; cursor: pointer; }
+.pagination button span { width: 6px; height: 6px; border-radius: 50%; background: var(--story-muted); opacity: .45; transition: opacity 180ms ease-out, transform 180ms ease-out; }
+.pagination button[aria-current] span { background: var(--story-gold); opacity: 1; transform: scale(1.45); }
+.arrows { justify-self: end; gap: 4px; }
+.arrows button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 50%; cursor: pointer; transition: background-color 160ms ease-out; }
+.arrows button:disabled { opacity: .25; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .chapterCopy a:hover svg { transform: translateX(4px); }
+  .arrows button:not(:disabled):hover { background: color-mix(in srgb, var(--story-ink) 7%, transparent); }
+}
 .question { display: flex; align-items: center; gap: 13px; width: 100%; padding: 17px 20px; background: var(--story-sheet); border: 1px solid var(--story-line); box-shadow: 0 7px 16px #18140805; font-size: clamp(13px, 1.4vw, 18px); }
 .question svg { flex: none; }
 .question svg:last-child { margin-left: auto; color: var(--story-gold); }
@@ -69,61 +88,73 @@
 .notebook { position: absolute; inset: 85px 0 0 44%; background: var(--story-sheet); padding: 22px 22px 10px 30px; border: 1px solid var(--story-line); border-left: 5px double var(--story-line); transform: rotate(3deg); box-shadow: -8px 9px 18px #3024170e; }
 .notebook > svg { vertical-align: middle; margin-right: 8px; color: var(--story-gold); }
 .notebook > span { font: 20px/1.5 var(--serif); vertical-align: middle; }
-.mobileScene { display: none; }
-@media (min-width: 1000px) { .stage { top: 124px; } }
-@media (max-width: 1100px) and (min-width: 900px) {
-  .layout { column-gap: 4%; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
-  .stage { min-height: 370px; }
-  .scene { padding: 6%; }
+
+@media (max-width: 900px) {
+  .chapterCopy { padding: 28px; }
+  .story .chapterCopy h2 { font-size: 32px; }
+  .scene { padding: 7%; }
   .bookShelf { gap: 14px; }
-  .book > img, .bookFallback { height: 125px; }
-  .paperPage { padding: 18px 16px; }
-  .sourceCard { padding: 18px; }
-}
-@media (max-width: 899px), (max-height: 649px) {
-  .story { padding-top: 48px; }
-  .heading { padding-bottom: 26px; }
-  .layout { display: block; }
-  .chapter { min-height: 0; display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 28px; padding: 36px 0; border-bottom: 1px solid var(--story-line); }
-  .chapterCopy { max-width: none; }
-  .chapterNumber { margin-bottom: 14px; }
-  .chapter p { font-size: 15px; margin-bottom: 18px; }
-  .stageRail { display: none; }
-  .mobileScene { display: block; background: var(--story-paper); min-width: 0; height: 350px; border: 1px solid var(--story-line); }
-  .scene { padding: 6%; }
-  .question { font-size: 13px; padding: 13px; gap: 8px; }
-  .bookShelf { gap: 10px; margin-top: 22px; }
   .book > img, .bookFallback { height: 120px; }
-  .book strong { font-size: 11px; }
-  .book > span { display: none; }
-  .paperPage { padding: 17px 14px; }
-  .mobileScene .lines { gap: 6px; margin: 12px 0; }
-  .mobileScene .lines[data-highlighted] { padding: 7px 0; }
-  .mobileScene .paperHeading { font-size: 16px; margin-bottom: 14px; }
+  .paperPage { padding: 16px; }
   .sourceCard { padding: 18px; }
-  .citationDesk, .researchDesk { height: 280px; }
-  .citationSheet { padding: 22px; }
 }
 @media (max-width: 599px) {
-  .heading { align-items: center; gap: 12px; }
-  .story .heading h2 { font-size: 26px; }
-  .heading a { font-size: 12px; gap: 4px; }
-  .chapter { display: flex; flex-direction: column; align-items: stretch; gap: 28px; padding: 36px 0; }
-  .chapterNumber { margin-bottom: 10px; font-size: 16px; }
-  .story .chapter h3 { font-size: 27px; margin-bottom: 12px; }
-  .chapter p { max-width: 28em; }
-  .mobileScene { height: 345px; }
-  .sourceCard strong { font-size: 16px; }
+  .story { padding: 12px 12px 4px; grid-template-rows: minmax(0, 1fr) 44px; }
+  .card { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(210px, 1fr); border-radius: 9px; }
+  .chapterCopy { padding: 24px 22px 20px; }
+  .story .chapterCopy h2 { font-size: 28px; margin-bottom: 12px; }
+  .chapterCopy p { font-size: calc(13px + var(--font-bump, 0px)); line-height: 1.7; margin-bottom: 12px; }
+  .chapterCopy a { font-size: 14px; padding: 5px 0; }
+  .visual, .closingImage { min-height: 210px; }
+  .scene { padding: 24px 7%; }
+  .sceneCaption { font-size: 10px; bottom: 8px; right: 14px; }
+  .question { padding: 10px 12px; font-size: 13px; gap: 8px; }
+  .bookShelf { gap: 12px; margin: 18px 0 14px; }
+  .book > img, .bookFallback { height: clamp(76px, 14dvh, 118px); }
+  .book strong { font-size: 10px; margin: 8px 0 0; }
+  .book > span { display: none; }
+  .discoveryTerms { font-size: 11px; }
+  .sourceSlip { font-size: 13px; margin-bottom: 12px; }
+  .paperPage { padding: 14px; }
+  .paperHeading { font-size: 14px; margin-bottom: 10px; }
+  .lines { gap: 5px; margin: 10px 0; }
+  .lines[data-highlighted] { padding: 6px 0; }
+  .citationDesk, .researchDesk { height: 230px; }
+  .citationSheet { padding: 18px; }
+  .sourceCard { inset: 24px 0 0 35%; padding: 14px; }
+  .sourceCard > svg { margin-bottom: 8px; }
+  .sourceCard strong { font-size: 15px; }
+  .sourceFields { gap: 8px; font-size: 11px; }
+  .researchFolder { padding: 20px; }
+  .researchFolder > span { font-size: 20px; margin: 8px 0 14px; }
+  .notebook { inset: 70px 0 0 42%; padding: 15px; }
+  .notebook > span { font-size: 17px; }
+  .notebook .lines:last-child { margin-bottom: 0; }
+  .story .enter { padding: 12px 20px; }
+  .controls { gap: 4px; padding-inline: 3px; }
+  .pagination button { width: 26px; }
+  .arrows button { width: 32px; height: 36px; }
+  .count { font-size: 12px; }
 }
-@media (max-width: 359px) {
-  .heading { align-items: start; flex-direction: column; gap: 14px; }
-  .mobileScene { height: 330px; }
-  .sourceCard { padding: 15px; }
-  .sourceCard strong { font-size: 14px; }
-  .sourceFields { font-size: 11px; }
-  .researchFolder { padding: 22px; }
-  .notebook { padding-left: 19px; padding-right: 14px; }
+@media (max-height: 700px) and (max-width: 599px) {
+  .chapterCopy { padding: 16px 18px 12px; }
+  .story .chapterCopy h2 { font-size: 24px; margin-bottom: 8px; }
+  .card { grid-template-rows: auto minmax(195px, 1fr); }
+  .visual, .closingImage { min-height: 195px; }
+  .scene { padding: 18px 7%; }
+  .bookShelf { margin: 10px 0; }
+  .book > img, .bookFallback { height: 76px; }
+  .sourceSlip { margin-bottom: 8px; }
+  .lines { gap: 3px; margin: 7px 0; }
+  .paperPage { padding: 10px; }
+  .citationDesk, .researchDesk { height: 185px; }
+  .sourceFields { gap: 5px; padding-top: 8px; }
+  .sourceCard > svg { display: none; }
+  .researchFolder { padding: 14px; }
+  .notebook { top: 48px; padding: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sceneLayer, .chapter a svg { transition: none; transform: none; }
+  .viewport { scroll-snap-type: none; }
+  .chapterCopy a svg, .pagination button span, .arrows button { transition: none; }
+  .chapterCopy a:hover svg { transform: none; }
 }

@@ -1,5 +1,20 @@
 # 欢迎页滚动功能介绍
 
+## 2026-11-05 最新交付：五张整屏大卡片
+
+WELCOME-CARDS-01开发D。用户要求同一页面内上下滑动切换大卡片，最后第五张进入首页。`HomeFeatureStory`只在/welcome使用，本次直接重组原组件，没有并行实现：前四张沿用真实功能入口和原示意图，第五张使用已有首页配图/欢迎语及进入书库链接。移除欢迎页旧首屏和独立CSS，保留全局Logo/导航，首页源码无变化。无新增依赖、接口、数据库或任务。
+
+采用CSS原生scroll-snap与overflow滚动；五个圆点和上下按钮能直接定位，当前页由真实滚动位置计算。按键触发控件使用即时定位，减少动态效果分支取消平滑与吸附。卡片min-height允许长内容自然延长，不用隐藏正文保持固定尺寸。功能示意字样继续区分演示与真实业务结果。
+
+- Web111观察到`web/app/editorial-v2.css`的路由min-height优先级覆盖局部容器，body比屏幕高22px（1280×720）及75px（390×844）。`home-feature-story.module.css`只针对直接包含欢迎卡片的路由容器增加#main-content限定，清除继承最小高度。Web112读取body高720/844/640，和对应屏幕一致，底部控件不再被裁切。
+- Web112桌面1280×720查看第1、2、3、5张，鼠标滚动从第1张吸附到第2张（scrollTop560.8），键盘Enter操作圆点切到第3张；390×844查看第4张，320×640查看第2和第5张，宽度无横向溢出。第五张按钮实际打开/，body恢复block、overflow visible、文档高2063px，原首页恢复正常滚动。没有触发检索或提交资料。
+- 类型检查`node node_modules/typescript/bin/tsc --noEmit`退出0；Web111与Web112的`node node_modules/vinext/dist/cli.js build`均完成，镜像打包及NAS发布退出0。日志`tmp/stl4-copy-20261104/type-r111.log`、`build-r111.log`、`build-r112.log`、`image-r11*.log`、`deploy-r11*.log`。
+- 当前Web112：`social-theory-library-web:stl4-preview-20261105-r112`，`sha256:d389d1bcaca349118ba56ac320ef4e097fb1169a6c739aefdddbe9aa4a6e0202`。NAS恢复点`welcome-cards-r112-recovery`保存前Web111，`welcome-cards-r111-recovery`保存本批前Web110。仅预览Web重建/edge重启，其他容器ID/挂载、除edge外启动时间保持；生产、API、模型及既有停止服务均未改。
+- 截图`output/welcome-20261105/cards-desktop-r112.png`、`cards-citation-r112.png`、`cards-mobile-research-r112.png`、`cards-320-original-r112.png`、`cards-320-enter-r112.png`、`cards-enter-r112.png`；`cards-desktop-r111.png`保留初版问题证据。浏览器视口已恢复，欢迎页保留为可交互交付。
+- 实体手机触摸和系统减少动态效果未实测；不称全站或全部设备通过。来源为2f2bd42f工作区加本批四个源码文件，继承脏文件完整保留，非干净提交构建。
+
+以下Web110及以前是历史记录，最新欢迎页不再采用独立首屏加长段落布局。
+
 ## 2026-11-05 最新决定与交付：欢迎页独立
 
 用户明确“分开吧，欢迎页是这个elicit的，首页维持原来的”。WELCOME-SPLIT-01开发D：`web/app/welcome/page.tsx`及局部样式承载简短欢迎语和既有四段介绍。`HomePublicView`只移除介绍接点，文件与`701ac8e2^`完全一致；原首页搜索、继续阅读与栏目、此前确认的全站界面修改保持。介绍组件的“浏览馆藏”由不存在于欢迎页的`#home-recent`改为`/`。不新增自动跳转或业务依赖。
