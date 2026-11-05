@@ -1,4 +1,18 @@
-# 首页滚动功能介绍
+# 欢迎页滚动功能介绍
+
+## 2026-11-05 最新决定与交付：欢迎页独立
+
+用户明确“分开吧，欢迎页是这个elicit的，首页维持原来的”。WELCOME-SPLIT-01开发D：`web/app/welcome/page.tsx`及局部样式承载简短欢迎语和既有四段介绍。`HomePublicView`只移除介绍接点，文件与`701ac8e2^`完全一致；原首页搜索、继续阅读与栏目、此前确认的全站界面修改保持。介绍组件的“浏览馆藏”由不存在于欢迎页的`#home-recent`改为`/`。不新增自动跳转或业务依赖。
+
+实际入口：[欢迎页](http://192.168.5.6:18084/welcome)、[首页](http://192.168.5.6:18084/)。Web110镜像`social-theory-library-web:stl4-preview-20261105-r110`，完整ID`sha256:95da9a1f47d85bbccd7a66fe6146242654d676db5ca9e01f19a2994db6f4b772`。
+
+- `node node_modules/typescript/bin/tsc --noEmit`、`node node_modules/vinext/dist/cli.js build`、本机`build_r110.py`、`nas_run.py deploy_r110.py`均退出0。构建与发布日志在`tmp/stl4-copy-20261104/*r110*`。
+- 真实NAS浏览器1280宽欢迎页、了解书库锚点及首个图示、进入书库返回首页已查看；首页显示真实继续阅读和原栏目，`#library-features`数量为0。390宽欢迎页标题、按钮、展开导航与首段已实看，scrollWidth375/innerWidth390，无横向溢出。图示内部沿用Web109，不重跑四个业务入口。
+- 截图`output/welcome-20261105/welcome-desktop-r110.png`、`welcome-story-r110.png`、`welcome-mobile-r110.png`、`home-restored-r110.png`；两个真实入口保留为交付标签，临时视口已重置。未提交业务表单或创建私人数据。
+- 仅预览Web重建、edge重启，其余受核对容器ID和挂载保持，除edge外启动时间未变。恢复点NAS`/volume2/library/stl-previews/20261026-r1/welcome-r110-recovery`保留前Web109配置/状态；回退仅`LIBRARY_WEB_IMAGE`，勿整份覆盖.env。API/数据/生产/模型未改，四worker/beat/RapidOCR/docx原停止状态保持。
+- 源为701ac8e2工作区加本批文件，继承的前端未提交改动保留并包含在构建中，不称干净提交构建。仅本次拆分定向验证，全站视觉/业务验收仍B。
+
+以下记录为拆分前实现与验证历史；其中“加入首页”现已被上述用户决定替代，原四段组件和验证证据继续复用。
 
 用户要求参考 Elicit 首页的滚动功能演示，结合书库功能实施；同期确认精简辅助文案、双栏菜单、展开外观设置、Logo 同行导航均应出现在真实内网预览。本项不使用独立空数据夹具。
 

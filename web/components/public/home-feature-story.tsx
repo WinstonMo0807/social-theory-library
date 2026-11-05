@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, BookOpen, FileText, FolderOpen, NotebookPen, Search } from "lucide-react";
+import { ArrowRight, BookOpen, FileText, FolderOpen, NotebookPen, Search } from "lucide-react";
 import styles from "./home-feature-story.module.css";
 
 type StoryBook = { id: string; title: string; author: string; coverImage?: string };
@@ -71,7 +71,7 @@ export function HomeFeatureStory({ books }: { books: StoryBook[] }) {
   }, []);
 
   return <section id="library-features" className={styles.story} aria-labelledby="library-features-title">
-    <header className={styles.heading}><h2 id="library-features-title">让阅读成为研究</h2><a href="#home-recent">浏览馆藏 <ArrowDown size={16} aria-hidden="true" /></a></header>
+    <header className={styles.heading}><h2 id="library-features-title">让阅读成为研究</h2><Link href="/">浏览馆藏 <ArrowRight size={16} aria-hidden="true" /></Link></header>
     <div className={styles.layout}>
       <div className={styles.chapters}>{chapters.map((chapter, index) => <article className={styles.chapter} key={chapter.href} data-chapter={index} data-active={active === index || undefined} ref={element => { chapterRefs.current[index] = element; }}>
         <div className={styles.chapterCopy}><span className={styles.chapterNumber} aria-hidden="true">0{index + 1}</span><h3>{chapter.title}</h3><p>{chapter.text}</p><Link href={chapter.href} onFocus={() => setActive(index)}>{chapter.action} <ArrowRight size={17} aria-hidden="true" /></Link></div>
