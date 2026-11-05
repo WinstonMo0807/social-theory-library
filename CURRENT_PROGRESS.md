@@ -1,5 +1,25 @@
 # Social Theory Library 当前进度
 
+## 2026-11-05 首页滚动介绍与已确认界面合并，内网 Web109
+
+HOME-STORY-01开发D。按用户Elicit参考新增首页“让阅读成为研究”四段滚动介绍，连接观点检索、原文目录、引文体检、读者中心。仅新增home-feature-story组件/局部样式和首页接点，复用公开作品封面；图示不伪造引文、页码或任务结果。桌面停驻换页，平板/手机顺序排布，键盘同步图示，减少动态效果有静态规则。保留原搜索、继续阅读、首页编排与全部业务。
+
+此前COPY-LEAN-02的118处文案、双栏菜单、外观展开、Logo同行已随Web107进入真实NAS，本次Web109继续包含。真实入口http://192.168.5.6:18084/；不再以5181空数据夹具作为业务参考。内网图示/链接及既有账户资料读回；首页四入口均实际打开，引文可用检查项和本人阅读历史实际加载。未提交稿件、检索或创建私人数据。Web108实看发现手机原文图示底部重复说明被裁切，Web109删除该说明并压缩示意行距，390/320实际复核；滚动切换收紧至视口中线。桌面1440/1280、平板768（Web108）、手机390/320、夜间和键盘定向记录见docs/stl4/HOME_FEATURE_STORY_20261104.md，非全站验收。
+
+最终Web109镜像ca5c9241698a（完整ID见专项记录）；类型检查及Vinext构建退出0。仅预览Web重建/edge重启，API r54、数据库、政策预览、生产及模型容器身份/启动时间未变。恢复点NAS home-story-r109-recovery（前Web108）、home-story-r108-recovery（前Web107）、reader-admin-r107-recovery（本批前Web106）保留受限配置与状态；回退仅Web镜像变量，勿整份覆盖.env。源为425aef2d工作区加本批文件，包含此前保留的前端脏文件，不能称镜像出自干净提交。日志tmp/stl4-copy-20261104/*r109*，截图output/home-story-20261104。
+
+本批开发项关闭，剩余B为原全站统一视觉/真实业务验收与公网前批准。四worker/beat/RapidOCR/docx仍停止，不称全异步业务已恢复或模型质量通过；扫描/深入引文检查在实际页面显示未开放。无生产切换、数据清理、自动安排重建。下一步按用户内网批注及原验收清单接续，不重开已关闭项。
+
+## 2026-11-04 16:05 真实读者中心与管理后台恢复，Web107
+
+PREVIEW-ACCESS-02开发D：5181原为无账户接口的排版夹具，NAS18084原Web/API/数据库等停止。已分步启动原postgres/redis/meilisearch/API/Web/edge，沿用原容器和数据挂载；仅随后更新Web107镜像31c6a4940b8f并重启原edge。源为425aef2d工作区（包含保留的前端未提交修改），前后未改这些脏文件。API仍r54，生产/政策预览/模型未重启或改变。当前四worker、beat、RapidOCR、docx-preview仍停止；本批仅恢复网页、登录与已有资料访问，不称全部异步业务恢复。
+
+用户实际登录后，浏览器/account显示真实阅读历史，/admin读回9项既有工作；未创建/删除/提交业务资料。API ready200/database=true/pending_migrations=0，匿名/api/auth/me/401。Web构建/镜像/发布成功；首次npm.cmd不可用后使用现有node直接调用Vinext成功，首次恢复读回因Docker mounts列表顺序不稳定断言失败，按Destination排序后完整映射及容器身份一致。原失败记录保留。
+
+现在使用http://192.168.5.6:18084/account与/admin；5181改为仅本机GET/HEAD跳转相同NAS路径，不转发凭据或POST，5182夹具已停止。独立跳转进程PID22396，入口tmp/stl4-copy-20261104/preview-redirect.mjs。恢复点NAS reader-admin-r107-recovery含原受限.env、容器状态及发布结果；回退仅Web镜像变量或按原停止名单逐项处理，勿改生产/政策。构建/发布日志tmp/stl4-copy-20261104，截图output/copy-site-20261104/reader-live-r107.png与admin-live-r107.png。
+
+接续用户新要求：参考Elicit首页滚动展示，按书库真实功能和品牌实施首页介绍；已确认的精简文案、双栏菜单、外观展开、Logo同行继续合并，并在18084真实内网预览呈现。不得退回无账户夹具入口或将新滚动演示当实际查询结果。
+
 ## 2026-11-04 15:50 本机预览访问恢复
 
 用户反馈两个5181预览链接均打不开。实查5181/5182无监听，原临时预览进程已退出；具体退出原因未留存，不能推断为网络或NAS故障。复用tmp/stl4-copy-20261104/preview.mjs，通过PowerShell Start-Process -WindowStyle Hidden启动独立后台进程，PID14796，两端口均仅绑定127.0.0.1。日志preview-detached.stdout.log/stderr.log位于同一忽略目录。实际浏览器重新打开/layout-preview与/drawer-preview成功，菜单及直接展开的外观设置显示正常，截图output/copy-site-20261104/menu-restored.png；已留可操作标签。未改应用源码、NAS、生产或网络配置，未设开机任务。此入口仍为本机排版预览，不接真实馆藏业务；电脑重启或该进程退出后需重新启动。
