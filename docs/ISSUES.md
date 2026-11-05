@@ -1,5 +1,12 @@
 # 当前问题
 
+## 2026-11-05 同画面欢迎演示
+
+- D WELCOME-FILM-01：最新用户要求参考Elicit整页并换成本库品牌内容。实际参考是首屏自动视频加普通长页，先前五卡片方案不再采用。HomeFeatureStory复用原组件入口，改为同画布40秒演示和交错介绍区，Web115同步。
+- D WELCOME-FILM-SIZE-01：r113 savedPanel实际378.6px超过329px背景；去掉重复的第二组示意线，r114降到324.6px；320宽255.1px容纳于263.2px背景。
+- D WELCOME-FILM-SCROLL-01：home-feature-story.module.css的demo使用overflow:hidden、装饰SVG超出边界，实际操作播放控件并调整视口后figure.scrollTop为38.4px，内容整体上移。仅改该画布为overflow:clip，r115相同操作和390/320宽度下scrollTop均0，画布与内容顶部对齐。
+- B：实体手机触摸、系统减少动态效果偏好及原全站验收仍未实测；已有CSS/状态分支不等于此类验收通过。本轮不新增业务任务。
+
 ## 2026-11-05 欢迎大卡片
 
 - D WELCOME-CARDS-01：用户明确五张整屏卡片，上下滑动，第五张进入首页。既有介绍组件与图示已改为纵向原生滚动容器，进入书库实际返回原首页。
