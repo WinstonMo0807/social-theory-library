@@ -3,14 +3,55 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, BookOpen, Check, FileText, FolderOpen, NotebookPen, Pause, Play, Plus, RotateCcw, Search } from "lucide-react";
+import { BrandImage } from "@/components/brand-image";
+import type { SiteConfig } from "@/lib/site-config";
 import styles from "./home-feature-story.module.css";
 
 type StoryBook = { id: string; title: string; author: string; coverImage?: string };
+type BrandConfig = Pick<SiteConfig, "site_name" | "wordmark_lines">;
 const chapters = [
-  { title: "先提出你的问题", text: "用自己的话检索观点，也可以沿着学者、流派与主题找到书。", href: "/explore/opinions", action: "检索观点" },
-  { title: "读到观点的来处", text: "从原文节选打开 PDF，连同前后文一起阅读。", href: "/explore/original", action: "查找原文" },
-  { title: "让引文有据可查", text: "回到具体版本与页码，核对原文，再决定如何引用。", href: "/account/citation-audits", action: "核对引文" },
-  { title: "留下自己的思考", text: "把材料、笔记与阅读计划保存在读者中心，下次接着读。", href: "/account", action: "进入读者中心" },
+  { href: "/explore/opinions", action: "检索观点" },
+  { href: "/explore/original", action: "查找原文" },
+  { href: "/account/citation-audits", action: "核对引文" },
+  { href: "/account", action: "进入读者中心" },
+];
+const copyOptions = [
+  {
+    id: "research", label: "研究日常",
+    lead: "从一个研究问题出发，找到文献，读到原文。",
+    title: ["从研究问题出发，", "把阅读做深。"],
+    intro: "找相关论述，回到原文，把材料与笔记留给下一次研究。",
+    cards: [
+      { title: "把问题带进文献", text: "用研究问题检索相关论述，从原文节选判断哪些材料值得细读。" },
+      { title: "在上下文中理解观点", text: "打开对应 PDF，把节选放回前后文，读清作者的论证。" },
+      { title: "引用之前，核对出处", text: "对照原文、版本与页码，为论文和课堂核对引用。" },
+      { title: "让阅读成为积累", text: "把原文、笔记与书单留在读者中心，下次从已有材料继续研究。" },
+    ],
+  },
+  {
+    id: "theory", label: "理论阅读",
+    lead: "读懂经典，也看见不同理论如何解释同一个问题。",
+    title: ["读原典，", "也读懂争论。"],
+    intro: "沿着学者、流派与问题，追问一个观点如何形成。",
+    cards: [
+      { title: "同一个问题，不同的解释", text: "从问题进入文献，比较不同作者的论述，找到值得继续追问的分歧。" },
+      { title: "回到概念出现的地方", text: "连同前后文阅读原典，理解作者如何使用概念、展开论证。" },
+      { title: "让讨论有共同的文本", text: "核对引用的版本与页码，让同行能够找到你所讨论的原文。" },
+      { title: "写下你的理解与疑问", text: "保存阅读笔记与相关材料，把暂未解决的问题留给下一次细读。" },
+    ],
+  },
+  {
+    id: "writing", label: "论文写作",
+    lead: "让阅读积累成为写作材料，让每一处引用可以查证。",
+    title: ["从文献阅读，", "走向有据的论述。"],
+    intro: "为选题寻找材料，为论证核对引文，为写作保存思路。",
+    cards: [
+      { title: "围绕论题寻找材料", text: "用你正在讨论的问题检索文献，先读相关节选，再决定深入哪些作品。" },
+      { title: "别停在一句引文", text: "回到完整段落与前后文，判断原文是否支持你要表达的意思。" },
+      { title: "把引文核对放在写作中", text: "对照引用来源、版本和页码，为读者留下可以查证的出处。" },
+      { title: "把笔记留给下一次写作", text: "将材料、笔记与书单放在读者中心，续写时接着此前的阅读。" },
+    ],
+  },
 ];
 
 function TextLines({ highlighted = false }: { highlighted?: boolean }) {
@@ -59,7 +100,7 @@ function GrainField() {
   </svg>;
 }
 
-function WorkflowDemo({ books }: { books: StoryBook[] }) {
+function WorkflowDemo({ books, brandConfig }: { books: StoryBook[]; brandConfig: BrandConfig }) {
   const ref = useRef<HTMLElement>(null);
   const [canAnimate, setCanAnimate] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -82,6 +123,7 @@ function WorkflowDemo({ books }: { books: StoryBook[] }) {
   return <figure ref={ref} className={styles.demo} data-playing={canAnimate && !paused} aria-label="功能演示：提出问题，查找文献，阅读原文，保存材料与笔记">
     <div className={styles.timeline} key={replay} aria-hidden="true">
       <GrainField /><div className={styles.demoFrame} />
+      <div className={styles.brandPanel}><BrandImage config={brandConfig} alt="" /></div>
       <div className={`${styles.demoPanel} ${styles.askPanel}`}>
         <span className={styles.demoEyebrow}><Search size={17} /> 观点检索</span>
         <div className={styles.typedQuestion}><span>技术进步会带来更大的社会公平吗？</span></div>
@@ -110,18 +152,23 @@ function WorkflowDemo({ books }: { books: StoryBook[] }) {
   </figure>;
 }
 
-export function HomeFeatureStory({ books, closingTitle, closingImage }: { books: StoryBook[]; closingTitle: string[]; closingImage: string }) {
+export function HomeFeatureStory({ books, closingTitle, closingImage, brandConfig, compareCopy = false }: { books: StoryBook[]; closingTitle: string[]; closingImage: string; brandConfig: BrandConfig; compareCopy?: boolean }) {
+  const [copyIndex, setCopyIndex] = useState(0);
+  const copy = copyOptions[copyIndex];
   return <div className={styles.story}>
     <section className={styles.hero} aria-labelledby="welcome-title">
-      <div className={styles.heroCopy}><h1 id="welcome-title">{closingTitle.map((line, index) => <span key={index}>{line}</span>)}</h1><p>从社会理论原典出发，寻找观点，留下自己的思考。</p><Link href="/" className={styles.primary}>进入书库 <ArrowRight size={21} aria-hidden="true" /></Link></div>
-      <WorkflowDemo books={books} />
+      <div className={styles.heroCopy}><h1 id="welcome-title">{closingTitle.map((line, index) => <span key={index}>{line}</span>)}</h1><p>{copy.lead}</p><Link href="/" className={styles.primary}>进入书库 <ArrowRight size={21} aria-hidden="true" /></Link></div>
+      <WorkflowDemo books={books} brandConfig={brandConfig} />
       <nav className={styles.topicTrail} aria-label="探索书库"><Link href="/scholars">学者</Link><Link href="/theories">理论流派</Link><Link href="/topics">主题</Link><Link href="/explore/original">原文</Link><Link href="/recommendations">特别策划</Link></nav>
     </section>
     <section className={styles.philosophy} aria-labelledby="welcome-philosophy"><GrainField /><div><h2 id="welcome-philosophy">回到原文，理解思想的来处。</h2><p>让观点有出处，让不同的解释相遇。<br />在阅读与追问中，形成自己的判断。</p></div></section>
     <section className={styles.features} id="library-features" aria-labelledby="welcome-features">
-      <header className={styles.sectionHeading}><h2 id="welcome-features">从一个问题，<br />到一次深入阅读。</h2><p>检索、阅读、核对与整理，在同一座书库里接续。</p></header>
+      <header className={styles.sectionHeading}>
+        {compareCopy ? <div className={styles.copyOptions} role="group" aria-label="欢迎页文案方案">{copyOptions.map((option, index) => <button type="button" key={option.id} aria-pressed={copyIndex === index} onClick={() => setCopyIndex(index)}>{option.label}</button>)}</div> : null}
+        <h2 id="welcome-features">{copy.title[0]}<br />{copy.title[1]}</h2><p>{copy.intro}</p>
+      </header>
       {chapters.map((chapter, index) => <article className={styles.featureRow} key={chapter.href} aria-labelledby={`welcome-feature-${index}`}>
-        <div className={styles.featureCopy}><h3 id={`welcome-feature-${index}`}>{chapter.title}</h3><p>{chapter.text}</p><Link href={chapter.href} className={styles.textLink}>{chapter.action} <ArrowRight size={18} aria-hidden="true" /></Link></div>
+        <div className={styles.featureCopy}><h3 id={`welcome-feature-${index}`}>{copy.cards[index].title}</h3><p>{copy.cards[index].text}</p><Link href={chapter.href} className={styles.textLink}>{chapter.action} <ArrowRight size={18} aria-hidden="true" /></Link></div>
         <div className={styles.visual}><StoryScene chapter={index} books={books} /></div>
       </article>)}
       <div className={styles.discoveryGrid}>

@@ -1,5 +1,31 @@
 # 欢迎页滚动功能介绍
 
+## 2026-11-06 当前交付：34秒演示、三套学者文案、白底Logo展开
+
+用户本轮明确要求演示略快，面向学者设计多套卡片文案，并追加STL现有Logo的展开与白底动效。WELCOME-COPY-01、WELCOME-BRAND-01开发D。仅改welcome/page.tsx及既有HomeFeatureStory组件和局部CSS。未改原首页、导航、BrandImage实现或品牌资源，也未调整后端/数据。
+
+**演示**：共享CSS时间线40→34秒，整轮缩短15%，包含品牌开场。沿用原BrandImage及实际配置，原黑金图形先显现，向左移至原横排位置，同时双语名称淡入展开；约3秒后同一白色卡片接续提问。压缩等待阶段，文献/原文主体各保留约6秒稳定显示，依然可暂停/重播/离屏暂停。原图形没有拆绘、重设计、STL缩写或新增字体。r116初版Logo直接在砂金背景上展示；用户追加白底后，r117去掉frameReveal，统一共用demoFrame，手机Logo适当缩小以保留白底内边距。此更改不影响已有减少动态效果的静态结果分支。
+
+**文案**：复用同一图示和四个真实功能链接；只切换首屏副句、功能区标题/引言、四张功能卡片的标题与正文。默认研究日常为临时建议，不是用户最终选择。普通/welcome没有方案控件；/welcome?compare=1#library-features提供三个原生按钮，切换不保存账户/浏览器偏好，刷新回到默认。
+
+| 方案 | 功能区标题 | 四张卡片标题 |
+| --- | --- | --- |
+| 研究日常（临时默认） | 从研究问题出发，把阅读做深。 | 把问题带进文献；在上下文中理解观点；引用之前，核对出处；让阅读成为积累 |
+| 理论阅读 | 读原典，也读懂争论。 | 同一个问题，不同的解释；回到概念出现的地方；让讨论有共同的文本；写下你的理解与疑问 |
+| 论文写作 | 从文献阅读，走向有据的论述。 | 围绕论题寻找材料；别停在一句引文；把引文核对放在写作中；把笔记留给下一次写作 |
+
+验证与边界：
+
+- r116 `node node_modules/typescript/bin/tsc --noEmit`退出0；r116/r117 `node node_modules/vinext/dist/cli.js build`退出0。镜像构建日志均确认成功生成对应标签，两次NAS同步脚本退出0。未运行全站测试、真实检索/OCR、邮件或私人资料写入。
+- r116实际查看1440/768/390/320；三方案点击和论文写作按钮Enter切换后，四标题/正文/首屏副句均读回对应文案。320宽三按钮均44px高、无横向溢出；暂停/重播/恢复播放与34秒变量实际读回。r117只更新白底及手机Logo尺寸，复用r116文案证据。
+- r117实际品牌开场：白色背景rgb(255,254,250)，frame opacity始终1，双语名称opacity从0到0.992逐步展开；暂停截图完整保留。320宽Logo宽201.56px/卡片宽236.80px，图形和双语字标完整位于白色卡片内，document.scrollWidth305/innerWidth320、figure.scrollTop0。恢复播放读回true，品牌随后淡出，白色框仍保持。浏览器视口已恢复。
+- 截图output/welcome-20261106/brand-white-r117.png、brand-white-mobile-r117.png、copy-controls-r117.png为最终版；brand-desktop-r116.png、copy-writing-r116.png、copy-tablet-r116.png、copy-320-r116.png为本批中间版证据。工具阶段旧session/tab失效、body定位器不接受Control+Home等已改用当前标签/原生按键，不是产品缺陷。
+- 当前内网Web117：social-theory-library-web:stl4-preview-20261106-r117，sha256:2a346e84b89388adf7fb73d850287f12b98b5893894a963ef3833ad84bcc5ede。前Web116：fcbacf14c51491eca92ec92c051e7085b825738bbc5a74b4115d72ae558093c5。NAS welcome-brand-r117-recovery保存前Web116，welcome-copy-r116-recovery保存本批前Web115；只回退LIBRARY_WEB_IMAGE，不整体覆盖.env。
+- 部署脚本核对所有原生产/预览/政策容器：仅预览web重建与edge重启，其余容器ID/挂载/启动时间未变。原停止worker/beat/RapidOCR/docx保持停止；旧Paddle孤儿容器警告保留，不执行清理。
+- 构建来源为2e51d70f已有脏工作区加本批修改，并非洁净发布。原未提交改动全部保留。实体手机、系统减少动态效果及用户最终审美/文案选择仍B，未声称全站验收。
+
+以下为历史版本。
+
 ## 2026-11-05 Elicit 同画面演示与整页介绍
 
 用户指出五张卡片不是所指的动效，并明确要求仿照 https://elicit.com/ 当前首页、将配色品牌及内容换成书库。新选择覆盖下方五卡片方案，仍只修改 `/welcome`，首页 `/` 和全站公共导航/Logo保持。

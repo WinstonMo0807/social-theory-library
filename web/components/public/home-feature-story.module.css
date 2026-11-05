@@ -22,10 +22,16 @@
 .primary svg, .textLink svg { flex: none; transition: transform 180ms var(--story-ease); }
 .primary:active, .playback button:active { transform: scale(.97); }
 .demo { position: relative; isolation: isolate; width: 100%; aspect-ratio: 2 / 1; min-height: 410px; margin: 0; border-radius: 26px; overflow: clip; background: color-mix(in srgb, var(--story-gold) 13%, var(--story-paper)); }
-.timeline { position: absolute; inset: 0; --film-duration: 40s; }
+.timeline { position: absolute; inset: 0; --film-duration: 34s; }
 .grain { position: absolute; inset: -8%; width: 116%; height: 116%; fill: var(--story-gold); opacity: .44; pointer-events: none; }
 .timeline .grain { animation: grainDrift var(--film-duration) ease-in-out infinite; }
 .demoFrame { position: absolute; top: 50%; left: 50%; width: 70%; height: 350px; border-radius: 16px; background: var(--story-sheet); box-shadow: 0 20px 50px #382d1714, 0 2px 6px #382d1710; transform: translate(-50%, -50%) scaleY(.58); animation: frameMorph var(--film-duration) cubic-bezier(.65,0,.35,1) infinite both; }
+.brandPanel { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; pointer-events: none; animation: brandScene var(--film-duration) var(--story-ease) infinite both; }
+.brandPanel :global(.brand-identity) { --brand-shift: 165px; gap: 20px; color: var(--story-ink); }
+.brandPanel :global(.brand-identity-symbol) { width: 86px; transform-origin: center; animation: brandUnfold var(--film-duration) var(--story-ease) infinite both; }
+.brandPanel :global(.brand-identity-words) { gap: 5px; padding-left: 20px; animation: brandWords var(--film-duration) var(--story-ease) infinite both; }
+.brandPanel :global(.brand-identity-en) { font-size: 28px; }
+.brandPanel :global(.brand-identity-cn) { font-size: 34px; }
 .demoPanel { position: absolute; top: 50%; left: 50%; width: 70%; padding: 28px 30px; font: 14px/1.5 var(--sans); opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
 .demoEyebrow { display: flex; gap: 8px; align-items: center; color: var(--story-muted); font-size: 13px; margin-bottom: 20px; }
 .askPanel { animation: questionScene var(--film-duration) var(--story-ease) infinite both; }
@@ -83,6 +89,9 @@
 .features { padding-block: 100px 96px; }
 .sectionHeading { max-width: 650px; margin-bottom: 64px; }
 .sectionHeading p { margin-top: 20px; color: var(--story-muted); }
+.copyOptions { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin-bottom: 32px; border: 1px solid var(--story-line); border-radius: 8px; }
+.copyOptions button { padding: 10px 16px; min-height: 44px; border-radius: 5px; background: transparent; color: var(--story-muted); font: 500 14px/1.5 var(--sans); cursor: pointer; }
+.copyOptions button[aria-pressed="true"] { background: var(--story-ink); color: var(--story-sheet); }
 .featureRow { display: grid; grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); gap: 72px; align-items: center; margin-top: 68px; }
 .featureRow:nth-of-type(even) { grid-template-columns: minmax(0, 1.22fr) minmax(0, .78fr); }
 .featureRow:nth-of-type(even) .featureCopy { order: 2; }
@@ -160,19 +169,23 @@
 
 @keyframes grainDrift { 0%, 100% { transform: translate(-1%, -1%) rotate(-2deg); } 50% { transform: translate(2%, 1%) rotate(3deg); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes frameMorph { 0%, 17%, 100% { transform: translate(-50%, -50%) scaleY(.58); } 20%, 26% { transform: translate(-50%, -50%) scaleY(.2); } 29%, 72% { transform: translate(-50%, -50%) scaleY(1); } 76%, 94% { transform: translate(-50%, -50%) scaleY(.94); } }
-@keyframes questionScene { 0%, 17%, 100% { opacity: 1; transform: translate(-50%, -50%); } 19%, 97% { opacity: 0; transform: translate(-50%, calc(-50% - 10px)); } }
-@keyframes typing { 0%, 1% { clip-path: inset(0 100% 0 0); } 12%, 100% { clip-path: inset(0); } }
-@keyframes workingScene { 0%, 18%, 28%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); } 20%, 26% { opacity: 1; transform: translate(-50%, -50%); } }
-@keyframes resultsScene { 0%, 27%, 53%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 30%, 50% { opacity: 1; transform: translate(-50%, -50%); } }
-@keyframes resultAppear { 0%, 27% { opacity: 0; transform: translateY(10px); } 31%, 100% { opacity: 1; transform: translateY(0); } }
-@keyframes readerScene { 0%, 51%, 76%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 54%, 73% { opacity: 1; transform: translate(-50%, -50%); } }
-@keyframes savedScene { 0%, 74%, 97%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 78%, 94% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes brandScene { 0%, 7%, 100% { opacity: 1; } 9%, 99% { opacity: 0; } }
+@keyframes brandUnfold { 0%, 100% { opacity: 0; transform: translateX(var(--brand-shift)) perspective(500px) rotateY(42deg) scale(.96); } 1.5%, 2.5% { opacity: 1; transform: translateX(var(--brand-shift)); } 4.5%, 97% { opacity: 1; transform: none; } }
+@keyframes brandWords { 0%, 2.5%, 100% { opacity: 0; transform: translateX(-14px); } 4.5%, 97% { opacity: 1; transform: none; } }
+@keyframes frameMorph { 0%, 23%, 100% { transform: translate(-50%, -50%) scaleY(.58); } 26%, 29% { transform: translate(-50%, -50%) scaleY(.2); } 32%, 73% { transform: translate(-50%, -50%) scaleY(1); } 77%, 96% { transform: translate(-50%, -50%) scaleY(.94); } }
+@keyframes questionScene { 0%, 9%, 25%, 100% { opacity: 0; transform: translate(-50%, calc(-50% - 10px)); } 11%, 23% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes typing { 0%, 11% { clip-path: inset(0 100% 0 0); } 20%, 100% { clip-path: inset(0); } }
+@keyframes workingScene { 0%, 24%, 31%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); } 26%, 29% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes resultsScene { 0%, 30%, 54%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 33%, 51% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes resultAppear { 0%, 30% { opacity: 0; transform: translateY(10px); } 34%, 100% { opacity: 1; transform: translateY(0); } }
+@keyframes readerScene { 0%, 52%, 77%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 56%, 74% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes savedScene { 0%, 75%, 99%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 80%, 96% { opacity: 1; transform: translate(-50%, -50%); } }
 @media (hover: hover) and (pointer: fine) {
   .primary:hover svg, .textLink:hover svg { transform: translateX(4px); }
   .primary:hover { background: color-mix(in srgb, var(--story-ink) 87%, var(--story-gold)); }
   .topicTrail a:hover { text-decoration: underline; text-decoration-color: var(--story-gold); text-underline-offset: 7px; }
   .playback button:hover { background: var(--story-sheet); }
+  .copyOptions button:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--story-gold) 10%, var(--story-paper)); color: var(--story-ink); }
   .discoveryImage:hover img { transform: scale(1.035); }
 }
 @media (max-width: 900px) {
@@ -206,6 +219,11 @@
   .demoFrame { height: 280px; }
   .demoFrame, .demoPanel { width: calc(100% - 32px); }
   .demoPanel { padding: 18px 16px; }
+  .brandPanel :global(.brand-identity) { --brand-shift: 92px; gap: 10px; }
+  .brandPanel :global(.brand-identity-symbol) { width: 44px; }
+  .brandPanel :global(.brand-identity-words) { padding-left: 10px; gap: 4px; }
+  .brandPanel :global(.brand-identity-en) { font-size: 15px; }
+  .brandPanel :global(.brand-identity-cn) { font-size: 20px; }
   .demoEyebrow { font-size: 11px; margin-bottom: 16px; }
   .typedQuestion { font-size: clamp(12px, 3.5vw, 16px); }
   .askTools { margin-top: 17px; }
@@ -238,6 +256,8 @@
   .philosophy .grain { left: 20%; width: 110%; opacity: .22; }
   .features { padding-block: 56px; }
   .sectionHeading { margin-bottom: 32px; }
+  .copyOptions { display: flex; margin-bottom: 26px; }
+  .copyOptions button { flex: 1; padding-inline: 8px; font-size: 13px; white-space: nowrap; }
   .featureRow, .featureRow:nth-of-type(even) { grid-template-columns: minmax(0, 1fr); margin-top: 48px; gap: 24px; }
   .featureRow:nth-of-type(even) .featureCopy { order: 0; }
   .featureCopy p { margin-top: 14px; padding-top: 14px; }
@@ -275,6 +295,7 @@
 @media (prefers-reduced-motion: reduce) {
   .story *, .story *::before, .story *::after { animation: none !important; transition: none !important; }
   .demoFrame { transform: translate(-50%, -50%); }
+  .brandPanel { display: none; }
   .demoPanel { opacity: 0; }
   .resultsPanel { opacity: 1; transform: translate(-50%, -50%); }
   .resultRow { opacity: 1; transform: none; }
