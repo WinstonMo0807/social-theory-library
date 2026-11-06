@@ -33,6 +33,13 @@ SOURCES = {
  'reader': ('web/app/reader/[assetId]/page.tsx','export default'),
  'reader-shell': ('web/components/reader-shell.tsx','useReaderCitation'),
  'citation': ('web/lib/api/shared-citation.client.ts','export function previewSharedCitation'),
+ 'citation-api': ('api/reading/shared_citation_views.py','class PublicCitationPreviewView'),
+ 'reader-citation': ('web/components/reader/use-reader-citation.ts','export function'),
+ 'research-client': ('web/lib/api/research.client.ts','export function changeResearchSelection'),
+ 'research-selection': ('api/reading/research.py','def change_selection'),
+ 'research-memory-scope': ('api/reading/research.py','def plan_memory_rows'),
+ 'document-outline': ('api/catalog/services/document_outline.py','def run_outline_job'),
+ 'publication-state': ('api/catalog/services/publication_commands.py','def catalog_publication_state'),
  'reader-access': ('web/lib/reader-access.server.ts','export async function requireReaderSession'),
  'permissions': ('api/common/permissions.py','class CanReadLibrary'),
  'admin-permissions': ('api/common/permissions.py','class CanAccessBackOffice'),
@@ -79,17 +86,17 @@ def module(id,title,subtitle,kind,refs,children=(),routes=(),status='pending',no
              sources=list(refs),children=list(children),routes=list(routes),status=status,note=note,boundary=boundary)
 
 NODES = [
- module('stl','社会理论书库','Social Theory Library','product',['nav','api','models'],['discovery','knowledge','reader','research','publishing','operations'],note='前台、私人研究与后台共用 Django 业务服务；图中分组是依据当前导航和代码职责作出的汇报组织。'),
+ module('stl','社会理论书库','Social Theory Library','product',['nav','api','models'],['discovery','knowledge','reader','research','publishing','operations'],note='前台、私人研究与后台共用 Django 业务服务。图中分组依据当前导航和代码职责。'),
  module('discovery','发现与检索','从问题进入原文','domain',['nav','opinions','discovery-ui'],['catalogue','viewpoints','evidence'],['/explore','/explore/original','/explore/opinions','/explore/evidence'],boundary='探索与检索须登录；网页浏览与正文访问分开授权。'),
- module('knowledge','知识与策划','让作品进入思想脉络','domain',['nav','knowledge','editorial'],['scholars','theories','topics','curation'],['/scholars','/theories','/topics','/recommendations'],boundary='仅正式公开的内容与关联进入前台。'),
+ module('knowledge','知识与策划','学者、理论、主题与作品','domain',['nav','knowledge','editorial'],['scholars','theories','topics','curation'],['/scholars','/theories','/topics','/recommendations'],boundary='仅正式公开的内容与关联进入前台。'),
  module('reader','阅读与引用','回到可定位的文本','domain',['reader','reader-shell','citation'],['pdf','parallel','citations'],['/reader/[assetId]'],boundary='正文与下载须登录；版本、物理页与证据位置共同定位来源。'),
- module('research','私人研究','把阅读接成连续研究','domain',['research','research-model','research-ui'],['sessions','notes','plans','audits','private-ai'],['/account/research','/account/notes','/account/plans','/account/citation-audits'],boundary='查询集按本人过滤；私人记录不直接进入公共馆藏证据。'),
+ module('research','私人研究','研究会话、笔记与计划','domain',['research','research-model','research-ui'],['sessions','notes','plans','audits','private-ai'],['/account/research','/account/notes','/account/plans','/account/citation-audits'],boundary='查询集按本人过滤；私人记录不直接进入公共馆藏证据。'),
  module('publishing','馆藏与内容管理','从文件到正式公开版本','domain',['admin','ingestion','publication','editorial'],['intake','processing','outline','publish'],['/admin/uploads','/admin/intake/[itemId]','/admin/processing','/admin/publication'],boundary='上传、编目、预览和发布各有能力权限；保存草稿不等于发布。'),
- module('operations','系统与权限','支撑长期运行','domain',['admin-permissions','api','queue','ai'],['identity','jobs','model-runtime','storage-ops'],['/admin/users','/admin/system-health','/admin/settings','/admin/storage'],boundary='后台按能力控制；地址与密钥配置仅允许指定管理能力访问。'),
+ module('operations','系统与权限','身份、任务、模型与存储','domain',['admin-permissions','api','queue','ai'],['identity','jobs','model-runtime','storage-ops'],['/admin/users','/admin/system-health','/admin/settings','/admin/storage'],boundary='后台按能力控制；地址与密钥配置仅允许指定管理能力访问。'),
  module('catalogue','馆藏发现','作品、版本与筛选','feature',['models','edition','nav'],routes=['/explore/original','/works/[slug]']),
  module('viewpoints','观点检索','查询、范围与异步整理','feature',['opinions','discovery-client','discovery-api','discovery-session'],routes=['/explore/opinions','/explore/evidence']),
  module('evidence','原文证据','节选、上下文与页码','feature',['span','projection','evidence-ui'],routes=['/explore/evidence']),
- module('scholars','学者','目录、详情与相关作品','feature',['nav','knowledge'],routes=['/scholars','/scholars/[slug]']),
+ module('scholars','学者','目录、详情与关联作品','feature',['nav','knowledge'],routes=['/scholars','/scholars/[slug]']),
  module('theories','理论与流派','目录、关系图与时间线','feature',['nav','knowledge'],routes=['/theories','/theories/graph','/theories/timeline','/theory-schools']),
  module('topics','主题','主题入口与内容关联','feature',['nav','knowledge'],routes=['/topics','/topics/[slug]']),
  module('curation','特别策划','专刊、文章与网站内容','feature',['editorial','welcome'],routes=['/recommendations','/recommendations/[slug]','/welcome']),
@@ -103,7 +110,7 @@ NODES = [
  module('private-ai','私人研究 API','独立模型能力配置','feature',['ai','progress'],status='partial',note='配置和加密链已实现；最新记录明确尚未配置真实中转、未调用外部模型。'),
  module('intake','收件与编目','上传、识别、去重与版本确认','feature',['ingestion','pipeline'],routes=['/admin/uploads','/admin/intake/[itemId]','/admin/cataloging/[sessionId]']),
  module('processing','文档处理','文本、OCR、目录与任务','feature',['ingestion','ocr','ocr-service','revision'],routes=['/admin/processing']),
- module('outline','自动目录','自动识别与派生 PDF','feature',['outline','outline-export','outline-record'],status='pending',note='最新项目记录已给出两份公开扫描件的全自动书签结果（1 / 38项）。这是已有样本验证记录，本轮未重跑；更多书种与识别质量继续待验收。'),
+ module('outline','自动目录','自动识别与派生 PDF','feature',['outline','outline-export','outline-record'],status='pending',note='最新项目记录已给出 2 份公开扫描件的自动书签结果（1 / 38 项）。这是已有样本验证记录，本轮未重跑；更多书种与识别质量继续待验收。'),
  module('publish','发布与修订','预览、公开、撤回与历史','feature',['publication','publication-check','editorial','knowledge'],routes=['/admin/publication','/admin/welcome','/admin/content']),
  module('identity','身份与能力','会话、读者与管理能力','feature',['permissions','admin-permissions','research'],routes=['/login','/register','/admin/users']),
  module('jobs','异步任务','持久记录与独立工作队列','feature',['queue','discovery-session','ingestion']),
@@ -166,25 +173,44 @@ def main():
   for key in n['sources']: assert key in refs,(n['id'],key)
   for child in n['children']: assert any(x['id']==child for x in NODES)
   n['parent']=next((p['id'] for p in NODES if n['id'] in p['children']),None)
-  n['implementation']='源码已存在' if n['status']=='pending' else '存在明确未闭环项'
+  n['implementation']='源码已存在' if n['status']=='pending' else '存在待接入或待配置项'
  for e in EDGES:
   assert e['source'] in {n['id'] for n in NODES} and e['target'] in {n['id'] for n in NODES}
   assert e['type'] in {'contains','data','navigation','call','uses'}
   assert all(ref in refs for ref in e['sources'])
  data=dict(schemaVersion=1,auditedAt=datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds'),commit=subprocess.check_output(['git','rev-parse','--short','HEAD'],cwd=ROOT,text=True).strip(),
            scope='当前工作区，包含继承的未提交修改。源码检查不等于业务验收。',
-           statuses={'verified':'限定范围已验证','pending':'已实现 · 待验收','partial':'部分实现 / 配置未闭环','planned':'规划 · 未实施'},
+           statuses={'verified':'限定范围已验证','pending':'已实现 · 待验收','partial':'待接入或待配置','planned':'规划 · 未实施'},
            sources=refs,nodes=NODES,edges=EDGES,routes=routes,
            exclusions=['政策研究已暂停，不纳入本轮产品叙事。','RAG / LLMWiki 的后续选择未定，不画成新增已实现能力。','开发预览和兼容路由计入文件清单，不冒充主要产品入口。'],
            runtime=[])
  runtime=HERE/'runtime-evidence.json'
  if runtime.exists(): data['runtime']=json.loads(runtime.read_text('utf-8'))
+ journeys=json.loads((HERE/'journeys.json').read_text('utf-8'))
+ for journey in journeys:
+  for step in journey['steps']:
+   assert step['node'] in {n['id'] for n in NODES}, step['id']
+   assert all(source in refs for source in step['sources']), step['id']
+   assert step['duration'] >= 1000 and step['input'] and step['output'] and step['boundary']
+ data['journeys']=journeys
+ facts=json.loads((HERE/'module-facts.json').read_text('utf-8'))
+ for node_id,fact in facts.items():
+  assert node_id in {n['id'] for n in NODES}
+  assert all(source in refs for source in fact['sources'])
+ data['moduleFacts']=facts
  (HERE/'architecture.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n','utf-8')
  with (HERE/'evidence-index.csv').open('w',encoding='utf-8-sig',newline='') as f:
   w=csv.writer(f); w.writerow(['node_id','module','implementation_status','source_kind','file','line','sha256'])
   for n in NODES:
    for id in n['sources']:
     r=refs[id]; w.writerow([n['id'],n['title'],n['status'],r['kind'],r['file'],r['line'],r['sha256']])
+  for journey in journeys:
+   for step in journey['steps']:
+    for id in step['sources']:
+     r=refs[id]; w.writerow([f"{journey['id']}/{step['id']}",step['label'],'source-reviewed',r['kind'],r['file'],r['line'],r['sha256']])
+  for node_id,fact in facts.items():
+   for id in fact['sources']:
+    r=refs[id]; w.writerow([node_id,'职责与数据记录','source-reviewed',r['kind'],r['file'],r['line'],r['sha256']])
  print(f'{len(NODES)} nodes, {len(EDGES)} typed relations, {len(refs)} references, {len(routes)} route files. Source anchors verified.')
 
 if __name__=='__main__': main()

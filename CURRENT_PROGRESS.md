@@ -1,5 +1,11 @@
 # Social Theory Library 当前进度
 
+## 2026-11-06 架构演示 v2 与 STC 原版备份
+
+ARCHITECTURE-SHOWCASE-02 D：`web/architecture-showcase/` 继续使用 5196。参考 Elicit 同画面动效，新增检索与引用、入库与发布、私人研究 3 条流程、14 个步骤；时间轴控制实际画面，支持暂停续播、拖动定位和阶段重播。每步列出调用、输入输出、字段、权限、失败条件与源码，技术节点增加职责说明。文案按 STC 复核；先保存文案修订后的原版，备份独立运行于 5197，源码、成品和校验清单在 `output/backups/STL-architecture-v1-STC-20261106/` 及同级 ZIP。
+
+77 项定向浏览器检查通过；9 张 4K PNG、110.72 秒 1080p WebM 和新版离线包在 `output/playwright/architecture-showcase-v2/`。源码快照为 43 节点、44 条关系、68 来源锚点、151 路由文件。详 `docs/stl4/ARCHITECTURE_SHOWCASE_V2_20261106.md`。本轮未执行真实业务操作或生产部署，不改变全站 B 验收结论；5274 的另一版展示与继承修改均保留。Git 检查点仅纳入本项文件与记录，不推送。
+
 ## 2026-11-06 目录校准简化、保存下载验证与预览交付
 
 内网Web128（fdfc80c34944）/API62（bb5fd9d5fd26）。OUTLINE-UX-01 D：只保留目录校准，删除候选对比/修订历史/读者预览标签，历史数据不删；跳转文字块改页外三角，修正共享stage裁切后，第五章PDF119页普通及全屏实际看见完整标题和标记。截图output/outline-validation-20261106/admin-outline-simple-r128.jpg、admin-outline-fullscreen-r128.jpg。原真实书未提交编辑。

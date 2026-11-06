@@ -3,7 +3,7 @@ import { mkdir,writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-const here=path.dirname(fileURLToPath(import.meta.url));const out=path.resolve(here,'../../output/playwright/architecture-showcase');
+const here=path.dirname(fileURLToPath(import.meta.url));const out=path.resolve(here,'../../output/playwright/architecture-showcase-v2');
 await mkdir(out,{recursive:true});
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const context=await browser.newContext({viewport:{width:1920,height:1080},acceptDownloads:true});
@@ -11,8 +11,8 @@ const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors
 const external=[];page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:5196')&&!r.url().startsWith('data:')&&!r.url().startsWith('blob:'))external.push(r.url())});
 const results=[];const check=(name,value)=>{assert.ok(value,name);results.push(name);console.log('PASS',name)};
 try{
- await page.goto('http://127.0.0.1:5196/?stage=3',{waitUntil:'networkidle'});await page.evaluate(()=>document.fonts.ready);
- check('presentation renders',await page.locator('h1').innerText()==='以原文为中心，连接整个书库。');
+ await page.goto('http://127.0.0.1:5196/?scene=0&stage=3',{waitUntil:'networkidle'});await page.evaluate(()=>document.fonts.ready);
+ check('presentation renders',await page.locator('h1').innerText()==='书库的功能与协作关系');
  for(let scene=0;scene<6;scene++){
   await page.locator('.scene-nav nav button').nth(scene).click();
   await page.locator('.stage-nav button').last().click();
@@ -28,7 +28,7 @@ try{
  check('detail content stays inside panel',await page.locator('.detail-scroll').evaluate(el=>el.getBoundingClientRect().bottom<=el.closest('.details').getBoundingClientRect().bottom));
  await page.locator('.details').getByRole('button',{name:/观点检索/}).click();check('child drilldown works',(await page.locator('.details h2').innerText())==='观点检索');
  await page.keyboard.press('Escape');check('escape returns global',await page.locator('.details').count()===0);
- await page.getByRole('button',{name:'来源索引',exact:true}).click();await page.getByPlaceholder('搜索模块、路径或源码').fill('discovery.client');check('evidence search works',await page.locator('.evidence-results article').count()>0);
+ await page.getByRole('button',{name:'查看来源',exact:true}).click();await page.getByPlaceholder('搜索模块、路径或源码').fill('discovery.client');check('evidence search works',await page.locator('.evidence-results article').count()>0);
  await page.getByRole('button',{name:'关闭来源索引',exact:true}).click();
  await page.locator('.stage-nav button').first().click();
  await page.getByRole('button',{name:'播放当前场景',exact:true}).click();await page.waitForTimeout(700);await page.getByRole('button',{name:'暂停播放',exact:true}).click();
