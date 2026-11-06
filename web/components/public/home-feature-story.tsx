@@ -6,6 +6,7 @@ import { ArrowRight, BookOpen, Check, FileText, FolderOpen, NotebookPen, Pause, 
 import { BrandImage } from "@/components/brand-image";
 import type { SiteConfig } from "@/lib/site-config";
 import styles from "./home-feature-story.module.css";
+import { EditorialDiscoveryArt, ScholarDiscoveryArt, TheoryDiscoveryArt } from "./welcome-discovery-art";
 
 import { welcomeContent, type WelcomeConfig, type WelcomeCopy, type WelcomeBook as StoryBook, type WelcomeDiscovery } from "@/lib/welcome";
 type BrandConfig = Pick<SiteConfig, "site_name" | "wordmark_lines">;
@@ -97,17 +98,15 @@ function WorkflowDemo({ books, brandConfig, copy, history, discovery }: { books:
       <div className={styles.brandPanel}><BrandImage config={brandConfig} alt="" /></div>
       <div className={`${styles.demoPanel} ${styles.historyPanel}`}>
         <div className={styles.historyHeading}><h2>{history.history_title}</h2><div>{history.history_subjects.split("、").filter(Boolean).slice(0, 3).map(subject => <span key={subject}>{subject}</span>)}</div></div>
-        <div className={styles.collectionHeading}><h3>{history.history_scholars}</h3><ArrowRight size={19} /></div>
-        <DiscoveryView kind="scholars" discovery={discovery} />
+        <ScholarDiscoveryArt discovery={discovery} />
       </div>
       <div className={`${styles.demoPanel} ${styles.theoryPanel}`}>
         <div className={styles.historyHeading}><h2>{history.discovery_theory_title}</h2></div>
-        <div className={styles.collectionHeading}><h3>{history.history_theories}</h3><ArrowRight size={19} /></div>
-        <DiscoveryView kind="theories" discovery={discovery} />
+        <TheoryDiscoveryArt discovery={discovery} />
       </div>
       <div className={`${styles.demoPanel} ${styles.discoveryPanel}`}>
         <div className={styles.historyHeading}><h2>{history.discovery_issue_title}</h2></div>
-        <div className={styles.discoveryPair}><div><div className={styles.collectionHeading}><h3>主题</h3></div><DiscoveryView kind="topics" discovery={discovery} /></div><div><div className={styles.collectionHeading}><h3>特别策划</h3></div><DiscoveryView kind="issue" discovery={discovery} /></div></div>
+        <EditorialDiscoveryArt discovery={discovery} />
       </div>
       <div className={`${styles.demoPanel} ${styles.askPanel}`}>
         <span className={styles.demoEyebrow}><Search size={17} /> 观点检索</span>
