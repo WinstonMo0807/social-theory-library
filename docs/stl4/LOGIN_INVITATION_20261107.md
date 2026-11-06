@@ -28,4 +28,12 @@ FAVICON-01：原 SVG 已为 STL，但 `favicon.ico` 为旧图标。现用已批�
 
 ## 发布状态
 
-代码及正式构建已完成，正在准备 Web 4.0.0-20261107-r2。只更新前端，保留 API、OCR、推理服务、任务队列、数据和其他项目。正式同步和回退证据将在部署读回后补记。
+LOGIN-INVITE-01、LOGIN-LAYOUT-01、FAVICON-01 为 D（本轮实现及下列定向运行核对完成；不代表全站验收）。代码检查点 `8b3d8cbb`。正式 Web 已更新为 `social-theory-library-web:4.0.0-20261107-r2`，镜像 `dea2f146adce0baedb6027303767223b9ac7e0b23531c148d15e51d4262f1391`，容器 `9cfbab1af328`。
+
+2074 个前端构建/图标文件逐项 hash 一致，仅排除启动时按正式环境注入的 runtime-config.js。公网实际核对欢迎无自动弹窗、进入后邀请、右栏切换/暂停、跳过后说明、刷新及再次进入不再提示；真实页面 head 已引用新版 SVG/ICO/Apple 图标。截图 `public-invitation.png`、`public-notice.png`。内网首页和新图标 HTTP 200，与公网同一正式 Web。
+
+NAS 恢复点 `/volume2/library/stl-releases/20261107-r1/login-web-r2-recovery` 保存更新前环境、完整组合命令、解析配置、容器摘要和操作日志。上一版 Web r1 镜像保留。仅 Web 重建，edge 执行 `nginx -t` 通过后的平滑 reload；其余 24 个当时正在运行的容器 ID/StartedAt 均未变化。API/四 worker/beat 仍 r1，所有具有健康检查的正式服务 healthy。数据库、任务、原件、私人资料未改。
+
+还原本次前端：由恢复点 `.env` 恢复 public/.env（0600），用既有完整 compose 命令 `up -d --no-build --pull never --no-deps web`，Web 就绪后 `docker exec social-science-library-edge-1 nginx -s reload`。不执行全栈 down/up 或旧预览启动。
+
+范围限制：本轮实看首页仍显示“暂无公开馆藏”，不能据用户提供的 57 本说明声称这些书已完成公开或检索验收；未擅自发布、清理、重跑 OCR 或索引。此差异留待对应入库批次/公开状态核对，不据推测新增后台修改。

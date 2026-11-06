@@ -1,3 +1,7 @@
+## 2026-11-07 正式前端 r2 回退点
+
+当前Web4.0.0-20261107-r2（dea2f146adce），API/worker/beat r1未改。恢复点/volume2/library/stl-releases/20261107-r1/login-web-r2-recovery包含前Web r1配置与运行摘要。回退仅恢复该点.env到同级public/.env，保留0600，使用public/compose-command.json的完整组合执行up -d --no-build --pull never --no-deps web；就绪后对social-science-library-edge-1执行nginx -s reload。不启动旧预览，不重建其他服务，不动业务卷。详情LOGIN_INVITATION_20261107.md。
+
 ## 2026-11-07 正式上线后的恢复入口
 
 先读 CURRENT_PROGRESS.md 顶部与 PUBLIC_LAUNCH_20261107.md。用户已最终批准且已实际完成示例清理和公网切换，不能重复清理或重建预览业务栈。公网 books.winstonmo.com 与内网 192.168.5.6:18084 同一正式实例；根路径欢迎页，/home 为首页。API/四 Worker/Beat 和 Web 为 4.0.0-20261107-r1；RapidOCR3、既定推理、DOCX 保持。旧预览全部停止。

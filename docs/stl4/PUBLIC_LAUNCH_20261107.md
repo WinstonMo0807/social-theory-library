@@ -1,3 +1,7 @@
+## 2026-11-07 正式前端 r2 已更新
+
+公网和内网继续共用 social-science-library，Web 更新至 4.0.0-20261107-r2（dea2f146adce），源码 8b3d8cbb。加入进入书库后的一次性登录邀请、试用说明和统一图标；2074个构建/图标文件读回一致。API/四worker/beat仍r1，其余24个运行容器未重启，edge仅平滑reload。配置仍为stl-releases/20261107-r1/public完整组合，旧目录stl4-compose.py入口继续有效。前Web r1、准确环境与配置保留于login-web-r2-recovery。详情stl4/LOGIN_INVITATION_20261107.md。
+
 # STL 4.0 正式运营切换包
 
 ## 2026-11-07 已正式上线

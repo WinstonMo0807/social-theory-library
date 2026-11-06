@@ -1,3 +1,7 @@
+## 2026-11-07 正式前端 r2 已更新
+
+公网和内网继续共用 social-science-library，Web 更新至 4.0.0-20261107-r2（dea2f146adce），源码 8b3d8cbb。加入进入书库后的一次性登录邀请、试用说明和统一图标；2074个构建/图标文件读回一致。API/四worker/beat仍r1，其余24个运行容器未重启，edge仅平滑reload。配置仍为stl-releases/20261107-r1/public完整组合，旧目录stl4-compose.py入口继续有效。前Web r1、准确环境与配置保留于login-web-r2-recovery。详情stl4/LOGIN_INVITATION_20261107.md。
+
 ## 2026-11-07 STL 4.0 已正式切换公网
 
 用户最终确认“确认，现在按清单清理并切换公网”后已执行。https://books.winstonmo.com/为欢迎页，/home为书库首页；http://192.168.5.6:18084接同一正式服务。浏览器已核对欢迎→首页、清空后的栏目、访客探索跳转登录、无需邮件验证注册页。API/四Worker/Beat为4.0.0-20261107-r1（d5ad61e3a20a），Web同版（f6de047aed7b）；16个正式容器运行，健康检查正常，预览栈运行数0，旧Paddle停止，回退数据/镜像保留。
