@@ -1,5 +1,11 @@
 # 中断恢复最短路径
 
+## 2026-11-06 目录校准 Web128 / API62
+
+先读CURRENT_PROGRESS顶部、AUTOMATIC_OUTLINE顶部及PREVIEW_DELIVERY_20261106.md。目录已是单一校准界面，标题无遮挡；不要恢复旧候选/历史/读者标签。历史数据保持。保存HTTP/导出函数/下载字节的4项隔离检查通过；真实样书只读看普通和全屏，未提交修正。
+
+活动Web为social-theory-library-web:stl4-preview-20261106-r128（fdfc80c34944ebbee40ad718ab4b70b7e84f52417557587da30afc0418032784），API/四worker/beat保持r62，本轮未重启后端。NAS恢复点outline-calibration-web-r128-recovery保存Web127，outline-calibration-web-r127-recovery保存本批前Web126；恢复只调整Web镜像及所需配置，不整份覆盖.env、不删数据。生产/政策容器未改。两轮清查入口已补，不重开已完成项；邮件只比较、OAuth真实缺口、外围网络和正式恢复/公网批准仍未完成。
+
 ## 2026-11-06 19:12 自动目录 API62 / Web126
 
 先读CURRENT_PROGRESS顶部、AUTOMATIC_OUTLINE_20261106.md、OPEN_LOOPS晚间更新及Git状态。自动目录已开发并部署，不恢复旧的逐本编辑/确认/采用/导出流程。后台纠错保存一次即生效并排下载副本，原人工目录优先。两份公开扫描样本116页已本机OCR并自动输出1/38书签，不重复OCR或导入正式馆藏；地图未定位和OCR拼写准确性仍B。原2404条EG2及既定检索代次不动。

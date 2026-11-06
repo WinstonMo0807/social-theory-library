@@ -1,5 +1,15 @@
 # Social Theory Library 当前进度
 
+## 2026-11-06 目录校准简化、保存下载验证与预览交付
+
+内网Web128（fdfc80c34944）/API62（bb5fd9d5fd26）。OUTLINE-UX-01 D：只保留目录校准，删除候选对比/修订历史/读者预览标签，历史数据不删；跳转文字块改页外三角，修正共享stage裁切后，第五章PDF119页普通及全屏实际看见完整标题和标记。截图output/outline-validation-20261106/admin-outline-simple-r128.jpg、admin-outline-fullscreen-r128.jpg。原真实书未提交编辑。
+
+OUTLINE-SAVE-02 D：冲突后的另存分支原editOutline只存未生效候选，改为差异确认后correctOutline，与正常保存保持一步生效/自动副本。4项隔离定向检查退出0，真实HTTP POST纠错/幂等、实际导出函数、GET下载并重开PDF核对标题/物理页/XY，原件字节不变、同作品/版本和正文身份、旧副本保留、权限拒绝均覆盖。不是本轮NAS实书写入或Celery投递验证；原NAS任务恢复证据沿用。首轮测试已关闭文件句柄复读失败与初次前端编辑语法错误日志保留，修正夹具/语法后通过。类型与构建退出0，无全站测试/OCR/索引重跑。
+
+仅更新Web及其edge，API/其他容器身份/挂载/启动时间不变，生产未改。NAS outline-calibration-web-r127-recovery（前Web126）、outline-calibration-web-r128-recovery（前Web127）保留；最终镜像fdfc80c34944ebbee40ad718ab4b70b7e84f52417557587da30afc0418032784，HTTP200。生成期间默认下载会退回原件/已有OCR版，不能声称保存瞬间就已生成；成功后自动选新书签副本，不创建新出版版本、不改原件及读者笔记。
+
+PREVIEW-DELIVERY-01 D交付：两轮15组清查对应真实入口、当前状态与剩余范围已列docs/stl4/PREVIEW_DELIVERY_20261106.md，补邮件三方案及OAuth官方条件说明。真实私人研究配置页已打开并选中该用途，HTTP密钥门禁正常可见，未保存配置/调用模型。O07暂不配置发信；O12 Apple/Google后端仍缺实现A；O13管理员接入口D/真实中转B；外围网络、最终一致恢复和公网批准仍待完成。用户批注和全站B不扩大，政策工作停止。Git仅本批明确路径与共享进度新增段，继承修改继续保留。
+
 ## 2026-11-06 19:08 独立架构汇报展示完成
 
 ARCHITECTURE-SHOWCASE-01 开发与本展示定向检查 D。独立目录 `web/architecture-showcase/`，本机 `http://127.0.0.1:5196/`；六幕总览/页面/研究流程/技术数据/设计系统/开发证据，复用 STL 标识、字体和现有 React 控件。43 节点、44 类别明确的关系、61 来源锚点、151 路由文件，数据与动画分离。31 项演示检查通过，实际全屏、四档桌面、减少动态效果、节点及子模块、暂停/阶段重播、来源检索与 4K 导出已验证；六张 4K PNG、1080p WebM 和截图位于 `output/playwright/architecture-showcase/`。无业务 API 调用、数据库写入或部署。

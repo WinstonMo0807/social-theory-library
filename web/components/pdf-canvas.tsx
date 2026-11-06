@@ -253,7 +253,7 @@ export function PdfCanvas({
         })}
       </div>
       {navigationTarget?.length === 2 && navigationTarget.every(value => Number.isFinite(value) && value >= 0 && value <= 1) && dimensions.width ?
-        <span className="pdf-navigation-target" role="img" aria-label="目录跳转落点" style={{ position: "absolute", left: `${navigationTarget[0] * 100}%`, top: `${navigationTarget[1] * 100}%`, pointerEvents: "none" }}>跳转位置</span> : null}
+        <span className="pdf-navigation-target" role="img" aria-label="目录跳转落点" style={{ position: "absolute", left: -12, top: `${navigationTarget[1] * 100}%`, pointerEvents: "none" }} /> : null}
       {status ? <p className="pdf-render-status">{status}</p> : null}
       {failure ? (
         <div className="pdf-render-error" role="alert">

@@ -55,7 +55,7 @@ export function OutlinePdfPreview({ asset, ownerId, page, setPage, navigationTar
     {displayError?<p className={styles.caption} role="status">{displayError}</p>:null}
     {error ? <div className={styles.notice} role="alert"><p>{error}</p><button type="button" onClick={() => { setError(""); setAttempt(value => value + 1); }}>重新读取 PDF</button></div> : !url ? <p role="status" className={styles.notice}>正在读取当前文件……</p> :
       page > total && total > 0 ? <p role="alert" className={styles.notice}>所选页超出实际 PDF 页数，请校准节点。</p> :
-        <div className={styles.canvas} data-pdf-canvas><PdfCanvas key={url} url={url} page={page} zoom={zoom} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={onLoad} navigationTarget={navigationTarget} /></div>}
-    {layout!=="ocr"?<p className={styles.caption}>请对照正文确认印刷页码和跳转位置。这里读取当前文件的原始页面。</p>:null}
+        <div className={styles.canvas} data-pdf-canvas data-navigation={Boolean(navigationTarget)}><PdfCanvas key={url} url={url} page={page} zoom={zoom} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={onLoad} navigationTarget={navigationTarget} /></div>}
+    {navigationTarget?<p className={styles.caption}>左侧金色标记对应跳转高度。</p>:null}
   </section>;
 }

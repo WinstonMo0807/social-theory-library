@@ -9,12 +9,13 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from catalog.models import Asset, DocumentRevision
-from catalog.services.document_outline import correct_outline, queue_outline_rebuild, run_outline_job
+from catalog.models import Asset, DocumentRevision, DocumentOutlineRevision
+from catalog.services.document_outline import queue_outline_rebuild, run_outline_job
 from catalog.services.outline_exports import current_download_copy, run_export, queue_download_cloud_copy
 from distribution.views import _download_file_asset
 from ingestion.models import ProcessingJob
 from .test_outline_atlas_20261018 import outline_source  # noqa: F401
+from .v304_helpers import activate_catalog_revision
 
 
 @pytest.mark.django_db
@@ -25,7 +26,7 @@ def test_no_observed_titles_does_not_claim_a_generated_outline(outline_source):
 
 
 @pytest.mark.django_db
-def test_automatic_outline_download_and_correction_preserve_source(outline_source, admin_user):
+def test_automatic_outline_download_and_correction_preserve_source(outline_source, admin_user, settings):
     asset, document, path = outline_source
     original = path.read_bytes()
     with patch("catalog.services.document_outline.dispatch_outline_job"), patch("catalog.services.outline_exports.dispatch_export"):
@@ -48,21 +49,55 @@ def test_automatic_outline_download_and_correction_preserve_source(outline_sourc
     active.nodes[1]["calibration_status"] = "matched"
     active.save(update_fields=["nodes"])
     rows = deepcopy(active.nodes)
-    rows[0].update(title="Corrected chapter", calibration_status="unverified")
+    rows[0].update(title="Corrected chapter", pdf_page=3, normalized_position=[.2, .3],
+                   clear_position=True, calibration_status="unverified")
     request = uuid4()
+    client = APIClient()
+    client.force_authenticate(admin_user)
+    command_url = reverse("admin-asset-outline", kwargs={"asset_id": asset.pk})
+    command = {"action": "correct", "nodes": rows, "base_revision_id": str(active.pk),
+               "expected_revision": active.revision, "request_id": str(request)}
     with patch("catalog.services.outline_exports.dispatch_export"):
-        corrected = correct_outline(asset.pk, nodes=rows, base_revision_id=active.pk,
-            expected_revision=active.revision, actor=admin_user, request_id=request)
-        replay = correct_outline(asset.pk, nodes=rows, base_revision_id=active.pk,
-            expected_revision=active.revision, actor=admin_user, request_id=request)
-    assert replay.pk == corrected.pk and corrected.is_active and not corrected.reviewed
+        response = client.post(command_url, command, format="json")
+        assert response.status_code == 200, response.data
+        corrected = DocumentOutlineRevision.objects.get(pk=response.data["active"]["id"])
+        replay = client.post(command_url, command, format="json")
+    assert replay.status_code == 200 and replay.data["active"]["id"] == str(corrected.pk)
+    assert corrected.is_active and not corrected.reviewed
     assert corrected.nodes[0]["calibration_status"] == "confirmed"
     assert corrected.nodes[1]["calibration_status"] == "matched"
     # The old download is no longer current while the new copy is being built.
     assert current_download_copy(asset) is None
     export = ProcessingJob.objects.get(asset=asset, stats__outline_revision_id=str(corrected.pk))
     run_export(export.pk, task_id=export.task_id)
-    assert current_download_copy(asset).pk != artifact.pk
+    updated_copy = current_download_copy(asset)
+    assert updated_copy.pk != artifact.pk and updated_copy.version == 1
+    # A directory edit creates a new derived PDF, not another edition or OCR revision.
+    assert updated_copy.source_asset_id == asset.pk and updated_copy.edition_id == asset.edition_id
+    assert corrected.document_revision_id == document.pk and asset.document_revisions.count() == 1
+    assert asset.outline_revisions.filter(is_active=True).count() == 1
+    asset.file.open("rb")
+    assert asset.file.read() == original
+    asset.file.close()
+    asset.access_status = "public"
+    asset.save(update_fields=["access_status"])
+    asset.edition.state = "published"
+    asset.edition.save(update_fields=["state"])
+    activate_catalog_revision(asset.edition, reader_asset=asset, document_revision=document)
+    settings.ALLOW_LOCAL_PUBLIC_ASSET_ACCESS = True
+    settings.REQUIRE_CLOUD_FOR_PUBLICATION = False
+    settings.PUBLIC_DEPLOYMENT_MODE = False
+    response = client.get(reverse("asset-file", kwargs={"asset_id": asset.pk}) + "?download=1")
+    assert response.status_code == 200 and response["ETag"] == f'"{updated_copy.sha256}"'
+    assert "no-store" in response["Cache-Control"]
+    downloaded = b"".join(response.streaming_content)
+    with fitz.open(stream=downloaded, filetype="pdf") as pdf:
+        bookmark = pdf.get_toc(simple=False)[0]
+        assert bookmark[:3] == [1, "Corrected chapter", 3]
+        assert abs(bookmark[3]["to"].x / pdf[2].rect.width - .2) < .003
+        assert abs(bookmark[3]["to"].y / pdf[2].rect.height - .3) < .003
+    original_response = client.get(reverse("asset-file", kwargs={"asset_id": asset.pk}) + "?download=original")
+    assert b"".join(original_response.streaming_content) == original
     with patch("catalog.services.document_outline.dispatch_outline_job"), patch("catalog.services.outline_exports.dispatch_export"):
         rebuild = queue_outline_rebuild(asset.pk)
         run_outline_job(rebuild.pk, task_id=rebuild.task_id)

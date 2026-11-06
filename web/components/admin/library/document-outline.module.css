@@ -75,7 +75,10 @@
 .workspace .pdfToolbar button { padding: 3px 5px; min-height: 25px; font-size: 10px; }
 .canvas { background: #f1eee7; height: 470px; overflow: auto; padding: 12px; }
 .canvas :global(.pdf-canvas-stage) { margin: 0 auto; box-shadow: none; }
-.canvas :global(.pdf-navigation-target) { z-index: 4; transform: translate(-2px, -1px); border-top: 2px dashed #a67b3d; border-left: 2px solid #a67b3d; color: #805a29; background: #fffaf0; padding: 2px 6px; font-size: 10px; white-space: nowrap; }
+.canvas[data-navigation="true"] { padding: 12px 16px; }
+.canvas :global(.pdf-navigation-target) { z-index: 4; transform: translateY(-50%); width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid #a67b3d; }
+.canvas[data-navigation="true"] :global(.pdf-canvas-stage) { overflow: visible; }
+.calibrationToolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; }
 .notice { padding: 11px 14px; background: #f8f0df; border: 1px solid #e6d6b8; margin: 12px 0; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .notice button, .notice a { margin-left: 10px; }
 .empty { padding: 28px 12px; color: var(--muted); font-size: 12px; line-height: 1.8; }

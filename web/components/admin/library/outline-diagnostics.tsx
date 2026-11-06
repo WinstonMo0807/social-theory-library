@@ -7,21 +7,18 @@ import styles from "./document-outline.module.css";
 type Props = {
   items: Array<Record<string, unknown>>;
   nodes: EditableOutlineNode[];
-  currentId: string;
   pageCount: number;
   onSelect: (node: EditableOutlineNode) => void;
   onPreview: (page: number) => void;
 };
 
-export function OutlineDiagnostics({ items, nodes, currentId, pageCount, onSelect, onPreview }: Props) {
-  const [onlyCurrent, setOnlyCurrent] = useState(false);
-  const [showOriginal, setShowOriginal] = useState(false);
+export function OutlineDiagnostics({ items, nodes, pageCount, onSelect, onPreview }: Props) {
   const [limit, setLimit] = useState(50);
   const byId = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes]);
-  const rows = useMemo(() => items.filter(item => (showOriginal || item.stage !== "before_automatic_matching") && (!onlyCurrent || !item.node_id || item.node_id === currentId)), [items, onlyCurrent, currentId, showOriginal]);
-  if (!items.length) return null;
-  return <div className={styles.diagnosticPanel}>
-    <header><h3>识别记录 <small>{rows.length} 条</small></h3><label><input type="checkbox" checked={onlyCurrent} onChange={event => { setOnlyCurrent(event.target.checked); setLimit(50); }} />仅当前节点</label><label><input type="checkbox" checked={showOriginal} onChange={event => { setShowOriginal(event.target.checked); setLimit(50); }} />包括匹配前的记录</label></header>
+  const rows = useMemo(() => items.filter(item => item.stage !== "before_automatic_matching" && item.code !== "automatic_outline"), [items]);
+  if (!rows.length) return null;
+  return <details className={styles.diagnosticPanel}>
+    <summary>需要补充的目录</summary>
     <ul className={styles.diagnostics}>{rows.slice(0, limit).map((item, index) => {
       const node = typeof item.node_id === "string" ? byId.get(item.node_id) : undefined;
       const pages = Array.isArray(item.observed_pages) ? [...new Set(item.observed_pages.filter((page): page is number => typeof page === "number" && Number.isInteger(page) && page >= 1 && page <= pageCount))].slice(0, 20) : [];
@@ -35,7 +32,6 @@ export function OutlineDiagnostics({ items, nodes, currentId, pageCount, onSelec
         </div>
       </li>;
     })}</ul>
-    {!rows.length ? <p className={styles.caption}>没有相关记录。</p> : null}
     {rows.length > limit ? <button type="button" onClick={() => setLimit(value => value + 50)}>再显示 50 条（已显示 {Math.min(limit, rows.length)} / {rows.length}）</button> : null}
-  </div>;
+  </details>;
 }

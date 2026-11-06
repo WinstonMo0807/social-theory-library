@@ -1,5 +1,11 @@
 # 开发进度
 
+## 2026-11-06 目录校准与两轮清查交付
+
+内网Web128/API62。目录只保留单一校准工作区，页外金色标记不挡标题，普通/全屏真实截图已核对。保存修正及冲突确认后的保存统一correctOutline；自动生成独立书签下载副本，不改变原件、出版版本、正文或笔记身份。4项隔离定向检查通过，含实际HTTP保存、任务函数、下载字节回读与原件比较；NAS原书只读未编辑。类型/构建退出0。恢复点outline-calibration-web-r127/r128-recovery保留，仅Web/edge更新，后端与生产保持。
+
+两次清查的15组当前状态、内网入口和邮件/OAuth说明见stl4/PREVIEW_DELIVERY_20261106.md；目录具体证据见stl4/AUTOMATIC_OUTLINE_20261106.md。未配置服务、OAuth未实现、外围网络/备份及用户验收仍分别保留，不重新开发B、不混称全部可用。继承修改及其他线程记录保持。
+
 ## 2026-11-06 独立动态架构汇报
 
 ARCHITECTURE-SHOWCASE-01 D：`web/architecture-showcase/` 本机内部演示完成，六幕、模块聚焦、阶段控制、全屏、键盘、减少动态效果、JSON/CSV 来源索引、4K PNG/SVG 和 WebM。43 节点/44 关系/61 锚点/151 路由，31 项定向浏览器检查通过，截图与视频在 `output/playwright/architecture-showcase/`。真实网站仅七个匿名页面观察，业务与生产未改，原全站 B 状态不扩大。自动目录按本文件下方的最新记录同步，未重跑样本。详 `stl4/ARCHITECTURE_SHOWCASE_20261106.md`；其他线程的既有记录与修改保留。
