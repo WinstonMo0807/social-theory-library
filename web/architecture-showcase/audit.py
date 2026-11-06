@@ -11,6 +11,14 @@ from datetime import datetime, timezone, timedelta
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 SOURCES = {
+ 'opinion-entry': ('web/components/opinion-search-entry.tsx','export function OpinionSearchEntry'),
+ 'opinion-client': ('web/lib/api/opinion-entry.client.ts','export async function loadOpinionScope'),
+ 'citation-overlay': ('web/components/shared-citation-overlay.tsx','function Workspace'),
+ 'research-workspace': ('web/components/research/research-session-detail.tsx','function '),
+ 'upload-ui': ('web/components/admin/workflow/upload-batch-view.tsx','export function'),
+ 'upload-policy': ('web/components/admin-upload.tsx','policy:{expected_count:'),
+ 'outline-ui': ('web/components/admin/library/document-outline-workspace.tsx','export function'),
+ 'publication-ui': ('web/components/admin/workflow/publication-review.tsx','export function'),
  'nav': ('web/components/site-header.tsx','const navigation ='),
  'brand': ('web/components/brand-image.tsx','export function BrandImage'),
  'tokens': ('web/styles/tokens/design.css',':root'),
@@ -76,9 +84,10 @@ SOURCES = {
  'compose': ('compose.yaml','  postgres:'),
  'inference': ('api/catalog/services/discovery_inference.py','def '),
  'ai': ('api/common/ai_runtime.py','PRIVATE_RESEARCH ='),
- 'oauth': ('web/components/auth-form.tsx','使用 Apple 登录'),
+ 'oauth': ('web/components/auth-form.tsx','export function AuthForm'),
  'closure': ('docs/stl4/DELIVERY_CLOSURE_20261026.md','206'),
  'progress': ('CURRENT_PROGRESS.md','## 2026-11-06 18:25'),
+ 'account-launch': ('CURRENT_PROGRESS.md','## 2026-11-06 首发账号、免费邮件与统一内网收口'),
 }
 
 def module(id,title,subtitle,kind,refs,children=(),routes=(),status='pending',note='',boundary=''):
@@ -128,7 +137,7 @@ NODES = [
  module('design-controls','基础控件','Button / Input / Dialog','design',['controls','dialog']),
  module('design-shells','共用框架','SiteHeader / AdminShell / ReaderShell','design',['nav','admin','reader-shell']),
  module('design-pages','页面结构','内容浏览、研究工作台与后台','design',['home','evidence-page','research-ui','admin']),
- module('oauth','第三方登录','Apple / Google 入口','feature',['oauth','closure'],status='partial',note='登录按钮已禁用。未发现对应的后端 OAuth 回调代码，暂不能使用。'),
+ module('oauth','第三方登录','Google 后续接入','feature',['oauth','account-launch'],status='planned',note='首发仅用书库账号。项目记录确认 Apple 不接入，Google 后续再接。'),
 ]
 
 # Relations are explicitly classified: a module belongs to a product, navigation
@@ -173,7 +182,7 @@ def main():
   for key in n['sources']: assert key in refs,(n['id'],key)
   for child in n['children']: assert any(x['id']==child for x in NODES)
   n['parent']=next((p['id'] for p in NODES if n['id'] in p['children']),None)
-  n['implementation']='源码已存在' if n['status']=='pending' else '存在待接入或待配置项'
+  n['implementation']='源码已存在' if n['status']=='pending' else '规划未实施' if n['status']=='planned' else '存在待接入或待配置项'
  for e in EDGES:
   assert e['source'] in {n['id'] for n in NODES} and e['target'] in {n['id'] for n in NODES}
   assert e['type'] in {'contains','data','navigation','call','uses'}

@@ -1,10 +1,10 @@
-# STL 架构演示 v2
+# STL 架构演示 v3
 
-用于内部汇报的 6 幕交互式架构展示。使用演示包含检索与引用、入库与发布、私人研究，共 14 步。每步记录操作、输入、输出、接口、字段、权限和失败条件。
+用于内部汇报的 5 幕交互式架构展示。使用演示包含检索与引用、入库与发布、私人研究，共 38 步。每步记录操作、输入、输出、接口、字段、权限和失败条件。
 
 动效参考 Elicit 当前首页的同画面连续操作演示。沿用 STL 已确认的黑金标识、纸白基底及本地 Noto 字体。直接导入 `BrandImage`、`Button` 和 `Dialog`，使用现有 React、esbuild 与 Playwright，无新增 npm 依赖。
 
-展示是独立的本机应用，仅提供静态文件，不执行真实业务操作。服务只监听 `127.0.0.1`。内容包含内部架构和管理路径，仅供内部汇报。
+展示是独立的本机应用，仅提供静态文件，不执行真实业务操作。界面动作依据实际组件重建。文献、页码与成功状态均为示例，原文以线条表示；这些画面不构成业务验收记录。服务只监听 `127.0.0.1`。内容包含内部架构和管理路径，仅供内部汇报。
 
 ## 启动
 
@@ -25,20 +25,19 @@ node web/architecture-showcase/serve.mjs
 
 1. 全站总览：展示 6 个功能领域，点击模块可查看子模块与来源。
 2. 页面地图：按浏览、阅读、私人研究和管理权限组织页面。
-3. 使用演示：在固定界面中连续呈现 3 条流程。操作内容随时间轴变化，右侧同步说明实际模块和数据交接。
-4. 技术与数据：Web、Django、PostgreSQL、Celery/Redis、Meilisearch、模型、OCR 与文件职责。
-5. 设计系统：实际品牌、字体与色值、复用控件、页面组合及匿名首页截图。
-6. 实现与证据：运行观察、已有代码待验收、待配置或待接入能力。
+3. 使用演示：在固定界面中连续呈现 3 条流程。按 20、10、8 步呈现。输入、指针、勾选、排序、加载与回执随时间轴变化。右侧说明每步操作及界面反馈。
+4. 底层架构：Web、Django、PostgreSQL、Celery/Redis、Meilisearch、模型、OCR 与文件职责。
+5. 品牌标识：实际品牌、字体与色值、复用控件、页面组合及匿名首页截图。
 
-默认停在当前阶段。点击“播放流程”后开始播放，暂停后可从当前位置继续。最后一步结束后自动停止。完成后再次播放，会从流程起点开始。拖动进度条可定位；点击阶段名称可显示该步的完整画面。
+默认停在当前阶段。点击“播放流程”后开始播放，暂停后可从当前位置继续。最后一步结束后自动停止。完成后再次播放，会从流程起点开始。拖动进度条可定位；使用底部步骤选择器，可直接显示该步的完整画面。流程下方的分段按钮可跳到对应分段。
 
-点击“查看实现详情”，可查看接口、字段、权限和源码。节点详情中的“实际使用”可跳到对应演示。点击“返回全局”，会关闭详情并显示当前场景的最后阶段。
+点击“查看步骤依据”，可查看本步输入、输出、接口、字段、权限和源码。演示内可操作的按钮只切换展示步骤。节点详情中的“实际使用”可跳到对应演示。点击“返回全局”，会关闭详情并显示当前场景的最后阶段。
 
 | 操作 | 键盘 |
 | --- | --- |
 | 上一阶段 / 下一阶段 | ← / → |
 | 播放 / 暂停 | 空格；选中按钮时，空格执行该按钮操作 |
-| 切换场景 | 1–6 |
+| 切换场景 | 1–5 |
 | 从当前阶段起点重新播放 | R |
 | 全屏 | F |
 | 关闭详情 / 对话框 | Esc |
@@ -54,11 +53,15 @@ node web/architecture-showcase/serve.mjs
 - 导出 SVG：生成内嵌字体与图像的文件，适合浏览器查看。文件使用 `foreignObject`，Office 支持情况可能不同，PPT 宜使用 PNG。
 - 录制演示：选择本展示标签页，再播放或手动切换。停止后下载 WebM 视频。浏览器须支持 `getDisplayMedia` 和 `MediaRecorder`。
 
-新版产物位于 `output/playwright/architecture-showcase-v2/`：6 幕截图、3 条流程的关键步骤、节点详情、全屏截图、`4k/` 中的 9 张 3840×2160 PNG，以及 `video/STL-architecture-v2-1080p.webm`。视频约 111 秒，完整录制 3 条流程，再展示调用详情与其余架构场景。现场网页仍可手动控制节奏。
+新版产物位于 `output/playwright/architecture-showcase-v3/`：5 幕截图、38 个步骤截图、节点详情、全屏截图、`4k/` 中的 11 张 3840×2160 PNG，以及 `video/STL-architecture-v3-1080p.webm`。视频约 3 分钟，完整录制 3 条流程，再展示步骤依据与其余架构场景。现场网页仍可手动控制节奏。
 
-同目录的 `STL-architecture-v2-local-20261106.zip` 包含构建成品、独立 Node 静态服务器、源码、9 张 PPT 图片和视频。解压后运行 `start.cmd`，无需安装 npm 依赖。重新打包使用 `python web/architecture-showcase/package.py`。
+同目录的 `STL-architecture-v3-local-20261106.zip` 包含构建成品、独立 Node 静态服务器、源码、11 张 PPT 图片和视频。解压后运行 `start.cmd`，无需安装 npm 依赖。重新打包使用 `python web/architecture-showcase/package.py`。
 
-## 文案修订后的原版备份
+## 备份
+
+本轮修改前的完整 v2 已保存为 `output/backups/STL-architecture-v2-final-STC-20261106.zip`，保留当时源码、成品、服务器和说明。上一轮 v2 离线包仍在 `output/playwright/architecture-showcase-v2/`。
+
+### 文案修订后的原版
 
 备份目录为 `output/backups/STL-architecture-v1-STC-20261106/`，同级有 ZIP。备份保留原版布局与播放方式，以及第一轮 STC 文案修订。`source/` 保存当时源码，`sha256.json` 记录文件校验值。
 
@@ -71,7 +74,7 @@ node web/architecture-showcase/export-assets.mjs
 node web/architecture-showcase/record.mjs
 ```
 
-这两个脚本使用已安装的 Playwright 和 Microsoft Edge。录制脚本约需 2 分钟，不触发 STL 业务操作。
+这两个脚本使用已安装的 Playwright 和 Microsoft Edge。录制脚本约需 3 分钟，不触发 STL 业务操作。
 
 ## 内容维护
 
@@ -99,7 +102,7 @@ node web/architecture-showcase/build.mjs
 
 提取器按源码中的定位文本查找行号，并保存文件校验值。找不到定位文本时，提取失败。模块、流程和职责说明的来源都写入 CSV 索引。页面路由和组件导入会自动更新，功能是否可用仍须单独验证。
 
-动画时长保存在各步骤的 `duration` 中，单位为毫秒。步骤的 `visual` 选择已有画面类型。事实变更只需更新数据文件；增加新的画面类型时再修改渲染组件。
+动画时长保存在各步骤的 `duration` 中，单位为毫秒。步骤的 `visual` 通过 `visualStates` 选择已有画面，调整步骤顺序不改变画面含义。`chapter` 指定分段，`feedback` 说明界面反馈，`target` 指定演示指针的目标。事实变更只需更新数据文件；增加新的画面类型时再修改渲染组件。
 
 中文按项目此前保存的 STC 规则复核。规则来源为 [STC Simplified Technical Chinese](https://github.com/daimonia-ai/STC-Simplified-Technical-Chinese)，本机副本位于 `tmp/stl4-font-copy-20261029/stc-reference/`。使用 `copy-snapshot.py` 提取 JSON 中的展示文字，避免把 JSON 引号和源码标识当成文案错误。`copy-review.json` 保留机器疑点的语义判断。
 
@@ -125,14 +128,13 @@ node web/architecture-showcase/verify.mjs
 node web/architecture-showcase/verify-journeys.mjs
 ```
 
-两个脚本共通过 77 项检查。报告保存在 `output/playwright/architecture-showcase-v2/` 的 `verification.json` 和 `journey-verification.json`。
+两个脚本共通过 279 项检查。报告保存在 `output/playwright/architecture-showcase-v3/` 的 `verification.json` 和 `journey-verification.json`。
 
 检查覆盖：
 
-- 6 幕布局、14 步流程，以及节点跳转和来源详情。
+- 5 幕布局、38 步流程，以及节点跳转和来源详情。
 - 播放内容变化、暂停续播和进度条定位。
 - 全屏、4 档桌面视口、减少动态效果和 4K 导出。
 
-第二个脚本还会检查 5197 上的原版备份，运行前须启动备份服务。
 
 这些检查只验证展示应用。已保存的网站观察覆盖未登录时的页面显示和 `/explore` 登录跳转。STL 全站业务仍按项目记录验收。自动目录的 2 份样本结果来自已有项目记录，本展示未重跑样本。

@@ -3,23 +3,130 @@
     "id": "discovery",
     "name": "检索与引用",
     "role": "登录读者",
-    "title": "从检索问题到原文引用",
-    "intro": "检索结果保留版本与原文位置，供阅读器和引用接口使用。",
+    "title": "提出问题，核对原文，再形成引用",
+    "intro": "从范围选择到引用下载，逐步呈现界面操作与反馈。",
     "question": "文化与社会环境如何影响人的行为？",
     "steps": [
       {
-        "id": "query",
-        "label": "提交问题",
-        "visual": "search",
-        "duration": 6500,
+        "id": "question",
+        "label": "输入问题",
+        "visual": "question",
+        "duration": 4800,
         "node": "viewpoints",
-        "action": "输入问题，选择检索范围。",
-        "system": "观点检索页保留问题和筛选条件，再转到原文证据页。",
+        "action": "输入要查证的研究问题。",
+        "system": "输入框检查问题长度。选择范围后，问题文字继续保留。",
+        "input": "输入的问题",
+        "output": "待提交的问题",
+        "handoff": "输入的问题 → 待提交的问题",
+        "route": "/explore/opinions",
+        "contract": "setQuery → ready",
+        "records": [
+          "q",
+          "filters"
+        ],
+        "boundary": "探索功能须登录。访客先进入登录页。",
+        "exception": "问题至少需要 2 个字符。限定主题时，须先选择公开主题。",
+        "sources": [
+          "opinion-entry",
+          "opinions"
+        ],
+        "chapter": "确定范围",
+        "feedback": "问题保留在输入框，范围可以单独选择。",
+        "target": "question"
+      },
+      {
+        "id": "scope",
+        "label": "打开范围",
+        "visual": "scope",
+        "duration": 3600,
+        "node": "viewpoints",
+        "action": "选择特定主题，打开范围选项。",
+        "system": "范围选择器按主题读取当前公开条目。",
+        "input": "范围类型 · 主题关键词",
+        "output": "公开主题选项",
+        "handoff": "范围类型 · 主题关键词 → 公开主题选项",
+        "route": "/explore/opinions",
+        "contract": "loadOpinionScope → GET /catalog/search/?context=topics",
+        "records": [
+          "q",
+          "filters"
+        ],
+        "boundary": "探索功能须登录。访客先进入登录页。",
+        "exception": "问题至少需要 2 个字符。限定主题时，须先选择公开主题。",
+        "sources": [
+          "opinion-entry",
+          "opinion-client"
+        ],
+        "chapter": "确定范围",
+        "feedback": "弹窗读取当前公开的主题。",
+        "target": "scope"
+      },
+      {
+        "id": "choose",
+        "label": "选择主题",
+        "visual": "choose",
+        "duration": 4200,
+        "node": "viewpoints",
+        "action": "勾选主题，限定本次检索。",
+        "system": "勾选操作先更新弹窗中的选择，不立即发起检索。",
+        "input": "公开主题标识",
+        "output": "待确认的主题标识",
+        "handoff": "公开主题标识 → 待确认的主题标识",
+        "route": "/explore/opinions",
+        "contract": "ScopePicker → draftSelected",
+        "records": [
+          "q",
+          "filters"
+        ],
+        "boundary": "探索功能须登录。访客先进入登录页。",
+        "exception": "问题至少需要 2 个字符。限定主题时，须先选择公开主题。",
+        "sources": [
+          "opinion-entry",
+          "opinion-client"
+        ],
+        "chapter": "确定范围",
+        "feedback": "已选数量更新，确认按钮可用。",
+        "target": "topic"
+      },
+      {
+        "id": "confirm",
+        "label": "确认范围",
+        "visual": "confirm",
+        "duration": 4200,
+        "node": "viewpoints",
+        "action": "确认所选主题。",
+        "system": "确认后，将主题标识写入本次筛选条件。",
+        "input": "待确认的主题标识",
+        "output": "检索范围标签",
+        "handoff": "待确认的主题标识 → 检索范围标签",
+        "route": "/explore/opinions",
+        "contract": "confirmScope → currentScopes",
+        "records": [
+          "q",
+          "filters"
+        ],
+        "boundary": "探索功能须登录。访客先进入登录页。",
+        "exception": "问题至少需要 2 个字符。限定主题时，须先选择公开主题。",
+        "sources": [
+          "opinion-entry"
+        ],
+        "chapter": "确定范围",
+        "feedback": "弹窗关闭，问题下方显示范围标签。",
+        "target": "confirm"
+      },
+      {
+        "id": "submit",
+        "label": "提交检索",
+        "visual": "submit",
+        "duration": 3600,
+        "node": "viewpoints",
+        "action": "点击搜索，进入原文证据页。",
+        "system": "页面把问题和范围带到结果页，再创建检索会话。",
         "input": "问题 · 筛选条件",
-        "output": "检索请求",
-        "handoff": "观点检索页 → 原文证据页",
+        "output": "结果页地址 · 检索会话",
+        "handoff": "问题 · 筛选条件 → 结果页地址 · 检索会话",
         "route": "/explore/opinions → /explore/evidence",
-        "contract": "POST /catalog/discovery-search/",
+        "contract": "opinionResultHref → createDiscoverySearch",
         "records": [
           "q",
           "filters"
@@ -27,25 +134,27 @@
         "boundary": "探索功能须登录。访客先进入登录页。",
         "exception": "问题过短、过长或筛选条件不符合要求时，接口拒绝创建检索会话。",
         "sources": [
-          "opinions",
-          "discovery-client",
-          "discovery-api",
-          "reader-access"
-        ]
+          "opinion-entry",
+          "discovery-ui",
+          "discovery-client"
+        ],
+        "chapter": "查找材料",
+        "feedback": "页面保留问题与筛选条件，并创建检索会话。",
+        "target": "search"
       },
       {
-        "id": "session",
-        "label": "异步检索",
-        "visual": "queue",
-        "duration": 6000,
+        "id": "running",
+        "label": "查看进度",
+        "visual": "running",
+        "duration": 4800,
         "node": "jobs",
-        "action": "查看进度，等待检索结果。",
-        "system": "数据库先保存检索会话。事务提交后，再由 Celery 执行任务。",
-        "input": "问题 · 范围 · 当前权限",
-        "output": "会话标识 · 任务状态",
-        "handoff": "Django → PostgreSQL → Celery",
+        "action": "查看检索进度。",
+        "system": "会话先写入数据库。事务提交后投递任务，页面读取进度。",
+        "input": "检索会话标识",
+        "output": "排队或处理状态",
+        "handoff": "检索会话标识 → 排队或处理状态",
         "route": "/explore/evidence",
-        "contract": "create_session → on_commit → run_discovery_search",
+        "contract": "readDiscoverySearch → session status",
         "records": [
           "DiscoverySearchSession",
           "generation",
@@ -57,21 +166,24 @@
           "discovery-session",
           "discovery-task",
           "discovery-client"
-        ]
+        ],
+        "chapter": "查找材料",
+        "feedback": "页面从等待状态进入检索状态，已有结果可先阅读。",
+        "target": "progress"
       },
       {
-        "id": "evidence",
-        "label": "查看证据",
-        "visual": "evidence",
-        "duration": 7000,
+        "id": "results",
+        "label": "读取结果",
+        "visual": "results",
+        "duration": 4800,
         "node": "evidence",
-        "action": "查看节选，并展开前后文。",
-        "system": "返回结果前，系统检查来源是否仍可访问。展开前后文时，再按结果标识读取。",
-        "input": "候选段落 · 当前来源状态",
-        "output": "节选 · 版本 · 原文位置",
-        "handoff": "检索结果 → 权限检查 → 原文证据",
+        "action": "阅读返回的原文节选。",
+        "system": "结果返回前，再次检查来源状态与访问权限。",
+        "input": "检索会话 · 结果游标",
+        "output": "可访问的原文节选",
+        "handoff": "检索会话 · 结果游标 → 可访问的原文节选",
         "route": "/explore/evidence",
-        "contract": "GET …/{id}/context/?result_id=…",
+        "contract": "readDiscoverySearch → validate_discovery_results",
         "records": [
           "edition_id",
           "document_revision_id",
@@ -82,25 +194,139 @@
         "boundary": "来源已撤回或账号已无权访问时，旧结果不能继续用作证据。",
         "exception": "正文是否就绪、是否已建立索引分别显示。尚未建立索引，不代表原文中没有匹配内容。",
         "sources": [
-          "projection",
-          "discovery-client",
-          "discovery-api",
+          "discovery-ui",
+          "projection"
+        ],
+        "chapter": "查找材料",
+        "feedback": "结果逐条出现，书目、版本与页码随原文一起显示。",
+        "target": "result"
+      },
+      {
+        "id": "sort",
+        "label": "调整排序",
+        "visual": "sort",
+        "duration": 3600,
+        "node": "evidence",
+        "action": "按出版年份从新到旧排序。",
+        "system": "排序请求复用本次检索会话，不新建问题。",
+        "input": "会话标识 · 排序方式",
+        "output": "重排后的结果",
+        "handoff": "会话标识 · 排序方式 → 重排后的结果",
+        "route": "/explore/evidence",
+        "contract": "sessionAction(\"sort\") → readDiscoverySearch(sort=\"year_desc\")",
+        "records": [
+          "session id",
+          "sort",
+          "passages"
+        ],
+        "boundary": "来源已撤回或账号已无权访问时，旧结果不能继续用作证据。",
+        "exception": "正文是否就绪、是否已建立索引分别显示。尚未建立索引，不代表原文中没有匹配内容。",
+        "sources": [
+          "discovery-ui",
+          "discovery-client"
+        ],
+        "chapter": "查找材料",
+        "feedback": "同一检索会话中的结果重新排列。",
+        "target": "sort"
+      },
+      {
+        "id": "select",
+        "label": "核对来源",
+        "visual": "select",
+        "duration": 3600,
+        "node": "evidence",
+        "action": "选中一条结果，查看证据摘要。",
+        "system": "选中结果后，右侧摘要使用该条结果中的来源信息。",
+        "input": "选中的结果标识",
+        "output": "来源、页码与原文摘要",
+        "handoff": "选中的结果标识 → 来源、页码与原文摘要",
+        "route": "/explore/evidence",
+        "contract": "setSelected → EvidenceSummary",
+        "records": [
+          "selected.id",
+          "asset_id",
+          "pdf_page",
+          "document_revision_id"
+        ],
+        "boundary": "来源已撤回或账号已无权访问时，旧结果不能继续用作证据。",
+        "exception": "正文是否就绪、是否已建立索引分别显示。尚未建立索引，不代表原文中没有匹配内容。",
+        "sources": [
+          "discovery-ui",
           "evidence-ui"
-        ]
+        ],
+        "chapter": "查找材料",
+        "feedback": "右侧展开书目、页码和原文位置。",
+        "target": "result"
+      },
+      {
+        "id": "context",
+        "label": "展开上下文",
+        "visual": "context",
+        "duration": 5200,
+        "node": "evidence",
+        "action": "打开上下文，核对节选前后段落。",
+        "system": "上下文接口按结果标识读取前后段落。",
+        "input": "会话标识 · 结果标识",
+        "output": "前段 · 命中段 · 后段",
+        "handoff": "会话标识 · 结果标识 → 前段 · 命中段 · 后段",
+        "route": "/explore/evidence",
+        "contract": "openContext → readDiscoveryContext → EvidenceContextBody",
+        "records": [
+          "result_id",
+          "blocks",
+          "same_work_results"
+        ],
+        "boundary": "来源已撤回或账号已无权访问时，旧结果不能继续用作证据。",
+        "exception": "正文是否就绪、是否已建立索引分别显示。尚未建立索引，不代表原文中没有匹配内容。",
+        "sources": [
+          "discovery-ui",
+          "discovery-client",
+          "evidence-ui"
+        ],
+        "chapter": "核对原文",
+        "feedback": "先显示读取状态，再显示前段、命中段与后段。",
+        "target": "context"
+      },
+      {
+        "id": "samebook",
+        "label": "查看同书材料",
+        "visual": "samebook",
+        "duration": 4200,
+        "node": "evidence",
+        "action": "查看本次检索中的同书段落。",
+        "system": "展开接口已返回的同书材料，保留各段原文位置。",
+        "input": "同书结果列表",
+        "output": "可切换的同书段落",
+        "handoff": "同书结果列表 → 可切换的同书段落",
+        "route": "/explore/evidence",
+        "contract": "setSameBook → context.same_work_results",
+        "records": [
+          "result_id",
+          "blocks",
+          "same_work_results"
+        ],
+        "boundary": "来源已撤回或账号已无权访问时，旧结果不能继续用作证据。",
+        "exception": "这里只展开本次检索返回的同书材料，不代表书内全部段落。",
+        "sources": [
+          "evidence-ui"
+        ],
+        "chapter": "核对原文",
+        "feedback": "同书材料展开，每段保留所在页码。",
+        "target": "samebook"
       },
       {
         "id": "reader",
-        "label": "定位原文",
+        "label": "打开阅读器",
         "visual": "reader",
-        "duration": 6500,
+        "duration": 4800,
         "node": "pdf",
-        "action": "打开原文，核对版本和页码。",
-        "system": "原文证据提供阅读地址。阅读器按文件、文档版本与页码打开原文。",
-        "input": "阅读地址 · 原文位置",
-        "output": "当前文档版本中的选文",
-        "handoff": "原文证据 → PDF 阅读器",
+        "action": "打开阅读器，回到对应原页。",
+        "system": "结果链接携带文件、页码和原文位置。阅读器先检查登录与访问权限。",
+        "input": "阅读链接 · 原文位置",
+        "output": "指定文件与原文所在页",
+        "handoff": "阅读链接 · 原文位置 → 指定文件与原文所在页",
         "route": "/reader/[assetId]",
-        "contract": "reader_url → ReaderShell",
+        "contract": "discoveryReaderHref → requireReaderSession → ReaderShell",
         "records": [
           "assetId",
           "document_revision_id",
@@ -112,23 +338,81 @@
         "sources": [
           "evidence-ui",
           "reader",
-          "reader-shell",
-          "reader-access"
-        ]
+          "reader-shell"
+        ],
+        "chapter": "核对原文",
+        "feedback": "阅读器读取指定文件，并定位结果所在页。",
+        "target": "reader"
+      },
+      {
+        "id": "locate",
+        "label": "核对位置",
+        "visual": "locate",
+        "duration": 3600,
+        "node": "pdf",
+        "action": "核对 PDF 页码与印刷页码。",
+        "system": "PDF 页序与印刷页码分别保存，用于核对原页。",
+        "input": "页面文本与页码映射",
+        "output": "定位高亮 · 两种页码",
+        "handoff": "页面文本与页码映射 → 定位高亮 · 两种页码",
+        "route": "/reader/[assetId]",
+        "contract": "pagePayloads → printed_label / pageIndex",
+        "records": [
+          "assetId",
+          "document_revision_id",
+          "PDF page",
+          "EvidenceSpan"
+        ],
+        "boundary": "PDF 正文须登录。PDF 页序与书中印刷页码分别记录。",
+        "exception": "原文定位需要可访问的文件与文档版本。再次打开时仍须检查版本。",
+        "sources": [
+          "reader",
+          "reader-shell"
+        ],
+        "chapter": "核对原文",
+        "feedback": "原文位置保持高亮，两个页码分别显示。",
+        "target": "location"
+      },
+      {
+        "id": "selection",
+        "label": "选择原文",
+        "visual": "selection",
+        "duration": 4800,
+        "node": "pdf",
+        "action": "在原页上选择需要引用的文字。",
+        "system": "阅读器保留选文、页码和文档修订，供引用与笔记使用。",
+        "input": "原页上的文字选区",
+        "output": "选文文字 · 页码 · 文档修订",
+        "handoff": "原页上的文字选区 → 选文文字 · 页码 · 文档修订",
+        "route": "/reader/[assetId]",
+        "contract": "selectedText → selectionTools → sharedSource",
+        "records": [
+          "selectedText.quote",
+          "pageIndex",
+          "documentRevisionId"
+        ],
+        "boundary": "PDF 正文须登录。PDF 页序与书中印刷页码分别记录。",
+        "exception": "原文定位需要可访问的文件与文档版本。再次打开时仍须检查版本。",
+        "sources": [
+          "reader-shell"
+        ],
+        "chapter": "形成引用",
+        "feedback": "选区高亮，并出现复制、引用和笔记工具。",
+        "target": "selection"
       },
       {
         "id": "citation",
-        "label": "生成引用",
+        "label": "打开引用",
         "visual": "citation",
-        "duration": 6500,
+        "duration": 4800,
         "node": "citations",
-        "action": "选择格式，复制或下载引用。",
-        "system": "引用接口根据出版版本、原文引用和选文生成预览。",
-        "input": "出版版本 · 原文引用 · 选文",
-        "output": "引用文本或 CSL JSON",
-        "handoff": "阅读器 → 引用预览 → 复制 / 下载",
-        "route": "PDF 阅读器 · 引用面板",
-        "contract": "POST /reading/citation-preview/",
+        "action": "点击引用，核对选文与来源。",
+        "system": "引用接口核对版本和选文的唯一原文位置，再返回来源信息。",
+        "input": "原文引用 · 选文",
+        "output": "经过来源核对的引用预览",
+        "handoff": "原文引用 · 选文 → 经过来源核对的引用预览",
+        "route": "/reader/[assetId]",
+        "contract": "sharedSource → SharedCitationOverlay → previewSharedCitation",
         "records": [
           "edition_id",
           "reference",
@@ -138,10 +422,153 @@
         "boundary": "阅读器须登录。引用预览允许匿名访问，仅使用已公开的内容快照。",
         "exception": "选文须唯一对应原文。原文版本已变化或选文不匹配时，接口拒绝生成预览。",
         "sources": [
-          "citation",
-          "reader-citation",
+          "reader-shell",
+          "citation-overlay",
           "citation-api"
-        ]
+        ],
+        "chapter": "形成引用",
+        "feedback": "引用浮层读取来源，保留选文及原文位置。",
+        "target": "cite"
+      },
+      {
+        "id": "format",
+        "label": "选择格式",
+        "visual": "format",
+        "duration": 3600,
+        "node": "citations",
+        "action": "选择需要的引用格式。",
+        "system": "格式选择改变复制与导出的格式列表，原文位置保持。",
+        "input": "格式选项 · 引用预览",
+        "output": "所选引用格式",
+        "handoff": "格式选项 · 引用预览 → 所选引用格式",
+        "route": "/reader/[assetId]",
+        "contract": "setFormats → citationText",
+        "records": [
+          "formats",
+          "reference",
+          "selected_text"
+        ],
+        "boundary": "阅读器须登录。引用预览允许匿名访问，仅使用已公开的内容快照。",
+        "exception": "选文须唯一对应原文。原文版本已变化或选文不匹配时，接口拒绝生成预览。",
+        "sources": [
+          "citation-overlay",
+          "citation"
+        ],
+        "chapter": "形成引用",
+        "feedback": "格式选项更新，选文和书目来源保持一致。",
+        "target": "format"
+      },
+      {
+        "id": "more",
+        "label": "展开引用操作",
+        "visual": "more",
+        "duration": 3600,
+        "node": "citations",
+        "action": "打开更多操作。",
+        "system": "更多菜单提供单独复制操作，无需同时加入私人研究。",
+        "input": "已核对的引用预览",
+        "output": "复制与格式操作菜单",
+        "handoff": "已核对的引用预览 → 复制与格式操作菜单",
+        "route": "/reader/[assetId]",
+        "contract": "moreActions <details> → copy / setMoreFormats",
+        "records": [
+          "edition_id",
+          "reference",
+          "selected_text",
+          "printed_label"
+        ],
+        "boundary": "阅读器须登录。引用预览允许匿名访问，仅使用已公开的内容快照。",
+        "exception": "选文须唯一对应原文。原文版本已变化或选文不匹配时，接口拒绝生成预览。",
+        "sources": [
+          "citation-overlay"
+        ],
+        "chapter": "形成引用",
+        "feedback": "菜单显示复制引用与更多格式。",
+        "target": "more"
+      },
+      {
+        "id": "copy",
+        "label": "复制引用",
+        "visual": "copy",
+        "duration": 4200,
+        "node": "citations",
+        "action": "复制所选格式的引用。",
+        "system": "复制前再次读取来源，再写入系统剪贴板。",
+        "input": "当前来源 · 所选格式",
+        "output": "引用文本 · 复制反馈",
+        "handoff": "当前来源 · 所选格式 → 引用文本 · 复制反馈",
+        "route": "/reader/[assetId]",
+        "contract": "fresh → citationText → navigator.clipboard.writeText",
+        "records": [
+          "edition_id",
+          "reference",
+          "selected_text",
+          "printed_label"
+        ],
+        "boundary": "阅读器须登录。引用预览允许匿名访问，仅使用已公开的内容快照。",
+        "exception": "浏览器拒绝复制时，浮层提供可手动选择的引用文字。",
+        "sources": [
+          "citation-overlay",
+          "citation-api"
+        ],
+        "chapter": "形成引用",
+        "feedback": "来源重新核对后，页面显示复制结果。",
+        "target": "copy"
+      },
+      {
+        "id": "export",
+        "label": "准备导出",
+        "visual": "export",
+        "duration": 4800,
+        "node": "citations",
+        "action": "导出选定格式。",
+        "system": "每种格式分别准备内容，记录完成或失败状态。",
+        "input": "当前来源 · 格式列表",
+        "output": "每种格式的导出记录",
+        "handoff": "当前来源 · 格式列表 → 每种格式的导出记录",
+        "route": "/reader/[assetId]",
+        "contract": "exportFormats → fresh → citationText",
+        "records": [
+          "ExportRow.format",
+          "ExportRow.state",
+          "ExportRow.text"
+        ],
+        "boundary": "阅读器须登录。引用预览允许匿名访问，仅使用已公开的内容快照。",
+        "exception": "选文须唯一对应原文。原文版本已变化或选文不匹配时，接口拒绝生成预览。",
+        "sources": [
+          "citation-overlay",
+          "citation"
+        ],
+        "chapter": "形成引用",
+        "feedback": "每种格式分别显示准备、完成或失败状态。",
+        "target": "export"
+      },
+      {
+        "id": "download",
+        "label": "下载引用",
+        "visual": "download",
+        "duration": 4200,
+        "node": "citations",
+        "action": "下载已经完成的格式。",
+        "system": "下载前核对来源，已完成的格式分别保存为文件。",
+        "input": "已完成格式 · 当前来源",
+        "output": "引用文件",
+        "handoff": "已完成格式 · 当前来源 → 引用文件",
+        "route": "/reader/[assetId]",
+        "contract": "downloadCompleted → fresh → citationDownload",
+        "records": [
+          "completed formats",
+          "text files"
+        ],
+        "boundary": "阅读器须登录。引用预览允许匿名访问，仅使用已公开的内容快照。",
+        "exception": "只有已完成格式可下载。导出失败的项目可单独重试。",
+        "sources": [
+          "citation-overlay",
+          "citation"
+        ],
+        "chapter": "形成引用",
+        "feedback": "浏览器保存引用文件，失败格式可单独重试。",
+        "target": "download"
       }
     ]
   },
@@ -150,22 +577,22 @@
     "name": "入库与发布",
     "role": "拥有相应权限的馆员",
     "title": "从上传文件到可阅读的馆藏",
-    "intro": "分别检查文件处理、目录生成和发布状态。",
+    "intro": "从上传列表到目录校准，再核对发布和下载状态。",
     "question": "将一份扫描文献加入书库",
     "steps": [
       {
-        "id": "upload",
-        "label": "上传文件",
-        "visual": "upload",
-        "duration": 6000,
+        "id": "file",
+        "label": "选择文件",
+        "visual": "file",
+        "duration": 4200,
         "node": "intake",
-        "action": "上传文件，检查识别结果与重复项。",
-        "system": "入库任务检查文件并保存原件，再建立作品、版本和文件记录。",
-        "input": "上传文件 · 批次处理策略",
-        "output": "上传记录 · 作品 · 版本 · 文件",
-        "handoff": "上传批次 → 入库任务 → 编目",
-        "route": "/admin/uploads → /admin/intake/[itemId]",
-        "contract": "process_upload_item → run_pipeline",
+        "action": "选择 PDF，加入上传列表。",
+        "system": "文件先进入当前浏览器列表。开始上传后才传输到服务器。",
+        "input": "本地 PDF",
+        "output": "待上传文件列表",
+        "handoff": "本地 PDF → 待上传文件列表",
+        "route": "/admin/uploads",
+        "contract": "UploadBatchView.choose → addFiles",
         "records": [
           "UploadItem",
           "Work",
@@ -175,23 +602,84 @@
         "boundary": "上传与编目分别检查管理权限。原件和规范化副本分开保存。",
         "exception": "系统按批次策略处理重复文件。存在冲突时，保留检查结果供馆员处理。",
         "sources": [
+          "upload-ui",
+          "ingestion"
+        ],
+        "chapter": "接收文件",
+        "feedback": "列表显示文件名、大小和待上传状态。",
+        "target": "file"
+      },
+      {
+        "id": "policy",
+        "label": "核对策略",
+        "visual": "policy",
+        "duration": 4200,
+        "node": "intake",
+        "action": "核对文字处理与重复文件策略。",
+        "system": "上传预留请求保存批次策略，后续处理按策略执行。",
+        "input": "文字识别与重复处理选项",
+        "output": "批次处理策略",
+        "handoff": "文字识别与重复处理选项 → 批次处理策略",
+        "route": "/admin/uploads",
+        "contract": "reservation.send → policy.ocr_strategy / duplicate_policy",
+        "records": [
+          "UploadItem",
+          "Work",
+          "Edition",
+          "Asset"
+        ],
+        "boundary": "上传与编目分别检查管理权限。原件和规范化副本分开保存。",
+        "exception": "系统按批次策略处理重复文件。存在冲突时，保留检查结果供馆员处理。",
+        "sources": [
+          "upload-ui",
+          "upload-policy",
+          "pipeline"
+        ],
+        "chapter": "接收文件",
+        "feedback": "当前批次使用所选处理方式。",
+        "target": "policy"
+      },
+      {
+        "id": "upload",
+        "label": "开始上传",
+        "visual": "upload",
+        "duration": 5000,
+        "node": "intake",
+        "action": "开始上传，观察传输进度。",
+        "system": "服务器保存接收记录，后台继续检查原件与重复项。",
+        "input": "文件数据 · 批次策略",
+        "output": "已接收文件 · 后台任务",
+        "handoff": "文件数据 · 批次策略 → 已接收文件 · 后台任务",
+        "route": "/admin/uploads",
+        "contract": "upload → process_upload_item → run_pipeline",
+        "records": [
+          "UploadItem",
+          "Work",
+          "Edition",
+          "Asset"
+        ],
+        "boundary": "上传与编目分别检查管理权限。原件和规范化副本分开保存。",
+        "exception": "系统按批次策略处理重复文件。存在冲突时，保留检查结果供馆员处理。",
+        "sources": [
+          "upload-ui",
           "ingestion",
-          "pipeline",
-          "admin-permissions",
-          "asset"
-        ]
+          "pipeline"
+        ],
+        "chapter": "接收文件",
+        "feedback": "传输完成后，文件进入处理队列。",
+        "target": "upload"
       },
       {
         "id": "processing",
-        "label": "处理正文",
+        "label": "查看处理",
         "visual": "processing",
-        "duration": 6500,
+        "duration": 4800,
         "node": "processing",
-        "action": "查看文字提取与识别进度。",
+        "action": "查看文件检查与文字处理状态。",
         "system": "系统逐页检查文本。需要文字识别（OCR）且批次策略允许时，再提交识别任务。",
         "input": "规范化文件 · 文字识别策略",
         "output": "页面文本 · 文档版本 · 索引",
-        "handoff": "检查文本 → 按需识别 → 准备非公开索引",
+        "handoff": "规范化文件 · 文字识别策略 → 页面文本 · 文档版本 · 索引",
         "route": "/admin/processing",
         "contract": "run_pipeline → queue_ocr_job / index_asset",
         "records": [
@@ -207,21 +695,24 @@
           "ocr",
           "ocr-service",
           "revision"
-        ]
+        ],
+        "chapter": "处理文档",
+        "feedback": "页面区分排队、处理和失败状态。",
+        "target": "processing"
       },
       {
         "id": "outline",
-        "label": "自动目录",
+        "label": "查看目录",
         "visual": "outline",
-        "duration": 6500,
+        "duration": 4200,
         "node": "outline",
-        "action": "查看自动目录，发现错误时修正。",
+        "action": "打开自动生成的目录。",
         "system": "系统识别目录并自动采用可用结果，再将书签写入 PDF 副本。",
         "input": "文档结构 · 标题与页码证据",
         "output": "自动目录 · 带书签的 PDF 副本",
-        "handoff": "文档结构 → 自动目录 → PDF 书签",
-        "route": "管理端 · 文档目录",
-        "contract": "automatic_nodes → outline_exports",
+        "handoff": "文档结构 · 标题与页码证据 → 自动目录 · 带书签的 PDF 副本",
+        "route": "/admin/library/assets/[assetId]/outline",
+        "contract": "run_outline_job → revision.is_active → queue_export",
         "records": [
           "outline revision",
           "automatic result",
@@ -231,24 +722,83 @@
         "exception": "目录识别可能有误。已有 2 份公开文献的样本验证记录，更多书种仍待验收。",
         "sources": [
           "outline",
-          "outline-export",
           "document-outline",
-          "outline-record"
-        ]
+          "outline-ui",
+          "outline-export"
+        ],
+        "chapter": "处理文档",
+        "feedback": "目录树与 PDF 预览显示对应标题和页码。",
+        "target": "outline"
       },
       {
-        "id": "publication",
-        "label": "发布修订",
-        "visual": "publication",
-        "duration": 6500,
+        "id": "correct",
+        "label": "校准位置",
+        "visual": "correct",
+        "duration": 4200,
+        "node": "outline",
+        "action": "有误时，修正标题或页内位置。",
+        "system": "节点编辑保存标题、层级、页码与页内位置。修改先保留在页面。",
+        "input": "目录节点 · 修正内容",
+        "output": "待保存的目录编辑",
+        "handoff": "目录节点 · 修正内容 → 待保存的目录编辑",
+        "route": "/admin/library/assets/[assetId]/outline",
+        "contract": "selectNode → patchNode",
+        "records": [
+          "outline revision",
+          "automatic result",
+          "derived PDF"
+        ],
+        "boundary": "自动结果标明来源。原件、人工修订与历史记录均保留。",
+        "exception": "自动目录可能有误。仅在需要时修正，原文内容保持。",
+        "sources": [
+          "outline-ui"
+        ],
+        "chapter": "处理文档",
+        "feedback": "修改保留在编辑区，PDF 预览显示定位点。",
+        "target": "correct"
+      },
+      {
+        "id": "save",
+        "label": "保存修正",
+        "visual": "save",
+        "duration": 4200,
+        "node": "outline",
+        "action": "保存目录修正。",
+        "system": "保存后，人工修正成为生效目录。后台另行生成带书签的 PDF 副本。",
+        "input": "目录修正 · 当前修订号",
+        "output": "生效目录 · 副本生成任务",
+        "handoff": "目录修正 · 当前修订号 → 生效目录 · 副本生成任务",
+        "route": "/admin/library/assets/[assetId]/outline",
+        "contract": "correctOutline → queue_export",
+        "records": [
+          "outline revision",
+          "automatic result",
+          "derived PDF"
+        ],
+        "boundary": "自动结果标明来源。原件、人工修订与历史记录均保留。",
+        "exception": "保存不等于副本已生成。生成期间，下载仍可能返回原件或已有副本。",
+        "sources": [
+          "outline-ui",
+          "document-outline",
+          "outline-export"
+        ],
+        "chapter": "处理文档",
+        "feedback": "目录修订生效，带书签的 PDF 副本进入生成队列。",
+        "target": "save"
+      },
+      {
+        "id": "review",
+        "label": "核对发布",
+        "visual": "review",
+        "duration": 4200,
         "node": "publish",
-        "action": "查看预览，检查状态后发布。",
-        "system": "系统检查书目、阅读文件和文档修订。发布修订生效后，书目才会公开。",
-        "input": "书目 · 阅读文件 · 文档修订",
-        "output": "生效的发布修订 · 公开状态",
-        "handoff": "发布检查 → 修订生效 → 公开书目",
-        "route": "/admin/publication → /works/[slug]",
-        "contract": "validate_revision → activate_revision",
+        "action": "核对草稿、阅读文件与发布检查。",
+        "system": "发布检查比较当前公开版本与待发布草稿。阻断项须先处理。",
+        "input": "书目草稿 · 阅读文件",
+        "output": "变化清单 · 发布检查",
+        "handoff": "书目草稿 · 阅读文件 → 变化清单 · 发布检查",
+        "route": "/admin/publication/[itemId]",
+        "contract": "PublicationReview → validate_revision",
         "records": [
           "CatalogPublicationRevision",
           "active_catalog_revision",
@@ -258,22 +808,55 @@
         "boundary": "书目公开不表示全文已就绪。作品列表按主版本规则显示。",
         "exception": "系统接收发布请求后，仍须等待修订生效，才能显示为已公开。",
         "sources": [
+          "publication-ui",
           "publication",
-          "publication-state",
-          "publication-check"
-        ]
+          "publication-state"
+        ],
+        "chapter": "发布馆藏",
+        "feedback": "页面分别列出阻断项和提醒。",
+        "target": "review"
+      },
+      {
+        "id": "publish",
+        "label": "等待生效",
+        "visual": "publish",
+        "duration": 5000,
+        "node": "publish",
+        "action": "确认发布，等待正式修订生效。",
+        "system": "发布请求生成正式修订。只有修订生效后，公开状态才改变。",
+        "input": "发布请求 · 当前修订",
+        "output": "生效的发布修订",
+        "handoff": "发布请求 · 当前修订 → 生效的发布修订",
+        "route": "/admin/publication/[itemId]",
+        "contract": "activate_revision → catalog_publication_state",
+        "records": [
+          "CatalogPublicationRevision",
+          "active_catalog_revision",
+          "metadata_ready",
+          "fulltext_ready"
+        ],
+        "boundary": "书目公开不表示全文已就绪。作品列表按主版本规则显示。",
+        "exception": "系统接收发布请求后，仍须等待修订生效，才能显示为已公开。",
+        "sources": [
+          "publication-ui",
+          "publication",
+          "publication-state"
+        ],
+        "chapter": "发布馆藏",
+        "feedback": "先显示发布处理中，生效后才显示已公开。",
+        "target": "publish"
       },
       {
         "id": "download",
         "label": "阅读下载",
         "visual": "download",
-        "duration": 6000,
+        "duration": 4600,
         "node": "storage-ops",
-        "action": "登录后阅读或下载文件。",
+        "action": "登录后打开原文或下载 PDF。",
         "system": "文件接口先检查权限，再按下载规则提供原件或 PDF 副本。",
         "input": "账号会话 · 文件标识",
         "output": "有权访问的 PDF",
-        "handoff": "读者请求 → 权限检查 → 提供文件",
+        "handoff": "账号会话 · 文件标识 → 有权访问的 PDF",
         "route": "/reader/[assetId] · 文件下载",
         "contract": "distribution views → storage",
         "records": [
@@ -288,7 +871,10 @@
           "permissions",
           "outline-export",
           "storage"
-        ]
+        ],
+        "chapter": "发布馆藏",
+        "feedback": "文件接口检查权限，并选择当前可用的下载版本。",
+        "target": "download"
       }
     ]
   },
@@ -297,49 +883,22 @@
     "name": "私人研究",
     "role": "研究记录所属读者",
     "title": "保存研究材料，继续追问",
-    "intro": "项目保存选文、笔记和研究历史。模型服务单独配置。",
+    "intro": "先保存原文与备注，再选择下一轮范围并继续提问。",
     "question": "不同解释分别依赖哪些原文？",
     "steps": [
       {
-        "id": "project",
-        "label": "新建研究",
-        "visual": "project",
-        "duration": 6000,
+        "id": "source",
+        "label": "打开选材",
+        "visual": "source",
+        "duration": 4200,
         "node": "sessions",
-        "action": "新建研究，写下问题与范围。",
-        "system": "项目绑定所属账号。写入时使用请求标识和修订号。",
-        "input": "问题 · 范围 · 请求标识",
-        "output": "本人研究项目",
-        "handoff": "研究页面 → 私人记录接口 → 研究项目",
-        "route": "/account/research",
-        "contract": "ResearchProjectViewSet.create → create_project",
-        "records": [
-          "ResearchProject",
-          "user",
-          "request_id",
-          "revision"
-        ],
-        "boundary": "读者只能访问本人的研究记录。管理身份不会扩大访问范围。",
-        "exception": "修订号不一致时，须先刷新记录，避免覆盖已更新的内容。",
-        "sources": [
-          "research",
-          "research-model",
-          "research-client"
-        ]
-      },
-      {
-        "id": "selection",
-        "label": "保存材料",
-        "visual": "selection",
-        "duration": 6500,
-        "node": "sessions",
-        "action": "选择原文材料，记录阅读笔记。",
-        "system": "项目保存原文引用、版本与位置，并记录材料选择。",
-        "input": "原文引用 · 阅读笔记",
-        "output": "项目材料与笔记",
-        "handoff": "原文证据 → 项目材料 → 阅读笔记",
-        "route": "/account/research/[id]",
-        "contract": "changeResearchSelection → selections",
+        "action": "从原文打开引用、选材与导出。",
+        "system": "引用浮层核对来源，再读取本人未归档的研究项目。",
+        "input": "所选原文 · 原文位置",
+        "output": "引用浮层 · 私人研究列表",
+        "handoff": "所选原文 · 原文位置 → 引用浮层 · 私人研究列表",
+        "route": "/reader/[assetId] · 引用、选材与导出",
+        "contract": "sharedSource → SharedCitationOverlay → projects",
         "records": [
           "references",
           "reference_id",
@@ -348,63 +907,210 @@
         "boundary": "使用材料时须检查来源状态。私人记录不会直接发布到馆藏。",
         "exception": "来源撤回或版本变化时，须重新检查材料是否可用。",
         "sources": [
-          "research-client",
-          "research-selection",
-          "research-model"
-        ]
+          "reader-shell",
+          "citation-overlay"
+        ],
+        "chapter": "保存材料",
+        "feedback": "浮层核对选文位置，显示可选的私人研究。",
+        "target": "cite"
       },
       {
-        "id": "consent",
-        "label": "授权笔记",
-        "visual": "consent",
-        "duration": 6500,
-        "node": "notes",
-        "action": "选择允许用于当前研究的笔记。",
-        "system": "系统只检索本人已确认且已授权的笔记。",
-        "input": "本人笔记 · 授权清单",
-        "output": "本次授权范围内的笔记",
-        "handoff": "本人已确认笔记 → 授权范围 → 笔记检索",
-        "route": "/account/confirmed-notes · 研究设置",
-        "contract": "search_memories(user, allowed_ids, context)",
+        "id": "project",
+        "label": "新建研究",
+        "visual": "project",
+        "duration": 4200,
+        "node": "sessions",
+        "action": "填写研究名称，创建项目。",
+        "system": "创建后将新项目设为保存目标。材料须另行加入。",
+        "input": "研究名称 · 所属账号",
+        "output": "新的私人研究项目",
+        "handoff": "研究名称 · 所属账号 → 新的私人研究项目",
+        "route": "/reader/[assetId] · 引用、选材与导出",
+        "contract": "createResearchProject → setProjectId",
         "records": [
-          "ResearchMemory",
-          "allowed_ids",
+          "ResearchProject",
+          "user",
+          "request_id",
           "revision"
         ],
-        "boundary": "未明确授权笔记时，笔记检索不返回结果。",
-        "exception": "笔记更新或授权撤销后，须重新检查本次可用范围。",
+        "boundary": "读者只能访问本人的研究记录。管理身份不会扩大访问范围。",
+        "exception": "创建研究与加入材料是两个动作。创建成功后仍须点击加入。",
         "sources": [
-          "memory",
-          "research-memory-scope",
+          "citation-overlay",
+          "research-client",
           "research-model"
-        ]
+        ],
+        "chapter": "保存材料",
+        "feedback": "新项目出现在目标列表，材料尚未加入。",
+        "target": "project"
+      },
+      {
+        "id": "note",
+        "label": "添加备注",
+        "visual": "note",
+        "duration": 4200,
+        "node": "sessions",
+        "action": "选择目标研究，填写原文备注。",
+        "system": "目标研究与备注保留在浮层中，点击加入后才会写入。",
+        "input": "目标项目 · 备注",
+        "output": "待保存的材料与备注",
+        "handoff": "目标项目 · 备注 → 待保存的材料与备注",
+        "route": "/reader/[assetId] · 引用、选材与导出",
+        "contract": "setProjectId / setNote → add",
+        "records": [
+          "projectId",
+          "note",
+          "reference"
+        ],
+        "boundary": "使用材料时须检查来源状态。私人记录不会直接发布到馆藏。",
+        "exception": "来源撤回或版本变化时，须重新检查材料是否可用。",
+        "sources": [
+          "citation-overlay"
+        ],
+        "chapter": "保存材料",
+        "feedback": "选文、来源和备注进入待保存内容。",
+        "target": "note"
+      },
+      {
+        "id": "save",
+        "label": "加入研究",
+        "visual": "save",
+        "duration": 4200,
+        "node": "sessions",
+        "action": "加入所选研究并复制引用。",
+        "system": "写入前核对账号与原文来源。请求标识用于处理重复提交。",
+        "input": "项目标识 · 来源位置 · 备注",
+        "output": "已保存选材 · 操作回执",
+        "handoff": "项目标识 · 来源位置 · 备注 → 已保存选材 · 操作回执",
+        "route": "/reader/[assetId] · 引用、选材与导出",
+        "contract": "fresh → assertOwner → changeResearchSelection → copy",
+        "records": [
+          "references",
+          "reference_id",
+          "expected_revision"
+        ],
+        "boundary": "使用材料时须检查来源状态。私人记录不会直接发布到馆藏。",
+        "exception": "重复材料不重复添加。结果不明确时，须沿用原请求核对。",
+        "sources": [
+          "citation-overlay",
+          "research-selection",
+          "research-client"
+        ],
+        "chapter": "保存材料",
+        "feedback": "保存成功后显示结果，并提供撤销入口。",
+        "target": "save"
+      },
+      {
+        "id": "materials",
+        "label": "查看选材",
+        "visual": "materials",
+        "duration": 4200,
+        "node": "sessions",
+        "action": "打开研究，核对当前选材。",
+        "system": "研究页面只读取当前账号所属的项目。每条选材保留原文位置。",
+        "input": "本人研究项目",
+        "output": "已保存选材与备注",
+        "handoff": "本人研究项目 → 已保存选材与备注",
+        "route": "/account/research/[id]",
+        "contract": "useResearchProject → selected → researchEvidenceReference",
+        "records": [
+          "references",
+          "reference_id",
+          "expected_revision"
+        ],
+        "boundary": "使用材料时须检查来源状态。私人记录不会直接发布到馆藏。",
+        "exception": "来源撤回或版本变化时，须重新检查材料是否可用。",
+        "sources": [
+          "research-workspace",
+          "research",
+          "research-selection"
+        ],
+        "chapter": "继续研究",
+        "feedback": "项目显示已保存的原文位置与备注。",
+        "target": "materials"
+      },
+      {
+        "id": "scope",
+        "label": "选择下轮范围",
+        "visual": "scope",
+        "duration": 4200,
+        "node": "private-ai",
+        "action": "将下一轮范围设为仅当前选材。",
+        "system": "范围选择更新下一轮输入。保存范围和发送问题是独立操作。",
+        "input": "当前选材",
+        "output": "下一轮检索范围",
+        "handoff": "当前选材 → 下一轮检索范围",
+        "route": "/account/research/[id]",
+        "contract": "setScopeChoice(\"selected\") → chosenScope",
+        "records": [
+          "scopeChoice",
+          "selected references"
+        ],
+        "boundary": "研究记录归属本人。范围选择决定本轮检索使用的材料。",
+        "exception": "模型配置、服务运行和生成结果仍待验证。",
+        "sources": [
+          "research-workspace",
+          "research-client"
+        ],
+        "chapter": "继续研究",
+        "feedback": "范围说明更新，其他馆藏不自动加入。",
+        "target": "scope"
+      },
+      {
+        "id": "question",
+        "label": "输入追问",
+        "visual": "question",
+        "duration": 4200,
+        "node": "private-ai",
+        "action": "根据已选原文继续提问。",
+        "system": "输入问题不会自动提交，也不会立即调用模型。",
+        "input": "追问 · 下一轮范围",
+        "output": "待发送的问题",
+        "handoff": "追问 · 下一轮范围 → 待发送的问题",
+        "route": "/account/research/[id]",
+        "contract": "setQuestion → submit",
+        "records": [
+          "question",
+          "scope",
+          "parent_id"
+        ],
+        "boundary": "私人研究中转服务尚未配置和实测。",
+        "exception": "模型配置、服务运行和生成结果仍待验证。",
+        "sources": [
+          "research-workspace"
+        ],
+        "chapter": "继续研究",
+        "feedback": "问题保留在输入框，发送是单独的动作。",
+        "target": "question"
       },
       {
         "id": "followup",
-        "label": "继续追问",
+        "label": "核对生成条件",
         "visual": "followup",
-        "duration": 6500,
+        "duration": 5200,
         "node": "private-ai",
-        "action": "继续追问，查看研究历史。",
-        "system": "问题和研究回合保存为私人记录。模型服务使用独立的私人研究配置。",
-        "input": "研究问题 · 已授权材料",
-        "output": "研究回合 · 历史记录",
-        "handoff": "研究项目 → 研究回合 → 历史",
-        "route": "/account/research/[id]/history",
-        "contract": "ResearchTurn · PRIVATE_RESEARCH",
+        "action": "核对模型生成条件。",
+        "system": "私人研究使用独立的模型用途配置，复用既有凭据和资料授权。",
+        "input": "研究问题 · 选材 · 服务配置",
+        "output": "待接通的模型生成能力",
+        "handoff": "研究问题 · 选材 · 服务配置 → 待接通的模型生成能力",
+        "route": "/account/research/[id]",
+        "contract": "submit → createResearchTurn → PRIVATE_RESEARCH",
         "records": [
           "ResearchTurn",
           "ResearchTurnReplayRevision",
           "PRIVATE_RESEARCH"
         ],
-        "boundary": "私人研究中转服务尚未配置和实测。",
-        "exception": "模型配置、服务运行和生成结果仍待验证。",
+        "boundary": "可保存选材与笔记。模型生成仍待接通私人研究服务。",
+        "exception": "演示在配置边界停止，不展示尚未验证的生成答案。",
         "sources": [
-          "research-model",
-          "research-ui",
+          "research-workspace",
           "ai",
           "progress"
-        ]
+        ],
+        "chapter": "继续研究",
+        "feedback": "私人研究中转服务尚未配置和实测。",
+        "target": "followup"
       }
     ]
   }

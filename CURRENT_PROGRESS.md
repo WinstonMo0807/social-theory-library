@@ -1,5 +1,11 @@
 # Social Theory Library 当前进度
 
+## 2026-11-06 架构演示 v3：5 个场景与 38 步操作
+
+ARCHITECTURE-SHOWCASE-04 D：5196 独立展示将“技术与数据”改为“底层架构”，“设计系统”改为“品牌标识”，删除“实现与证据”场景。参考 Elicit 同画面演示，按真实组件重建检索与引用 20 步、入库与发布 10 步、私人研究 8 步。输入、范围、排序、加载、上下文、原页、选文、复制与导出均有可见反馈。增加分段导航及步骤选择器，修正文字间距与弹窗裁切。38 步均保留源码、调用及权限依据。
+
+279 项独立浏览器检查通过；STC 文案 0 错误、4 警告均已语义复核。11 张 4K PNG、186.28 秒 1080p WebM 和离线包在 `output/playwright/architecture-showcase-v3/`。本轮前 v2 完整备份在 `output/backups/STL-architecture-v2-final-STC-20261106.zip`，原 v1/v2 包保留。详 `docs/stl4/ARCHITECTURE_SHOWCASE_V3_20261106.md`。演示文献与操作状态均标为示例，未执行真实业务操作；不扩大全站验收结论。未推送或部署，其他改动保留。
+
 ## 2026-11-06 首发账号、免费邮件与统一内网收口
 
 当前真实内网Web130（ec47cbfbc947）/API63（1c90f0c67e2e），仍为http://192.168.5.6:18084。用户已选首发只用书库账号，Apple不接、Google后补；O12移为C，不再列首发A。共用AuthForm移除第三方占位按钮。D SMTP-CONFIG-01：原settings不读SMTP环境参数；已接Django标准SMTP，保留Brevo/显式backend。4项无外网模拟SMTP检查退出0，覆盖TLS/SSL/凭据传递、未配置门禁及旧后端；未发邮件。免费服务当前官方比较见MAIL_LOGIN_LAUNCH_20261106.md，仍未选定或配置服务商。

@@ -2,15 +2,9 @@
   "version": 1,
   "decisions": [
     {
-      "id": "11c974be16a3669ed3242eb1ffe26792c7cb5cfacee2cab65becb8f38adcd2a6",
+      "id": "aa54811b438b883ab98936b8243c6b1841e8dc7a01cd3cb4c9f9bae7583c2873",
       "decision": "keep",
-      "reason": "演示使用示例问题和原文线条。流程示意标记用于区分演示画面与实际业务结果。"
-    }
-  ],
-  "contextReviews": [
-    {
-      "match": "实现",
-      "reason": "表示源码已存在或指向实现详情，属于软件状态用语。未用于夸大程度。"
+      "reason": "这是内部架构演示，操作状态和文献内容均为示例。删除说明会使观众误认为正在真实检索、复制、发布或写入私人资料；因此保留示例边界。"
     }
   ]
 }
