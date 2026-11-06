@@ -4,29 +4,17 @@ import Link from "next/link";
 import { ArrowRightLeft, ChevronDown, LogOut, Settings, ShieldCheck, UserRound, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { SessionUser } from "@/lib/session";
-import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
-import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
-import type { components } from "@/lib/api/generated/schema";
-import { AccountAvatar } from "./account-avatar";
+import { subscribeToSessionChanges } from "@/lib/api";
+import { SelfAccountAvatar } from "./account-avatar";
 import { Dialog } from "./ui/dialog";
 import styles from "./reader-account-menu.module.css";
 
 export function ReaderAccountMenu({ user, onLogout, onPreferences, pending, error }: { user: SessionUser; onPreferences: () => void; onLogout: () => Promise<void>; pending: boolean; error: string }) {
   const [open, setOpen] = useState(false), [switching, setSwitching] = useState(false);
-  const [avatar, setAvatar] = useState<components["schemas"]["AvatarState"] | null>(null);
   const titleId = useId(), closeButton = useRef<HTMLButtonElement>(null);
   const owner = String(user.id);
-  useEffect(() => {
-    const controller = new AbortController();
-    const off = subscribeToSessionChanges(() => { controller.abort(); setAvatar(null); setOpen(false); });
-    void withPrivateOwner(owner, async () => {
-      const result = await apiRequest<components["schemas"]["AvatarState"]>("/auth/me/avatar/", { headers: { "X-Reader-Owner": owner }, cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]) }, getServerSessionCredential(), false);
-      if (result.owner_id !== owner) throw new PrivateOwnerVerificationError("头像归属已变化。", 403);
-      return result;
-    }, controller.signal).then(value => { if (!controller.signal.aborted) setAvatar(value); }).catch(() => { /* Initials remain available; avatar editing has the full recovery flow. */ });
-    return () => { controller.abort(); off(); };
-  }, [owner, open]);
-  const portrait = <AccountAvatar owner={owner} target={owner} name={user.display_name} revision={avatar?.owner_id === owner && avatar.has_avatar ? avatar.revision : null} />;
+  useEffect(() => subscribeToSessionChanges(() => { setOpen(false); }), [owner]);
+  const portrait = <SelfAccountAvatar owner={owner} name={user.display_name} />;
   const close = () => { if (!pending) { setOpen(false); setSwitching(false); } };
   return <>
     <button className={styles.trigger} type="button" aria-label="打开本人账户菜单" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>{portrait}<ChevronDown size={14} /></button>

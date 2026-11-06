@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiStreamRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { apiRequest, apiStreamRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import styles from "./account-avatar.module.css";
 import { subscribeAvatarUpdates } from "@/lib/avatar-updates";
@@ -16,6 +16,21 @@ export async function readAccountAvatar(owner: string, target: string, signal: A
     if (!blob.size || blob.size > 300 * 1024) throw Error("头像数据不完整，请重新读取。");
     return blob;
   }, signal);
+}
+
+export function SelfAccountAvatar({ owner, name }: { owner: string; name: string }) {
+  const [state, setState] = useState<{ owner_id: string; has_avatar: boolean; revision: number } | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    const off = subscribeToSessionChanges(() => { controller.abort(); setState(null); });
+    void withPrivateOwner(owner, () => apiRequest<{ owner_id: string; has_avatar: boolean; revision: number }>("/auth/me/avatar/", {
+      headers: { "X-Reader-Owner": owner }, cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]),
+    }, getServerSessionCredential(), false), controller.signal).then(value => {
+      if (!controller.signal.aborted && value.owner_id === owner) setState(value);
+    }).catch(() => { /* Keep initials if this optional portrait cannot be loaded. */ });
+    return () => { controller.abort(); off(); };
+  }, [owner]);
+  return <AccountAvatar owner={owner} target={owner} name={name} revision={state?.owner_id === owner && state.has_avatar ? state.revision : null} />;
 }
 
 export function AccountAvatar({ owner, target, revision, name, className = "" }: {
