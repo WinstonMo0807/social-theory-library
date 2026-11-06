@@ -34,9 +34,10 @@ export function GuestTransferProvider({ children }: { children: ReactNode }) {
   return <GuestTransferContext.Provider value={{ locked, setLocked, selected, setSelected, snapshot, importForOwner }}>{children}</GuestTransferContext.Provider>;
 }
 
-export function GuestTransferChoice({ recovery = false }: { recovery?: boolean }) {
+export function GuestTransferChoice({ recovery = false, compact = false }: { recovery?: boolean; compact?: boolean }) {
   const transfer = useGuestTransfer();
   const count = transfer?.snapshot.records.length || 0;
+  if (compact) return count ? <label className="auth-local-choice"><input type="checkbox" checked={transfer?.selected || false} disabled={transfer?.locked} onChange={event => transfer?.setSelected(event.target.checked)} /><span>将本机 {count} 条浏览记录存入我的账户<small>仅转存公开阅读与检索记录，原记录保留。</small></span></label> : null;
   return <section className="auth-local-records"><h3><FolderInput size={20} />本地访客记录</h3>
     <p>{transfer?.snapshot.available === false ? "暂时无法读取本机访客记录，已有内容未更改。" : count ? `我们检测到您在本设备上有 ${count} 条未保存的浏览记录。` : "本设备暂无待转存的访客浏览记录。"}</p>
     {!recovery ? <label className="auth-local-choice"><input type="checkbox" checked={transfer?.selected || false} disabled={!count || transfer?.locked} onChange={event => transfer?.setSelected(event.target.checked)} /><span>登录后将本地访客记录保存到我的账户<small>仅转存本设备的公开阅读与检索记录。原记录保留。</small></span></label> : <small>返回登录页后，可自行选择是否转存。</small>}

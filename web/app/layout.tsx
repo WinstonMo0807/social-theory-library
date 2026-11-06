@@ -43,8 +43,12 @@ export async function generateMetadata(): Promise<Metadata> {
       },
     },
     icons: {
-      icon: "/favicon.svg",
-      shortcut: "/favicon.svg",
+      icon: [
+        { url: "/brand/stl-favicon-20261107.svg", type: "image/svg+xml" },
+        { url: "/favicon.ico?v=stl4-20261107", sizes: "16x16 32x32 48x48", type: "image/x-icon" },
+      ],
+      shortcut: "/favicon.ico?v=stl4-20261107",
+      apple: "/brand/stl-apple-touch-20261107.png",
     },
   };
 }

@@ -147,7 +147,7 @@ export function HomeFeatureStory({ books, closingImage, brandConfig, compareCopy
     <section className={styles.hero} aria-labelledby="welcome-title">
       <div className={styles.heroCopy}>
         {compareCopy ? <div className={styles.copyOptions} id="welcome-copy" role="group" aria-label="欢迎卡片文案方案">{copyOptions.map((option, index) => <button type="button" key={option.id} aria-pressed={copyIndex === index} onClick={() => setCopyIndex(index)}>{option.label}</button>)}</div> : null}
-        <h1 id="welcome-title">{copy.title.map((line, index) => <span key={index}>{line}</span>)}</h1><p>{copy.lead}</p><a href="/home" className={styles.primary}>{texts.enter_label} <ArrowRight size={21} aria-hidden="true" /></a></div>
+        <h1 id="welcome-title">{copy.title.map((line, index) => <span key={index}>{line}</span>)}</h1><p>{copy.lead}</p><a data-library-entry href="/home" className={styles.primary}>{texts.enter_label} <ArrowRight size={21} aria-hidden="true" /></a></div>
       <WorkflowDemo books={books} brandConfig={brandConfig} copy={copy} history={texts} discovery={discovery} />
       <nav className={styles.topicTrail} aria-label="探索书库"><Link href="/scholars">学者</Link><Link href="/theories">理论流派</Link><Link href="/topics">主题</Link><Link href="/explore/original">原文</Link><Link href="/recommendations">特别策划</Link></nav>
     </section>
@@ -174,6 +174,6 @@ export function HomeFeatureStory({ books, closingImage, brandConfig, compareCopy
       <details><summary>{texts.faq_cite_title}<Plus size={20} aria-hidden="true" /></summary><p>{texts.faq_cite_body}</p></details>
       <details><summary>{texts.faq_private_title}<Plus size={20} aria-hidden="true" /></summary><p>{texts.faq_private_body}</p></details>
     </div></section>
-    <section className={styles.closing} aria-labelledby="welcome-enter"><GrainField /><h2 id="welcome-enter">{texts.closing_title}</h2><a href="/home" className={styles.primary}>{texts.enter_label} <ArrowRight size={21} aria-hidden="true" /></a></section>
+    <section className={styles.closing} aria-labelledby="welcome-enter"><GrainField /><h2 id="welcome-enter">{texts.closing_title}</h2><a data-library-entry href="/home" className={styles.primary}>{texts.enter_label} <ArrowRight size={21} aria-hidden="true" /></a></section>
   </div>;
 }
