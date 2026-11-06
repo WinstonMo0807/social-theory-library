@@ -65,7 +65,7 @@ export function LegacyTheoryPublicView({ entity }: { entity: ApiTheorySchool }) 
 
   return <article className={`${styles.page} ${styles.tradition} ${legacyStyles.page}`}>
     <nav className={styles.breadcrumb} aria-label="面包屑">
-      <Link href="/">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>{entity.name}</span>
+      <Link href="/home">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>{entity.name}</span>
     </nav>
     <p className={legacyStyles.editorialNotice}>条目正在整理，已公开资料仍可阅读</p>
     <header className={`${styles.hero} ${legacyStyles.hero}`}>

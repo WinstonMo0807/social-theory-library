@@ -22,7 +22,7 @@ function markerKind(type: string): keyof typeof markerLabels {
 export function TimelineHero({ scope }: { scope?: { name: string; href: string } }) {
   return <header className={styles.hero}>
     <div className={styles.heroCopy}>
-      <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/explore">探索</Link><span>/</span>{scope ? <><Link href={scope.href}>{scope.name}</Link><span>/</span></> : null}<span>学科与概念时间线</span></nav>
+      <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/explore">探索</Link><span>/</span>{scope ? <><Link href={scope.href}>{scope.name}</Link><span>/</span></> : null}<span>学科与概念时间线</span></nav>
       <h1>学科与概念时间线</h1>
 
     </div>

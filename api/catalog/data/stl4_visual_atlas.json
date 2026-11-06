@@ -4,13 +4,13 @@
     "id": "R01-main",
     "module": "首页",
     "title": "首页：从内容进入研究",
-    "route": "/",
+    "route": "/home",
     "implementation_status": "B. 已实现，待验收",
     "visual_gaps": "正式桌面/移动/状态对照未执行；默认与人工编排入口的公开策划头像已接；精确几何和运行状态待核对",
     "implementation_evidence": "web/app/page.tsx；已接入范围与修复记录见notes，不表示全部运行状态通过",
     "unverified_scope": "",
     "must_fix_ids": "",
-    "start_path": "/",
+    "start_path": "/home",
     "route_kind": "page",
     "route_files": [
       "web/app/page.tsx"
@@ -21,13 +21,13 @@
     "id": "R01-sub01",
     "module": "首页",
     "title": "首页下半屏：完整头像与主题大图",
-    "route": "/",
+    "route": "/home",
     "implementation_status": "B. 已实现，待验收",
     "visual_gaps": "正式桌面/移动/状态对照未执行；默认与人工编排入口的公开策划头像已接；精确几何和运行状态待核对",
     "implementation_evidence": "web/app/page.tsx；已接入范围与修复记录见notes，不表示全部运行状态通过",
     "unverified_scope": "",
     "must_fix_ids": "",
-    "start_path": "/",
+    "start_path": "/home",
     "route_kind": "page",
     "route_files": [
       "web/app/page.tsx"
@@ -38,13 +38,13 @@
     "id": "R01-states",
     "module": "首页",
     "title": "首页：从内容进入研究 · 状态",
-    "route": "/",
+    "route": "/home",
     "implementation_status": "B. 已实现，待验收",
     "visual_gaps": "正式桌面/移动/状态对照未执行；默认与人工编排入口的公开策划头像已接；精确几何和运行状态待核对",
     "implementation_evidence": "web/app/page.tsx；已接入范围与修复记录见notes，不表示全部运行状态通过",
     "unverified_scope": "",
     "must_fix_ids": "",
-    "start_path": "/",
+    "start_path": "/home",
     "route_kind": "page",
     "route_files": [
       "web/app/page.tsx"
@@ -146,7 +146,7 @@
     "implementation_evidence": "web/components/site-header.tsx；已接入范围与修复记录见notes，不表示全部运行状态通过",
     "unverified_scope": "",
     "must_fix_ids": "",
-    "start_path": "/",
+    "start_path": "/home",
     "route_kind": "shared",
     "route_files": [
       "web/components/site-header.tsx"

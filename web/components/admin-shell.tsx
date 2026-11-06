@@ -241,7 +241,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         aria-hidden={compactNavigation && !open}
         inert={compactNavigation && !open}
       >
-        <Link className="admin-logo" href="/" prefetch={false}><Wordmark /></Link>
+        <Link className="admin-logo" href="/home" prefetch={false}><Wordmark /></Link>
         <button ref={closeButtonRef} className="admin-mobile-close" type="button" aria-label="关闭后台菜单" onClick={closeNavigation}><X size={19} /></button>
         <nav aria-label="管理工作区">
           {navigationGroups.map(group => <section className="stl4-nav-group" key={group.label} aria-label={group.label}><h2>{group.label}</h2>{group.entries.map(entry => {
@@ -274,7 +274,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </form>
           {!compactWorkHeader ? <AdminWorkNotices key={String(user.id)} /> : null}
           <ThemeToggle />
-          <details className="stl4-admin-account" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label="账户菜单"><span>{user.display_name.slice(0, 1)}</span><ChevronDown size={13} /></summary><div><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small>{compactWorkHeader || manualRoute ? <><Link href="/admin/search">搜索工作与资料</Link><Link href="/admin/review">待办与复核</Link><span className={manualRoute ? "stl4-manual-account-notices" : undefined}><AdminWorkNotices key={String(user.id)} /></span></> : null}<Link href="/account">读者中心与账户</Link><Link href="/">返回前台</Link></div></details>
+          <details className="stl4-admin-account" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label="账户菜单"><span>{user.display_name.slice(0, 1)}</span><ChevronDown size={13} /></summary><div><strong>{user.display_name}</strong><small>{user.role === "admin" ? "管理员" : "编辑"}</small>{compactWorkHeader || manualRoute ? <><Link href="/admin/search">搜索工作与资料</Link><Link href="/admin/review">待办与复核</Link><span className={manualRoute ? "stl4-manual-account-notices" : undefined}><AdminWorkNotices key={String(user.id)} /></span></> : null}<Link href="/account">读者中心与账户</Link><Link href="/home">返回前台</Link></div></details>
         </header> : null}
         <div className="admin-content" key={String(user.id)}>{returnToCuration ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回策展草稿</Link> : null}{returnToToday ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回今日工作</Link> : null}{returnToSearch ? <Link className="admin-curation-return" href={returnHref} prefetch={false}>‹ 返回搜索结果</Link> : null}{canViewRoute(pathname) ? children : <section className="stl4-admin-denied" role="alert"><LockKeyhole size={28} /><h1>当前账户没有此项管理权限</h1><p>你可以返回今日工作，继续处理有权访问的条目。</p><Link href="/admin">返回今日工作</Link><Link href="/feedback?category=usage">申请权限</Link></section>}</div>
       </div>

@@ -89,7 +89,7 @@ def resolve_public_source(raw="", *, scholar_profile_id=None, topic_id=None):
     match = re.fullmatch(r"/(reader|works)/([^/]+)", base)
     if not match:
         # Navigation labels are local product metadata, never caller-supplied titles.
-        labels = {"/": "首页", "/help": "使用帮助与反馈", "/about": "关于书库", "/explore": "探索书库",
+        labels = {"/": "欢迎页", "/welcome": "欢迎页", "/home": "首页", "/help": "使用帮助与反馈", "/about": "关于书库", "/explore": "探索书库",
                   "/help/search": "搜索资料", "/help/reading": "阅读文献", "/help/citation": "引用与导出",
                   "/help/source": "来源说明", "/help/account": "账户与隐私"}
         if base in labels:

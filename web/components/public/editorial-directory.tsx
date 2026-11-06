@@ -75,7 +75,7 @@ export function EditorialDirectoryView({ data, params, error }: { data: Editoria
   const label = (key: string) => key === "topic" ? data?.facets.topics.find(row => [row.id,row.slug].includes(value(key)))?.name || "原主题条件" : key === "theory" ? data?.facets.theories?.find(row => [row.id,row.slug].includes(value(key)))?.name || "原理论条件" : key === "kind" ? data?.facets.kinds.find(row => row.id === value(key))?.label || value(key) : key.startsWith("year") ? `${key === "year_from" ? "起始" : "结束"} ${value(key)} 年` : value(key);
   const submit = (event: ChangeEvent<HTMLSelectElement>) => event.currentTarget.form?.requestSubmit();
   return <main className={styles.directory}>
-    <header className={styles.hero}><nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><span>特别策划</span><span>›</span><span>专题文章索引</span></nav>
+    <header className={styles.hero}><nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><span>特别策划</span><span>›</span><span>专题文章索引</span></nav>
       <div className={styles.heroCopy}><h1>专题文章索引</h1><p className={styles.subtitle}>发现策划文章、阅读专题和原文展览。</p></div>
       <img className={styles.heroImage} src="/editorial/generated-20261030/editorial.webp" alt="" />
       <form id="editorial-filter" action="/recommendations" className={styles.search}><Search size={19} /><input name="q" aria-label="搜索专题文章" placeholder="搜索文章、作者、概念、主题…" defaultValue={q} /><button type="submit">搜索</button>{list ? <input type="hidden" name="layout" value="list" /> : null}</form>

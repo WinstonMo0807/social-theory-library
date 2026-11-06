@@ -11,7 +11,7 @@ import { usePublicSource } from "./feedback-source-card";
 import styles from "./feedback-page-picker.module.css";
 
 export const feedbackPages = [
-  ["/", "首页"], ["/explore", "探索"], ["/explore/original", "原文检索"],
+  ["/", "欢迎页"], ["/home", "首页"], ["/explore", "探索"], ["/explore/original", "原文检索"],
   ["/explore/opinions", "观点检索"], ["/explore/evidence", "观点检索结果"],
   ["/theories", "理论流派"], ["/scholars", "学者"], ["/topics", "主题"],
   ["/recommendations", "特别策划"], ["/help", "使用帮助"], ["/about", "关于书库"],

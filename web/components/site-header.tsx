@@ -48,12 +48,12 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const navigationReturn = usePublicNavigationReturn(`${pathname}${searchParams.size ? `?${searchParams}` : ""}`, menuButtonRef);
   const [menuSearch, setMenuSearch] = useState("");
-  const isActive = (href: string) => href === "/" ? pathname === "/" || pathname === "/layout-preview"
+  const isActive = (href: string) => href === "/home" ? pathname === "/home" || pathname === "/layout-preview"
     : ["/theories/graph", "/theories/timeline"].includes(pathname) || pathname.startsWith("/theories/reading-paths") ? href === "/explore"
     : href === "/theories" ? /^\/(theories|theory-schools|subdisciplines)(\/|$)/.test(pathname)
     : pathname === href || pathname.startsWith(`${href}/`);
   const navigation = [
-    ["/", config.navigation.home],
+    ["/home", config.navigation.home],
     ["/explore", config.navigation.explore],
     ["/theories", config.navigation.theory_schools],
     ["/scholars", config.navigation.scholars],
@@ -138,7 +138,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-stl-privacy={privacyReference}
       data-stl-confirmed-notes={pathname==="/account/confirmed-notes"||undefined}
       data-stl-auth={authRoute ? pathname === "/reset-password" ? "recovery" : "true" : undefined}
-      data-stl-home={pathname === "/" || pathname === "/layout-preview" || preview ? "true" : undefined}
+      data-stl-home={["/", "/welcome", "/home"].includes(pathname) || pathname === "/layout-preview" || preview ? "true" : undefined}
       data-stl-sharing={pathname === "/account/sharing/new" ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : archiveRoute ? "archive" : undefined}
       data-stl-research={pathname === "/account/research" ? "true" : undefined}
@@ -154,7 +154,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       className="site-header site-masthead"
       data-ui-scope="stl4"
     >
-      <Link className="logo-link" href="/" prefetch={false}>
+      <Link className="logo-link" href="/home" prefetch={false}>
         <Wordmark config={config} />
       </Link>
       <nav className="desktop-nav" aria-label={t("主导航")}>
@@ -205,7 +205,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
           <button className="site-menu-backdrop" type="button" aria-label={t("关闭菜单")} onClick={closeMenu} />
           <aside className="site-menu-panel" aria-labelledby="site-menu-title">
             <header className="site-menu-head">
-              <Link href="/" prefetch={false} onClick={closeMenu}><Wordmark config={config} /><span className="sr-only" id="site-menu-title">{t("书库导航")}</span></Link>
+              <Link href="/home" prefetch={false} onClick={closeMenu}><Wordmark config={config} /><span className="sr-only" id="site-menu-title">{t("书库导航")}</span></Link>
               <IconButton ref={closeButtonRef} aria-label={t("关闭菜单")} onClick={closeMenu}>
                 <X size={25} />
               </IconButton>
@@ -271,7 +271,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
             <div className="site-menu-appearance"><DisplayPreferences /></div>
 
             <footer className="site-menu-foot">
-              <span>{user ? `${user.display_name} · ${user.role === "reader" ? t("读者") : t("馆员")}` : t("访客可直接阅读、下载、复制与引用")}</span>
+              <span>{user ? `${user.display_name} · ${user.role === "reader" ? t("读者") : t("馆员")}` : t("登录后可检索、阅读和下载")}</span>
               <Link href="/about" prefetch={false} onClick={closeMenu}>{t("关于书库")}<ArrowUpRight size={14} /></Link>
             </footer>
           </aside>

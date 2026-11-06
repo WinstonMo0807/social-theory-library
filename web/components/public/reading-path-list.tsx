@@ -20,7 +20,7 @@ export function ReadingPathList({ result, filters, error }: { result: ReadingPat
     router.push(`/theories/reading-paths${query.size ? `?${query}` : ""}`);
   }
   return <main className={styles.page}>
-    <header className={`${styles.hero} ${styles.listHero}`}><div><nav aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>阅读路径</span></nav><h1>选择一条阅读路径</h1><p className={styles.heroLead}>从问题和基础出发，按阶段阅读原典。</p></div><picture><source media="(max-width:650px)" srcSet="/visual/stl4/reading-paths/list-hero-mobile-final-r2.png" /><img src="/visual/stl4/reading-paths/list-hero-final-r2.png" alt="" width={678} height={269} /></picture></header>
+    <header className={`${styles.hero} ${styles.listHero}`}><div><nav aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>阅读路径</span></nav><h1>选择一条阅读路径</h1><p className={styles.heroLead}>从问题和基础出发，按阶段阅读原典。</p></div><picture><source media="(max-width:650px)" srcSet="/visual/stl4/reading-paths/list-hero-mobile-final-r2.png" /><img src="/visual/stl4/reading-paths/list-hero-final-r2.png" alt="" width={678} height={269} /></picture></header>
     <form ref={formRef} className={styles.listFilters} action="/theories/reading-paths" method="get" aria-label="筛选阅读路径">
       <label className={styles.search}><Search size={19} /><input name="q" defaultValue={filters.q || ""} placeholder="搜索阅读路径（如：国家、民主、现代性…）" aria-label="搜索阅读路径" maxLength={300} /><button type="submit" aria-label="搜索路径"><ArrowRight size={17} /></button></label>
       <PathTopicPicker value={filters.topic || ""} known={result?.results.flatMap(row => row.topics) || []} onSelect={value => applyChoice("topic", value)} />

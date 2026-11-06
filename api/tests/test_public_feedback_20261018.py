@@ -25,6 +25,9 @@ def command(**changes):
 
 
 @pytest.mark.parametrize(("path", "expected"), [
+    ("/?token=secret", "/"), ("/home?token=secret#section", "/home"),
+    ("/welcome?compare=1", "/welcome"), ("/home/", "/home/"),
+    ("/home/private", ""), ("/welcome/account", ""),
     ("/works/123?token=secret#fragment", "/works/123"),
     ("/reader/81000000-0000-4000-8000-000000000001?page=12&token=secret", "/reader/81000000-0000-4000-8000-000000000001?page=12"),
     ("/reader/abc?page=-1", "/reader/abc"), ("/reader/abc?page=1&page=2", "/reader/abc"),

@@ -71,7 +71,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
     <main className="stl4-catalog-page">
       <section className="stl4-catalog-hero" aria-labelledby="catalog-title">
         <div className="stl4-catalog-hero-copy">
-          <nav aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><Link href="/explore">探索</Link><ChevronRight size={12} /><span>馆藏检索</span></nav>
+          <nav aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><Link href="/explore">探索</Link><ChevronRight size={12} /><span>馆藏检索</span></nav>
           <h1 id="catalog-title">馆藏检索与文献列表</h1>
           <p>按题名、作者、材料类型或年份寻找具体文献，<br />也能转向正文研究。</p>
           <div className="stl4-catalog-query-row"><form className="stl4-catalog-query" onSubmit={submitQuery} action="/explore/original" key={`q:${query}`}>

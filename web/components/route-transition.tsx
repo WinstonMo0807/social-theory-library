@@ -13,7 +13,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
   const pendingTimerRef = useRef<number | null>(null);
   const readerRoute = pathname.startsWith("/reader/");
   const exploreRoute = pathname === "/explore" || pathname.startsWith("/explore/");
-  const atlasRoute = pathname.startsWith("/account/settings/privacy") || /^\/account\/research\/[^/]+\/history$/.test(pathname) || pathname==="/account/collections" || pathname.startsWith("/account/collections/") || pathname==="/account/notes" || pathname.startsWith("/account/notes/") || pathname.startsWith("/account/citation-audits/") || pathname === "/account/confirmed-notes" || pathname==="/account/plans" || /^\/account\/plans\/[^/]+$/.test(pathname) || /^\/account\/research\/[^/]+\/(compare|counter-evidence)$/.test(pathname) || /^\/account\/research\/[^/]+$/.test(pathname) || ["/login","/register","/reset-password","/verify-email"].includes(pathname) || pathname === "/account/research" || pathname === "/account/sharing/new" || pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/recommendations" || pathname.startsWith("/recommendations/") || pathname === "/topics" || pathname.startsWith("/topics/") || pathname === "/scholars" || pathname.startsWith("/scholars/") || pathname.startsWith("/theories/reading-paths") || ["/theories/graph", "/theories/directory", "/theories/timeline"].includes(pathname) || pathname.startsWith("/theories/nodes/") || pathname === "/subdisciplines" || pathname.startsWith("/subdisciplines/") || pathname === "/theories" || pathname === "/theory-schools" || pathname.startsWith("/works/") || pathname === "/" || pathname === "/account" || pathname === "/account/citation-audits" || pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback" || pathname === "/explore/evidence" || pathname === "/explore/opinions" || (pathname === "/explore" && searchParams.size === 0) || (pathname === "/explore/original" && (!searchParams.has("type") || searchParams.get("type") === "catalog"));
+  const atlasRoute = pathname.startsWith("/account/settings/privacy") || /^\/account\/research\/[^/]+\/history$/.test(pathname) || pathname==="/account/collections" || pathname.startsWith("/account/collections/") || pathname==="/account/notes" || pathname.startsWith("/account/notes/") || pathname.startsWith("/account/citation-audits/") || pathname === "/account/confirmed-notes" || pathname==="/account/plans" || /^\/account\/plans\/[^/]+$/.test(pathname) || /^\/account\/research\/[^/]+\/(compare|counter-evidence)$/.test(pathname) || /^\/account\/research\/[^/]+$/.test(pathname) || ["/login","/register","/reset-password","/verify-email"].includes(pathname) || pathname === "/account/research" || pathname === "/account/sharing/new" || pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/recommendations" || pathname.startsWith("/recommendations/") || pathname === "/topics" || pathname.startsWith("/topics/") || pathname === "/scholars" || pathname.startsWith("/scholars/") || pathname.startsWith("/theories/reading-paths") || ["/theories/graph", "/theories/directory", "/theories/timeline"].includes(pathname) || pathname.startsWith("/theories/nodes/") || pathname === "/subdisciplines" || pathname.startsWith("/subdisciplines/") || pathname === "/theories" || pathname === "/theory-schools" || pathname.startsWith("/works/") || pathname === "/home" || pathname === "/account" || pathname === "/account/citation-audits" || pathname === "/about" || pathname === "/help" || pathname.startsWith("/help/") || pathname === "/feedback" || pathname === "/explore/evidence" || pathname === "/explore/opinions" || (pathname === "/explore" && searchParams.size === 0) || (pathname === "/explore/original" && (!searchParams.has("type") || searchParams.get("type") === "catalog"));
   const routeKey = `${pathname}?${searchParams.toString()}`;
   // Presentation only: keep business routing and query contracts unchanged.
   const typeMode = readerRoute ? "reader" : pathname.startsWith("/admin") ? "admin"
@@ -65,7 +65,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
   }, [clearPendingNavigation, routeKey]);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (["/", "/welcome", "/home"].includes(pathname) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const container = containerRef.current;
     if (!container) return;
     const target = pathname.startsWith("/admin")
@@ -91,7 +91,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
       className={`route-content-transition ${readerRoute ? "reader-route" : ""}`}
       data-ui-scope={atlasRoute || readerRoute ? "stl4" : exploreRoute ? "explore-frozen" : "editorial-v2"}
       data-type-mode={typeMode}
-      data-type-section={pathname.split("/")[1] || "home"}
+      data-type-section={pathname.split("/")[1] || "welcome"}
       ref={containerRef}
     >
       {children}

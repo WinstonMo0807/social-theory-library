@@ -360,7 +360,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
     try {
       await logoutCurrentSession(session.user ? String(session.user.id) : undefined);
       finishReaderAction(actionKey, "success", "已退出登录，正在返回书库首页……");
-      router.push("/");
+      router.push("/home");
     } catch (error) {
       finishReaderAction(actionKey, "error", error instanceof Error ? error.message : "退出登录失败。");
     }
@@ -473,7 +473,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
       <div className="account-loading" data-error-category={session.errorCategory}>
         <strong>当前账户不能访问读者中心</strong>
         <p>{session.message}</p>
-        <Link href="/">返回书库首页</Link>
+        <Link href="/home">返回书库首页</Link>
       </div>
     );
   }
@@ -497,7 +497,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   return (
     <div className="reader-center" data-archive={archiveView||undefined}>{archiveView?<aside className="reader-archive-nav"><h2>我的资料</h2><nav aria-label="研究档案导航">{[["/account?view=archive","研究档案"],["/account/notes","我的笔记"],["/account/collections","阅读书单"],["/account/plans","研究计划"],["/account/research","问题列表"],["/account?section=history","最近浏览"]].map(([href,label])=><Link key={href} href={href} aria-current={label==="研究档案"?"page":undefined}>{label==="研究档案"?<FolderClosed size={16}/>:label==="我的笔记"?<StickyNote size={16}/>:label==="阅读书单"?<BookOpen size={16}/>:label==="研究计划"?<CalendarDays size={16}/>:label==="最近浏览"?<Clock3 size={16}/>:<FileText size={16}/>}<span>{label}</span></Link>)}</nav><h2>账号与设置</h2><nav aria-label="账户与资料"><Link href="/account?section=settings"><Settings size={16}/>个人资料</Link><Link href="/account/settings/privacy"><LockKeyhole size={16}/>数据管理</Link></nav></aside>:null}
       <div className="account-content">
-        <nav className="reader-center-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><span>{archiveView?"我的资料与研究档案":"读者中心"}</span></nav>
+        <nav className="reader-center-breadcrumb" aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><span>{archiveView?"我的资料与研究档案":"读者中心"}</span></nav>
         <header className="reader-center-heading">
           <div><h1>{archiveView?"我的资料与研究档案":"读者中心"} {!archiveView?<small className="reader-center-private"><LockKeyhole size={15} />仅本人可见</small>:null}</h1><p>{archiveView?"快速回到自己的研究、笔记、计划、稿件和未完成问题。":"继续阅读，整理笔记与研究。"}</p></div>
           {!archiveView?<div className="reader-center-heading-actions">

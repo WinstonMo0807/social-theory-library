@@ -44,7 +44,7 @@ def safe_public_path(raw):
     path = parts.path
     if any(segment in {".", ".."} for segment in path.split("/")):
         return ""
-    if not re.fullmatch(r"/(?:|(?:explore|works|reader|scholars|topics|theories|theory-schools|subdisciplines|concepts|recommendations|help|about)(?:/[^?#]*)?)", path):
+    if not re.fullmatch(r"/(?:|(?:home|welcome)/?|(?:explore|works|reader|scholars|topics|theories|theory-schools|subdisciplines|concepts|recommendations|help|about)(?:/[^?#]*)?)", path):
         return ""
     if re.fullmatch(r"/reader/[0-9a-fA-F-]+/?", path):
         pages = re.findall(r"(?:^|&)page=([1-9]\d{0,5})(?:&|$)", parts.query)

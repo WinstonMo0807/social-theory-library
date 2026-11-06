@@ -19,7 +19,7 @@ export function safeFeedbackPath(value: string): string {
     const address = decoded.split("#", 1)[0], separator = address.indexOf("?");
     const path = separator === -1 ? address : address.slice(0, separator), query = separator === -1 ? "" : address.slice(separator + 1);
     if (path.split("/").some(part => part === "." || part === "..")) return "";
-    if (!/^\/(?:|(?:explore|works|reader|scholars|topics|theories|theory-schools|subdisciplines|concepts|recommendations|help|about)(?:\/[^?#]*)?)$/.test(path)) return "";
+    if (!/^\/(?:|(?:home|welcome)\/?|(?:explore|works|reader|scholars|topics|theories|theory-schools|subdisciplines|concepts|recommendations|help|about)(?:\/[^?#]*)?)$/.test(path)) return "";
     const pages = query.split("&").filter(part => part.split("=", 1)[0] === "page");
     const page = /^\/reader\/[0-9a-f-]+\/?$/i.test(path) && pages.length === 1 ? pages[0].slice(5) : "";
     return path + (page && /^[1-9]\d{0,5}$/.test(page) ? `?page=${page}` : "");

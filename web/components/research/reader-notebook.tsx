@@ -74,7 +74,7 @@ function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: st
   function open(value: NotebookRecord) { setFocus({ category: value.category, id: value.id }); setPreview(false); }
   function paginate(value: number) { setPage(value); setSelected([]); }
   return <main className={styles.page}>
-    <nav className={styles.crumb} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/account">读者中心</Link><span>›</span><span>笔记、摘录与书签</span></nav>
+    <nav className={styles.crumb} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/account">读者中心</Link><span>›</span><span>笔记、摘录与书签</span></nav>
     <header className={styles.heading}><div><h1>笔记、摘录与书签</h1></div><small><LockKeyhole size={20} /><span>仅本人可见</span></small></header>
 
     {filters.booklist ? <div className={styles.notice}><p>当前范围：这份书单现有作品下的本人记录。移除作品不删除笔记。</p><Link href={`/account/collections/${filters.booklist}?tab=notes`}>返回书单 →</Link><button onClick={() => change("booklist", "")}>查看全部笔记</button></div> : null}

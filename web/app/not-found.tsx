@@ -8,7 +8,7 @@ export default function NotFound() {
       <p>页面可能已下架、改名，或链接不完整。</p>
       <div className="route-state-actions">
         <Link className="button primary" href="/explore">搜索馆藏</Link>
-        <Link className="button secondary" href="/">返回首页</Link>
+        <Link className="button secondary" href="/home">返回首页</Link>
       </div>
     </section>
   );

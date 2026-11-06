@@ -56,7 +56,7 @@ export function AccountActivation() {
     } finally { submitting.current = false; if (!request.signal.aborted) setBusy(false); }
   }
   function submit(event: FormEvent) { event.preventDefault(); void act("activate"); }
-  return <div className="auth-atlas-page" data-mode="login"><nav className="auth-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>›</span><span>激活账户</span></nav>
+  return <div className="auth-atlas-page" data-mode="login"><nav className="auth-breadcrumb" aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><span>激活账户</span></nav>
     <header className="auth-heading"><h1>激活你的账户</h1><p>核对邀请账户，由你设置密码，保存本人的阅读与研究。</p></header>
     <div className="auth-atlas-columns"><div className="auth-panel"><form className="auth-form" onSubmit={submit} aria-busy={busy}>
       <nav className="auth-tabs" aria-label="账户入口"><span aria-current="page">激活账户</span><Link href="/login">登录</Link></nav>
@@ -69,6 +69,6 @@ export function AccountActivation() {
       {error ? <p className="form-message error" role="alert">{error}</p> : null}
       {uncertain ? <p className="field-help">原激活结果待确认，请保留刚才设置的密码。查询或重试不会修改已经生效的密码。</p> : null}
       {result?.state === "activated" ? <Link className="button auth-submit" href="/login?next=%2Faccount">登录并前往读者中心</Link> : <button type="button" disabled={busy} onClick={() => void act("inspect")}>重新核对邀请与激活结果</button>}
-    </form></div><AuthReturnContext destination="/account" /></div><div className="auth-guest"><Link href="/">继续以访客身份浏览</Link><p>访客可浏览公开页面。阅读PDF、下载和检索请先登录。</p></div>
+    </form></div><AuthReturnContext destination="/account" /></div><div className="auth-guest"><Link href="/home">继续以访客身份浏览</Link><p>访客可浏览公开页面。阅读PDF、下载和检索请先登录。</p></div>
   </div>;
 }

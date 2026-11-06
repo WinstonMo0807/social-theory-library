@@ -1,3 +1,4 @@
+import { LibraryEntryTransition } from "@/components/public/library-entry-transition";
 import { HomeFeatureStory } from "@/components/public/home-feature-story";
 import { loadHomeViewData } from "@/lib/api/home.server";
 import { SiteFooterView } from "@/components/public/site-footer-view";
@@ -10,7 +11,7 @@ export const metadata = { title: "欢迎", description: "从社会理论原典�
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ compare?: string }> }) {
   const [home, params] = await Promise.all([loadHomeViewData(), searchParams]);
   const { config, works } = home;
-  return <><HomeFeatureStory
+  return <><LibraryEntryTransition /><HomeFeatureStory
     books={config.welcome?.edition_ids == null ? works.slice(0, 3) : config.welcome_books || []}
     content={config.welcome}
     discovery={welcomeDiscovery(home)}

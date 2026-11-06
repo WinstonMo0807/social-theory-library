@@ -37,7 +37,7 @@ export function VisualReviewWorkspace(){
 }
 
 function Workspace({owner}:{owner:string}){
-  const [page,setPage]=useState(1),[entryId,setEntryId]=useState(""),[pathInput,setPathInput]=useState("/"),[path,setPath]=useState<string|null>("/");
+  const [page,setPage]=useState(1),[entryId,setEntryId]=useState(""),[pathInput,setPathInput]=useState("/home"),[path,setPath]=useState<string|null>("/home");
   const [referenceOpen,setReferenceOpen]=useState(false);
   const [size,setSize]=useState({width:1280,height:800}),[draft,setDraft]=useState<Draft|null>(null),[saved,setSaved]=useState<Draft|null>(null),[version,setVersion]=useState("0");
   const [drawing,setDrawing]=useState(false),[color,setColor]=useState<Stroke["color"]>("#B44C3D"),[active,setActive]=useState<Stroke|null>(null),[message,setMessage]=useState("");

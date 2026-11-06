@@ -15,7 +15,7 @@ import type { HomeLayoutPreview } from "@/lib/api/home.types";
 import { HomeCuratedSection } from "./home-curated-section";
 
 function EmptyDiscovery({ section, children }: { section?: HomeSection; children: ReactNode }) {
-  return <div className="stl4-home-state" role={section?.status === "unavailable" ? "alert" : "status"}><BookOpen size={24} strokeWidth={1} /><p>{section?.status === "unavailable" ? section.message : children}</p>{section?.status === "unavailable" ? <Link href="/">重新加载首页 <ArrowRight size={14} /></Link> : null}</div>;
+  return <div className="stl4-home-state" role={section?.status === "unavailable" ? "alert" : "status"}><BookOpen size={24} strokeWidth={1} /><p>{section?.status === "unavailable" ? section.message : children}</p>{section?.status === "unavailable" ? <Link href="/home">重新加载首页 <ArrowRight size={14} /></Link> : null}</div>;
 }
 
 export function HomeSearch() {

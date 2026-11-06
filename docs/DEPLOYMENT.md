@@ -1,3 +1,7 @@
+## 2026-11-06 欢迎入口候选
+
+当前内网Web131/API64，根路径/为欢迎页，/home为原首页，/welcome为兼容入口。生产books.winstonmo.com未改，最终批准发布该候选时采用同一路由；不需要添加DNS跳转或第二套服务。恢复点welcome-entry-web-r131-recovery、welcome-entry-api-r64-recovery保留旧镜像及受限配置，数据库包尚未独立恢复。不得直接暴露预览组合。详stl4/WELCOME_ENTRY_20261106.md及stl4/CUTOVER_CANDIDATE_20261026.md顶部。
+
 # 部署说明
 
 ## 2026-11-06 账号邮件候选配置

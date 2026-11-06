@@ -50,7 +50,7 @@ function Replay({ id, owner, initialTurn }: { id: string; owner: string; initial
   function refresh() { history.reload(); detail.reload(); setTreeEpoch(value => value + 1); }
   function choose(value: string) { setTurnId(value); setSelected([]); setCompareId(""); }
   return <main className={styles.page}>
-    <nav className={styles.crumb} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/account/research">我的研究</Link><span>›</span><span>研究过程回放</span></nav>
+    <nav className={styles.crumb} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/account/research">我的研究</Link><span>›</span><span>研究过程回放</span></nav>
     <header className={styles.heading}><div><h1>研究过程回放</h1></div><div><button className={styles.primary} disabled={!data || !(data.materials.length + data.evidence.length)} onClick={() => setFork(data)}><GitBranch size={16} />从此分支另开研究</button><Link href={`/account/sharing/new?kind=research&source=${id}`}>分享所选内容</Link><small><LockKeyhole size={12} />仅本人可见 · 明确选择材料</small></div></header>
     {history.error ? <Failure message={history.error} onRetry={history.reload} /> : !timeline ? <p role="status">正在读取研究路径…</p> : <>
       <div className={styles.topnav}><button aria-pressed={tab === "materials"} onClick={() => setTab("materials")}>研究路径</button><button aria-pressed={tab === "notes"} onClick={() => setTab("notes")}>材料与笔记</button><button aria-pressed={tab === "compare"} onClick={() => setTab("compare")}>对比视图</button><button aria-pressed={tab === "snapshots"} onClick={() => setTab("snapshots")}>历史记录</button></div>

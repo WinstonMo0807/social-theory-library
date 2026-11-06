@@ -73,7 +73,7 @@ export function RecommendationIssueView({ issue, preview = false, selectedExhibi
   }
   const toolbar = <><button type="button" onClick={() => setCitations(true)}><Quote size={15} />引用</button><button type="button" className={styles.researchAction} onClick={() => setCitations(true)}><FolderPlus size={15} />加入研究</button><button type="button" onClick={() => void share()}><Share2 size={15} />分享</button>{!preview ? <a href="#article-comments"><MessageSquare size={15}/>评论{commentCount!==null?`（${commentCount}）`:""}</a> : null}</>;
   return <article className={styles.article} data-editorial-kind={selected ? "exhibit" : isExhibition ? "exhibition" : "article"}>
-    <nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/recommendations">特别策划</Link><span>›</span><span>{issue.title}</span></nav>
+    <nav className={styles.breadcrumbs} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/recommendations">特别策划</Link><span>›</span><span>{issue.title}</span></nav>
     {selected ? <section className={styles.exhibitReading}><Link href={base}><ArrowLeft size={15} /> 返回展项</Link><h1>{selected.title}</h1>
       {selected.item?.authors ? <p>{selected.item.authors}</p> : null}{selected.item?.note ? <p>{selected.item.note}</p> : null}
       <nav aria-label="切换展项">{exhibitRows.indexOf(selected) > 0 ? <Link href={`${base}?exhibit=${encodeURIComponent(exhibitRows[exhibitRows.indexOf(selected)-1].id)}`}>上一个展项</Link> : null}{exhibitRows.indexOf(selected) < exhibitRows.length-1 ? <Link href={`${base}?exhibit=${encodeURIComponent(exhibitRows[exhibitRows.indexOf(selected)+1].id)}`}>下一个展项 <ArrowRight size={14} /></Link> : null}</nav>

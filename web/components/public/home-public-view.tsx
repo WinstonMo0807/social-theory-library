@@ -23,7 +23,7 @@ function HomeSectionState({ section, empty }: { section?: HomeSections[keyof Hom
   const failed = section?.status === "unavailable";
   return <div className="stl4-home-state" role={failed ? "alert" : "status"}>
     <BookOpen size={24} strokeWidth={1} aria-hidden="true" /><p>{failed ? section.message : empty}</p>
-    {failed ? <Link href="/">重新加载首页 <ArrowRight size={14} aria-hidden="true" /></Link> : null}
+    {failed ? <Link href="/home">重新加载首页 <ArrowRight size={14} aria-hidden="true" /></Link> : null}
   </div>;
 }
 

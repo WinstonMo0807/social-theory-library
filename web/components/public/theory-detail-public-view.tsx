@@ -90,7 +90,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
   </section>;
 
   return <article data-theory-kind={tradition ? "tradition" : "concept"} className={`${styles.page} ${tradition ? styles.tradition : styles.concept} ${section !== "overview" ? styles.sectionPage : ""}`}>
-    <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>{node.canonical_name_zh}</span></nav>
+    <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>{node.canonical_name_zh}</span></nav>
     <div className={styles.detailGrid}>
     <header className={styles.hero}>
       {!tradition ? <div className={styles.heroMedia}>{heroMedia}</div> : null}

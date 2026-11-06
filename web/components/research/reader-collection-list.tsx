@@ -113,7 +113,7 @@ export function ReaderCollectionList({ kind }: { kind: CollectionKind }) {
   }
   const rows = snapshot.rows;
   return <CollectionFrame>
-    <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><strong>{page.title}</strong></nav>
+    <nav className="stl4-research-breadcrumb" aria-label="面包屑"><Link href="/home">首页</Link><span>/</span><Link href="/account">读者中心</Link><span>/</span><strong>{page.title}</strong></nav>
     <header className="stl4-research-heading"><h1>{page.title}</h1><p>{page.subtitle}</p></header>
     <section className="stl4-research-panel"><ResearchCenterNav active={page.nav} counts={{ [page.nav]: rows.length }} />
       {rows.length ? <div className="stl4-research-list">{rows.map(row => <article className="stl4-research-card" key={row.id}>

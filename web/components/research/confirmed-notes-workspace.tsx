@@ -86,7 +86,7 @@ function MemoryCollection({ ownerId }: { ownerId: string }) {
   }
   if (privateInvalid) return <div className={styles.page}><div className={styles.empty} role="alert"><p>登录账户暂时无法确认，私人内容已收起。</p><button onClick={() => window.location.reload()}>重新验证账户</button></div></div>;
   return <div className={styles.page}><div className={styles.shell} data-inspecting={Boolean(inspect) || undefined}>
-    <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/">首页</Link><ChevronRight size={12} /><Link href="/account">读者中心</Link><ChevronRight size={12} /><span>已确认笔记</span></nav>
+    <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><Link href="/account">读者中心</Link><ChevronRight size={12} /><span>已确认笔记</span></nav>
     <header className={styles.heading}><div><h1>我的已确认笔记</h1><p>由你确认，在选定的研究与阅读计划中使用。</p></div><Link href="/account/notes">查看我的笔记 <ChevronRight size={14} /></Link></header>
     <div className={styles.layout}>
       <aside className={`${styles.sidebar} ${filtersOpen ? styles.showFilters : ""}`}><button className={styles.gold} onClick={() => setCreate(true)}><Plus size={17} />从笔记选择</button>

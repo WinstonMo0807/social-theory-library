@@ -1,3 +1,7 @@
+## 2026-11-06 欢迎入口 Web131 / API64
+
+先读CURRENT_PROGRESS顶部与WELCOME_ENTRY_20261106.md。当前根路径/为欢迎页，原首页/home，/welcome兼容；此为用户新决定，不恢复旧根路径首页。NAS welcome-entry-web-r131-recovery保留前Web130，welcome-entry-api-r64-recovery保留前API63/配置/日志/数据库包，未独立恢复。只按相应镜像键恢复，不覆盖整份环境或删除数据。原账户、批注、目录和OCR/索引不重做；公网仍未切换。
+
 # 中断恢复最短路径
 
 ## 2026-11-06 目录校准 Web128 / API62

@@ -93,5 +93,5 @@ export function AccountEmailLink({ purpose, destination }: { purpose: "password"
 
 export function EmailVerificationPage() {
   const params = useSearchParams(), destination = safeAuthDestination(params.get("next"));
-  return <div className="auth-atlas-page"><nav className="auth-breadcrumb" aria-label="面包屑"><Link href="/">首页</Link><span>›</span><span>验证邮箱</span></nav><header className="auth-heading"><h1>验证邮箱</h1><p>确认邮箱归属，保留账户恢复渠道。</p></header><div className="auth-atlas-columns"><div className="auth-panel"><AccountEmailLink purpose="verify" destination={destination} /></div><AuthReturnContext destination={destination} /></div></div>;
+  return <div className="auth-atlas-page"><nav className="auth-breadcrumb" aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><span>验证邮箱</span></nav><header className="auth-heading"><h1>验证邮箱</h1><p>确认邮箱归属，保留账户恢复渠道。</p></header><div className="auth-atlas-columns"><div className="auth-panel"><AccountEmailLink purpose="verify" destination={destination} /></div><AuthReturnContext destination={destination} /></div></div>;
 }
