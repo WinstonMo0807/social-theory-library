@@ -16,7 +16,7 @@ export function AuthReturnContext({ destination, recovery=false, compact=false }
   return <aside className="auth-context" data-recovery={recovery||undefined} data-compact={compact||undefined}><section><h2>{recovery?"即将返回的任务":"登录后，你将返回"}</h2><AuthReturnCard key={destination} destination={destination} /></section>
     <section className="auth-research-benefits"><h3>保留你的研究内容</h3><p>登录后可以在不同设备继续查看已保存的资料。</p><div className="auth-benefits"><span><Bookmark size={24} /><strong>书签</strong></span><span><NotebookPen size={24} /><strong>笔记</strong></span><span><Clock3 size={24} /><strong>阅读历史</strong></span></div></section>
     <GuestTransferChoice recovery={recovery} />
-    {recovery?<p className="auth-private-note"><LockKeyhole size={17}/><span><strong>安全提示</strong>我们会向您的注册邮箱发送重置链接，链接24小时内有效。若长时间未收到，请检查垃圾邮件或稍后重试。</span></p>:null}
+    {recovery?<p className="auth-private-note"><LockKeyhole size={17}/><span>找回申请只用于核对账户，请勿提供密码、验证码或私人研究内容。</span></p>:null}
   </aside>;
 }
 

@@ -83,7 +83,7 @@ class RegisterView(AuthEntryView):
             requested = False
         return Response({**UserSerializer(user).data, "verification_requested": requested,
             "notice": "账户已创建。验证邮件请求已受理，请在收到链接后24小时内确认。" if requested else
-            "账户已创建，但暂时无法受理验证邮件。你可以登录后重新申请邮箱验证。"}, status=status.HTTP_201_CREATED)
+            "账户已创建。请使用邮箱或用户名和密码登录。"}, status=status.HTTP_201_CREATED)
 
 
 class LoginView(AuthEntryView):

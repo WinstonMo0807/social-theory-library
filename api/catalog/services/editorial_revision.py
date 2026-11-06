@@ -1783,7 +1783,12 @@ def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=
     if hasattr(target, "reviewed_by") and next_status == "published":
         target.reviewed_by = actor
     try:
-        target.full_clean()
+        # A status-only withdrawal must also work for imported legacy URLs.
+        # Keep the stored URL; edits and all publications still validate it.
+        withdrawal_only = (previous_status in {"published", "approved"}
+            and next_status in {"archived", "rejected"}
+            and set(patch) in ({"status"}, {"editorial_status"}, {"review_status"}))
+        target.full_clean(exclude=["slug"] if withdrawal_only else None)
     except ValidationError as exc:
         message = "；".join(
             f"{field}: {','.join(messages)}"
