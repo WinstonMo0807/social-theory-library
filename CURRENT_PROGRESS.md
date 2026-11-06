@@ -1,5 +1,11 @@
 # Social Theory Library 当前进度
 
+## 2026-11-06 架构演示全部文案复核完成
+
+ARCHITECTURE-SHOWCASE-03 D：5196 展示按 STC 复核 6 幕、14 步、43 节点、8 组服务职责及全部操作文字，连同浏览器标题、帮助、导出提示和启动说明统一修订。源码标识、接口、权限和验证范围保留。展示文案检查退出 0，7 个警告均已作语义复核；独立构建和原有 77 项浏览器检查通过。9 张 4K PNG、111.96 秒 1080p WebM、离线包同步更新。
+
+详 `docs/stl4/ARCHITECTURE_SHOWCASE_V2_20261106.md` 顶部。原版 5197 备份不变，修改前 v2 包另存 `output/backups/STL-architecture-v2-before-full-copy-20261106.zip`。本轮仅改独立展示文案与交付记录，未改业务服务、动画行为或生产部署，继承修改保留。
+
 ## 2026-11-06 架构演示 v2 与 STC 原版备份
 
 ARCHITECTURE-SHOWCASE-02 D：`web/architecture-showcase/` 继续使用 5196。参考 Elicit 同画面动效，新增检索与引用、入库与发布、私人研究 3 条流程、14 个步骤；时间轴控制实际画面，支持暂停续播、拖动定位和阶段重播。每步列出调用、输入输出、字段、权限、失败条件与源码，技术节点增加职责说明。文案按 STC 复核；先保存文案修订后的原版，备份独立运行于 5197，源码、成品和校验清单在 `output/backups/STL-architecture-v1-STC-20261106/` 及同级 ZIP。

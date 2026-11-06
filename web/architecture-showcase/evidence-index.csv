@@ -55,7 +55,7 @@ plans,阅读计划,pending,source,api/reading/research_views.py,98,3ffc710a70bb2
 audits,引文体检,pending,source,web/app/account/citation-audits/page.tsx,1,44320d3e1f742cc5e9a0c203b8f8d42e1f66bbd4028b0ad551aebd3597450cd5
 audits,引文体检,pending,source,api/reading/research_views.py,98,3ffc710a70bb298e8575a30d7de341e33f8aa2d48f35e61730091695ad49f513
 private-ai,私人研究 API,partial,source,api/common/ai_runtime.py,17,2de960d163982fc0295878fdaa3b5180434a090a928b0895be732e3895d6c873
-private-ai,私人研究 API,partial,record,CURRENT_PROGRESS.md,43,f0333b2408c90bd81b740129a6af9aaf9777bddf0f511aa60159368939be4ade
+private-ai,私人研究 API,partial,record,CURRENT_PROGRESS.md,49,05c97ea71c53827912b08b686c507bba0d0dc706aa272f559a6b79e448140edc
 intake,收件与编目,pending,source,api/ingestion/tasks.py,206,9ee55e7734d58bbf0e025b54ff52742cd2e214b4d197c64243c450cc214deade
 intake,收件与编目,pending,source,api/ingestion/services/pipeline.py,894,a37948ccaae10a3d34a88f8deb163d37af2683e6c7bea6c2aa9fa35764910295
 processing,文档处理,pending,source,api/ingestion/tasks.py,206,9ee55e7734d58bbf0e025b54ff52742cd2e214b4d197c64243c450cc214deade
@@ -86,18 +86,18 @@ web,Web 界面,pending,source,web/components/site-header.tsx,55,81dae70fff69fff0
 web,Web 界面,pending,source,web/app/reader/[assetId]/page.tsx,14,4a61f41a5a4b4ed06afb05580f09b0a014cfcd015b284e13ba8c7b718f9023d5
 django,业务服务,pending,source,api/config/urls.py,59,4a6f0e7d9293f00a9d831bdfea80b21bd18fffc760c74171900f717a306787a8
 django,业务服务,pending,source,api/common/permissions.py,6,ef88101519150509118ad8cd74930a23a9d86d87fcd2f20cb9580b236c2bf943
-postgres,业务事实,pending,source,api/config/settings.py,91,8d729b6a24f182f33bed174cd2b53113f284720f2754dd6e100bb77ed3547b09
-postgres,业务事实,pending,source,api/catalog/models.py,103,4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249
-postgres,业务事实,pending,source,api/reading/research_models.py,10,6a1a180e8e0be08d8f3eeab0cb2d6fbf20d60f2c881b81b0df73e117e5e66619
-postgres,业务事实,pending,source,compose.yaml,4,bbc57a87f0039f1f39fa1dcaf8a961cfe656aa7bd325b056498e40a38095b69c
-redis,任务传递,pending,source,api/config/settings.py,409,8d729b6a24f182f33bed174cd2b53113f284720f2754dd6e100bb77ed3547b09
-redis,任务传递,pending,source,compose.yaml,4,bbc57a87f0039f1f39fa1dcaf8a961cfe656aa7bd325b056498e40a38095b69c
-redis,任务传递,pending,source,api/catalog/services/discovery_sessions.py,197,f9b8b497ae725fbfb186a8a7d3c11975b8260cff5831a6f89eb2e725a0c8e36a
-meili,派生检索,pending,source,api/catalog/services/discovery_indexing.py,2,a11fe23672170c79b631bc7136f97de66120a2ff52fd308b259e6a1405d4c77c
-meili,派生检索,pending,source,api/catalog/services/discovery_projection.py,151,82773041938c531aed26b3859a1d0523614c229eeaa824b30f027549b0eb24a7
-meili,派生检索,pending,source,compose.yaml,4,bbc57a87f0039f1f39fa1dcaf8a961cfe656aa7bd325b056498e40a38095b69c
-models-runtime,推理适配,pending,source,api/catalog/services/discovery_inference.py,12,3835442d2c3c9cfdcfc5fbc07a6a1564cbc9d2609cb788e606f85f0c25037ef6
-models-runtime,推理适配,pending,source,api/catalog/services/retrieval/deep_pipeline.py,34,290bdd9f8c6b6dc28806854a5f3af37b91f03568474f60ca636634f746ba2e86
+postgres,业务数据,pending,source,api/config/settings.py,91,8d729b6a24f182f33bed174cd2b53113f284720f2754dd6e100bb77ed3547b09
+postgres,业务数据,pending,source,api/catalog/models.py,103,4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249
+postgres,业务数据,pending,source,api/reading/research_models.py,10,6a1a180e8e0be08d8f3eeab0cb2d6fbf20d60f2c881b81b0df73e117e5e66619
+postgres,业务数据,pending,source,compose.yaml,4,bbc57a87f0039f1f39fa1dcaf8a961cfe656aa7bd325b056498e40a38095b69c
+redis,任务队列,pending,source,api/config/settings.py,409,8d729b6a24f182f33bed174cd2b53113f284720f2754dd6e100bb77ed3547b09
+redis,任务队列,pending,source,compose.yaml,4,bbc57a87f0039f1f39fa1dcaf8a961cfe656aa7bd325b056498e40a38095b69c
+redis,任务队列,pending,source,api/catalog/services/discovery_sessions.py,197,f9b8b497ae725fbfb186a8a7d3c11975b8260cff5831a6f89eb2e725a0c8e36a
+meili,检索索引,pending,source,api/catalog/services/discovery_indexing.py,2,a11fe23672170c79b631bc7136f97de66120a2ff52fd308b259e6a1405d4c77c
+meili,检索索引,pending,source,api/catalog/services/discovery_projection.py,151,82773041938c531aed26b3859a1d0523614c229eeaa824b30f027549b0eb24a7
+meili,检索索引,pending,source,compose.yaml,4,bbc57a87f0039f1f39fa1dcaf8a961cfe656aa7bd325b056498e40a38095b69c
+models-runtime,检索模型,pending,source,api/catalog/services/discovery_inference.py,12,3835442d2c3c9cfdcfc5fbc07a6a1564cbc9d2609cb788e606f85f0c25037ef6
+models-runtime,检索模型,pending,source,api/catalog/services/retrieval/deep_pipeline.py,34,290bdd9f8c6b6dc28806854a5f3af37b91f03568474f60ca636634f746ba2e86
 ocr-runtime,文档解析,pending,source,ocr_service/requirements.txt,9,b592822cce47e73edbe7566444e1b98790585b3263ecd1cdbb94d5c425deec2b
 ocr-runtime,文档解析,pending,source,api/ingestion/services/catalog_ocr.py,27,df42e610e89d5effd2ad359199898d26fc483f2cbddb6e55a877015eef324048
 ocr-runtime,文档解析,pending,source,api/ingestion/tasks.py,206,9ee55e7734d58bbf0e025b54ff52742cd2e214b4d197c64243c450cc214deade
@@ -112,10 +112,10 @@ design-controls,基础控件,pending,source,web/components/ui/dialog.tsx,13,fdd9
 design-shells,共用框架,pending,source,web/components/site-header.tsx,55,81dae70fff69fff0821b67b945e6bca2b8533121f45639cb9dd5f543d97687e4
 design-shells,共用框架,pending,source,web/components/admin-shell.tsx,3,a77824b36a73a5c2f0c6019915f3b0a780069ac64c902265fac78be8587b01ef
 design-shells,共用框架,pending,source,web/components/reader-shell.tsx,69,12c0c9a02168626e7d19adae953348791b9403836043104c635decf12b561e53
-design-pages,页面范式,pending,source,web/app/page.tsx,1,472dc9632afefdd54b41efbff600f8d169b4021e5490a089565cb8bbc838a844
-design-pages,页面范式,pending,source,web/app/explore/evidence/page.tsx,9,c54caa7a03ed75b50fc6315caba41590ecb065a9c774e793eba78ad4b2653164
-design-pages,页面范式,pending,source,web/app/account/research/[id]/page.tsx,1,05d419e5a6bbc97db2f58cb0a9ad1aea082d9a0a356f480bc1c3008f1ffaf301
-design-pages,页面范式,pending,source,web/components/admin-shell.tsx,3,a77824b36a73a5c2f0c6019915f3b0a780069ac64c902265fac78be8587b01ef
+design-pages,页面结构,pending,source,web/app/page.tsx,1,472dc9632afefdd54b41efbff600f8d169b4021e5490a089565cb8bbc838a844
+design-pages,页面结构,pending,source,web/app/explore/evidence/page.tsx,9,c54caa7a03ed75b50fc6315caba41590ecb065a9c774e793eba78ad4b2653164
+design-pages,页面结构,pending,source,web/app/account/research/[id]/page.tsx,1,05d419e5a6bbc97db2f58cb0a9ad1aea082d9a0a356f480bc1c3008f1ffaf301
+design-pages,页面结构,pending,source,web/components/admin-shell.tsx,3,a77824b36a73a5c2f0c6019915f3b0a780069ac64c902265fac78be8587b01ef
 oauth,第三方登录,partial,source,web/components/auth-form.tsx,113,2d8d1bebe803721e3610259f100d6c057673332eeafaf3e11f21a613191c123d
 oauth,第三方登录,partial,record,docs/stl4/DELIVERY_CLOSURE_20261026.md,7,eec4e3273fdd9ee07c009a169e1e9465474e98fa30c1229c5c5976d18b71dd26
 discovery/query,提交问题,source-reviewed,source,web/app/explore/opinions/page.tsx,11,2db9026af906457a89862098946e836bf605ed75e57abf8843775156e709d5b7
@@ -168,7 +168,7 @@ research/consent,授权笔记,source-reviewed,source,api/reading/research_models
 research/followup,继续追问,source-reviewed,source,api/reading/research_models.py,10,6a1a180e8e0be08d8f3eeab0cb2d6fbf20d60f2c881b81b0df73e117e5e66619
 research/followup,继续追问,source-reviewed,source,web/app/account/research/[id]/page.tsx,1,05d419e5a6bbc97db2f58cb0a9ad1aea082d9a0a356f480bc1c3008f1ffaf301
 research/followup,继续追问,source-reviewed,source,api/common/ai_runtime.py,17,2de960d163982fc0295878fdaa3b5180434a090a928b0895be732e3895d6c873
-research/followup,继续追问,source-reviewed,record,CURRENT_PROGRESS.md,43,f0333b2408c90bd81b740129a6af9aaf9777bddf0f511aa60159368939be4ade
+research/followup,继续追问,source-reviewed,record,CURRENT_PROGRESS.md,49,05c97ea71c53827912b08b686c507bba0d0dc706aa272f559a6b79e448140edc
 postgres,职责与数据记录,source-reviewed,source,api/catalog/models.py,103,4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249
 postgres,职责与数据记录,source-reviewed,source,api/catalog/models.py,170,4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249
 postgres,职责与数据记录,source-reviewed,source,api/catalog/models.py,407,4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249
@@ -193,7 +193,7 @@ meili,职责与数据记录,source-reviewed,source,web/lib/api/discovery.client.
 models-runtime,职责与数据记录,source-reviewed,source,api/catalog/services/discovery_inference.py,12,3835442d2c3c9cfdcfc5fbc07a6a1564cbc9d2609cb788e606f85f0c25037ef6
 models-runtime,职责与数据记录,source-reviewed,source,api/catalog/services/retrieval/deep_pipeline.py,34,290bdd9f8c6b6dc28806854a5f3af37b91f03568474f60ca636634f746ba2e86
 models-runtime,职责与数据记录,source-reviewed,source,api/common/ai_runtime.py,17,2de960d163982fc0295878fdaa3b5180434a090a928b0895be732e3895d6c873
-models-runtime,职责与数据记录,source-reviewed,record,CURRENT_PROGRESS.md,43,f0333b2408c90bd81b740129a6af9aaf9777bddf0f511aa60159368939be4ade
+models-runtime,职责与数据记录,source-reviewed,record,CURRENT_PROGRESS.md,49,05c97ea71c53827912b08b686c507bba0d0dc706aa272f559a6b79e448140edc
 ocr-runtime,职责与数据记录,source-reviewed,source,api/ingestion/services/pipeline.py,894,a37948ccaae10a3d34a88f8deb163d37af2683e6c7bea6c2aa9fa35764910295
 ocr-runtime,职责与数据记录,source-reviewed,source,ocr_service/requirements.txt,9,b592822cce47e73edbe7566444e1b98790585b3263ecd1cdbb94d5c425deec2b
 ocr-runtime,职责与数据记录,source-reviewed,source,api/ingestion/services/catalog_ocr.py,27,df42e610e89d5effd2ad359199898d26fc483f2cbddb6e55a877015eef324048

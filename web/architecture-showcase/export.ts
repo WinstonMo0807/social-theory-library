@@ -5,7 +5,7 @@ async function embeddedFonts(){
  // Cache the repository's already licensed local font subsets. No external upload.
  fontCache??=(async()=>{const css=await (await fetch('/fonts.css')).text();const urls=[...new Set([...css.matchAll(/url\(([^)]+)\)/g)].map(m=>m[1].replace(/["']/g,'')))];const results=new Map<string,string>();
   // Bound parallel file reads to keep export responsive on slower machines.
-  for(let i=0;i<urls.length;i+=8)await Promise.all(urls.slice(i,i+8).map(async url=>{const response=await fetch(url);if(!response.ok)throw new Error('本地字体读取失败');results.set(url,await dataURL(await response.blob()));}));
+  for(let i=0;i<urls.length;i+=8)await Promise.all(urls.slice(i,i+8).map(async url=>{const response=await fetch(url);if(!response.ok)throw new Error('无法读取本地字体。请刷新页面后重试。');results.set(url,await dataURL(await response.blob()));}));
   return css.replace(/url\(([^)]+)\)/g,(_,url)=>`url("${results.get(url.replace(/["']/g,''))}")`);})();return fontCache;
 }
 export async function exportFrame(element:HTMLElement,name:string,kind:'svg'|'png'){
@@ -23,13 +23,13 @@ export async function exportFrame(element:HTMLElement,name:string,kind:'svg'|'pn
  // An opaque blob URL containing foreignObject taints Chromium canvases.
  // A self-contained data URL keeps this entirely local and origin-clean.
  const img=new Image();const url=await dataURL(blob);
- await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(new Error('画面转换失败，可使用 SVG 导出'));img.src=url;});const canvas=document.createElement('canvas');canvas.width=3840;canvas.height=2160;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#f7f4ee';ctx.fillRect(0,0,3840,2160);ctx.drawImage(img,0,0);const png=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(v=>v?resolve(v):reject(new Error('PNG 编码失败')),'image/png'));download(png,`${name}.png`);
+ await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(new Error('无法转换图片。请改用 SVG 导出。'));img.src=url;});const canvas=document.createElement('canvas');canvas.width=3840;canvas.height=2160;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#f7f4ee';ctx.fillRect(0,0,3840,2160);ctx.drawImage(img,0,0);const png=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(v=>v?resolve(v):reject(new Error('无法生成 PNG。请重试或改用 SVG 导出。')),'image/png'));download(png,`${name}.png`);
 }
 export async function recordPresentation(onFinish:()=>void){
- if(!navigator.mediaDevices?.getDisplayMedia||!window.MediaRecorder)throw new Error('当前浏览器不支持标签页录制');
+ if(!navigator.mediaDevices?.getDisplayMedia||!window.MediaRecorder)throw new Error('当前浏览器无法录制标签页。请使用支持录屏的浏览器。');
  const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:false});
  const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));
- if(!mime){stream.getTracks().forEach(t=>t.stop());throw new Error('不支持 WebM');}
+ if(!mime){stream.getTracks().forEach(t=>t.stop());throw new Error('当前浏览器无法生成 WebM 视频。请更换浏览器后重试。');}
  const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:8000000});const chunks:Blob[]=[];
  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
  recorder.onstop=()=>{stream.getTracks().forEach(t=>t.stop());if(chunks.length)download(new Blob(chunks,{type:mime}),'STL-architecture.webm');onFinish();};

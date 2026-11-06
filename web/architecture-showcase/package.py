@@ -22,19 +22,24 @@ with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
     z.write(out / 'video/STL-architecture-v2-1080p.webm', prefix + 'STL-architecture-v2-1080p.webm')
     z.writestr(prefix + '开始使用.txt', '''STL 架构演示 v2 · 2026-11-06
 
-本包用于内部汇报，包含架构与管理路径，请勿发布到公网。
+本包包含内部架构与管理路径，仅供内部汇报。
 
-动态网页：电脑安装 Node 后，在本目录打开终端，执行 node serve.mjs。
-然后打开 http://127.0.0.1:5196/ 。无需 npm 安装、后端服务、联网字体或数据库。
-F 全屏，← → 推进，空格播放/暂停，R 重播当前阶段，1–6 切幕，Esc 关闭详情。
+启动网页：
+1. 在电脑上安装 Node。
+2. 双击 start.cmd。
+3. 打开 http://127.0.0.1:5196/ 。
+网页可离线运行，无需安装 npm 依赖。
+F 切换全屏，← → 切换步骤，空格播放或暂停。
+R 重播当前阶段，1–6 切换场景，Esc 关闭详情。
 默认打开使用演示。3 条流程共 14 步，可拖动进度条定位。
 点击模块查看内部结构与来源。右上角可导出当前 4K PNG。
 
-没有 Node 时：直接播放 STL-architecture-v2-1080p.webm，或将 PPT-pictures 中的 PNG 插入幻灯片。
-视频为约111秒无旁白操作录屏，分辨率1920×1080。9幅PNG均为3840×2160。
+未安装 Node 时，可直接播放 STL-architecture-v2-1080p.webm。
+PPT-pictures 中的 9 张 PNG 均为 3840×2160，可插入幻灯片。
+视频约 111 秒，分辨率为 1920×1080，无旁白。
 
-架构状态是一份有日期的工作区快照。公开页渲染观察不等于全部业务验收。
-自动目录的样本验证来自项目记录，本展示未重新运行其样本。
+架构内容记录核对时的实现状态。页面可以显示，不代表业务已通过验收。
+自动目录的样本结果来自已有项目记录，本展示未重跑样本。
 '''.encode('utf-8-sig'))
 with zipfile.ZipFile(archive) as z:
     assert z.testzip() is None

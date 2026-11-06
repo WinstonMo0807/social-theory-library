@@ -27,7 +27,7 @@ try{
     const children=[...stage.querySelector('.demo-panel').children];
     return panel.scrollHeight<=panel.clientHeight+1&&children.every(el=>el.scrollHeight<=stage.clientHeight+1)&&p.bottom<n.top&&n.bottom<rail.getBoundingClientRect().top;
    }));
-   await page.getByRole('button',{name:'查看调用与字段',exact:true}).click();
+   await page.getByRole('button',{name:'查看实现详情',exact:true}).click();
    check(`${j.id}/${step.id}: source and contract available`,(await page.locator('.step-inspector .source-list li').count())===step.sources.length&&(await page.locator('.step-contract').innerText()).includes(step.contract));
    await page.keyboard.press('Escape');
    await page.locator('h1').click();
@@ -58,7 +58,7 @@ try{
  check('tab keyboard selects next journey',await page.getByRole('tab',{name:'入库与发布',exact:true}).getAttribute('aria-selected')==='true');
  await page.getByRole('button',{name:'全屏展示',exact:true}).click();
  check('journey fullscreen enters',await page.evaluate(()=>!!document.fullscreenElement));
- await page.getByRole('button',{name:'查看调用与字段',exact:true}).click();check('contract dialog available in fullscreen',await page.locator('.step-dialog').isVisible());await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'查看实现详情',exact:true}).click();check('contract dialog available in fullscreen',await page.locator('.step-dialog').isVisible());await page.keyboard.press('Escape');
  await page.screenshot({path:path.join(out,'journey-fullscreen.png')});await page.getByRole('button',{name:'退出全屏',exact:true}).click();
  await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(50);await page.locator('.stage-nav button').nth(2).click();
  check('reduced motion shows complete frame',await page.getByRole('button',{name:'播放当前场景',exact:true}).isDisabled()&&await page.locator('.journey-scene').getAttribute('data-step')==='outline');

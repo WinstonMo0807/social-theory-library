@@ -13,7 +13,7 @@ for(const name of ['检索与引用','入库与发布','私人研究']){
  await page.getByRole('tab',{name,exact:true}).click();await page.getByRole('button',{name:'播放当前场景',exact:true}).click();await page.locator('h1').click();
  await page.waitForFunction(()=>document.querySelector('.presentation')?.classList.contains('paused'),{},{timeout:45000});await page.waitForTimeout(1200);console.log('Recorded complete workflow:',name);
 }
-await page.getByRole('button',{name:'查看调用与字段',exact:true}).click();await page.waitForTimeout(2800);await page.keyboard.press('Escape');
+await page.getByRole('button',{name:'查看实现详情',exact:true}).click();await page.waitForTimeout(2800);await page.keyboard.press('Escape');
 for(const scene of [0,1,3,4,5]){
  await page.locator('.scene-nav nav button').nth(scene).click();await page.locator('.stage-nav button').last().click();await page.locator('h1').click();await page.waitForTimeout(2400);
 }

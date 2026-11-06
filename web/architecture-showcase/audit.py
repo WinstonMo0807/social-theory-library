@@ -87,48 +87,48 @@ def module(id,title,subtitle,kind,refs,children=(),routes=(),status='pending',no
 
 NODES = [
  module('stl','社会理论书库','Social Theory Library','product',['nav','api','models'],['discovery','knowledge','reader','research','publishing','operations'],note='前台、私人研究与后台共用 Django 业务服务。图中分组依据当前导航和代码职责。'),
- module('discovery','发现与检索','从问题进入原文','domain',['nav','opinions','discovery-ui'],['catalogue','viewpoints','evidence'],['/explore','/explore/original','/explore/opinions','/explore/evidence'],boundary='探索与检索须登录；网页浏览与正文访问分开授权。'),
- module('knowledge','知识与策划','学者、理论、主题与作品','domain',['nav','knowledge','editorial'],['scholars','theories','topics','curation'],['/scholars','/theories','/topics','/recommendations'],boundary='仅正式公开的内容与关联进入前台。'),
- module('reader','阅读与引用','回到可定位的文本','domain',['reader','reader-shell','citation'],['pdf','parallel','citations'],['/reader/[assetId]'],boundary='正文与下载须登录；版本、物理页与证据位置共同定位来源。'),
- module('research','私人研究','研究会话、笔记与计划','domain',['research','research-model','research-ui'],['sessions','notes','plans','audits','private-ai'],['/account/research','/account/notes','/account/plans','/account/citation-audits'],boundary='查询集按本人过滤；私人记录不直接进入公共馆藏证据。'),
- module('publishing','馆藏与内容管理','从文件到正式公开版本','domain',['admin','ingestion','publication','editorial'],['intake','processing','outline','publish'],['/admin/uploads','/admin/intake/[itemId]','/admin/processing','/admin/publication'],boundary='上传、编目、预览和发布各有能力权限；保存草稿不等于发布。'),
- module('operations','系统与权限','身份、任务、模型与存储','domain',['admin-permissions','api','queue','ai'],['identity','jobs','model-runtime','storage-ops'],['/admin/users','/admin/system-health','/admin/settings','/admin/storage'],boundary='后台按能力控制；地址与密钥配置仅允许指定管理能力访问。'),
+ module('discovery','发现与检索','从问题进入原文','domain',['nav','opinions','discovery-ui'],['catalogue','viewpoints','evidence'],['/explore','/explore/original','/explore/opinions','/explore/evidence'],boundary='探索与检索须登录。浏览网页与访问正文分别检查权限。'),
+ module('knowledge','知识与策划','学者、理论、主题与作品','domain',['nav','knowledge','editorial'],['scholars','theories','topics','curation'],['/scholars','/theories','/topics','/recommendations'],boundary='读者页面仅展示已发布的内容和关联。'),
+ module('reader','阅读与引用','原文定位、阅读与引用','domain',['reader','reader-shell','citation'],['pdf','parallel','citations'],['/reader/[assetId]'],boundary='正文与下载须登录。版本、PDF 页码与原文位置共同确定来源。'),
+ module('research','私人研究','研究会话、笔记与计划','domain',['research','research-model','research-ui'],['sessions','notes','plans','audits','private-ai'],['/account/research','/account/notes','/account/plans','/account/citation-audits'],boundary='接口仅返回所属读者的记录。私人记录不直接用作公共馆藏证据。'),
+ module('publishing','馆藏与内容管理','从文件到正式公开版本','domain',['admin','ingestion','publication','editorial'],['intake','processing','outline','publish'],['/admin/uploads','/admin/intake/[itemId]','/admin/processing','/admin/publication'],boundary='上传、编目、预览和发布分别检查权限。保存草稿不会自动发布。'),
+ module('operations','系统与权限','身份、任务、模型与存储','domain',['admin-permissions','api','queue','ai'],['identity','jobs','model-runtime','storage-ops'],['/admin/users','/admin/system-health','/admin/settings','/admin/storage'],boundary='后台操作分别检查权限。仅具备指定配置权限的管理员可设置地址与密钥。'),
  module('catalogue','馆藏发现','作品、版本与筛选','feature',['models','edition','nav'],routes=['/explore/original','/works/[slug]']),
- module('viewpoints','观点检索','查询、范围与异步整理','feature',['opinions','discovery-client','discovery-api','discovery-session'],routes=['/explore/opinions','/explore/evidence']),
+ module('viewpoints','观点检索','查询、筛选与后台检索','feature',['opinions','discovery-client','discovery-api','discovery-session'],routes=['/explore/opinions','/explore/evidence']),
  module('evidence','原文证据','节选、上下文与页码','feature',['span','projection','evidence-ui'],routes=['/explore/evidence']),
  module('scholars','学者','目录、详情与关联作品','feature',['nav','knowledge'],routes=['/scholars','/scholars/[slug]']),
  module('theories','理论与流派','目录、关系图与时间线','feature',['nav','knowledge'],routes=['/theories','/theories/graph','/theories/timeline','/theory-schools']),
  module('topics','主题','主题入口与内容关联','feature',['nav','knowledge'],routes=['/topics','/topics/[slug]']),
  module('curation','特别策划','专刊、文章与网站内容','feature',['editorial','welcome'],routes=['/recommendations','/recommendations/[slug]','/welcome']),
  module('pdf','PDF 阅读器','连续阅读、目录与书内检索','feature',['reader','reader-shell'],routes=['/reader/[assetId]']),
- module('parallel','并读','同一 Reader 的 parallel 模式','feature',['reader'],routes=['/reader/[assetId]?mode=parallel'],note='并读由现有路由的查询参数分支承担，不是另一套阅读站。'),
- module('citations','引用','共享引用预览与格式导出','feature',['citation','reader-shell'],note='前端请求 reading/citation-preview；结果保留 edition、原文引用与页码。'),
- module('sessions','研究会话','材料选择、比较、反证与回放','feature',['research','research-ui','research-model'],routes=['/account/research/[id]','/account/research/[id]/compare','/account/research/[id]/counter-evidence','/account/research/[id]/history'],note='结构与接口已存在；模型生成效果不能由页面存在推断。'),
- module('notes','笔记与记忆','阅读笔记、确认与授权','feature',['memory','research-model'],routes=['/account/notes','/account/confirmed-notes'],boundary='使用本人明确授权的笔记范围。'),
+ module('parallel','并读','在同一阅读器中对照阅读','feature',['reader'],routes=['/reader/[assetId]?mode=parallel'],note='并读使用现有阅读器路由，通过 mode=parallel 切换。'),
+ module('citations','引用','预览、复制与下载引用','feature',['citation','reader-shell'],note='前端调用 reading/citation-preview。结果保留 edition、原文引用与页码。'),
+ module('sessions','研究会话','选取材料、比较观点与查看历史','feature',['research','research-ui','research-model'],routes=['/account/research/[id]','/account/research/[id]/compare','/account/research/[id]/counter-evidence','/account/research/[id]/history'],note='研究页面与接口已有代码。模型生成结果仍需单独验证。'),
+ module('notes','笔记与记忆','阅读笔记、确认与授权','feature',['memory','research-model'],routes=['/account/notes','/account/confirmed-notes'],boundary='只使用本人明确授权的笔记。'),
  module('plans','阅读计划','规则排序与本人调整','feature',['plans','research'],routes=['/account/plans','/account/plans/[id]']),
  module('audits','引文体检','稿件解析、问题与报告','feature',['audit','research'],routes=['/account/citation-audits','/account/citation-audits/[id]']),
- module('private-ai','私人研究 API','独立模型能力配置','feature',['ai','progress'],status='partial',note='配置和加密链已实现；最新记录明确尚未配置真实中转、未调用外部模型。'),
+ module('private-ai','私人研究 API','单独配置研究模型服务','feature',['ai','progress'],status='partial',note='配置入口和凭据加密已有代码。项目记录显示，中转服务尚未配置，外部模型尚未调用。'),
  module('intake','收件与编目','上传、识别、去重与版本确认','feature',['ingestion','pipeline'],routes=['/admin/uploads','/admin/intake/[itemId]','/admin/cataloging/[sessionId]']),
  module('processing','文档处理','文本、OCR、目录与任务','feature',['ingestion','ocr','ocr-service','revision'],routes=['/admin/processing']),
- module('outline','自动目录','自动识别与派生 PDF','feature',['outline','outline-export','outline-record'],status='pending',note='最新项目记录已给出 2 份公开扫描件的自动书签结果（1 / 38 项）。这是已有样本验证记录，本轮未重跑；更多书种与识别质量继续待验收。'),
+ module('outline','自动目录','自动识别目录并生成 PDF 副本','feature',['outline','outline-export','outline-record'],status='pending',note='项目记录中的 2 份公开扫描件分别生成 1 项和 38 项书签。本展示引用已有记录，未重跑样本。更多书种及识别质量仍待验收。'),
  module('publish','发布与修订','预览、公开、撤回与历史','feature',['publication','publication-check','editorial','knowledge'],routes=['/admin/publication','/admin/welcome','/admin/content']),
- module('identity','身份与能力','会话、读者与管理能力','feature',['permissions','admin-permissions','research'],routes=['/login','/register','/admin/users']),
- module('jobs','异步任务','持久记录与独立工作队列','feature',['queue','discovery-session','ingestion']),
- module('model-runtime','模型管理','嵌入、重排与生成能力分开','feature',['inference','deep','ai'],note='现有模型适配不代表每项能力均已配置；运行状态须按能力核验。'),
- module('storage-ops','存储与分发','原件、派生文件与受控访问','feature',['storage','distribution','asset'],routes=['/admin/storage','/admin/distribution']),
+ module('identity','身份与能力','登录会话、读者身份与管理权限','feature',['permissions','admin-permissions','research'],routes=['/login','/register','/admin/users']),
+ module('jobs','异步任务','保存任务记录，由后台队列执行','feature',['queue','discovery-session','ingestion']),
+ module('model-runtime','模型管理','分别管理嵌入、重排与生成模型','feature',['inference','deep','ai'],note='已有模型调用代码。嵌入、重排与生成服务须分别检查配置和运行状态。'),
+ module('storage-ops','存储与分发','原件、副本与访问权限','feature',['storage','distribution','asset'],routes=['/admin/storage','/admin/distribution']),
  module('web','Web 界面','React / Next 约定 / Vinext','service',['dependencies','nav','reader']),
  module('django','业务服务','Django REST API','service',['api','permissions']),
- module('postgres','业务事实','PostgreSQL','store',['database','models','research-model','compose']),
- module('redis','任务传递','Redis / Celery','service',['queue','compose','discovery-session']),
- module('meili','派生检索','Meilisearch 索引','store',['indexing','projection','compose']),
- module('models-runtime','推理适配','嵌入与重排','service',['inference','deep']),
+ module('postgres','业务数据','PostgreSQL','store',['database','models','research-model','compose']),
+ module('redis','任务队列','Redis / Celery','service',['queue','compose','discovery-session']),
+ module('meili','检索索引','Meilisearch 索引','store',['indexing','projection','compose']),
+ module('models-runtime','检索模型','嵌入与重排','service',['inference','deep']),
  module('ocr-runtime','文档解析','RapidOCR / ONNX Runtime','service',['ocr-service','ocr','ingestion']),
- module('files','文件存储','NAS 原件与派生副本','store',['storage','distribution','outline-export']),
+ module('files','文件存储','NAS 中的原件与处理后副本','store',['storage','distribution','outline-export']),
  module('design-tokens','基础规范','纸白、炭黑、砂金与字体','design',['tokens','type','brand']),
  module('design-controls','基础控件','Button / Input / Dialog','design',['controls','dialog']),
  module('design-shells','共用框架','SiteHeader / AdminShell / ReaderShell','design',['nav','admin','reader-shell']),
- module('design-pages','页面范式','内容浏览、研究工作台与后台','design',['home','evidence-page','research-ui','admin']),
- module('oauth','第三方登录','Apple / Google 入口','feature',['oauth','closure'],status='partial',note='当前按钮被禁用。未发现对应后端 OAuth 回调实现；不能归为已可用。'),
+ module('design-pages','页面结构','内容浏览、研究工作台与后台','design',['home','evidence-page','research-ui','admin']),
+ module('oauth','第三方登录','Apple / Google 入口','feature',['oauth','closure'],status='partial',note='登录按钮已禁用。未发现对应的后端 OAuth 回调代码，暂不能使用。'),
 ]
 
 # Relations are explicitly classified: a module belongs to a product, navigation
@@ -139,17 +139,17 @@ def edge(a,b,kind,label,refs):
 for n in NODES:
  for child in n['children']: edge(n['id'],child,'contains','功能归属',n['sources'])
 edge('viewpoints','evidence','data','查询 → 原文结果',['opinions','discovery-client','discovery-api'])
-edge('evidence','pdf','navigation','证据位置 → Reader',['evidence-ui','reader'])
+edge('evidence','pdf','navigation','原文位置 → 阅读器',['evidence-ui','reader'])
 edge('pdf','citations','call','版本与选文 → 引用预览',['reader-shell','citation'])
-edge('intake','processing','call','入库任务 → 处理流水线',['ingestion','pipeline'])
+edge('intake','processing','call','入库任务 → 文档处理',['ingestion','pipeline'])
 edge('processing','meili','data','处理结果 → 非公开索引准备',['pipeline-index','indexing'])
 edge('web','django','call','API 请求',['discovery-client','api'])
 edge('django','postgres','data','业务记录',['discovery-session','database'])
 edge('django','redis','call','事务提交后投递',['discovery-session','queue'])
-edge('redis','meili','call','任务检索 / 索引',['discovery-task','indexing','projection'])
+edge('redis','meili','call','执行检索 / 更新索引',['discovery-task','indexing','projection'])
 edge('redis','models-runtime','call','嵌入 / 重排',['discovery-task','inference','deep'])
 edge('redis','ocr-runtime','call','文档处理任务',['ingestion','ocr'])
-edge('django','files','data','授权文件读取',['distribution','storage'])
+edge('django','files','data','按权限读取文件',['distribution','storage'])
 edge('design-tokens','design-controls','uses','样式规范',['tokens','controls'])
 edge('design-controls','design-shells','uses','复用控件',['nav','admin','reader-shell'])
 edge('design-shells','design-pages','uses','组合页面',['home','evidence-page','research-ui'])
@@ -182,7 +182,7 @@ def main():
            scope='当前工作区，包含继承的未提交修改。源码检查不等于业务验收。',
            statuses={'verified':'限定范围已验证','pending':'已实现 · 待验收','partial':'待接入或待配置','planned':'规划 · 未实施'},
            sources=refs,nodes=NODES,edges=EDGES,routes=routes,
-           exclusions=['政策研究已暂停，不纳入本轮产品叙事。','RAG / LLMWiki 的后续选择未定，不画成新增已实现能力。','开发预览和兼容路由计入文件清单，不冒充主要产品入口。'],
+           exclusions=['政策研究已暂停，本展示不包含该模块。','RAG / LLMWiki 的后续方案未定，未列为已交付功能。','文件清单包含开发预览和兼容路由，页面地图仅展示主要入口。'],
            runtime=[])
  runtime=HERE/'runtime-evidence.json'
  if runtime.exists(): data['runtime']=json.loads(runtime.read_text('utf-8'))

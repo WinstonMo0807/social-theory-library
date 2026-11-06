@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "auditedAt": "2026-11-06T21:19:15+08:00",
-  "commit": "5a7f62d4",
+  "auditedAt": "2026-11-06T22:31:10+08:00",
+  "commit": "013529bd",
   "scope": "当前工作区，包含继承的未提交修改。源码检查不等于业务验收。",
   "statuses": {
     "verified": "限定范围已验证",
@@ -549,9 +549,9 @@
     "progress": {
       "id": "progress",
       "file": "CURRENT_PROGRESS.md",
-      "line": 43,
+      "line": 49,
       "anchor": "## 2026-11-06 18:25",
-      "sha256": "f0333b2408c90bd81b740129a6af9aaf9777bddf0f511aa60159368939be4ade",
+      "sha256": "05c97ea71c53827912b08b686c507bba0d0dc706aa272f559a6b79e448140edc",
       "kind": "record"
     }
   },
@@ -606,7 +606,7 @@
       ],
       "status": "pending",
       "note": "",
-      "boundary": "探索与检索须登录；网页浏览与正文访问分开授权。",
+      "boundary": "探索与检索须登录。浏览网页与访问正文分别检查权限。",
       "parent": "stl",
       "implementation": "源码已存在"
     },
@@ -635,14 +635,14 @@
       ],
       "status": "pending",
       "note": "",
-      "boundary": "仅正式公开的内容与关联进入前台。",
+      "boundary": "读者页面仅展示已发布的内容和关联。",
       "parent": "stl",
       "implementation": "源码已存在"
     },
     {
       "id": "reader",
       "title": "阅读与引用",
-      "subtitle": "回到可定位的文本",
+      "subtitle": "原文定位、阅读与引用",
       "type": "domain",
       "level": 1,
       "sources": [
@@ -660,7 +660,7 @@
       ],
       "status": "pending",
       "note": "",
-      "boundary": "正文与下载须登录；版本、物理页与证据位置共同定位来源。",
+      "boundary": "正文与下载须登录。版本、PDF 页码与原文位置共同确定来源。",
       "parent": "stl",
       "implementation": "源码已存在"
     },
@@ -690,7 +690,7 @@
       ],
       "status": "pending",
       "note": "",
-      "boundary": "查询集按本人过滤；私人记录不直接进入公共馆藏证据。",
+      "boundary": "接口仅返回所属读者的记录。私人记录不直接用作公共馆藏证据。",
       "parent": "stl",
       "implementation": "源码已存在"
     },
@@ -720,7 +720,7 @@
       ],
       "status": "pending",
       "note": "",
-      "boundary": "上传、编目、预览和发布各有能力权限；保存草稿不等于发布。",
+      "boundary": "上传、编目、预览和发布分别检查权限。保存草稿不会自动发布。",
       "parent": "stl",
       "implementation": "源码已存在"
     },
@@ -750,7 +750,7 @@
       ],
       "status": "pending",
       "note": "",
-      "boundary": "后台按能力控制；地址与密钥配置仅允许指定管理能力访问。",
+      "boundary": "后台操作分别检查权限。仅具备指定配置权限的管理员可设置地址与密钥。",
       "parent": "stl",
       "implementation": "源码已存在"
     },
@@ -779,7 +779,7 @@
     {
       "id": "viewpoints",
       "title": "观点检索",
-      "subtitle": "查询、范围与异步整理",
+      "subtitle": "查询、筛选与后台检索",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -930,7 +930,7 @@
     {
       "id": "parallel",
       "title": "并读",
-      "subtitle": "同一 Reader 的 parallel 模式",
+      "subtitle": "在同一阅读器中对照阅读",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -941,7 +941,7 @@
         "/reader/[assetId]?mode=parallel"
       ],
       "status": "pending",
-      "note": "并读由现有路由的查询参数分支承担，不是另一套阅读站。",
+      "note": "并读使用现有阅读器路由，通过 mode=parallel 切换。",
       "boundary": "",
       "parent": "reader",
       "implementation": "源码已存在"
@@ -949,7 +949,7 @@
     {
       "id": "citations",
       "title": "引用",
-      "subtitle": "共享引用预览与格式导出",
+      "subtitle": "预览、复制与下载引用",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -959,7 +959,7 @@
       "children": [],
       "routes": [],
       "status": "pending",
-      "note": "前端请求 reading/citation-preview；结果保留 edition、原文引用与页码。",
+      "note": "前端调用 reading/citation-preview。结果保留 edition、原文引用与页码。",
       "boundary": "",
       "parent": "reader",
       "implementation": "源码已存在"
@@ -967,7 +967,7 @@
     {
       "id": "sessions",
       "title": "研究会话",
-      "subtitle": "材料选择、比较、反证与回放",
+      "subtitle": "选取材料、比较观点与查看历史",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -983,7 +983,7 @@
         "/account/research/[id]/history"
       ],
       "status": "pending",
-      "note": "结构与接口已存在；模型生成效果不能由页面存在推断。",
+      "note": "研究页面与接口已有代码。模型生成结果仍需单独验证。",
       "boundary": "",
       "parent": "research",
       "implementation": "源码已存在"
@@ -1005,7 +1005,7 @@
       ],
       "status": "pending",
       "note": "",
-      "boundary": "使用本人明确授权的笔记范围。",
+      "boundary": "只使用本人明确授权的笔记。",
       "parent": "research",
       "implementation": "源码已存在"
     },
@@ -1054,7 +1054,7 @@
     {
       "id": "private-ai",
       "title": "私人研究 API",
-      "subtitle": "独立模型能力配置",
+      "subtitle": "单独配置研究模型服务",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -1064,7 +1064,7 @@
       "children": [],
       "routes": [],
       "status": "partial",
-      "note": "配置和加密链已实现；最新记录明确尚未配置真实中转、未调用外部模型。",
+      "note": "配置入口和凭据加密已有代码。项目记录显示，中转服务尚未配置，外部模型尚未调用。",
       "boundary": "",
       "parent": "research",
       "implementation": "存在待接入或待配置项"
@@ -1116,7 +1116,7 @@
     {
       "id": "outline",
       "title": "自动目录",
-      "subtitle": "自动识别与派生 PDF",
+      "subtitle": "自动识别目录并生成 PDF 副本",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -1127,7 +1127,7 @@
       "children": [],
       "routes": [],
       "status": "pending",
-      "note": "最新项目记录已给出 2 份公开扫描件的自动书签结果（1 / 38 项）。这是已有样本验证记录，本轮未重跑；更多书种与识别质量继续待验收。",
+      "note": "项目记录中的 2 份公开扫描件分别生成 1 项和 38 项书签。本展示引用已有记录，未重跑样本。更多书种及识别质量仍待验收。",
       "boundary": "",
       "parent": "publishing",
       "implementation": "源码已存在"
@@ -1159,7 +1159,7 @@
     {
       "id": "identity",
       "title": "身份与能力",
-      "subtitle": "会话、读者与管理能力",
+      "subtitle": "登录会话、读者身份与管理权限",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -1182,7 +1182,7 @@
     {
       "id": "jobs",
       "title": "异步任务",
-      "subtitle": "持久记录与独立工作队列",
+      "subtitle": "保存任务记录，由后台队列执行",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -1201,7 +1201,7 @@
     {
       "id": "model-runtime",
       "title": "模型管理",
-      "subtitle": "嵌入、重排与生成能力分开",
+      "subtitle": "分别管理嵌入、重排与生成模型",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -1212,7 +1212,7 @@
       "children": [],
       "routes": [],
       "status": "pending",
-      "note": "现有模型适配不代表每项能力均已配置；运行状态须按能力核验。",
+      "note": "已有模型调用代码。嵌入、重排与生成服务须分别检查配置和运行状态。",
       "boundary": "",
       "parent": "operations",
       "implementation": "源码已存在"
@@ -1220,7 +1220,7 @@
     {
       "id": "storage-ops",
       "title": "存储与分发",
-      "subtitle": "原件、派生文件与受控访问",
+      "subtitle": "原件、副本与访问权限",
       "type": "feature",
       "level": 2,
       "sources": [
@@ -1278,7 +1278,7 @@
     },
     {
       "id": "postgres",
-      "title": "业务事实",
+      "title": "业务数据",
       "subtitle": "PostgreSQL",
       "type": "store",
       "level": 2,
@@ -1298,7 +1298,7 @@
     },
     {
       "id": "redis",
-      "title": "任务传递",
+      "title": "任务队列",
       "subtitle": "Redis / Celery",
       "type": "service",
       "level": 2,
@@ -1317,7 +1317,7 @@
     },
     {
       "id": "meili",
-      "title": "派生检索",
+      "title": "检索索引",
       "subtitle": "Meilisearch 索引",
       "type": "store",
       "level": 2,
@@ -1336,7 +1336,7 @@
     },
     {
       "id": "models-runtime",
-      "title": "推理适配",
+      "title": "检索模型",
       "subtitle": "嵌入与重排",
       "type": "service",
       "level": 2,
@@ -1374,7 +1374,7 @@
     {
       "id": "files",
       "title": "文件存储",
-      "subtitle": "NAS 原件与派生副本",
+      "subtitle": "NAS 中的原件与处理后副本",
       "type": "store",
       "level": 2,
       "sources": [
@@ -1448,7 +1448,7 @@
     },
     {
       "id": "design-pages",
-      "title": "页面范式",
+      "title": "页面结构",
       "subtitle": "内容浏览、研究工作台与后台",
       "type": "design",
       "level": 2,
@@ -1479,7 +1479,7 @@
       "children": [],
       "routes": [],
       "status": "partial",
-      "note": "当前按钮被禁用。未发现对应后端 OAuth 回调实现；不能归为已可用。",
+      "note": "登录按钮已禁用。未发现对应的后端 OAuth 回调代码，暂不能使用。",
       "boundary": "",
       "parent": null,
       "implementation": "存在待接入或待配置项"
@@ -1828,7 +1828,7 @@
       "source": "evidence",
       "target": "pdf",
       "type": "navigation",
-      "label": "证据位置 → Reader",
+      "label": "原文位置 → 阅读器",
       "sources": [
         "evidence-ui",
         "reader"
@@ -1848,7 +1848,7 @@
       "source": "intake",
       "target": "processing",
       "type": "call",
-      "label": "入库任务 → 处理流水线",
+      "label": "入库任务 → 文档处理",
       "sources": [
         "ingestion",
         "pipeline"
@@ -1898,7 +1898,7 @@
       "source": "redis",
       "target": "meili",
       "type": "call",
-      "label": "任务检索 / 索引",
+      "label": "执行检索 / 更新索引",
       "sources": [
         "discovery-task",
         "indexing",
@@ -1930,7 +1930,7 @@
       "source": "django",
       "target": "files",
       "type": "data",
-      "label": "授权文件读取",
+      "label": "按权限读取文件",
       "sources": [
         "distribution",
         "storage"
@@ -3508,9 +3508,9 @@
     }
   ],
   "exclusions": [
-    "政策研究已暂停，不纳入本轮产品叙事。",
-    "RAG / LLMWiki 的后续选择未定，不画成新增已实现能力。",
-    "开发预览和兼容路由计入文件清单，不冒充主要产品入口。"
+    "政策研究已暂停，本展示不包含该模块。",
+    "RAG / LLMWiki 的后续方案未定，未列为已交付功能。",
+    "文件清单包含开发预览和兼容路由，页面地图仅展示主要入口。"
   ],
   "runtime": [
     {
@@ -3582,8 +3582,8 @@
       "id": "discovery",
       "name": "检索与引用",
       "role": "登录读者",
-      "title": "检索问题，核对原文，生成引用",
-      "intro": "查询、原文位置和版本信息在各环节之间传递。",
+      "title": "从检索问题到原文引用",
+      "intro": "检索结果保留版本与原文位置，供阅读器和引用接口使用。",
       "question": "文化与社会环境如何影响人的行为？",
       "steps": [
         {
@@ -3593,10 +3593,10 @@
           "duration": 6500,
           "node": "viewpoints",
           "action": "输入问题，选择检索范围。",
-          "system": "观点页保留查询与筛选条件，转到原文证据页。",
-          "input": "问题 q · 筛选 filters",
+          "system": "观点检索页保留问题和筛选条件，再转到原文证据页。",
+          "input": "问题 · 筛选条件",
           "output": "检索请求",
-          "handoff": "观点页 → 原文证据页",
+          "handoff": "观点检索页 → 原文证据页",
           "route": "/explore/opinions → /explore/evidence",
           "contract": "POST /catalog/discovery-search/",
           "records": [
@@ -3604,7 +3604,7 @@
             "filters"
           ],
           "boundary": "探索功能须登录。访客先进入登录页。",
-          "exception": "问题长度或筛选条件不符合要求时，接口拒绝创建会话。",
+          "exception": "问题过短、过长或筛选条件不符合要求时，接口拒绝创建检索会话。",
           "sources": [
             "opinions",
             "discovery-client",
@@ -3618,8 +3618,8 @@
           "visual": "queue",
           "duration": 6000,
           "node": "jobs",
-          "action": "查看检索状态，等待原文结果。",
-          "system": "数据库先保存会话。事务提交后，Celery 执行检索任务。",
+          "action": "查看进度，等待检索结果。",
+          "system": "数据库先保存检索会话。事务提交后，再由 Celery 执行任务。",
           "input": "问题 · 范围 · 当前权限",
           "output": "会话标识 · 任务状态",
           "handoff": "Django → PostgreSQL → Celery",
@@ -3630,8 +3630,8 @@
             "generation",
             "task_id"
           ],
-          "boundary": "会话记录绑定所属账号。接口按当前访问资格过滤来源。",
-          "exception": "队列投递失败会记录失败状态。重试须携带当前检索轮次。",
+          "boundary": "检索会话绑定所属账号。接口按当前权限筛选可访问的来源。",
+          "exception": "任务投递失败时，会话记录失败状态。重试须提交当前检索轮次。",
           "sources": [
             "discovery-session",
             "discovery-task",
@@ -3645,10 +3645,10 @@
           "duration": 7000,
           "node": "evidence",
           "action": "查看节选，并展开前后文。",
-          "system": "结果返回前重新检查来源资格。前端按结果标识请求上下文。",
+          "system": "返回结果前，系统检查来源是否仍可访问。展开前后文时，再按结果标识读取。",
           "input": "候选段落 · 当前来源状态",
           "output": "节选 · 版本 · 原文位置",
-          "handoff": "检索结果 → 资格检查 → 证据卡片",
+          "handoff": "检索结果 → 权限检查 → 原文证据",
           "route": "/explore/evidence",
           "contract": "GET …/{id}/context/?result_id=…",
           "records": [
@@ -3658,8 +3658,8 @@
             "pdf_page",
             "reader_url"
           ],
-          "boundary": "来源撤回或访问条件变化时，旧结果不能继续作为可用证据。",
-          "exception": "索引覆盖与正文就绪状态分别显示，不能把未索引文献当成无匹配。",
+          "boundary": "来源已撤回或账号已无权访问时，旧结果不能继续用作证据。",
+          "exception": "正文是否就绪、是否已建立索引分别显示。尚未建立索引，不代表原文中没有匹配内容。",
           "sources": [
             "projection",
             "discovery-client",
@@ -3674,10 +3674,10 @@
           "duration": 6500,
           "node": "pdf",
           "action": "打开原文，核对版本和页码。",
-          "system": "证据卡片提供阅读地址。阅读器按文件、文档版本和位置恢复阅读。",
-          "input": "阅读地址 · 证据定位信息",
-          "output": "当前版本中的原文选区",
-          "handoff": "证据卡片 → PDF 阅读器",
+          "system": "原文证据提供阅读地址。阅读器按文件、文档版本与页码打开原文。",
+          "input": "阅读地址 · 原文位置",
+          "output": "当前文档版本中的选文",
+          "handoff": "原文证据 → PDF 阅读器",
           "route": "/reader/[assetId]",
           "contract": "reader_url → ReaderShell",
           "records": [
@@ -3686,8 +3686,8 @@
             "PDF page",
             "EvidenceSpan"
           ],
-          "boundary": "PDF 正文须登录。PDF 物理页与印刷页码分别保留。",
-          "exception": "定位依赖当前可访问的文件与版本。旧位置不能替代版本检查。",
+          "boundary": "PDF 正文须登录。PDF 页序与书中印刷页码分别记录。",
+          "exception": "原文定位需要可访问的文件与文档版本。再次打开时仍须检查版本。",
           "sources": [
             "evidence-ui",
             "reader",
@@ -3702,8 +3702,8 @@
           "duration": 6500,
           "node": "citations",
           "action": "选择格式，复制或下载引用。",
-          "system": "共享接口根据版本、证据引用和选文生成引用预览。",
-          "input": "版本 · 证据引用 · 选文",
+          "system": "引用接口根据出版版本、原文引用和选文生成预览。",
+          "input": "出版版本 · 原文引用 · 选文",
           "output": "引用文本或 CSL JSON",
           "handoff": "阅读器 → 引用预览 → 复制 / 下载",
           "route": "PDF 阅读器 · 引用面板",
@@ -3714,8 +3714,8 @@
             "selected_text",
             "printed_label"
           ],
-          "boundary": "阅读器须登录。引用预览接口允许匿名，但只读取公开快照。",
-          "exception": "选文须唯一对应原文。版本已变化或选文不匹配时，接口拒绝预览。",
+          "boundary": "阅读器须登录。引用预览允许匿名访问，仅使用已公开的内容快照。",
+          "exception": "选文须唯一对应原文。原文版本已变化或选文不匹配时，接口拒绝生成预览。",
           "sources": [
             "citation",
             "reader-citation",
@@ -3727,9 +3727,9 @@
     {
       "id": "publishing",
       "name": "入库与发布",
-      "role": "具备管理能力的馆员",
+      "role": "拥有相应权限的馆员",
       "title": "从上传文件到可阅读的馆藏",
-      "intro": "文件处理、目录生成与发布状态分别管理。",
+      "intro": "分别检查文件处理、目录生成和发布状态。",
       "question": "将一份扫描文献加入书库",
       "steps": [
         {
@@ -3738,10 +3738,10 @@
           "visual": "upload",
           "duration": 6000,
           "node": "intake",
-          "action": "上传文件，检查识别结果和重复项。",
-          "system": "入库任务检查文件，保存原件，并建立作品、版本与文件记录。",
+          "action": "上传文件，检查识别结果与重复项。",
+          "system": "入库任务检查文件并保存原件，再建立作品、版本和文件记录。",
           "input": "上传文件 · 批次处理策略",
-          "output": "上传项 · 作品 / 版本 · 文件记录",
+          "output": "上传记录 · 作品 · 版本 · 文件",
           "handoff": "上传批次 → 入库任务 → 编目",
           "route": "/admin/uploads → /admin/intake/[itemId]",
           "contract": "process_upload_item → run_pipeline",
@@ -3751,8 +3751,8 @@
             "Edition",
             "Asset"
           ],
-          "boundary": "上传和编目按管理能力授权。原件与规范化副本分开保存。",
-          "exception": "重复文件按批次策略处理。遇到冲突时，保留检查结果供馆员判断。",
+          "boundary": "上传与编目分别检查管理权限。原件和规范化副本分开保存。",
+          "exception": "系统按批次策略处理重复文件。存在冲突时，保留检查结果供馆员处理。",
           "sources": [
             "ingestion",
             "pipeline",
@@ -3766,11 +3766,11 @@
           "visual": "processing",
           "duration": 6500,
           "node": "processing",
-          "action": "查看文本提取、OCR 与任务状态。",
-          "system": "系统检查每页文本。需要识别且策略允许时，再投递 OCR 任务。",
-          "input": "规范化文件 · OCR 策略",
-          "output": "页文本 · 文档版本 · 索引准备",
-          "handoff": "文档处理 → OCR 分支 → 非公开索引准备",
+          "action": "查看文字提取与识别进度。",
+          "system": "系统逐页检查文本。需要文字识别（OCR）且批次策略允许时，再提交识别任务。",
+          "input": "规范化文件 · 文字识别策略",
+          "output": "页面文本 · 文档版本 · 索引",
+          "handoff": "检查文本 → 按需识别 → 准备非公开索引",
           "route": "/admin/processing",
           "contract": "run_pipeline → queue_ocr_job / index_asset",
           "records": [
@@ -3778,8 +3778,8 @@
             "DocumentRevision",
             "is_public=False"
           ],
-          "boundary": "文本可用、索引就绪与书目公开是不同状态。",
-          "exception": "跳过 OCR 的批次仍可能缺少可检索正文。处理失败须查看具体任务。",
+          "boundary": "正文可用、索引就绪和书目公开分别记录。",
+          "exception": "跳过文字识别的扫描页可能无法全文检索。处理失败时，可查看具体任务。",
           "sources": [
             "pipeline",
             "pipeline-index",
@@ -3795,10 +3795,10 @@
           "duration": 6500,
           "node": "outline",
           "action": "查看自动目录，发现错误时修正。",
-          "system": "系统识别目录并自动采用可用结果。书签写入独立的派生 PDF。",
+          "system": "系统识别目录并自动采用可用结果，再将书签写入 PDF 副本。",
           "input": "文档结构 · 标题与页码证据",
-          "output": "自动目录 · 带书签的派生 PDF",
-          "handoff": "文档证据 → 自动目录 → PDF 书签",
+          "output": "自动目录 · 带书签的 PDF 副本",
+          "handoff": "文档结构 → 自动目录 → PDF 书签",
           "route": "管理端 · 文档目录",
           "contract": "automatic_nodes → outline_exports",
           "records": [
@@ -3806,8 +3806,8 @@
             "automatic result",
             "derived PDF"
           ],
-          "boundary": "自动结果带来源标记。保留原件、人工修订与历史。",
-          "exception": "目录识别可能有误。已有 2 份公开样本记录，更多书种仍待验收。",
+          "boundary": "自动结果标明来源。原件、人工修订与历史记录均保留。",
+          "exception": "目录识别可能有误。已有 2 份公开文献的样本验证记录，更多书种仍待验收。",
           "sources": [
             "outline",
             "outline-export",
@@ -3821,11 +3821,11 @@
           "visual": "publication",
           "duration": 6500,
           "node": "publish",
-          "action": "检查发布状态与预览，再按权限发布。",
-          "system": "发布服务检查书目、阅读文件与文档修订。有效活动修订决定公开状态。",
+          "action": "查看预览，检查状态后发布。",
+          "system": "系统检查书目、阅读文件和文档修订。发布修订生效后，书目才会公开。",
           "input": "书目 · 阅读文件 · 文档修订",
-          "output": "活动发布修订 · 公开状态",
-          "handoff": "发布检查 → 活动修订 → 公开书目",
+          "output": "生效的发布修订 · 公开状态",
+          "handoff": "发布检查 → 修订生效 → 公开书目",
           "route": "/admin/publication → /works/[slug]",
           "contract": "validate_revision → activate_revision",
           "records": [
@@ -3834,8 +3834,8 @@
             "metadata_ready",
             "fulltext_ready"
           ],
-          "boundary": "书目公开不等于全文就绪。作品列表还依据主版本规则展示。",
-          "exception": "发布命令已接受但活动修订未就绪时，仍不能记为已公开。",
+          "boundary": "书目公开不表示全文已就绪。作品列表按主版本规则显示。",
+          "exception": "系统接收发布请求后，仍须等待修订生效，才能显示为已公开。",
           "sources": [
             "publication",
             "publication-state",
@@ -3848,11 +3848,11 @@
           "visual": "download",
           "duration": 6000,
           "node": "storage-ops",
-          "action": "登录后阅读或下载获准访问的文件。",
-          "system": "分发接口检查访问资格，并按下载规则选择原件或派生文件。",
+          "action": "登录后阅读或下载文件。",
+          "system": "文件接口先检查权限，再按下载规则提供原件或 PDF 副本。",
           "input": "账号会话 · 文件标识",
-          "output": "获准访问的 PDF",
-          "handoff": "读者请求 → 权限检查 → 文件分发",
+          "output": "有权访问的 PDF",
+          "handoff": "读者请求 → 权限检查 → 提供文件",
           "route": "/reader/[assetId] · 文件下载",
           "contract": "distribution views → storage",
           "records": [
@@ -3861,7 +3861,7 @@
             "access policy"
           ],
           "boundary": "访客可浏览网页。PDF 正文、下载和探索功能须登录。",
-          "exception": "文件不可用或访问资格不符时，分发接口拒绝请求。",
+          "exception": "文件不可用或账号无权访问时，接口拒绝请求。",
           "sources": [
             "distribution",
             "permissions",
@@ -3874,9 +3874,9 @@
     {
       "id": "research",
       "name": "私人研究",
-      "role": "记录所属读者",
+      "role": "研究记录所属读者",
       "title": "保存研究材料，继续追问",
-      "intro": "研究项目保留选文与历史。模型能力另行配置。",
+      "intro": "项目保存选文、笔记和研究历史。模型服务单独配置。",
       "question": "不同解释分别依赖哪些原文？",
       "steps": [
         {
@@ -3886,10 +3886,10 @@
           "duration": 6000,
           "node": "sessions",
           "action": "新建研究，写下问题与范围。",
-          "system": "项目记录绑定账号，使用请求标识和修订号管理写入。",
+          "system": "项目绑定所属账号。写入时使用请求标识和修订号。",
           "input": "问题 · 范围 · 请求标识",
           "output": "本人研究项目",
-          "handoff": "研究页面 → 私人记录接口 → 项目",
+          "handoff": "研究页面 → 私人记录接口 → 研究项目",
           "route": "/account/research",
           "contract": "ResearchProjectViewSet.create → create_project",
           "records": [
@@ -3898,8 +3898,8 @@
             "request_id",
             "revision"
           ],
-          "boundary": "研究记录按本人过滤。管理身份不会扩大私人记录的查询范围。",
-          "exception": "修订号冲突时须刷新记录，避免覆盖已更新的内容。",
+          "boundary": "读者只能访问本人的研究记录。管理身份不会扩大访问范围。",
+          "exception": "修订号不一致时，须先刷新记录，避免覆盖已更新的内容。",
           "sources": [
             "research",
             "research-model",
@@ -3912,11 +3912,11 @@
           "visual": "selection",
           "duration": 6500,
           "node": "sessions",
-          "action": "选择原文材料，记录阅读判断。",
-          "system": "材料选择接口保存证据引用。项目保留版本、位置与选择记录。",
-          "input": "证据引用 · 选文说明",
+          "action": "选择原文材料，记录阅读笔记。",
+          "system": "项目保存原文引用、版本与位置，并记录材料选择。",
+          "input": "原文引用 · 阅读笔记",
           "output": "项目材料与笔记",
-          "handoff": "原文证据 → 项目材料 → 阅读判断",
+          "handoff": "原文证据 → 项目材料 → 阅读笔记",
           "route": "/account/research/[id]",
           "contract": "changeResearchSelection → selections",
           "records": [
@@ -3924,8 +3924,8 @@
             "reference_id",
             "expected_revision"
           ],
-          "boundary": "材料引用须检查来源状态。私人研究记录不直接公开到馆藏。",
-          "exception": "来源撤回或版本变化时，须重新检查材料；不能只依赖保存时的状态。",
+          "boundary": "使用材料时须检查来源状态。私人记录不会直接发布到馆藏。",
+          "exception": "来源撤回或版本变化时，须重新检查材料是否可用。",
           "sources": [
             "research-client",
             "research-selection",
@@ -3939,10 +3939,10 @@
           "duration": 6500,
           "node": "notes",
           "action": "选择允许用于当前研究的笔记。",
-          "system": "笔记检索取本人记录与授权范围的交集。未授权记录不参与检索。",
+          "system": "系统只检索本人已确认且已授权的笔记。",
           "input": "本人笔记 · 授权清单",
-          "output": "当前范围内的可用笔记",
-          "handoff": "本人记录 ∩ 明确授权 → 笔记检索",
+          "output": "本次授权范围内的笔记",
+          "handoff": "本人已确认笔记 → 授权范围 → 笔记检索",
           "route": "/account/confirmed-notes · 研究设置",
           "contract": "search_memories(user, allowed_ids, context)",
           "records": [
@@ -3950,8 +3950,8 @@
             "allowed_ids",
             "revision"
           ],
-          "boundary": "没有授权清单时，不默认检索全部私人笔记。",
-          "exception": "记录已变更或授权已撤销时，须重新检查当前可用范围。",
+          "boundary": "未明确授权笔记时，笔记检索不返回结果。",
+          "exception": "笔记更新或授权撤销后，须重新检查本次可用范围。",
           "sources": [
             "memory",
             "research-memory-scope",
@@ -3965,7 +3965,7 @@
           "duration": 6500,
           "node": "private-ai",
           "action": "继续追问，查看研究历史。",
-          "system": "问题与回合使用私人研究记录。模型调用使用独立的私人研究能力配置。",
+          "system": "问题和研究回合保存为私人记录。模型服务使用独立的私人研究配置。",
           "input": "研究问题 · 已授权材料",
           "output": "研究回合 · 历史记录",
           "handoff": "研究项目 → 研究回合 → 历史",
@@ -3976,8 +3976,8 @@
             "ResearchTurnReplayRevision",
             "PRIVATE_RESEARCH"
           ],
-          "boundary": "当前私人研究中转尚未配置与实测。此处保留待配置状态。",
-          "exception": "配置和模型服务可用前，不能将页面存在解释为生成能力已验收。",
+          "boundary": "私人研究中转服务尚未配置和实测。",
+          "exception": "模型配置、服务运行和生成结果仍待验证。",
           "sources": [
             "research-model",
             "research-ui",
@@ -3990,30 +3990,30 @@
   ],
   "moduleFacts": {
     "postgres": {
-      "responsibility": "保存业务记录与当前有效版本。",
+      "responsibility": "保存业务记录和当前生效的版本。",
       "records": [
         [
           "Work → Edition",
-          "作品与出版版本分别记录。"
+          "分别记录作品和出版版本。"
         ],
         [
           "Edition → Asset",
-          "同一版本关联文件记录。"
+          "出版版本关联文件记录。"
         ],
         [
           "Asset → DocumentRevision",
-          "文档修订保留正文解释的版本。"
+          "保留同一文件的不同文档修订。"
         ],
         [
           "EvidenceSpan",
-          "以文档版本和原文位置标识证据。"
+          "用文档版本和原文位置标识证据。"
         ],
         [
           "ResearchProject / ResearchTurn",
-          "私人项目与研究回合绑定账号。"
+          "研究项目和研究回合绑定所属账号。"
         ]
       ],
-      "boundary": "检索索引是派生数据。来源是否可用仍以业务记录和当前权限为准。",
+      "boundary": "检索索引来自业务数据。来源是否可访问，仍须检查当前记录与权限。",
       "sources": [
         "models",
         "edition",
@@ -4025,22 +4025,22 @@
       ]
     },
     "django": {
-      "responsibility": "验证请求、检查权限，并协调业务记录与任务。",
+      "responsibility": "检查请求和权限，处理业务记录并安排后台任务。",
       "records": [
         [
           "检索",
-          "保存会话后，事务提交时投递任务。"
+          "先保存会话，事务提交后再投递任务。"
         ],
         [
           "发布",
-          "检查阅读文件与文档修订，再切换活动发布修订。"
+          "检查文件与文档修订，再切换生效的发布修订。"
         ],
         [
           "私人研究",
-          "按所属账号过滤记录，更新时检查修订号。"
+          "按所属账号返回记录，更新时检查修订号。"
         ]
       ],
-      "boundary": "各接口有独立权限规则。引用预览接口允许匿名，但只读取公开快照。",
+      "boundary": "各接口分别检查权限。引用预览允许匿名访问，但仅使用已公开的内容快照。",
       "sources": [
         "api",
         "discovery-session",
@@ -4054,18 +4054,18 @@
       "records": [
         [
           "检索任务",
-          "按会话标识与检索轮次处理查询。"
+          "按会话标识和检索轮次处理查询。"
         ],
         [
           "文档任务",
-          "入库流程按内容和策略调用文档解析。"
+          "按文档内容和批次策略安排解析。"
         ],
         [
           "失败状态",
-          "队列投递失败会写入检索会话的失败状态。"
+          "任务投递失败时，检索会话记录失败状态。"
         ]
       ],
-      "boundary": "图中的 Redis / Celery 节点合并展示投递与执行职责；Redis 不直接执行检索。",
+      "boundary": "图中合并展示队列投递与任务执行。Redis 传递消息，Celery 执行任务。",
       "sources": [
         "queue",
         "compose",
@@ -4075,22 +4075,22 @@
       ]
     },
     "meili": {
-      "responsibility": "保存供检索使用的派生索引。",
+      "responsibility": "保存从馆藏内容生成的检索索引。",
       "records": [
         [
           "索引准备",
-          "入库流水线先按 is_public=False 准备索引。"
+          "入库流程先按 is_public=False 准备非公开索引。"
         ],
         [
-          "结果投影",
-          "结果返回前检查当前来源与访问资格。"
+          "返回结果",
+          "返回前检查来源状态与访问权限。"
         ],
         [
-          "覆盖状态",
-          "关键词、向量和正文就绪状态分别呈现。"
+          "索引覆盖",
+          "分别显示关键词索引、向量索引和正文就绪状态。"
         ]
       ],
-      "boundary": "索引中存在段落，不等于当前读者可以读取该段原文。",
+      "boundary": "索引中有段落，不代表当前读者有权读取该段原文。",
       "sources": [
         "indexing",
         "pipeline-index",
@@ -4099,22 +4099,22 @@
       ]
     },
     "models-runtime": {
-      "responsibility": "为检索提供嵌入与重排能力。",
+      "responsibility": "将文本转换为检索向量，并重新排序候选结果。",
       "records": [
         [
-          "检索适配",
-          "检索任务通过推理适配调用模型。"
+          "模型调用",
+          "检索任务通过现有接口调用嵌入和重排模型。"
         ],
         [
           "深度检索",
-          "按已配置能力执行深度检索流程。"
+          "按已配置的能力执行深度检索。"
         ],
         [
           "私人研究",
-          "使用独立的 PRIVATE_RESEARCH 配置。"
+          "单独使用 PRIVATE_RESEARCH 配置。"
         ]
       ],
-      "boundary": "检索模型可用不能证明私人研究中转可用。模型状态须分别核验。",
+      "boundary": "检索模型和私人研究中转服务须分别检查配置与运行状态。",
       "sources": [
         "inference",
         "deep",
@@ -4123,22 +4123,22 @@
       ]
     },
     "ocr-runtime": {
-      "responsibility": "为需要识别的文档页提取文字。",
+      "responsibility": "从需要识别的文档页提取文字。",
       "records": [
         [
-          "触发条件",
-          "页面需要 OCR，且批次策略允许执行。"
+          "执行条件",
+          "页面需要文字识别，且批次策略允许。"
         ],
         [
-          "当前依赖",
-          "OCR 服务声明 RapidOCR 与 ONNX Runtime。"
+          "服务依赖",
+          "OCR 服务使用 RapidOCR 和 ONNX Runtime。"
         ],
         [
-          "后续处理",
-          "提取文字用于文档结构和检索准备。"
+          "识别结果",
+          "文字用于文档结构分析和检索准备。"
         ]
       ],
-      "boundary": "OCR 是文档处理分支。普通检索不会现场重新识别 PDF。",
+      "boundary": "文字识别在文档处理时执行。普通检索不会重新识别 PDF。",
       "sources": [
         "pipeline",
         "ocr-service",
@@ -4147,22 +4147,22 @@
       ]
     },
     "files": {
-      "responsibility": "保存原件、规范化文件与派生 PDF。",
+      "responsibility": "保存原件、规范化文件和 PDF 副本。",
       "records": [
         [
           "原件",
-          "上传原件独立保留。"
+          "单独保存上传原件。"
         ],
         [
-          "派生 PDF",
-          "自动目录可写入带书签的副本。"
+          "PDF 副本",
+          "将自动目录写成书签，另存为副本。"
         ],
         [
-          "文件分发",
-          "请求须通过当前接口的访问检查。"
+          "文件访问",
+          "接口先检查账号是否有权读取文件。"
         ]
       ],
-      "boundary": "派生结果不覆盖原件。下载规则与馆藏公开状态分别检查。",
+      "boundary": "处理后的文件不覆盖原件。下载权限与馆藏公开状态分别检查。",
       "sources": [
         "asset",
         "pipeline",
@@ -4172,22 +4172,22 @@
       ]
     },
     "web": {
-      "responsibility": "渲染页面，收集操作，并呈现后台任务状态。",
+      "responsibility": "显示页面，接收操作，并显示后台任务状态。",
       "records": [
         [
           "页面框架",
-          "React 与 Next 页面约定，使用 Vinext 工具。"
+          "使用 React，沿用 Next 页面约定，由 Vinext 运行。"
         ],
         [
           "原文证据",
-          "客户端创建检索会话并读取进度和上下文。"
+          "创建检索会话，读取进度和前后文。"
         ],
         [
           "阅读器",
-          "根据原文地址恢复文档、页码与选区。"
+          "根据阅读地址打开文档、页码与选文。"
         ]
       ],
-      "boundary": "前端登录跳转之外，接口仍须执行权限检查。",
+      "boundary": "页面会引导未登录读者登录。接口仍须独立检查权限。",
       "sources": [
         "dependencies",
         "discovery-client",
