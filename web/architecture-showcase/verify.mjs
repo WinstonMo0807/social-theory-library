@@ -3,7 +3,7 @@ import { mkdir,writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-const here=path.dirname(fileURLToPath(import.meta.url));const out=path.resolve(here,'../../output/playwright/architecture-showcase-v4');
+const here=path.dirname(fileURLToPath(import.meta.url));const out=path.resolve(here,'../../output/playwright/architecture-showcase-v5');
 await mkdir(out,{recursive:true});
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const context=await browser.newContext({viewport:{width:1920,height:1080},acceptDownloads:true});
@@ -33,11 +33,11 @@ try{
  await page.locator('.stage-nav button').first().click();
  await page.getByRole('button',{name:'恢复自动切换',exact:true}).click();await page.waitForTimeout(700);await page.getByRole('button',{name:'暂停自动切换',exact:true}).click();
  const paused=await page.locator('.presentation').getAttribute('data-stage');await page.waitForTimeout(4500);check('pause preserves stage',await page.locator('.presentation').getAttribute('data-stage')===paused);
- await page.keyboard.press('ArrowRight');check('keyboard advances stage',await page.locator('.presentation').getAttribute('data-stage')==='1');
- await page.getByRole('button',{name:'重新播放当前阶段',exact:true}).click();check('replay preserves current stage',await page.locator('.presentation').getAttribute('data-stage')==='1');
+ await page.keyboard.press('ArrowRight');check('keyboard advances stage',await page.locator('.presentation').getAttribute('data-stage')===String(Number(paused)+1));
+ await page.getByRole('button',{name:'重新播放当前阶段',exact:true}).click();check('replay preserves current stage',await page.locator('.presentation').getAttribute('data-stage')===String(Number(paused)+1));
  await page.getByRole('button',{name:'全屏展示',exact:true}).click();check('native fullscreen entered',await page.evaluate(()=>Boolean(document.fullscreenElement)));await page.screenshot({path:path.join(out,'fullscreen-1920.png')});await page.getByRole('button',{name:'退出全屏',exact:true}).click();
  for(const [width,height] of [[1440,900],[1366,768],[1280,720],[1920,1080]]){await page.setViewportSize({width,height});await page.waitForTimeout(150);check(`fits ${width}x${height}`,await page.locator('.presentation').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=-1&&r.top>=-1&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1}));}
- await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('.presentation')?.classList.contains('reduced'));check('reduced motion preserves automatic controls',await page.getByRole('button',{name:/自动切换$/,exact:false}).isEnabled());await page.keyboard.press('ArrowRight');check('reduced motion manual navigation works',await page.locator('.presentation').getAttribute('data-stage')==='2');await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('.presentation')?.classList.contains('reduced'));check('reduced motion preserves automatic controls',await page.getByRole('button',{name:/自动切换$/,exact:false}).isEnabled());await page.keyboard.press('ArrowRight');check('reduced motion manual navigation works',await page.locator('.presentation').getAttribute('data-stage')===String(Number(paused)+2));await page.emulateMedia({reducedMotion:'no-preference'});
  await page.locator('.stage-nav button').last().click();await page.waitForTimeout(700);
  await page.locator('.masthead').getByRole('button',{name:'导出',exact:true}).click();const downloaded=page.waitForEvent('download',{timeout:30000});await page.getByRole('button',{name:/^导出 PNG/}).click();const file=await downloaded;await file.saveAs(path.join(out,'STL-overview-3840.png'));check('4K PNG export succeeds',!(await file.failure()));
  check('no browser JS errors',errors.length===0);check('no external requests or business API calls',external.length===0);

@@ -1,4 +1,4 @@
-# STL 架构演示 v4
+# STL 架构演示 v5
 
 用于内部汇报的 5 幕交互式架构展示。使用演示包含检索与引用、入库与发布、私人研究，共 38 步。每步记录操作、输入、输出、接口、字段、权限和失败条件。
 
@@ -15,7 +15,7 @@ node web/architecture-showcase/build.mjs
 node web/architecture-showcase/serve.mjs
 ```
 
-入口为 <http://127.0.0.1:5196/>，默认从全站总览自动开始。完整总览使用 <http://127.0.0.1:5196/?scene=0&stage=3>。入库演示使用 <http://127.0.0.1:5196/?scene=2&journey=1>，私人研究使用 <http://127.0.0.1:5196/?scene=2&journey=2>。
+入口为 <http://127.0.0.1:5196/>，默认从全站总览自动开始。入库演示使用 <http://127.0.0.1:5196/?scene=2&journey=1>，私人研究使用 <http://127.0.0.1:5196/?scene=2&journey=2>。
 
 也可运行本目录的 `start.ps1`。要更换端口，可在 `serve.mjs` 后添加端口号。按终端中的 Ctrl+C 停止服务。
 
@@ -23,15 +23,15 @@ node web/architecture-showcase/serve.mjs
 
 ## 场景与操作
 
-1. 全站总览：展示 6 个功能领域，点击模块可查看子模块与来源。
-2. 页面地图：按浏览、阅读、私人研究和管理权限组织页面。
-3. 使用演示：在固定界面中连续呈现 3 条流程。按 20、10、8 步呈现。输入、指针、勾选、排序、加载与回执随时间轴变化。右侧说明每步操作及界面反馈。
+1. 全站总览：演示指针依次点击 6 个模块，展开子模块与使用示例，再返回全图。六个模块展示完毕后进入网站页面。
+2. 网站页面：用 4 张独立卡片组织浏览、阅读、私人研究和管理页面。逐张突出显示，最后回到卡片总览。
+3. 使用演示：在固定界面中连续呈现 3 条流程。按 20、10、8 步呈现。输入、指针、勾选、排序、加载与回执随操作逐步呈现。右侧说明每步操作及界面反馈。
 4. 底层架构：Web、Django、PostgreSQL、Celery/Redis、Meilisearch、模型、OCR 与文件职责。
 5. 品牌标识：实际品牌、字体与色值、复用控件、页面组合及匿名首页截图。
 
-进入页面后自动展示，5 个场景依次切换。使用演示包含检索与引用、入库与发布、私人研究，按顺序呈现。品牌标识结束后回到开场。普通架构阶段停留 4.2 秒，使用步骤按各步配置停留 3.6–5.2 秒。点击页面会重新计算当前步骤的停留时间，动画进度不回退；悬停、移动鼠标与滚动不会延时。详情打开后至少停留 8 秒，期间点击会延时，之后自动收起并继续。底部细线显示剩余停留时间。
+进入页面后自动展示，5 个场景依次切换。使用演示包含检索与引用、入库与发布、私人研究，按顺序呈现。品牌标识结束后回到开场。总览的每个模块展开后停留 8 秒，再返回全图。网站页面、底层架构和品牌标识的各阶段停留 4.2 秒。使用演示按各步配置停留 3.6–5.2 秒。点击页面会重新计算当前步骤的停留时间，动画进度不回退；悬停、移动鼠标与滚动不会延时。详情打开后至少停留 8 秒，期间点击会延时，之后自动收起并继续。底部进度条、时间读数和停留条已移除，保留阶段选择与快捷控制。
 
-本机完整版的“查看步骤依据”保留输入、输出、接口、字段、权限和源码；公开版移除此入口。演示内可操作的按钮只切换展示步骤。节点详情中的“实际使用”可跳到对应演示。点击“返回全局”，会关闭详情并显示当前场景的最后阶段。
+本机完整版的“查看步骤依据”保留输入、输出、接口、字段、权限和源码；公开版移除此入口。演示内可操作的按钮只切换展示步骤。节点详情中的“实际使用”可跳到对应演示。总览中的“返回全局”会关闭详情，回到全图后接续下一模块。其他场景显示全貌。
 
 | 操作 | 键盘 |
 | --- | --- |
@@ -53,13 +53,13 @@ node web/architecture-showcase/serve.mjs
 - 导出 SVG：生成内嵌字体与图像的文件，适合浏览器查看。文件使用 `foreignObject`，Office 支持情况可能不同，PPT 宜使用 PNG。
 - 录制演示：选择本展示标签页后，录制自动展示过程。停止后下载 WebM 视频。浏览器须支持 `getDisplayMedia` 和 `MediaRecorder`。
 
-新版产物位于 `output/playwright/architecture-showcase-v4/`：5 幕截图、38 个步骤截图、节点详情、全屏截图、`4k/` 中的 11 张 3840×2160 PNG，以及 `video/STL-architecture-v4-1080p.webm`。视频约 4 分钟，记录公开版从开场到末幕再回到开场的一整轮，无需点击播放。
+新版产物位于 `output/playwright/architecture-showcase-v5/`：5 幕截图、38 个步骤截图、节点详情、全屏截图、`4k/` 中的 14 张 3840×2160 PNG，以及 `video/STL-architecture-v5-1080p.webm`。视频约 5 分钟，记录公开版从开场到末幕再回到开场的一整轮，无需点击播放。
 
-同目录的 `STL-architecture-v4-local-20261106.zip` 包含构建成品、独立 Node 静态服务器、源码、11 张 PPT 图片和视频。解压后运行 `start.cmd`，无需安装 npm 依赖。重新打包使用 `python web/architecture-showcase/package.py`。
+同目录的 `STL-architecture-v5-local-20261107.zip` 包含构建成品、独立 Node 静态服务器、源码、14 张 PPT 图片和视频。解压后运行 `start.cmd`，无需安装 npm 依赖。重新打包使用 `python web/architecture-showcase/package.py`。
 
 ## 备份
 
-本轮修改前的完整 v3 离线包保留在 `output/playwright/architecture-showcase-v3/STL-architecture-v3-local-20261106.zip`。完整 v2 已保存为 `output/backups/STL-architecture-v2-final-STC-20261106.zip`，保留当时源码、成品、服务器和说明。上一轮 v2 离线包仍在 `output/playwright/architecture-showcase-v2/`。
+本轮修改前的 v4 离线包保留在 `output/playwright/architecture-showcase-v4/STL-architecture-v4-local-20261106.zip`。完整 v3 离线包保留在 `output/playwright/architecture-showcase-v3/STL-architecture-v3-local-20261106.zip`。完整 v2 已保存为 `output/backups/STL-architecture-v2-final-STC-20261106.zip`，保留当时源码、成品、服务器和说明。上一轮 v2 离线包仍在 `output/playwright/architecture-showcase-v2/`。
 
 ### 文案修订后的原版
 
@@ -74,7 +74,7 @@ node web/architecture-showcase/export-assets.mjs
 node web/architecture-showcase/record.mjs
 ```
 
-这两个脚本使用已安装的 Playwright 和 Microsoft Edge。录制脚本约需 4 分钟，不触发 STL 业务操作。
+这两个脚本使用已安装的 Playwright 和 Microsoft Edge。录制脚本约需 5 分钟，不触发 STL 业务操作。
 
 ## 内容维护
 
@@ -87,6 +87,7 @@ node web/architecture-showcase/record.mjs
 | `evidence-index.csv` | 节点到源码文件、行号、类型和 SHA-256 的索引 |
 | `runtime-evidence.json` | 本轮匿名页面观察；只保留路径，不保存内部服务器地址 |
 | `scenes.ts` | 场景叙事、阶段与空间布局 |
+| `overview-tour.json` | 总览的 6 个模块、展开顺序、停留与返回时长 |
 | `journeys.json` | 3 条使用流程的步骤、时长、操作、数据和来源 |
 | `module-facts.json` | 技术模块的职责、记录类型和边界 |
 | `journey-scene.tsx` / `journey.css` | 同画面操作演示及逐步说明 |
@@ -129,12 +130,12 @@ node web/architecture-showcase/verify-journeys.mjs
 node web/architecture-showcase/verify-auto.mjs
 ```
 
-三个脚本共通过 341 项检查。报告保存在 `output/playwright/architecture-showcase-v4/` 的 `verification.json`、`journey-verification.json` 和 `auto-verification.json`。
+三个脚本共通过 401 项检查。报告保存在 `output/playwright/architecture-showcase-v5/` 的 `verification.json`、`journey-verification.json` 和 `auto-verification.json`。
 
 检查覆盖：
 
 - 5 幕布局、38 步流程，以及节点跳转和来源详情。
-- 自动完整循环、点击延长停留、悬停不延时、详情自动收起、暂停续播和进度条定位。
+- 自动完整循环、点击延长停留、悬停不延时、详情自动收起、暂停续播和阶段选择。
 - 公开版 JS、JSON 与下载入口不包含源码索引及内部路径。
 - 全屏、4 档桌面视口、减少动态效果和 4K 导出。
 
@@ -152,8 +153,8 @@ node web/architecture-showcase/build.mjs --public
 node web/architecture-showcase/serve.mjs 5198 --public
 ```
 
-打开 <http://127.0.0.1:5198/>。本机完整版仍在 5196。公开版包为 `output/playwright/architecture-showcase-v4/STL-architecture-v4-public-20261106.tar.gz`，仅含公开成品、服务器与容器配置。
+打开 <http://127.0.0.1:5198/>。本机完整版仍在 5196。公开版包为 `output/playwright/architecture-showcase-v5/STL-architecture-v5-public-20261107.tar.gz`，仅含公开成品、服务器与容器配置。
 
-NAS 已运行独立的 `stl-architecture-showcase` 容器。成品封装在只读镜像中，无业务数据挂载，无宿主机端口。发布目录为 `/volume2/library/stl-previews/architecture-showcase-v4-20261106`。现有书库 edge 与 cloudflared 不变。域名路由由用户稍后添加，当前不能据此称公网已可访问。
+NAS 已运行独立的 `stl-architecture-showcase` 容器。成品封装在只读镜像中，无业务数据挂载，无宿主机端口。发布目录为 `/volume2/library/stl-previews/architecture-showcase-v5-20261107`。现有书库 edge 与 cloudflared 不变。域名由用户自行接入；本轮未修改或复核公网路由。
 
 Cloudflare 接入步骤与恢复方式见 [域名接入说明](DOMAIN_SETUP.md)。完整本机 ZIP 含内部溯源信息，不作为公开下载包。

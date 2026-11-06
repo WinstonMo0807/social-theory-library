@@ -1,6 +1,6 @@
 # preview.winstonmo.com 接入说明
 
-公开版服务已在 NAS 启动并通过 HTTP 检查。域名尚未接入；用户选择稍后自行配置 Cloudflare。
+公开版服务已在 NAS 启动并通过 HTTP 检查。用户选择自行配置 Cloudflare，本轮未修改或复核公网路由。
 
 ## 在 Cloudflare 添加路由
 
@@ -23,7 +23,7 @@
 
 ## 服务与恢复
 
-NAS 目录为 `/volume2/library/stl-previews/architecture-showcase-v4-20261106`，容器名为 `stl-architecture-showcase`，镜像为 `stl-architecture-showcase:v4-20261106`。
+NAS 目录为 `/volume2/library/stl-previews/architecture-showcase-v5-20261107`，容器名为 `stl-architecture-showcase`，镜像为 `stl-architecture-showcase:v5-20261107`。
 
 服务使用只读文件系统、非 root 用户，无业务数据挂载，无宿主机端口，复用现有隧道网络。目录中保留公开成品、构建配置和 `deployment-proof.json`。恢复运行可在该目录执行：
 
@@ -38,3 +38,5 @@ sudo docker stop stl-architecture-showcase
 ```
 
 不需要修改或重启原书库、数据库及隧道。未执行删除操作，发布目录、镜像和 v3 本机备份均保留。
+
+上一版的目录 `/volume2/library/stl-previews/architecture-showcase-v4-20261106` 和 v4 镜像继续保留。需要恢复上一版时，在该目录运行相同的 Compose 启动命令。当前服务名与域名路由值保持一致。

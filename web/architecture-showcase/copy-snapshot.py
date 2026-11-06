@@ -3,7 +3,7 @@ from pathlib import Path
 import json, re
 
 HERE = Path(__file__).resolve().parent
-OUT = HERE.parents[1] / 'output/playwright/architecture-showcase-v4'
+OUT = HERE.parents[1] / 'output/playwright/architecture-showcase-v5'
 OUT.mkdir(parents=True, exist_ok=True)
 lines = []
 def visit(value):
@@ -17,7 +17,7 @@ def visit(value):
             if key not in {'sources', 'routes', 'runtime', 'route', 'file', 'anchor', 'scope', 'exclusions'}:
                 visit(item)
 
-for filename in ['journeys.json', 'module-facts.json']:
+for filename in ['journeys.json', 'module-facts.json', 'overview-tour.json']:
     visit(json.loads((HERE / filename).read_text('utf-8')))
 data = json.loads((HERE / 'architecture.json').read_text('utf-8'))
 visit(data['nodes'])

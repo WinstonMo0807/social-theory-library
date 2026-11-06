@@ -1,0 +1,15 @@
+{
+  "opening": 3200,
+  "click": 1400,
+  "detail": 8000,
+  "return": 1800,
+  "closing": 2600,
+  "modules": [
+    {"id":"discovery","label":"发现与检索","note":"从馆藏与观点检索发现材料，再回到原文证据。"},
+    {"id":"knowledge","label":"知识与策划","note":"按学者、理论流派、主题与特别策划组织作品。"},
+    {"id":"reader","label":"阅读与引用","note":"打开对应版本与页码，选取原文，再形成引用。"},
+    {"id":"research","label":"私人研究","note":"保存原文选材，整理笔记、研究会话与阅读计划。"},
+    {"id":"publishing","label":"馆藏与内容管理","note":"接收文件、整理书目、处理文档，再检查并发布。"},
+    {"id":"operations","label":"系统与权限","note":"维护身份权限、后台任务、模型服务与存储。"}
+  ]
+}

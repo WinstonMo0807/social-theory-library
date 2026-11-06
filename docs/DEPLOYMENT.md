@@ -4,6 +4,12 @@
 
 # 部署说明
 
+## 2026-11-07 架构演示 v5 源站更新
+
+独立容器 stl-architecture-showcase 已更新至 v5-20261107，发布目录 /volume2/library/stl-previews/architecture-showcase-v5-20261107。仍使用只读非 root 镜像，无业务挂载或宿主机端口。216 个运行文件 SHA-256 与本机公开成品一致，容器 healthy，隧道网络携带 Host preview.winstonmo.com 返回 HTTP 200。公开 JSON、首页及 JS 可访问；证据索引、管理路径与服务器源码返回 404。
+
+原 edge/cloudflared 未重建或重启，书库业务与生产候选保持。v4 发布目录及镜像原样保留，新目录有 rollback.json；恢复时在 v4 目录运行同一 Compose 项目的启动命令。用户自行接入域名，本轮未修改 DNS/隧道映射或复核公网。服务地址保持 http://stl-architecture-showcase:5196。详 stl4/ARCHITECTURE_SHOWCASE_V5_20261107.md 与 ../web/architecture-showcase/DOMAIN_SETUP.md。
+
 ## 2026-11-06 架构演示公开版源站
 
 独立展示公开版已部署至 NAS `/volume2/library/stl-previews/architecture-showcase-v4-20261106`，容器 `stl-architecture-showcase`。只读镜像、非 root、无业务挂载、无宿主端口；复用原隧道网络，源站 `http://stl-architecture-showcase:5196`，允许 Host `preview.winstonmo.com`。216 个运行文件哈希读回一致，健康检查与隧道网络 HTTP 200 已核实。实际静态文件已剔除内部路径、源码索引和接口细节，完整证据只在本机版。
