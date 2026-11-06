@@ -9,6 +9,7 @@ import httpx
 from django.conf import settings
 
 from catalog.models import DocumentType
+from catalog.services.text import sanitize_unicode
 from ingestion.services.metadata_scoring import AI_SOURCE_RE, calibrate_candidate, ranked_candidates
 
 
@@ -45,7 +46,7 @@ class ProviderCandidates(list):
 
 
 def _clean_pdf_metadata(value: str) -> str:
-    value = (value or "").strip()
+    value = sanitize_unicode(value).strip()
     if value.lower() in {"untitled", "microsoft word", "扫描全能王"}:
         return ""
     return value
@@ -248,11 +249,11 @@ def extract_text_candidates(
 def extract_local_candidates(path: str | Path) -> tuple[list[Candidate], str]:
     import fitz
     with fitz.open(str(path)) as document:
-        metadata = document.metadata or {}
-        first_text = "\n".join(
+        metadata = {key: sanitize_unicode(value) for key, value in (document.metadata or {}).items()}
+        first_text = sanitize_unicode("\n".join(
             document[index].get_text("text")
             for index in range(min(5, document.page_count))
-        )
+        ))
     candidates: list[Candidate] = []
 
     title = _clean_pdf_metadata(metadata.get("title", ""))

@@ -491,7 +491,9 @@ def _r2_error_response(exc: Exception, *, stage: str, session_id: str = "", part
         stage,
         exc.__class__.__name__,
     )
-    if isinstance(exc, R2StagingExpired):
+    if getattr(exc, "error_code", "") == "r2_upload_capacity":
+        status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    elif isinstance(exc, R2StagingExpired):
         status_code = status.HTTP_410_GONE
     elif isinstance(exc, R2ConfigurationError):
         status_code = status.HTTP_503_SERVICE_UNAVAILABLE

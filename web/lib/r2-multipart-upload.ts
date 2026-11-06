@@ -1,4 +1,4 @@
-import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "./api";
+import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "./api";
 import { r2StagingStatusLabel } from "./ingestion-staging-status";
 import { withPrivateOwner } from "./api/private-owner";
 import { UploadRateMeter } from "./upload-metrics";
@@ -162,10 +162,21 @@ export class R2MultipartUploadManager {
     if (task.owner !== this.owner) throw Error("上传账户已变化，请重新读取上传记录。");
     while (task.paused) { task.status = "paused"; task.message = "上传已暂停，已确认分段保留"; this.emit(true); await wait(200); task.controller.signal.throwIfAborted(); }
   }
-  private request<T>(task: InternalTask, path: string, options: RequestInit = {}, _credential?: string | null) {
+  private async request<T>(task: InternalTask, path: string, options: RequestInit = {}, _credential?: string | null): Promise<T> {
     void _credential;
-    const signal = AbortSignal.any([task.controller.signal, AbortSignal.timeout(60000)]);
-    return withPrivateOwner(task.owner, () => apiRequest<T>(path, {...options,signal,headers:{...options.headers,"X-Editor-Owner":task.owner}}, getServerSessionCredential(), false), signal);
+    for (let attempt = 0; ; attempt += 1) {
+      await this.checkpoint(task);
+      const signal = AbortSignal.any([task.controller.signal, AbortSignal.timeout(60000)]);
+      try {
+        return await withPrivateOwner(task.owner, () => apiRequest<T>(path, {...options,signal,headers:{...options.headers,"X-Editor-Owner":task.owner}}, getServerSessionCredential(), false), signal);
+      } catch (reason) {
+        if (task.controller.signal.aborted || attempt >= 3 || !(reason instanceof ApiRequestError) || ![429, 503].includes(reason.status)) throw reason;
+        task.status = "connection_waiting";
+        task.message = "服务器繁忙，正在等待后继续原上传请求";
+        this.emit(true);
+        await wait(2000 * 2 ** attempt);
+      }
+    }
   }
 
   private tasks = new Map<string, InternalTask>();
@@ -201,6 +212,9 @@ export class R2MultipartUploadManager {
       );
       if (active && this.running.has(active.taskId)) continue;
       if (active) {
+        // A server session can remain resumable after its browser task failed.
+        // Keep the failed task actionable until the librarian explicitly resumes.
+        if (session.staging_status === "uploading" && ["failed", "aborted"].includes(active.status)) continue;
         active.message = this.sessionMessage(session);
         active.status = session.staging_status === "aborted" ? "aborted"
           : session.staging_status === "uploading" ? "waiting"
@@ -390,8 +404,8 @@ export class R2MultipartUploadManager {
       task.etaSeconds = null;
       task.error = reason instanceof Error ? reason.message : "上传失败。";
       task.message = task.sessionId
-        ? "PDF 上传未完成，可重新选择同一文件继续"
-        : "无法建立上传会话";
+        ? `PDF 上传未完成：${task.error}。可继续已保存的分段`
+        : `无法建立上传会话：${task.error}`;
       this.emit(true);
       throw reason;
     }

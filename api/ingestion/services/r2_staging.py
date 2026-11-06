@@ -56,6 +56,11 @@ class R2ConfigurationError(R2StagingError):
     error_code = "r2_not_configured"
 
 
+class R2UploadCapacityError(R2StagingError):
+    error_code = "r2_upload_capacity"
+    retryable = True
+
+
 class R2RetryableError(R2StagingError):
     error_code = "r2_temporarily_unavailable"
     retryable = True
@@ -303,7 +308,7 @@ def create_r2_upload(
             staging_status__in=CONCURRENT_STAGING_STATUSES,
         ).count()
         if active_count >= settings.R2_MAX_ACTIVE_UPLOADS_PER_USER:
-            raise R2StagingError("当前账户同时进行的 PDF 上传已达到上限。")
+            raise R2UploadCapacityError("当前账户的上传通道暂时已满，等待在途文件完成后可继续。")
         if batch.items.count() >= min(batch.expected_count, 50):
             raise R2StagingError("该批次已达到预定文件数量。")
         item_id = uuid.uuid4()
@@ -708,7 +713,7 @@ def import_r2_staging_object(item_id) -> dict:
                     locked,
                     "file",
                     temporary_path,
-                    locked.source_filename,
+                    f"{locked.pk}.pdf",
                 )
                 saved_name = locked.file.name
             locked.sha256 = digest.hexdigest()

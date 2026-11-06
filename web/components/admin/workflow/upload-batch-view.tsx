@@ -6,7 +6,7 @@ import { formatUploadBytes } from "@/lib/upload-metrics";
 import { Dialog } from "@/components/ui/dialog";
 import styles from "./upload-batch-view.module.css";
 
-export type UploadDisplayRow = {id:string;filename:string;size:number;profile:string;kind:string;progress:number;stageProgress?:number;canPreview?:boolean;transferState?:"waiting"|"uploading"|"paused";retryTarget?:{kind:"upload"|"ingestion";id:string};status:string;detail:string;category:"waiting"|"active"|"done"|"failed"|"duplicate"|"paused";actions:ReactNode;primaryAction?:ReactNode;select?:()=>void};
+export type UploadDisplayRow = {id:string;filename:string;size:number;profile:string;kind:string;progress:number;stageProgress?:number;canPreview?:boolean;transferState?:"waiting"|"uploading"|"paused";retryTarget?:{kind:"upload"|"ingestion"|"import";id:string};status:string;detail:string;category:"waiting"|"active"|"done"|"failed"|"duplicate"|"paused";actions:ReactNode;primaryAction?:ReactNode;select?:()=>void};
 export function UploadBatchView({rows,label,onLabel,saveLabel,addFiles,locked,pending,start,canStart,pauseAll,resumeAll,retryAll,clear,policy,feedback,details,recent,metadata,preview,processingHref,batchFirst=false,title="批量收件与上传",maxFiles=50,maxBytes=200*1024*1024}:{
   rows:UploadDisplayRow[];label:string;onLabel:(value:string)=>void;saveLabel?:()=>void;addFiles:(files:FileList|null)=>void;locked:boolean;pending:boolean;start:()=>void;canStart:boolean;pauseAll:(ids?:string[])=>void;resumeAll:(ids?:string[])=>void;retryAll:(ids?:string[])=>void;clear:()=>void;policy:ReactNode;feedback:ReactNode;details:ReactNode;recent:ReactNode;metadata:ReactNode;preview:ReactNode;processingHref?:string;batchFirst?:boolean;title?:string;maxFiles?:number;maxBytes?:number;
 }) {

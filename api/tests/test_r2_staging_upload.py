@@ -307,11 +307,13 @@ def test_user_abort_is_persisted_even_when_r2_abort_fails(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("source_name", ["streamed.pdf", "社会运行论及其发展" * 25 + ".pdf"])
 def test_r2_complete_then_stream_import_preserves_r2_until_pipeline_ready(
     admin_user,
     r2_settings,
     tmp_path,
     django_capture_on_commit_callbacks,
+    source_name,
 ):
     r2_settings.MEDIA_ROOT = tmp_path
     r2_settings.NAS_INCOMING_ROOT = tmp_path / "incoming"
@@ -319,7 +321,7 @@ def test_r2_complete_then_stream_import_preserves_r2_until_pipeline_ready(
     batch = create_batch(admin_user)
     item = UploadItem.objects.create(
         batch=batch,
-        source_filename="streamed.pdf",
+        source_filename=source_name,
         processing_token="stream-token-123",
         staging_backend=UploadItem.StagingBackend.R2,
         staging_status=UploadItem.StagingStatus.UPLOADED,
@@ -343,8 +345,29 @@ def test_r2_complete_then_stream_import_preserves_r2_until_pipeline_ready(
     assert item.byte_size == len(fake.objects[item.staging_object_key])
     assert item.sha256
     assert item.file
+    assert item.file.name.endswith(f"/{item.id}.pdf")
+    assert item.source_filename == source_name
+    with item.file.open("rb") as stored:
+        assert stored.read() == fake.objects[item.staging_object_key]
     assert fake.objects[item.staging_object_key]
     scheduled.assert_called_once_with(str(item.id))
+
+
+@pytest.mark.django_db
+def test_busy_upload_capacity_returns_retryable_429_without_creating_extra_session(api_client, admin_user, r2_settings):
+    fake = FakeR2Client()
+    batch = create_batch(admin_user, expected_count=50)
+    with patch("ingestion.services.r2_staging.r2_client", return_value=fake):
+        for index in range(5):
+            assert init_session(api_client, admin_user, batch, 7, f"capacity-token-{index}").status_code == 201
+        blocked = init_session(api_client, admin_user, batch, 7, "capacity-token-6")
+        assert blocked.status_code == 429
+        assert blocked.data["error_code"] == "r2_upload_capacity"
+        assert batch.items.count() == 5
+        assert len(fake.uploads) == 5
+        repeated = init_session(api_client, admin_user, batch, 7, "capacity-token-0")
+        assert repeated.status_code == 200
+        assert batch.items.count() == 5
 
 
 @pytest.mark.django_db

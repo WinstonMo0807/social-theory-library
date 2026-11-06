@@ -34,6 +34,26 @@ def test_illegal_pdf_surrogates_are_repaired_before_utf8_persistence():
     assert "\udcc0" not in normalize_search_text(damaged)
 
 
+def test_pdf_metadata_and_first_pages_repair_invalid_unicode_before_candidates(monkeypatch):
+    import fitz
+    import json
+    from ingestion.services.metadata import extract_local_candidates
+
+    class Pdf:
+        metadata = {"title": "强制、资本和欧洲国家\udcc0", "author": "查尔斯·蒂利\udc80"}
+        page_count = 1
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def __getitem__(self, index): return self
+        def get_text(self, kind): return "原文\udcc0\n"
+
+    monkeypatch.setattr(fitz, "open", lambda path: Pdf())
+    candidates, text = extract_local_candidates("damaged-metadata.pdf")
+    encoded = json.dumps([candidate.value for candidate in candidates], ensure_ascii=False).encode("utf-8")
+    assert "强制、资本和欧洲国家�".encode() in encoded
+    assert text == "原文�\n"
+
+
 @pytest.mark.django_db
 def test_persist_pages_repairs_surrogates_without_changing_the_pdf():
     work = Work.objects.create(document_type="book", title="非法 Unicode 测试")

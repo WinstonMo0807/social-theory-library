@@ -31,6 +31,7 @@ import {
 import {
   INGESTION_TERMINAL_STATUSES, activeUploadStage, uploadNeedsRefresh, uploadSnapshotTime, type UploadStageState,
   r2BrowserUploadComplete,
+  r2TransferProgress,
   r2StagingOwnsPrimaryStatus,
   r2StagingStatusLabel,
   r2StagingWaitingAction,
@@ -450,42 +451,10 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
   }, [refreshStagingSessions]);
 
   useEffect(() => {
-    const accepted = result?.accepted ?? [];
-    if (!accepted.length) return;
-    const token = getServerSessionCredential();
-    if (!token) return;
-    let active = true;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    async function refresh() {
-      if (document.hidden) { timer = setTimeout(refresh, 10_000); return; }
-      try {
-        const snapshots = await Promise.all(
-          accepted.map((itemId) => apiRequest<IngestionItem>(
-            `/ingestion/items/${itemId}/`,
-            {},
-            token,
-          )),
-        );
-        if (!active) return;
-        setIngestionItems(snapshots);
-        setIngestionError("");
-        if (snapshots.some(uploadNeedsRefresh)) {
-          timer = setTimeout(refresh, 2500);
-        }
-      } catch (reason) {
-        if (!active) return;
-        setIngestionError(reason instanceof Error ? reason.message : "暂时无法刷新识别状态。");
-        timer = setTimeout(refresh, 5000);
-      }
-    }
-
-    void refresh();
-    return () => {
-      active = false;
-      if (timer) clearTimeout(timer);
-    };
-  }, [result,apiRequest]);
+    // The owner-scoped batch workspace already polls every item's status.
+    // Refresh it after a receipt instead of starting N extra per-file pollers.
+    if (result?.accepted.length) workspace.reload();
+  }, [result?.accepted.length, workspace.reload]);
 
   async function addFiles(list: FileList | null) {
     if(!list||reservation.recovery||selecting.current||pending)return;
@@ -539,7 +508,8 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
         {},
         token,
       );
-      setIngestionItems((current) => current.map((item) => item.id === itemId ? snapshot : item));
+      setIngestionItems((current) => [...current.filter(item => item.id !== itemId), snapshot]);
+      workspace.reload();
       return true;
     } catch (reason) {
       setIngestionError(reason instanceof Error ? reason.message : "重新处理失败。");
@@ -569,14 +539,17 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
 
   async function retryStagingImport(sessionId: string) {
     const actionKey = `retry-staging:${sessionId}`;
-    if (!startAction(actionKey)) return;
+    if (!startAction(actionKey)) return false;
     setStagingAction(sessionId);
     setStagingError("");
     try {
       await withPrivateOwner(owner,()=>retryR2Import(sessionId));
       await refreshStagingSessions();
+      workspace.reload();
+      return true;
     } catch (reason) {
       setStagingError(reason instanceof Error ? reason.message : "重新入库失败。");
+      return false;
     } finally {
       setStagingAction("");
       finishAction(actionKey);
@@ -1003,16 +976,45 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
     const source=ingestionItems.find(row=>row.id===(item.itemId||item.sessionId)),kind=String(source?.review_data?.document_type||source?.recognized_metadata.document_type||"");
     const processing=activeUploadStage(source);
     const category:UploadDisplayRow["category"]=processing?.status==="paused"?"paused":processing?"active":source?.preflight_summary?.exact_duplicate?"duplicate":source?.status==="failed"||item.status==="failed"?"failed":item.status==="paused"?"paused":item.status==="uploading"?"active":source&&!INGESTION_TERMINAL_STATUSES.has(source.status)?"active":item.status==="accepted"?"done":"waiting";
-    return {id:item.token,filename:item.file.name,size:item.file.size,profile:textProfileLabels[source?.preflight_summary?.text_profile||""],kind:({book:"图书",journal_article:"期刊论文",journal_issue:"整期期刊",thesis:"学位论文",report:"研究报告"} as Record<string,string>)[kind]||kind,progress:item.progress,stageProgress:processing?.progress??source?.stage_progress,canPreview:true,transferState:["waiting","uploading","paused"].includes(item.status)?item.status as "waiting"|"uploading"|"paused":undefined,retryTarget:item.status==="failed"?{kind:"upload",id:item.token}:source?.status==="failed"?{kind:"ingestion",id:source.id}:undefined,category,status:processing?.status==="paused"?"后台处理已暂停":processing?"后台处理中":source?ingestionStatusLabels[source.status]||source.status:item.status==="paused"?"传输已暂停":item.status==="accepted"?"上传完成 · 等待识别":item.status==="uploading"?"上传中":item.status==="failed"?"上传失败":"等待上传",detail:source?.error_message||item.message,primaryAction:["uploading","paused"].includes(item.status)?<button type="button" onClick={()=>pauseFile(item,item.status!=="paused")}>{item.status==="paused"?"继续":"暂停"}</button>:item.status==="failed"?<button disabled={pending||Boolean(reservation.recovery)} onClick={()=>void upload(item.token)}>重试</button>:source?.status==="failed"?<button disabled={Boolean(retryingItem)} onClick={()=>void retryIngestionItem(source.id)}>重试</button>:source?<Link href={`/admin/intake/${source.id}`}>查看</Link>:undefined,select:()=>setPreviewToken(item.token),actions:<>{["uploading","paused"].includes(item.status)?<button type="button" onClick={()=>pauseFile(item,item.status!=="paused")}>{item.status==="paused"?"继续":"暂停"}</button>:null}{item.status==="failed"?<button disabled={pending||Boolean(reservation.recovery)} onClick={()=>void upload(item.token)}>重试</button>:null}{source?<><Link href={`/admin/intake/${source.id}`}>{source.preflight_summary?.exact_duplicate?"核对重复与版本":"前往编目"}</Link>{source.status==="failed"?<button disabled={Boolean(retryingItem)} onClick={()=>void retryIngestionItem(source.id)}>重试处理</button>:null}</>:null}<button disabled={pending} onClick={()=>setFiles(rows=>rows.filter(row=>row.token!==item.token))}>移除列表项</button></>};
+    return {id:item.token,filename:item.file.name,size:item.file.size,profile:textProfileLabels[source?.preflight_summary?.text_profile||""],kind:({book:"图书",journal_article:"期刊论文",journal_issue:"整期期刊",thesis:"学位论文",report:"研究报告"} as Record<string,string>)[kind]||kind,progress:item.progress,stageProgress:processing?.progress??source?.stage_progress,canPreview:true,transferState:["waiting","uploading","paused"].includes(item.status)?item.status as "waiting"|"uploading"|"paused":undefined,retryTarget:item.status==="failed"?{kind:"upload",id:item.token}:source?.status==="failed"?{kind:"ingestion",id:source.id}:undefined,category,status:item.status==="failed"?"上传失败":source?.staging&&r2StagingOwnsPrimaryStatus(source.staging.staging_status)?r2StagingStatusLabel(source.staging.staging_status):processing?.status==="paused"?"后台处理已暂停":processing?"后台处理中":source?ingestionStatusLabels[source.status]||source.status:item.status==="paused"?"传输已暂停":item.status==="accepted"?"上传完成 · 等待识别":item.status==="uploading"?"上传中":"等待上传",detail:source?.error_message||item.message,primaryAction:["uploading","paused"].includes(item.status)?<button type="button" onClick={()=>pauseFile(item,item.status!=="paused")}>{item.status==="paused"?"继续":"暂停"}</button>:item.status==="failed"?<button disabled={pending||Boolean(reservation.recovery)} onClick={()=>void upload(item.token)}>重试</button>:source?.status==="failed"?<button disabled={Boolean(retryingItem)} onClick={()=>void retryIngestionItem(source.id)}>重试</button>:source?<Link href={`/admin/intake/${source.id}`}>查看</Link>:undefined,select:()=>setPreviewToken(item.token),actions:<>{["uploading","paused"].includes(item.status)?<button type="button" onClick={()=>pauseFile(item,item.status!=="paused")}>{item.status==="paused"?"继续":"暂停"}</button>:null}{item.status==="failed"?<button disabled={pending||Boolean(reservation.recovery)} onClick={()=>void upload(item.token)}>重试</button>:null}{source?<><Link href={`/admin/intake/${source.id}`}>{source.preflight_summary?.exact_duplicate?"核对重复与版本":"前往编目"}</Link>{source.status==="failed"?<button disabled={Boolean(retryingItem)} onClick={()=>void retryIngestionItem(source.id)}>重试处理</button>:null}</>:null}<button disabled={pending} onClick={()=>setFiles(rows=>rows.filter(row=>row.token!==item.token))}>移除列表项</button></>};
   });
-  for(const item of ingestionItems)if(!files.some(row=>row.itemId===item.id||row.sessionId===item.id)){const processing=activeUploadStage(item);displayRows.push({id:item.id,filename:item.source_filename,size:item.byte_size||0,profile:textProfileLabels[item.preflight_summary?.text_profile||""],kind:String(item.review_data?.document_type||item.recognized_metadata.document_type||""),progress:100,stageProgress:processing?.progress??item.stage_progress,retryTarget:item.status==="failed"?{kind:"ingestion",id:item.id}:undefined,select:()=>setPreviewToken(item.id),category:processing?.status==="paused"?"paused":processing?"active":item.preflight_summary?.exact_duplicate?"duplicate":item.status==="failed"?"failed":INGESTION_TERMINAL_STATUSES.has(item.status)?"done":"active",status:processing?.status==="paused"?"后台处理已暂停":processing?"后台处理中":ingestionStatusLabels[item.status]||item.status,detail:item.error_message||"文件已接收，识别状态来自后台任务。",primaryAction:item.status==="failed"?<button disabled={Boolean(retryingItem)} onClick={()=>void retryIngestionItem(item.id)}>重试</button>:<Link href={`/admin/intake/${item.id}`}>查看</Link>,actions:<><Link href={`/admin/intake/${item.id}`}>查看并编目</Link>{item.status==="failed"?<button disabled={Boolean(retryingItem)} onClick={()=>void retryIngestionItem(item.id)}>重试处理</button>:null}</>});}
+  for (const item of ingestionItems) {
+    if (files.some(row => row.itemId === item.id || row.sessionId === item.id)) continue;
+    const processing = activeUploadStage(item), staging = item.staging;
+    const stagingOwnsStatus = Boolean(staging && r2StagingOwnsPrimaryStatus(staging.staging_status));
+    const retryImport = staging?.staging_status === "import_failed" && staging.can_retry_import;
+    const stageFailed = stagingOwnsStatus && ["import_failed", "expired", "aborted"].includes(staging!.staging_status);
+    const retryAction = retryImport
+      ? <button disabled={Boolean(stagingAction)} onClick={() => void retryStagingImport(item.id)}>重新导入</button>
+      : !stagingOwnsStatus && item.status === "failed"
+        ? <button disabled={Boolean(retryingItem)} onClick={() => void retryIngestionItem(item.id)}>重试处理</button> : undefined;
+    const catalogAction = !stagingOwnsStatus ? <Link href={`/admin/intake/${item.id}`}>查看并编目</Link> : undefined;
+    displayRows.push({
+      id:item.id, filename:item.source_filename, size:staging?.file_size || item.byte_size || 0,
+      profile:textProfileLabels[item.preflight_summary?.text_profile || ""],
+      kind:String(item.review_data?.document_type || item.recognized_metadata.document_type || ""),
+      progress:staging ? r2TransferProgress(staging) : 100,
+      stageProgress:processing?.progress ?? item.stage_progress,
+      retryTarget:retryImport ? {kind:"import", id:item.id} : !stagingOwnsStatus && item.status === "failed" ? {kind:"ingestion", id:item.id} : undefined,
+      select:() => setPreviewToken(item.id),
+      category:stagingOwnsStatus ? stageFailed ? "failed" : staging!.staging_status === "uploading" ? "waiting" : "active"
+        : processing?.status === "paused" ? "paused" : processing ? "active" : item.preflight_summary?.exact_duplicate ? "duplicate"
+          : item.status === "failed" ? "failed" : INGESTION_TERMINAL_STATUSES.has(item.status) ? "done" : "active",
+      status:stagingOwnsStatus ? staging!.staging_status === "uploading" ? "等待续传" : r2StagingStatusLabel(staging!.staging_status)
+        : processing?.status === "paused" ? "后台处理已暂停" : processing ? "后台处理中" : ingestionStatusLabels[item.status] || item.status,
+      detail:stagingOwnsStatus ? staging!.error_message || (staging!.staging_status === "uploading" ? "重新选择同一 PDF，继续已保存的分段。" : r2StagingWaitingAction(staging!.staging_status))
+        : item.error_message || "文件已接收，识别状态来自后台任务。",
+      primaryAction:retryAction || catalogAction,
+      actions:<>{retryAction}{catalogAction}</>,
+    });
+  }
   for(const item of invalidFiles)displayRows.push({id:item.id,filename:item.filename,size:item.size,profile:"未上传",kind:"",progress:0,status:"无法上传",category:"failed",detail:item.message,select:()=>setPreviewToken(item.id),primaryAction:<button onClick={()=>setInvalidFiles(rows=>rows.filter(row=>row.id!==item.id))}>移除</button>,actions:<button onClick={()=>setInvalidFiles(rows=>rows.filter(row=>row.id!==item.id))}>移除列表项</button>});
   async function retryDisplayRows(ids?:string[]){
     if(retryLoop.current||pending||preparing||reservation.recovery)return;
     const plan=displayRows.filter(row=>row.retryTarget&&(!ids||ids.includes(row.id)));
     if(!plan.length)return;
     retryLoop.current=true;setRetryingRows(true);
-    try{for(const row of plan){if(!retryAlive.current)break;const target=row.retryTarget!;const completed=target.kind==="upload"?await upload(target.id):await retryIngestionItem(target.id);if(!completed)break;}}
+    try{for(const row of plan){if(!retryAlive.current)break;const target=row.retryTarget!;const completed=target.kind==="upload"?await upload(target.id):target.kind==="import"?await retryStagingImport(target.id):await retryIngestionItem(target.id);if(!completed)break;}}
     finally{retryLoop.current=false;if(retryAlive.current)setRetryingRows(false);}
   }
   return <UploadBatchView batchFirst={Boolean(activeBatchId)} processingHref={workspace.data?.batch&&hasAdminCapability(user,"can_view_system_status")?`/admin/processing?batch_id=${workspace.data.batch.id}`:undefined} rows={displayRows} label={batchLabel} onLabel={setBatchLabel} saveLabel={workspace.data?.batch?()=>void renameBatch():undefined} addFiles={list=>void addFiles(list)} locked={preparing||retryingRows||!workspace.data||!reservation.ready||Boolean(reservation.recovery)||reservation.busy} pending={pending} canStart={files.some(row=>row.status==="waiting")} start={()=>void upload()} pauseAll={ids=>files.filter(row=>(!ids||ids.includes(row.token))&&["waiting","uploading"].includes(row.status)).forEach(row=>pauseFile(row))} resumeAll={ids=>files.filter(row=>(!ids||ids.includes(row.token))&&row.status==="paused").forEach(row=>pauseFile(row,false))} retryAll={ids=>void retryDisplayRows(ids)} clear={()=>{setActiveBatchId("");setBatchLabel(null);paused.current.clear();setInvalidFiles([]);setFiles([]);setMetadataFiles([]);setResult(null);setIngestionItems([]);}} maxFiles={workspace.data?.max_files} maxBytes={workspace.data?.max_file_bytes} title={activeBatchId?"批次详情与上传恢复":"批量收件与上传"}
@@ -1163,5 +1165,5 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
               );
             })}
           </div>{!ingestionItems.some(item=>item.id===detailItemId)?<p>当前文件尚未进入识别，上传完成后可在批次或收件详情查看。</p>:null}{stagingSessions.length?<details><summary>持续上传与恢复记录</summary>{stagingSessions.map(session=><p key={session.upload_session_id}>{session.source_filename} · {r2StagingStatusLabel(session.staging_status)}{session.can_abort?<button disabled={Boolean(stagingAction)} onClick={()=>void abortStagingSession(session.upload_session_id)}>取消上传</button>:null}{session.can_retry_import?<button disabled={Boolean(stagingAction)} onClick={()=>void retryStagingImport(session.upload_session_id)}>重新入库</button>:null}</p>)}</details>:null}</>}
-    recent={<section className="upload-recent-batches admin-panel"><header><h2>我的最近批次</h2><button onClick={workspace.reload}>刷新批次</button></header>{workspace.data?.recent.length?<ul>{workspace.data.recent.map(batch=><li key={batch.id}><Link href={`/admin/uploads?batch=${batch.id}`}>{batch.label||`批次 ${batch.created_at.slice(0,10)}`}</Link> · {batch.expected_count} 个预留文件位 · {batch.completed_count} 项处理完成 · {batch.failed_count} 项失败</li>)}</ul>:<p>尚无上传批次。</p>}</section>}/>;
+    recent={<section className="upload-recent-batches admin-panel"><header><h2>我的最近批次</h2><button onClick={workspace.reload}>刷新批次</button></header>{workspace.data?.recent.length?<ul>{workspace.data.recent.map(batch=><li key={batch.id}><Link href={`/admin/uploads?batch=${batch.id}`}>{batch.label||`批次 ${batch.created_at.slice(0,10)}`}</Link> · {batch.expected_count} 个预留文件位 · {batch.completed_count} 项处理完成 · {batch.failed_count} 项待复核或重试</li>)}</ul>:<p>尚无上传批次。</p>}</section>}/>;
 }

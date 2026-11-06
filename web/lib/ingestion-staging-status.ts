@@ -63,6 +63,12 @@ export function r2BrowserUploadComplete(status: string) {
   return R2_BROWSER_UPLOAD_COMPLETE.has(status);
 }
 
+export function r2TransferProgress(session: {staging_status:string;file_size:number;completed_parts:Array<{size:number}>}) {
+  if (r2BrowserUploadComplete(session.staging_status)) return 100;
+  const bytes = session.completed_parts.reduce((sum, part) => sum + part.size, 0);
+  return session.file_size > 0 ? Math.min(99, Math.floor(bytes / session.file_size * 100)) : 0;
+}
+
 export function r2StagingWaitingAction(status: string) {
   if (status === "import_failed") return "重新导入";
   if (status === "expired") return "需要重新上传 PDF";
