@@ -4,6 +4,12 @@
 
 # 部署说明
 
+## 2026-11-06 架构演示公开版源站
+
+独立展示公开版已部署至 NAS `/volume2/library/stl-previews/architecture-showcase-v4-20261106`，容器 `stl-architecture-showcase`。只读镜像、非 root、无业务挂载、无宿主端口；复用原隧道网络，源站 `http://stl-architecture-showcase:5196`，允许 Host `preview.winstonmo.com`。216 个运行文件哈希读回一致，健康检查与隧道网络 HTTP 200 已核实。实际静态文件已剔除内部路径、源码索引和接口细节，完整证据只在本机版。
+
+用户选择无需密码公开访问，并决定稍后自行接入 Cloudflare。目前 DNS 和隧道域名路由未改，公网未验收。现有书库 edge/cloudflared 保持，不切换生产候选。详 `stl4/ARCHITECTURE_SHOWCASE_V4_20261106.md`；具体路由值、启动和停止方式见 `../web/architecture-showcase/DOMAIN_SETUP.md`。
+
 ## 2026-11-06 账号邮件候选配置
 
 当前统一内网Web130/API63。新增标准SMTP环境加载，`.env.example`列主机、端口、用户、专用授权码、TLS/SSL与超时；默认仍不外发。正式服务由用户选定并安全配置，再获授权验证送达；Brevo保持兼容。不更改生产、域名或隧道。当前候选、恢复点及公网缺项见stl4/CUTOVER_CANDIDATE_20261026.md顶部；免费方案与配置步骤见stl4/MAIL_LOGIN_LAUNCH_20261106.md。

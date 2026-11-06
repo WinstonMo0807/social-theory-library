@@ -16,3 +16,5 @@ dialog{padding:0;border:1px solid var(--line);background:var(--paper);color:var(
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 @media(max-width:800px){.evidence-dialog,.help-dialog{padding:20px}.evidence-tools{flex-wrap:wrap;gap:12px}.evidence-tools label{order:2;max-width:none;flex-basis:100%}.evidence-results{max-height:46vh}dialog h2{font-size:23px}}
 .graph{overflow:clip}.details{display:flex;flex-direction:column}.details>header,.details>h2,.details>.detail-subtitle,.details>.status-pill{flex-shrink:0}.details>.status-pill{align-self:flex-start}.detail-scroll{height:auto;flex:1;min-height:0}
+
+.auto-dwell{width:88px;padding:0 10px 7px;color:var(--muted);font-size:11px;text-align:center}.auto-dwell>span{display:block;margin-bottom:9px}.auto-dwell>i{display:block;height:2px;background:#ddd6ca;overflow:hidden}.auto-dwell b{display:block;height:100%;background:var(--gold);transform-origin:left}.transport-controls .auto-pause{min-width:32px;width:32px;color:var(--muted)}

@@ -1,0 +1,28 @@
+services:
+  architecture:
+    image: stl-architecture-showcase:v4-20261106
+    build:
+      context: .
+      dockerfile: Dockerfile.public
+    container_name: stl-architecture-showcase
+    command: ["node", "/app/serve.mjs", "5196", "--public"]
+    working_dir: /app
+    user: "1000:1000"
+    read_only: true
+    restart: unless-stopped
+    environment:
+      SHOWCASE_BIND: 0.0.0.0
+    networks: [tunnel]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 96m
+    cpus: 0.25
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5196/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+networks:
+  tunnel:
+    external: true
+    name: social-science-library_public_front

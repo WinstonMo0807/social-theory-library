@@ -8,6 +8,12 @@ NAS welcome-entry-web-r131-recovery保留前Web130，welcome-entry-api-r64-recov
 
 # 开发进度
 
+## 2026-11-06 架构演示 v4 自动循环与公开版准备
+
+ARCHITECTURE-SHOWCASE-05 D：独立展示改为打开即自动循环 5 幕、3 条流程和 38 步操作。点击只刷新当前停留时间，动画不重置；悬停与滚动不延时。移除“播放流程”，保留暂停图标、键盘、全屏、详情及导出。用户选择 preview.winstonmo.com 公开脱敏版，构建时剔除内部路径、接口调用细节及源码索引；本机完整溯源版仍在 5196，公开预览在 5198。
+
+341 项独立浏览器检查通过，STC 界面 0 错误，11 张 4K PNG 与 225.8 秒 1080p 完整循环 WebM 已生成。公开版已部署 NAS 独立只读容器 stl-architecture-showcase，216 个运行文件哈希与本机一致，健康检查及隧道网络 HTTP 200 通过；无业务挂载或宿主端口。原 edge/cloudflared 保持，不改书库业务与生产候选。用户选择稍后自行接入 Cloudflare，DNS 与域名路由未改，不能称公网已可用。配置详 web/architecture-showcase/DOMAIN_SETUP.md；完整记录 docs/stl4/ARCHITECTURE_SHOWCASE_V4_20261106.md。v3 原包及 v1/v2 备份保留。只形成本项 Git 检查点，不推送，继承修改保持。
+
 ## 2026-11-06 架构演示 v3 交付
 
 ARCHITECTURE-SHOWCASE-04 D：5196 收为 5 个场景，使用“底层架构”“品牌标识”，删除“实现与证据”。3 条流程共 38 步，界面操作及反馈依据实际组件重建；保留示例说明与来源。新增步骤选择器与分段导航，调整大屏排版。构建、源码索引、STC 与 279 项独立浏览器检查通过。11 张 4K PNG、186.28 秒 1080p WebM 与离线包已导出。修改前 v2 备份及原版备份保留。详 `stl4/ARCHITECTURE_SHOWCASE_V3_20261106.md`。仅改独立展示，不写入业务或生产；继承改动保留。

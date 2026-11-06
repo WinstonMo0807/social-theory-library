@@ -8,6 +8,12 @@ NAS welcome-entry-web-r131-recovery保留前Web130，welcome-entry-api-r64-recov
 
 # Social Theory Library 当前进度
 
+## 2026-11-06 架构演示 v4 自动循环与公开版准备
+
+ARCHITECTURE-SHOWCASE-05 D：独立展示改为打开即自动循环 5 幕、3 条流程和 38 步操作。点击只刷新当前停留时间，动画不重置；悬停与滚动不延时。移除“播放流程”，保留暂停图标、键盘、全屏、详情及导出。用户选择 preview.winstonmo.com 公开脱敏版，构建时剔除内部路径、接口调用细节及源码索引；本机完整溯源版仍在 5196，公开预览在 5198。
+
+341 项独立浏览器检查通过，STC 界面 0 错误，11 张 4K PNG 与 225.8 秒 1080p 完整循环 WebM 已生成。公开版已部署 NAS 独立只读容器 stl-architecture-showcase，216 个运行文件哈希与本机一致，健康检查及隧道网络 HTTP 200 通过；无业务挂载或宿主端口。原 edge/cloudflared 保持，不改书库业务与生产候选。用户选择稍后自行接入 Cloudflare，DNS 与域名路由未改，不能称公网已可用。配置详 web/architecture-showcase/DOMAIN_SETUP.md；完整记录 docs/stl4/ARCHITECTURE_SHOWCASE_V4_20261106.md。v3 原包及 v1/v2 备份保留。只形成本项 Git 检查点，不推送，继承修改保持。
+
 ## 2026-11-06 架构演示 v3：5 个场景与 38 步操作
 
 ARCHITECTURE-SHOWCASE-04 D：5196 独立展示将“技术与数据”改为“底层架构”，“设计系统”改为“品牌标识”，删除“实现与证据”场景。参考 Elicit 同画面演示，按真实组件重建检索与引用 20 步、入库与发布 10 步、私人研究 8 步。输入、范围、排序、加载、上下文、原页、选文、复制与导出均有可见反馈。增加分段导航及步骤选择器，修正文字间距与弹窗裁切。38 步均保留源码、调用及权限依据。

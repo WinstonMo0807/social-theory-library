@@ -2,7 +2,7 @@
   "version": 1,
   "decisions": [
     {
-      "id": "aa54811b438b883ab98936b8243c6b1841e8dc7a01cd3cb4c9f9bae7583c2873",
+      "id": "db60936a3da35c6330c761159192c5a2bd822fc0c002f5812d9c2f0ffbdb5c8d",
       "decision": "keep",
       "reason": "这是内部架构演示，操作状态和文献内容均为示例。删除说明会使观众误认为正在真实检索、复制、发布或写入私人资料；因此保留示例边界。"
     }

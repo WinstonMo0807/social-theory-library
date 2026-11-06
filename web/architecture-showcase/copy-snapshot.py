@@ -3,7 +3,7 @@ from pathlib import Path
 import json, re
 
 HERE = Path(__file__).resolve().parent
-OUT = HERE.parents[1] / 'output/playwright/architecture-showcase-v3'
+OUT = HERE.parents[1] / 'output/playwright/architecture-showcase-v4'
 OUT.mkdir(parents=True, exist_ok=True)
 lines = []
 def visit(value):

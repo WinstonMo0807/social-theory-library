@@ -1,3 +1,4 @@
+import { publicDemo } from './mode';
 // Narrative and layout are separate from the audited architecture graph.
 export const scenes = [
  {id:'overview',name:'全站总览',english:'Library architecture',title:'书库的功能与协作关系',intro:'6 个功能领域围绕馆藏与原文协作，共用业务和权限服务。',stages:['整体结构','发现与知识','阅读与研究','管理与支撑'],notes:['前台、私人研究与管理端共用 Django 业务服务。','检索返回原文证据。知识页面按学者、理论与主题组织作品。','阅读器保留版本与页码。私人研究记录仅供所属读者访问。','管理端处理馆藏与内容发布。系统模块维护任务、模型与存储。']},
@@ -21,7 +22,7 @@ export const sitemapGroups=[
  {title:'浏览书库',access:'公开页面',reveal:0,items:[['首页与欢迎','/ · /welcome','curation'],['学者、理论与主题','/scholars · /theories · /topics','knowledge'],['特别策划与作品','/recommendations · /works/[slug]','curation'],['关于与帮助','/about · /help','stl']]},
  {title:'发现与阅读',access:'登录后使用',reveal:1,items:[['馆藏与观点检索','/explore/original · /explore/opinions','discovery'],['原文证据','/explore/evidence','evidence'],['PDF 阅读与并读','/reader/[assetId]','reader'],['引用与下载','阅读器操作与文件下载接口','citations']]},
  {title:'私人研究',access:'本人记录',reveal:1,items:[['连续研究','/account/research','sessions'],['笔记与确认','/account/notes · /account/confirmed-notes','notes'],['计划与书单','/account/plans · /account/collections','plans'],['引文体检与隐私','/account/citation-audits · /account/settings/privacy','audits']]},
- {title:'管理工作区',access:'按管理权限使用',reveal:2,items:[['收件与编目','/admin/uploads · /admin/intake/[itemId]','intake'],['文档与索引','/admin/processing','processing'],['发布与内容','/admin/publication · /admin/content','publish'],['系统与权限','/admin/system-health · /admin/users','operations']]},
+ {title:'管理工作区',access:'按管理权限使用',reveal:2,items:[['收件与编目',(publicDemo?'':'/admin/uploads · /admin/intake/[itemId]'),'intake'],['文档与索引',(publicDemo?'':'/admin/processing'),'processing'],['发布与内容',(publicDemo?'':'/admin/publication · /admin/content'),'publish'],['系统与权限',(publicDemo?'':'/admin/system-health · /admin/users'),'operations']]},
 ];
 export const workflowSteps=[
  {id:'viewpoints',title:'提出问题',action:'输入问题，限定范围',output:'查询 + 筛选条件',source:'discovery-client'},
