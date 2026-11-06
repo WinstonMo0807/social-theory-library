@@ -17,6 +17,7 @@ from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.models import AboutPageBlock, MediaRendition, SiteSetting
 from catalog.services import editorial_issues as ledger
 from catalog.site_layout import AREAS, present
+from catalog.welcome import welcome_books
 from common.permissions import IsLibraryAdmin
 
 AREA_LABELS = {"featured": "首页主推", "scholars": "学者聚焦", "topics": "探索主题"}
@@ -32,6 +33,9 @@ def checks(payload):
     layout = present(payload.get("home_layout", {}))
     media = []
     config = payload.get("config", {})
+    from catalog.welcome import welcome_books
+    if any(not row["available"] for row in welcome_books(config, include_missing=True)):
+        add("welcome_source_unavailable", "blocking", "欢迎页有不可公开的书籍", "请更换或移除已撤回的书籍。", "welcome-books")
     if not str(config.get("site_name") or "").strip():
         add("site_name", "blocking", "书库名称未填写", "请填写品牌与导航中的书库名称。", "brand")
     if config.get("home_hero_rendition_id"):
@@ -94,6 +98,24 @@ def changes(before, after):
     for prefix, label in SECTION_LABELS.items():
         labels.update({f"{prefix}_title": f"{label}标题", f"{prefix}_body": f"{label}正文"})
     for key in dict.fromkeys([*before.get("config", {}), *after.get("config", {})]):
+        if key == "welcome_books":
+            continue  # Resolved labels are not editable configuration or a historical snapshot.
+        if key == "welcome":
+            old = before.get("config", {}).get(key) or {}
+            new = after.get("config", {}).get(key) or {}
+            for field, label in (("copies", "欢迎页三版文案"), ("chapters", "欢迎页功能介绍"), ("texts", "欢迎页文字")):
+                def words(value):
+                    if value is None: return "沿用默认文字"
+                    if isinstance(value, dict): return "\n".join(words(v) for k, v in value.items() if k != "id")
+                    if isinstance(value, list): return "\n".join(words(v) for v in value)
+                    return str(value)
+                add(f"config.welcome.{field}", label, words(old.get(field)), words(new.get(field)))
+            def books(value):
+                if value.get("edition_ids") is None: return "跟随公开馆藏推荐"
+                if not value["edition_ids"]: return "不展示具体书籍"
+                return "\n".join(f"{i+1}. {row['title']}" for i, row in enumerate(welcome_books({"welcome": value}, include_missing=True)))
+            add("config.welcome.edition_ids", "欢迎页展示书籍与顺序", books(old), books(new))
+            continue
         if key == "home_hero_image" and before.get("config", {}).get("home_hero_rendition_id") == after.get("config", {}).get("home_hero_rendition_id") and after.get("config", {}).get("home_hero_rendition_id"):
             continue  # Public and private URLs refer to the same immutable image.
         add(f"config.{key}", labels.get(key, "其他网站文字"), before.get("config", {}).get(key), after.get("config", {}).get(key))

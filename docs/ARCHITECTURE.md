@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-11-06 欢迎内容与统一内网候选
+
+catalog/welcome.py在原site_content中校验欢迎配置和解析正式公开版本；welcome_books为派生只读输出，不接受保存的伪造书目。/admin/welcome复用原网站修订/预览/发布检查/历史，没有新表或第二套发布系统，整份网站共同发布范围明确展示，来源撤回不继续公开。/welcome在动态请求时随机取三版之一，同次停留保持；首页不重定向。
+
+compose.stl4-review.yaml仅为内网末层覆盖，将Web接入原discovery_internal和模型地址，/policy共用18084。无新宿主端口、数据库或模型，旧18086停止保留。Web122/API56源码统一，四worker/beat仅同步镜像不启动，OCR/DOCX停止状态保留。本覆盖不是公网配置。详stl4/UNIFIED_REVIEW_20261106.md。
+
 ## 2026-11-03 政策库研究预览边界
 
 新增`web/app/policy`同域名候选页面与`/policy/query`接口，`web/lib/policy-demo`保存有限真实公开样本与检索逻辑，未建政策生产数据库或爬虫。查询可通过显式`POLICY_DEMO_INFERENCE_URL`调用原`/rerank`模型，保留原文位置与模型身份核验，异常时明确使用关键词结果。独立Vite/Node预览复用同一页面与查询服务代码，NAS仅绑定内网18086并加入原预览模型内部网络；不改现有STL入库、馆藏或生产代理。未来政策模块独立表/队列/索引、以证据契约连接STL仍为建议，未实施。详情及部署/恢复记录见`stl4/POLICY_DEMO_20261103.md`。

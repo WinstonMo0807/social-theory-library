@@ -8,7 +8,7 @@
   --story-ease: cubic-bezier(.22, 1, .36, 1);
   color: var(--story-ink); background: var(--story-paper); font-family: var(--sans); overflow: clip;
 }
-.story :is(h1, h2, h3, p) { margin: 0; color: inherit; }
+.story :is(h1, h2, h3, p) { margin: 0; color: inherit; white-space: pre-line; }
 .story :is(h1, h2, h3) { font-family: var(--serif); font-weight: 600; letter-spacing: -.025em; text-wrap: balance; }
 .story h2 { font-size: clamp(30px, 3.5vw, 48px); line-height: 1.45; }
 .story h3 { font-size: clamp(23px, 2.4vw, 31px); line-height: 1.5; }
@@ -170,20 +170,20 @@
 
 @keyframes grainDrift { 0%, 100% { transform: translate(-1%, -1%) rotate(-2deg); } 50% { transform: translate(2%, 1%) rotate(3deg); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes brandScene { 0%, 10%, 100% { opacity: 1; } 13%, 99% { opacity: 0; } }
+@keyframes brandScene { 0%, 11.5%, 100% { opacity: 1; } 13.5%, 99% { opacity: 0; } }
 @keyframes brandSettle { 0%, 100% { opacity: 0; transform: translateY(7px) scale(.97); } 2%, 97% { opacity: 1; transform: none; } }
 @keyframes brandUnfold { 0%, 1.5%, 100% { transform: translateX(var(--brand-shift)); } 6%, 97% { transform: none; } }
-@keyframes brandRule { 0%, 3%, 100% { opacity: 0; transform: scaleY(.6); } 5.5%, 97% { opacity: 1; transform: scaleY(1); } }
-@keyframes brandEnglish { 0%, 3.5%, 100% { opacity: 0; transform: translateX(-9px); clip-path: inset(0 100% 0 0); } 6.5%, 97% { opacity: 1; transform: none; clip-path: inset(0); } }
-@keyframes brandChinese { 0%, 4%, 100% { opacity: 0; transform: translateX(-7px); clip-path: inset(0 100% 0 0); } 7%, 97% { opacity: 1; transform: none; clip-path: inset(0); } }
-@keyframes frameMorph { 0%, 23%, 100% { transform: translate(-50%, -50%) scaleY(.58); } 26%, 29% { transform: translate(-50%, -50%) scaleY(.2); } 32%, 73% { transform: translate(-50%, -50%) scaleY(1); } 77%, 96% { transform: translate(-50%, -50%) scaleY(.94); } }
-@keyframes questionScene { 0%, 12%, 25%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } 14%, 23% { opacity: 1; transform: translate(-50%, -50%); } }
-@keyframes typing { 0%, 14% { clip-path: inset(0 100% 0 0); } 21%, 100% { clip-path: inset(0); } }
-@keyframes workingScene { 0%, 24%, 31%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); } 26%, 29% { opacity: 1; transform: translate(-50%, -50%); } }
-@keyframes resultsScene { 0%, 30%, 54%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 33%, 51% { opacity: 1; transform: translate(-50%, -50%); } }
-@keyframes resultAppear { 0%, 30% { opacity: 0; transform: translateY(10px); } 34%, 100% { opacity: 1; transform: translateY(0); } }
-@keyframes readerScene { 0%, 52%, 77%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 56%, 74% { opacity: 1; transform: translate(-50%, -50%); } }
-@keyframes savedScene { 0%, 75%, 99%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 80%, 96% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes brandRule { 0%, 6.3%, 100% { opacity: 0; transform: scaleY(.82); } 8.5%, 97% { opacity: .7; transform: scaleY(1); } }
+@keyframes brandEnglish { 0%, 6.2%, 100% { opacity: 0; transform: translateX(-6px); clip-path: inset(0 100% 0 0); } 8.8%, 97% { opacity: 1; transform: none; clip-path: inset(0); } }
+@keyframes brandChinese { 0%, 6.6%, 100% { opacity: 0; transform: translateX(-5px); clip-path: inset(0 100% 0 0); } 9.1%, 97% { opacity: 1; transform: none; clip-path: inset(0); } }
+@keyframes frameMorph { 0%, 11.5%, 100% { transform: translate(-50%, -50%) scaleY(.58); } 15%, 27% { transform: translate(-50%, -50%) scaleY(1); } 30%, 39% { transform: translate(-50%, -50%) scaleY(.58); } 41%, 44% { transform: translate(-50%, -50%) scaleY(.2); } 47%, 80% { transform: translate(-50%, -50%) scaleY(1); } 84%, 97% { transform: translate(-50%, -50%) scaleY(.94); } }
+@keyframes questionScene { 0%, 28%, 41%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } 30%, 39% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes typing { 0%, 30% { clip-path: inset(0 100% 0 0); } 37%, 100% { clip-path: inset(0); } }
+@keyframes workingScene { 0%, 40%, 46%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); } 41.5%, 44% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes resultsScene { 0%, 45%, 65%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 48%, 62% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes resultAppear { 0%, 46% { opacity: 0; transform: translateY(10px); } 49%, 100% { opacity: 1; transform: none; } }
+@keyframes readerScene { 0%, 63%, 84%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 66%, 81% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes savedScene { 0%, 82%, 99%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 85%, 97% { opacity: 1; transform: translate(-50%, -50%); } }
 @media (hover: hover) and (pointer: fine) {
   .primary:hover svg, .textLink:hover svg { transform: translateX(4px); }
   .primary:hover { background: color-mix(in srgb, var(--story-ink) 87%, var(--story-gold)); }
@@ -294,6 +294,34 @@
   .closing { padding: 60px 24px; }
   .closing h2 { font-size: 38px; }
 }
+
+.historyPanel { animation: historyScene var(--film-duration) var(--story-ease) infinite both; text-align: center; }
+.historyPanel h2 { font: 500 clamp(20px, 2.3vw, 29px)/1.5 var(--serif); margin: 0 0 23px; }
+.historySubjects { display: flex; justify-content: center; gap: 14px; animation: historySubjects var(--film-duration) var(--story-ease) infinite both; }
+.historySubjects span { flex: 1; padding: 9px 5px; border: 1px solid var(--story-line); border-radius: 4px; font: 500 16px/1.5 var(--serif); background: var(--story-paper); }
+.historyRelations { display: flex; justify-content: center; align-items: center; gap: 18px; padding-block: 20px; color: var(--story-gold); animation: historyRelations var(--film-duration) var(--story-ease) infinite both; }
+.historyRelations i { width: 80px; height: 1px; background: currentColor; position: relative; }
+.historyRelations i::before, .historyRelations i::after { content: ""; position: absolute; top: -2px; width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
+.historyRelations i::before { left: 0; }.historyRelations i::after { right: 0; }
+.historyBooks { animation: historyBooks var(--film-duration) var(--story-ease) infinite both; border-top: 1px solid var(--story-line); padding-top: 15px; }
+.historyBooks > span { font-size: 12px; color: var(--story-muted); }
+.historyBooks > div { display: flex; justify-content: center; gap: 18px; margin-top: 13px; }
+.historyBooks > div > span { min-width: 0; flex: 1; display: flex; gap: 10px; align-items: center; text-align: left; }
+.historyBooks img { width: 33px; height: 47px; object-fit: contain; flex: none; }
+.historyBooks strong { font: 500 12px/1.65 var(--serif); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@keyframes historyScene { 0%, 13%, 29%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); } 15%, 27% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes historySubjects { 0%, 15% { opacity: 0; transform: translateY(6px); } 18%, 100% { opacity: 1; transform: none; } }
+@keyframes historyRelations { 0%, 18% { opacity: 0; transform: translateY(6px); } 21%, 100% { opacity: 1; transform: none; } }
+@keyframes historyBooks { 0%, 21% { opacity: 0; transform: translateY(6px); } 24%, 100% { opacity: 1; transform: none; } }
+@media(max-width:599px) {
+ .historyPanel h2 { font-size: 18px; margin-bottom: 18px; }
+ .historySubjects { gap: 6px; }.historySubjects span { font-size: 12px; padding: 7px 3px; }
+ .historyRelations { padding-block: 16px; gap: 12px; font-size: 12px; }.historyRelations i { width: 48px; }
+ .historyBooks { padding-top: 11px; }.historyBooks > div { gap: 8px; }
+ .historyBooks > div > span { flex-direction: column; text-align: center; gap: 6px; }
+ .historyBooks img { width: 28px; height: 38px; }.historyBooks strong { font-size: 10px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .story *, .story *::before, .story *::after { animation: none !important; transition: none !important; }
   .demoFrame { transform: translate(-50%, -50%); }

@@ -78387,6 +78387,17 @@
             "SiteConfig": {
                 "type": "object",
                 "properties": {
+                    "welcome": {
+                        "$ref": "#/components/schemas/WelcomeConfig"
+                    },
+                    "welcome_books": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "readOnly": true
+                    },
                     "home_hero_image": {
                         "type": "string",
                         "default": "",
@@ -78574,12 +78585,16 @@
                     "navigation",
                     "sections",
                     "site_name",
+                    "welcome_books",
                     "wordmark_lines"
                 ]
             },
             "SiteConfigRequest": {
                 "type": "object",
                 "properties": {
+                    "welcome": {
+                        "$ref": "#/components/schemas/WelcomeConfigRequest"
+                    },
                     "home_hero_image": {
                         "type": "string",
                         "default": "",
@@ -85921,6 +85936,238 @@
                 ],
                 "type": "string",
                 "description": "* `open` - open\n* `resolved` - resolved"
+            },
+            "WelcomeChapter": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 40
+                    },
+                    "text": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
+                    "action": {
+                        "type": "string",
+                        "maxLength": 16
+                    }
+                },
+                "required": [
+                    "action",
+                    "text",
+                    "title"
+                ]
+            },
+            "WelcomeChapterRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40
+                    },
+                    "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                    },
+                    "action": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16
+                    }
+                },
+                "required": [
+                    "action",
+                    "text",
+                    "title"
+                ]
+            },
+            "WelcomeConfig": {
+                "type": "object",
+                "properties": {
+                    "copies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WelcomeCopy"
+                        }
+                    },
+                    "chapters": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WelcomeChapter"
+                        }
+                    },
+                    "texts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "maxLength": 600
+                        }
+                    },
+                    "edition_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "nullable": true,
+                        "maxItems": 3
+                    }
+                }
+            },
+            "WelcomeConfigRequest": {
+                "type": "object",
+                "properties": {
+                    "copies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WelcomeCopyRequest"
+                        }
+                    },
+                    "chapters": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WelcomeChapterRequest"
+                        }
+                    },
+                    "texts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 600
+                        }
+                    },
+                    "edition_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "nullable": true,
+                        "maxItems": 3
+                    }
+                }
+            },
+            "WelcomeCopy": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "$ref": "#/components/schemas/WelcomeCopyIdEnum"
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 12
+                    },
+                    "title": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 24
+                        },
+                        "maxItems": 2,
+                        "minItems": 2
+                    },
+                    "lead": {
+                        "type": "string",
+                        "maxLength": 160
+                    },
+                    "question": {
+                        "type": "string",
+                        "maxLength": 60
+                    },
+                    "results": {
+                        "type": "string",
+                        "maxLength": 24
+                    },
+                    "reader": {
+                        "type": "string",
+                        "maxLength": 24
+                    },
+                    "saved": {
+                        "type": "string",
+                        "maxLength": 40
+                    }
+                },
+                "required": [
+                    "id",
+                    "label",
+                    "lead",
+                    "question",
+                    "reader",
+                    "results",
+                    "saved",
+                    "title"
+                ]
+            },
+            "WelcomeCopyIdEnum": {
+                "enum": [
+                    "source",
+                    "question",
+                    "debate"
+                ],
+                "type": "string",
+                "description": "* `source` - source\n* `question` - question\n* `debate` - debate"
+            },
+            "WelcomeCopyRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "$ref": "#/components/schemas/WelcomeCopyIdEnum"
+                    },
+                    "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 12
+                    },
+                    "title": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 24
+                        },
+                        "maxItems": 2,
+                        "minItems": 2
+                    },
+                    "lead": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                    },
+                    "question": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 60
+                    },
+                    "results": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 24
+                    },
+                    "reader": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 24
+                    },
+                    "saved": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40
+                    }
+                },
+                "required": [
+                    "id",
+                    "label",
+                    "lead",
+                    "question",
+                    "reader",
+                    "results",
+                    "saved",
+                    "title"
+                ]
             },
             "WidthEnum": {
                 "enum": [

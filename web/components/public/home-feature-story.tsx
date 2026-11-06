@@ -7,46 +7,8 @@ import { BrandImage } from "@/components/brand-image";
 import type { SiteConfig } from "@/lib/site-config";
 import styles from "./home-feature-story.module.css";
 
-type StoryBook = { id: string; title: string; author: string; coverImage?: string };
+import { welcomeContent, type WelcomeConfig, type WelcomeCopy, type WelcomeBook as StoryBook } from "@/lib/welcome";
 type BrandConfig = Pick<SiteConfig, "site_name" | "wordmark_lines">;
-const chapters = [
-  { title: "把问题带进文献", text: "用研究问题检索相关论述，从原文节选判断哪些材料值得细读。", href: "/explore/opinions", action: "检索观点" },
-  { title: "在上下文中理解观点", text: "打开对应 PDF，把节选放回前后文，读清作者的论证。", href: "/explore/original", action: "查找原文" },
-  { title: "引用之前，核对出处", text: "对照原文、版本与页码，为论文和课堂核对引用。", href: "/account/citation-audits", action: "核对引文" },
-  { title: "让阅读成为积累", text: "把原文、笔记与书单留在读者中心，下次从已有材料继续研究。", href: "/account", action: "进入读者中心" },
-];
-const copyOptions = [
-  {
-    id: "source", label: "原文优先", title: ["让每一个观点，", "都有原文可循。"],
-    lead: "以原文为起点，用观点检索找到相关论述，把判断留给阅读。",
-    question: "制度如何改变人的行动？", results: "先读相关原文", reader: "回到上下文", saved: "原文与思考，一起保存",
-  },
-  {
-    id: "question", label: "问题出发", title: ["带着问题，", "找到相关的原文。"],
-    lead: "从你关心的问题进入文献，在具体段落里寻找作者的回答。",
-    question: "国家如何认识社会？", results: "从节选进入原文", reader: "把原文读完整", saved: "留下材料，接着追问",
-  },
-  {
-    id: "debate", label: "思想交锋", title: ["同一个问题，", "读见不同的解释。"],
-    lead: "用观点检索找到不同论述，回到上下文，理解分歧从何而来。",
-    question: "技术进步一定带来社会进步吗？", results: "比较不同论述", reader: "理解论证的差异", saved: "保存分歧，写下判断",
-  },
-  {
-    id: "context", label: "回到原话", title: ["回到作者的原话，", "形成自己的判断。"],
-    lead: "找到观点出现的段落，查看版本与前后文，让理解有据可查。",
-    question: "社会秩序是如何形成的？", results: "找到观点的出处", reader: "查看原文与版本", saved: "让笔记连着出处",
-  },
-  {
-    id: "classics", label: "经典再读", title: ["让今天的问题，", "走进经典的论述。"],
-    lead: "从现实关切出发检索观点，在原典中寻找仍值得追问的思想。",
-    question: "科学为什么会发生革命？", results: "读见经典的回应", reader: "细读作者的论证", saved: "把新的理解记下来",
-  },
-  {
-    id: "research", label: "研究积累", title: ["找到原文，", "让研究继续。"],
-    lead: "检索相关观点，核对出处，保存原文与笔记，把阅读积累带入下一次研究。",
-    question: "现代社会如何组织知识？", results: "把相关原文留下", reader: "核对原文出处", saved: "下一次研究，从这里继续",
-  },
-];
 
 function TextLines({ highlighted = false }: { highlighted?: boolean }) {
   return <div className={styles.lines} data-highlighted={highlighted || undefined}>
@@ -94,7 +56,7 @@ function GrainField() {
   </svg>;
 }
 
-function WorkflowDemo({ books, brandConfig, copy }: { books: StoryBook[]; brandConfig: BrandConfig; copy: typeof copyOptions[number] }) {
+function WorkflowDemo({ books, brandConfig, copy, history }: { books: StoryBook[]; brandConfig: BrandConfig; copy: WelcomeCopy; history: ReturnType<typeof welcomeContent>["texts"] }) {
   const ref = useRef<HTMLElement>(null);
   const [canAnimate, setCanAnimate] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -114,10 +76,16 @@ function WorkflowDemo({ books, brandConfig, copy }: { books: StoryBook[]; brandC
     return () => { observer.disconnect(); preference.removeEventListener("change", update); document.removeEventListener("visibilitychange", update); };
   }, []);
 
-  return <figure ref={ref} className={styles.demo} data-playing={canAnimate && !paused} aria-label="功能演示：提出问题，查找文献，阅读原文，保存材料与笔记">
+  return <figure ref={ref} className={styles.demo} data-playing={canAnimate && !paused} aria-label="功能演示：沿学科史认识学者与流派，提出问题，查找文献，阅读原文，保存材料与笔记">
     <div className={styles.timeline} key={`${copy.id}-${replay}`} aria-hidden="true">
       <GrainField /><div className={styles.demoFrame} />
       <div className={styles.brandPanel}><BrandImage config={brandConfig} alt="" /></div>
+      <div className={`${styles.demoPanel} ${styles.historyPanel}`}>
+        <h2>{history.history_title}</h2>
+        <div className={styles.historySubjects}>{history.history_subjects.split("、").filter(Boolean).slice(0, 3).map(subject => <span key={subject}>{subject}</span>)}</div>
+        <div className={styles.historyRelations}><span>{history.history_scholars}</span><i /><span>{history.history_theories}</span></div>
+        <div className={styles.historyBooks}><span>{history.history_works}</span><div>{books.map(entry => <span key={entry.id}>{entry.coverImage ? <img src={entry.coverImage} width={38} height={54} alt="" /> : <BookOpen size={28} />}<strong>{entry.title}</strong></span>)}</div></div>
+      </div>
       <div className={`${styles.demoPanel} ${styles.askPanel}`}>
         <span className={styles.demoEyebrow}><Search size={17} /> 观点检索</span>
         <div className={styles.typedQuestion}><span>{copy.question}</span></div>
@@ -145,38 +113,39 @@ function WorkflowDemo({ books, brandConfig, copy }: { books: StoryBook[]; brandC
   </figure>;
 }
 
-export function HomeFeatureStory({ books, closingImage, brandConfig, compareCopy = false }: { books: StoryBook[]; closingImage: string; brandConfig: BrandConfig; compareCopy?: boolean }) {
-  const [copyIndex, setCopyIndex] = useState(0);
+export function HomeFeatureStory({ books, closingImage, brandConfig, compareCopy = false, initialCopy = 0, content }: { books: StoryBook[]; closingImage: string; brandConfig: BrandConfig; compareCopy?: boolean; initialCopy?: number; content?: WelcomeConfig }) {
+  const { copies: copyOptions, chapters, texts } = welcomeContent(content);
+  const [copyIndex, setCopyIndex] = useState(initialCopy);
   const copy = copyOptions[copyIndex];
   return <div className={styles.story}>
     <section className={styles.hero} aria-labelledby="welcome-title">
       <div className={styles.heroCopy}>
         {compareCopy ? <div className={styles.copyOptions} id="welcome-copy" role="group" aria-label="欢迎卡片文案方案">{copyOptions.map((option, index) => <button type="button" key={option.id} aria-pressed={copyIndex === index} onClick={() => setCopyIndex(index)}>{option.label}</button>)}</div> : null}
-        <h1 id="welcome-title">{copy.title.map((line, index) => <span key={index}>{line}</span>)}</h1><p>{copy.lead}</p><Link href="/" className={styles.primary}>进入书库 <ArrowRight size={21} aria-hidden="true" /></Link></div>
-      <WorkflowDemo books={books} brandConfig={brandConfig} copy={copy} />
+        <h1 id="welcome-title">{copy.title.map((line, index) => <span key={index}>{line}</span>)}</h1><p>{copy.lead}</p><Link href="/" className={styles.primary}>{texts.enter_label} <ArrowRight size={21} aria-hidden="true" /></Link></div>
+      <WorkflowDemo books={books} brandConfig={brandConfig} copy={copy} history={texts} />
       <nav className={styles.topicTrail} aria-label="探索书库"><Link href="/scholars">学者</Link><Link href="/theories">理论流派</Link><Link href="/topics">主题</Link><Link href="/explore/original">原文</Link><Link href="/recommendations">特别策划</Link></nav>
     </section>
-    <section className={styles.philosophy} aria-labelledby="welcome-philosophy"><GrainField /><div><h2 id="welcome-philosophy">回到原文，理解思想的来处。</h2><p>让观点有出处，让不同的解释相遇。<br />在阅读与追问中，形成自己的判断。</p></div></section>
+    <section className={styles.philosophy} aria-labelledby="welcome-philosophy"><GrainField /><div><h2 id="welcome-philosophy">{texts.philosophy_title}</h2><p>{texts.philosophy_body}</p></div></section>
     <section className={styles.features} id="library-features" aria-labelledby="welcome-features">
-      <header className={styles.sectionHeading}><h2 id="welcome-features">从研究问题出发，<br />把阅读做深。</h2><p>找相关论述，回到原文，把材料与笔记留给下一次研究。</p></header>
+      <header className={styles.sectionHeading}><h2 id="welcome-features">{texts.features_title}</h2><p>{texts.features_body}</p></header>
       {chapters.map((chapter, index) => <article className={styles.featureRow} key={chapter.href} aria-labelledby={`welcome-feature-${index}`}>
         <div className={styles.featureCopy}><h3 id={`welcome-feature-${index}`}>{chapter.title}</h3><p>{chapter.text}</p><Link href={chapter.href} className={styles.textLink}>{chapter.action} <ArrowRight size={18} aria-hidden="true" /></Link></div>
         <div className={styles.visual}><StoryScene chapter={index} books={books} /></div>
       </article>)}
       <div className={styles.discoveryGrid}>
-        <article><Link href="/theories" className={styles.discoveryImage} aria-label="探索理论"><img src="/editorial/generated-20261030/theories.webp" alt="" width={1024} height={640} loading="lazy" /></Link><h3>沿着思想的脉络</h3><p>从学者、流派与主题，发现彼此相连的作品。</p><Link href="/theories" className={styles.textLink}>探索理论 <ArrowRight size={18} aria-hidden="true" /></Link></article>
-        <article><Link href="/recommendations" className={styles.discoveryImage} aria-label="阅读策划"><img src="/editorial/generated-20261030/editorial.webp" alt="" width={1024} height={640} loading="lazy" /></Link><h3>换一个角度读世界</h3><p>跟随特别策划，把分散的阅读连成一个问题。</p><Link href="/recommendations" className={styles.textLink}>阅读策划 <ArrowRight size={18} aria-hidden="true" /></Link></article>
+        <article><Link href="/theories" className={styles.discoveryImage} aria-label="探索理论"><img src="/editorial/generated-20261030/theories.webp" alt="" width={1024} height={640} loading="lazy" /></Link><h3>{texts.discovery_theory_title}</h3><p>{texts.discovery_theory_body}</p><Link href="/theories" className={styles.textLink}>探索理论 <ArrowRight size={18} aria-hidden="true" /></Link></article>
+        <article><Link href="/recommendations" className={styles.discoveryImage} aria-label="阅读策划"><img src="/editorial/generated-20261030/editorial.webp" alt="" width={1024} height={640} loading="lazy" /></Link><h3>{texts.discovery_issue_title}</h3><p>{texts.discovery_issue_body}</p><Link href="/recommendations" className={styles.textLink}>阅读策划 <ArrowRight size={18} aria-hidden="true" /></Link></article>
       </div>
     </section>
-    <section className={styles.principles} aria-labelledby="welcome-principles"><div className={styles.sectionHeading}><h2 id="welcome-principles">理解，从有据可查开始。</h2></div><div className={styles.principleGrid}>
-      <div><h3>保留出处</h3><p>辨认作者、版本与页码，回到观点出现的地方。</p></div><div><h3>读见上下文</h3><p>节选是阅读的起点，前后的论述同样重要。</p></div><div><h3>容纳不同解释</h3><p>沿着不同学者与流派，比较他们如何提出问题。</p></div><div><h3>留下自己的判断</h3><p>让笔记与材料一起保存，思考可以继续生长。</p></div>
+    <section className={styles.principles} aria-labelledby="welcome-principles"><div className={styles.sectionHeading}><h2 id="welcome-principles">{texts.principles_title}</h2></div><div className={styles.principleGrid}>
+      <div><h3>{texts.principle_source_title}</h3><p>{texts.principle_source_body}</p></div><div><h3>{texts.principle_context_title}</h3><p>{texts.principle_context_body}</p></div><div><h3>{texts.principle_debate_title}</h3><p>{texts.principle_debate_body}</p></div><div><h3>{texts.principle_judgment_title}</h3><p>{texts.principle_judgment_body}</p></div>
     </div></section>
-    <section className={styles.invitation} aria-labelledby="welcome-invitation"><div><h2 id="welcome-invitation">给思想一点时间。</h2><p>一本书、一段原文、一个尚未解答的问题。<br />从感兴趣的地方开始，慢慢读下去。</p><Link href="/explore" className={styles.textLink}>浏览馆藏 <ArrowRight size={18} aria-hidden="true" /></Link></div><img src={closingImage} alt="" width={1536} height={1024} loading="lazy" /></section>
-    <section className={styles.faq} aria-labelledby="welcome-faq"><h2 id="welcome-faq">你可能想知道</h2><div>
-      <details><summary>需要登录才能阅读吗？<Plus size={20} aria-hidden="true" /></summary><p>公开馆藏可以直接检索与阅读。登录后，可以在读者中心保存自己的阅读资料。</p></details>
-      <details><summary>怎样核对一段引文？<Plus size={20} aria-hidden="true" /></summary><p>从原文节选打开对应文件，查看版本、页码与前后文；也可以在读者中心使用引文核对。</p></details>
-      <details><summary>我的笔记和阅读资料保存在哪里？<Plus size={20} aria-hidden="true" /></summary><p>登录后在读者中心管理笔记、书单与阅读计划。私人资料按账户权限访问。</p></details>
+    <section className={styles.invitation} aria-labelledby="welcome-invitation"><div><h2 id="welcome-invitation">{texts.invitation_title}</h2><p>{texts.invitation_body}</p><Link href="/explore" className={styles.textLink}>浏览馆藏 <ArrowRight size={18} aria-hidden="true" /></Link></div><img src={closingImage} alt="" width={1536} height={1024} loading="lazy" /></section>
+    <section className={styles.faq} aria-labelledby="welcome-faq"><h2 id="welcome-faq">{texts.faq_title}</h2><div>
+      <details><summary>{texts.faq_read_title}<Plus size={20} aria-hidden="true" /></summary><p>{texts.faq_read_body}</p></details>
+      <details><summary>{texts.faq_cite_title}<Plus size={20} aria-hidden="true" /></summary><p>{texts.faq_cite_body}</p></details>
+      <details><summary>{texts.faq_private_title}<Plus size={20} aria-hidden="true" /></summary><p>{texts.faq_private_body}</p></details>
     </div></section>
-    <section className={styles.closing} aria-labelledby="welcome-enter"><GrainField /><h2 id="welcome-enter">下一本书，<br />下一次理解。</h2><Link href="/" className={styles.primary}>进入书库 <ArrowRight size={21} aria-hidden="true" /></Link></section>
+    <section className={styles.closing} aria-labelledby="welcome-enter"><GrainField /><h2 id="welcome-enter">{texts.closing_title}</h2><Link href="/" className={styles.primary}>{texts.enter_label} <ArrowRight size={21} aria-hidden="true" /></Link></section>
   </div>;
 }

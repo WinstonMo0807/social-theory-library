@@ -2889,7 +2889,12 @@ class AdminWorkTheoryRelationSerializer(ReviewedRelationSerializer):
         return super().save(**kwargs)
 
 
+from catalog.welcome import WelcomeConfigSerializer
+
+
 class SiteConfigSerializer(serializers.Serializer):
+    welcome = WelcomeConfigSerializer(required=False)
+    welcome_books = serializers.ListField(child=serializers.DictField(), read_only=True)
     home_hero_image = serializers.CharField(max_length=1500, required=False, allow_blank=True, default="")
     home_hero_alt = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
     home_hero_rendition_id = serializers.UUIDField(required=False, allow_null=True, default=None)

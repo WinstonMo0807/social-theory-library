@@ -1,0 +1,152 @@
+route,group,source,entry_components,dynamic,delivery,acceptance
+/about,账户入口与公共帮助,web/app/about/page.tsx,@/components/site-footer; @/components/public/about-public-view,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/citation-audits/[id]/issues/[issueId],读者与私人研究,web/app/account/citation-audits/[id]/issues/[issueId]/page.tsx,@/components/site-footer; @/components/research/citation-audit-issue,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/citation-audits/[id],读者与私人研究,web/app/account/citation-audits/[id]/page.tsx,@/components/site-footer; @/components/research/citation-audit-report,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/citation-audits/[id]/parse,读者与私人研究,web/app/account/citation-audits/[id]/parse/page.tsx,@/components/site-footer; @/components/research/citation-audit-parse,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/citation-audits,读者与私人研究,web/app/account/citation-audits/page.tsx,@/components/site-footer; @/components/research/citation-audit-upload,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/collections/[id],读者与私人研究,web/app/account/collections/[id]/page.tsx,@/components/research/reader-booklists; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/collections,读者与私人研究,web/app/account/collections/page.tsx,@/components/research/reader-booklists; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/confirmed-notes,读者与私人研究,web/app/account/confirmed-notes/page.tsx,@/components/site-footer; @/components/research/confirmed-notes-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/groups,读者与私人研究,web/app/account/groups/page.tsx,@/components/research/reader-groups; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/notes/[assetId],读者与私人研究,web/app/account/notes/[assetId]/page.tsx,@/components/research/reader-notebook,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/notes,读者与私人研究,web/app/account/notes/page.tsx,@/components/site-footer; @/components/research/reader-notebook,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account,读者与私人研究,web/app/account/page.tsx,@/components/reader-center; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/plans/[id],读者与私人研究,web/app/account/plans/[id]/page.tsx,@/components/site-footer; @/components/research/reading-plan-detail,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/plans,读者与私人研究,web/app/account/plans/page.tsx,@/components/site-footer; @/components/research/reading-plans,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/research/[id]/compare,读者与私人研究,web/app/account/research/[id]/compare/page.tsx,@/components/site-footer; @/components/research/research-session-compare,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/research/[id]/counter-evidence,读者与私人研究,web/app/account/research/[id]/counter-evidence/page.tsx,@/components/site-footer; @/components/research/counter-evidence-workspace,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/research/[id]/history,读者与私人研究,web/app/account/research/[id]/history/page.tsx,@/components/site-footer; @/components/research/research-replay,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/research/[id],读者与私人研究,web/app/account/research/[id]/page.tsx,@/components/site-footer; @/components/research/research-session-detail,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/research,读者与私人研究,web/app/account/research/page.tsx,@/components/site-footer; @/components/research/research-session-list,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/settings/privacy/export,读者与私人研究,web/app/account/settings/privacy/export/page.tsx,@/components/site-footer; @/components/research/privacy-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/settings/privacy,读者与私人研究,web/app/account/settings/privacy/page.tsx,@/components/site-footer; @/components/research/privacy-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/sharing/[id],读者与私人研究,web/app/account/sharing/[id]/page.tsx,@/components/research/reader-sharing; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/sharing/new,读者与私人研究,web/app/account/sharing/new/page.tsx,@/components/research/share-composer; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/sharing,读者与私人研究,web/app/account/sharing/page.tsx,@/components/research/reader-sharing; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/account/source-updates,读者与私人研究,web/app/account/source-updates/page.tsx,@/components/research/source-updates-workspace; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/activate,账户入口与公共帮助,web/app/activate/page.tsx,@/components/account-activation; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/about,管理端,web/app/admin/about/page.tsx,@/components/admin/site-content-editor,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/about/preview,管理端,web/app/admin/about/preview/page.tsx,@/components/admin/site-content-editor,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/analytics,管理端,web/app/admin/analytics/page.tsx,@/components/admin-analytics,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/backups,管理端,web/app/admin/backups/page.tsx,@/components/admin/storage-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/candidates,管理端,web/app/admin/candidates/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/cataloging/[sessionId]/candidates,管理端,web/app/admin/cataloging/[sessionId]/candidates/page.tsx,@/components/admin/workflow/cataloging-session,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/cataloging/[sessionId],管理端,web/app/admin/cataloging/[sessionId]/page.tsx,@/components/admin/workflow/cataloging-session,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/cataloging/new,管理端,web/app/admin/cataloging/new/page.tsx,@/components/admin/workflow/cataloging-session,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/content/[pageType]/[pageId],管理端,web/app/admin/content/[pageType]/[pageId]/page.tsx,@/components/admin/curation/placement-workspace,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/content,管理端,web/app/admin/content/page.tsx,@/components/admin/curation/placement-directory,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/disciplines,管理端,web/app/admin/disciplines/page.tsx,@/components/admin/knowledge/knowledge-legacy-redirect,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/distribution,管理端,web/app/admin/distribution/page.tsx,@/components/admin-sections,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/intake/[itemId],管理端,web/app/admin/intake/[itemId]/page.tsx,@/components/intake-workspace,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/knowledge,管理端,web/app/admin/knowledge/page.tsx,@/components/admin/knowledge/knowledge-legacy-redirect,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/library/assets/[assetId]/ocr,管理端,web/app/admin/library/assets/[assetId]/ocr/page.tsx,@/components/admin/library/ocr-workspace,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/library/assets/[assetId]/outline,管理端,web/app/admin/library/assets/[assetId]/outline/page.tsx,@/components/admin/library/document-outline-workspace,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/library/assets/[assetId]/page-mapping,管理端,web/app/admin/library/assets/[assetId]/page-mapping/page.tsx,@/components/admin/library/page-mapping-workspace,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/library,管理端,web/app/admin/library/page.tsx,@/components/admin/library/work-library,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/library/works/[workId]/files,管理端,web/app/admin/library/works/[workId]/files/page.tsx,@/components/admin/library/work-files-workspace,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/library/works/[workId],管理端,web/app/admin/library/works/[workId]/page.tsx,@/components/admin/workflow/workflow-editor,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/media,管理端,web/app/admin/media/page.tsx,@/components/admin/media/media-library,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin,管理端,web/app/admin/page.tsx,@/components/admin-dashboard,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/people,管理端,web/app/admin/people/page.tsx,@/components/admin/knowledge/person-authority-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/preview/evidence/[objectType]/[objectId],管理端,web/app/admin/preview/evidence/[objectType]/[objectId]/page.tsx,@/components/admin/curation/evidence-curation-editor,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/preview/knowledge/[objectType]/[objectId],管理端,web/app/admin/preview/knowledge/[objectType]/[objectId]/page.tsx,@/components/admin/preview/knowledge-page-preview; @/components/admin/knowledge/knowledge-publication-review; @/components/site-header; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/preview/works/[editionId],管理端,web/app/admin/preview/works/[editionId]/page.tsx,@/components/admin/preview/work-page-preview; @/components/site-footer; @/components/site-header,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/processing/health/candidates,管理端,web/app/admin/processing/health/candidates/page.tsx,@/components/candidate-review,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/processing/health/knowledge,管理端,web/app/admin/processing/health/knowledge/page.tsx,@/components/knowledge-workspace-diagnostics,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/processing/health,管理端,web/app/admin/processing/health/page.tsx,@/components/admin-system-health,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/processing,管理端,web/app/admin/processing/page.tsx,@/components/processing-center,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/processing/query-lexicon,管理端,web/app/admin/processing/query-lexicon/page.tsx,@/components/query-lexicon-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/processing/semantic-index,管理端,web/app/admin/processing/semantic-index/page.tsx,@/components/semantic-index-admin; @/components/admin/index-maintenance,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/processing/settings,管理端,web/app/admin/processing/settings/page.tsx,@/components/admin-sections,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/processing/status,管理端,web/app/admin/processing/status/page.tsx,@/components/system-status-center,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/publication/[itemId],管理端,web/app/admin/publication/[itemId]/page.tsx,@/components/admin/workflow/publication-review-entry,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/publication/knowledge/[objectType]/[objectId],管理端,web/app/admin/publication/knowledge/[objectType]/[objectId]/page.tsx,@/components/admin/knowledge/knowledge-history,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/publication,管理端,web/app/admin/publication/page.tsx,@/components/publication-desk,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/query-lexicon,管理端,web/app/admin/query-lexicon/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/reading-paths,管理端,web/app/admin/reading-paths/page.tsx,@/components/admin/knowledge/knowledge-legacy-redirect,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/recommendations/issues/[issueId],管理端,web/app/admin/recommendations/issues/[issueId]/page.tsx,@/components/admin/recommendation-issue-editor,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/recommendations/issues/[issueId]/preview,管理端,web/app/admin/recommendations/issues/[issueId]/preview/page.tsx,@/components/admin/recommendation-issue-editor; @/components/admin/curation/issue-preview-frame,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/recommendations,管理端,web/app/admin/recommendations/page.tsx,@/components/admin/recommendation-issue-list; @/components/admin/curation-project-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/recycle,管理端,web/app/admin/recycle/page.tsx,@/components/admin/recycle-bin,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/review/[itemId],管理端,web/app/admin/review/[itemId]/page.tsx,,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/review,管理端,web/app/admin/review/page.tsx,@/components/review-queue,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/scholars/[scholarId],管理端,web/app/admin/scholars/[scholarId]/page.tsx,@/components/admin-sections,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/scholars/[scholarId]/relations,管理端,web/app/admin/scholars/[scholarId]/relations/page.tsx,@/components/admin/knowledge/scholar-knowledge-relations,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/scholars,管理端,web/app/admin/scholars/page.tsx,@/components/admin-sections,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/scholars/people,管理端,web/app/admin/scholars/people/page.tsx,@/components/admin/knowledge/person-authority-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/search,管理端,web/app/admin/search/page.tsx,@/components/admin-dashboard,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/semantic-index,管理端,web/app/admin/semantic-index/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/settings,管理端,web/app/admin/settings/page.tsx,@/components/admin/legacy-settings-route,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/status,管理端,web/app/admin/status/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/storage,管理端,web/app/admin/storage/page.tsx,@/components/admin/storage-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/subdisciplines,管理端,web/app/admin/subdisciplines/page.tsx,@/components/admin/knowledge/knowledge-legacy-redirect,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/support/feedback,管理端,web/app/admin/support/feedback/page.tsx,@/components/admin/support/feedback-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/support/parallel-calibrations,管理端,web/app/admin/support/parallel-calibrations/page.tsx,@/components/admin/support/parallel-calibration-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/system-health/candidates,管理端,web/app/admin/system-health/candidates/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/system-health/knowledge,管理端,web/app/admin/system-health/knowledge/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/system-health,管理端,web/app/admin/system-health/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/taxonomy,管理端,web/app/admin/taxonomy/page.tsx,@/components/admin/knowledge/knowledge-legacy-redirect,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theories/[nodeId],管理端,web/app/admin/theories/[nodeId]/page.tsx,@/components/theory-system-admin,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theories/disciplines,管理端,web/app/admin/theories/disciplines/page.tsx,@/components/knowledge-admin,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theories,管理端,web/app/admin/theories/page.tsx,@/components/theory-system-admin,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theories/reading-paths,管理端,web/app/admin/theories/reading-paths/page.tsx,@/components/admin/curation/reading-path-workbench,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theories/relations,管理端,web/app/admin/theories/relations/page.tsx,@/components/theory-system-admin,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theories/subdisciplines,管理端,web/app/admin/theories/subdisciplines/page.tsx,@/components/knowledge-admin,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theories/timeline,管理端,web/app/admin/theories/timeline/page.tsx,@/components/theory-system-admin,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theory-nodes,管理端,web/app/admin/theory-nodes/page.tsx,@/components/admin/knowledge/knowledge-legacy-redirect,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theory-relations,管理端,web/app/admin/theory-relations/page.tsx,@/components/admin/knowledge/knowledge-legacy-redirect,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/theory-timeline,管理端,web/app/admin/theory-timeline/page.tsx,@/components/admin/knowledge/knowledge-legacy-redirect,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/topics/[entityId],管理端,web/app/admin/topics/[entityId]/page.tsx,@/components/admin-sections,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/topics,管理端,web/app/admin/topics/page.tsx,@/components/admin-sections,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/uploads,管理端,web/app/admin/uploads/page.tsx,@/components/admin-upload; @/components/admin/workflow/upload-source-context,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/users,管理端,web/app/admin/users/page.tsx,@/components/admin/accounts/account-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/visual-review,管理端,web/app/admin/visual-review/page.tsx,@/components/admin/visual-review/visual-review-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/admin/welcome,管理端,web/app/admin/welcome/page.tsx,@/components/admin/site-content-editor,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/concepts/[slug],账户入口与公共帮助,web/app/concepts/[slug]/page.tsx,,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/drawer-preview,方案参考与政策样本,web/app/drawer-preview/page.tsx,@/components/ui/dialog,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/explore/ask,检索与原文,web/app/explore/ask/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/explore/evidence,检索与原文,web/app/explore/evidence/page.tsx,@/components/discovery-search-workspace,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/explore/opinions,检索与原文,web/app/explore/opinions/page.tsx,@/components/site-footer; @/components/opinion-search-entry,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/explore/original,检索与原文,web/app/explore/original/page.tsx,@/components/catalog-search-workspace; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/explore,检索与原文,web/app/explore/page.tsx,@/components/collection-link; @/components/ui; @/components/site-footer; @/components/explore-ask-client; @/components/explore-landing; @/components/semantic-result-actions; @/components/usage-tracker; @/components/search-mode-switch,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/explore/semantic/[workId],检索与原文,web/app/explore/semantic/[workId]/page.tsx,@/components/semantic-result-actions; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/feedback,账户入口与公共帮助,web/app/feedback/page.tsx,@/components/site-footer; @/components/public/feedback-form; @/components/public/support-hero,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/help/[slug],账户入口与公共帮助,web/app/help/[slug]/page.tsx,@/components/site-footer; @/components/public/support-source-status; @/components/public/support-hero; @/components/public/support-citation-example,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/help,账户入口与公共帮助,web/app/help/page.tsx,@/components/site-footer; @/components/public/support-hub,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/interaction-preview,方案参考与政策样本,web/app/interaction-preview/page.tsx,@/components/ui/dialog; @/components/source-text,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/layout-preview,方案参考与政策样本,web/app/layout-preview/page.tsx,@/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/login,账户入口与公共帮助,web/app/login/page.tsx,@/components/auth-layout,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/,首页与欢迎页,web/app/page.tsx,@/components/public/home-public-view; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/policy,方案参考与政策样本,web/app/policy/page.tsx,,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/reader/[assetId],读者与私人研究,web/app/reader/[assetId]/page.tsx,@/components/reader-shell; @/components/reader/reader-route-failure; @/components/reader/parallel-reader,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/recommendations/[slug],公开内容与知识,web/app/recommendations/[slug]/page.tsx,@/components/public/published-placements; @/components/public/recommendation-issue-view; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/recommendations,公开内容与知识,web/app/recommendations/page.tsx,@/components/site-footer; @/components/public/editorial-directory,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/register,账户入口与公共帮助,web/app/register/page.tsx,@/components/auth-layout,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/reset-password,账户入口与公共帮助,web/app/reset-password/page.tsx,@/components/auth-layout,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/scholars/[slug]/[section],公开内容与知识,web/app/scholars/[slug]/[section]/page.tsx,@/components/public/scholar-section-public-view; @/components/public/scholar-load-error; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/scholars/[slug],公开内容与知识,web/app/scholars/[slug]/page.tsx,@/components/public/published-placements; @/components/public/scholar-public-view; @/components/site-footer; @/components/public/scholar-load-error,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/scholars,公开内容与知识,web/app/scholars/page.tsx,@/components/public/scholar-directory,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/shared/[id],账户入口与公共帮助,web/app/shared/[id]/page.tsx,@/components/research/reader-sharing; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/subdisciplines/[slug],账户入口与公共帮助,web/app/subdisciplines/[slug]/page.tsx,@/components/public/published-placements; @/components/public/subdiscipline-public-view; @/components/site-footer; @/components/public/subdiscipline.module.css,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/subdisciplines,账户入口与公共帮助,web/app/subdisciplines/page.tsx,@/components/scoped-search; @/components/public/subdiscipline.module.css,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/directory,公开内容与知识,web/app/theories/directory/page.tsx,@/components/theory/theory-directory,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/disciplines/[slug],公开内容与知识,web/app/theories/disciplines/[slug]/page.tsx,@/components/public/published-placements; @/components/public/discipline-public-view; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/events/[eventId],公开内容与知识,web/app/theories/events/[eventId]/page.tsx,@/components/public/published-placements; @/components/site-footer; @/components/public/timeline-event-details; @/components/public/theory-timeline.module.css,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/graph,公开内容与知识,web/app/theories/graph/page.tsx,@/components/public/theory-graph-page,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/nodes/[slug]/[section],公开内容与知识,web/app/theories/nodes/[slug]/[section]/page.tsx,@/components/public/knowledge-node-public-view; @/components/public/theory-timeline-page; @/components/site-footer; @/components/scoped-search,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/nodes/[slug],公开内容与知识,web/app/theories/nodes/[slug]/page.tsx,@/components/public/published-placements; @/components/public/knowledge-node-public-view; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories,公开内容与知识,web/app/theories/page.tsx,@/components/theory/theory-overview,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/reading-paths/[slug],公开内容与知识,web/app/theories/reading-paths/[slug]/page.tsx,@/components/public/published-placements; @/components/public/reading-path-public-view; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/reading-paths,公开内容与知识,web/app/theories/reading-paths/page.tsx,@/components/site-footer; @/components/public/reading-path-list,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theories/timeline,公开内容与知识,web/app/theories/timeline/page.tsx,@/components/public/theory-timeline-page,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theory-schools/[slug]/[section],账户入口与公共帮助,web/app/theory-schools/[slug]/[section]/page.tsx,@/components/knowledge-map; @/components/ui,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theory-schools/[slug],账户入口与公共帮助,web/app/theory-schools/[slug]/page.tsx,@/components/site-footer; @/components/public/legacy-theory-public-view,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theory-schools/graph,账户入口与公共帮助,web/app/theory-schools/graph/page.tsx,@/components/site-footer; @/components/theory-graph-client,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theory-schools,账户入口与公共帮助,web/app/theory-schools/page.tsx,@/components/theory/theory-overview,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/theory-schools/timeline,账户入口与公共帮助,web/app/theory-schools/timeline/page.tsx,@/components/public/theory-timeline-page,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/topics/[slug]/[section],公开内容与知识,web/app/topics/[slug]/[section]/page.tsx,@/components/site-footer; @/components/public/topic-section-public-view; @/components/public/topic-load-error,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/topics/[slug],公开内容与知识,web/app/topics/[slug]/page.tsx,@/components/public/published-placements; @/components/public/topic-public-view; @/components/public/topic-load-error; @/components/site-footer,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/topics,公开内容与知识,web/app/topics/page.tsx,@/components/public/topic-directory,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/verify-email,账户入口与公共帮助,web/app/verify-email/page.tsx,@/components/account-email-link; @/components/site-footer,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/welcome,首页与欢迎页,web/app/welcome/page.tsx,@/components/public/home-feature-story; @/components/public/site-footer-view,否,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过
+/works/[slug],公开内容与知识,web/app/works/[slug]/page.tsx,@/components/site-footer; @/components/work-detail-view,是，需已有对象编号,Web122统一构建,B 已实现待用户逐步批注；不是逐页运行通过

@@ -816,9 +816,10 @@ def search_facets(queryset):
 
 
 def current_site_config():
+    from catalog.welcome import welcome_books
     stored = SiteSetting.objects.filter(key="site_config", public=True).first()
     if not stored or not isinstance(stored.value, dict):
-        return DEFAULT_SITE_CONFIG
+        return {**DEFAULT_SITE_CONFIG, "welcome_books": []}
     value = {**DEFAULT_SITE_CONFIG, **stored.value}
     value["navigation"] = {
         **DEFAULT_SITE_CONFIG["navigation"],
@@ -828,6 +829,7 @@ def current_site_config():
         **DEFAULT_SITE_CONFIG["sections"],
         **stored.value.get("sections", {}),
     }
+    value["welcome_books"] = welcome_books(value)
     return value
 
 

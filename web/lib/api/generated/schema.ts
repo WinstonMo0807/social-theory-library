@@ -20409,6 +20409,10 @@ export interface components {
             cover_media?: components["schemas"]["PublicCoverMedia"] | null;
         };
         SiteConfig: {
+            welcome?: components["schemas"]["WelcomeConfig"];
+            readonly welcome_books: {
+                [key: string]: unknown;
+            }[];
             /** @default  */
             home_hero_image: string;
             /** @default  */
@@ -20450,6 +20454,7 @@ export interface components {
             };
         };
         SiteConfigRequest: {
+            welcome?: components["schemas"]["WelcomeConfigRequest"];
             /** @default  */
             home_hero_image: string;
             /** @default  */
@@ -22551,6 +22556,59 @@ export interface components {
          * @enum {string}
          */
         VisualReviewSaveStatusEnum: "open" | "resolved";
+        WelcomeChapter: {
+            title: string;
+            text: string;
+            action: string;
+        };
+        WelcomeChapterRequest: {
+            title: string;
+            text: string;
+            action: string;
+        };
+        WelcomeConfig: {
+            copies?: components["schemas"]["WelcomeCopy"][];
+            chapters?: components["schemas"]["WelcomeChapter"][];
+            texts?: {
+                [key: string]: string;
+            };
+            edition_ids?: string[] | null;
+        };
+        WelcomeConfigRequest: {
+            copies?: components["schemas"]["WelcomeCopyRequest"][];
+            chapters?: components["schemas"]["WelcomeChapterRequest"][];
+            texts?: {
+                [key: string]: string;
+            };
+            edition_ids?: string[] | null;
+        };
+        WelcomeCopy: {
+            id: components["schemas"]["WelcomeCopyIdEnum"];
+            label: string;
+            title: string[];
+            lead: string;
+            question: string;
+            results: string;
+            reader: string;
+            saved: string;
+        };
+        /**
+         * @description * `source` - source
+         *     * `question` - question
+         *     * `debate` - debate
+         * @enum {string}
+         */
+        WelcomeCopyIdEnum: "source" | "question" | "debate";
+        WelcomeCopyRequest: {
+            id: components["schemas"]["WelcomeCopyIdEnum"];
+            label: string;
+            title: string[];
+            lead: string;
+            question: string;
+            results: string;
+            reader: string;
+            saved: string;
+        };
         /**
          * @description * `320` - 320
          *     * `640` - 640

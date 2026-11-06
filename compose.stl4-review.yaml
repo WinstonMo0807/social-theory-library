@@ -1,0 +1,8 @@
+# Internal STL 4.0 review only. Layer after the existing stl4-preview/deep files.
+# The policy sample uses the same Web and the already-authorized local reranker.
+# No new host port, model, data store, scheduled work or public exposure.
+services:
+  web:
+    environment:
+      POLICY_DEMO_INFERENCE_URL: http://discovery-inference:8091
+    networks: [default, discovery_internal]

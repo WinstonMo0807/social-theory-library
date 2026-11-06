@@ -1,4 +1,7 @@
+import type { WelcomeConfig, WelcomeBook } from "./welcome";
 export type SiteConfig = {
+  welcome?: WelcomeConfig;
+  welcome_books?: WelcomeBook[];
   site_name: string;
   home_hero_image?: string;
   home_hero_alt?: string;

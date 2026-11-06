@@ -1,5 +1,15 @@
 # 中断恢复最短路径
 
+## 2026-11-06 统一内网Web122 / API56
+
+先读CURRENT_PROGRESS顶部、UNIFIED_REVIEW_20261106.md和OPEN_LOOPS_20261106.md，再读Git状态。新欢迎编辑/三版随机/学科史演示及同站政策样本已部署；783后端/3008前端文件比对0差异，不重复部署/回填/OCR。
+
+Web122镜像37dd56d86a51、API56 a0d442401ce2；四worker/beat同API56但停止，RapidOCR3/DOCX停止。原17排队、2未确认消息未消费，不直接批量up。预览Compose末层compose.stl4-review.yaml提供Web到原模型内部网络。旧stl-policy-preview-20261103-r2停止，挂载/容器保留；不要同时恢复18086作为当前入口。
+
+NAS /volume2/library/stl-previews/20261026-r1 下welcome-api-r55-recovery（前API54）、welcome-admin-r120-recovery（前Web119）、unified-r121-recovery（合并前状态/env、17,315,703字节DB包及原五任务容器可写层镜像）、unified-r122-recovery（前Web121）均保留。DB包未独立恢复；旧worker日志驱动读取失败原样记录，可写层镜像保留，不称全日志完整。回退只调整目标镜像/必要配置差异，不整份覆盖.env，不删除卷/索引/原件/账户/批注，不重建自动任务。生产未改。
+
+当前已能逐步批注，真实全站状态/隐私操作、复杂目录、邮件/外围网络、最终一致恢复与公网批准仍在未闭环清单。未提交继承源码仍在工作区和候选内，不能仅用本轮提交冒充全部干净源码基线。
+
 ## 2026-10-29 19:20 Web101与API r54
 
 活动Web101 social-theory-library-web:stl4-preview-20261029-r101，SHA e93a89b7372b8893762d0de492bb5b9180441524295545a156006d1c51870dc7。API r54 social-theory-library-api:stl4-preview-20261029-r54，SHA ca45017317c52e3abcf4658a7ad7e76989c5b02e82b0c372765091305fed9baa；只替换shared_citation_views.py，不含工作区其他后端脏改动，无迁移。四worker仍r53，环境LIBRARY_API_IMAGE为r54，后续不能误称worker已更新。

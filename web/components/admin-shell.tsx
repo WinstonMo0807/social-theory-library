@@ -21,7 +21,7 @@ const navigationGroups = [
   ] },
   { label: "内容", entries: [
     { href: "/admin/recommendations", title: "特别策划", Icon: FileText, paths: ["/admin/recommendations"], children: [["/admin/recommendations", "策划文章"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
-    { href: "/admin/content", title: "页面编排", Icon: ChartColumn, paths: ["/admin/content", "/admin/about", "/admin/media"], children: [["/admin/content", "内容编排"], ["/admin/about", "网站与关于书库"], ["/admin/media", "图片库"]] },
+    { href: "/admin/content", title: "页面编排", Icon: ChartColumn, paths: ["/admin/content", "/admin/welcome", "/admin/about", "/admin/media"], children: [["/admin/content", "内容编排"], ["/admin/welcome", "欢迎页"], ["/admin/about", "网站与关于书库"], ["/admin/media", "图片库"]] },
     { href: "/admin/theories", title: "学者与知识", Icon: ClipboardCheck, paths: ["/admin/theories", "/admin/scholars", "/admin/topics", "/admin/people", "/admin/reading-paths", "/admin/disciplines", "/admin/subdisciplines"], children: [["/admin/scholars", "学者"], ["/admin/theories", "理论流派"], ["/admin/topics", "主题"], ["/admin/theories/disciplines", "学科"], ["/admin/theories/subdisciplines", "子学科"], ["/admin/theories/relations", "学术关系"], ["/admin/theories/timeline", "时间线"], ["/admin/theories/reading-paths", "阅读路径"], ["/admin/scholars/people", "人物查重"]] },
     { href: "/admin/publication", title: "发布台", Icon: Archive, paths: ["/admin/publication"], children: [] },
   ] },
@@ -97,7 +97,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const articleRoute = /^\/admin\/recommendations\/issues\/[^/]+(?:\/preview)?$/.test(pathname);
   const curationRoute = pathname === "/admin/recommendations" && !["home","legacy"].includes(searchParams.get("view")||"");
   const placementRoute = pathname === "/admin/content" || pathname.startsWith("/admin/content/");
-  const homeEditingRoute = pathname === "/admin/about";
+  const homeEditingRoute = ["/admin/about", "/admin/welcome"].includes(pathname);
   const recoveryRoute = pathname === "/admin/recycle";
   const storageRoute = pathname === "/admin/storage";
   const servicesRoute = pathname === "/admin/settings";

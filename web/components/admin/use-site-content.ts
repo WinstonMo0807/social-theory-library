@@ -47,7 +47,7 @@ export function useSiteContent(owner:string) {
     const value=original||{id:createRequestKey(),action:restore?"restore" as const:publish?"publish" as const:"save" as const,body:JSON.stringify(restore?{...restore,edit_version:draft.edit_version,confirm:true}:publish?{edit_version:draft.edit_version,confirm:true,...(expectedFingerprint?{expected_fingerprint:expectedFingerprint}:{})}:{config:draft.config,about_blocks:draft.about_blocks,home_layout:draft.home_layout,edit_version:draft.edit_version})};
     remember(value);running.current=true;setBusy(true);setMessage("");
     try{const data=await request<SiteContentDraft>(`${siteBase}${value.action==="save"?"":`${value.action}/`}`,{method:value.action==="save"?"PUT":"POST",headers:{"Idempotency-Key":value.id},body:value.body});
-      if(active.current?.signal.aborted)return;remember(null);setDraft(data);setSaved(data);resource.reload();setMessage(data.replayed?"已查询原操作；当前显示服务器最新内容。":value.action==="publish"?"网站内容已发布。":value.action==="restore"?"已从所选历史恢复为新草稿，当前公开内容保持原版本。请核对来源后再发布。":"已保存草稿，公开首页在确认发布后更新。");
+      if(active.current?.signal.aborted)return;remember(null);setDraft(data);setSaved(data);resource.reload();setMessage(data.replayed?"已查询原操作；当前显示服务器最新内容。":value.action==="publish"?"网站内容已发布。":value.action==="restore"?"已从所选历史恢复为新草稿，当前公开内容保持原版本。请核对来源后再发布。":"已保存草稿，公开页面在确认发布后更新。");
       return true;
     }catch(error){failure(error,true);return false;}finally{running.current=false;if(!active.current?.signal.aborted)setBusy(false);}
   }

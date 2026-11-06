@@ -508,7 +508,9 @@ def site_target(*, lock=False):
 
 def site_snapshot(payload):
     from catalog.site_layout import AREAS, present
+    from catalog.welcome import welcome_books
     payload = deepcopy(payload)
+    payload["config"]["welcome_books"] = welcome_books(payload["config"], include_missing=True)
     rid = payload["config"].get("home_hero_rendition_id")
     if rid:
         payload["config"]["home_hero_image"] = f"/api/catalog/admin/media/renditions/{rid}/file/"

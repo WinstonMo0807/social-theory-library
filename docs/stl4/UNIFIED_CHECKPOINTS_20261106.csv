@@ -1,0 +1,408 @@
+﻿commit,date,change
+4dbe776515cbf1d2a37fc8ba71455e1fba38bf29,2026-10-15T18:51:54+08:00,feat(stl4): establish public homepage contract
+188611573a74fa2aba96669198d4ff64206ab873,2026-10-15T18:53:51+08:00,docs(stl4): record homepage checkpoint
+b4638a3f285cbdcce294f9c8256b143cf1f28c2f,2026-10-15T20:02:59+08:00,feat(stl4): align reader center and research workspace
+26c4b4da384a12f33105075584ea19cf97e213b7,2026-10-15T20:08:25+08:00,docs(stl4): record reader center visual audit checkpoint
+6bb0f8be1d81cb350b0cfcf7c482c7e7a88a3965,2026-10-15T20:25:25+08:00,feat(stl4): add support and public feedback flow
+ab578c0548eda3ce466e184969348515d7416a66,2026-10-15T20:26:23+08:00,docs(stl4): record support feedback checkpoint
+af983b538bdc6641f49d0954c0f1c697a5f7ca3a,2026-10-15T20:36:14+08:00,feat(stl4): reshape public about page
+0d2d0dbfb242edb85c6aa1ec29c3a1a983003aa7,2026-10-15T20:59:56+08:00,feat(stl4): align explore landing with final atlas
+00234cb60091c25513fb2b0b042fa540f07bee01,2026-10-15T21:11:03+08:00,feat(stl4): add live evidence results entry
+7594ce2cc8513ec8d073ba86e451493c2a2ca234,2026-10-15T21:20:52+08:00,feat(stl4): align exact search workspace
+6049fa405259b38219c8b9fe929fa42a469a29dc,2026-10-15T21:28:44+08:00,feat(stl4): align reader shell with final atlas
+9e7bb64b0d121d8f10b4b9ec1de48692f258e50b,2026-10-15T21:37:25+08:00,feat(stl4): align admin work dashboard
+f762d12c397792e38c875cf892066938926bc3a5,2026-10-15T21:46:28+08:00,feat(stl4): surface private research run states
+5b32b6236319acc273681dca808ba5a786d2c1fa,2026-10-15T22:22:47+08:00,feat(stl4): complete reader center workbench
+1ab60a059e8d05fbeb80aa4b2f0e2bc8c5766b1d,2026-10-15T22:34:18+08:00,feat(stl4): add real reader center counts
+3b9d6e0bad0586d8b2866f3b382c66e28c9d4c7f,2026-10-15T22:39:29+08:00,docs(stl4): record reader center checkpoints
+9d557e659f574855346a46283c7d70db6d8e36d8,2026-10-15T22:48:51+08:00,fix(stl4): keep saved material links within reader center
+3e65a4411328a9c3ff7ae6cacb36b729b5cc4e60,2026-10-15T22:52:54+08:00,fix(stl4): avoid nested research main landmark
+e97cdb5f88e9d3c849ea3bcce0372971ccfc418a,2026-10-15T22:54:22+08:00,docs(stl4): record research landmark fix
+bb71f4cb03ec532f5e19851754d254543cfe9b78,2026-10-15T22:59:15+08:00,fix(stl4): route reader center logout through Next
+b338503e75d7aa660d56d3714efd9e920ebf740e,2026-10-15T23:52:54+08:00,feat(stl4): add isolated deep inference contracts
+da1bd492f4cb9c54a37a2f10257d8dd277a01f5d,2026-10-16T00:13:02+08:00,feat(stl4): add opt-in deep retrieval orchestration
+2c522d8b6b797e7f9695bee39b92e21de9bddfb6,2026-10-16T00:15:55+08:00,feat(stl4): expose discovery deep progress contract
+f0c161c6644091364c3d53ad4bf4d56ff85a1e9c,2026-10-16T00:20:12+08:00,feat(stl4): type deep discovery evidence payload
+e14ec3abd576ef1e72bf0e4ec5192837df8e67ce,2026-10-16T00:23:42+08:00,fix(stl4): preserve deep stage degradation state
+cfc9c505b2530ed6e0951cca3a782ef34a0fcbbf,2026-10-16T00:59:39+08:00,fix(stl4): align deep retrieval service contracts
+585ef30b54e9337b1c61b2eb99365008c37875b7,2026-10-16T01:00:32+08:00,feat(stl4): connect visual discovery to deep retrieval states
+f4076e1e1d57c92f088f63956833cbe7b5216a44,2026-10-16T01:01:15+08:00,docs(stl4): record deep retrieval checkpoint
+34d2d8010f27e8e94f8e102313432a793dfc2316,2026-10-16T01:01:55+08:00,fix(stl4): reject non-finite deep scores
+5529167d0c42a8e6f4dda7aa24be14c82613365d,2026-10-16T01:04:02+08:00,docs(stl4): include deep score safety checkpoint
+5afe4c299c904417d87588fa217a479f12941eea,2026-10-16T01:11:29+08:00,fix(stl4): keep deep identity metadata truthful
+2654f64e68e708fc875ac5865dccc725b44ab2c8,2026-10-16T01:25:11+08:00,docs(stl4): record identity metadata guard
+19f9d30a67f193f976b39f45e03ada0dd73fdbb1,2026-10-16T01:34:44+08:00,docs(stl4): record final deep metadata checkpoint
+295d4e11a57bd3fc8c2cbcda37c099f882d1c99e,2026-10-16T13:50:35+08:00,feat(stl4): connect research workspace and retrieval runtime
+24dc9e1074d946271b194531dec82baa564400bf,2026-10-16T13:51:49+08:00,docs(stl4): record research checkpoint
+38953f3a42ce5fdeabef2b0e4b3f3416febe9b17,2026-10-16T13:53:42+08:00,fix(stl4): revalidate research session list on focus
+321787d1f4db45394e11343aebc2d7ee5148be7a,2026-10-16T13:53:56+08:00,docs(stl4): record focus revalidation checkpoint
+a77be7ab40c7d97a307119f90b28819829356dfd,2026-10-18T15:21:06+08:00,chore(stl4): checkpoint inherited API and Reader dependencies
+15f62528eb1fe10fb1e5a8b504204d3cb9816a77,2026-10-18T15:33:10+08:00,feat(stl4): connect private reading plan workspace and consent
+50cf8edff68d409fe798a3522394eb6fbd90d1d3,2026-10-18T16:09:07+08:00,feat(stl4): connect citation audit review workspace
+b0cbf28afa1cf080754ebae881466b6b32fb72b3,2026-10-18T16:09:32+08:00,docs(stl4): record citation audit checkpoint and remaining gaps
+45c669a458a060e4215d5e9d760220efa9d13fb7,2026-10-18T16:54:47+08:00,feat(stl4): preserve manuscript versions and recheck changed citations
+0fe3a8ebe4c95da67376efacb6faf979e666ed2a,2026-10-18T16:57:32+08:00,feat(stl4): connect versioned outline calibration workspace
+3ef7d7fe7bd4c6a99e90110fd3697d8aefd3536e,2026-10-18T16:58:02+08:00,docs(stl4): checkpoint manuscript versions and outline integration
+1d19dd5e355e35820b9038535889ad12ab1935ba,2026-10-18T17:33:45+08:00,feat(stl4): connect confirmed notes and private citation sources
+51ae0557c028371124d1a96817443102a802df15,2026-10-18T17:35:37+08:00,docs(stl4): record memory and source checkpoint
+9a7c68c94375558f2f8d60e41c304783ad4c9bc0,2026-10-18T18:05:39+08:00,feat(stl4): connect counter evidence privacy and page mapping
+56e7aac2ec81479e46a5a72b3ad15557d3807acd,2026-10-18T18:06:46+08:00,docs(stl4): record counter privacy and mapping checkpoint
+e310536d498d4e91a8b3af3e05522e8977158c57,2026-10-18T18:59:09+08:00,feat(stl4): connect file versions OCR review and private DOCX previews
+671c6017ff22ac68f9313b616469d919fa4e87f1,2026-10-18T18:59:53+08:00,docs(stl4): record file OCR and preview recovery checkpoint
+0448865d6cb0c5d42bf6a2d0cd173a427939170b,2026-10-18T20:53:32+08:00,feat(stl4): connect public navigation and return context
+bf1705b9fcdf64d62e611a31cb969a17185efcae,2026-10-19T12:16:41+08:00,feat(stl4): connect public support source updates and shared citations
+d69ec44b71537cf9cf0b7a431d21926434ee7951,2026-10-20T11:45:31+08:00,feat(stl4): connect catalog discovery and private search workflows
+d3acba844a105976d0e8d1acb6c35be75db79e97,2026-10-20T11:54:44+08:00,feat(stl4): track document query states and scoped removal
+42f068ad4a37d95e2628967cc932943bc0b08d43,2026-10-20T15:22:34+08:00,feat(stl4): bind public work details to selected editions
+a5898aad52caf3857610e50d85d62e595690195d,2026-10-20T15:58:33+08:00,feat(stl4): connect reader views and private annotation recovery
+0b6c010cde1ed72f87d2be34738da70850f1dcf1,2026-10-20T16:33:45+08:00,feat(stl4): implement parallel reading and private alignment workflow
+5f692edd44634c85f20f176e8a749a47f46601ed,2026-10-20T16:52:34+08:00,feat(stl4): connect reader OCR progress and safe task recovery
+966f5faa8ebff60acab5f051d89b614484e5659f,2026-10-20T17:26:57+08:00,feat(stl4): connect theory views and verified concept comparisons
+376adc9c4db8c3d7f2ec8286dd97b64ce0fb35de,2026-10-20T17:53:56+08:00,feat(stl4): connect subdiscipline pages and public theory directory
+67c5db5a90321336255b45279f35d24eeb7da30c,2026-10-21T10:00:32+08:00,feat(stl4): connect verified timeline views and publication identities
+42518048e2e20729b24f496d1eda6a319d99141f,2026-10-21T10:21:51+08:00,feat(stl4): connect bounded knowledge graphs and private saved views
+a0720ad4ba9f06401ecab2f58353bdc772f22db8,2026-10-21T11:02:52+08:00,feat(stl4): connect versioned reading paths and private progress
+ba56939dafccbc709886e8b67d739d0feeda43ec,2026-10-21T11:56:23+08:00,feat(stl4): connect scholar views and precise contribution scopes
+9bb2bb488e92453c1d5eb347d1db1c5a69dd9121,2026-10-21T15:56:09+08:00,feat(stl4): connect topic directory and publication-aware curation
+dd747885438ce87d74fda682b2346bf2b71facfb,2026-10-21T23:20:00+08:00,feat(stl4): connect editorial articles exhibitions and reader comments
+68ceb89cb4bc87a012f8df8cb08600a415777488,2026-10-22T11:03:19+08:00,feat(stl4): connect permission-scoped today work queue and admin navigation
+f94545ec78b353bf76af87f07e49487ed5c8cd42,2026-10-22T11:57:02+08:00,feat(stl4): add scoped admin search and current work notices
+3136d5ce463abc1183718a795eaa72c88196b541,2026-10-22T12:27:26+08:00,feat(stl4): connect structured issue editor and draft recovery
+c79756effb6e2243f7021037eafa50a6e923cd74,2026-10-22T12:56:01+08:00,feat(stl4): connect editor formatting materials and presence
+155c107a8c90c5541ecf29870845bcb410005d42,2026-10-22T15:24:00+08:00,feat(stl4): connect inline rich editing and composition guards
+e14c6acb9aaad51740ce68ea047dd99b13144cc9,2026-10-22T17:57:55+08:00,feat(stl4): connect selection workbench and assistant review
+f07d121d928d1f02273dcee18cca2f648d65853d,2026-10-22T18:17:33+08:00,feat(stl4): refine canonical source details and material thumbnails
+65c512bc1600826063b66a01c73c61dc781e10ab,2026-10-22T18:34:23+08:00,feat(stl4): connect related materials and hierarchical suggestion review
+0e11275f2e17b699ccbd823baefa8bac0fd4cc2d,2026-10-22T23:34:34+08:00,feat(stl4): connect real article previews and publication checks
+791bd9b9a4f820678f015f7136903dfc1bb013c7,2026-10-22T23:55:12+08:00,feat(stl4): connect publication history and guarded recovery desk
+ad1b230298876721f4a82d9dee65776dc9a6c70b,2026-10-23T00:44:20+08:00,feat(stl4): implement version-bound publication review page
+fbb68642bcca0ce99a93e3f04bc18a68bab07744,2026-10-23T01:27:20+08:00,feat(stl4): guard knowledge publication and recover original revisions
+d82b148cb3045a6c17cf1e654b5903357fc5ae7f,2026-10-23T01:39:25+08:00,fix(stl4): bind knowledge previews to saved versions and current owner
+4f6e2bdc3118e78135d37fc0698acd03a18e3abc,2026-10-23T02:05:13+08:00,feat(stl4): add knowledge publication review workspace
+8a491d10b1ca12305da908d362c8b4b0b975a2f3,2026-10-23T02:35:05+08:00,feat(stl4): add knowledge history and guarded recovery drafts
+840ad60437793028c34cc4379cd24fbe41d67448,2026-10-23T03:02:27+08:00,feat(stl4): unify night appearance and protect reader account requests
+cde09db1030097774f6e274c870e3d6883d32460,2026-10-23T03:21:16+08:00,feat(stl4): connect owner-scoped reader overview and materials
+bec56340e893e86a46bda402a8a0a17f2f6e0da3,2026-10-23T03:31:53+08:00,feat(stl4): connect selected data tasks and guarded local research transfer
+e814dd6899cc59f98f08c90aed5fb7d854d355cc,2026-10-23T03:48:14+08:00,feat(stl4): align authentication pages and guard session recovery
+6ed6afd4c30f55623a92571516956763fe6f375c,2026-10-23T04:10:35+08:00,feat(stl4): connect private booklist workspace and recoverable materials
+1a0291707e91b46410851c6b60176c49ad1ca0ef,2026-10-23T04:20:23+08:00,feat(stl4): create version-bound reading plans from private booklists
+a84e707c0950f8dc73a893af9a2d0b3f115a6342,2026-10-23T04:24:24+08:00,fix(stl4): use actual privacy choices for explicit reading plans
+af22a6f5999963c347480b51084aab6bd131f5a3,2026-10-23T04:50:25+08:00,feat(stl4): unify private reading notes and protect data operations
+bf44e7ddd62f639f2db169d3235f3706d6f26d06,2026-10-23T04:52:37+08:00,fix(stl4): include bookmarks in reader overview and data actions
+6024f12abda828fd266553ef82ff3d55cf7e47c4,2026-10-23T05:06:54+08:00,feat(stl4): replay private research inputs and fork bounded studies
+7c5ef8597cce007b358017e088873330d0cbf940,2026-10-23T05:25:05+08:00,feat(stl4): save verified citations to private booklists and notes
+f793e68d1d20038dcaa9affd09d1970ea128688a,2026-10-23T06:05:52+08:00,"feat(stl4): add scoped sharing, reader groups and privacy controls"
+13d54c1416c20a933729a183bccbcf63a22988b0,2026-10-23T06:13:15+08:00,feat(stl4): add scoped notebook exports and recover note creation
+7dc144602686bdea16c9260ebca7fe3fcc5e8c54,2026-10-23T06:28:07+08:00,feat(stl4): align account management with scoped capability previews
+d05fd41abb68357e122bf9f8dac50f8d60a3cc4a,2026-10-23T06:37:37+08:00,feat(stl4): add scoped research summaries and reading continuation
+413522bfc0ab6a03949244c1eff0beb460f61396,2026-10-23T06:58:25+08:00,feat(stl4): connect person authority editing and identity review
+ac28461cce4d736cd3a417301686a210e8f73861,2026-10-23T07:01:10+08:00,fix(stl4): inherit appearance settings in editor previews
+42a858d44d965298968bbb61c75cf962f0d5d2c2,2026-10-23T07:30:29+08:00,feat(stl4): connect scholar editing to original identities and publication
+a8aa001c5cf0aa358238cd3e4420bfca5a29c73d,2026-10-23T07:56:07+08:00,feat(stl4): connect concept usages to original editorial ledger
+ba115c646de14f415f3090205866c3e4f4dc50a4,2026-10-23T08:20:08+08:00,feat(stl4): connect topic organization and recoverable editorial saves
+44a40377d744b41cd260248289feb38d890214b5,2026-10-23T08:33:07+08:00,feat(stl4): connect timeline evidence and recoverable event editing
+75cbad770ac49d81e4006f2b5774383830f11ba8,2026-10-23T08:48:56+08:00,feat(stl4): connect reading path prerequisites and editorial workspace
+cefd18da09d34f1ff3d50577c78b7c00ca331521,2026-10-23T09:11:27+08:00,feat(stl4): connect model and service status workspace
+11b25ce735a71de84ceaf8add01585abf2012285,2026-10-23T09:47:55+08:00,feat(stl4): connect storage backup and recovery workspace
+e5cbc3ba78299a08e63481896cf27d8bf1d7a45d,2026-10-23T10:10:09+08:00,feat(stl4): connect recovery workspace and protected restore
+e8d966468cb967e15a61d081a8b9bfd7ebaa9823,2026-10-23T10:11:47+08:00,docs(stl4): record site content editor continuation
+a92c85cf598606baf7504176df1996eea196bb97,2026-10-23T10:35:32+08:00,feat(stl4): connect homepage curation and protected site editing
+d8d60bd2182a6de49d02e89f372d80b9129d2e78,2026-10-23T10:42:51+08:00,fix(stl4): retain site publication conflicts and inline selection
+ef5c90d9c33e8289ea8aa4cd1fc79874d9a96f6e,2026-10-23T11:11:04+08:00,feat(stl4): connect shared page curation and catalog selection
+0d00ee1fc0621f6d5f3cfb24bca56b9807ca47ab,2026-10-23T11:43:40+08:00,feat(stl4): connect upload batch workspace and resumable transfers
+0c4fd27c90025b753cdd644b74ac5206d21d5838,2026-10-23T12:08:02+08:00,feat(stl4): connect intake identity confirmation to catalog processing
+b16f2b17d9de98f4e021ab3249a5d2c789a56800,2026-10-23T12:25:52+08:00,feat(stl4): implement material-first manual catalog workspace
+b45b54b7a826bebbbe9018c1e0cefc796127a9f1,2026-10-23T12:42:06+08:00,feat(stl4): connect material editor layout and save recovery
+dd7b6cf1d01a06c06e7ef91570d1739b1a01a664,2026-10-23T12:56:26+08:00,feat(stl4): connect field review to existing editorial assistants
+f756c78fcf07f3bdbede8cada312786342123512,2026-10-23T13:44:01+08:00,feat(stl4): connect immutable media crop and revision workspace
+7b2c44abfabf231812efe5a3bef73a98cedd60e0,2026-10-23T21:27:17+08:00,feat(stl4): connect processing queue and recoverable task controls
+7ebe1954873734e638ba3d10c849dd3e552c8de0,2026-10-23T21:39:04+08:00,feat(stl4): connect Discovery index maintenance and authority term navigation
+8f3fa96b9ac8621b35e9f55371987b41597b434d,2026-10-23T22:09:31+08:00,feat(stl4): connect curation projects to editorial workflows and team access
+e80daebf585e3dc41ebc88a5eb621dda24b5765e,2026-10-23T22:17:32+08:00,feat(stl4): aggregate project appendix materials across article pages
+a132f6fde2a2b337c0929540b4219b5e39916f3b,2026-10-23T22:39:58+08:00,feat(stl4): complete project source inventory and article previews
+77de03ed07e164671221be0ad99b8ac7365015f0,2026-10-23T22:55:10+08:00,feat(stl4): group processing tasks by file and expose stage controls
+3a2dd1130287d2a7b99425cde94153b64d29ddc3,2026-10-23T23:18:49+08:00,feat(stl4): configure processing tasks and preserve failure checkpoints
+dbf98ab3a62c4ef8c51a3020e2149886d82874f6,2026-10-23T23:32:33+08:00,feat(stl4): embed recoverable Discovery previews in index maintenance
+0cb45af1aebaa2f6a7d6301ef84b30f050e2897f,2026-10-23T23:45:12+08:00,feat(stl4): edit person aliases inline with authority change previews
+0a3b2c9da1c4ad7874e7a58a40aaf1df9b16d098,2026-10-23T23:56:04+08:00,feat(stl4): maintain knowledge terms through recoverable editorial drafts
+30e7a18cf19374e9a78653aac2cc672333c914c6,2026-10-24T00:02:50+08:00,fix(stl4): stop unapplied authority commands without losing receipts
+f2bfe56f5572465df07193f4f43b43d3bab7db59,2026-10-24T00:11:37+08:00,feat(stl4): organize query rules by source and actual availability
+bac772fd8d27dd32045515f2a560dd738e29a49d,2026-10-24T00:32:52+08:00,feat(stl4): export recorded OCR pages and task outline revisions
+d7d4e1895b2f4d51a7d82efe3e010dcae9fd6adc,2026-10-24T00:47:00+08:00,docs(stl4): record dependency advisories and stale offline runtime
+0ac51fdf0fb964b047189696e08508a07d6d6ec1,2026-10-24T01:11:32+08:00,fix(security): upgrade reviewed dependencies and refresh offline runtimes
+1f6690613214e04c053787649cf5e745ce4d8031,2026-10-24T01:20:07+08:00,feat(stl4): export confirmed Discovery passages with current access checks
+518cacaa62dd12fc57f4aa941cda96c6734ee0b2,2026-10-24T01:26:20+08:00,fix(security): include verified Paddle wheel dependencies in OCR runtime
+e1f4523715d01af0617bde148b3f76dada9cbee0,2026-10-24T01:57:53+08:00,feat(stl4): recover stalled processing tasks through guarded checkpoints
+f2d5e694f6aaff0a6b5cd374cf2828ff30f6eaf8,2026-10-24T02:06:36+08:00,feat(stl4): retry selected OCR failures without losing task checkpoints
+1831fa3935ea84d75caa69bda319dc372c90791a,2026-10-24T02:17:26+08:00,feat(stl4): configure OCR concept follow-up and preserve human review
+eaca24a0940bae1c6e6d4957b85a3311423e1fa6,2026-10-24T02:22:13+08:00,fix(stl4): surface partial OCR follow-up outcomes in task queues
+1fe3b6394b7b37319bd51cc574d0ace0f6cc16a2,2026-10-24T02:30:07+08:00,feat(stl4): retry concept alignment independently of OCR
+02b3b625d9c35e01fea496212235d72ee3144854,2026-10-24T02:33:24+08:00,refactor(stl4): unify processing action confirmation dialogs
+0f9fc62fae58ab71430b242b3f2aa15284425f63,2026-10-24T02:38:05+08:00,fix(stl4): scope concept task results to their original material
+13b1bdf1ddc11b3ba1157fb8016fa15b44ffd72a,2026-10-24T02:52:47+08:00,feat(stl4): transfer OCR checkpoints to explicitly selected services
+2b383f14a9ef2b3ceaa9c9d327c1f8bbaae64a22,2026-10-24T03:04:10+08:00,feat(stl4): add private visual review and saved drawing workspace
+c8e3bcfb2e26cdd06046dd8bee6d2ee3be5f9a66,2026-10-24T03:47:38+08:00,fix(stl4): align home bylines and reference review navigation
+4f3754b4c934b4b282dbc418d2db3c15176bc716,2026-10-24T03:52:20+08:00,fix(stl4): preserve safe operations on the HTTP intranet preview
+a67531a4ad0a1cf1e068a5b6035bbee62eaa554b,2026-10-24T03:57:29+08:00,fix(stl4): retain outline review state and validate rotated targets
+3ea81f79ff0fa0163604b706e8bb1cbfdd1b2511,2026-10-24T04:07:11+08:00,feat: append source-bound journal contents through existing editor
+470bea4d82fe96557e0a56c7d5a122d3da43c45a,2026-10-24T04:11:17+08:00,fix: preserve unguided reader navigation and request recovery
+2b03312d9bbd9068dbb531e9ff5bb9e70e18ea20,2026-10-24T04:22:55+08:00,fix: preserve reader context and owner-bound save recovery
+28d717182408510e2dadf3efddc1e2691580b0ca,2026-10-24T04:26:36+08:00,feat: retain native heading observations in outline review
+44ef9162b577e89938a801907d8eccecc6561db0,2026-10-24T04:34:26+08:00,feat(outline): export adopted bookmarks as a separate protected PDF
+ac9d1f3d0bf75f63d3cab3f972960909519e5aaa,2026-10-24T04:37:10+08:00,fix(admin): retain backup commands and unsaved catalog input across navigation
+3530465a3fa5c879195583b188e460728d501b44,2026-10-24T04:43:05+08:00,fix(admin): preserve interrupted recovery and selection; record all atlas images
+51d7236e1939ace5f0999563125648d4b746cb4e,2026-10-24T04:49:20+08:00,"feat(recovery): add scoped filters, original covers and mobile detail sheet"
+ceba7b7406a720fe6395448a952e7fd84251a860,2026-10-24T04:56:27+08:00,Gate recovery confirmation on retained file preflight
+398297c79ccff1f27fc2dceaffb31b0ff84f91d7,2026-10-24T04:59:48+08:00,Keep restored people from reactivating old public profiles
+d38c049bad719d00cb129115618286c3a6003848,2026-10-24T05:05:17+08:00,Group catalog picker by work and preserve prose on edition changes
+fcb9004ea4e92bea8df842a5102ed79412942e45,2026-10-24T05:15:08+08:00,feat(stl4): control upload processing stages in file details
+f36f998ba4fb0529965499a6813a083b9010da3e,2026-10-24T05:26:10+08:00,feat(stl4): preview placements in complete protected page templates
+9f8a8ec248af40f4030219c2845976af3e16b74c,2026-10-24T05:29:29+08:00,feat(stl4): retain selected editions across placement target pages
+bd29ec0fd779d05331e783597df2f5e24c15dc20,2026-10-24T05:37:01+08:00,fix(stl4): recover original editorial assistance commands after reload
+71cb7122aebd807af7e59e2a14ab62b620307cdb,2026-10-24T05:42:44+08:00,fix(stl4): stop pending account writes and protect unsaved edits
+936cee844afa4cb3092e095d8fe22dc91e1b5fdf,2026-10-24T05:54:19+08:00,feat(stl4): connect pending accounts to private invitation activation
+675bcdb60e8a1472b4ed26abd580d3d49052d4c6,2026-10-24T06:06:57+08:00,feat(stl4): add private account avatars and owner data controls
+e5049cdb809c28971c56f128d9db34b644cd8551,2026-10-24T06:09:38+08:00,fix(stl4): preserve account data and command receipts in reset plans
+65b75723a60f55b6d7e7f6b354db4745bbdc3e25,2026-10-24T06:17:11+08:00,fix(stl4): scope upload processing to exact batch files
+a9d80998ddd7cd3b75d2a28ebbe1d44487b13cc5,2026-10-24T06:25:17+08:00,fix(stl4): recover stalled backups without accepting late results
+543994be9eec5d6b91f4040143d044523a0258cb,2026-10-24T06:35:00+08:00,fix(stl4): recover private data requests across reader entry points
+2a3fa6015a0f2c233a1fdb088a6d2a069b192312,2026-10-24T06:41:38+08:00,feat(stl4): complete privacy export format choices from final atlas
+937e5d9a525ea6fc349d74cd945d8ee8bc2b47e3,2026-10-24T06:50:08+08:00,feat(stl4): connect cross-page reader material management
+18d4190df4e91fd03144b29934dfc586c412736d,2026-10-24T06:56:18+08:00,feat(stl4): add reader account menu and guarded account exit
+6d1ad8215c175f82b16096dd3845bd9589dc3029,2026-10-24T07:08:45+08:00,feat(stl4): support private naming and archive across reader materials
+c6bc2815a56b26f9573497326c11d576b738018f,2026-10-24T07:22:38+08:00,feat(stl4): expose catalog field protection and source comparison
+54d405fc1860366cd33b65badf2e8227e317d806,2026-10-24T07:36:57+08:00,feat(stl4): recover catalog assistant decisions without duplicate writes
+a769738e5afbc4a938906f7d2eaa9437f8842005,2026-10-24T07:45:29+08:00,feat(stl4): prefill manual catalogues with recoverable source provenance
+16c18f992d384e1043166ca6c8abf2d1ed38447c,2026-10-24T07:55:22+08:00,feat(stl4): attach supporting materials to their catalogued edition
+098ab14d2136da4aff84af6f7176da2f33127956,2026-10-24T08:05:08+08:00,feat(stl4): inspect exact material sources within the assistant
+485741351b4b01e340111c63878b6478f56a8a8b,2026-10-24T08:13:08+08:00,feat(stl4): recover knowledge and claim assistant decisions safely
+eb8960bfe9128def605a0fef781f7fc2b99e608d,2026-10-24T08:24:03+08:00,feat(stl4): share recoverable media editing with scholar and knowledge pages
+634dbcd901ba37c73266c135b179b9b720130479,2026-10-24T08:35:00+08:00,feat(stl4): publish book images with explicit display uses
+afa8390d95916e9c3bbe873d2f306226e86d4b26,2026-10-24T08:43:12+08:00,feat(stl4): apply media uses to knowledge pages and related cards
+b20fad66f164c4f8ab293e4ea8b6a176a11ad89b,2026-10-24T08:46:29+08:00,fix(stl4): keep image projections and sharing bound to the edition
+79c9663c6f90c20ffa7f61e35b4c21edd1acd4f7,2026-10-24T08:57:29+08:00,fix: carry media uses through discovery graph and relations
+2422b45041309a9d19d1a80c86b7b781e3eab096,2026-10-24T09:07:11+08:00,fix: preserve edition and media choices across reader sources
+2eea6698a7cd649ce5781011ea46018cf0686fdc,2026-10-24T09:20:55+08:00,feat: unify media library source editing and recovery
+2151225d8cc30f5e6449515c2d918cf9d2aa63ee,2026-10-24T09:35:40+08:00,feat: preview saved pages inside the media workspace
+eca89a66fea8d971c3ae841db686970d09fd7bab,2026-10-24T09:42:36+08:00,feat: recover recorded legacy images without changing publications
+7d00f7d0e780d6aff29205bd4c94e967020bf441,2026-10-24T09:47:37+08:00,fix: distinguish retrieval index coverage from service observations
+ccad760754e0da819eae37123fe96a8c5fecddfe,2026-10-24T11:36:37+08:00,feat: unify article directory and recover homepage publication commands
+acae50d942aba3cb7d713eb03b94dc2e7c9aeb80,2026-10-24T11:43:14+08:00,fix: protect editorial composition and touch selection across workspaces
+f43b1da3fcb518aa7e52d75881d9423b55070356,2026-10-24T11:55:19+08:00,feat: review saved website content before publishing
+c9b695b3d1fa3866cbe544ebc7e1cf8daacab86d,2026-10-24T12:04:57+08:00,feat: restore website history through recoverable draft commands
+edee8f08047dd51f87a6877fbb6dab1f5cb5ad8d,2026-10-24T12:15:05+08:00,feat: publish website notices and public policy copy from saved content
+d68bd808db716564f13121683cefc042bc84f257,2026-10-24T12:29:22+08:00,feat(reading): add public covers and version checks to private booklist exports
+729a1335c01989be04b0a977877e5c4e30d1add6,2026-10-24T12:38:43+08:00,feat(reading): connect booklist plans notes and public topic scholar links
+d308456c26a78976ef96eec63347c50c23ac883d,2026-10-24T12:43:48+08:00,feat(reading): complete booklist chapter filters ordering and citation types
+407b0b80e47fb3209c18e5e7fdd3e7aacb4b405b,2026-10-24T12:49:16+08:00,feat(reading): add explicit private topic selections to booklists
+7d3cd11ce4c83d36c76d617cf34143bfaa19f7f9,2026-10-24T13:03:21+08:00,feat(editorial): connect reader proposals to recoverable article drafts
+2ab4bbd7dc5d5f7f0ddaf6974e9029b5aba7579a,2026-10-24T13:15:31+08:00,feat(reading): browse research branches and fence stopped fork requests
+8d9284d9f64b7340dad7af81b6171ec5c5939836,2026-10-24T13:33:22+08:00,feat(reading): preserve replay text history tags and saved new evidence
+c49e88ee10063c7c263dd483127f6eb492b29e47,2026-10-24T13:51:35+08:00,feat(accounts): add private mail links and recoverable account appeals
+22790f8cdbec0c1a4cc9528119668441ac0e2ec1,2026-10-24T13:58:17+08:00,feat(accounts): render public return context and confirm mailbox ownership
+23529092858ca64bf9141339499e7e0580670456,2026-10-24T14:11:34+08:00,feat(scholars): bind rich prose to saved text and preserve uncertain saves
+53423ad3a6e0a697bd71d39b6082456869a05ac8,2026-10-24T14:21:39+08:00,feat(scholars): edit related people in place with recoverable commands
+8569a12913eb1cec3f53cbb589c4e716f0ebe48f,2026-10-24T14:28:50+08:00,feat(scholars): edit original life events in place with draft membership
+d1a11f709051ce5042830781de16cd05e3bdb5dd,2026-10-24T14:42:10+08:00,feat(scholars): review original concept and topic links in place
+4ce871752cd6a5aa1210ec207b533e3fdbc99b81,2026-10-24T14:48:51+08:00,fix(knowledge): recover original node saves without duplicate creation
+f9d3ea98d8fa7ba92f508ee8d09aa2faa22f4af5,2026-10-24T15:02:52+08:00,feat(knowledge): edit original node relations in place with safe recovery
+e7b094451279e316be560a473b2a3bc6c8e1962b,2026-10-24T15:30:16+08:00,feat(knowledge): unify person and node relations with guarded merge rollback
+41442c316da982a8778ba2c1a926c2442c416daf,2026-10-24T15:42:47+08:00,feat(knowledge): pin person relation quotes to original document revisions
+70f24ee2ed135495ec722beb7b74d37e2a3198f7,2026-10-24T15:55:06+08:00,feat(knowledge): pin node relation evidence through staged publication
+d2a03556db84986bbfef89eaa8ea247a27df5dd9,2026-10-24T16:06:47+08:00,feat(knowledge): keep node editorial notes private and bind prose formats
+75fbb9eab8400542c01c2e4bb273accfa8881c2c,2026-10-24T16:22:04+08:00,feat(knowledge): unify scholar relation directory and inline editing
+b82e5642f691d672a777122998d37840fdf517e9,2026-10-24T16:29:30+08:00,feat(knowledge): pin scholar relation sources to published revisions
+8febb04d48660f4c9134319c8e4a9090e8a63fe1,2026-10-24T16:38:54+08:00,feat(knowledge): connect scholar concept usages and original material ledger
+18ca037e5441505b37476773560c5ad473333bed,2026-10-24T16:42:41+08:00,feat(knowledge): expose original candidate relation review queue
+40fe3fa782626132f05179277e149388a11c6e0a,2026-10-24T16:47:35+08:00,feat(knowledge): show original catalog dependencies in impact panels
+385ea2a76e5bcf97df1017e5207c1e24ca073115,2026-10-24T16:57:05+08:00,feat(knowledge): trace accessible placement references to exact revisions
+8a5778f3616ad9dd380c215f477b0e054fcc414d,2026-10-24T17:01:53+08:00,feat(knowledge): connect material entry and scholar relation direction controls
+6f6d75d1377a1c64a5ffe443e2c4baffc3711c66,2026-10-24T17:10:39+08:00,feat(knowledge): connect scoped original material review candidates
+3ac909bb4ceab00ea03c029f1c4c41f0e2adf8eb,2026-10-24T17:25:18+08:00,fix(knowledge): preserve and recover original candidate review decisions
+dbd1759ba6072327c7d7b3c5725897d2d5fad74b,2026-10-24T17:42:22+08:00,feat(topics): connect association notes and bounded cover sorting
+7e82a943d287e910b4110ab04cd08903706c7bc0,2026-10-24T17:50:05+08:00,feat(topics): confirm hierarchy changes against original parent chain
+36727966f7e7cd3959db9f380b64c824a3bdcdf3,2026-10-24T17:56:56+08:00,feat(timeline): preserve mobile editing panels and invalid-field focus
+18398fdf88e685771ef34f839ab02c13b410b545,2026-10-24T18:11:57+08:00,feat(timeline): preserve event roles and published edition responsibility
+5dee558f54607f303fdca896f2d37c85cbb3b491,2026-10-24T18:25:25+08:00,feat(timeline): protect evidence pictures across drafts and publication
+fda36e5ac291ac6412172d3facc71c262e7c42f6,2026-10-24T18:53:57+08:00,feat(timeline): merge duplicate events with guarded reversal and stable links
+d067d2317b45db2f96661760c2412b1b73891c28,2026-10-24T19:08:29+08:00,feat(reading-path): arrange stable materials and preview unsaved sources
+66673ec173d05edd8a7f7354a06fa2d2ed31a404,2026-10-24T19:25:16+08:00,feat(reading-path): compare and adopt evidenced route candidates
+f651b202dd8e2490dbae3ca9d101b70afb369db3,2026-10-24T19:31:23+08:00,fix(maintenance): handle empty services and paginate check history
+25d080710ba156f3469bdefe62913fc51c3ab1d9,2026-10-24T19:41:41+08:00,fix(storage): recover original commands and cancel late requests
+ef58a3d3bc20582410b9b1a4cc4bef0a382bdc51,2026-10-24T19:46:55+08:00,fix(storage): verify permanent originals before staging cleanup
+3e924b534f51a5ddfcd8aeb86e69c3ed5c911cd7,2026-10-24T20:27:10+08:00,feat(storage): paginate archive verification history and bound backup pages
+96ef2043099ff11fa3175f2658ac2bb454d075e4,2026-10-24T20:42:21+08:00,feat(storage): scan and confirm bounded transient cleanup with retention rules
+a9700595cdc63bdae0c99f2349c8cced1cf332c8,2026-10-24T23:10:59+08:00,feat(recovery): page related objects and audit history with identity comparison
+101d50c54a809a9fabd8cfe58d48e2780cf543d8,2026-10-24T23:15:38+08:00,fix(recovery): separate receipt lookup from restore and stop late requests
+fbb294211854961d91b8c5499459af9983532969,2026-10-24T23:20:24+08:00,feat(recovery): trace current page placement references by source identity
+2ff1f28e958bff1e80ae48f2d00945df1eb3c49a,2026-10-24T23:24:20+08:00,fix(recovery): withdraw legacy public editions when restoring catalog records
+901e6960010b8f302b11f8015167613cad5de6cf,2026-10-25T02:46:04+08:00,feat(recovery): add bounded resumable batch restore selection
+7c7e88be7c07157d088d1143e08a5f75bcf8850d,2026-10-25T02:54:37+08:00,feat(recovery): resolve name conflicts through protected editorial revisions
+4a3c80088cd944a2ec3bb8b5a76ee154e6950716,2026-10-25T04:15:38+08:00,feat(recovery): include retained relationship rows and edition dependencies
+02d7eabc720935bde07a409e7c7d1034ecbd9d58,2026-10-25T04:17:40+08:00,feat(recovery): trace issue body and scheduled revision references
+75c268a2662b1150e7c06b3cf644c2394f63547d,2026-10-25T04:22:28+08:00,fix(services): persist unresolved checks and fence cancelled requests
+dee6393353a35aa35510d81bb00a1e5b704c9d15,2026-10-25T04:30:22+08:00,fix(services): report actual runtime identity and current residency
+652670ab4752f55000e73d5d7331a2b152814f37,2026-10-25T04:32:53+08:00,fix(ocr): distinguish current readiness from connectivity and history
+6945f9cf1fd7640511a619fe6719b61dfb08dfc0,2026-10-25T04:44:12+08:00,feat(services): share OCR configuration editor with versioned saves
+09c3220c373a6df10cc5f7a15d42e1d83eabcb27,2026-10-25T14:43:44+08:00,feat(storage): paginate signed restore history without truncating older reports
+967eb223b89cbd10b6df36680170a0a303884a77,2026-10-25T14:52:57+08:00,fix(backup): capture database and catalog inventory from one snapshot
+fef372ddbbb14bc7e6a4807a32af873527abc963,2026-10-25T15:06:38+08:00,feat(storage): preserve full baseline for incremental original backups
+6e9f2618a20752fb491aa41fecb0945bce8b66a4,2026-10-25T15:25:06+08:00,feat(storage): integrate private search-index exports with backup jobs
+baef1b469c8a21a1e00e9730b7c34ce6bafd012f,2026-10-25T15:54:56+08:00,feat(admin): save source configuration and encrypted binding atomically
+a7531638307c28cac46ed67d81f776f76fd46998,2026-10-25T16:15:41+08:00,feat(admin): unify model profile editing with versioned credential binding
+fa0c49444e286161decb7c28158e3151db4dfbf6,2026-10-25T16:24:11+08:00,fix(admin): protect legacy credential mutations and bound references
+7469e2dd6f103f9f204b4f9ed54b4623a0df6b28,2026-10-25T16:35:02+08:00,fix(sharing): persist cancellation of unresolved share creation
+b82ef33a1553aabaa45a17f5f79c7b93a3c0affd,2026-10-25T16:52:56+08:00,feat(sharing): compose version-bound scopes across research and booklists
+bbf83756b0f5bd089f6ea2a8b8544509240f5174,2026-10-25T17:03:17+08:00,feat(knowledge): trace article references to exact editorial revisions
+703a7449757362e0582d137bdf33949e4a941df4,2026-10-25T17:11:29+08:00,fix(media): preserve editorial material display uses and clear retired images
+18c81624e1731422bf2965011e690c4ef3e1d277,2026-10-25T17:18:44+08:00,fix(editorial): align directory related content with final atlas
+788cea7afe1c257bf8f2034f669d8011a7d53fd3,2026-10-25T17:30:48+08:00,fix(intake): filter candidates before paging and restore exact selections
+fa7543f327907b20325586fdd17d7ff834a33a90,2026-10-25T17:37:47+08:00,fix(catalog): review all same-title works before manual creation
+42672581e65056eef2e4314c53b3a77b2812a454,2026-10-25T17:41:02+08:00,fix(catalog): paginate contributor candidates without losing identity
+841f0d06a955c52e6419d6004d37e9592fe1fe4f,2026-10-25T17:49:39+08:00,fix(research): protect comparison drafts and record final atlas gaps
+132c96e44faf05bfdccbe9583a762ec581093442,2026-10-25T17:58:09+08:00,feat(research): align single-dimension comparison with final atlas
+7774258249fc07f149b96ca4ea434a076ed05dce,2026-10-25T22:29:14+08:00,feat(research): connect comparison gaps to persistent research turns
+292614f42e6ba401948f864bddff67a62019dbde,2026-10-25T22:37:07+08:00,feat(research): connect translation comparison with exact source revisions
+3ee07ac01f39818bff960f9f9ddacd037c23131b,2026-10-25T22:46:48+08:00,feat(research): complete mobile panes and preserve branch inputs
+365f2d34aa268f601ef5bcacbf430597897a1860,2026-10-25T23:02:44+08:00,feat(research): generate private comparison drafts with durable cancellation
+cb3db4b9635fbb29c44a0a6a28503e2bc6f5be4b,2026-10-25T23:11:40+08:00,feat(research): recover consented prompt drafts within the original account
+155d6519f072a5787cd8c18b44029619f783b936,2026-10-25T23:23:50+08:00,fix(research): recover original turn receipts without duplicate submissions
+2b54bae9d4beae92b612f1d50ceabe346e21d081,2026-10-25T23:30:05+08:00,feat(research): retain consented offline notes with revision-safe sync
+51d775218b6a51eb15833ae8a68810be3c29b753,2026-10-25T23:36:45+08:00,feat(research): restore consented pending requests with pinned identities
+fedbc8efe167004b9bc94668d28b9bada31f9817,2026-10-25T23:42:17+08:00,feat(research): recover unsent branches and align page reference payloads
+4eab9b575bb186c99b86541876b1f0af80e7f6db,2026-10-25T23:56:25+08:00,feat(research): sync consented offline selections as an atomic batch
+77ca29bde708189514287d4e8277d543ab02dd29,2026-10-26T00:03:36+08:00,feat(research): align evidence bibliography and covers with final atlas
+5fdc16e067a6789861434f197bf82d955dbd359c,2026-10-26T00:12:25+08:00,feat(research): export saved notes and expose workspace actions
+d6b8bc88eb447b08a95f03989dfd78cb527032b8,2026-10-26T00:24:35+08:00,fix(research): preserve authored selection notes beyond undo history
+67975916f207676880e7391a5865d95e578cbafb,2026-10-26T00:34:45+08:00,fix(privacy): distinguish material types and clarify research note scope
+6ae126692ca12f37ff2898380b160437b7298eea,2026-10-26T00:41:43+08:00,fix(publication): require version-bound preview and confirmation
+f63fc9c0959572af36874eac111b7f331ab1e7f0,2026-10-26T00:51:09+08:00,feat(processing): page through all interrupted OCR pages for selective retry
+c0d814803d164d4f97552e5099ae2214f728bf3a,2026-10-26T00:56:10+08:00,fix(timeline): keep supplemental evidence open while editing
+90e5853b1b337efe10fd7a84071d94ce06a4128d,2026-10-26T01:07:58+08:00,fix(citation): pin private previews to active account
+9efc7f3c161992c8f9861ae14f707b8780efbdf9,2026-10-26T01:22:49+08:00,feat(knowledge): bind node merges to reviewed scope and receipts
+f2084f4a6080814b42c2a31c30878adb3d590490,2026-10-26T01:27:39+08:00,feat(knowledge): replace evidence as an explicitly reviewed reference
+136dd855bc3dcd526ef9abaee16d1a8492bdd704,2026-10-26T01:38:48+08:00,fix(outline): require title evidence before trusting native targets
+2eed73189e810c25eeafa4cd4347e7aab5d7a2dd,2026-10-26T01:46:56+08:00,feat(outline): consume verified page-label segments and locate review findings
+907db192f30d8c297073b33cc1fbbca44d4ebffe,2026-10-26T01:53:57+08:00,fix(upload): preserve uncertain commands and retry exact selected items
+7de4f88db277684a62bf9fc8b9e6962f36a66690,2026-10-26T02:07:34+08:00,fix(media): include published topic references and clarify delivery scope
+9bacba16b3ca13cace1145f07c62eaf6ae1c2d3c,2026-10-26T02:23:07+08:00,feat(preview): stage isolated review environment and classify delivery work
+38ec28b9a993de456a2d408fbf66dfc358a294a9,2026-10-26T02:54:26+08:00,fix(preview): complete isolated runtime and legacy database compatibility
+89ea7c6130bc7c9db57edeca0df4e7eb85bd3258,2026-10-26T03:16:37+08:00,feat(retrieval): connect inherited EG2 artifacts and isolated projections
+f8fcf54eadd6292ad46107f3290eacc34318aede,2026-10-26T03:46:32+08:00,fix(visual): restore PDF brand assets and reader page layouts
+91e79e1950f7ee9357e2294957556195bcd8f77b,2026-10-26T04:11:10+08:00,fix(visual): reproduce PDF about and support page assets and layouts
+19711f033fb8a8a9b25b18d95eff18c76ac64d47,2026-10-26T04:31:53+08:00,fix(visual): restore PDF exploration catalog and opinion layouts
+0d65bda13a81b1717430aeb1c61c54504ebd55da,2026-10-26T04:50:39+08:00,fix(visual): restore PDF evidence layout and source filters
+873b6216410cd12f7c9908b086cb1ff2143411b6,2026-10-26T04:58:53+08:00,fix(visual): align document detail states with final PDF
+eb27e1b270ab6086cd5d0e668c158a106d430842,2026-10-26T05:11:13+08:00,fix(visual): restore PDF reader branding and reading states
+ceb636aedc7823bde3895300da336c4c1f27de2a,2026-10-26T05:20:18+08:00,fix(visual): match parallel reader and manual alignment PDF layouts
+f25acf2402a8514466c37d53dbbd153e5612c18d,2026-10-26T05:26:31+08:00,fix(visual): restore theory and subdiscipline PDF page geometry
+f35248815f6c9ad3db735241f1dd64ddc39d1458,2026-10-26T05:30:48+08:00,fix(visual): align concept and tradition detail with final PDF
+118abe342bcad12af7142bbf3cd350cfe87519c4,2026-10-26T05:41:06+08:00,fix(visual): restore atlas map directory and timeline presentation
+20a5fd6579789cdd73017bb48c8b54f2d96060db,2026-10-26T05:50:02+08:00,fix(visual): restore atlas reading path presentation
+8772a6780a5e6b1670ea39de33318da674a1a4ff,2026-10-26T05:55:33+08:00,fix(visual): restore atlas scholar directory and profiles
+cc615ac78a04de0115161ad6455937764094c5d5,2026-10-26T06:04:48+08:00,fix(visual): restore atlas topic presentation and assets
+f191dd4644e617b6754f9207460e0ebd44093242,2026-10-26T06:12:20+08:00,fix(editorial): restore atlas presentation and public snapshot reads
+11515458cc066a31154d767dc04131b82d8040f7,2026-10-26T06:17:56+08:00,fix(admin): restore atlas management shell and today view
+2757c58b959f5d70077a9fe27f8308d604296b0d,2026-10-26T06:26:40+08:00,fix(upload): align intake batch views with final atlas
+e6b16b1952cce125c52de75e1ecd602fc5423589,2026-10-26T06:32:01+08:00,fix(intake): restore atlas identity confirmation layout
+f2aebc327c4aa0e1d563f0d9892f9839a7f738d3,2026-10-26T06:35:51+08:00,fix(cataloguing): restore atlas manual entry presentation
+4d7faeff2ca0f50ef20c759e19a3f9496494e6ed,2026-10-26T06:40:41+08:00,fix(cataloguing): align editor controls and conflict presentation
+8a03323aef79cf8108108c3a8139b4b99f44cb7a,2026-10-26T06:49:07+08:00,fix(files): align version inventory with final atlas and edition data
+79b9c36974bd3d01fc8797e905cdc4fff6d8a579,2026-10-26T06:54:39+08:00,fix(assistant): restore atlas field review and source selection layout
+c92b5889f0327045e1ef7e2033bd7c7c663558af,2026-10-26T07:01:13+08:00,fix(media): match atlas cover tools and source form layout
+ae66e9136df6f53566c97372b8c292cf02e4d06d,2026-10-26T07:17:50+08:00,fix(processing): match atlas queue and preserve task union projections
+f4c60ed22f04754ff9ee1ac00b50b1c2733b6c62,2026-10-26T07:23:28+08:00,fix(ocr): restore atlas page inventory and correction workspace
+821fb929857ee98994b077e7425e6c26d8ebc99d,2026-10-26T07:34:03+08:00,fix(outline): align calibration and source comparison with final atlas
+c6c20f4b3654332b5bcec057fe7300096cc790ef,2026-10-26T07:42:06+08:00,fix(mapping): match final atlas and persist page source notes
+d8e44b5523cda615c314d039943d1388112ff07e,2026-10-26T07:52:52+08:00,fix(index): align maintenance view and reuse global query pipeline
+8b1adf6b7759b0308b2de48bc449a16761bba970,2026-10-26T08:01:22+08:00,fix(curation): match project atlas layout and expose article states
+feb159f776fe174d5fdaf703b454ad9a9cf2b594,2026-10-26T08:06:44+08:00,fix(editor): reproduce atlas layout while retaining draft workflow
+78f256059da9a4a0b840edfd1624917097ed1d3a,2026-10-26T08:12:00+08:00,fix(selection): align evidence workspace with final visual atlas
+a876e3e263a559cc4e5b24c34a68ab98f046d4b1,2026-10-26T08:18:17+08:00,feat(stl4): align publication preview with final atlas 131-133
+e84d19841fd0832cedc45e8f7564214321e2b0fe,2026-10-26T08:29:55+08:00,feat(stl4): restore publication desk and align atlas 134-137
+e46a2596b458bf6b6b50b6b5990f742d18b462ea,2026-10-26T08:36:15+08:00,feat(stl4): align person authority and comparison with atlas 138-141
+e76dc1dfc101b9de4106952c916d0455efc79dc5,2026-10-26T08:46:04+08:00,Align scholar editor with final atlas pages 142-143
+601bdda09f5332872fcb9c75bffb6afe26d6b65c,2026-10-26T08:58:30+08:00,Align concept workspaces with atlas and record remaining visual gaps
+d7bd46779c2291412dd985ac347d40dfc2cbdd27,2026-10-26T09:13:30+08:00,Align topic organization and complete canonical concept field layout
+7217bc80e6263bde71b7e36f242651148b835902,2026-10-26T09:28:33+08:00,Align timeline editor with atlas and preserve primary evidence kinds
+90c8fe7ce195be958a011aeef54650e79d70781b,2026-10-26T09:45:12+08:00,Align reading path editor and preserve existing curation workflow
+48c484dba9a8f6bb88bb1931daf2d1e6c8546dba,2026-10-26T09:53:09+08:00,Align account directory and capability confirmation with final atlas
+8b902de3c4d6710e48bebf80c9a0ed71d313e359,2026-10-26T10:00:24+08:00,Align model service overview and real configuration details with atlas
+d9db33337e4824b949a441eea974752e65399e7e,2026-10-26T10:09:29+08:00,Align storage and recovery preparation with real retention rules
+f0cce5ab96ba8b8b38056d639f544b886acf73b5,2026-10-26T10:24:57+08:00,Align recovery workspace with final PDF and original object metadata
+c26171ca972995a362d46ee5b97ecb50f8577fa8,2026-10-26T10:34:38+08:00,Align homepage composition and source selection with final PDF
+f904bd0e565761f4257776804ed340295a5bcb9a,2026-10-26T10:52:24+08:00,Align content placement and catalog selection with final PDF
+d0fa0685c800000621020e6c6061532cf5852a62,2026-10-26T11:00:28+08:00,Align citation export and explicit sharing scope with final PDF
+5f34d8fc0b2e55b2efe4babcad75c8e888ed5aff,2026-10-26T11:13:50+08:00,Align reader centre and research archive with final PDF 183-185
+339814ba69e65c719c7ba1e7e25813a0d2b5b27d,2026-10-26T11:28:16+08:00,Match account entry and recovery presentation to final PDF 186-190
+258c9aaf859d56ed74d55da7b2e4d5556063292a,2026-10-26T11:37:37+08:00,Align continuous research workspace with final PDF 191-194
+6cfd60c701b266bb0dfc7a5b4fcfa96b3ce781bb,2026-10-26T11:45:23+08:00,Restore final PDF evidence matrix and counter-evidence presentation
+e63ae154b6914e9bd2722cb8736b4939fb5ac1ea,2026-10-26T12:02:28+08:00,Align reading plans with final atlas and preserve reader planning inputs
+b74ae9d75bc2546390fdb090fb00ee6bb77d2545,2026-10-26T12:13:03+08:00,Reproduce confirmed notes layout and inline confirmation from final atlas
+51d38db8e2ca46e1ba7abcbe28abf80571b72bb2,2026-10-26T12:24:27+08:00,fix(stl4): align citation detail views to final PDF
+03820624faa96b82c3da68750776e59ba0ad8ec0,2026-10-26T12:32:37+08:00,fix(stl4): restore notebook layout and original editing flow
+f2a06beec275b4d38788597c4b6da9ade3d69a4f,2026-10-26T12:39:48+08:00,fix(stl4): align collection layouts and real notebook filters
+db112467108c980efea96ca41ca3884a61a8f231,2026-10-26T12:54:42+08:00,Restore PDF research replay and privacy workspace views
+5caad0b569693b46409a40a2db400ae942e30ef0,2026-10-26T13:05:13+08:00,Complete reader confirmation filters and prerequisite guidance
+24ea5b24e070a1bcdbe29c9a5cfd6b374fb5099b,2026-10-26T13:20:36+08:00,fix(stl4): restore inline project questions and timeline material cards
+b8a30cd10ff68458b0592fbc3a40dab10fc736db,2026-10-26T13:40:23+08:00,feat(stl4): generate reviewed blank-page copies through existing PDF jobs
+8f28a43147c50fc5930517097eb27eb18da7e0ab,2026-10-26T13:50:38+08:00,feat(stl4): connect inline term editing and advanced index preview filters
+5eab384f6b2c444c3d0a7193ec87c9f4784706e5,2026-10-26T18:02:21+08:00,feat(stl4): publish blank-page copies with remapped reading navigation
+41ee7af7484be59c1aa161677eb2b5ef129229ab,2026-10-26T18:12:28+08:00,feat(stl4): connect PDF query scopes to existing discovery fields
+6fb867cee90fe02a2a123863a3b574bdf7006a96,2026-10-26T19:10:17+08:00,feat(stl4): connect person research fields and align index navigation
+32fd05378683ff9b9bcb20d0c8d62962ff80f08c,2026-10-26T19:22:54+08:00,feat(stl4): restore person biographical media with original editorial drafts
+e1a6931817ae3721dd3871148612950c8c869aa9,2026-10-26T19:36:27+08:00,feat(stl4): edit person contribution roles through original catalog workspace
+3e8307f4786493085c1e8cc59078f3cbc156e19a,2026-10-26T19:58:12+08:00,fix(stl4): show evidenced OCR quality spans and preserve exact correction text
+4631fca998db3f2ec18a591bc843ae0bedeb7ea4,2026-10-26T20:14:13+08:00,feat(stl4): connect PDF evidence interface language controls
+74318b9eed44de3eff4bd20d9ebad8f5e7c5077c,2026-10-26T20:22:32+08:00,fix(ingestion): queue parallel upload requests without exhausting page-read limits
+fea18cbccd1c08b0ecbd95ff533a2b8d0cd1b2c4,2026-10-26T20:34:28+08:00,fix(ingestion): resume confirmed intake through retained PDF preflight
+e5ed17e04624925b6c6d553e2f0636dac4d48a34,2026-10-26T20:41:36+08:00,fix(catalog): synchronize legacy ISBN with corrected catalog fields
+196a96ac584c2e1506d9b964bfd54a39e2b4d1da,2026-10-26T20:45:19+08:00,fix(catalog): retain explicit publication mode during catalog confirmation
+42f444da1dc7d9c837c730e5e662ee4f572a0574,2026-10-26T20:53:24+08:00,fix(ingestion): omit unused image bytes during native text extraction
+856eafd1a8be1f7c1398f0643d8588a48119a8e0,2026-10-26T21:14:37+08:00,fix(ingestion): release native PDF parser cache after each page
+9855942aecc8cd40858672ea9446ca48b5f5228b,2026-10-26T21:49:13+08:00,fix(curation): expose published scans through reader eligibility
+fbe6f99933497741101dd55d84f3ce3f088f562f,2026-10-26T21:58:16+08:00,fix(preview): budget search memory for real document indexing
+de1dc78c22cdb6464621e8f378994a7da723b8b1,2026-10-26T22:19:27+08:00,docs(samples): record published three-book curation and OCR-free receipts
+7d6404a6048c2db6f202225ee5f67a9986ab4a04,2026-10-26T23:36:19+08:00,fix(brand): draw vector logo and wordmarks for PDF layouts
+1af204dbe7d99a0dff563cbe93810e44606672f8,2026-10-27T00:46:35+08:00,fix(stl4): render edited brand text in site previews
+4623e234be055c325ff18eab840a06db1bfc79f1,2026-10-27T01:32:14+08:00,docs: record NAS OCR candidate measurements and pressure recovery
+87e6a12ae807a3d4f6e0c4f551d828cdf39c3181,2026-10-27T02:19:56+08:00,Replace active OCR backend with pinned RapidOCR ONNX tiny workflow
+e198d123a9694d0208c3294310b3d0a736dca4d4,2026-10-27T02:55:13+08:00,Preserve printed TOC rows and verify RapidOCR preview integration
+813f328d36550b5cfe65594f717edafbc3a17854,2026-10-27T03:14:48+08:00,Connect opt-in guest records to reader history and PDF login design
+c8a4920cae91a8a364c6849724b4e15e905cbdb2,2026-10-27T03:53:26+08:00,fix(stl4): align editorial landing and published theory filters
+94e91d17401008a525d589bd53e299ea1406fc04,2026-10-27T04:18:52+08:00,fix: calibrate scanned contents from observed headings
+4e869ba05d8bd0d2ffb96d5508ccca09e4959bd4,2026-10-27T05:04:21+08:00,fix(stl4): finish page labels privacy and discovery publication handoff
+c769a84c23b681e5a17562c0981273d5cf572d5e,2026-10-27T05:29:50+08:00,fix: export adopted mapped outlines with accurate PDF destinations
+9f4268ad50c0692ac57d5cb2c53bc8b54e7bc22a,2026-10-27T05:43:44+08:00,fix: prepare isolated deep index and record verified runtime handoff
+3f79ee0d1cde0dfb7bf38a332c33936bd309ba43,2026-10-27T06:11:50+08:00,docs: record ongoing deep index recovery checkpoint
+0540b259a226a4027bb436626ce18f5a9092e891,2026-10-27T06:48:47+08:00,docs: record resumed deep backfill and temporary memory recovery
+10128e33b160fdec356f1ab187b2449801661fd8,2026-10-27T07:11:54+08:00,docs: checkpoint continuing deep backfill at 1191 documents
+cff9401540ba4cf723ea4fd9c84f82443232ce0b,2026-10-27T07:41:20+08:00,docs: checkpoint continuing deep backfill at 1561 documents
+b0072dce33e7f1adb761480cda0f8ca48b0f8253,2026-10-27T08:11:24+08:00,docs: checkpoint continuing deep backfill at 1944 documents
+6300fe6887fd3a684761e80dae84262ae4d84a49,2026-10-27T09:04:20+08:00,fix: align bounded deep query timeouts and verify corpus coverage
+70dd2ea342ffbb17ba88dc00e69f7e01b1425403,2026-10-27T09:13:43+08:00,docs: close live deep retrieval verification and save candidate recovery
+be835bf7897030d4c9ba015875ab5c0d401040dd,2026-10-27T09:58:52+08:00,fix(stl4): align privacy export views and record cutover config gates
+e5d4d12e94a40646ac09da068ae0faca1159a276,2026-10-27T10:22:07+08:00,fix(stl4): restore note selection and refine reader views
+4be4c9f23b6be43164032023c335272c8e24cfef,2026-10-27T12:39:01+08:00,fix(stl4): honor booklist tabs and restore mobile navigation
+5481cf7ff423b1fb849ecddd941295a65ad0d325,2026-10-27T12:45:42+08:00,docs(stl4): record cutover configuration boundaries and review handoff
+8d7672d5e3fe6841bcbab1f43bde26d2936a498b,2026-10-27T12:57:54+08:00,chore(stl4): prepare cutover overlay and preserve candidate files
+f9d8e24f89b7de36b8bd3f7708f242180cf363f5,2026-10-27T13:38:01+08:00,fix(stl4): unify brand identity and address homepage annotations
+92742cc4b49ce5a09ae7645ca94c038c1e9b53a0,2026-10-27T14:27:58+08:00,fix(stl4): unify icon hover and soften shared motion
+33f27db72814d097dbb87c480bcdb76692488c57,2026-10-27T18:45:45+08:00,feat(stl4): preserve A and deliver typography B preview
+d6686bd9f0a57550b90038680c70e419ed6d5537,2026-10-29T13:34:26+08:00,"Restore A typography, compare OFL fonts and simplify interface copy"
+e1b6ef077aefe1e71ebb9875d587bc6647d8da24,2026-10-29T17:47:44+08:00,Keep shared navigation visible across pages and screen sizes
+a323c3996a88a56893d1c4ca78b85323bc8a6a07,2026-10-29T18:43:14+08:00,Polish search interactions and preserve preview redirect ports
+797fa840766d2fa5e9be6b94173e5141fc81983f,2026-10-29T19:23:36+08:00,Apply editorial link feedback and correct citation presentation
+988350295e69aee0ddb4e01795923237ee12c7a9,2026-10-30T12:23:09+08:00,Improve evidence order and feedback page selection with homepage layout preview
+774e3ccab42779fea246a530b03a51219c1ec8f0,2026-10-30T12:45:25+08:00,Keep desktop navigation beside the brand and record picker verification
+a1180fb37ab3503c787c180347bccd2a8a4713b1,2026-10-30T13:51:07+08:00,feat(ui): refresh editorial imagery and polish footer and drawers
+8331734350d3d3990a398444298da4b7ebc0f04e,2026-11-03T18:38:39+08:00,feat(policy): add branded research demo with shared inference
+70213db7f2f2d1e7fab9372f78542e78eedef8e1,2026-11-04T13:01:36+08:00,refactor(ui): remove redundant home and preview copy
+fe338085613466634b7f3b56ea6e2a2a3c5d68c4,2026-11-04T13:42:57+08:00,refactor(ui): simplify site copy and adopt grouped menu
+425aef2d7644acf0222393296410e46841aab29f,2026-11-04T15:52:13+08:00,docs: record detached local preview recovery
+701ac8e2fa10d8456118713f0b0cb09f6412c447,2026-11-05T12:56:40+08:00,feat: add homepage research story and merge intranet UI
+2f2bd42fc6a0d531b55becb93175dbb9b731ee53,2026-11-05T13:07:21+08:00,feat: separate welcome story from library homepage
+185c4e7ff6b508bf33bc02c0c15a4993b178cc74,2026-11-05T17:33:06+08:00,feat: present welcome in five scroll snap cards
+2e51d70f8d027056bac11915ae87f2f9938a454d,2026-11-05T18:11:47+08:00,feat: rebuild welcome as continuous branded product demo
+4e4c638d40b5397ea5bfa6340650f5e1fbc07b54,2026-11-06T01:55:26+08:00,feat: add welcome brand animation and scholar copy variants
+68da4fe443138a2ecf711f83b1037bef94aece9f,2026-11-06T10:08:20+08:00,feat: refine welcome copy choices and brand motion
