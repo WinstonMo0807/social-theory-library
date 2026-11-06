@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@/*": ["web/*"],
+      "react": ["web/node_modules/@types/react"],
+      "react/*": ["web/node_modules/@types/react/*"],
+      "react-dom": ["web/node_modules/@types/react-dom"],
+      "react-dom/*": ["web/node_modules/@types/react-dom/*"],
+      "lucide-react": ["web/node_modules/lucide-react"]
+    },
+    "typeRoots": ["../../web/node_modules/@types"]
+  },
+  "include": ["src/**/*.tsx", "src/**/*.ts"]
+}

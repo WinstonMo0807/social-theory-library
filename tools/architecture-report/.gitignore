@@ -1,0 +1,8 @@
+dist/
+.cache/
+exports/
+node_modules/
+data/runtime.json
+data/architecture.json
+data/inventory.json
+data/evidence-index.csv

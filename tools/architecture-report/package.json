@@ -1,0 +1,12 @@
+{
+  "name": "stl-architecture-report",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "audit": "node audit.mjs",
+    "build": "node build.mjs",
+    "start": "node server.mjs",
+    "verify": "node verify.mjs",
+    "export": "node export.mjs"
+  }
+}

@@ -1,0 +1,95 @@
+// Curated after reading the call chain. audit.mjs resolves anchors, hashes and import edges.
+// Refreshing the inventory does NOT infer business meaning or certify functionality.
+const E = (file, anchor, note = '') => ({ file, anchor, note });
+const N = (id, name, type, summary, sources, extra = {}) => ({ id, name, type, summary, status: 'implemented', sources, ...extra });
+export const statusLabels = { verified: '已实现 · 定向验证', implemented: '已实现 · 待验收', partial: '部分实现 / 条件未满足', planned: '规划或范围未定' };
+export const nodes = [
+  N('stl', 'Social Theory Library', 'system', '同一馆藏与证据身份，连接发现、阅读、研究和内容管理。', [E('web/app/layout.tsx', 'RootLayout'), E('api/config/urls.py', 'urlpatterns')], {children:['discovery','knowledge','reader','research','admin'], statusNote:'整体仍在开发与验收中；本图是产品职责归纳，不表示五个独立部署服务。'}),
+  N('discovery', '文献发现', 'domain', '从书目线索与研究问题，进入可核验的原文。', [E('web/app/explore/page.tsx','ExplorePage'),E('web/components/discovery-search-workspace.tsx','DiscoverySearchWorkspace')],{children:['catalog-search','opinion','evidence','assistant'],access:'登录读者'}),
+  N('knowledge','知识与策划','domain','以学者、流派、主题和策划，组织进入馆藏的路径。',[E('web/components/site-header.tsx','const navigation ='), E('web/app/theories/page.tsx','export default')],{children:['scholars','theories','topics','editorial'],access:'网页公开'}),
+  N('reader','原文阅读','domain','在实际 PDF 页中核对原文、目录、上下文及引用。',[E('web/app/reader/[assetId]/page.tsx','ReaderPage'),E('web/components/reader-shell.tsx','ReaderShell')],{children:['pdf','outline','citation','parallel'],access:'登录读者',routes:['/reader/[assetId]'],action:'进入原文页，核对上下文',output:'阅读定位、选区与批注'}),
+  N('research','私人研究','domain','持续保存问题、材料、判断与笔记，按本人归属访问。',[E('api/reading/research_views.py','class PrivateRecordViewSet'),E('web/lib/api/research.client.ts','createResearchProject')],{children:['projects','compare','plans','notes','audit'],access:'登录且本人所有'}),
+  N('admin','馆藏与运营','domain','收件、编目、处理、发布及知识内容维护共用既有服务。',[E('web/components/admin-shell.tsx','navigationGroups'),E('api/common/permissions.py','class CanAccessBackOffice')],{children:['intake','processing','publication','content','operations'],access:'按管理能力授权'}),
+  N('home','首页与欢迎','page','首页与 /welcome 独立；欢迎页三版随机，同次停留固定。',[E('web/app/page.tsx','export default'),E('web/app/welcome/page.tsx','export default')],{routes:['/','/welcome'],children:['knowledge','discovery'],status:'verified',statusNote:'本轮只读打开首页与欢迎页；不代表全部功能或视觉验收。',screenshot:'home.png'}),
+  N('scholars','学者','page','从学者目录进入详情及关联作品。',[E('web/app/scholars/page.tsx','export default'),E('web/app/scholars/[slug]/page.tsx','export default')],{routes:['/scholars','/scholars/[slug]']}),
+  N('theories','理论流派','page','流派目录、关系图、时间线与阅读路径。',[E('web/app/theories/page.tsx','export default'),E('web/app/theories/graph/page.tsx','export default'),E('web/app/theories/timeline/page.tsx','export default')],{routes:['/theories','/theories/nodes/[slug]','/theories/graph','/theories/timeline','/theories/reading-paths'],screenshot:'theories.png'}),
+  N('topics','主题','page','主题详情连接策划与相关馆藏。',[E('web/app/topics/page.tsx','export default'),E('web/app/topics/[slug]/page.tsx','export default')],{routes:['/topics','/topics/[slug]']}),
+  N('editorial','特别策划','page','公开策划及文章页，从内容组织进入作品。',[E('web/app/recommendations/page.tsx','export default'),E('web/app/recommendations/[slug]/page.tsx','export default')],{routes:['/recommendations','/recommendations/[slug]']}),
+  N('catalog-search','馆藏与原文检索','feature','查询书目、筛选版本，并进入作品详情。',[E('web/app/explore/original/page.tsx','export default'),E('web/lib/api/search.server.ts','loadSearch')],{routes:['/explore/original','/works/[slug]'],action:'输入题名、作者或关键词',output:'作品 / 版本 / 文件入口'}),
+  N('opinion','观点检索','feature','问题通过探索入口创建 Discovery 检索会话。',[E('web/app/explore/opinions/page.tsx','OpinionSearchPage'),E('web/lib/api/discovery.client.ts','createDiscoverySearch')],{routes:['/explore/opinions'],action:'提出问题，选择检索范围',output:'检索会话标识与状态'}),
+  N('evidence','原文证据','feature','轮询检索结果，核对上下文与来源，再跳转原文。',[E('web/app/explore/evidence/page.tsx','EvidencePage'),E('web/components/discovery-search-workspace.tsx','readDiscoveryContext'),E('web/components/discovery-evidence-detail.tsx','reader')],{routes:['/explore/evidence'],action:'读节选，打开上下文',output:'文件 + 修订 + 页码 + 证据定位'}),
+  N('assistant','STL 智能助手','feature','馆内问答服务与私人研究 API 配置各自独立。',[E('web/components/explore-ask-client.tsx','export'),E('api/reading/library_assistant.py','def ')],{routes:['/explore/ask'],statusNote:'调用链存在；本轮未运行生成式问答或模型质量测评。'}),
+  N('pdf','PDF 阅读器','component','ReaderShell 组合 PDF 连续阅读、侧栏、搜索与研究上下文。',[E('web/components/reader-shell.tsx','PdfContinuousViewer'),E('web/components/pdf-continuous-viewer.tsx','export')],{action:'进入对应物理页，核对上下文',output:'阅读定位、选区与批注'}),
+  N('outline','目录与派生 PDF','feature','自动识别目录并排队导出副本，保留原件及人工校准。',[E('api/catalog/services/document_outline.py','def run_outline_job'),E('api/catalog/services/outline_exports.py','def queue_export'),E('docs/stl4/AUTOMATIC_OUTLINE_20261106.md','自动化开发 D')],{status:'implemented',statusNote:'最新项目记录已报告两份扫描件的自动流程及11项定向检查；本轮未复测。更多书种的识别质量和整体运行仍待验收。',children:[],action:'目录导航 / 管理员纠错',output:'目录修订 + 独立下载副本'}),
+  N('citation','引用与出处','feature','阅读器共用引用逻辑与来源覆盖层，基于当前选区或页码。',[E('web/components/reader-shell.tsx','useReaderCitation'),E('web/components/shared-citation-overlay.tsx','export')],{action:'选择引文格式，核对出处',output:'引用文本与来源信息'}),
+  N('parallel','对照阅读','feature','同一阅读路由按 mode=parallel 进入双文档对照。',[E('web/app/reader/[assetId]/page.tsx','query.mode === "parallel"'),E('web/components/reader/parallel-reader.tsx','export')]),
+  N('projects','持续研究','feature','服务端保存研究、轮次及材料选择，支持继续追问。',[E('web/lib/api/research.client.ts','startResearchTurn'),E('api/reading/research_views.py','def turns(')],{routes:['/account/research','/account/research/[id]'],children:['compare','notes','plans','audit'],action:'保存材料，继续同一问题',output:'本人研究项目与轮次'}),
+  N('compare','比较与反证','feature','材料比较、反证与人工判断入口已接入研究服务。',[E('web/lib/api/research.client.ts','generateResearchComparison'),E('web/components/research/counter-evidence-workspace.tsx','export')],{routes:['/account/research/[id]/compare','/account/research/[id]/counter-evidence'],action:'比较材料，记录判断',output:'人工比较 / 条件性生成',status:'partial',statusNote:'界面、接口存在；生成能力受 Provider 配置影响，真实中转调用未验证。'}),
+  N('plans','阅读计划','feature','规则排序、进度和人工调整；模型补充独立于基础规则。',[E('api/reading/plan_rules.py','def '),E('web/lib/api/research.client.ts','createReadingPlan')],{routes:['/account/plans','/account/plans/[id]']}),
+  N('notes','笔记与授权记忆','feature','本人笔记与已确认材料，仅在授权范围内参与检索。',[E('api/reading/research_views.py','def search('),E('api/reading/research.py','def search_memories'),E('web/lib/api/research.client.ts','createResearchMemory')],{routes:['/account/notes','/account/confirmed-notes']}),
+  N('audit','引文体检','feature','稿件上传、解析、匹配与复核，支持任务状态和私人来源。',[E('web/lib/api/research.client.ts','createCitationAudit'),E('api/reading/research_views.py','class CitationAuditViewSet')],{routes:['/account/citation-audits','/account/citation-audits/[id]']}),
+  N('intake','收件与编目','feature','批次、上传条目、元数据候选与人工校订。',[E('api/ingestion/urls.py','upload-workspace/'),E('api/ingestion/services/pipeline.py','def run_pipeline')],{routes:['/admin/uploads','/admin/intake/[itemId]','/admin/cataloging/[sessionId]'],action:'管理员上传并校订元数据',output:'上传条目 → 作品 / 版本 / 文件'}),
+  N('processing','文档处理','feature','原生文字提取、按页 OCR、目录、页码与索引任务。',[E('api/ingestion/services/pipeline.py','extract_native_pages(normalized.file.path)'),E('api/ingestion/tasks.py','def process_ocr_job')],{routes:['/admin/processing','/admin/library/works/[workId]/files'],children:['ocr','outline','index'],action:'提取正文，处理需要 OCR 的页面',output:'页文本、正文修订与派生索引'}),
+  N('publication','发布与撤回','feature','命令层管理发布资格与正式修订，保存草稿不等于公开。',[E('api/ingestion/services/publication.py','def publish_edition'),E('api/catalog/services/publication_commands.py','def activate_revision')],{routes:['/admin/publication'],action:'检查资格，采用正式修订',output:'发布事件与公开内容投影'}),
+  N('content','内容编排','feature','网站、欢迎页、策划与知识对象复用修订及发布机制。',[E('web/app/admin/welcome/page.tsx','export default'),E('api/catalog/welcome.py','def ')],{routes:['/admin/content','/admin/welcome','/admin/recommendations']}),
+  N('operations','运行与权限','feature','处理状态、模型服务、用户、备份及分发按能力控制。',[E('web/components/admin-shell.tsx','routeCapabilities'),E('api/common/permissions.py','class CanManageModels')],{routes:['/admin/processing/status','/admin/settings','/admin/users','/admin/backups']}),
+  N('frontend','React · Vinext','service','React 19 界面与 App Router 页面，由 Vinext / Vite 构建。',[E('web/package.json','"vinext"'),E('web/app/layout.tsx','PublicSessionProvider')],{children:['home','discovery','reader','research','admin']}),
+  N('api','Django · REST API','service','身份、馆藏、入库、阅读与分发共用业务 API。',[E('api/config/urls.py','urlpatterns'),E('api/requirements.txt','djangorestframework')],{children:['auth','catalog-model','tasks']}),
+  N('auth','身份与授权','service','读者登录、资源访问、本人数据和管理能力分别校验。',[E('api/common/permissions.py','class CanReadLibrary'),E('api/reading/research_views.py','filters = {')],{status:'verified',statusNote:'前后端门禁代码已核对；本轮匿名探索跳转与接口 401 定向读回。私人隔离完整验收仍待完成。'}),
+  N('tasks','Celery · Redis','service','异步工作保存状态；重试、取消与延后处理有独立控制。',[E('api/ingestion/tasks.py','@shared_task('),E('api/catalog/services/discovery_sessions.py','transaction.on_commit(lambda: _enqueue'),E('compose.yaml','  redis:')],{statusNote:'最新项目记录称 worker 已恢复；本轮未 SSH 核对容器或消费任务，运行状态待核实。'}),
+  N('retrieval','检索与重排','service','基础多路检索及可选深度补充，结果回读经过来源权限校验。',[E('api/catalog/services/discovery_sessions.py','CHANNELS ='),E('api/catalog/services/retrieval/deep_pipeline.py','PIPELINE_VERSION')],{children:['index','inference'],statusNote:'历史定向深度检索有记录；本轮未创建查询任务或重跑模型质量评估。'}),
+  N('index','Meilisearch 索引','storage','书目、原文与语义投影由既有索引服务管理。',[E('compose.yaml','  meilisearch:'),E('api/catalog/services/discovery_indexing.py','def ')],{statusNote:'派生检索投影；不是作品和人工决策的权威主库。'}),
+  N('inference','本地模型服务','service','嵌入与重排调用独立推理服务，深度阶段受显式配置控制。',[E('api/catalog/services/retrieval/deep_pipeline.py','from catalog.services.discovery_inference'),E('compose.stl4-deep.yaml','  discovery-inference:')]),
+  N('ocr','RapidOCR','service','当前 OCR 主链使用 RapidOCR，沿原文档处理接口接入。',[E('ocr_service/requirements.txt','rapidocr=='),E('compose.yaml','  rapidocr:')],{statusNote:'依赖与服务配置确认；旧 PaddleOCR 描述是历史，本轮未执行 OCR。'}),
+  N('catalog-model','作品 · 版本 · 证据','model','Work → Edition → Asset；Page、DocumentRevision、EvidenceSpan 保留原文身份。',[E('api/catalog/models.py','class Work('),E('api/catalog/models.py','class Edition('),E('api/catalog/models.py','class Asset('),E('api/catalog/models.py','class EvidenceSpan(')],{children:['postgres','files']}),
+  N('postgres','PostgreSQL 主库','storage','保存馆藏实体、业务任务、发布修订及私人记录。',[E('compose.yaml','  postgres:'),E('api/catalog/models.py','class DocumentRevision('),E('api/reading/research_models.py','class ')]),
+  N('files','文件与原件存储','storage','原件、公开派生文件、私人资料和模型按存储职责隔离。',[E('compose.yaml','NAS_ORIGINAL_ROOT:'),E('api/catalog/models.py','class Asset(')]),
+  N('relay','私人研究 API','service','管理员配置的 DeepSeek 中转接口，地址和密钥不向读者显示。',[E('api/reading/runtime_configuration.py',"raise PermissionDenied('只有馆长可以修改服务器接口地址。')"),E('api/common/ai_runtime.py','PRIVATE_RESEARCH'),E('web/components/admin/ai-runtime-editor.tsx','DeepSeek')],{status:'partial',statusNote:'接口和加密配置已实现；最新记录明确未录入真实中转配置、未调用外部模型。'}),
+  N('brand','品牌与字体','design','现有双语 BrandImage、黑金符号与自托管 Noto 中文字体。',[E('web/components/brand-image.tsx','export function BrandImage'),E('web/styles/tokens/type-fonts.css','@font-face')]),
+  N('tokens','设计变量','design','纸白、暖灰、炭黑；间距、字级、边框与交互时长由变量定义。',[E('web/styles/tokens/design.css',':root'),E('web/styles/tokens/typeface.css','--content-display')]),
+  N('controls','共用控件','design','Button、Input、Dialog 与 Drawer 使用原生语义和共享交互。',[E('web/components/ui/controls.tsx','export function Button'),E('web/components/ui/dialog.tsx','export function')]),
+  N('shells','页面骨架','design','SiteHeader、AdminShell、ReaderShell 分别承载公共、管理与阅读场景。',[E('web/app/layout.tsx','SiteHeader'),E('web/app/admin/layout.tsx','AdminShell'),E('web/components/reader-shell.tsx','ReaderShell')],{children:['home','admin','reader']}),
+  N('oauth','第三方登录','gap','Apple / Google 入口尚未形成完整认证与回调能力。',[E('web/components/auth-form.tsx','disabled title="Apple登录尚未配置"'),E('docs/stl4/DELIVERY_CLOSURE_20261026.md','AUTH-OAUTH-01')],{status:'partial',statusNote:'已存在具体缺口记录；本轮没有实施或测试第三方登录。'}),
+  N('future','后续范围待定','planning','RAG / LLMWiki 尚未选定；政策研究已暂停，不纳入当前产品主图。',[E('AGENTS.md','RAG/LLMWiki未定'),E('AGENTS.md','政策研究已暂停')],{status:'planned',statusNote:'用户决定与范围记录，不能作为已实现架构。'})
+];
+
+// Explicitly typed edges: hierarchy and design reuse are NOT live data streams.
+const L=(from,to,kind,label,sources)=>({from,to,kind,label,sources});
+export const relations = [
+  ...['discovery','knowledge','reader','research','admin'].map(id=>L('stl',id,'structure','产品职责',[E('web/app/layout.tsx','RootLayout'),E('api/config/urls.py','urlpatterns')])),
+  L('opinion','evidence','navigation','问题与筛选',[E('web/app/explore/opinions/page.tsx','redirect(`/explore/evidence')]),
+  L('evidence','reader','navigation','文件 / 修订 / 页码',[E('web/components/discovery-evidence-detail.tsx','reader'),E('web/app/reader/[assetId]/page.tsx','initialEvidence')]),
+  L('reader','citation','reuse','共用引用',[E('web/components/reader-shell.tsx','useReaderCitation')]),
+  L('evidence','projects','data','选材与证据引用',[E('web/lib/api/research.client.ts','passageReference'),E('web/lib/api/research.client.ts','changeResearchSelection'),E('web/components/shared-citation-overlay.tsx','changeResearchSelection'),E('web/components/discovery-evidence-detail.tsx','加入当前研究')]),
+  L('projects','compare','call','比较与反证',[E('web/lib/api/research.client.ts','generateResearchComparison')]),
+  L('tasks','processing','call','文档任务',[E('api/ingestion/tasks.py','def process_upload_item')]),
+  L('shells','home','reuse','公共页面',[E('web/app/layout.tsx','SiteHeader')]),
+  L('shells','reader','reuse','阅读骨架',[E('web/app/reader/[assetId]/page.tsx','ReaderShell')]),
+  L('shells','admin','reuse','管理骨架',[E('web/app/admin/layout.tsx','AdminShell')]),
+  L('intake','processing','data','文件与上传条目',[E('api/ingestion/tasks.py','run_pipeline')]),
+  L('processing','publication','data','正文与索引资格',[E('api/ingestion/services/publication.py','def publication_preflight')]),
+  L('publication','index','data','发布事件 / 投影',[E('api/ingestion/services/publication.py','dispatch_knowledge_event')]),
+  L('frontend','api','call','同源业务请求',[E('web/lib/api/discovery.client.ts','apiRequest<T>')]),
+  L('api','auth','call','会话与权限校验',[E('api/catalog/discovery_views.py','permission_classes = [CanReadLibrary]')]),
+  L('api','tasks','call','事务提交后派发',[E('api/catalog/services/discovery_sessions.py','transaction.on_commit(lambda: _enqueue')]),
+  L('tasks','retrieval','call','异步检索阶段',[E('api/catalog/services/discovery_sessions.py','DEEP_CHANNEL')]),
+  L('retrieval','index','call','读取公开投影',[E('api/catalog/services/retrieval/deep_pipeline.py','meili,')]),
+  L('retrieval','inference','call','嵌入 / 重排',[E('api/catalog/services/retrieval/deep_pipeline.py','embed_texts')]),
+  L('api','postgres','data','业务读写',[E('api/catalog/models.py','class Work(')]),
+  L('processing','ocr','call','按页识别',[E('api/ingestion/tasks.py','run_ocr_job')]),
+  L('processing','files','data','原件与派生文件',[E('api/ingestion/services/pipeline.py','def _copy_asset')]),
+  L('research','relay','call','需已配置与授权',[E('api/reading/local_analysis.py','AICapability.PRIVATE_RESEARCH')]),
+  L('brand','shells','reuse','统一标识',[E('web/components/site-header.tsx','BrandImage'),E('web/components/admin-shell.tsx','Wordmark')]),
+  L('tokens','controls','reuse','样式规范',[E('web/styles/tokens/design.css','--stl-control-height')]),
+  L('controls','shells','reuse','组件组合',[E('web/components/site-header.tsx','from "./ui/dialog"')]),
+  L('shells','frontend','reuse','页面渲染',[E('web/app/layout.tsx','SiteHeader')])
+];
+
+export const scenes = [
+  {id:'overview',title:'一座书库，\n多条通往原文的路径。',label:'全站总览',subtitle:'从产品职责，看见同一套馆藏如何连接发现、阅读与持续研究。',kind:'overview',phases:[{name:'书库核心',note:'先从同一馆藏与证据身份出发。',ids:['stl']},{name:'发现与阅读',note:'公开知识页面提供阅读线索；探索和 PDF 正文需要登录。',ids:['knowledge','discovery','reader']},{name:'研究与管理',note:'私人研究按本人归属，管理端按能力授权；并非独立书库。',ids:['research','admin']}],footnote:'点击任一模块，进入其内部结构与证据。'},
+  {id:'sitemap',title:'页面有层级，\n研究不止一条路线。',label:'信息架构',subtitle:'按用户实际入口组织页面；目录层级与跨页导航分别表达。',kind:'sitemap',phases:[{name:'公开入口',note:'首页、欢迎页和知识内容可浏览。',ids:['home','scholars','theories','topics','editorial']},{name:'登录阅读',note:'探索、阅读器与个人研究须登录，不能把访客门禁画成开放入口。',ids:['catalog-search','opinion','evidence','reader','projects','notes','plans','audit']},{name:'管理工作区',note:'收件到发布共享馆藏；页面可见不等于具备操作权限。',ids:['intake','processing','publication','content','operations']}],footnote:'完整清单可在“路由索引”检索；别名、预览和已暂停页面单独标注。'},
+  {id:'workflow',title:'从一个问题，\n走回一页原文。',label:'研究工作流',subtitle:'以文件、修订与页码承接检索结果，再保存到本人研究。',kind:'workflow',phases:[{name:'提出问题',note:'观点入口把问题与筛选传给原文证据工作区。',ids:['opinion']},{name:'寻找证据',note:'会话返回段落、知识条目与策划，查看上下文后再判断。',ids:['evidence']},{name:'阅读与引用',note:'阅读器接收定位信息；引用功能基于当前页或选区。',ids:['reader','citation']},{name:'继续研究',note:'材料选择写入本人研究。比较与反证的生成能力仍受配置条件限制。',ids:['projects','compare']}],footnote:'这是一条有源码支持的操作路径示意；播放不提交真实检索或私人数据。'},
+  {id:'technology',title:'同一套服务，\n让原文保持可追溯。',label:'技术与数据',subtitle:'从界面请求到检索任务，再回到权威数据与实际文件。',kind:'technology',phases:[{name:'界面与授权',note:'React / Vinext 界面经 Django API 校验身份与资源权限。',ids:['frontend','api','auth']},{name:'异步与检索',note:'Celery / Redis 执行检索；Meilisearch 与本地模型承担召回和重排。',ids:['tasks','retrieval','index','inference']},{name:'文档与存储',note:'RapidOCR 参与文档处理；PostgreSQL 保留业务实体，文件存储保留原件和派生结果。',ids:['processing','ocr','postgres','files']},{name:'研究服务边界',note:'私人研究中转 API 与本地检索独立，真实外部调用尚未验证。',ids:['research','relay']}],footnote:'连线表示代码调用或数据职责，不是实时监控；不展示服务器地址与配置值。'},
+  {id:'design',title:'统一的阅读气质，\n适应不同的工作。',label:'设计系统',subtitle:'延续已确认品牌、字体与变量，从基础规则组合到页面场景。',kind:'design',phases:[{name:'品牌与基础',note:'复用现有 BrandImage、Noto 中文字体和纸白 / 炭黑 / 砂金语言。',ids:['brand','tokens']},{name:'组件与骨架',note:'原生控件、弹层与三类页面骨架承载实际操作。',ids:['controls','shells']},{name:'真实页面',note:'公共发现、研究与管理各有密度，同属一个设计体系。',ids:['home','reader','admin']}],footnote:'控件样例直接复用现有组件；截图来自本轮只读预览。'},
+  {id:'status',title:'看见已实现，\n也看清待完成。',label:'实际状态',subtitle:'把实现、验证与运行条件分开，保留开发中项目的真实边界。',kind:'status',phases:[{name:'有验证证据',note:'本轮仅确认公共页面呈现与匿名访问门禁，范围有限。',ids:['home','auth']},{name:'已实现待验收',note:'核心页面、API、任务与引用连接已存在；完整业务仍需统一验收。',ids:['discovery','reader','projects','intake','publication','plans','outline']},{name:'条件与缺口',note:'目录已有样本流程记录，更多书种待验收；生成服务需配置，第三方登录尚不完整。',ids:['compare','relay','oauth','future']}],footnote:'没有整体完成百分比。历史测试记录不替代当前工作区完整验收。'}
+];
