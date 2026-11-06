@@ -109,7 +109,7 @@ def review(issue, actor):
     for block in preview["body_blocks"]:
         if block.get("type") == "image" and block.get("image_rendition_id"):
             block["image_url"] = f"/api/catalog/admin/media/renditions/{block['image_rendition_id']}/file/" if block.get("source_status") == "available" else ""
-    preview["article_metadata"], preview["curator"] = public_metadata(draft, public=True)
+    preview["article_metadata"], preview["curator"] = public_metadata(draft, public=True, issue=issue, avatar_preview=True)
     portrait = preview["article_metadata"].get("curator_portrait_id")
     if portrait and preview["curator"]["portrait_url"]:
         preview["curator"]["portrait_url"] = f"/api/catalog/admin/media/renditions/{portrait}/file/"

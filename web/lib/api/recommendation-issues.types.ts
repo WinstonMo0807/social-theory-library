@@ -42,7 +42,7 @@ export type RecommendationIssue = {
 export type IssueSelection = {question:string;query:string;filters:Record<string,string|string[]|number>;references:IssueSourceReference[];materials?:Array<{target:IssueSourceReference;source:IssueResolvedSource|null;available:boolean;public_eligible:boolean}>};
 export type ArticleMetadata = {
   kind: "article" | "research" | "exhibition"; keywords: string[]; topic_ids: string[]; theory_ids?: string[]; scholar_ids: string[]; reading_path_ids: string[];
-  curator_role: string; curator_affiliation: string; curator_portrait_id: string | null;
+  curator_role: string; curator_affiliation: string; curator_portrait_id: string | null; curator_account_id?: number | null;
 };
 export type EditorialCurator = { name: string; role: string; affiliation: string; portrait_url: string };
 export type EditorialCard = Pick<RecommendationIssue, "id" | "slug" | "title" | "issue_label" | "introduction" | "public_byline" | "cover_url" | "published_at" | "display_from"> & {

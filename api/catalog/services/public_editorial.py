@@ -14,10 +14,10 @@ from catalog.models import KnowledgeNode, MediaRendition, ReadingPath, ScholarPr
 from catalog.services.public_scholars import _choice, _page, _paging
 
 KINDS = {"article": "策划文章", "research": "研究论文", "exhibition": "原文展览"}
-METADATA_FIELDS = {"kind", "keywords", "topic_ids", "theory_ids", "scholar_ids", "reading_path_ids", "curator_role", "curator_affiliation", "curator_portrait_id"}
+METADATA_FIELDS = {"kind", "keywords", "topic_ids", "theory_ids", "scholar_ids", "reading_path_ids", "curator_role", "curator_affiliation", "curator_portrait_id", "curator_account_id"}
 
 
-def metadata_input(value):
+def metadata_input(value, *, actor=None, previous=None):
     from catalog.services.editorial_issues import _text, _rendition
     if not isinstance(value, dict) or set(value) - METADATA_FIELDS:
         raise ValidationError({"article_metadata": "文章资料包含不支持的字段。"})
@@ -44,10 +44,15 @@ def metadata_input(value):
         result[key] = _text(value.get(key, ""), 240)
     portrait = _rendition(value.get("curator_portrait_id"))
     result["curator_portrait_id"] = str(portrait.pk) if portrait else None
+    from catalog.curator_avatars import account_link
+    old_account = (previous or {}).get("curator_account_id")
+    result["curator_account_id"] = account_link(value.get("curator_account_id", old_account), actor=actor, previous=old_account)
+    if result["curator_account_id"] is not None:
+        result["curator_portrait_id"] = None
     return result
 
 
-def public_metadata(payload, *, public=True):
+def public_metadata(payload, *, public=True, issue=None, avatar_preview=False):
     """Only the explicit public byline is exposed; never infer a user profile."""
     raw = payload.get("article_metadata") or {}
     result = {"kind": raw.get("kind", "article"), "keywords": raw.get("keywords", []),
@@ -62,6 +67,11 @@ def public_metadata(payload, *, public=True):
         portrait = result["curator_portrait_id"] = None
     curator = {"name": payload.get("public_byline", ""), "role": result["curator_role"], "affiliation": result["curator_affiliation"],
         "portrait_url": (f"/api/catalog/editorial-media/{portrait}/" if public else f"/api/catalog/admin/media/renditions/{portrait}/file/") if portrait else ""}
+    if not public:
+        result["curator_account_id"] = raw.get("curator_account_id")
+    if raw.get("curator_account_id") is not None:
+        from catalog.curator_avatars import portrait_url
+        curator["portrait_url"] = portrait_url(payload, issue, public=public and not avatar_preview)
     # There is no account identity behind an anonymous editorial byline.
     if not curator["name"]:
         curator.update(role="", affiliation="", portrait_url="")
@@ -84,7 +94,7 @@ def directory_card(issue):
     from catalog.services.editorial_issues import public_issue_revision
     revision = public_issue_revision(issue)
     payload = deepcopy(revision.materialized_preview)
-    metadata, curator = public_metadata(payload)
+    metadata, curator = public_metadata(payload, issue=issue)
     rendition = payload.get("cover_rendition_id")
     text_length = sum(len(row.get("text", "")) for row in payload.get("body_blocks", []) if isinstance(row, dict))
     return {"id": str(issue.pk), "slug": payload.get("slug") or issue.slug, "title": payload.get("title", ""),

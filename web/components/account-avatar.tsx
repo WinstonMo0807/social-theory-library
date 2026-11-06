@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiStreamRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import styles from "./account-avatar.module.css";
+import { subscribeAvatarUpdates } from "@/lib/avatar-updates";
 
 export async function readAccountAvatar(owner: string, target: string, signal: AbortSignal) {
   return withPrivateOwner(owner, async () => {
@@ -21,9 +22,12 @@ export function AccountAvatar({ owner, target, revision, name, className = "" }:
   owner: string; target: string; revision: number | null; name: string; className?: string;
 }) {
   const [image, setImage] = useState<{ key: string; url: string } | null>(null), [failed, setFailed] = useState("");
-  const key = `${owner}:${target}:${revision}`;
+  const [currentRevision, setCurrentRevision] = useState(revision);
+  useEffect(() => { setCurrentRevision(revision); }, [revision, owner, target]);
+  useEffect(() => subscribeAvatarUpdates(value => { if (value.owner === target) setCurrentRevision(value.revision); }), [target]);
+  const key = `${owner}:${target}:${currentRevision}`;
   useEffect(() => {
-    if (revision === null) return;
+    if (currentRevision === null) return;
     const request = new AbortController(); let url = "";
     const off = subscribeToSessionChanges(() => { request.abort(); setImage(null); });
     void readAccountAvatar(owner, target, request.signal).then(blob => {
@@ -31,6 +35,6 @@ export function AccountAvatar({ owner, target, revision, name, className = "" }:
       url = URL.createObjectURL(blob); setImage({ key, url }); setFailed("");
     }).catch(reason => { if (!request.signal.aborted) setFailed(reason instanceof Error ? reason.message : "头像暂时无法读取。"); });
     return () => { request.abort(); off(); if (url) URL.revokeObjectURL(url); };
-  }, [owner, target, revision, key]);
-  return <span className={`${styles.avatar} ${className}`} title={failed || undefined}>{image?.key === key && revision !== null ? <img src={image.url} alt={`${name}的头像`} /> : <span aria-hidden>{name.slice(0, 1) || "人"}</span>}</span>;
+  }, [owner, target, currentRevision, key]);
+  return <span className={`${styles.avatar} ${className}`} title={failed || undefined}>{image?.key === key && currentRevision !== null ? <img src={image.url} alt={`${name}的头像`} /> : <span aria-hidden>{name.slice(0, 1) || "人"}</span>}</span>;
 }

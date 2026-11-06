@@ -169,6 +169,10 @@ def create_issue(data, actor):
     if RecommendationIssue.objects.filter(slug=slug).exists():
         raise ValidationError({"slug": "此期地址已存在。"})
     issue = RecommendationIssue.objects.create(title=title, slug=slug, created_by=actor)
+    # The new article starts with its creator's portrait. The editor can unlink
+    # it or select a separate public portrait before publication.
+    metadata = data.get("article_metadata") or {}
+    data = {**data, "article_metadata": {"curator_account_id": None if metadata.get("curator_portrait_id") else actor.pk, **metadata}}
     save_issue(issue.pk, {**issue_draft_payload(issue), **data, "edit_version": "0"}, actor)
     return issue
 
@@ -200,7 +204,7 @@ def save_issue(identifier, data, actor):
     # Once a URL exists its identity remains stable across corrections.
     payload["slug"] = issue.slug
     from catalog.services.public_editorial import metadata_input
-    payload["article_metadata"] = metadata_input(values.get("article_metadata", {}))
+    payload["article_metadata"] = metadata_input(values.get("article_metadata", {}), actor=actor, previous=(restored.materialized_preview if restored else previous).get("article_metadata"))
     from catalog.services.editorial_selection import normalize as selection_input
     payload["selection_workspace"] = selection_input(values.get("selection_workspace", {}), (restored.materialized_preview if restored else previous).get("selection_workspace"))
     payload["body_blocks"] = _body(values.get("body_blocks", []), retained=(restored.materialized_preview if restored else previous).get("body_blocks", []))
@@ -376,7 +380,7 @@ def issue_payload(issue, *, public=False, include_cover_storage=False, revision=
     published_at = revision.published_at if revision else issue.published_at
     payload.update(id=str(issue.pk), slug=issue.slug, published_at=published_at.isoformat() if published_at else None)
     from catalog.services.public_editorial import public_metadata
-    payload["article_metadata"], payload["curator"] = public_metadata(payload, public=public)
+    payload["article_metadata"], payload["curator"] = public_metadata(payload, public=public, issue=issue)
     if payload.get("cover_rendition_id"):
         rid = payload["cover_rendition_id"]
         payload["cover_url"] = f"/api/catalog/editorial-media/{rid}/" if public else f"/api/catalog/admin/media/renditions/{rid}/file/"

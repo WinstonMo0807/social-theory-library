@@ -71,6 +71,7 @@ class ArticleMetadataSerializer(serializers.Serializer):
     curator_role = serializers.CharField(max_length=240, allow_blank=True, required=False)
     curator_affiliation = serializers.CharField(max_length=240, allow_blank=True, required=False)
     curator_portrait_id = serializers.UUIDField(allow_null=True, required=False)
+    curator_account_id = serializers.IntegerField(min_value=1, allow_null=True, required=False)
 
 
 from catalog.site_layout import PublicEditorialCuratorSerializer

@@ -12,6 +12,7 @@ from accounts.urls import urlpatterns as account_patterns
 
 
 VERIFIED_NAMES = {
+    "public-curator-avatar", "admin-curator-avatar",
     "admin-provider-secrets",
     "admin-research-source-registry",
     "ocr-runtime-settings",

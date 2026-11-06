@@ -9719,6 +9719,46 @@
                 }
             }
         },
+        "/api/catalog/admin/recommendation-issues/{issue_id}/curator-avatar/": {
+            "get": {
+                "operationId": "catalog_admin_recommendation_issues_curator_avatar_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "image/png": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/catalog/admin/recommendation-issues/{issue_id}/history/": {
             "get": {
                 "operationId": "catalog_admin_recommendation_issues_history_retrieve",
@@ -18452,6 +18492,46 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/RecommendationIssue"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/catalog/recommendation-issues/{slug}/curator-avatar/": {
+            "get": {
+                "operationId": "catalog_recommendation_issues_curator_avatar_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "security": [
+                    {
+                        "libraryCookie": []
+                    },
+                    {
+                        "cookieAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "image/png": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
                                 }
                             }
                         },
@@ -36526,6 +36606,11 @@
                         "type": "string",
                         "format": "uuid",
                         "nullable": true
+                    },
+                    "curator_account_id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true
                     }
                 }
             },
@@ -36587,6 +36672,11 @@
                     "curator_portrait_id": {
                         "type": "string",
                         "format": "uuid",
+                        "nullable": true
+                    },
+                    "curator_account_id": {
+                        "type": "integer",
+                        "minimum": 1,
                         "nullable": true
                     }
                 }

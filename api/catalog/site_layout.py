@@ -121,7 +121,7 @@ def source_card(target, row=None):
     if kind == "issue":
         from catalog.services.public_editorial import public_metadata
         raw = ledger.public_issue_revision(row).materialized_preview
-        _metadata, curator = public_metadata(raw, public=True)
+        _metadata, curator = public_metadata(raw, public=True, issue=row)
         card.update(curator=curator, label=raw.get("issue_label") or LABELS[kind])
         image = f"/api/catalog/editorial-media/{raw['cover_rendition_id']}/" if raw.get("cover_rendition_id") else raw.get("cover_url", "")
         card.update(title=raw.get("title", ""), description=raw.get("introduction", ""), image_url=image, href=f"/recommendations/{row.slug}",

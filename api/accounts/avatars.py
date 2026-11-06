@@ -25,7 +25,7 @@ def state(user):
     return {"owner_id": str(user.pk), "has_avatar": bool(row and row.image_ciphertext), "revision": revision,
         "expected_version": salted_hmac("stl-profile-avatar-v1", f"{user.pk}:{user.token_version}:{revision}", algorithm="sha256").hexdigest(),
         "updated_at": row.updated_at if row else None,
-        "notice": "仅本人和获准管理账户的管理员可查看。不会加入公开素材或学者肖像。"}
+        "notice": "头像显示在你的账号界面；关联到公开策展署名后，也会随署名展示。"}
 
 
 def image_data(user):

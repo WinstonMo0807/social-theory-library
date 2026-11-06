@@ -43,6 +43,7 @@ from .shared_curation_views import (CurationSourcesView, AdminEvidenceCurationVi
     PublicEvidenceCurationView, AdminScholarRelationListView, AdminScholarRelationDetailView,
     PublishScholarRelationView, PublicScholarRelationListView, ArchiveScholarRelationView)
 from .bibliographic_candidate_views import BibliographicCandidatesView
+from .curator_avatars import PublicCuratorAvatarView, AdminCuratorAvatarView
 from .editorial_issue_views import (PublicIssueListView, PublicIssueDetailView, SaveIssueReadingListView,
     AdminIssueListView, AdminIssueDetailView, AdminIssuePublishView, AdminIssueLinkView,
     AdminSiteContentView, AdminSitePublishView, AdminIssuePreviewView, AdminSitePreviewView,
@@ -324,6 +325,8 @@ urlpatterns = [
     path("admin/bibliographic-candidates/", BibliographicCandidatesView.as_view(), name="admin-bibliographic-candidates"),
     path("recommendation-issues/", PublicIssueListView.as_view(), name="recommendation-issue-list"),
     path("recommendation-issues/<slug:slug>/", PublicIssueDetailView.as_view(), name="recommendation-issue-detail"),
+    path("recommendation-issues/<slug:slug>/curator-avatar/", PublicCuratorAvatarView.as_view(), name="public-curator-avatar"),
+    path("admin/recommendation-issues/<uuid:issue_id>/curator-avatar/", AdminCuratorAvatarView.as_view(), name="admin-curator-avatar"),
     path("recommendation-issues/<slug:slug>/save-list/", SaveIssueReadingListView.as_view(), name="recommendation-issue-save-list"),
     path("recommendation-issues/<slug:slug>/items/<uuid:item_id>/cover/", IssueItemCoverView.as_view(), name="recommendation-issue-item-cover"),
     path("admin/recommendation-issues/", AdminIssueListView.as_view(), name="admin-recommendation-issue-list"),

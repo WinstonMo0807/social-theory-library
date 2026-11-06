@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, ChevronDown, LoaderCircle } from "lucide-react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { announceAvatarUpdate } from "@/lib/avatar-updates";
 import type { components } from "@/lib/api/generated/schema";
 import { PrivateOwnerVerificationError, withPrivateOwner } from "@/lib/api/private-owner";
 import { createRequestKey } from "@/lib/request-key";
@@ -68,6 +69,7 @@ function AvatarEditor({ owner, name }: { owner: string; name: string }) {
     if (value.request_id !== id || !["applied", "cancelled"].includes(value.state)) throw Error("头像操作结果与原请求不一致。");
     sessionStorage.removeItem(key(owner)); setRecovery(""); pending.current = null; setCanRetry(false); setFile(null); setPreview(""); setSnapshot(value); setConfirmation(null);
     if (fileInput.current) fileInput.current.value = "";
+    announceAvatarUpdate({ owner, revision: value.has_avatar ? value.revision : null });
     setMessage(value.state === "cancelled" ? "已取消待处理的头像操作。" : value.has_avatar ? "头像已更新。" : "已恢复默认头像。");
   }
   async function submit(action: "set" | "remove") {
@@ -119,7 +121,7 @@ function AvatarEditor({ owner, name }: { owner: string; name: string }) {
       </button>
       <div className={styles.content}>
         <h3>{file ? "新头像预览" : "头像"}</h3>
-        <p className={styles.privacy}>仅你和获准管理账号的管理员可见。</p>
+        <p className={styles.privacy}>头像也会显示在关联的公开策展署名中。</p>
         <div className={styles.actions}>
           {file ? <>
             <button type="button" className={styles.primary} disabled={blocked || !snapshot} onClick={() => void submit("set")}>{busy ? <><LoaderCircle size={16} className={styles.spinner} aria-hidden="true" />正在保存…</> : "保存头像"}</button>

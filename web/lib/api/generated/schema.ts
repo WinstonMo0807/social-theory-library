@@ -2071,6 +2071,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/admin/recommendation-issues/{issue_id}/curator-avatar/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_admin_recommendation_issues_curator_avatar_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/admin/recommendation-issues/{issue_id}/history/": {
         parameters: {
             query?: never;
@@ -3822,6 +3838,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["catalog_recommendation_issues_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/recommendation-issues/{slug}/curator-avatar/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_recommendation_issues_curator_avatar_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7764,6 +7796,7 @@ export interface components {
             curator_affiliation?: string;
             /** Format: uuid */
             curator_portrait_id?: string | null;
+            curator_account_id?: number | null;
         };
         ArticleMetadataRequest: {
             kind?: components["schemas"]["IssueCreationKindEnum"];
@@ -7776,6 +7809,7 @@ export interface components {
             curator_affiliation?: string;
             /** Format: uuid */
             curator_portrait_id?: string | null;
+            curator_account_id?: number | null;
         };
         AssetCompact: {
             /** Format: uuid */
@@ -27768,6 +27802,27 @@ export interface operations {
             };
         };
     };
+    catalog_admin_recommendation_issues_curator_avatar_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+        };
+    };
     catalog_admin_recommendation_issues_history_retrieve: {
         parameters: {
             query?: {
@@ -31949,6 +32004,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecommendationIssue"];
+                };
+            };
+        };
+    };
+    catalog_recommendation_issues_curator_avatar_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
                 };
             };
         };
