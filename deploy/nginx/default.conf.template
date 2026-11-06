@@ -42,6 +42,7 @@ map $library_lan_http $library_forwarded_proto {
 map $uri $library_frame_policy {
     default DENY;
     ~^/admin/preview/ SAMEORIGIN;
+    ~^/admin/recommendations/issues/[0-9a-f-]+/preview/?$ SAMEORIGIN;
 }
 
 server {

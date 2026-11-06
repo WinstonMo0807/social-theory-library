@@ -11,3 +11,5 @@
 浏览器已显示草稿PDF的blob阅读器；组织社会学子学科保存版本实际渲染，发布前检查无阻断，发布确认成功。公开 `/subdisciplines/sociology-of-organizations` 已显示说明与三个关键问题。作品、学者及理论关联继续策展，尚未以该基础对象发布代替整体任务完成。
 
 浏览器证据位于策展工作区 `编目修复-20261107/reader-preview-fixed.jpg` 与 `subdiscipline-published.jpg`。运行与部署脚本及日志留在策展工作区，不提交馆藏数据、凭据或运行产物。
+
+实际文章编排另发现 `/admin/recommendations/issues/<UUID>/preview` 使用独立路由，仍被 DENY 阻止内嵌。补充同源预览路径后，NGINX 配置检查及四条响应头检查通过：首页与文章编辑器为 DENY，两类预览为 SAMEORIGIN。仅平滑 reload，edge 容器与启动时间未变。恢复点 `issue-preview-recovery` 保存修改前配置，失败会自动恢复。浏览器实际显示 C001 的标题、正文、winston 署名及来源链接，证据 `预览修复-20261107/issue-preview-fixed.jpg`；当前文章仍因关联作品尚未公开而阻断发布，未绕过检查。
