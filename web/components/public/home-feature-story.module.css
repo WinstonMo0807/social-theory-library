@@ -17,7 +17,8 @@
 .hero, .features, .principles, .invitation, .faq { width: min(1180px, calc(100% - 96px)); margin-inline: auto; }
 .heroCopy { text-align: center; padding: 76px 0 54px; }
 .heroCopy h1 { font-size: clamp(38px, 4.8vw, 70px); line-height: 1.4; }
-.heroCopy p { margin: 22px auto 30px; color: var(--story-muted); }
+.heroCopy h1 span { display: block; }
+.heroCopy p { max-width: 36em; margin: 22px auto 30px; color: var(--story-muted); }
 .story .primary { display: inline-flex; align-items: center; justify-content: space-between; min-width: 224px; gap: 44px; padding: 16px 25px; background: var(--story-ink); color: var(--story-sheet); font: 500 17px/1.5 var(--sans); border: 1px solid var(--story-ink); border-radius: 6px; transition: transform 180ms var(--story-ease), background-color 180ms ease-out; }
 .primary svg, .textLink svg { flex: none; transition: transform 180ms var(--story-ease); }
 .primary:active, .playback button:active { transform: scale(.97); }
@@ -27,11 +28,12 @@
 .timeline .grain { animation: grainDrift var(--film-duration) ease-in-out infinite; }
 .demoFrame { position: absolute; top: 50%; left: 50%; width: 70%; height: 350px; border-radius: 16px; background: var(--story-sheet); box-shadow: 0 20px 50px #382d1714, 0 2px 6px #382d1710; transform: translate(-50%, -50%) scaleY(.58); animation: frameMorph var(--film-duration) cubic-bezier(.65,0,.35,1) infinite both; }
 .brandPanel { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; pointer-events: none; animation: brandScene var(--film-duration) var(--story-ease) infinite both; }
-.brandPanel :global(.brand-identity) { --brand-shift: 165px; gap: 20px; color: var(--story-ink); }
-.brandPanel :global(.brand-identity-symbol) { width: 86px; transform-origin: center; animation: brandUnfold var(--film-duration) var(--story-ease) infinite both; }
-.brandPanel :global(.brand-identity-words) { gap: 5px; padding-left: 20px; animation: brandWords var(--film-duration) var(--story-ease) infinite both; }
-.brandPanel :global(.brand-identity-en) { font-size: 28px; }
-.brandPanel :global(.brand-identity-cn) { font-size: 34px; }
+.brandPanel :global(.brand-identity) { --brand-shift: 165px; gap: 20px; color: var(--story-ink); animation: brandSettle var(--film-duration) var(--story-ease) infinite both; }
+.brandPanel :global(.brand-identity-symbol) { width: 86px; transform-origin: center; animation: brandUnfold var(--film-duration) cubic-bezier(.65, 0, .35, 1) infinite both; }
+.brandPanel :global(.brand-identity-words) { position: relative; gap: 5px; padding-left: 20px; border-left-color: transparent; }
+.brandPanel :global(.brand-identity-words)::before { content: ""; position: absolute; inset: 0 auto 0 -1px; width: 1px; background: currentColor; transform-origin: center; animation: brandRule var(--film-duration) var(--story-ease) infinite both; }
+.brandPanel :global(.brand-identity-en) { font-size: 28px; animation: brandEnglish var(--film-duration) var(--story-ease) infinite both; }
+.brandPanel :global(.brand-identity-cn) { font-size: 34px; animation: brandChinese var(--film-duration) var(--story-ease) infinite both; }
 .demoPanel { position: absolute; top: 50%; left: 50%; width: 70%; padding: 28px 30px; font: 14px/1.5 var(--sans); opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
 .demoEyebrow { display: flex; gap: 8px; align-items: center; color: var(--story-muted); font-size: 13px; margin-bottom: 20px; }
 .askPanel { animation: questionScene var(--film-duration) var(--story-ease) infinite both; }
@@ -76,10 +78,9 @@
 .savedFooter svg { color: var(--story-gold); }
 .emptyIllustration { padding: 30px 0; }
 .emptyIllustration > span { margin-left: 15px; }
-.demo figcaption { position: absolute; bottom: 22px; left: 26px; font: 12px/1.5 var(--sans); color: var(--story-muted); }
 .playback { position: absolute; bottom: 14px; right: 18px; display: flex; gap: 5px; }
 .playback button { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: color-mix(in srgb, var(--story-sheet) 78%, transparent); color: var(--story-ink); cursor: pointer; transition: transform 160ms ease-out, background-color 160ms ease-out; }
-.demo[data-playing="false"] .timeline, .demo[data-playing="false"] .timeline * { animation-play-state: paused; }
+.demo[data-playing="false"] .timeline, .demo[data-playing="false"] .timeline *, .demo[data-playing="false"] .timeline *::before { animation-play-state: paused; }
 .topicTrail { display: flex; justify-content: space-evenly; flex-wrap: wrap; gap: 24px 40px; padding: 58px 0 66px; font: 500 clamp(17px, 2vw, 23px)/1.5 var(--serif); }
 .philosophy { position: relative; overflow: hidden; background: #292820; color: #f7f4ee; padding: 82px max(48px, calc((100% - 1180px) / 2)); }
 .philosophy > div { position: relative; }
@@ -89,7 +90,7 @@
 .features { padding-block: 100px 96px; }
 .sectionHeading { max-width: 650px; margin-bottom: 64px; }
 .sectionHeading p { margin-top: 20px; color: var(--story-muted); }
-.copyOptions { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin-bottom: 32px; border: 1px solid var(--story-line); border-radius: 8px; }
+.copyOptions { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 4px; margin-bottom: 32px; border: 1px solid var(--story-line); border-radius: 8px; scroll-margin-top: 100px; }
 .copyOptions button { padding: 10px 16px; min-height: 44px; border-radius: 5px; background: transparent; color: var(--story-muted); font: 500 14px/1.5 var(--sans); cursor: pointer; }
 .copyOptions button[aria-pressed="true"] { background: var(--story-ink); color: var(--story-sheet); }
 .featureRow { display: grid; grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); gap: 72px; align-items: center; margin-top: 68px; }
@@ -169,12 +170,15 @@
 
 @keyframes grainDrift { 0%, 100% { transform: translate(-1%, -1%) rotate(-2deg); } 50% { transform: translate(2%, 1%) rotate(3deg); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes brandScene { 0%, 7%, 100% { opacity: 1; } 9%, 99% { opacity: 0; } }
-@keyframes brandUnfold { 0%, 100% { opacity: 0; transform: translateX(var(--brand-shift)) perspective(500px) rotateY(42deg) scale(.96); } 1.5%, 2.5% { opacity: 1; transform: translateX(var(--brand-shift)); } 4.5%, 97% { opacity: 1; transform: none; } }
-@keyframes brandWords { 0%, 2.5%, 100% { opacity: 0; transform: translateX(-14px); } 4.5%, 97% { opacity: 1; transform: none; } }
+@keyframes brandScene { 0%, 10%, 100% { opacity: 1; } 13%, 99% { opacity: 0; } }
+@keyframes brandSettle { 0%, 100% { opacity: 0; transform: translateY(7px) scale(.97); } 2%, 97% { opacity: 1; transform: none; } }
+@keyframes brandUnfold { 0%, 1.5%, 100% { transform: translateX(var(--brand-shift)); } 6%, 97% { transform: none; } }
+@keyframes brandRule { 0%, 3%, 100% { opacity: 0; transform: scaleY(.6); } 5.5%, 97% { opacity: 1; transform: scaleY(1); } }
+@keyframes brandEnglish { 0%, 3.5%, 100% { opacity: 0; transform: translateX(-9px); clip-path: inset(0 100% 0 0); } 6.5%, 97% { opacity: 1; transform: none; clip-path: inset(0); } }
+@keyframes brandChinese { 0%, 4%, 100% { opacity: 0; transform: translateX(-7px); clip-path: inset(0 100% 0 0); } 7%, 97% { opacity: 1; transform: none; clip-path: inset(0); } }
 @keyframes frameMorph { 0%, 23%, 100% { transform: translate(-50%, -50%) scaleY(.58); } 26%, 29% { transform: translate(-50%, -50%) scaleY(.2); } 32%, 73% { transform: translate(-50%, -50%) scaleY(1); } 77%, 96% { transform: translate(-50%, -50%) scaleY(.94); } }
-@keyframes questionScene { 0%, 9%, 25%, 100% { opacity: 0; transform: translate(-50%, calc(-50% - 10px)); } 11%, 23% { opacity: 1; transform: translate(-50%, -50%); } }
-@keyframes typing { 0%, 11% { clip-path: inset(0 100% 0 0); } 20%, 100% { clip-path: inset(0); } }
+@keyframes questionScene { 0%, 12%, 25%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } 14%, 23% { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes typing { 0%, 14% { clip-path: inset(0 100% 0 0); } 21%, 100% { clip-path: inset(0); } }
 @keyframes workingScene { 0%, 24%, 31%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); } 26%, 29% { opacity: 1; transform: translate(-50%, -50%); } }
 @keyframes resultsScene { 0%, 30%, 54%, 100% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } 33%, 51% { opacity: 1; transform: translate(-50%, -50%); } }
 @keyframes resultAppear { 0%, 30% { opacity: 0; transform: translateY(10px); } 34%, 100% { opacity: 1; transform: translateY(0); } }
@@ -212,7 +216,6 @@
   .story p { font-size: calc(15px + var(--font-bump, 0px)); }
   .heroCopy { padding: 42px 0 32px; }
   .heroCopy h1 { font-size: clamp(31px, 8.7vw, 46px); line-height: 1.5; }
-  .heroCopy h1 span { display: block; }
   .heroCopy p { max-width: 22em; margin: 18px auto 24px; }
   .story .primary { min-width: 190px; padding: 13px 22px; font-size: 16px; }
   .demo { aspect-ratio: auto; height: 350px; min-height: 0; border-radius: 17px; }
@@ -248,7 +251,6 @@
   .savedBody span { padding-top: 12px; font-size: 10px; }
   .savedBody .lines { gap: 5px; margin: 12px 0; }
   .savedFooter { margin-top: 10px; padding-top: 10px; font-size: 10px; }
-  .demo figcaption { left: 18px; bottom: 18px; font-size: 10px; }
   .playback { bottom: 9px; right: 10px; }
   .playback button { width: 34px; height: 34px; }
   .topicTrail { gap: 20px 25px; padding: 35px 0 42px; font-size: 17px; }
@@ -256,7 +258,7 @@
   .philosophy .grain { left: 20%; width: 110%; opacity: .22; }
   .features { padding-block: 56px; }
   .sectionHeading { margin-bottom: 32px; }
-  .copyOptions { display: flex; margin-bottom: 26px; }
+  .copyOptions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 26px; scroll-margin-top: 145px; }
   .copyOptions button { flex: 1; padding-inline: 8px; font-size: 13px; white-space: nowrap; }
   .featureRow, .featureRow:nth-of-type(even) { grid-template-columns: minmax(0, 1fr); margin-top: 48px; gap: 24px; }
   .featureRow:nth-of-type(even) .featureCopy { order: 0; }
