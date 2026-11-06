@@ -1,0 +1,302 @@
+/* The presentation fills the viewport; only diagrams use measured coordinates. */
+body,.viewport{background:var(--paper)}
+.viewport{height:100dvh;min-height:0}
+.presentation{position:relative;inset:auto;width:100%;height:100%;transform:none;display:grid;grid-template-columns:clamp(180px,15vw,252px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:'header header' 'nav main' 'footer footer' 'hint hint';column-gap:clamp(24px,3vw,64px);row-gap:20px;padding:0 clamp(24px,2.7vw,52px) 12px;font-size:16px}
+.masthead{grid-area:header;position:relative;inset:auto;min-height:96px;height:auto;padding:20px 0}
+.masthead .brand-identity-symbol{width:clamp(44px,3.5vw,68px)}
+.scene-nav{grid-area:nav;position:relative;inset:auto;width:auto;min-height:0;padding-top:20px}
+.scene-nav nav button{height:auto;min-height:52px;font-size:16px}
+.nav-bottom{padding-bottom:12px}
+.main-scene{grid-area:main;position:relative;inset:auto;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:auto;overscroll-behavior:contain;padding:6px 4px 4px 0;scrollbar-width:thin;scrollbar-color:#cbbfa8 transparent}
+.scene-intro{height:auto;flex-shrink:0;padding-bottom:26px}
+.scene-intro h1{font-size:clamp(30px,2.6vw,48px);line-height:1.4;text-wrap:balance}
+.scene-intro p{line-height:1.7;max-width:75ch;margin-top:10px}
+.scene-canvas{width:100%;height:auto;min-height:410px;flex:1;isolation:isolate}
+.speaker-note{flex-shrink:0;width:100%;max-width:none;align-items:flex-start;margin-top:16px;padding:12px 0 0;min-height:44px}
+.speaker-note p{font-size:14px}
+.transport{grid-area:footer;position:relative;inset:auto;height:auto;min-height:60px;align-items:center;padding-top:12px;gap:16px}
+.transport-controls{flex-shrink:0;gap:6px}
+.transport-controls button{height:44px;min-width:44px}
+.stage-nav{overflow-x:auto;min-width:0;gap:18px;padding:0 2px;scrollbar-width:thin;scrollbar-color:#cbbfa8 transparent}
+.stage-nav button{min-height:44px;flex-shrink:0;font-size:13px}
+.scene-counter{flex-shrink:0;margin-left:6px;padding:0}
+.keyboard-note{grid-area:hint;position:static;font-size:11px;line-height:1.4;color:#68655d}
+.presentation{row-gap:16px}
+.presentation>.keyboard-note{margin-top:-6px}
+.presentation-title{font-size:15px}
+.graph{position:relative;width:100%;height:100%;min-height:410px;transition:height 550ms var(--ease)}
+.graph-camera,.connections{width:100%;height:100%}
+.graph-node{padding:16px 20px;transition:transform 550ms var(--ease),width 550ms var(--ease),opacity 400ms,background 200ms,border-color 200ms}
+.graph-node strong{font-size:clamp(19px,1.45vw,28px)}
+.node-subtitle{font-size:13px;line-height:1.5}
+.graph-legend{left:50%;transform:translateX(-50%);bottom:0;font-size:12px}
+.graph.compact-graph{min-height:0;flex-shrink:0}
+.compact-graph .graph-node{padding:12px}
+.compact-graph .graph-node strong{font-size:19px;line-height:1.35}
+.compact-graph .node-top{gap:5px;margin-bottom:8px}
+.compact-graph .node-top>svg{width:17px;height:17px}
+.compact-graph .node-top span{font-size:10px}
+.compact-graph .node-subtitle{font-size:12px;margin-top:5px}
+.compact-graph .root-node{padding:12px;gap:12px}
+.compact-graph .root-node .brand-identity-symbol{width:46px}
+.compact-graph .root-node .brand-identity-en{font-size:18px}
+.compact-graph .root-node .brand-identity-cn{font-size:21px}
+.compact-graph .root-caption{font-size:12px}
+.compact-graph .graph-legend{font-size:11px;gap:6px}
+.compact-graph .graph-legend>span{margin-left:4px}
+.compact-graph .graph-legend .legend-line{width:18px}
+.details,.details.automatic{top:0;bottom:0;width:53%;max-width:680px;min-width:360px;padding:24px;max-height:100%}
+.details h2{font-size:30px}
+.details .detail-scroll{overflow:auto;overscroll-behavior:contain}
+.detail-shade{inset:0}
+.child-list button{min-height:64px}
+.sitemap-view{width:100%;height:100%;display:flex;flex-direction:column}
+.sitemap-columns{grid-template-columns:repeat(4,minmax(0,1fr));flex:1;align-items:stretch}
+.map-group{min-width:0;min-height:346px;padding:23px 18px 18px}
+.map-group h2{font-size:clamp(21px,1.7vw,29px)}
+.map-group>button{min-height:48px;line-height:1.6}
+.map-root .brand-identity{flex-shrink:0}
+.canvas-footnote{font-size:12px;margin-top:16px}
+.design-view{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto;height:100%;gap:28px}
+.design-brand{padding-right:28px}
+.design-brand .brand-identity-en{font-size:clamp(17px,1.4vw,24px)}
+.design-brand .brand-identity-cn{font-size:clamp(21px,1.7vw,28px)}
+.design-brand .brand-identity-symbol{width:clamp(42px,3.6vw,64px)}
+.design-pages{min-width:0;align-items:flex-start}
+.page-thumbnail{width:40%;height:auto;aspect-ratio:2.13;flex-shrink:0}
+.component-sample button{min-height:44px}
+.swatches{flex-wrap:wrap}
+.presentation[data-scene=workflow] .scene-intro{height:auto;padding-bottom:20px}
+.presentation[data-scene=workflow] .scene-intro h1{font-size:clamp(30px,2.4vw,44px)}
+.presentation[data-scene=workflow] .scene-canvas{height:auto;min-height:540px}
+.journey-scene{height:100%;min-height:540px;gap:16px}
+.journey-tabs{height:auto;min-height:44px;gap:8px}
+.journey-tabs button{min-height:44px}
+.journey-layout{flex:1;height:auto;min-height:420px;grid-template-columns:minmax(0,3fr) minmax(260px,1fr);gap:26px}
+.demo-window{min-width:0;min-height:420px}
+.demo-surface{min-height:350px}
+.journey-chapters{width:calc(75% - 20px);height:auto;min-height:44px;gap:16px}
+.journey-chapters button{min-height:44px}
+.journey-explanation h2{font-size:clamp(22px,1.6vw,28px)}
+.journey-feedback p{font-size:16px}
+.journey-system{font-size:14px}
+.journey-boundary{font-size:12px}
+.journey-detail-actions button{min-height:44px;font-size:13px}
+.step-selector{padding:0;gap:10px;min-width:0}
+.step-selector select{width:min(330px,32vw);max-width:100%;min-height:44px;font-size:14px}
+.recording-button{bottom:120px}
+.toast{bottom:130px;max-width:calc(100% - 32px)}
+::selection{background:#ddcaa7;color:#1b1b18}
+button,select,input{touch-action:manipulation}
+
+/* Tablet keeps readable controls and uses the whole height instead of letterboxing. */
+.presentation[data-layout=tablet],.presentation[data-layout=phone]{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:'header' 'nav' 'main' 'footer';gap:12px;padding:0 max(20px,env(safe-area-inset-left)) max(12px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-right))}
+.presentation:not([data-layout=desktop]) .masthead{min-height:80px;padding:16px 0}
+.presentation:not([data-layout=desktop]) .presentation-title{display:none}
+.presentation:not([data-layout=desktop]) .scene-nav{padding:0;display:block}
+.presentation:not([data-layout=desktop]) .scene-nav nav{flex-direction:row;overflow-x:auto;gap:8px;scrollbar-width:none}
+.presentation:not([data-layout=desktop]) .scene-nav nav button{flex:1 0 auto;justify-content:center;font-size:15px;min-height:48px;padding:10px 12px;white-space:nowrap}
+.presentation:not([data-layout=desktop]) .nav-active{bottom:0;left:12px;right:12px;top:auto;width:auto;height:2px}
+.presentation:not([data-layout=desktop]) .nav-heading,.presentation:not([data-layout=desktop]) .nav-bottom,.presentation:not([data-layout=desktop]) .keyboard-note{display:none}
+.presentation:not([data-layout=desktop]) .main-scene{padding:6px 0 0}
+.presentation:not([data-layout=desktop]) .scene-canvas{min-height:0;flex:1}
+.presentation:not([data-layout=desktop]) .scene-canvas:has(.compact-graph){flex:none}
+.presentation:not([data-layout=desktop]) .scene-canvas:has(.compact-graph) .details{position:relative;width:100%;max-width:none;min-width:0;max-height:none;inset:auto;margin-top:16px}
+.presentation:not([data-layout=desktop]) .scene-canvas:has(.compact-graph) .detail-scroll{overflow:visible;max-height:none}
+.presentation:not([data-layout=desktop]) .scene-canvas:has(.compact-graph) .detail-shade{display:none}
+.presentation:not([data-layout=desktop]) .scene-intro{padding-bottom:22px}
+.presentation:not([data-layout=desktop]) .scene-intro h1{font-size:32px}
+.presentation:not([data-layout=desktop]) .transport{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;padding-top:8px}
+.presentation:not([data-layout=desktop]) .stage-nav{order:3;width:100%;justify-content:flex-start;margin:0}
+.presentation:not([data-layout=desktop]) .transport .scene-counter{margin-left:auto;font-size:20px}
+.presentation:not([data-layout=desktop]) .sitemap-columns{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding-top:24px}
+.presentation:not([data-layout=desktop]) .map-group{min-height:320px}
+.presentation:not([data-layout=desktop]) .map-group h2{font-size:25px}
+.presentation:not([data-layout=desktop]) .map-root{flex-wrap:wrap;gap:14px}
+.presentation:not([data-layout=desktop]) .map-root>span{margin-left:auto}
+.presentation:not([data-layout=desktop]) .map-root>button{margin-left:0;min-height:44px}
+.presentation:not([data-layout=desktop]) .journey-layout{display:flex;flex-direction:column;gap:16px;min-height:0}
+.presentation:not([data-layout=desktop]) .journey-explanation{display:contents}
+.presentation:not([data-layout=desktop]) .journey-step-label{order:0;font-size:12px}
+.presentation:not([data-layout=desktop]) .journey-explanation h2{order:1;font-size:24px;margin:0}
+.presentation:not([data-layout=desktop]) .demo-window{order:2;min-height:480px;flex-shrink:0;height:480px}
+.presentation:not([data-layout=desktop]) .journey-feedback{order:3;margin:0}
+.presentation:not([data-layout=desktop]) .journey-system{order:4;margin:0}
+.presentation:not([data-layout=desktop]) .journey-boundary{order:5;margin:0}
+.presentation:not([data-layout=desktop]) .journey-detail-actions{order:6;margin:0;padding-top:8px}
+.presentation:not([data-layout=desktop]) .journey-chapters{width:100%;flex-wrap:wrap;gap:8px 20px}
+.presentation:not([data-layout=desktop]) .journey-chapters>button{flex:1 0 auto}
+.presentation:not([data-layout=desktop]) .journey-scene{height:auto}
+.presentation:not([data-layout=desktop]) .journey-tabs{flex-wrap:wrap}
+.presentation:not([data-layout=desktop]) .journey-tabs>span{margin-left:0;font-size:12px}
+.presentation:not([data-layout=desktop]) .step-selector{order:3;width:100%;margin:0}
+.presentation:not([data-layout=desktop]) .step-selector select{flex:1;width:auto}
+
+/* Phone content reflows. The demonstration scrolls its own panels to its active control. */
+.presentation[data-layout=phone]{padding-inline:max(12px,env(safe-area-inset-left));gap:8px}
+.presentation[data-layout=phone] .masthead{min-height:70px;padding:12px 0}
+.presentation[data-layout=phone] .masthead .brand-identity{gap:8px}
+.presentation[data-layout=phone] .masthead .brand-identity-symbol{width:36px}
+.presentation[data-layout=phone] .masthead .brand-identity-words{padding-left:8px;gap:4px}
+.presentation[data-layout=phone] .masthead .brand-identity-en{font-size:13px}
+.presentation[data-layout=phone] .masthead .brand-identity-cn{font-size:17px}
+.presentation[data-layout=phone] .header-actions{gap:0}
+.presentation[data-layout=phone] .header-actions>button,.presentation[data-layout=phone] .export-anchor>button{font-size:0;padding:10px;min-height:44px;min-width:44px;gap:0}
+.presentation[data-layout=phone] .export-anchor>button>svg:last-child{display:none}
+.presentation[data-layout=phone] .scene-nav nav button{font-size:14px;min-height:44px;padding:10px;gap:6px}
+.presentation[data-layout=phone] .scene-number{font-size:10px;min-width:12px}
+.presentation[data-layout=phone] .scene-intro h1{font-size:27px;line-height:1.45;margin-top:6px}
+.presentation[data-layout=phone] .scene-intro p{font-size:15px;line-height:1.7;margin-top:8px}
+.presentation[data-layout=phone] .scene-english{font-size:15px}
+.presentation[data-layout=phone] .scene-intro{padding:10px 0 22px}
+.presentation[data-layout=phone] .graph-node strong{font-size:18px}
+.presentation[data-layout=phone] .graph-legend{white-space:normal;justify-content:center;width:100%;flex-wrap:wrap}
+.presentation[data-layout=phone] .speaker-note{gap:12px;padding-top:12px;margin-bottom:12px}
+.presentation[data-layout=phone] .speaker-note p{font-size:13px}
+.presentation[data-layout=phone] .details,.presentation[data-layout=phone] .details.automatic{position:relative;width:100%;max-width:none;min-width:0;max-height:none;inset:auto;padding:20px 16px;margin-top:16px}
+.presentation[data-layout=phone] .detail-shade{display:none}
+.presentation[data-layout=phone] .details .detail-scroll{overflow:visible}
+.presentation[data-layout=phone] .details .child-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+.presentation[data-layout=phone] .details .child-list button{font-size:15px;min-height:80px}
+.presentation[data-layout=phone] .details .child-list small{font-size:12px}
+.presentation[data-layout=phone] .detail-routes{flex-wrap:wrap}
+.presentation[data-layout=phone] .detail-facts dl>div{grid-template-columns:1fr;gap:6px}
+.presentation[data-layout=phone] .transport{gap:0;padding-top:6px}
+.presentation[data-layout=phone] .transport-controls{width:100%;gap:4px;justify-content:space-between}
+.presentation[data-layout=phone] .transport-controls .auto-state,.presentation[data-layout=phone] .transport-divider,.presentation[data-layout=phone] .scene-counter{display:none}
+.presentation[data-layout=phone] .transport-controls .global-button{font-size:13px;gap:5px;padding:0 6px}
+.presentation[data-layout=phone] .stage-nav{gap:20px;max-height:44px}
+.presentation[data-layout=phone] .stage-nav button{font-size:12px;min-height:40px}
+.presentation[data-layout=phone] .step-selector{gap:8px;padding-top:4px}
+.presentation[data-layout=phone] .step-selector label{display:none}
+.presentation[data-layout=phone] .step-selector select{font-size:13px;padding:8px;width:100%;min-width:0}
+.presentation[data-layout=phone] .step-selector>span{white-space:nowrap}
+.presentation[data-layout=phone] .map-root>span{margin:0;font-size:13px}
+.presentation[data-layout=phone] .sitemap-columns{grid-template-columns:1fr;gap:18px}
+.presentation[data-layout=phone] .map-group{min-height:0;padding:20px}
+.presentation[data-layout=phone] .map-group header{margin-bottom:10px}
+.presentation[data-layout=phone] .map-group strong{font-size:16px}
+.presentation[data-layout=phone] .design-view{display:flex;flex-direction:column;gap:24px}
+.presentation[data-layout=phone] .design-brand{border-right:0;padding:0 0 20px;border-bottom:1px solid var(--line)}
+.presentation[data-layout=phone] .design-pages{flex-direction:column;gap:18px}
+.presentation[data-layout=phone] .page-thumbnail{width:100%}
+.presentation[data-layout=phone] .type-example>span{font-size:24px}
+.presentation[data-layout=phone] .design-brand .brand-identity-en{font-size:17px}
+.presentation[data-layout=phone] .design-brand .brand-identity-cn{font-size:22px}
+.presentation[data-layout=phone] .component-sample{padding:16px}
+.presentation[data-layout=phone] .swatches{gap:12px}
+.presentation[data-layout=phone] .swatches>div{width:calc((100% - 24px)/3)}
+.presentation[data-layout=phone] .journey-tabs{gap:4px}
+.presentation[data-layout=phone] .journey-tabs button{font-size:13px;padding:8px;gap:5px;flex:1}
+.presentation[data-layout=phone] .journey-tabs>span{width:100%}
+.presentation[data-layout=phone] .journey-explanation h2{font-size:21px;line-height:1.6}
+.presentation[data-layout=phone] .demo-window{height:570px;min-height:570px}
+.presentation[data-layout=phone] .demo-window-bar{height:auto;min-height:48px;padding:10px 12px;gap:8px;flex-wrap:wrap}
+.presentation[data-layout=phone] .demo-window-bar>span{font-size:11px}
+.presentation[data-layout=phone] .demo-window-bar>.demo-login{margin-left:auto}
+.presentation[data-layout=phone] .demo-window-footer{height:auto;min-height:48px;flex-wrap:wrap;gap:4px 10px;padding:8px 12px}
+.presentation[data-layout=phone] .demo-window-footer small{margin:0;width:100%;font-size:10px}
+.presentation[data-layout=phone] .demo-surface{min-height:0}
+.presentation[data-layout=phone] .demo-panel{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#cbbfa8 transparent;font-size:14px}
+.presentation[data-layout=phone] .demo-panel:has(.demo-overlay){overflow:hidden}
+.presentation[data-layout=phone] .demo-overlay{padding:12px;overflow-y:auto;display:block;scrollbar-width:thin}
+.presentation[data-layout=phone] .demo-overlay>section{width:100%;max-width:none;height:auto;max-height:none;overflow:visible;margin:0}
+.presentation[data-layout=phone] .demo-button{min-height:44px;font-size:13px;padding:8px 10px;white-space:normal}
+.presentation[data-layout=phone] .demo-field{min-height:42px;font-size:13px}
+.presentation[data-layout=phone] .entry-screen{padding:26px 16px;height:auto;min-height:100%}
+.presentation[data-layout=phone] .entry-screen h2{font-size:24px;margin:16px 0}
+.presentation[data-layout=phone] .entry-question{margin-top:16px;min-height:100px;height:auto;align-items:flex-start;flex-direction:column;font-size:16px;padding:14px;gap:12px}
+.presentation[data-layout=phone] .entry-question .demo-button{align-self:flex-end}
+.presentation[data-layout=phone] .scope-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;display:grid}
+.presentation[data-layout=phone] .scope-cards .demo-button{width:auto;min-width:0}
+.presentation[data-layout=phone] .entry-scope,.presentation[data-layout=phone] .scope-title{font-size:13px}
+.presentation[data-layout=phone] .modal-tabs{font-size:12px;gap:10px;flex-wrap:wrap}
+.presentation[data-layout=phone] .scope-modal{padding-bottom:16px}
+.presentation[data-layout=phone] .topic-option{min-height:70px}
+.presentation[data-layout=phone] .evidence-screen{height:auto;min-height:100%;padding:14px}
+.presentation[data-layout=phone] .workspace-query{flex-wrap:wrap;gap:8px;font-size:14px;height:auto;min-height:55px}
+.presentation[data-layout=phone] .evidence-columns,.presentation[data-layout=phone] .evidence-columns.has-summary{display:flex;flex-direction:column;height:auto;gap:14px}
+.presentation[data-layout=phone] .demo-filters{display:flex;flex-wrap:wrap;gap:8px 12px;padding:12px 0;border:0;border-bottom:1px solid var(--line);font-size:12px}
+.presentation[data-layout=phone] .demo-filters>strong{width:100%}
+.presentation[data-layout=phone] .demo-filters>span,.presentation[data-layout=phone] .demo-filters>small{margin:0;font-size:12px}
+.presentation[data-layout=phone] .demo-results{overflow:visible}
+.presentation[data-layout=phone] .demo-results>header{font-size:14px;gap:8px}
+.presentation[data-layout=phone] .result-row{padding:16px}
+.presentation[data-layout=phone] .demo-document-title.small strong{font-size:15px}
+.presentation[data-layout=phone] .demo-document-title small{font-size:11px}
+.presentation[data-layout=phone] .result-row footer{font-size:11px;gap:8px;flex-wrap:wrap}
+.presentation[data-layout=phone] .evidence-summary{width:auto;padding:16px;font-size:14px}
+.presentation[data-layout=phone] .evidence-summary .demo-button{width:100%}
+.presentation[data-layout=phone] .sort-popover{right:14px;top:110px;max-width:calc(100% - 28px);font-size:13px}
+.presentation[data-layout=phone] .context-content{display:flex;flex-direction:column;overflow:visible;gap:20px;padding:16px}
+.presentation[data-layout=phone] .context-content>main,.presentation[data-layout=phone] .context-content>aside{width:auto;padding:0;border:0;font-size:14px}
+.presentation[data-layout=phone] .context-content small{font-size:12px}
+.presentation[data-layout=phone] .context-content>aside{gap:12px}
+.presentation[data-layout=phone] .context-content>aside .demo-button{width:100%}
+.presentation[data-layout=phone] .reader-screen{height:auto;min-height:100%}
+.presentation[data-layout=phone] .reader-demo-toolbar{height:auto;min-height:60px;flex-wrap:wrap;padding:10px 12px;gap:10px;font-size:13px}
+.presentation[data-layout=phone] .reader-demo-body{display:flex;flex-direction:column;height:auto;padding:12px;gap:16px}
+.presentation[data-layout=phone] .reader-demo-outline{display:flex;flex-wrap:wrap;gap:8px;padding:0;font-size:12px}
+.presentation[data-layout=phone] .reader-demo-outline>*{margin:0}
+.presentation[data-layout=phone] .reader-demo-page{width:100%;min-height:370px;padding:26px 20px}
+.presentation[data-layout=phone] .reader-demo-source{width:100%;overflow:visible;font-size:14px;padding:14px}
+.presentation[data-layout=phone] .selection-tools{left:12px;right:12px;width:auto;gap:12px;justify-content:space-around;padding:6px;font-size:12px;top:110px}
+.presentation[data-layout=phone] .citation-columns{grid-template-columns:1fr;gap:18px;padding:16px}
+.presentation[data-layout=phone] .citation-columns .numbered-title{font-size:14px}
+.presentation[data-layout=phone] .citation-modal>footer{flex-wrap:wrap;padding:12px 16px;gap:8px}
+.presentation[data-layout=phone] .citation-formats>span{font-size:12px;min-height:32px}
+.presentation[data-layout=phone] .citation-notice,.presentation[data-layout=phone] .export-status{position:relative;inset:auto;width:auto;max-width:none;margin:12px 16px;font-size:12px}
+.presentation[data-layout=phone] .citation-notice{flex-wrap:wrap}
+.presentation[data-layout=phone] .citation-more{right:16px;bottom:70px;font-size:13px}
+.presentation[data-layout=phone] .project-create{position:relative;inset:auto;width:auto;margin-top:12px}
+.presentation[data-layout=phone] .admin-demo{display:flex;flex-direction:column;height:auto;min-height:100%}
+.presentation[data-layout=phone] .admin-demo-nav{flex-direction:row;flex-wrap:wrap;gap:4px;padding:10px;border-right:0;border-bottom:1px solid var(--line);font-size:12px}
+.presentation[data-layout=phone] .admin-demo-nav>span{width:100%;margin:0;padding:0 4px}
+.presentation[data-layout=phone] .admin-demo-nav b{padding:7px}
+.presentation[data-layout=phone] .admin-demo>main{padding:18px 14px;overflow:visible}
+.presentation[data-layout=phone] .demo-content-heading{flex-wrap:wrap;gap:10px}
+.presentation[data-layout=phone] .demo-content-heading h2{font-size:23px}
+.presentation[data-layout=phone] .upload-table>header,.presentation[data-layout=phone] .upload-table>div:not(.progress-track){grid-template-columns:minmax(0,1fr) 48px 58px;padding:12px 9px;gap:8px}
+.presentation[data-layout=phone] .policy-box{font-size:14px}
+.presentation[data-layout=phone] .policy-box>div{flex-wrap:wrap;gap:8px 16px;font-size:12px}
+.presentation[data-layout=phone] .admin-demo .demo-receipt{margin:12px 0 0;font-size:12px}
+.presentation[data-layout=phone] .outline-workspace{height:auto;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.presentation[data-layout=phone] .outline-workspace>aside{padding:12px;font-size:14px}
+.presentation[data-layout=phone] .outline-workspace aside b{font-size:12px}
+.presentation[data-layout=phone] .outline-workspace aside small{font-size:11px}
+.presentation[data-layout=phone] .outline-editor{min-width:0;gap:8px;font-size:14px}
+.presentation[data-layout=phone] .outline-editor .demo-field{min-height:36px;font-size:13px}
+.presentation[data-layout=phone] .outline-paper{grid-column:1/-1;min-height:280px}
+.presentation[data-layout=phone] .publication-compare{gap:10px}
+.presentation[data-layout=phone] .publication-compare>div{padding:12px}
+.presentation[data-layout=phone] .publication-checks{gap:10px;flex-wrap:wrap;font-size:12px}
+.presentation[data-layout=phone] .publication-action{flex-direction:column;align-items:flex-start;gap:12px}
+.presentation[data-layout=phone] .processing-rows>div{gap:8px;font-size:13px;flex-wrap:wrap}
+.presentation[data-layout=phone] .research-origin{height:100%;min-height:400px}
+.presentation[data-layout=phone] .origin-page{width:100%;padding:20px}
+.presentation[data-layout=phone] .research-demo{height:auto;padding:18px 14px}
+.presentation[data-layout=phone] .research-demo>header{flex-wrap:wrap;gap:8px}
+.presentation[data-layout=phone] .research-tabs{gap:14px;font-size:13px}
+.presentation[data-layout=phone] .research-body{display:flex;flex-direction:column;gap:18px;font-size:14px}
+.presentation[data-layout=phone] .research-body>aside:first-child{border-right:0;border-bottom:1px solid var(--line);padding:0 0 12px;gap:7px;font-size:13px}
+.presentation[data-layout=phone] .research-body>aside:first-child p{margin-bottom:6px;font-size:14px}
+.presentation[data-layout=phone] .research-selected{border-left:0;border-top:1px solid var(--line);padding:14px 0;font-size:13px}
+.presentation[data-layout=phone] .followup-input{height:auto;min-height:90px;font-size:14px;line-height:1.6}
+.presentation[data-layout=phone] .research-scope-options{flex-wrap:wrap;gap:12px}
+.presentation[data-layout=phone] .research-scope-options>span{font-size:12px}
+.presentation[data-layout=phone] .model-pending{font-size:14px}
+.presentation[data-layout=phone] .model-pending p{font-size:13px}
+.presentation[data-layout=phone] .demo-hint{font-size:12px!important;line-height:1.7}
+.presentation[data-layout=phone] .journey-feedback p{font-size:15px}
+.presentation[data-layout=phone] .journey-system{font-size:14px;line-height:1.8}
+.presentation[data-layout=phone] .journey-boundary{font-size:12px}
+
+@media(prefers-reduced-motion:reduce){.graph{transition:none}.main-scene{scroll-behavior:auto}}
+
+/* Keep overlays anchored to the visible demo rather than its taller document. */
+.presentation:not([data-layout=desktop]) .demo-overlay>section{max-width:calc(100% - 24px)}
+.presentation[data-layout=phone] .demo-window{min-height:0;height:clamp(360px,calc(100dvh - 300px),570px)}
+.presentation[data-layout=phone] .demo-surface{min-height:0}
+.presentation[data-layout=phone] .demo-panel{position:relative}
+.presentation[data-layout=phone] .demo-panel:has(.demo-overlay)>div{position:static}
+.presentation[data-layout=phone] .demo-overlay>section{max-width:100%}

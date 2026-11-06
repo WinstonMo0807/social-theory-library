@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowLeft, ArrowRight, Play, Pause, RotateCcw, Maximize2, Minimize2, Download, X, Search, BookOpen, ScanText, Network, Library, ShieldCheck, Layers, FileText, Database, Workflow, SlidersHorizontal, ChevronRight, ExternalLink, Video, Square, Check, CircleHelp } from 'lucide-react';
 import { BrandImage } from '../components/brand-image';
@@ -11,6 +11,7 @@ import { exportFrame, download, recordPresentation } from './export';
 import { JourneyScene, StepDetails, journeys } from './journey-scene';
 import './style.css';
 import './journey.css';
+import './responsive.css';
 import moduleFacts from './module-facts.json';
 
 type Node = typeof data.nodes[number];
@@ -23,23 +24,38 @@ const STAGE_MS=4200;
 function SourceList({ids}:{ids:string[]}) { return <ul className="source-list">{ids.map(id=>{const r=sources[id];return <li key={id}><span>{r.kind==='record'?'项目记录':'源码依据'}</span><code>{r.file}:{r.line}</code><small>{r.anchor}</small></li>})}</ul> }
 
 function Graph({layout,scene,stage,selected,onSelect}:{layout:Placement[],scene:string,stage:number,selected:string|null,onSelect:(id:string)=>void}) {
+ const graph=useRef<HTMLDivElement>(null),[box,setBox]=useState({width:1200,height:500});
+ useLayoutEffect(()=>{const el=graph.current;if(!el)return;const observer=new ResizeObserver(([entry])=>{const {width,height}=entry.contentRect;setBox({width,height});});observer.observe(el);return()=>observer.disconnect();},[]);
+ const compact=box.width<760;
+ const compactHeight=scene==='overview'?600:640;
+ const placed=layout.map((p,i)=>{
+  if(!compact)return {...p,x:p.x/1200*box.width,y:p.y/500*box.height,w:(p.w??278)/1200*box.width,h:(p.h??118)/500*box.height};
+  const gap=14,w=(box.width-gap)/2;
+  if(scene==='overview'){
+   if(p.id==='stl')return {...p,x:0,y:0,w:box.width,h:102};
+   const order=['discovery','knowledge','reader','research','publishing','operations'].indexOf(p.id);
+   return {...p,x:order%2*(w+gap),y:120+Math.floor(order/2)*156,w,h:140};
+  }
+  return {...p,x:i%2*(w+gap),y:Math.floor(i/2)*156,w,h:140};
+ });
  const visibleIds=new Set(layout.map(p=>p.id));
  const edges=data.edges.filter(e=>visibleIds.has(e.source)&&visibleIds.has(e.target));
- const nodePositions=Object.fromEntries(layout.map(p=>[p.id,{...p,w:p.w??278,h:p.h??118}]));
+ const nodePositions=Object.fromEntries(placed.map(p=>[p.id,p]));
  const related=new Set(selected?[selected,...data.edges.filter(e=>e.source===selected||e.target===selected).flatMap(e=>[e.source,e.target])]:[]);
  const focus=selected?nodePositions[selected]:null;
- const camera=focus?`translate(${230-(focus.x+focus.w/2)*.94}px, ${254-(focus.y+focus.h/2)*.94}px) scale(.94)`:'translate(0px, 0px) scale(1)';
- return <div className={`graph ${selected?'has-focus':''}`}>
+ const camera=focus?(compact?`translate(${(box.width-focus.w)/2-focus.x}px, ${12-focus.y}px)`:`translate(${box.width*.22-(focus.x+focus.w/2)*.94}px, ${box.height*.5-(focus.y+focus.h/2)*.94}px) scale(.94)`):'translate(0px, 0px) scale(1)';
+ return <div ref={graph} className={`graph ${selected?'has-focus':''} ${compact?'compact-graph':''}`} style={compact?{height:selected?160:compactHeight}:undefined}>
   <div className="graph-camera" style={{transform:camera}}>
-   <svg className="connections" viewBox="0 0 1200 500" aria-hidden="true">
+   <svg className="connections" viewBox={`0 0 ${box.width} ${box.height}`} aria-hidden="true">
     <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="currentColor" strokeWidth="1.3"/></marker></defs>
     {edges.map((e,i)=>{const a=nodePositions[e.source],b=nodePositions[e.target];const right=b.x>=a.x;let x1=right?a.x+a.w:a.x,x2=right?b.x:b.x+b.w,y1=a.y+a.h/2,y2=b.y+b.h/2;
-      const d=`M${x1},${y1} C${x1+(x2-x1)*.52},${y1} ${x1+(x2-x1)*.48},${y2} ${x2},${y2}`;
+      const vertical=compact&&Math.abs(b.y-a.y)>Math.abs(b.x-a.x);if(vertical){x1=a.x+a.w/2;x2=b.x+b.w/2;y1=b.y>a.y?a.y+a.h:a.y;y2=b.y>a.y?b.y:b.y+b.h;}
+      const d=compact&&scene==='overview'?`M${box.width/2},102 V${b.y+b.h/2} H${b.x===0?b.x+b.w:b.x}`:vertical?`M${x1},${y1} C${x1},${y1+(y2-y1)*.5} ${x2},${y1+(y2-y1)*.5} ${x2},${y2}`:`M${x1},${y1} C${x1+(x2-x1)*.52},${y1} ${x1+(x2-x1)*.48},${y2} ${x2},${y2}`;
       const active=stage>=Math.max(a.reveal??0,b.reveal??0);const dim=selected&&e.source!==selected&&e.target!==selected;
-      return <g key={e.source+e.target} className={`edge edge-${e.type} ${active?'active':''} ${dim?'dim':''}`}><path className="edge-track" d={d}/><path className="edge-draw" d={d} pathLength="1" markerEnd={e.type==='contains'?undefined:'url(#arrow)'}/>{scene==='technology'&&active&&<text x={(x1+x2)/2} y={(y1+y2)/2-12} textAnchor="middle">{e.label}</text>}</g>;
+      return <g key={e.source+e.target} className={`edge edge-${e.type} ${active?'active':''} ${dim?'dim':''}`}><path className="edge-track" d={d}/><path className="edge-draw" d={d} pathLength="1" markerEnd={e.type==='contains'?undefined:'url(#arrow)'}/>{scene==='technology'&&!compact&&active&&<text x={(x1+x2)/2} y={(y1+y2)/2-12} textAnchor="middle">{e.label}</text>}</g>;
     })}
    </svg>
-   {layout.map(p=>{const n=byId[p.id];const Icon=icons[p.id]||FileText;const active=stage>=(p.reveal??0);const root=p.id==='stl';return <Button key={p.id} data-node={p.id} className={`graph-node ${root?'root-node':''} ${active?'revealed':''} ${selected===p.id?'selected':''} ${selected&&!related.has(p.id)?'dim':''}`} style={{transform:`translate(${p.x}px, ${p.y}px)`,width:p.w??278,height:p.h??118}} onClick={()=>onSelect(p.id)} aria-label={`查看${n.title}详情`}>
+   {placed.map(p=>{const n=byId[p.id];const Icon=icons[p.id]||FileText;const active=stage>=(p.reveal??0);const root=p.id==='stl';return <Button key={p.id} data-node={p.id} className={`graph-node ${root?'root-node':''} ${active?'revealed':''} ${selected===p.id?'selected':''} ${selected&&!related.has(p.id)?'dim':''}`} style={{transform:`translate(${p.x}px, ${p.y}px)`,width:p.w??278,height:p.h??118}} onClick={()=>onSelect(p.id)} aria-label={`查看${n.title}详情`}>
      {root?<><BrandImage/><span className="root-caption">馆藏 · 原文 · 私人研究</span></>:<><span className="node-top"><Icon size={21} strokeWidth={1.45}/><span>{n.type==='domain'?`${n.children.length} 个子模块`:n.type==='store'?'数据存储':'服务模块'}</span><ChevronRight size={15}/></span><strong>{n.title}</strong><span className="node-subtitle">{n.subtitle}</span></>}
     </Button>})}
   </div>
@@ -86,7 +102,7 @@ function App(){
  const params=new URLSearchParams(location.search);const initial=Math.max(0,Math.min(scenes.length-1,params.has('scene')?Number(params.get('scene'))||0:0));
  const initialJourney=Math.max(0,Math.min(journeys.length-1,Number(params.get('journey'))||0));
  const [journey,setJourney]=useState(initialJourney),[progress,setProgress]=useState(0),[inspect,setInspect]=useState(false);
- const [scene,setScene]=useState(initial),[stage,setStage]=useState(Math.max(0,Math.min((initial===2?journeys[initialJourney].steps.length:scenes[initial].stages.length)-1,Number(params.get('stage'))||0))),[playing,setPlaying]=useState(true),[selected,setSelected]=useState<string|null>(null),[indexOpen,setIndexOpen]=useState(false),[help,setHelp]=useState(false),[exportOpen,setExportOpen]=useState(false),[full,setFull]=useState(false),[busy,setBusy]=useState(''),[toast,setToast]=useState(''),[recording,setRecording]=useState(false),[scale,setScale]=useState(1),[replayKey,setReplayKey]=useState(0);
+ const [scene,setScene]=useState(initial),[stage,setStage]=useState(Math.max(0,Math.min((initial===2?journeys[initialJourney].steps.length:scenes[initial].stages.length)-1,Number(params.get('stage'))||0))),[playing,setPlaying]=useState(true),[selected,setSelected]=useState<string|null>(null),[indexOpen,setIndexOpen]=useState(false),[help,setHelp]=useState(false),[exportOpen,setExportOpen]=useState(false),[full,setFull]=useState(false),[busy,setBusy]=useState(''),[toast,setToast]=useState(''),[recording,setRecording]=useState(false),[screen,setScreen]=useState({width:innerWidth,height:innerHeight}),[replayKey,setReplayKey]=useState(0);
  const [reduced,setReduced]=useState(matchMedia('(prefers-reduced-motion: reduce)').matches);
  const viewport=useRef<HTMLDivElement>(null),frame=useRef<HTMLDivElement>(null),progressRef=useRef(0),remaining=useRef<number|null>(null),[dwell,setDwell]=useState(1),[extended,setExtended]=useState(false),recorder=useRef<Awaited<ReturnType<typeof recordPresentation>>|null>(null);
  const j=journeys[journey];
@@ -114,7 +130,7 @@ function App(){
  async function exportImage(kind:'png'|'svg'){setExportOpen(false);setBusy(kind);try{await exportFrame(frame.current!,`STL-${s.id}`,kind);notify(kind==='png'?'3840 × 2160 图片已导出':'SVG 图片已导出');}catch(e){notify(`导出失败：${e instanceof Error?e.message:'请重试'}`);}finally{setBusy('');}}
  async function record(){setExportOpen(false);try{if(recording){recorder.current?.stop();return;}recorder.current=await recordPresentation(()=>{setRecording(false);notify('录制已结束，视频已下载。');});setRecording(true);notify('正在录制。完成演示后，点击“停止录制”。');}catch(e){notify('未开始录制。请重试，并选择本展示标签页。');}}
  useEffect(()=>{const mq=matchMedia('(prefers-reduced-motion: reduce)');const update=()=>{setReduced(mq.matches)};mq.addEventListener('change',update);return()=>mq.removeEventListener('change',update);},[]);
- useEffect(()=>{const update=()=>{const rect=viewport.current?.getBoundingClientRect();if(rect)setScale(Math.min(rect.width/1600,rect.height/900));};const observer=new ResizeObserver(update);if(viewport.current)observer.observe(viewport.current);update();return()=>observer.disconnect();},[]);
+ useEffect(()=>{const update=()=>{const rect=viewport.current?.getBoundingClientRect();if(rect)setScreen({width:rect.width,height:rect.height});};const observer=new ResizeObserver(update);if(viewport.current)observer.observe(viewport.current);update();return()=>observer.disconnect();},[]);
  useEffect(()=>{const fn=()=>setFull(Boolean(document.fullscreenElement));document.addEventListener('fullscreenchange',fn);return()=>document.removeEventListener('fullscreenchange',fn);},[]);
  // The animation and the reading time are separate. A click extends the latter only.
  useEffect(()=>{if(reduced)return;const el=frame.current?.querySelector('.main-scene');el?.animate([{opacity:.2,transform:'translateX(48px)'},{opacity:1,transform:'translateX(0)'}],{duration:580,easing:'cubic-bezier(.22,1,.36,1)'});},[scene,journey,replayKey,reduced]);
@@ -130,9 +146,13 @@ function App(){
  },[playing,busy,stage,scene,journey,indexOpen,help,inspect,selected,replayKey]);
  useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(''),4800);return()=>clearTimeout(t);},[toast]);
  useEffect(()=>{const fn=(e:KeyboardEvent)=>{if(e.ctrlKey||e.altKey||e.metaKey||e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.target instanceof HTMLSelectElement)return;if(indexOpen||help||inspect)return;if(e.key==='Escape'){closeDetails();setExportOpen(false);return;}if(e.key==='ArrowRight'){e.preventDefault();next();}if(e.key==='ArrowLeft'){e.preventDefault();prev();}if(e.code==='Space'&&!(e.target instanceof HTMLButtonElement)){e.preventDefault();togglePlay();}if(e.key.toLowerCase()==='f'){e.preventDefault();void fullscreen();}if(e.key.toLowerCase()==='r'){e.preventDefault();replay();}if(/^[1-5]$/.test(e.key))changeScene(Number(e.key)-1);};window.addEventListener('keydown',fn);return()=>window.removeEventListener('keydown',fn);});
+ useEffect(()=>{const main=frame.current?.querySelector('.main-scene');if(!main)return;main.scrollTo({top:0,behavior:'instant'});},[scene,journey,focusedNode]);
+ useEffect(()=>{if(screen.width>=1180)return;const main=frame.current?.querySelector('.main-scene'),detail=main?.querySelector('.details');if(main&&detail){const timer=requestAnimationFrame(()=>main.scrollTo({top:main.scrollTop+detail.getBoundingClientRect().top-main.getBoundingClientRect().top-12,behavior:reduced?'instant':'smooth'}));return()=>cancelAnimationFrame(timer);}},[detailNode,screen.width,reduced]);
+ useEffect(()=>{if(screen.width>=1180)return;for(const selector of ['.scene-nav nav','.stage-nav']){const nav=frame.current?.querySelector(selector),active=nav?.querySelector('[aria-current]');if(nav&&active){const a=active.getBoundingClientRect(),b=nav.getBoundingClientRect();if(a.left<b.left||a.right>b.right)nav.scrollTo({left:nav.scrollLeft+a.left-b.left-(b.width-a.width)/2,behavior:reduced?'instant':'smooth'});}}},[scene,stage,screen.width,reduced]);
+ useEffect(()=>{if(screen.width>=1180)return;const main=frame.current?.querySelector('.main-scene'),active=main?.querySelector('.current-card');if(scene===1&&main&&active){const a=active.getBoundingClientRect(),b=main.getBoundingClientRect();if(a.top<b.top||a.bottom>b.bottom)main.scrollTo({top:main.scrollTop+a.top-b.top-12,behavior:reduced?'instant':'smooth'});}},[scene,stage,screen.width,reduced]);
  const graphScene=scene===0||scene===3;
  return <div className="viewport" ref={viewport}>
-  <div ref={frame} className={`presentation ${playing?'playing':'paused'} ${reduced?'reduced':''}`} style={{transform:`translate(-50%,-50%) scale(${scale})`}} data-scene={s.id} data-stage={stage} data-progress={progress.toFixed(3)} data-journey={journey} data-dwell={dwell.toFixed(3)} data-tour-phase={tourStep?.phase} data-tour-node={autoNode??undefined}>
+  <div ref={frame} className={`presentation ${playing?'playing':'paused'} ${reduced?'reduced':''}`} data-layout={screen.width<640?'phone':screen.width<1180?'tablet':'desktop'} data-scene={s.id} data-stage={stage} data-progress={progress.toFixed(3)} data-journey={journey} data-dwell={dwell.toFixed(3)} data-tour-phase={tourStep?.phase} data-tour-node={autoNode??undefined}>
    <header className="masthead"><BrandImage/><div className="presentation-title">架构演示 <span>STL 4.0</span></div><div className="header-actions no-export">{!publicDemo&&<Button onClick={()=>{setIndexOpen(true)}}><FileText size={17}/>查看来源</Button>}<div className="export-anchor"><Button disabled={!!busy} aria-expanded={exportOpen} onClick={()=>setExportOpen(v=>!v)}><Download size={17}/>{busy?'正在导出':'导出'}<ChevronRight size={14}/></Button>{exportOpen&&<div className="export-menu"><Button onClick={()=>void exportImage('png')}>导出 PNG <small>3840 × 2160 · 适合 PPT</small></Button><Button onClick={()=>void exportImage('svg')}>导出 SVG <small>适合浏览器查看</small></Button><Button onClick={()=>void record()}>{recording?'停止录制':'录制演示'}<small>保存为 WebM 视频</small></Button></div>}</div><Button aria-label={full?'退出全屏':'全屏展示'} onClick={()=>void fullscreen()}>{full?<Minimize2 size={19}/>:<Maximize2 size={19}/>}</Button></div></header>
    <aside className="scene-nav"><div className="nav-heading">展示场景</div><nav aria-label="展示场景">{scenes.map((item,i)=>{const Icon=sceneIcons[i];return <Button key={item.id} aria-current={scene===i?'step':undefined} onClick={()=>changeScene(i)}><span className="scene-number">0{i+1}</span><Icon size={18}/><span>{i===2?'使用演示':item.name}</span>{scene===i&&<span className="nav-active"/>}</Button>})}</nav><div className="nav-bottom"><span className="live-dot"/>架构核对记录<small>2026.11.06<br/>依据源码与页面观察</small><Button className="no-export" onClick={()=>{setHelp(true)}}><CircleHelp size={16}/>查看操作帮助</Button></div></aside>
    <main className={`main-scene ${focusedNode?'with-details':''}`}><div className="scene-intro"><span className="scene-english">{s.english}</span><h1>{s.title}</h1><p>{s.intro}</p></div><div className="scene-canvas" key={replayKey}>

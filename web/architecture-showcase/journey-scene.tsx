@@ -88,10 +88,17 @@ export function JourneyScene({journeyIndex,stage,progress,onJourney,onStage,onSe
  const chapters=[...new Set(journey.steps.map(s=>s.chapter))];
  const visualStage=visualStates[journey.id].indexOf(step.visual);
  const next=()=>onStage(Math.min(journey.steps.length-1,stage+1));
- useLayoutEffect(()=>{const root=surface.current,el=root?.querySelector<HTMLElement>(`[data-demo-target="${step.target}"]`);if(!root||!el)return;
-  const a=root.getBoundingClientRect(),b=el.getBoundingClientRect(),scale=a.width/root.offsetWidth;
-  const to={x:(b.left-a.left+b.width*.72)/scale,y:(b.top-a.top+b.height*.64)/scale};setPointer({from:previous.current,to});previous.current=to;
- },[stage,journeyIndex,progress>.45]);
+ useLayoutEffect(()=>{const root=surface.current,target=root?.querySelector<HTMLElement>(`[data-demo-target="${step.target}"]`),overlay=root?.querySelector<HTMLElement>('.demo-overlay');const el=overlay&&(!target||!overlay.contains(target))?overlay.querySelector<HTMLElement>('[data-demo-target]')??overlay.querySelector<HTMLElement>('section'):target;if(!root||!el)return;
+  // Reveal the active control in its panel and in the presentation's scroll region.
+  const reveal=()=>{if(overlay){const panel=root.querySelector('.demo-panel');if(panel)panel.scrollTop=0;}for(let parent=el.parentElement;parent&&parent!==root;parent=parent.parentElement){
+   if(/auto|scroll/.test(getComputedStyle(parent).overflowY)&&parent.scrollHeight>parent.clientHeight){const a=parent.getBoundingClientRect(),b=el.getBoundingClientRect();if(b.height>a.height-24)parent.scrollTop+=b.top+b.height*.64-a.top-a.height*.5;else if(b.bottom>a.bottom)parent.scrollTop+=b.bottom-a.bottom+12;else if(b.top<a.top)parent.scrollTop-=a.top-b.top+12;}
+  }
+   const main=root.closest('.main-scene'),frame=root.closest('.presentation');if(main&&frame?.getAttribute('data-layout')!=='desktop'){const a=main.getBoundingClientRect(),b=el.getBoundingClientRect();if(b.top<a.top||b.bottom>a.bottom)main.scrollTo({top:main.scrollTop+b.top-a.top-Math.max(12,(a.height-b.height)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+  };
+  const measure=()=>{const a=root.getBoundingClientRect(),b=el.getBoundingClientRect(),scale=a.width/root.offsetWidth;
+   const to={x:(b.left-a.left+b.width*.72)/scale,y:(b.top-a.top+b.height*.64)/scale};setPointer({from:previous.current,to});previous.current=to;
+  };reveal();measure();const raf=requestAnimationFrame(()=>{reveal();measure();});const observer=new ResizeObserver(()=>{reveal();measure();});observer.observe(root);root.addEventListener('scroll',measure,true);return()=>{cancelAnimationFrame(raf);observer.disconnect();root.removeEventListener('scroll',measure,true);};
+ },[stage,journeyIndex,progress>.28,progress>.45,progress>.5,progress>.62]);
  const motion=ease(progress/.35),click=progress>.32&&progress<.55;
  const route=journeyIndex===0?visualStage<5?'探索 / 观点检索':visualStage<11?'探索 / 原文证据':'阅读器 / 原文与引用':journeyIndex===1?'管理工作区 / 馆藏':'私人研究 / 原文选材';
  return <div className="journey-scene" data-journey={journey.id} data-step={step.id}>

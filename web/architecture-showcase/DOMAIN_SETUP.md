@@ -1,8 +1,8 @@
 # preview.winstonmo.com 接入说明
 
-公开版服务已在 NAS 启动并通过 HTTP 检查。用户选择自行配置 Cloudflare，本轮未修改或复核公网路由。
+2026-11-07 已按用户部署要求完成接入。公开入口为 **https://preview.winstonmo.com/**，正常 Edge 浏览器已打开自动演示并进入全屏。现有 `books.winstonmo.com → http://edge:80` 路由保持。以下配置用于维护和恢复，无需重复添加。
 
-## 在 Cloudflare 添加路由
+## 已生效的 Cloudflare 路由
 
 进入 **Networking → Tunnels**，选择当前承载 `books.winstonmo.com` 的隧道。在 **Routes → Add route → Published application** 中添加一条路由，不替换已有的书库路由。当前操作名称依据 [Cloudflare 官方说明](https://developers.cloudflare.com/tunnel/get-started/)。
 
@@ -19,11 +19,11 @@
 
 通过控制台新增路由时，Cloudflare 会创建指向隧道的 DNS 记录。详见官方[路由说明](https://developers.cloudflare.com/tunnel/concepts/routing/)。若已有同名 DNS 记录导致冲突，先核对其用途，再处理该记录，不改动其他域名。
 
-保存后打开 <https://preview.winstonmo.com/>。应直接看到自动展示，不要求密码。若遇到 403，核对 HTTP Host Header；若遇到 502，核对服务名、端口和容器健康状态。当前仅验证了隧道网络到源站的 HTTP 200，未验证公网 TLS、DNS 或 Cloudflare 路由。
+保存后打开 <https://preview.winstonmo.com/>。应直接看到自动展示，不要求密码。若遇到 403，核对 HTTP Host Header；若遇到 502，核对服务名、端口和容器健康状态。本轮已在控制台确认路由与 DNS 创建成功，并通过正常浏览器实际访问 HTTPS 页面。早期 Python 自动 HTTP 探测遇到 403；正常 Edge 与独立浏览器随后均可打开公开页面。未调整 Cloudflare 安全规则。不要仅凭该早期请求判断应用或域名不可用。
 
 ## 服务与恢复
 
-NAS 目录为 `/volume2/library/stl-previews/architecture-showcase-v5-smooth-20261107`，容器名为 `stl-architecture-showcase`，镜像为 `stl-architecture-showcase:v5-smooth-20261107`。
+NAS 目录为 `/volume2/library/stl-previews/architecture-showcase-v6-r2-20261107`，容器名为 `stl-architecture-showcase`，镜像为 `stl-architecture-showcase:v6-r2-20261107`。
 
 服务使用只读文件系统、非 root 用户，无业务数据挂载，无宿主机端口，复用现有隧道网络。目录中保留公开成品、构建配置和 `deployment-proof.json`。恢复运行可在该目录执行：
 
@@ -42,3 +42,7 @@ sudo docker stop stl-architecture-showcase
 上一版的目录 `/volume2/library/stl-previews/architecture-showcase-v4-20261106` 和 v4 镜像继续保留。需要恢复上一版时，在该目录运行相同的 Compose 启动命令。当前服务名与域名路由值保持一致。
 
 平滑总览版之前的 v5 发布目录与镜像也保留，可按上述方式恢复。
+
+域名连接现有 `social-theory-library-nas` 隧道。新增 CNAME 为 `preview.winstonmo.com`，目标 `2f1346f6-b4ff-4c63-8014-79e0d39b62f2.cfargotunnel.com`。只增加此域名，没有替换书库路由。
+
+直接上一版为 `/volume2/library/stl-previews/architecture-showcase-v5-smooth-20261107`，镜像 `stl-architecture-showcase:v5-smooth-20261107`。在该目录执行上面的 Compose 命令即可回退，域名路由无需改变。

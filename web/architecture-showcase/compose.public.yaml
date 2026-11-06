@@ -1,6 +1,6 @@
 services:
   architecture:
-    image: stl-architecture-showcase:v5-smooth-20261107
+    image: stl-architecture-showcase:v6-r2-20261107
     build:
       context: .
       dockerfile: Dockerfile.public

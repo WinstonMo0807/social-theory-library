@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
-const here=path.dirname(fileURLToPath(import.meta.url));const out=path.resolve(here,'../../output/playwright/architecture-showcase-v5-smooth/video');
+const here=path.dirname(fileURLToPath(import.meta.url));const out=path.resolve(here,'../../output/playwright/architecture-showcase-v6/video');
 await mkdir(out,{recursive:true});
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const context=await browser.newContext({viewport:{width:1920,height:1080},recordVideo:{dir:out,size:{width:1920,height:1080}}});
@@ -20,7 +20,7 @@ while(Date.now()<deadline){
 }
 assert.ok(sawBrand&&last==='overview/0/0','Presentation did not complete one automatic loop');
 await page.waitForTimeout(1000);const video=page.video();await context.close();
-const result=path.join(out,'STL-architecture-v5-smooth-1080p.webm');await video.saveAs(result);await video.delete();
+const result=path.join(out,'STL-architecture-v6-1080p.webm');await video.saveAs(result);await video.delete();
 const playback=await browser.newPage({viewport:{width:1920,height:1080}});await playback.goto(pathToFileURL(result).href);await playback.waitForFunction(()=>document.querySelector('video')?.readyState>=1);
 const info=await playback.locator('video').evaluate(v=>({width:v.videoWidth,height:v.videoHeight,duration:v.duration}));assert.equal(info.width,1920);assert.equal(info.height,1080);assert.ok(info.duration>280&&Number.isFinite(info.duration));
 await playback.locator('video').evaluate(v=>{v.pause();v.currentTime=24});await playback.waitForTimeout(400);await playback.screenshot({path:path.join(out,'playback-proof.png')});

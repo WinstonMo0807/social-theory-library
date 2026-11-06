@@ -3,7 +3,7 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-const here=path.dirname(fileURLToPath(import.meta.url));const out=path.resolve(here,'../../output/playwright/architecture-showcase-v5-smooth/4k');await mkdir(out,{recursive:true});
+const here=path.dirname(fileURLToPath(import.meta.url));const out=path.resolve(here,'../../output/playwright/architecture-showcase-v6/4k');await mkdir(out,{recursive:true});
 const browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1920,height:1080},acceptDownloads:true});
 await page.goto('http://127.0.0.1:5198',{waitUntil:'networkidle'});await page.evaluate(()=>document.fonts.ready);await page.getByRole('button',{name:'暂停自动切换'}).click();
 for(let scene=0;scene<5;scene++){

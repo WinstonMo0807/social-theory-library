@@ -10,14 +10,19 @@ async function embeddedFonts(){
 }
 export async function exportFrame(element:HTMLElement,name:string,kind:'svg'|'png'){
  await document.fonts.ready;
- const clone=element.cloneNode(true) as HTMLElement;clone.style.transform='none';clone.style.position='relative';clone.style.left='0';clone.style.top='0';
+ const {width,height}=element.getBoundingClientRect();
+ const clone=element.cloneNode(true) as HTMLElement;clone.style.transform='none';clone.style.position='relative';clone.style.left='0';clone.style.top='0';clone.style.width=`${width}px`;clone.style.height=`${height}px`;
+ // Resolve viewport-relative typography and grid sizing before the SVG uses a 4K viewport.
+ const originals=[element,...element.querySelectorAll('*')],copies=[clone,...clone.querySelectorAll('*')];
+ const geometry=['grid-template-columns','grid-template-rows','column-gap','row-gap','padding-top','padding-right','padding-bottom','padding-left','font-size','line-height','letter-spacing'];
+ originals.forEach((original,i)=>{const computed=getComputedStyle(original),copy=copies[i] as HTMLElement;for(const property of geometry)copy.style.setProperty(property,computed.getPropertyValue(property));});
  clone.querySelectorAll('.no-export').forEach(e=>e.remove());clone.classList.remove('playing');clone.classList.add('paused','reduced');
  const symbol=await (await fetch('/brand/stl-symbol-20261027.svg')).text();const parsed=new DOMParser().parseFromString(symbol,'image/svg+xml');
  for(const use of clone.querySelectorAll('use')){use.replaceWith(parsed.documentElement.querySelector('#mark')!.cloneNode(true));}
  for(const img of clone.querySelectorAll('img')){if(img.hidden){img.remove();continue;}try{img.src=await dataURL(await (await fetch(img.src)).blob());}catch{img.remove();}}
  const css=await (await fetch('/app.css')).text();const fonts=await embeddedFonts();
  const markup=new XMLSerializer().serializeToString(clone);
- const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 1600 900"><foreignObject width="1600" height="900"><div xmlns="http://www.w3.org/1999/xhtml"><style>${(fonts+css).replaceAll('&','&amp;').replaceAll('<','&lt;')}</style>${markup}</div></foreignObject></svg>`;
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#f7f4ee"/><foreignObject width="${width}" height="${height}"><div xmlns="http://www.w3.org/1999/xhtml"><style>${(fonts+css).replaceAll('&','&amp;').replaceAll('<','&lt;')}</style>${markup}</div></foreignObject></svg>`;
  const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
  if(kind==='svg'){download(blob,`${name}.svg`);return;}
  // An opaque blob URL containing foreignObject taints Chromium canvases.

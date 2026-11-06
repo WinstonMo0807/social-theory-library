@@ -28,6 +28,14 @@ NAS welcome-entry-web-r131-recovery保留前Web130，welcome-entry-api-r64-recov
 
 # Social Theory Library 当前进度
 
+## 2026-11-07 架构演示域名接入与多端适配
+
+ARCHITECTURE-SHOWCASE-08 D：preview.winstonmo.com 已通过现有 Cloudflare 隧道公开接入独立脱敏演示，原 books 路由保持。移除固定 16:9 整页缩放，桌面铺满窗口，平板改为顶部导航，手机纵向重排节点、详情与使用步骤。保留自动循环、点击延时、总览无指针平滑聚焦及其他流程的模拟鼠标。修复手机弹窗滚动位置和 4K 导出的裁切。
+
+129 项自动检查、197 条多尺寸检查及 6 个手机指针步骤通过；9 种尺寸覆盖 320×568 至 1920×1080。公网 3 种尺寸均 HTTP 200，JS/CSS/数据与本机哈希相同，全屏 API 通过，内部索引/管理/服务器源码路径 404。仅设备模拟，未做实体手机/Safari 或全站业务验收。
+
+最终独立源站 v6-r2-20261107，216 个运行文件一致，healthy，原 edge/cloudflared 容器保持。原 v5-smooth 和更早备份保留。14 张 4K 图片、完整视频和离线包位于 output/playwright/architecture-showcase-v6。详 docs/stl4/ARCHITECTURE_SHOWCASE_V6_20261107.md。只提交独立展示及本项记录，不推送；其他未提交修改保留。
+
 ## 2026-11-07 架构总览改为卡片平滑进入
 
 ARCHITECTURE-SHOWCASE-07 D：按最新批注，删除全站总览专用的模拟指针和点击波纹。卡片用原有 550ms 缓动移至焦点，700ms 聚焦阶段后以 450ms 动画展开详情，再按原顺序返回。保留六模块、8 秒详情停留、点击延时和全部控制。使用演示的三条流程、指针/点击、输入与反馈代码均未改。

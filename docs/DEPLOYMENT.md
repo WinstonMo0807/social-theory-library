@@ -4,6 +4,14 @@
 
 # 部署说明
 
+## 2026-11-07 preview.winstonmo.com 已接通
+
+按用户明确的公开脱敏展示与部署要求，Cloudflare 现有 social-theory-library-nas 隧道增加 preview.winstonmo.com → http://stl-architecture-showcase:5196，Host 为 preview.winstonmo.com。CNAME 由控制台创建；原 books.winstonmo.com → http://edge:80 保持。正常 Edge 与独立浏览器已访问 HTTPS 展示。
+
+最终目录 /volume2/library/stl-previews/architecture-showcase-v6-r2-20261107，镜像 stl-architecture-showcase:v6-r2-20261107。216 个运行文件与本机一致，healthy，无业务挂载或宿主端口。公网 JS/CSS/架构 JSON 哈希一致，受限路径 404；3 种窗口布局和全屏通过。原 edge/cloudflared 身份和启动时间保持。
+
+v5-smooth 及此前版本继续保留，v6 初次发布亦保留。恢复方式见 web/architecture-showcase/DOMAIN_SETUP.md；完整证据见 stl4/ARCHITECTURE_SHOWCASE_V6_20261107.md。此次只公开独立演示，不表示书库业务候选已批准切换。
+
 ## 2026-11-07 架构总览平滑动画更新
 
 独立源站更新至 /volume2/library/stl-previews/architecture-showcase-v5-smooth-20261107，镜像 stl-architecture-showcase:v5-smooth-20261107。仅重建 stl-architecture-showcase，216 个运行文件哈希一致，健康检查及隧道网络 HTTP 200；仍无业务挂载或宿主端口。现有生产/预览 edge 与 cloudflared 的 ID、镜像、启动时间和重启次数不变。

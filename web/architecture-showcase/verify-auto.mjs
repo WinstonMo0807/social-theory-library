@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const here=path.dirname(fileURLToPath(import.meta.url));
-const out=path.resolve(here,'../../output/playwright/architecture-showcase-v5-smooth');await mkdir(out,{recursive:true});
+const out=path.resolve(here,'../../output/playwright/architecture-showcase-v6');await mkdir(out,{recursive:true});
 const journeys=JSON.parse(await readFile(path.join(here,'journeys.json'),'utf8'));
 const tour=JSON.parse(await readFile(path.join(here,'overview-tour.json'),'utf8'));
 const checks=[],errors=[],requests=[];const check=(name,value)=>{assert.ok(value,name);checks.push(name);console.log('PASS',name)};
