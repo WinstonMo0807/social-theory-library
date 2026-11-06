@@ -16,7 +16,7 @@ from common.permissions import CanAccessBackOffice, CanRetryJobs
 from catalog.models import Asset, DocumentOutlineRevision
 from catalog.editorial_read import AdminPrivateResponseMixin
 from catalog.services.document_outline import (
-    OutlineConflict, adopt_outline, edit_outline, outline_job_action,
+    OutlineConflict, adopt_outline, correct_outline, edit_outline, outline_job_action,
     outline_state, public_outline, queue_outline_rebuild,
 )
 from catalog.services.publication_eligibility import active_asset_q
@@ -39,7 +39,7 @@ class OutlineNodeSerializer(serializers.Serializer):
 
 
 class OutlineCommandSerializer(serializers.Serializer):
-    action = serializers.ChoiceField(choices=["rebuild", "edit", "adopt", "restore", "export"])
+    action = serializers.ChoiceField(choices=["rebuild", "edit", "correct", "adopt", "restore", "export"])
     expected_revision = serializers.IntegerField(min_value=0, required=False)
     revision_id = serializers.UUIDField(required=False)
     base_revision_id = serializers.UUIDField(required=False, allow_null=True)
@@ -94,10 +94,11 @@ class AdminDocumentOutlineView(AdminPrivateResponseMixin, APIView):
                 return Response({"job_id": str(job.pk), "status": job.status}, status=202 if job.status in {"pending", "running"} else 200)
             if "expected_revision" not in data:
                 return Response({"detail": "请提供当前目录 expected_revision。"}, status=400)
-            if action == "edit":
+            if action in {"edit", "correct"}:
                 if "nodes" not in data:
                     return Response({"detail": "请提供目录节点列表。"}, status=400)
-                edit_outline(asset.pk, nodes=data["nodes"], expected_revision=data["expected_revision"], actor=request.user,
+                save_outline = correct_outline if action == "correct" else edit_outline
+                save_outline(asset.pk, nodes=data["nodes"], expected_revision=data["expected_revision"], actor=request.user,
                              request_id=data["request_id"], base_revision_id=data.get("base_revision_id"))
             else:
                 if not data.get("revision_id"):

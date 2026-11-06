@@ -3,7 +3,7 @@ import type { OutlineEditNode } from "@/lib/api/curation-workspace.client";
 
 export type EditableOutlineNode = OutlineNode & { id: string; title: string; level: number };
 export const outlineSourceLabels: Record<string, string> = { pdf_bookmark: "PDF 书签", printed_contents: "印刷目录", generated_heading: "正文标题", manual: "人工校准", legacy_page_heading: "历史页标题" };
-export const outlineStatusLabels: Record<string, string> = { confirmed: "已确认", native: "原生书签", matched: "待复核", generated: "待复核", unverified: "待确认", needs_review: "待校准" };
+export const outlineStatusLabels: Record<string, string> = { confirmed: "已修正", native: "原生书签", matched: "自动匹配", generated: "自动识别", unverified: "待保存", needs_review: "待定位" };
 export function editableOutline(nodes: OutlineNode[]): EditableOutlineNode[] {
   return nodes.map(node => ({ ...node, id: node.id!, title: node.title || node.chapter_title || "", level: node.level || 1 }));
 }

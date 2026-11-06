@@ -1,4 +1,4 @@
-"""A separate downloadable PDF from an explicitly adopted outline revision."""
+"""A separate downloadable PDF from the active automatic or corrected outline."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import UUID, uuid4
@@ -16,22 +16,69 @@ OPERATION = "outline_export"
 PROCESSOR = "adopted-outline-export"
 
 
+def current_download_copy(asset):
+    """Resolve only the active navigation copy; authorization remains on its reader anchor."""
+    active = asset.outline_revisions.filter(is_active=True, source_checksum=asset.sha256).first()
+    if not active:
+        return None
+    try:
+        export_revision(asset, active.pk)
+    except OutlineConflict:
+        return None
+    job = ProcessingJob.objects.filter(asset=asset, status="succeeded", stats__operation=OPERATION,
+        stats__outline_revision_id=str(active.pk), stats__source_sha256=asset.sha256).order_by("-finished_at").first()
+    if not job:
+        return None
+    return Asset.objects.filter(pk=job.stats.get("result_asset_id"), source_asset=asset, edition=asset.edition,
+        kind=Asset.Kind.WEB_DERIVATIVE, processor=PROCESSOR, status="ready", validation_status="valid",
+        page_count=asset.page_count, mime_type="application/pdf",
+        validation_details__source_sha256=asset.sha256, validation_details__title_page_position_roundtrip=True).exclude(file="").first()
+
+
+def queue_download_cloud_copy(anchor):
+    """Use the anchor's existing publication destination, never a new provider."""
+    from distribution.models import CloudObject
+    from distribution.services import cloud_budget_allows_new_publication
+    from distribution.tasks import sync_cloud_object
+    artifact = current_download_copy(anchor)
+    if artifact is None:
+        return
+    for source in anchor.cloud_objects.filter(status="ready", provider__enabled=True).select_related("provider"):
+        record, created = CloudObject.objects.get_or_create(provider=source.provider,
+            object_key=f"published/{anchor.edition_id}/outline/{artifact.sha256}.pdf",
+            defaults={"asset": artifact, "sha256": artifact.sha256, "byte_size": artifact.byte_size})
+        if not created:
+            continue
+        if not cloud_budget_allows_new_publication(source.provider):
+            record.status, record.error_message = "failed", "云端预算保护已暂停书签副本同步；本地副本保留。"
+            record.save(update_fields=["status", "error_message", "updated_at"])
+            continue
+        try:
+            sync_cloud_object.apply_async(args=[str(record.pk)], kwargs={"resume_publication": False}, ignore_result=True)
+        except (OperationalError, OSError, ConnectionError, TimeoutError):
+            record.status, record.error_message = "failed", "书签副本尚未进入同步队列，可从文件管理重试。"
+            record.save(update_fields=["status", "error_message", "updated_at"])
+
+
 def export_revision(asset, revision_id):
     _source_current(asset)
-    revision = asset.outline_revisions.filter(pk=revision_id, is_active=True, reviewed=True,
-        source_checksum=asset.sha256, origin__in=["adopted", "restored", "page_mapping"]).first()
+    revision = asset.outline_revisions.filter(pk=revision_id, is_active=True,
+        source_checksum=asset.sha256, origin__in=["automatic", "corrected", "adopted", "restored", "page_mapping"]).first()
     document = asset.document_revisions.filter(is_active=True).first()
     if not revision or str(revision.document_revision_id or "") != str(document.pk if document else ""):
         raise OutlineConflict("已采用目录或原文已变化，请重新读取当前目录；原文件保留。")
-    if not revision.nodes or any(node.get("calibration_status") not in {"confirmed", "native"} for node in revision.nodes):
-        raise OutlineConflict("请先确认并采用有效目录，再生成书签副本。")
+    automatic = revision.origin in {"automatic", "corrected", "restored"} and revision.parser_version == "outline-v9-docling-geometry"
+    allowed = {"confirmed", "native", "matched", "generated"} if automatic else {"confirmed", "native"}
+    if (not revision.nodes or not (automatic or revision.reviewed)
+            or any(node.get("calibration_status") not in allowed or not node.get("pdf_page") for node in revision.nodes)):
+        raise OutlineConflict("目录尚无有效落点，请重新生成或修正目录。")
     return revision
 
 
 @transaction.atomic
 def queue_export(asset_id, *, revision_id, request_id, actor):
     asset = Asset.objects.select_for_update().get(pk=asset_id)
-    identity = f"outline-export:{actor.pk}:{UUID(str(request_id))}"
+    identity = f"outline-export:{actor.pk if actor else 'automatic'}:{UUID(str(request_id))}"
     prior = ProcessingJob.objects.filter(idempotency_key=identity).first()
     if prior:
         if prior.asset_id != asset.pk or prior.stats.get("outline_revision_id") != str(revision_id):
@@ -135,9 +182,11 @@ def run_export(job_id, *, task_id):
         processor = "page-mapping-blank-copy" if mapping else PROCESSOR
         if asset.sha256 != job.stats["source_sha256"]:
             raise OutlineConflict("任务绑定的文件已变化，请按当前来源新建任务。")
-        source, cleanup = materialize_field_file(asset.file)
+        from distribution.services import validated_ocr_rendition
+        base = (validated_ocr_rendition(asset) if not mapping else None) or asset
+        source, cleanup = materialize_field_file(base.file)
         heartbeat("source", 0, 1)
-        if sha256_file(source)[0] != asset.sha256:
+        if sha256_file(source)[0] != base.sha256:
             raise OutlineConflict("原文件内容与登记指纹不一致，请先校验文件。")
         with TemporaryDirectory(prefix="stl-outline-export-") as temporary:
             output = Path(temporary) / "bookmarked.pdf"
@@ -151,9 +200,10 @@ def run_export(job_id, *, task_id):
                 output_pages = asset.page_count
                 details = {"outline_revision_id": str(revision.pk), "source_sha256": asset.sha256,
                     "document_revision_id": str(revision.document_revision_id or ""), "bookmark_count": len(revision.nodes),
+                    "export_base_id": str(base.pk), "export_base_sha256": base.sha256,
                     "title_page_position_roundtrip": True}
             digest, size = sha256_file(output)
-            if sha256_file(source)[0] != job.stats["source_sha256"]:
+            if sha256_file(source)[0] != base.sha256:
                 raise OutlineConflict("生成期间原文件内容发生变化，本次副本未保存。")
             with transaction.atomic():
                 asset = Asset.objects.select_for_update().get(pk=asset.pk)
@@ -182,6 +232,8 @@ def run_export(job_id, *, task_id):
                 AuditEvent.objects.create(actor=job.created_by, action="page_mapping.exported" if mapping else "outline.exported", object_type="Asset", object_id=str(asset.pk),
                     after={**details, "result_asset_id": str(artifact.pk), "job_id": str(job.pk)})
             committed = True
+            if not mapping:
+                queue_download_cloud_copy(asset)
             return current
     except OutlineJobInterrupted:
         return ProcessingJob.objects.get(pk=job.pk)

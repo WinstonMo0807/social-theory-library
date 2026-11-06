@@ -76,6 +76,10 @@ def _reader_file_asset(anchor: Asset) -> tuple[Asset, str]:
 
 
 def _download_file_asset(anchor: Asset) -> tuple[Asset, str]:
+    from catalog.services.outline_exports import current_download_copy
+    outline_copy = current_download_copy(anchor)
+    if outline_copy is not None:
+        return outline_copy, ""
     if anchor.edition.ocr_status == OcrStatus.SUCCEEDED:
         ocr_asset = validated_ocr_rendition(anchor)
         if ocr_asset is not None:

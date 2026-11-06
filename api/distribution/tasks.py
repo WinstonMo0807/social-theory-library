@@ -44,6 +44,9 @@ def _require_backup_delivery(job):
 def sync_cloud_object(self, cloud_object_id, *, resume_publication=True):
     cloud_object = CloudObject.objects.select_related("asset", "provider").get(pk=cloud_object_id)
     sync_asset_to_cloud(cloud_object)
+    if cloud_object.asset.kind == Asset.Kind.NORMALIZED:
+        from catalog.services.outline_exports import queue_download_cloud_copy
+        queue_download_cloud_copy(cloud_object.asset)
     from ingestion.services.pipeline import resume_publication_for_asset
 
     if resume_publication:

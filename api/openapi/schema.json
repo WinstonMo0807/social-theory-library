@@ -57922,12 +57922,13 @@
                 "enum": [
                     "rebuild",
                     "edit",
+                    "correct",
                     "adopt",
                     "restore",
                     "export"
                 ],
                 "type": "string",
-                "description": "* `rebuild` - rebuild\n* `edit` - edit\n* `adopt` - adopt\n* `restore` - restore\n* `export` - export"
+                "description": "* `rebuild` - rebuild\n* `edit` - edit\n* `correct` - correct\n* `adopt` - adopt\n* `restore` - restore\n* `export` - export"
             },
             "OutlineCommandRequest": {
                 "type": "object",

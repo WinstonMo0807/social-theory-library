@@ -14135,12 +14135,13 @@ export interface components {
         /**
          * @description * `rebuild` - rebuild
          *     * `edit` - edit
+         *     * `correct` - correct
          *     * `adopt` - adopt
          *     * `restore` - restore
          *     * `export` - export
          * @enum {string}
          */
-        OutlineCommandActionEnum: "rebuild" | "edit" | "adopt" | "restore" | "export";
+        OutlineCommandActionEnum: "rebuild" | "edit" | "correct" | "adopt" | "restore" | "export";
         OutlineCommandRequest: {
             action: components["schemas"]["OutlineCommandActionEnum"];
             expected_revision?: number;

@@ -1,5 +1,11 @@
 # Social Theory Library 架构
 
+## 2026-11-06 自动目录与私人研究API
+
+目录仍使用Asset/Page/DocumentOutlineRevision/ProcessingJob。outline-v9在既有解析提交后自动生效，自动排outline_export，distribution通过有权限的原文件锚点解析当前书签副本；原件和OCR文字层保留，人工纠错优先。新correct动作需要编辑权限及乐观版本，保存即更新并自动导出，旧接口只留兼容。云端副本复用原件已配置目的地，无新存储/模型服务，当前未发生云上传。详stl4/AUTOMATIC_OUTLINE_20261106.md。
+
+私人研究能力private_research与library_qa分开。DeepSeek兼容中转站由馆长在原模型编辑器配置，地址与密钥加密、写入专用；HTTPS地址和公共目标校验、DNS固定解析、禁重定向与系统代理。HTTP预览禁止录入密钥。私人上下文复用账户授权材料，不接本地模型；原本地分析函数名仅为兼容。选定检索模型与索引不改。
+
 ## 2026-11-06 欢迎内容与统一内网候选
 
 catalog/welcome.py在原site_content中校验欢迎配置和解析正式公开版本；welcome_books为派生只读输出，不接受保存的伪造书目。/admin/welcome复用原网站修订/预览/发布检查/历史，没有新表或第二套发布系统，整份网站共同发布范围明确展示，来源撤回不继续公开。/welcome在动态请求时随机取三版之一，同次停留保持；首页不重定向。

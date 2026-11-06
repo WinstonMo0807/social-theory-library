@@ -1,7 +1,7 @@
 """Versioned PDF navigation using the existing Asset, Page and ProcessingJob.
 
-Bookmarks are lossless; printed contents and heading recognition are explicit
-candidates. No parser candidate overwrites a human-calibrated directory.
+Bookmarks are lossless; observed contents and headings generate navigation.
+No automatic result overwrites a human-corrected directory.
 """
 from collections import defaultdict
 from hashlib import sha256
@@ -23,7 +23,7 @@ from catalog.services.outline_labels import LABEL_ONLY, LABEL_RANGE, PRINTED_LAB
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v8"
+PARSER_VERSION = "outline-v9-docling-geometry"
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*[录錄]|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(rf"^(?P<title>.+?)\s*(?:[.．·…_]{{2,}}|\s{{2,}}|\t)\s*(?P<label>{PRINTED_LABEL})\s*$")
@@ -595,7 +595,8 @@ def outline_state(asset, *, history_page=1):
                "document_revision_id": str(document.pk) if document else "",
                "preview_url": f"/distribution/admin/assets/{asset.pk}/preview/" if asset.is_current and asset.status == "ready" and asset.file else "",
                "reader_url": f"/reader/{asset.pk}" if readable else "",
-               "cover_url": work.cover.url if work.cover else ""}
+               "cover_url": (f"/api/catalog/admin/media/renditions/{work.cover_rendition_id}/file/" if work.cover_rendition_id else
+                             f"/api/catalog/works/{work.pk}/cover/?edition_id={edition.pk}" if readable and work.cover else "")}
     return {"asset_id": str(asset.pk), "asset": summary, "expected_revision": latest.revision if latest else 0,
             "active": revision_payload(revisions.filter(is_active=True).first()),
             "latest": revision_payload(latest),
@@ -677,7 +678,8 @@ def adopt_outline(asset_id, *, revision_id, expected_revision, actor, restore=Fa
         raise ValueError("目录为空，请先添加并确认有效目录项。")
     if any(type(node.get("pdf_page")) is not int or not 1 <= node["pdf_page"] <= asset.page_count for node in revision.nodes):
         raise ValueError("仍有目录项缺少有效物理页落点，请先逐项校准。")
-    if any(node.get("calibration_status") not in {"confirmed", "native"} for node in revision.nodes):
+    allowed = {"confirmed", "native", "matched", "generated"} if restore and revision.parser_version == PARSER_VERSION else {"confirmed", "native"}
+    if any(node.get("calibration_status") not in allowed for node in revision.nodes):
         raise ValueError("仍有目录项未经明确确认，请核对候选后再采用。")
     # Adoption changes the edit precondition too. Otherwise two windows can
     # both adopt different candidates with the same expected_revision value.
@@ -685,10 +687,35 @@ def adopt_outline(asset_id, *, revision_id, expected_revision, actor, restore=Fa
                              actor=actor, origin="restored" if restore else "adopted", restored_from=revision)
     previous = asset.outline_revisions.filter(is_active=True).first()
     asset.outline_revisions.filter(is_active=True).update(is_active=False, updated_at=timezone.now())
-    revision.is_active, revision.reviewed = True, True
+    revision.is_active = True
+    revision.reviewed = all(n.get("calibration_status") in {"confirmed", "native"} for n in revision.nodes)
     revision.save(update_fields=["is_active", "reviewed", "updated_at"])
     AuditEvent.objects.create(actor=actor, action=action, object_type="Asset", object_id=str(asset.pk), request_id=identity,
                               before={"revision_id": str(previous.pk) if previous else None}, after={"revision_id": str(revision.pk), "fingerprint": fingerprint})
+    from .outline_exports import queue_export
+    queue_export(asset.pk, revision_id=revision.pk, request_id=uuid5(asset.pk, str(revision.pk)), actor=actor)
+    return revision
+
+
+@transaction.atomic
+def correct_outline(asset_id, *, nodes, expected_revision, actor, request_id, base_revision_id=None):
+    """One explicit correction saves navigation and schedules its download copy."""
+    from .outline_exports import queue_export
+    asset = Asset.objects.select_for_update().get(pk=asset_id)
+    revision = edit_outline(asset_id, nodes=nodes, expected_revision=expected_revision, actor=actor,
+                            request_id=request_id, base_revision_id=base_revision_id)
+    if revision.origin == "corrected":
+        return revision
+    if not revision.nodes or any(type(n.get("pdf_page")) is not int or not 1 <= n["pdf_page"] <= asset.page_count for n in revision.nodes):
+        raise ValueError("请为每个保留的目录项填写有效的 PDF 页码。")
+    for node in revision.nodes:
+        if node.get("source") == "manual" and node.get("calibration_status") in {"unverified", "needs_review"}:
+            node["calibration_status"] = "confirmed"
+    asset.outline_revisions.filter(is_active=True).update(is_active=False, updated_at=timezone.now())
+    revision.origin, revision.is_active = "corrected", True
+    revision.reviewed = all(n.get("calibration_status") in {"confirmed", "native"} for n in revision.nodes)
+    revision.save(update_fields=["origin", "is_active", "reviewed", "nodes", "updated_at"])
+    queue_export(asset.pk, revision_id=revision.pk, request_id=uuid5(asset.pk, str(revision.pk)), actor=actor)
     return revision
 
 
@@ -704,10 +731,10 @@ def public_outline(asset, *, access_statuses=None):
         revisions = revisions.filter(document_revision_id=asset.edition.active_catalog_revision.document_revision_id)
     revision = revisions.first()
     if revision:
-        # Native bookmarks and explicitly adopted navigation are readable PDF
-        # metadata. Automatically generated OCR/contents titles still require
-        # the exact formal text revision or a human adoption decision.
-        visible = revision.nodes if fulltext_ready or revision.reviewed else [node for node in revision.nodes if node["source"] == "pdf_bookmark"]
+        # Automatic navigation is readable only for the current document identity.
+        document = asset.document_revisions.filter(is_active=True).first()
+        current_navigation = revision.document_revision_id == (document.pk if document else None)
+        visible = revision.nodes if fulltext_ready or revision.reviewed or current_navigation else [node for node in revision.nodes if node["source"] == "pdf_bookmark"]
         identifiers = {node["id"] for node in visible}
         # Source comparisons include unadopted OCR/heading observations and
         # belong only to the private editor, even alongside a public bookmark.
@@ -816,6 +843,9 @@ def run_outline_job(job_id, *, task_id):
         _source_current(asset)
         path, cleanup = materialize_field_file(asset.file)
         nodes, diagnostics = extract_outline(asset, path, progress=progress)
+        from .outline_automatic import automatic_nodes
+        nodes, automatic_diagnostics = automatic_nodes(asset, nodes)
+        diagnostics = [{**row, "stage": "before_automatic_matching"} for row in diagnostics] + automatic_diagnostics
         with transaction.atomic():
             asset = Asset.objects.select_for_update().get(pk=asset.pk)
             current = ProcessingJob.objects.select_for_update().get(pk=job.pk)
@@ -828,14 +858,18 @@ def run_outline_job(job_id, *, task_id):
             revision = _new_revision(asset, nodes=nodes, diagnostics=diagnostics, actor=job.created_by, document_revision=document)
             active = asset.outline_revisions.filter(is_active=True).first()
             # Preserve manual calibration even when a newer parser finds more nodes.
-            if nodes and all(node["calibration_status"] == "native" for node in nodes) and not (active and active.reviewed):
+            if nodes and not (active and (active.reviewed or active.origin in {"corrected", "restored"})):
                 asset.outline_revisions.filter(is_active=True).update(is_active=False, updated_at=timezone.now())
                 revision.is_active = True
                 revision.save(update_fields=["is_active", "updated_at"])
+                from .outline_exports import queue_export
+                queue_export(asset.pk, revision_id=revision.pk, request_id=uuid5(asset.pk, str(revision.pk)), actor=job.created_by)
             current.status, current.progress, current.finished_at = "succeeded", 100, timezone.now()
             # Extraction is never a human review, even when matching produced
             # no warnings or the source contained structurally valid bookmarks.
-            current.stats = {**current.stats, "result_revision_id": str(revision.pk), "node_count": len(nodes), "needs_review": not revision.reviewed, "stage": "complete"}
+            current.stats = {**current.stats, "result_revision_id": str(revision.pk), "node_count": len(nodes),
+                             "needs_review": not nodes or any(row.get("code") == "unresolved_contents" for row in automatic_diagnostics),
+                             "automatic_active": revision.is_active, "stage": "complete"}
             current.save(update_fields=["status", "progress", "finished_at", "stats", "updated_at"])
             return current
     except OutlineJobInterrupted:

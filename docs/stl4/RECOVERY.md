@@ -1,5 +1,15 @@
 # 中断恢复最短路径
 
+## 2026-11-06 19:12 自动目录 API62 / Web126
+
+先读CURRENT_PROGRESS顶部、AUTOMATIC_OUTLINE_20261106.md、OPEN_LOOPS晚间更新及Git状态。自动目录已开发并部署，不恢复旧的逐本编辑/确认/采用/导出流程。后台纠错保存一次即生效并排下载副本，原人工目录优先。两份公开扫描样本116页已本机OCR并自动输出1/38书签，不重复OCR或导入正式馆藏；地图未定位和OCR拼写准确性仍B。原2404条EG2及既定检索代次不动。
+
+活动镜像：API与四worker/beat为social-theory-library-api:stl4-preview-20261106-r62（bb5fd9d5fd264987ce67218461ae7ccbf75ac45d32c523b5d776db052bdaf92c），Web为social-theory-library-web:stl4-preview-20261106-r126（8fd5bc0468b48583c17cb8eb606d809b91f88ba0a7114be2d16e61c146cc36f3）。RapidOCR3/DOCX运行，原停止状态仅是下方历史。O01已恢复，发布事件耗尽任务后dead_letter/5940，旧失败保留，不手动重新投递耗尽任务。
+
+NAS /volume2/library/stl-previews/20261026-r1 下automatic-outline-api-r60-recovery-2保存API59，automatic-outline-api-r61-recovery保存API60，automatic-outline-api-r62-recovery保存API61；automatic-outline-web-r126-recovery保存Web125。首次automatic-outline-api-r60-recovery只完成备份后因在途任务中止，也保留。private-relay-api-r59-recovery/private-relay-web-r125-recovery及此前恢复点不删除。数据库新包未独立恢复。
+
+恢复只调整所需镜像/配置差异，不整份覆盖.env；先暂停beat新增调度并等待已在途任务自然结束，禁止杀正在处理的任务。无迁移、无生产更改、无公开切换。用户明确暂停政策工作；不重建已删除的自动安排。源码继承脏文件保持，不能把本轮Git检查点称为全仓库干净基线。当前完整限制见最新进度，不重复旧审计。
+
 ## 2026-11-06 统一内网Web122 / API56
 
 先读CURRENT_PROGRESS顶部、UNIFIED_REVIEW_20261106.md和OPEN_LOOPS_20261106.md，再读Git状态。新欢迎编辑/三版随机/学科史演示及同站政策样本已部署；783后端/3008前端文件比对0差异，不重复部署/回填/OCR。
