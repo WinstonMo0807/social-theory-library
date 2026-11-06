@@ -1,0 +1,3524 @@
+{
+  "schemaVersion": 1,
+  "auditedAt": "2026-11-06T19:11:06+08:00",
+  "commit": "956f3864",
+  "scope": "当前工作区，包含继承的未提交修改。源码检查不等于业务验收。",
+  "statuses": {
+    "verified": "限定范围已验证",
+    "pending": "已实现 · 待验收",
+    "partial": "部分实现 / 配置未闭环",
+    "planned": "规划 · 未实施"
+  },
+  "sources": {
+    "nav": {
+      "id": "nav",
+      "file": "web/components/site-header.tsx",
+      "line": 55,
+      "anchor": "const navigation =",
+      "sha256": "81dae70fff69fff0821b67b945e6bca2b8533121f45639cb9dd5f543d97687e4",
+      "kind": "source"
+    },
+    "brand": {
+      "id": "brand",
+      "file": "web/components/brand-image.tsx",
+      "line": 12,
+      "anchor": "export function BrandImage",
+      "sha256": "5585cd8fc836fb264e3424377251bac1e32b83fc70a8d321c6b17b2be23dec78",
+      "kind": "source"
+    },
+    "tokens": {
+      "id": "tokens",
+      "file": "web/styles/tokens/design.css",
+      "line": 2,
+      "anchor": ":root",
+      "sha256": "13a80a1af58b752da3e8c8302f906e2da7e7c0e0e0b32de77b2936e775b80d08",
+      "kind": "source"
+    },
+    "type": {
+      "id": "type",
+      "file": "web/styles/tokens/typeface.css",
+      "line": 10,
+      "anchor": "html[data-typeset=\"A\"]",
+      "sha256": "7873257db5169267567e8d5935138c8ddd86e9affda8041b790b422ef1532a92",
+      "kind": "source"
+    },
+    "controls": {
+      "id": "controls",
+      "file": "web/components/ui/controls.tsx",
+      "line": 6,
+      "anchor": "export function Button",
+      "sha256": "561a96030382297f33ef02634eea2a1055cd2914888538f2bbfe23d42f8c856d",
+      "kind": "source"
+    },
+    "dialog": {
+      "id": "dialog",
+      "file": "web/components/ui/dialog.tsx",
+      "line": 13,
+      "anchor": "export function Dialog",
+      "sha256": "fdd96d97777b3a2d9ae1227ac1f3d375994f7207deab93ddaa494bacf6f243c8",
+      "kind": "source"
+    },
+    "home": {
+      "id": "home",
+      "file": "web/app/page.tsx",
+      "line": 1,
+      "anchor": "import",
+      "sha256": "472dc9632afefdd54b41efbff600f8d169b4021e5490a089565cb8bbc838a844",
+      "kind": "source"
+    },
+    "welcome": {
+      "id": "welcome",
+      "file": "web/app/welcome/page.tsx",
+      "line": 1,
+      "anchor": "import",
+      "sha256": "162f9be84ebfdd86e6e30c702f3c518be8abee9eaa96c038289723f8afc40ec4",
+      "kind": "source"
+    },
+    "opinions": {
+      "id": "opinions",
+      "file": "web/app/explore/opinions/page.tsx",
+      "line": 11,
+      "anchor": "export default",
+      "sha256": "2db9026af906457a89862098946e836bf605ed75e57abf8843775156e709d5b7",
+      "kind": "source"
+    },
+    "evidence-page": {
+      "id": "evidence-page",
+      "file": "web/app/explore/evidence/page.tsx",
+      "line": 9,
+      "anchor": "export default",
+      "sha256": "c54caa7a03ed75b50fc6315caba41590ecb065a9c774e793eba78ad4b2653164",
+      "kind": "source"
+    },
+    "discovery-ui": {
+      "id": "discovery-ui",
+      "file": "web/components/discovery-search-workspace.tsx",
+      "line": 36,
+      "anchor": "export function DiscoverySearchWorkspace",
+      "sha256": "40b6dc940b82c414640b2973bafb5c25645d4e15e27f84c84acc376f48907e73",
+      "kind": "source"
+    },
+    "discovery-client": {
+      "id": "discovery-client",
+      "file": "web/lib/api/discovery.client.ts",
+      "line": 17,
+      "anchor": "const endpoint =",
+      "sha256": "e7102da27d49400d86c24e2358a7c56b02b69f98268acf431ec4c07db0f4f01b",
+      "kind": "source"
+    },
+    "discovery-api": {
+      "id": "discovery-api",
+      "file": "api/catalog/discovery_views.py",
+      "line": 298,
+      "anchor": "class DiscoverySearchView",
+      "sha256": "95f95d22175f3503dd3e7890018c29ac1d97a647d6ff86adabb66bf940fa434b",
+      "kind": "source"
+    },
+    "discovery-session": {
+      "id": "discovery-session",
+      "file": "api/catalog/services/discovery_sessions.py",
+      "line": 197,
+      "anchor": "def _create_session",
+      "sha256": "f9b8b497ae725fbfb186a8a7d3c11975b8260cff5831a6f89eb2e725a0c8e36a",
+      "kind": "source"
+    },
+    "discovery-task": {
+      "id": "discovery-task",
+      "file": "api/catalog/discovery_tasks.py",
+      "line": 8,
+      "anchor": "def run_discovery_search",
+      "sha256": "958169053b26a75b4eecab625a239dd826ad1c84af550a9ba53fd9c1fe7b3de6",
+      "kind": "source"
+    },
+    "projection": {
+      "id": "projection",
+      "file": "api/catalog/services/discovery_projection.py",
+      "line": 151,
+      "anchor": "def validate_discovery_results",
+      "sha256": "82773041938c531aed26b3859a1d0523614c229eeaa824b30f027549b0eb24a7",
+      "kind": "source"
+    },
+    "indexing": {
+      "id": "indexing",
+      "file": "api/catalog/services/discovery_indexing.py",
+      "line": 2,
+      "anchor": "from",
+      "sha256": "a11fe23672170c79b631bc7136f97de66120a2ff52fd308b259e6a1405d4c77c",
+      "kind": "source"
+    },
+    "deep": {
+      "id": "deep",
+      "file": "api/catalog/services/retrieval/deep_pipeline.py",
+      "line": 34,
+      "anchor": "PIPELINE_VERSION =",
+      "sha256": "290bdd9f8c6b6dc28806854a5f3af37b91f03568474f60ca636634f746ba2e86",
+      "kind": "source"
+    },
+    "evidence-ui": {
+      "id": "evidence-ui",
+      "file": "web/components/discovery-evidence-detail.tsx",
+      "line": 18,
+      "anchor": "item.reader_url",
+      "sha256": "0ba00c685d27c30e676740c8474a633a106ce86e8ef30a3e83fd23a6cd0a61c6",
+      "kind": "source"
+    },
+    "reader": {
+      "id": "reader",
+      "file": "web/app/reader/[assetId]/page.tsx",
+      "line": 14,
+      "anchor": "export default",
+      "sha256": "4a61f41a5a4b4ed06afb05580f09b0a014cfcd015b284e13ba8c7b718f9023d5",
+      "kind": "source"
+    },
+    "reader-shell": {
+      "id": "reader-shell",
+      "file": "web/components/reader-shell.tsx",
+      "line": 69,
+      "anchor": "useReaderCitation",
+      "sha256": "12c0c9a02168626e7d19adae953348791b9403836043104c635decf12b561e53",
+      "kind": "source"
+    },
+    "citation": {
+      "id": "citation",
+      "file": "web/lib/api/shared-citation.client.ts",
+      "line": 18,
+      "anchor": "export function previewSharedCitation",
+      "sha256": "32bd524fee252fc0326311fc03b9d667abc8360e8b98f231b854f19ce1621cca",
+      "kind": "source"
+    },
+    "reader-access": {
+      "id": "reader-access",
+      "file": "web/lib/reader-access.server.ts",
+      "line": 5,
+      "anchor": "export async function requireReaderSession",
+      "sha256": "7369fbf53ad913c13f36d62e8c2601356702ff6a56f5744b4f45ace16196a84c",
+      "kind": "source"
+    },
+    "permissions": {
+      "id": "permissions",
+      "file": "api/common/permissions.py",
+      "line": 6,
+      "anchor": "class CanReadLibrary",
+      "sha256": "ef88101519150509118ad8cd74930a23a9d86d87fcd2f20cb9580b236c2bf943",
+      "kind": "source"
+    },
+    "admin-permissions": {
+      "id": "admin-permissions",
+      "file": "api/common/permissions.py",
+      "line": 28,
+      "anchor": "class CanAccessBackOffice",
+      "sha256": "ef88101519150509118ad8cd74930a23a9d86d87fcd2f20cb9580b236c2bf943",
+      "kind": "source"
+    },
+    "admin": {
+      "id": "admin",
+      "file": "web/components/admin-shell.tsx",
+      "line": 3,
+      "anchor": "import",
+      "sha256": "a77824b36a73a5c2f0c6019915f3b0a780069ac64c902265fac78be8587b01ef",
+      "kind": "source"
+    },
+    "models": {
+      "id": "models",
+      "file": "api/catalog/models.py",
+      "line": 103,
+      "anchor": "class Work(",
+      "sha256": "4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249",
+      "kind": "source"
+    },
+    "edition": {
+      "id": "edition",
+      "file": "api/catalog/models.py",
+      "line": 170,
+      "anchor": "class Edition(",
+      "sha256": "4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249",
+      "kind": "source"
+    },
+    "asset": {
+      "id": "asset",
+      "file": "api/catalog/models.py",
+      "line": 407,
+      "anchor": "class Asset(",
+      "sha256": "4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249",
+      "kind": "source"
+    },
+    "revision": {
+      "id": "revision",
+      "file": "api/catalog/models.py",
+      "line": 690,
+      "anchor": "class DocumentRevision(",
+      "sha256": "4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249",
+      "kind": "source"
+    },
+    "span": {
+      "id": "span",
+      "file": "api/catalog/models.py",
+      "line": 764,
+      "anchor": "class EvidenceSpan(",
+      "sha256": "4c15b0edd82e02af8b9b4be552191ad278b0fd5697e2be3777e0d02a7067b249",
+      "kind": "source"
+    },
+    "research": {
+      "id": "research",
+      "file": "api/reading/research_views.py",
+      "line": 98,
+      "anchor": "class PrivateRecordViewSet",
+      "sha256": "3ffc710a70bb298e8575a30d7de341e33f8aa2d48f35e61730091695ad49f513",
+      "kind": "source"
+    },
+    "research-model": {
+      "id": "research-model",
+      "file": "api/reading/research_models.py",
+      "line": 10,
+      "anchor": "class PrivateResearchRecord",
+      "sha256": "6a1a180e8e0be08d8f3eeab0cb2d6fbf20d60f2c881b81b0df73e117e5e66619",
+      "kind": "source"
+    },
+    "research-ui": {
+      "id": "research-ui",
+      "file": "web/app/account/research/[id]/page.tsx",
+      "line": 1,
+      "anchor": "import",
+      "sha256": "05d419e5a6bbc97db2f58cb0a9ad1aea082d9a0a356f480bc1c3008f1ffaf301",
+      "kind": "source"
+    },
+    "memory": {
+      "id": "memory",
+      "file": "api/reading/research.py",
+      "line": 1286,
+      "anchor": "def search_memories",
+      "sha256": "bb23bd0d1554e9d0e80f45d6f5cd982c69ff8a75cf8c785c10286ddb860eee93",
+      "kind": "source"
+    },
+    "plans": {
+      "id": "plans",
+      "file": "api/reading/plan_rules.py",
+      "line": 17,
+      "anchor": "def ",
+      "sha256": "e138342b776359e7575304564436c0abd0a9b7ecd0c1421e2a85acff45b58b89",
+      "kind": "source"
+    },
+    "audit": {
+      "id": "audit",
+      "file": "web/app/account/citation-audits/page.tsx",
+      "line": 1,
+      "anchor": "import",
+      "sha256": "44320d3e1f742cc5e9a0c203b8f8d42e1f66bbd4028b0ad551aebd3597450cd5",
+      "kind": "source"
+    },
+    "ingestion": {
+      "id": "ingestion",
+      "file": "api/ingestion/tasks.py",
+      "line": 206,
+      "anchor": "def process_upload_item",
+      "sha256": "9ee55e7734d58bbf0e025b54ff52742cd2e214b4d197c64243c450cc214deade",
+      "kind": "source"
+    },
+    "ocr": {
+      "id": "ocr",
+      "file": "api/ingestion/services/catalog_ocr.py",
+      "line": 27,
+      "anchor": "def ",
+      "sha256": "df42e610e89d5effd2ad359199898d26fc483f2cbddb6e55a877015eef324048",
+      "kind": "source"
+    },
+    "ocr-service": {
+      "id": "ocr-service",
+      "file": "ocr_service/requirements.txt",
+      "line": 9,
+      "anchor": "rapidocr==",
+      "sha256": "b592822cce47e73edbe7566444e1b98790585b3263ecd1cdbb94d5c425deec2b",
+      "kind": "source"
+    },
+    "outline": {
+      "id": "outline",
+      "file": "api/catalog/services/outline_automatic.py",
+      "line": 1,
+      "anchor": "from",
+      "sha256": "a457d2c6b638c45fcf99143726ddae64024ddc9137ad730d53ee1fa646263444",
+      "kind": "source"
+    },
+    "outline-export": {
+      "id": "outline-export",
+      "file": "api/catalog/services/outline_exports.py",
+      "line": 19,
+      "anchor": "def ",
+      "sha256": "bfbe304d80d00da63c935befd4cc4b6f15dbd26bfacacb024b7748c18bfb5a1c",
+      "kind": "source"
+    },
+    "outline-record": {
+      "id": "outline-record",
+      "file": "docs/stl4/AUTOMATIC_OUTLINE_20261106.md",
+      "line": 25,
+      "anchor": "## 两份公开扫描文献的实际结果",
+      "sha256": "7f754b70cd1a7831747e58212636857392d438d0e11d09a0bdf1ebec4959abf1",
+      "kind": "record"
+    },
+    "publication": {
+      "id": "publication",
+      "file": "api/catalog/services/publication_commands.py",
+      "line": 302,
+      "anchor": "def activate_revision",
+      "sha256": "d2b30d86d66ca1e8425dc7368f0423f07c1dd277cc23781c6c8d62b5ed5ea284",
+      "kind": "source"
+    },
+    "pipeline": {
+      "id": "pipeline",
+      "file": "api/ingestion/services/pipeline.py",
+      "line": 894,
+      "anchor": "def run_pipeline",
+      "sha256": "a37948ccaae10a3d34a88f8deb163d37af2683e6c7bea6c2aa9fa35764910295",
+      "kind": "source"
+    },
+    "pipeline-index": {
+      "id": "pipeline-index",
+      "file": "api/ingestion/services/pipeline.py",
+      "line": 760,
+      "anchor": "result = index_asset(normalized, is_public=False)",
+      "sha256": "a37948ccaae10a3d34a88f8deb163d37af2683e6c7bea6c2aa9fa35764910295",
+      "kind": "source"
+    },
+    "publication-check": {
+      "id": "publication-check",
+      "file": "api/ingestion/services/publication.py",
+      "line": 46,
+      "anchor": "def publish_edition",
+      "sha256": "e78cd7d6b5fd50b0d64f6fd4f16ba227541dd594e292b6b9f2eac84a09f221af",
+      "kind": "source"
+    },
+    "editorial": {
+      "id": "editorial",
+      "file": "api/catalog/services/editorial_issues.py",
+      "line": 572,
+      "anchor": "def publish_site",
+      "sha256": "52ccbd7101af6336833a073334267ee24098374d4562f06f934dd338d5ea37ef",
+      "kind": "source"
+    },
+    "knowledge": {
+      "id": "knowledge",
+      "file": "api/catalog/services/knowledge_publication.py",
+      "line": 120,
+      "anchor": "def ",
+      "sha256": "87755718c8d452fca6be13d4a8c2060b5a4b424d748a17ac052c115ef84223b1",
+      "kind": "source"
+    },
+    "api": {
+      "id": "api",
+      "file": "api/config/urls.py",
+      "line": 59,
+      "anchor": "urlpatterns =",
+      "sha256": "4a6f0e7d9293f00a9d831bdfea80b21bd18fffc760c74171900f717a306787a8",
+      "kind": "source"
+    },
+    "database": {
+      "id": "database",
+      "file": "api/config/settings.py",
+      "line": 91,
+      "anchor": "DATABASES =",
+      "sha256": "8d729b6a24f182f33bed174cd2b53113f284720f2754dd6e100bb77ed3547b09",
+      "kind": "source"
+    },
+    "queue": {
+      "id": "queue",
+      "file": "api/config/settings.py",
+      "line": 409,
+      "anchor": "CELERY_TASK_ROUTES =",
+      "sha256": "8d729b6a24f182f33bed174cd2b53113f284720f2754dd6e100bb77ed3547b09",
+      "kind": "source"
+    },
+    "storage": {
+      "id": "storage",
+      "file": "api/config/settings.py",
+      "line": 123,
+      "anchor": "MEDIA_ROOT =",
+      "sha256": "8d729b6a24f182f33bed174cd2b53113f284720f2754dd6e100bb77ed3547b09",
+      "kind": "source"
+    },
+    "distribution": {
+      "id": "distribution",
+      "file": "api/distribution/views.py",
+      "line": 1,
+      "anchor": "CanReadLibrary",
+      "sha256": "09bca1a29648f2ccc4d998e81d63b20525c4b42b9e82af9cc67041ff365c6dc1",
+      "kind": "source"
+    },
+    "dependencies": {
+      "id": "dependencies",
+      "file": "web/package.json",
+      "line": 28,
+      "anchor": "\"dependencies\"",
+      "sha256": "d1f3efeb8fd55c9fe87a0dea964795161a369115734689ff024a37cad3e14f93",
+      "kind": "source"
+    },
+    "compose": {
+      "id": "compose",
+      "file": "compose.yaml",
+      "line": 4,
+      "anchor": "  postgres:",
+      "sha256": "bbc57a87f0039f1f39fa1dcaf8a961cfe656aa7bd325b056498e40a38095b69c",
+      "kind": "source"
+    },
+    "inference": {
+      "id": "inference",
+      "file": "api/catalog/services/discovery_inference.py",
+      "line": 12,
+      "anchor": "def ",
+      "sha256": "3835442d2c3c9cfdcfc5fbc07a6a1564cbc9d2609cb788e606f85f0c25037ef6",
+      "kind": "source"
+    },
+    "ai": {
+      "id": "ai",
+      "file": "api/common/ai_runtime.py",
+      "line": 17,
+      "anchor": "PRIVATE_RESEARCH =",
+      "sha256": "2de960d163982fc0295878fdaa3b5180434a090a928b0895be732e3895d6c873",
+      "kind": "source"
+    },
+    "oauth": {
+      "id": "oauth",
+      "file": "web/components/auth-form.tsx",
+      "line": 113,
+      "anchor": "使用 Apple 登录",
+      "sha256": "2d8d1bebe803721e3610259f100d6c057673332eeafaf3e11f21a613191c123d",
+      "kind": "source"
+    },
+    "closure": {
+      "id": "closure",
+      "file": "docs/stl4/DELIVERY_CLOSURE_20261026.md",
+      "line": 7,
+      "anchor": "206",
+      "sha256": "eec4e3273fdd9ee07c009a169e1e9465474e98fa30c1229c5c5976d18b71dd26",
+      "kind": "record"
+    },
+    "progress": {
+      "id": "progress",
+      "file": "CURRENT_PROGRESS.md",
+      "line": 27,
+      "anchor": "## 2026-11-06 18:25",
+      "sha256": "14426d63f2f26f2bc744d7e04cdc3e86a97aa0be59f76d25e0cf6a7a9590b466",
+      "kind": "record"
+    }
+  },
+  "nodes": [
+    {
+      "id": "stl",
+      "title": "社会理论书库",
+      "subtitle": "Social Theory Library",
+      "type": "product",
+      "level": 0,
+      "sources": [
+        "nav",
+        "api",
+        "models"
+      ],
+      "children": [
+        "discovery",
+        "knowledge",
+        "reader",
+        "research",
+        "publishing",
+        "operations"
+      ],
+      "routes": [],
+      "status": "pending",
+      "note": "前台、私人研究与后台共用 Django 业务服务；图中分组是依据当前导航和代码职责作出的汇报组织。",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "discovery",
+      "title": "发现与检索",
+      "subtitle": "从问题进入原文",
+      "type": "domain",
+      "level": 1,
+      "sources": [
+        "nav",
+        "opinions",
+        "discovery-ui"
+      ],
+      "children": [
+        "catalogue",
+        "viewpoints",
+        "evidence"
+      ],
+      "routes": [
+        "/explore",
+        "/explore/original",
+        "/explore/opinions",
+        "/explore/evidence"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "探索与检索须登录；网页浏览与正文访问分开授权。",
+      "parent": "stl",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "knowledge",
+      "title": "知识与策划",
+      "subtitle": "让作品进入思想脉络",
+      "type": "domain",
+      "level": 1,
+      "sources": [
+        "nav",
+        "knowledge",
+        "editorial"
+      ],
+      "children": [
+        "scholars",
+        "theories",
+        "topics",
+        "curation"
+      ],
+      "routes": [
+        "/scholars",
+        "/theories",
+        "/topics",
+        "/recommendations"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "仅正式公开的内容与关联进入前台。",
+      "parent": "stl",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "reader",
+      "title": "阅读与引用",
+      "subtitle": "回到可定位的文本",
+      "type": "domain",
+      "level": 1,
+      "sources": [
+        "reader",
+        "reader-shell",
+        "citation"
+      ],
+      "children": [
+        "pdf",
+        "parallel",
+        "citations"
+      ],
+      "routes": [
+        "/reader/[assetId]"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "正文与下载须登录；版本、物理页与证据位置共同定位来源。",
+      "parent": "stl",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "research",
+      "title": "私人研究",
+      "subtitle": "把阅读接成连续研究",
+      "type": "domain",
+      "level": 1,
+      "sources": [
+        "research",
+        "research-model",
+        "research-ui"
+      ],
+      "children": [
+        "sessions",
+        "notes",
+        "plans",
+        "audits",
+        "private-ai"
+      ],
+      "routes": [
+        "/account/research",
+        "/account/notes",
+        "/account/plans",
+        "/account/citation-audits"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "查询集按本人过滤；私人记录不直接进入公共馆藏证据。",
+      "parent": "stl",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "publishing",
+      "title": "馆藏与内容管理",
+      "subtitle": "从文件到正式公开版本",
+      "type": "domain",
+      "level": 1,
+      "sources": [
+        "admin",
+        "ingestion",
+        "publication",
+        "editorial"
+      ],
+      "children": [
+        "intake",
+        "processing",
+        "outline",
+        "publish"
+      ],
+      "routes": [
+        "/admin/uploads",
+        "/admin/intake/[itemId]",
+        "/admin/processing",
+        "/admin/publication"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "上传、编目、预览和发布各有能力权限；保存草稿不等于发布。",
+      "parent": "stl",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "operations",
+      "title": "系统与权限",
+      "subtitle": "支撑长期运行",
+      "type": "domain",
+      "level": 1,
+      "sources": [
+        "admin-permissions",
+        "api",
+        "queue",
+        "ai"
+      ],
+      "children": [
+        "identity",
+        "jobs",
+        "model-runtime",
+        "storage-ops"
+      ],
+      "routes": [
+        "/admin/users",
+        "/admin/system-health",
+        "/admin/settings",
+        "/admin/storage"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "后台按能力控制；地址与密钥配置仅允许指定管理能力访问。",
+      "parent": "stl",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "catalogue",
+      "title": "馆藏发现",
+      "subtitle": "作品、版本与筛选",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "models",
+        "edition",
+        "nav"
+      ],
+      "children": [],
+      "routes": [
+        "/explore/original",
+        "/works/[slug]"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "discovery",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "viewpoints",
+      "title": "观点检索",
+      "subtitle": "查询、范围与异步整理",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "opinions",
+        "discovery-client",
+        "discovery-api",
+        "discovery-session"
+      ],
+      "children": [],
+      "routes": [
+        "/explore/opinions",
+        "/explore/evidence"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "discovery",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "evidence",
+      "title": "原文证据",
+      "subtitle": "节选、上下文与页码",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "span",
+        "projection",
+        "evidence-ui"
+      ],
+      "children": [],
+      "routes": [
+        "/explore/evidence"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "discovery",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "scholars",
+      "title": "学者",
+      "subtitle": "目录、详情与相关作品",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "nav",
+        "knowledge"
+      ],
+      "children": [],
+      "routes": [
+        "/scholars",
+        "/scholars/[slug]"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "knowledge",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "theories",
+      "title": "理论与流派",
+      "subtitle": "目录、关系图与时间线",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "nav",
+        "knowledge"
+      ],
+      "children": [],
+      "routes": [
+        "/theories",
+        "/theories/graph",
+        "/theories/timeline",
+        "/theory-schools"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "knowledge",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "topics",
+      "title": "主题",
+      "subtitle": "主题入口与内容关联",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "nav",
+        "knowledge"
+      ],
+      "children": [],
+      "routes": [
+        "/topics",
+        "/topics/[slug]"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "knowledge",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "curation",
+      "title": "特别策划",
+      "subtitle": "专刊、文章与网站内容",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "editorial",
+        "welcome"
+      ],
+      "children": [],
+      "routes": [
+        "/recommendations",
+        "/recommendations/[slug]",
+        "/welcome"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "knowledge",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "pdf",
+      "title": "PDF 阅读器",
+      "subtitle": "连续阅读、目录与书内检索",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "reader",
+        "reader-shell"
+      ],
+      "children": [],
+      "routes": [
+        "/reader/[assetId]"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "reader",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "parallel",
+      "title": "并读",
+      "subtitle": "同一 Reader 的 parallel 模式",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "reader"
+      ],
+      "children": [],
+      "routes": [
+        "/reader/[assetId]?mode=parallel"
+      ],
+      "status": "pending",
+      "note": "并读由现有路由的查询参数分支承担，不是另一套阅读站。",
+      "boundary": "",
+      "parent": "reader",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "citations",
+      "title": "引用",
+      "subtitle": "共享引用预览与格式导出",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "citation",
+        "reader-shell"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "前端请求 reading/citation-preview；结果保留 edition、原文引用与页码。",
+      "boundary": "",
+      "parent": "reader",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "sessions",
+      "title": "研究会话",
+      "subtitle": "材料选择、比较、反证与回放",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "research",
+        "research-ui",
+        "research-model"
+      ],
+      "children": [],
+      "routes": [
+        "/account/research/[id]",
+        "/account/research/[id]/compare",
+        "/account/research/[id]/counter-evidence",
+        "/account/research/[id]/history"
+      ],
+      "status": "pending",
+      "note": "结构与接口已存在；模型生成效果不能由页面存在推断。",
+      "boundary": "",
+      "parent": "research",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "notes",
+      "title": "笔记与记忆",
+      "subtitle": "阅读笔记、确认与授权",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "memory",
+        "research-model"
+      ],
+      "children": [],
+      "routes": [
+        "/account/notes",
+        "/account/confirmed-notes"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "使用本人明确授权的笔记范围。",
+      "parent": "research",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "plans",
+      "title": "阅读计划",
+      "subtitle": "规则排序与本人调整",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "plans",
+        "research"
+      ],
+      "children": [],
+      "routes": [
+        "/account/plans",
+        "/account/plans/[id]"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "research",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "audits",
+      "title": "引文体检",
+      "subtitle": "稿件解析、问题与报告",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "audit",
+        "research"
+      ],
+      "children": [],
+      "routes": [
+        "/account/citation-audits",
+        "/account/citation-audits/[id]"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "research",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "private-ai",
+      "title": "私人研究 API",
+      "subtitle": "独立模型能力配置",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "ai",
+        "progress"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "partial",
+      "note": "配置和加密链已实现；最新记录明确尚未配置真实中转、未调用外部模型。",
+      "boundary": "",
+      "parent": "research",
+      "implementation": "存在明确未闭环项"
+    },
+    {
+      "id": "intake",
+      "title": "收件与编目",
+      "subtitle": "上传、识别、去重与版本确认",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "ingestion",
+        "pipeline"
+      ],
+      "children": [],
+      "routes": [
+        "/admin/uploads",
+        "/admin/intake/[itemId]",
+        "/admin/cataloging/[sessionId]"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "publishing",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "processing",
+      "title": "文档处理",
+      "subtitle": "文本、OCR、目录与任务",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "ingestion",
+        "ocr",
+        "ocr-service",
+        "revision"
+      ],
+      "children": [],
+      "routes": [
+        "/admin/processing"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "publishing",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "outline",
+      "title": "自动目录",
+      "subtitle": "自动识别与派生 PDF",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "outline",
+        "outline-export",
+        "outline-record"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "最新项目记录已给出两份公开扫描件的全自动书签结果（1 / 38项）。这是已有样本验证记录，本轮未重跑；更多书种与识别质量继续待验收。",
+      "boundary": "",
+      "parent": "publishing",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "publish",
+      "title": "发布与修订",
+      "subtitle": "预览、公开、撤回与历史",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "publication",
+        "publication-check",
+        "editorial",
+        "knowledge"
+      ],
+      "children": [],
+      "routes": [
+        "/admin/publication",
+        "/admin/welcome",
+        "/admin/content"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "publishing",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "identity",
+      "title": "身份与能力",
+      "subtitle": "会话、读者与管理能力",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "permissions",
+        "admin-permissions",
+        "research"
+      ],
+      "children": [],
+      "routes": [
+        "/login",
+        "/register",
+        "/admin/users"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "operations",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "jobs",
+      "title": "异步任务",
+      "subtitle": "持久记录与独立工作队列",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "queue",
+        "discovery-session",
+        "ingestion"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "operations",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "model-runtime",
+      "title": "模型管理",
+      "subtitle": "嵌入、重排与生成能力分开",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "inference",
+        "deep",
+        "ai"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "现有模型适配不代表每项能力均已配置；运行状态须按能力核验。",
+      "boundary": "",
+      "parent": "operations",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "storage-ops",
+      "title": "存储与分发",
+      "subtitle": "原件、派生文件与受控访问",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "storage",
+        "distribution",
+        "asset"
+      ],
+      "children": [],
+      "routes": [
+        "/admin/storage",
+        "/admin/distribution"
+      ],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": "operations",
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "web",
+      "title": "Web 界面",
+      "subtitle": "React / Next 约定 / Vinext",
+      "type": "service",
+      "level": 2,
+      "sources": [
+        "dependencies",
+        "nav",
+        "reader"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "django",
+      "title": "业务服务",
+      "subtitle": "Django REST API",
+      "type": "service",
+      "level": 2,
+      "sources": [
+        "api",
+        "permissions"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "postgres",
+      "title": "业务事实",
+      "subtitle": "PostgreSQL",
+      "type": "store",
+      "level": 2,
+      "sources": [
+        "database",
+        "models",
+        "research-model",
+        "compose"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "redis",
+      "title": "任务传递",
+      "subtitle": "Redis / Celery",
+      "type": "service",
+      "level": 2,
+      "sources": [
+        "queue",
+        "compose",
+        "discovery-session"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "meili",
+      "title": "派生检索",
+      "subtitle": "Meilisearch 索引",
+      "type": "store",
+      "level": 2,
+      "sources": [
+        "indexing",
+        "projection",
+        "compose"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "models-runtime",
+      "title": "推理适配",
+      "subtitle": "嵌入与重排",
+      "type": "service",
+      "level": 2,
+      "sources": [
+        "inference",
+        "deep"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "ocr-runtime",
+      "title": "文档解析",
+      "subtitle": "RapidOCR / ONNX Runtime",
+      "type": "service",
+      "level": 2,
+      "sources": [
+        "ocr-service",
+        "ocr",
+        "ingestion"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "files",
+      "title": "文件存储",
+      "subtitle": "NAS 原件与派生副本",
+      "type": "store",
+      "level": 2,
+      "sources": [
+        "storage",
+        "distribution",
+        "outline-export"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "design-tokens",
+      "title": "基础规范",
+      "subtitle": "纸白、炭黑、砂金与字体",
+      "type": "design",
+      "level": 2,
+      "sources": [
+        "tokens",
+        "type",
+        "brand"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "design-controls",
+      "title": "基础控件",
+      "subtitle": "Button / Input / Dialog",
+      "type": "design",
+      "level": 2,
+      "sources": [
+        "controls",
+        "dialog"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "design-shells",
+      "title": "共用框架",
+      "subtitle": "SiteHeader / AdminShell / ReaderShell",
+      "type": "design",
+      "level": 2,
+      "sources": [
+        "nav",
+        "admin",
+        "reader-shell"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "design-pages",
+      "title": "页面范式",
+      "subtitle": "内容浏览、研究工作台与后台",
+      "type": "design",
+      "level": 2,
+      "sources": [
+        "home",
+        "evidence-page",
+        "research-ui",
+        "admin"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "pending",
+      "note": "",
+      "boundary": "",
+      "parent": null,
+      "implementation": "源码已存在"
+    },
+    {
+      "id": "oauth",
+      "title": "第三方登录",
+      "subtitle": "Apple / Google 入口",
+      "type": "feature",
+      "level": 2,
+      "sources": [
+        "oauth",
+        "closure"
+      ],
+      "children": [],
+      "routes": [],
+      "status": "partial",
+      "note": "当前按钮被禁用。未发现对应后端 OAuth 回调实现；不能归为已可用。",
+      "boundary": "",
+      "parent": null,
+      "implementation": "存在明确未闭环项"
+    }
+  ],
+  "edges": [
+    {
+      "source": "stl",
+      "target": "discovery",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "api",
+        "models"
+      ]
+    },
+    {
+      "source": "stl",
+      "target": "knowledge",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "api",
+        "models"
+      ]
+    },
+    {
+      "source": "stl",
+      "target": "reader",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "api",
+        "models"
+      ]
+    },
+    {
+      "source": "stl",
+      "target": "research",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "api",
+        "models"
+      ]
+    },
+    {
+      "source": "stl",
+      "target": "publishing",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "api",
+        "models"
+      ]
+    },
+    {
+      "source": "stl",
+      "target": "operations",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "api",
+        "models"
+      ]
+    },
+    {
+      "source": "discovery",
+      "target": "catalogue",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "opinions",
+        "discovery-ui"
+      ]
+    },
+    {
+      "source": "discovery",
+      "target": "viewpoints",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "opinions",
+        "discovery-ui"
+      ]
+    },
+    {
+      "source": "discovery",
+      "target": "evidence",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "opinions",
+        "discovery-ui"
+      ]
+    },
+    {
+      "source": "knowledge",
+      "target": "scholars",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "knowledge",
+        "editorial"
+      ]
+    },
+    {
+      "source": "knowledge",
+      "target": "theories",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "knowledge",
+        "editorial"
+      ]
+    },
+    {
+      "source": "knowledge",
+      "target": "topics",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "knowledge",
+        "editorial"
+      ]
+    },
+    {
+      "source": "knowledge",
+      "target": "curation",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "nav",
+        "knowledge",
+        "editorial"
+      ]
+    },
+    {
+      "source": "reader",
+      "target": "pdf",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "reader",
+        "reader-shell",
+        "citation"
+      ]
+    },
+    {
+      "source": "reader",
+      "target": "parallel",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "reader",
+        "reader-shell",
+        "citation"
+      ]
+    },
+    {
+      "source": "reader",
+      "target": "citations",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "reader",
+        "reader-shell",
+        "citation"
+      ]
+    },
+    {
+      "source": "research",
+      "target": "sessions",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "research",
+        "research-model",
+        "research-ui"
+      ]
+    },
+    {
+      "source": "research",
+      "target": "notes",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "research",
+        "research-model",
+        "research-ui"
+      ]
+    },
+    {
+      "source": "research",
+      "target": "plans",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "research",
+        "research-model",
+        "research-ui"
+      ]
+    },
+    {
+      "source": "research",
+      "target": "audits",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "research",
+        "research-model",
+        "research-ui"
+      ]
+    },
+    {
+      "source": "research",
+      "target": "private-ai",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "research",
+        "research-model",
+        "research-ui"
+      ]
+    },
+    {
+      "source": "publishing",
+      "target": "intake",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "admin",
+        "ingestion",
+        "publication",
+        "editorial"
+      ]
+    },
+    {
+      "source": "publishing",
+      "target": "processing",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "admin",
+        "ingestion",
+        "publication",
+        "editorial"
+      ]
+    },
+    {
+      "source": "publishing",
+      "target": "outline",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "admin",
+        "ingestion",
+        "publication",
+        "editorial"
+      ]
+    },
+    {
+      "source": "publishing",
+      "target": "publish",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "admin",
+        "ingestion",
+        "publication",
+        "editorial"
+      ]
+    },
+    {
+      "source": "operations",
+      "target": "identity",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "admin-permissions",
+        "api",
+        "queue",
+        "ai"
+      ]
+    },
+    {
+      "source": "operations",
+      "target": "jobs",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "admin-permissions",
+        "api",
+        "queue",
+        "ai"
+      ]
+    },
+    {
+      "source": "operations",
+      "target": "model-runtime",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "admin-permissions",
+        "api",
+        "queue",
+        "ai"
+      ]
+    },
+    {
+      "source": "operations",
+      "target": "storage-ops",
+      "type": "contains",
+      "label": "功能归属",
+      "sources": [
+        "admin-permissions",
+        "api",
+        "queue",
+        "ai"
+      ]
+    },
+    {
+      "source": "viewpoints",
+      "target": "evidence",
+      "type": "data",
+      "label": "查询 → 原文结果",
+      "sources": [
+        "opinions",
+        "discovery-client",
+        "discovery-api"
+      ]
+    },
+    {
+      "source": "evidence",
+      "target": "pdf",
+      "type": "navigation",
+      "label": "证据位置 → Reader",
+      "sources": [
+        "evidence-ui",
+        "reader"
+      ]
+    },
+    {
+      "source": "pdf",
+      "target": "citations",
+      "type": "call",
+      "label": "版本与选文 → 引用预览",
+      "sources": [
+        "reader-shell",
+        "citation"
+      ]
+    },
+    {
+      "source": "intake",
+      "target": "processing",
+      "type": "call",
+      "label": "入库任务 → 处理流水线",
+      "sources": [
+        "ingestion",
+        "pipeline"
+      ]
+    },
+    {
+      "source": "processing",
+      "target": "meili",
+      "type": "data",
+      "label": "处理结果 → 非公开索引准备",
+      "sources": [
+        "pipeline-index",
+        "indexing"
+      ]
+    },
+    {
+      "source": "web",
+      "target": "django",
+      "type": "call",
+      "label": "API 请求",
+      "sources": [
+        "discovery-client",
+        "api"
+      ]
+    },
+    {
+      "source": "django",
+      "target": "postgres",
+      "type": "data",
+      "label": "业务记录",
+      "sources": [
+        "discovery-session",
+        "database"
+      ]
+    },
+    {
+      "source": "django",
+      "target": "redis",
+      "type": "call",
+      "label": "事务提交后投递",
+      "sources": [
+        "discovery-session",
+        "queue"
+      ]
+    },
+    {
+      "source": "redis",
+      "target": "meili",
+      "type": "call",
+      "label": "任务检索 / 索引",
+      "sources": [
+        "discovery-task",
+        "indexing",
+        "projection"
+      ]
+    },
+    {
+      "source": "redis",
+      "target": "models-runtime",
+      "type": "call",
+      "label": "嵌入 / 重排",
+      "sources": [
+        "discovery-task",
+        "inference",
+        "deep"
+      ]
+    },
+    {
+      "source": "redis",
+      "target": "ocr-runtime",
+      "type": "call",
+      "label": "文档处理任务",
+      "sources": [
+        "ingestion",
+        "ocr"
+      ]
+    },
+    {
+      "source": "django",
+      "target": "files",
+      "type": "data",
+      "label": "授权文件读取",
+      "sources": [
+        "distribution",
+        "storage"
+      ]
+    },
+    {
+      "source": "design-tokens",
+      "target": "design-controls",
+      "type": "uses",
+      "label": "样式规范",
+      "sources": [
+        "tokens",
+        "controls"
+      ]
+    },
+    {
+      "source": "design-controls",
+      "target": "design-shells",
+      "type": "uses",
+      "label": "复用控件",
+      "sources": [
+        "nav",
+        "admin",
+        "reader-shell"
+      ]
+    },
+    {
+      "source": "design-shells",
+      "target": "design-pages",
+      "type": "uses",
+      "label": "组合页面",
+      "sources": [
+        "home",
+        "evidence-page",
+        "research-ui"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "route": "/about",
+      "file": "web/app/about/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/site-footer",
+        "@/components/public/about-public-view",
+        "@/lib/api/site.server"
+      ]
+    },
+    {
+      "route": "/account/citation-audits/[id]/issues/[issueId]",
+      "file": "web/app/account/citation-audits/[id]/issues/[issueId]/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/citation-audit-issue"
+      ]
+    },
+    {
+      "route": "/account/citation-audits/[id]",
+      "file": "web/app/account/citation-audits/[id]/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/citation-audit-report"
+      ]
+    },
+    {
+      "route": "/account/citation-audits/[id]/parse",
+      "file": "web/app/account/citation-audits/[id]/parse/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/citation-audit-parse"
+      ]
+    },
+    {
+      "route": "/account/citation-audits",
+      "file": "web/app/account/citation-audits/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/citation-audit-upload"
+      ]
+    },
+    {
+      "route": "/account/collections/[id]",
+      "file": "web/app/account/collections/[id]/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/research/reader-booklists",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/account/collections",
+      "file": "web/app/account/collections/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/research/reader-booklists",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/account/confirmed-notes",
+      "file": "web/app/account/confirmed-notes/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/confirmed-notes-workspace"
+      ]
+    },
+    {
+      "route": "/account/groups",
+      "file": "web/app/account/groups/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/research/reader-groups",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/account/notes/[assetId]",
+      "file": "web/app/account/notes/[assetId]/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/research/reader-notebook"
+      ]
+    },
+    {
+      "route": "/account/notes",
+      "file": "web/app/account/notes/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/reader-notebook"
+      ]
+    },
+    {
+      "route": "/account",
+      "file": "web/app/account/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/reader-center",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/account/plans/[id]",
+      "file": "web/app/account/plans/[id]/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/reading-plan-detail"
+      ]
+    },
+    {
+      "route": "/account/plans",
+      "file": "web/app/account/plans/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/reading-plans"
+      ]
+    },
+    {
+      "route": "/account/research/[id]/compare",
+      "file": "web/app/account/research/[id]/compare/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/research-session-compare"
+      ]
+    },
+    {
+      "route": "/account/research/[id]/counter-evidence",
+      "file": "web/app/account/research/[id]/counter-evidence/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/counter-evidence-workspace"
+      ]
+    },
+    {
+      "route": "/account/research/[id]/history",
+      "file": "web/app/account/research/[id]/history/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/research-replay"
+      ]
+    },
+    {
+      "route": "/account/research/[id]",
+      "file": "web/app/account/research/[id]/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/research-session-detail"
+      ]
+    },
+    {
+      "route": "/account/research",
+      "file": "web/app/account/research/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/research-session-list"
+      ]
+    },
+    {
+      "route": "/account/settings/privacy/export",
+      "file": "web/app/account/settings/privacy/export/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/privacy-workspace"
+      ]
+    },
+    {
+      "route": "/account/settings/privacy",
+      "file": "web/app/account/settings/privacy/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/research/privacy-workspace"
+      ]
+    },
+    {
+      "route": "/account/sharing/[id]",
+      "file": "web/app/account/sharing/[id]/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/research/reader-sharing",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/account/sharing/new",
+      "file": "web/app/account/sharing/new/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/research/share-composer",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/account/sharing",
+      "file": "web/app/account/sharing/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/research/reader-sharing",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/account/source-updates",
+      "file": "web/app/account/source-updates/page.tsx",
+      "group": "私人空间",
+      "imports": [
+        "next",
+        "@/components/research/source-updates-workspace",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/activate",
+      "file": "web/app/activate/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/account-activation",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/admin/about",
+      "file": "web/app/admin/about/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/site-content-editor",
+        "@/lib/api/home.server",
+        "@/lib/api/site.server"
+      ]
+    },
+    {
+      "route": "/admin/about/preview",
+      "file": "web/app/admin/about/preview/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/site-content-editor",
+        "@/lib/api/home.server",
+        "@/lib/api/site.server"
+      ]
+    },
+    {
+      "route": "/admin/analytics",
+      "file": "web/app/admin/analytics/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin-analytics"
+      ]
+    },
+    {
+      "route": "/admin/backups",
+      "file": "web/app/admin/backups/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/storage-workspace"
+      ]
+    },
+    {
+      "route": "/admin/candidates",
+      "file": "web/app/admin/candidates/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/cataloging/[sessionId]/candidates",
+      "file": "web/app/admin/cataloging/[sessionId]/candidates/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/workflow/cataloging-session"
+      ]
+    },
+    {
+      "route": "/admin/cataloging/[sessionId]",
+      "file": "web/app/admin/cataloging/[sessionId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/workflow/cataloging-session"
+      ]
+    },
+    {
+      "route": "/admin/cataloging/new",
+      "file": "web/app/admin/cataloging/new/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/workflow/cataloging-session"
+      ]
+    },
+    {
+      "route": "/admin/content/[pageType]/[pageId]",
+      "file": "web/app/admin/content/[pageType]/[pageId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/components/admin/curation/placement-workspace",
+        "@/lib/api/curation-workspace.client"
+      ]
+    },
+    {
+      "route": "/admin/content",
+      "file": "web/app/admin/content/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/curation/placement-directory"
+      ]
+    },
+    {
+      "route": "/admin/disciplines",
+      "file": "web/app/admin/disciplines/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-legacy-redirect"
+      ]
+    },
+    {
+      "route": "/admin/distribution",
+      "file": "web/app/admin/distribution/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin-sections"
+      ]
+    },
+    {
+      "route": "/admin/intake/[itemId]",
+      "file": "web/app/admin/intake/[itemId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/intake-workspace"
+      ]
+    },
+    {
+      "route": "/admin/knowledge",
+      "file": "web/app/admin/knowledge/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-legacy-redirect"
+      ]
+    },
+    {
+      "route": "/admin/library/assets/[assetId]/ocr",
+      "file": "web/app/admin/library/assets/[assetId]/ocr/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/library/ocr-workspace"
+      ]
+    },
+    {
+      "route": "/admin/library/assets/[assetId]/outline",
+      "file": "web/app/admin/library/assets/[assetId]/outline/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/library/document-outline-workspace"
+      ]
+    },
+    {
+      "route": "/admin/library/assets/[assetId]/page-mapping",
+      "file": "web/app/admin/library/assets/[assetId]/page-mapping/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/library/page-mapping-workspace"
+      ]
+    },
+    {
+      "route": "/admin/library",
+      "file": "web/app/admin/library/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/library/work-library"
+      ]
+    },
+    {
+      "route": "/admin/library/works/[workId]/files",
+      "file": "web/app/admin/library/works/[workId]/files/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/library/work-files-workspace"
+      ]
+    },
+    {
+      "route": "/admin/library/works/[workId]",
+      "file": "web/app/admin/library/works/[workId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/workflow/workflow-editor"
+      ]
+    },
+    {
+      "route": "/admin/media",
+      "file": "web/app/admin/media/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/media/media-library"
+      ]
+    },
+    {
+      "route": "/admin",
+      "file": "web/app/admin/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin-dashboard"
+      ]
+    },
+    {
+      "route": "/admin/people",
+      "file": "web/app/admin/people/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/person-authority-workspace"
+      ]
+    },
+    {
+      "route": "/admin/preview/evidence/[objectType]/[objectId]",
+      "file": "web/app/admin/preview/evidence/[objectType]/[objectId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/components/admin/curation/evidence-curation-editor",
+        "@/lib/api/evidence-curation.types"
+      ]
+    },
+    {
+      "route": "/admin/preview/knowledge/[objectType]/[objectId]",
+      "file": "web/app/admin/preview/knowledge/[objectType]/[objectId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/preview/knowledge-page-preview",
+        "@/components/admin/knowledge/knowledge-publication-review",
+        "@/components/site-header",
+        "@/components/site-footer",
+        "@/lib/api/site.server"
+      ]
+    },
+    {
+      "route": "/admin/preview/works/[editionId]",
+      "file": "web/app/admin/preview/works/[editionId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/preview/work-page-preview",
+        "@/components/site-footer",
+        "@/components/site-header",
+        "@/lib/api/site.server"
+      ]
+    },
+    {
+      "route": "/admin/processing/health/candidates",
+      "file": "web/app/admin/processing/health/candidates/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/candidate-review"
+      ]
+    },
+    {
+      "route": "/admin/processing/health/knowledge",
+      "file": "web/app/admin/processing/health/knowledge/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/knowledge-workspace-diagnostics"
+      ]
+    },
+    {
+      "route": "/admin/processing/health",
+      "file": "web/app/admin/processing/health/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin-system-health"
+      ]
+    },
+    {
+      "route": "/admin/processing",
+      "file": "web/app/admin/processing/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/processing-center"
+      ]
+    },
+    {
+      "route": "/admin/processing/query-lexicon",
+      "file": "web/app/admin/processing/query-lexicon/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/query-lexicon-workspace"
+      ]
+    },
+    {
+      "route": "/admin/processing/semantic-index",
+      "file": "web/app/admin/processing/semantic-index/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/semantic-index-admin",
+        "@/components/admin/index-maintenance"
+      ]
+    },
+    {
+      "route": "/admin/processing/settings",
+      "file": "web/app/admin/processing/settings/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin-sections"
+      ]
+    },
+    {
+      "route": "/admin/processing/status",
+      "file": "web/app/admin/processing/status/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/system-status-center"
+      ]
+    },
+    {
+      "route": "/admin/publication/[itemId]",
+      "file": "web/app/admin/publication/[itemId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/workflow/publication-review-entry",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/publication/knowledge/[objectType]/[objectId]",
+      "file": "web/app/admin/publication/knowledge/[objectType]/[objectId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-history"
+      ]
+    },
+    {
+      "route": "/admin/publication",
+      "file": "web/app/admin/publication/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/publication-desk",
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/query-lexicon",
+      "file": "web/app/admin/query-lexicon/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/reading-paths",
+      "file": "web/app/admin/reading-paths/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-legacy-redirect"
+      ]
+    },
+    {
+      "route": "/admin/recommendations/issues/[issueId]",
+      "file": "web/app/admin/recommendations/issues/[issueId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/recommendation-issue-editor"
+      ]
+    },
+    {
+      "route": "/admin/recommendations/issues/[issueId]/preview",
+      "file": "web/app/admin/recommendations/issues/[issueId]/preview/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/recommendation-issue-editor",
+        "@/components/admin/curation/issue-preview-frame",
+        "@/lib/api/site.server"
+      ]
+    },
+    {
+      "route": "/admin/recommendations",
+      "file": "web/app/admin/recommendations/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/recommendation-issue-list",
+        "@/components/admin/curation-project-workspace"
+      ]
+    },
+    {
+      "route": "/admin/recycle",
+      "file": "web/app/admin/recycle/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/recycle-bin"
+      ]
+    },
+    {
+      "route": "/admin/review/[itemId]",
+      "file": "web/app/admin/review/[itemId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/review",
+      "file": "web/app/admin/review/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/review-queue"
+      ]
+    },
+    {
+      "route": "/admin/scholars/[scholarId]",
+      "file": "web/app/admin/scholars/[scholarId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin-sections"
+      ]
+    },
+    {
+      "route": "/admin/scholars/[scholarId]/relations",
+      "file": "web/app/admin/scholars/[scholarId]/relations/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/scholar-knowledge-relations"
+      ]
+    },
+    {
+      "route": "/admin/scholars",
+      "file": "web/app/admin/scholars/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin-sections"
+      ]
+    },
+    {
+      "route": "/admin/scholars/people",
+      "file": "web/app/admin/scholars/people/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/person-authority-workspace"
+      ]
+    },
+    {
+      "route": "/admin/search",
+      "file": "web/app/admin/search/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin-dashboard"
+      ]
+    },
+    {
+      "route": "/admin/semantic-index",
+      "file": "web/app/admin/semantic-index/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/settings",
+      "file": "web/app/admin/settings/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/legacy-settings-route"
+      ]
+    },
+    {
+      "route": "/admin/status",
+      "file": "web/app/admin/status/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/storage",
+      "file": "web/app/admin/storage/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/storage-workspace"
+      ]
+    },
+    {
+      "route": "/admin/subdisciplines",
+      "file": "web/app/admin/subdisciplines/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-legacy-redirect"
+      ]
+    },
+    {
+      "route": "/admin/support/feedback",
+      "file": "web/app/admin/support/feedback/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/support/feedback-workspace"
+      ]
+    },
+    {
+      "route": "/admin/support/parallel-calibrations",
+      "file": "web/app/admin/support/parallel-calibrations/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/support/parallel-calibration-workspace"
+      ]
+    },
+    {
+      "route": "/admin/system-health/candidates",
+      "file": "web/app/admin/system-health/candidates/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/system-health/knowledge",
+      "file": "web/app/admin/system-health/knowledge/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/system-health",
+      "file": "web/app/admin/system-health/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next/navigation",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/taxonomy",
+      "file": "web/app/admin/taxonomy/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-legacy-redirect"
+      ]
+    },
+    {
+      "route": "/admin/theories/[nodeId]",
+      "file": "web/app/admin/theories/[nodeId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/theory-system-admin"
+      ]
+    },
+    {
+      "route": "/admin/theories/disciplines",
+      "file": "web/app/admin/theories/disciplines/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/knowledge-admin"
+      ]
+    },
+    {
+      "route": "/admin/theories",
+      "file": "web/app/admin/theories/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/theory-system-admin"
+      ]
+    },
+    {
+      "route": "/admin/theories/reading-paths",
+      "file": "web/app/admin/theories/reading-paths/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin/curation/reading-path-workbench"
+      ]
+    },
+    {
+      "route": "/admin/theories/relations",
+      "file": "web/app/admin/theories/relations/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/theory-system-admin"
+      ]
+    },
+    {
+      "route": "/admin/theories/subdisciplines",
+      "file": "web/app/admin/theories/subdisciplines/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/knowledge-admin"
+      ]
+    },
+    {
+      "route": "/admin/theories/timeline",
+      "file": "web/app/admin/theories/timeline/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/theory-system-admin"
+      ]
+    },
+    {
+      "route": "/admin/theory-nodes",
+      "file": "web/app/admin/theory-nodes/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-legacy-redirect"
+      ]
+    },
+    {
+      "route": "/admin/theory-relations",
+      "file": "web/app/admin/theory-relations/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-legacy-redirect"
+      ]
+    },
+    {
+      "route": "/admin/theory-timeline",
+      "file": "web/app/admin/theory-timeline/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/knowledge/knowledge-legacy-redirect"
+      ]
+    },
+    {
+      "route": "/admin/topics/[entityId]",
+      "file": "web/app/admin/topics/[entityId]/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin-sections"
+      ]
+    },
+    {
+      "route": "/admin/topics",
+      "file": "web/app/admin/topics/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin-sections"
+      ]
+    },
+    {
+      "route": "/admin/uploads",
+      "file": "web/app/admin/uploads/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "next",
+        "@/components/admin-upload",
+        "@/components/admin/workflow/upload-source-context",
+        "@/lib/admin-route-context"
+      ]
+    },
+    {
+      "route": "/admin/users",
+      "file": "web/app/admin/users/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/accounts/account-workspace"
+      ]
+    },
+    {
+      "route": "/admin/visual-review",
+      "file": "web/app/admin/visual-review/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/visual-review/visual-review-workspace"
+      ]
+    },
+    {
+      "route": "/admin/welcome",
+      "file": "web/app/admin/welcome/page.tsx",
+      "group": "管理端",
+      "imports": [
+        "@/components/admin/site-content-editor",
+        "@/lib/api/home.server",
+        "@/lib/api/site.server"
+      ]
+    },
+    {
+      "route": "/concepts/[slug]",
+      "file": "web/app/concepts/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next/navigation",
+        "@/lib/api/knowledge.server"
+      ]
+    },
+    {
+      "route": "/drawer-preview",
+      "file": "web/app/drawer-preview/page.tsx",
+      "group": "开发或暂停",
+      "imports": [
+        "react",
+        "lucide-react",
+        "@/components/ui/dialog"
+      ]
+    },
+    {
+      "route": "/explore/ask",
+      "file": "web/app/explore/ask/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/lib/reader-access.server",
+        "next",
+        "../page"
+      ]
+    },
+    {
+      "route": "/explore/evidence",
+      "file": "web/app/explore/evidence/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/lib/reader-access.server",
+        "next",
+        "@/components/discovery-search-workspace",
+        "@/lib/api/discovery.types",
+        "@/lib/api/opinion-entry.client"
+      ]
+    },
+    {
+      "route": "/explore/opinions",
+      "file": "web/app/explore/opinions/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/lib/reader-access.server",
+        "next",
+        "@/components/site-footer",
+        "next/navigation",
+        "@/components/opinion-search-entry",
+        "@/lib/api/opinion-entry.client",
+        "@/lib/api/discovery.types"
+      ]
+    },
+    {
+      "route": "/explore/original",
+      "file": "web/app/explore/original/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/lib/reader-access.server",
+        "next",
+        "../page",
+        "@/components/catalog-search-workspace",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/explore",
+      "file": "web/app/explore/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/lib/reader-access.server",
+        "next",
+        "next/image",
+        "next/link",
+        "@/components/collection-link",
+        "lucide-react",
+        "@/components/ui",
+        "@/components/site-footer",
+        "@/components/explore-ask-client",
+        "@/components/explore-landing",
+        "@/components/semantic-result-actions",
+        "@/components/usage-tracker",
+        "@/lib/semantic-search-ui",
+        "@/components/search-mode-switch",
+        "@/lib/api/search.server",
+        "@/lib/api/search.types"
+      ]
+    },
+    {
+      "route": "/explore/semantic/[workId]",
+      "file": "web/app/explore/semantic/[workId]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/lib/reader-access.server",
+        "next",
+        "next/link",
+        "lucide-react",
+        "@/components/semantic-result-actions",
+        "@/components/site-footer",
+        "@/lib/api/search.server",
+        "@/lib/semantic-search-ui"
+      ]
+    },
+    {
+      "route": "/feedback",
+      "file": "web/app/feedback/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/site-footer",
+        "@/components/public/feedback-form",
+        "@/components/public/support-hero",
+        "@/lib/api/site.server",
+        "@/lib/api/feedback.client"
+      ]
+    },
+    {
+      "route": "/help/[slug]",
+      "file": "web/app/help/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next/link",
+        "lucide-react",
+        "next/navigation",
+        "@/components/site-footer",
+        "@/components/public/support-source-status",
+        "@/components/public/support-hero",
+        "@/components/public/support-citation-example",
+        "@/lib/site-content",
+        "@/lib/support-content",
+        "@/lib/api/site.server"
+      ]
+    },
+    {
+      "route": "/help",
+      "file": "web/app/help/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/site-footer",
+        "@/components/public/support-hub",
+        "@/lib/api/site.server",
+        "@/lib/support-content",
+        "next/navigation"
+      ]
+    },
+    {
+      "route": "/interaction-preview",
+      "file": "web/app/interaction-preview/page.tsx",
+      "group": "开发或暂停",
+      "imports": [
+        "react",
+        "lucide-react",
+        "@/components/ui/dialog",
+        "@/components/source-text",
+        "./preview.module.css"
+      ]
+    },
+    {
+      "route": "/layout-preview",
+      "file": "web/app/layout-preview/page.tsx",
+      "group": "开发或暂停",
+      "imports": [
+        "@/lib/api/home.server",
+        "@/components/site-footer",
+        "./preview"
+      ]
+    },
+    {
+      "route": "/login",
+      "file": "web/app/login/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/auth-layout"
+      ]
+    },
+    {
+      "route": "/",
+      "file": "web/app/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/home-public-view",
+        "@/components/site-footer",
+        "@/lib/api/home.server"
+      ]
+    },
+    {
+      "route": "/policy",
+      "file": "web/app/policy/page.tsx",
+      "group": "开发或暂停",
+      "imports": [
+        "next",
+        "./policy-workspace"
+      ]
+    },
+    {
+      "route": "/reader/[assetId]",
+      "file": "web/app/reader/[assetId]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/lib/reader-access.server",
+        "next",
+        "@/components/reader-shell",
+        "@/components/reader/reader-route-failure",
+        "@/components/reader/parallel-reader",
+        "@/lib/api/reader.server",
+        "@/lib/api/site.server",
+        "@/lib/api/reader-failure"
+      ]
+    },
+    {
+      "route": "/recommendations/[slug]",
+      "file": "web/app/recommendations/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/published-placements",
+        "@/components/public/recommendation-issue-view",
+        "@/components/site-footer",
+        "@/lib/api/recommendation-issues.server",
+        "next/navigation",
+        "@/lib/api/server-request"
+      ]
+    },
+    {
+      "route": "/recommendations",
+      "file": "web/app/recommendations/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/site-footer",
+        "@/components/public/editorial-directory",
+        "@/lib/api/recommendation-issues.server",
+        "@/lib/api/server-request",
+        "@/lib/api/recommendation-issues.types"
+      ]
+    },
+    {
+      "route": "/register",
+      "file": "web/app/register/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/auth-layout"
+      ]
+    },
+    {
+      "route": "/reset-password",
+      "file": "web/app/reset-password/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/auth-layout"
+      ]
+    },
+    {
+      "route": "/scholars/[slug]/[section]",
+      "file": "web/app/scholars/[slug]/[section]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "next/navigation",
+        "@/components/public/scholar-section-public-view",
+        "@/components/public/scholar-load-error",
+        "@/components/site-footer",
+        "@/lib/api/scholars.server",
+        "@/lib/api/scholars.params",
+        "@/lib/api/scholars.types"
+      ]
+    },
+    {
+      "route": "/scholars/[slug]",
+      "file": "web/app/scholars/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/published-placements",
+        "next",
+        "@/lib/public-image-metadata",
+        "next/navigation",
+        "@/components/public/scholar-public-view",
+        "@/components/site-footer",
+        "@/lib/api/scholars.server",
+        "@/lib/api/scholars.types",
+        "@/components/public/scholar-load-error"
+      ]
+    },
+    {
+      "route": "/scholars",
+      "file": "web/app/scholars/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/public/scholar-directory",
+        "@/lib/api/scholars.server",
+        "@/lib/api/scholars.types"
+      ]
+    },
+    {
+      "route": "/shared/[id]",
+      "file": "web/app/shared/[id]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/research/reader-sharing",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/subdisciplines/[slug]",
+      "file": "web/app/subdisciplines/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/published-placements",
+        "next",
+        "@/lib/public-image-metadata",
+        "next/navigation",
+        "@/components/public/subdiscipline-public-view",
+        "@/components/site-footer",
+        "@/lib/api/taxonomy.server",
+        "next/link",
+        "@/components/public/subdiscipline.module.css"
+      ]
+    },
+    {
+      "route": "/subdisciplines",
+      "file": "web/app/subdisciplines/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "next/image",
+        "next/link",
+        "lucide-react",
+        "@/components/scoped-search",
+        "@/lib/api/taxonomy.server",
+        "@/lib/api/taxonomy.types",
+        "@/lib/search-context",
+        "@/components/public/subdiscipline.module.css"
+      ]
+    },
+    {
+      "route": "/theories/directory",
+      "file": "web/app/theories/directory/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/theory/theory-directory",
+        "@/lib/api/theory-directory.server",
+        "@/lib/api/theory-directory.types",
+        "@/lib/api/server-request",
+        "@/lib/search-context"
+      ]
+    },
+    {
+      "route": "/theories/disciplines/[slug]",
+      "file": "web/app/theories/disciplines/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/published-placements",
+        "next",
+        "@/lib/public-image-metadata",
+        "next/navigation",
+        "@/components/public/discipline-public-view",
+        "@/components/site-footer",
+        "@/lib/api/knowledge.server"
+      ]
+    },
+    {
+      "route": "/theories/events/[eventId]",
+      "file": "web/app/theories/events/[eventId]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/published-placements",
+        "next/link",
+        "next/navigation",
+        "@/components/site-footer",
+        "@/components/public/timeline-event-details",
+        "@/lib/api/timeline.server",
+        "@/lib/api/timeline.types",
+        "@/components/public/theory-timeline.module.css"
+      ]
+    },
+    {
+      "route": "/theories/graph",
+      "file": "web/app/theories/graph/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/public/theory-graph-page",
+        "@/lib/api/graph.types"
+      ]
+    },
+    {
+      "route": "/theories/nodes/[slug]/[section]",
+      "file": "web/app/theories/nodes/[slug]/[section]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next/navigation",
+        "@/components/public/knowledge-node-public-view",
+        "@/components/public/theory-timeline-page",
+        "@/components/site-footer",
+        "@/lib/api/knowledge.server",
+        "@/components/scoped-search",
+        "@/lib/search-context",
+        "@/lib/api/timeline.types"
+      ]
+    },
+    {
+      "route": "/theories/nodes/[slug]",
+      "file": "web/app/theories/nodes/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/published-placements",
+        "next",
+        "@/lib/public-image-metadata",
+        "next/navigation",
+        "@/components/public/knowledge-node-public-view",
+        "@/components/site-footer",
+        "@/lib/api/knowledge.server"
+      ]
+    },
+    {
+      "route": "/theories",
+      "file": "web/app/theories/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/theory/theory-overview"
+      ]
+    },
+    {
+      "route": "/theories/reading-paths/[slug]",
+      "file": "web/app/theories/reading-paths/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/published-placements",
+        "next",
+        "@/lib/public-image-metadata",
+        "next/navigation",
+        "next/link",
+        "@/components/public/reading-path-public-view",
+        "@/components/site-footer",
+        "@/lib/api/reading-paths.server",
+        "@/lib/api/server-request",
+        "@/lib/api/reading-paths.types"
+      ]
+    },
+    {
+      "route": "/theories/reading-paths",
+      "file": "web/app/theories/reading-paths/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/site-footer",
+        "@/components/public/reading-path-list",
+        "@/lib/api/reading-paths.server",
+        "@/lib/api/reading-paths.types"
+      ]
+    },
+    {
+      "route": "/theories/timeline",
+      "file": "web/app/theories/timeline/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/public/theory-timeline-page",
+        "@/lib/api/timeline.types"
+      ]
+    },
+    {
+      "route": "/theory-schools/[slug]/[section]",
+      "file": "web/app/theory-schools/[slug]/[section]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "next/link",
+        "next/navigation",
+        "lucide-react",
+        "@/components/knowledge-map",
+        "@/components/ui",
+        "@/lib/api/theories.server"
+      ]
+    },
+    {
+      "route": "/theory-schools/[slug]",
+      "file": "web/app/theory-schools/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "next/navigation",
+        "@/components/site-footer",
+        "@/components/public/legacy-theory-public-view",
+        "@/lib/api/theories.server"
+      ]
+    },
+    {
+      "route": "/theory-schools/graph",
+      "file": "web/app/theory-schools/graph/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "next/link",
+        "@/components/site-footer",
+        "@/components/theory-graph-client",
+        "@/lib/api/taxonomy.server",
+        "@/lib/api/theories.server"
+      ]
+    },
+    {
+      "route": "/theory-schools",
+      "file": "web/app/theory-schools/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/theory/theory-overview"
+      ]
+    },
+    {
+      "route": "/theory-schools/timeline",
+      "file": "web/app/theory-schools/timeline/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/public/theory-timeline-page",
+        "@/lib/api/timeline.types"
+      ]
+    },
+    {
+      "route": "/topics/[slug]/[section]",
+      "file": "web/app/topics/[slug]/[section]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "next/navigation",
+        "@/components/site-footer",
+        "@/components/public/topic-section-public-view",
+        "@/components/public/topic-load-error",
+        "@/lib/api/topics.server",
+        "@/lib/api/topics.params",
+        "@/lib/api/topics.types"
+      ]
+    },
+    {
+      "route": "/topics/[slug]",
+      "file": "web/app/topics/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/published-placements",
+        "next",
+        "@/lib/public-image-metadata",
+        "next/navigation",
+        "@/components/public/topic-public-view",
+        "@/components/public/topic-load-error",
+        "@/components/site-footer",
+        "@/lib/api/topics.server",
+        "@/lib/api/topics.types"
+      ]
+    },
+    {
+      "route": "/topics",
+      "file": "web/app/topics/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "@/components/public/topic-directory",
+        "@/lib/api/topics.server",
+        "@/lib/api/topics.types"
+      ]
+    },
+    {
+      "route": "/verify-email",
+      "file": "web/app/verify-email/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "react",
+        "@/components/account-email-link",
+        "@/components/site-footer"
+      ]
+    },
+    {
+      "route": "/welcome",
+      "file": "web/app/welcome/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "@/components/public/home-feature-story",
+        "@/lib/api/home.server",
+        "@/components/public/site-footer-view",
+        "@/lib/welcome"
+      ]
+    },
+    {
+      "route": "/works/[slug]",
+      "file": "web/app/works/[slug]/page.tsx",
+      "group": "网站页面",
+      "imports": [
+        "next",
+        "next/navigation",
+        "@/components/site-footer",
+        "@/components/work-detail-view",
+        "@/lib/api/catalog.server",
+        "@/lib/public-image-metadata"
+      ]
+    }
+  ],
+  "exclusions": [
+    "政策研究已暂停，不纳入本轮产品叙事。",
+    "RAG / LLMWiki 的后续选择未定，不画成新增已实现能力。",
+    "开发预览和兼容路由计入文件清单，不冒充主要产品入口。"
+  ],
+  "runtime": [
+    {
+      "route": "/",
+      "status": 200,
+      "destination": "/",
+      "title": "首页｜社会理论书库",
+      "scope": "匿名 GET 与页面渲染；未提交业务操作",
+      "screenshot": "/site/home.png",
+      "observedAt": "2026-11-06T10:46:35.078Z"
+    },
+    {
+      "route": "/welcome",
+      "status": 200,
+      "destination": "/welcome",
+      "title": "欢迎｜社会理论书库",
+      "scope": "匿名 GET 与页面渲染；未提交业务操作",
+      "screenshot": "/site/welcome.png",
+      "observedAt": "2026-11-06T10:46:37.430Z"
+    },
+    {
+      "route": "/theories",
+      "status": 200,
+      "destination": "/theories",
+      "title": "理论流派｜社会理论书库",
+      "scope": "匿名 GET 与页面渲染；未提交业务操作",
+      "screenshot": "/site/theories.png",
+      "observedAt": "2026-11-06T10:46:38.918Z"
+    },
+    {
+      "route": "/scholars",
+      "status": 200,
+      "destination": "/scholars",
+      "title": "学者｜社会理论书库",
+      "scope": "匿名 GET 与页面渲染；未提交业务操作",
+      "screenshot": "/site/scholars.png",
+      "observedAt": "2026-11-06T10:46:40.002Z"
+    },
+    {
+      "route": "/topics",
+      "status": 200,
+      "destination": "/topics",
+      "title": "主题与专题方向｜社会理论书库",
+      "scope": "匿名 GET 与页面渲染；未提交业务操作",
+      "screenshot": "/site/topics.png",
+      "observedAt": "2026-11-06T10:46:41.108Z"
+    },
+    {
+      "route": "/recommendations",
+      "status": 200,
+      "destination": "/recommendations",
+      "title": "专题文章索引｜社会理论书库",
+      "scope": "匿名 GET 与页面渲染；未提交业务操作",
+      "screenshot": "/site/curation.png",
+      "observedAt": "2026-11-06T10:46:42.574Z"
+    },
+    {
+      "route": "/explore",
+      "status": 200,
+      "destination": "/login",
+      "title": "登录｜社会理论书库",
+      "scope": "匿名 GET 与页面渲染；未提交业务操作",
+      "screenshot": "/site/gate.png",
+      "observedAt": "2026-11-06T10:46:43.331Z"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "route": "/",
+    "status": 200,
+    "destination": "/",
+    "title": "首页｜社会理论书库",
+    "scope": "匿名 GET 与页面渲染；未提交业务操作",
+    "screenshot": "/site/home.png",
+    "observedAt": "2026-11-06T10:46:35.078Z"
+  },
+  {
+    "route": "/welcome",
+    "status": 200,
+    "destination": "/welcome",
+    "title": "欢迎｜社会理论书库",
+    "scope": "匿名 GET 与页面渲染；未提交业务操作",
+    "screenshot": "/site/welcome.png",
+    "observedAt": "2026-11-06T10:46:37.430Z"
+  },
+  {
+    "route": "/theories",
+    "status": 200,
+    "destination": "/theories",
+    "title": "理论流派｜社会理论书库",
+    "scope": "匿名 GET 与页面渲染；未提交业务操作",
+    "screenshot": "/site/theories.png",
+    "observedAt": "2026-11-06T10:46:38.918Z"
+  },
+  {
+    "route": "/scholars",
+    "status": 200,
+    "destination": "/scholars",
+    "title": "学者｜社会理论书库",
+    "scope": "匿名 GET 与页面渲染；未提交业务操作",
+    "screenshot": "/site/scholars.png",
+    "observedAt": "2026-11-06T10:46:40.002Z"
+  },
+  {
+    "route": "/topics",
+    "status": 200,
+    "destination": "/topics",
+    "title": "主题与专题方向｜社会理论书库",
+    "scope": "匿名 GET 与页面渲染；未提交业务操作",
+    "screenshot": "/site/topics.png",
+    "observedAt": "2026-11-06T10:46:41.108Z"
+  },
+  {
+    "route": "/recommendations",
+    "status": 200,
+    "destination": "/recommendations",
+    "title": "专题文章索引｜社会理论书库",
+    "scope": "匿名 GET 与页面渲染；未提交业务操作",
+    "screenshot": "/site/curation.png",
+    "observedAt": "2026-11-06T10:46:42.574Z"
+  },
+  {
+    "route": "/explore",
+    "status": 200,
+    "destination": "/login",
+    "title": "登录｜社会理论书库",
+    "scope": "匿名 GET 与页面渲染；未提交业务操作",
+    "screenshot": "/site/gate.png",
+    "observedAt": "2026-11-06T10:46:43.331Z"
+  }
+]
