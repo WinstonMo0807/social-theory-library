@@ -1,6 +1,24 @@
 # STL 4.0 正式运营切换包
 
-## 当前状态
+## 2026-11-07 已正式上线
+
+用户已最终确认“确认，现在按清单清理并切换公网”，本清单已执行。正式入口 https://books.winstonmo.com/ 为欢迎页，进入书库到 /home；内网 http://192.168.5.6:18084 接同一正式栈。浏览器实际核对欢迎页、点击进入首页、空馆藏/空策展、访客探索跳转登录、注册无需验证提示。截图为 output/launch-20261107/public-live-welcome.png、public-live-home.png、public-live-registration.png。
+
+16 个正式服务容器运行，带健康检查的均 healthy；旧预览栈运行数 0，旧 PaddleOCR 停止，API/四 Worker/Beat/Web 共 7 个容器的镜像 ID 与上述候选精确一致。正式库 library_stl4_20261107、业务目录 /volume2/library/stl4/storage 已使用；当前 0 公开作品、版本、策划、学者、主题、知识条目、时间线，3 个正式学科顺序为社会学、人类学、民族学。13 个资产与 28 个业务文件保留，4 个账号及私人数据核对一致。旧公网新增的 1 条令牌撤销已合并，8 条原撤销记录全部保留。筹备中的 58 个 PDF 未处理。
+
+最终停写快照位于 NAS /volume2/library/stl-releases/20261107-r1/final-recovery：生产包 8,477,697 字节、候选包 17,432,442 字节，均在独立库实际恢复，22/49 张保护表摘要一致，文件逐个核对；停止后的候选 Meili 索引另备份 356,710,400 字节。旧库、原目录、配置及回退镜像保留。上线后另有 stl4-after-launch.dump 15,399,713 字节，**此上线后包未再次独立恢复**，不混称前面的恢复证据。
+
+正式 API /ready 200、version=4.0.0、0 待迁移；首页/学科/策划接口 200，未登录探索、PDF 访问/下载、管理 schema 均 401。实际 RapidOCR 识别后 /ready 200，管理端同源 OCR 记录 cf8bf748-9b84-442a-b1b7-1038c89e97d0 为 healthy，Worker/Beat 同源检查正常；任务清理后的四队列与 unacked 均 0。Redis/Meili/DOCX、其余带健康检查服务均正常。推理模型沿用既定配置，服务 prepared/manifest_ready，未重复执行质量评测或将冷启动模型状态冒充已完成本次推理。
+
+PUBLIC-BIND-01 D：第一次真实公网检查发现 compose.stl4-cutover.yaml 中带额外缩进的多行 shell 命令保留换行，Gunicorn 在 application 参数后启动，后面的 --bind/threads 等参数未生效，造成仅监听 127.0.0.1、edge 连接拒绝。修复为一行完整 exec 命令，重建 API 并重新载入 edge。随后内网 HTTP、真实公网欢迎页和首页通过。保留最初失败日志，不以容器内 /ready 正常替代外部页面验证。
+
+Cloudflared 与 PostgreSQL 原容器保持，隧道凭据/协议核对一致，未改 DNS。26 个其他容器身份与启动时间不变；独立架构展示由并行会话从 v5 更新到 v6-r2，本任务没有操作该容器。NAS 旧部署目录新增 STL4_CURRENT_RELEASE.md 和 stl4-compose.py 指向完整新组合；日常命令使用 `sudo -n python3 /volume2/library/docker/social-theory-library/stl4-compose.py ps`，不要按旧三层组合重新启动历史版本。旧模型路径包含 stl-previews 仍为受保护依赖。
+
+本轮移除的 117 个无引用测试镜像标签保持准确；回退所需旧镜像、数据卷及模型保留。B 视觉/管理员操作验收随用户批注推进；邮件/Google/生成式中转配置依既定决定后续处理。未替用户创建公网测试账号或操作其密码；实际账号登录及管理员日常操作留给本人验收。没有宣称像素一致、全站业务及长期稳定性验收完成。
+
+新增证据在 tmp/stl4-launch-20261107/：cutover-freeze.log、cutover-drain.log、account-delta-final.json、cutover-backup.log、cutover-materialize.log、cutover-cleanup-r2.log、cutover-revocations.log、cutover-verify-application-r3.log、cutover-ocr-ready.log、cutover-binding-fix.log、cutover-edge.log、cutover-health-final.log、cutover-final-state-r3.log、current-release-entry.log。工具对 Compose run 的不支持参数、非 JSON schema 响应及不存在预览 Searxng 的初轮探针错误均保留，不列为产品缺陷。
+
+## 以下为切换前准备记录（上述发布已完成）
 
 2026-11-07：用户已要求清理全部示例内容并正式运营；已确认开放注册、不要求邮箱验证，首发仅书库账号。邮件接口保留，邮件密码重置未配置，现有人工找回申请继续提供。用户确认基础学科为社会学、人类学、民族学；筹备中的 58 个 PDF 不属于此次示例清理范围。
 

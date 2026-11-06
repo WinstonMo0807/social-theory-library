@@ -1,3 +1,13 @@
+## 2026-11-07 正式上线后的恢复入口
+
+先读 CURRENT_PROGRESS.md 顶部与 PUBLIC_LAUNCH_20261107.md。用户已最终批准且已实际完成示例清理和公网切换，不能重复清理或重建预览业务栈。公网 books.winstonmo.com 与内网 192.168.5.6:18084 同一正式实例；根路径欢迎页，/home 为首页。API/四 Worker/Beat 和 Web 为 4.0.0-20261107-r1；RapidOCR3、既定推理、DOCX 保持。旧预览全部停止。
+
+当前完整 Compose 在 NAS /volume2/library/stl-releases/20261107-r1/public，可经 `sudo -n python3 /volume2/library/docker/social-theory-library/stl4-compose.py ps` 查看。不要按旧部署目录的历史 .env/三层组合启动，不能重新开启第二个 Beat；旧目录 STL4_CURRENT_RELEASE.md 已指向新入口。数据库 library_stl4_20261107，业务目录 /volume2/library/stl4/storage；模型仍挂原 stl-previews 中的保护路径，不能清除。
+
+即时回退证据 /volume2/library/stl-releases/20261107-r1/final-recovery。最终停写数据库/文件已独立恢复并核对，后续 stl4-after-launch.dump 另存且未再恢复。回退前先暂停新写入并保护上线后新增账户/私人数据，不能直接以旧快照覆盖增量。旧生产数据库、原件、人工修订、失败记录、批注和旧镜像均保留；筹备中的58个PDF未动。Cloudflared及PostgreSQL原容器保持；独立架构展示由另一会话管理。
+
+上线时 compose.stl4-cutover.yaml 的多行 shell 启动参数被截断问题已修复为单行 exec，切勿恢复旧写法。正式入口与访客保护已实看，OCR及管理状态就绪；全站视觉与管理员操作仍按用户批注验收，不重开已实现项。邮件无验证注册已启用，邮件服务、Google和生成式中转后配。下方“尚未上线”及旧版本均为历史。
+
 ## 2026-11-06 欢迎入口 Web131 / API64
 
 先读CURRENT_PROGRESS顶部与WELCOME_ENTRY_20261106.md。当前根路径/为欢迎页，原首页/home，/welcome兼容；此为用户新决定，不恢复旧根路径首页。NAS welcome-entry-web-r131-recovery保留前Web130，welcome-entry-api-r64-recovery保留前API63/配置/日志/数据库包，未独立恢复。只按相应镜像键恢复，不覆盖整份环境或删除数据。原账户、批注、目录和OCR/索引不重做；公网仍未切换。

@@ -39,10 +39,7 @@ services:
     <<: *worker-budget
     # Match the running candidate's process budget; retain public static setup.
     command: >
-      sh -c "python manage.py collectstatic --noinput &&
-             gunicorn --config python:config.gunicorn config.wsgi:application
-             --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120
-             --access-logfile - --error-logfile -"
+      sh -c "python manage.py collectstatic --noinput && exec gunicorn --config python:config.gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120 --access-logfile - --error-logfile -"
   worker:
     <<: *worker-budget
   ingestion-worker:
