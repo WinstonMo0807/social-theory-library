@@ -1,3 +1,7 @@
+## 2026-11-06 头像编辑交互
+
+AVATAR-UX-01 D：更换头像改为可点头像/明确按钮、原位预览、一次保存和取消；低频操作收进更多，隐私/校验/请求恢复继续沿用。Web132（129ee46b02d8）已更新，API64不变。TypeScript/最终构建通过；实际核对选图、取消、更多及390px排版，未保存或删除用户头像。NAS avatar-editor-web-r132-recovery可回前Web131。截图output/avatar-editor-20261106/，细节见CURRENT_PROGRESS顶部。
+
 # 当前问题
 
 ## 2026-11-06 首发登录与SMTP配置

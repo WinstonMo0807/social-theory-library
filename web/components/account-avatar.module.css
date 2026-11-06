@@ -1,17 +1,39 @@
 .avatar { width: 44px; height: 44px; display: inline-grid; place-items: center; flex-shrink: 0; overflow: hidden; background: var(--annotation); color: var(--ink); font: 600 21px var(--serif); }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
-.editor { padding-block: 18px; border-block: 1px solid var(--line); margin-block: 18px; color: var(--ink); }
+.editor { padding-block: 24px; border-block: 1px solid var(--line); margin-block: 18px; color: var(--ink); }
 .editor h3 { margin: 0; font: 600 20px var(--serif); }
-.row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-.row .avatar { width: 72px; height: 72px; }
-.editor p { font-size: 13px; line-height: 1.8; color: var(--muted); }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-.editor button, .dialog button { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 8px 13px; cursor: pointer; }
+.row { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 22px; align-items: start; }
+.content { min-width: 0; }
+.editor p { font-size: 13px; line-height: 1.6; color: var(--muted); }
+.editor .privacy { margin: 6px 0 14px; }
+.editor .hint { margin: 10px 0 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.editor button, .dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 8px 14px; font: inherit; font-size: 14px; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease; }
 .editor button:disabled, .dialog button:disabled { opacity: .5; cursor: not-allowed; }
-.editor input[type=file] { max-width: 100%; margin-top: 12px; }
-.preview { width: 96px; height: 96px; object-fit: cover; }
+.editor .primary, .dialog .primary { color: var(--surface); background: var(--ink); border-color: var(--ink); }
+.editor .textButton { background: transparent; border-color: transparent; }
+.editor .avatarButton { position: relative; width: 88px; height: 88px; padding: 0; border: 0; border-radius: 12px; background: transparent; }
+.avatarButton .avatar, .preview { display: grid; width: 88px; height: 88px; border-radius: 12px; object-fit: cover; background: var(--paper); border: 1px solid var(--line); font-size: 32px; }
+.camera { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid var(--surface); border-radius: 50%; color: var(--surface); background: var(--ink); }
+.more { margin-top: 8px; }
+.more summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 2px 0; color: var(--muted); font-size: 13px; cursor: pointer; list-style: none; }
+.more summary::-webkit-details-marker { display: none; }
+.more[open] summary svg { transform: rotate(180deg); }
+.moreActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.editor .feedback { margin: 16px 0 0; padding: 12px 14px; background: var(--paper); border-left: 2px solid var(--line-dark); }
+.feedback p { margin: 0; }
+.spinner { animation: avatar-saving 800ms linear infinite; }
+@keyframes avatar-saving { to { transform: rotate(360deg); } }
+@media (hover: hover) {
+  .editor button:not(:disabled):hover, .dialog button:not(:disabled):hover { border-color: var(--ink); background: var(--paper); }
+  .editor .primary:not(:disabled):hover, .dialog .primary:not(:disabled):hover { background: color-mix(in srgb, var(--ink) 88%, var(--surface)); border-color: var(--ink); }
+  .editor .avatarButton:not(:disabled):hover { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .more summary:hover { color: var(--ink); }
+}
+@media (max-width: 480px) { .row { grid-template-columns: 64px minmax(0, 1fr); gap: 16px; } .editor .avatarButton, .avatarButton .avatar, .preview { width: 64px; height: 64px; border-radius: 8px; } }
+@media (prefers-reduced-motion: reduce) { .editor button, .dialog button { transition: none; } .spinner { animation: none; } }
 .dialog { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; width: min(440px, calc(100vw - 32px)); padding: 24px; }
 .dialog::backdrop { background: rgb(0 0 0 / .4); }
 .dialog h3 { margin-top: 0; font: 600 22px var(--serif); }
 .dialog p { line-height: 1.8; font-size: 14px; }
-.editor button:focus-visible, .editor input:focus-visible, .dialog button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.editor button:focus-visible, .more summary:focus-visible, .dialog button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
