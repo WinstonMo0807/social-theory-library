@@ -1051,7 +1051,7 @@ def build_admin_workspace(
             "is_primary": edition.is_primary,
             "publication_mode": edition.publication_mode,
             "pdf_preview_url": f"/ingestion/items/{item.id}/preview/" if item else (
-                f"/api/distribution/admin/assets/{normalized.id}/preview/" if normalized else ""
+                f"/distribution/admin/assets/{normalized.id}/preview/" if normalized else ""
             ),
             "page_preview_url": f"/admin/preview/works/{edition.id}",
             "public_url": visibility["public_url"],

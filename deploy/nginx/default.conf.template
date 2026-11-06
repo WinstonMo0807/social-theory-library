@@ -37,6 +37,13 @@ map $library_lan_http $library_forwarded_proto {
     1 https;
 }
 
+# Saved-content previews are embedded by the same-origin administrator UI.
+# Other pages continue to reject framing, including all third-party origins.
+map $uri $library_frame_policy {
+    default DENY;
+    ~^/admin/preview/ SAMEORIGIN;
+}
+
 server {
     listen 80 default_server;
     server_name _;
@@ -47,7 +54,7 @@ server {
     send_timeout 15m;
 
     add_header X-Content-Type-Options nosniff always;
-    add_header X-Frame-Options DENY always;
+    add_header X-Frame-Options $library_frame_policy always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
 

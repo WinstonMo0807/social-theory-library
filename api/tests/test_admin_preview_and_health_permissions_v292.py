@@ -64,6 +64,7 @@ def _edition_with_pdf(*, state: str) -> tuple[Edition, Asset, bytes]:
 def test_draft_and_ready_admin_pdf_preview_is_private_and_range_capable(
     api_client,
     admin_user,
+    reader_user,
     settings,
     tmp_path,
     state,
@@ -81,8 +82,9 @@ def test_draft_and_ready_admin_pdf_preview_is_private_and_range_capable(
         user=admin_user,
         mode="maintenance",
     )
-    preview_path = f"/api/distribution/admin/assets/{asset.id}/preview/"
-    assert workspace["context"]["pdf_preview_url"] == preview_path
+    # The admin API client prefixes its configured /api base exactly once.
+    preview_path = "/api" + workspace["context"]["pdf_preview_url"]
+    assert preview_path == f"/api/distribution/admin/assets/{asset.id}/preview/"
 
     anonymous = api_client.get(preview_path, HTTP_RANGE="bytes=0-4")
     assert anonymous.status_code in {401, 403}
@@ -100,7 +102,13 @@ def test_draft_and_ready_admin_pdf_preview_is_private_and_range_capable(
         f"/api/distribution/assets/{asset.id}/file/",
         HTTP_RANGE="bytes=0-4",
     )
-    assert public.status_code == 404
+    assert public.status_code == 401
+    api_client.force_authenticate(reader_user)
+    assert api_client.get(preview_path, HTTP_RANGE="bytes=0-4").status_code == 403
+    assert api_client.get(
+        f"/api/distribution/assets/{asset.id}/file/",
+        HTTP_RANGE="bytes=0-4",
+    ).status_code == 404
 
 
 def test_published_public_pdf_range_behavior_is_unchanged(
