@@ -1,3 +1,11 @@
+## 2026-11-07 欢迎演示三幕原创设计已上线
+
+用户指出学者、理论、主题与特别策划三幕过空，并明确不复用旧页面配图。已以原创SVG/HTML/CSS重绘匿名学者档案、概念分支卡片、主题线稿与专题册；三幕不含img，不新增图片请求或依赖。功能演示继续使用公开投影，空内容采用示意元素，不发布假学者、假关系或策展记录。320px专题册改为单封面，宽屏双页；暂停、重播、减少动态效果沿用。实现D，审美验收仍由用户批注确认。
+
+源码38dc1032；正式Web4.0.0-20261107-welcome-r1（de6008008818），运行容器f41fcf80e595。准确基线为Web r3来源加upload-r5四个前端修复，API/四Worker/Beat仍upload-r5，本次不重启；其余24个运行容器身份和启动时间保持，edge仅平滑reload。公网和内网同一正式服务。NAS恢复点stl-releases/20261107-r1/welcome-art-web-r1-recovery保留前Web upload-r5及准确配置，不回滚数据库或上传批次。
+
+TypeScript、独立正式构建退出0，候选运行UID1000可读全部1838文件，部署后1838运行文件hash一致（既有runtime-config注入除外）。浏览器实际核对1440/768/390/320布局、暂停/重播及公网新画面；未做全站验收。截图output/playwright/welcome-art-20261107/，记录docs/stl4/WELCOME_DISCOVERY_ART_20261107.md。所有既有未提交改动保留。
+
 ## 2026-11-07 正式前端 r2 已更新
 
 公网和内网继续共用 social-science-library，Web 更新至 4.0.0-20261107-r2（dea2f146adce），源码 8b3d8cbb。加入进入书库后的一次性登录邀请、试用说明和统一图标；2074个构建/图标文件读回一致。API/四worker/beat仍r1，其余24个运行容器未重启，edge仅平滑reload。配置仍为stl-releases/20261107-r1/public完整组合，旧目录stl4-compose.py入口继续有效。前Web r1、准确环境与配置保留于login-web-r2-recovery。详情stl4/LOGIN_INVITATION_20261107.md。
