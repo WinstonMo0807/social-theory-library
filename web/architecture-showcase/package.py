@@ -3,9 +3,9 @@ from pathlib import Path
 import zipfile, tarfile, hashlib, json, sys
 
 here = Path(__file__).resolve().parent
-out = here.parent.parent / 'output/playwright/architecture-showcase-v5'
+out = here.parent.parent / 'output/playwright/architecture-showcase-v5-smooth'
 if '--public' in sys.argv:
-    archive = out / 'STL-architecture-v5-public-20261107.tar.gz'
+    archive = out / 'STL-architecture-v5-smooth-public-20261107.tar.gz'
     files = [p for p in (here / 'dist-public').rglob('*') if p.is_file()]
     assert all(not p.is_symlink() and p.suffix not in {'.csv', '.tsx', '.py', '.map'} for p in files)
     assert not json.loads((here/'dist-public/architecture.json').read_text())['sources']
@@ -17,8 +17,8 @@ if '--public' in sys.argv:
     (out/'public-manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     print(f'Public package: {archive.name}, {len(files)} files, {archive.stat().st_size:,} bytes')
     sys.exit(0)
-archive = out / 'STL-architecture-v5-local-20261107.zip'
-prefix = 'STL-architecture-v5/'
+archive = out / 'STL-architecture-v5-smooth-local-20261107.zip'
+prefix = 'STL-architecture-v5-smooth/'
 with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
     for f in (here / 'dist').rglob('*'):
         if f.is_file():
@@ -33,7 +33,7 @@ with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
     z.writestr(prefix + 'start.cmd', '@echo off\r\ncd /d "%~dp0"\r\nnode serve.mjs 5196\r\npause\r\n')
     for f in (out / '4k').glob('*.png'):
         z.write(f, prefix + 'PPT-pictures/' + f.name)
-    z.write(out / 'video/STL-architecture-v5-1080p.webm', prefix + 'STL-architecture-v5-1080p.webm')
+    z.write(out / 'video/STL-architecture-v5-smooth-1080p.webm', prefix + 'STL-architecture-v5-smooth-1080p.webm')
     z.writestr(prefix + '开始使用.txt', '''STL 架构演示 v5 · 2026-11-07
 
 本包包含内部架构与管理路径，仅供内部汇报。
@@ -48,7 +48,7 @@ R 重播当前阶段，1–5 切换场景，Esc 关闭详情。
 默认从总览自动开始，5 幕和 3 条流程循环展示。点击页面延长当前步骤的停留。
 点击模块查看内部结构与来源。右上角可导出当前 4K PNG。
 
-未安装 Node 时，可直接播放 STL-architecture-v5-1080p.webm。
+未安装 Node 时，可直接播放 STL-architecture-v5-smooth-1080p.webm。
 PPT-pictures 中的 14 张 PNG 均为 3840×2160，可插入幻灯片。
 视频约 5 分钟，分辨率为 1920×1080，无旁白。
 

@@ -1,6 +1,6 @@
 {
   "opening": 3200,
-  "click": 1400,
+  "focus": 700,
   "detail": 8000,
   "return": 1800,
   "closing": 2600,

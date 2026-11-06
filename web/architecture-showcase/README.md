@@ -23,7 +23,7 @@ node web/architecture-showcase/serve.mjs
 
 ## 场景与操作
 
-1. 全站总览：演示指针依次点击 6 个模块，展开子模块与使用示例，再返回全图。六个模块展示完毕后进入网站页面。
+1. 全站总览：6 张模块卡片依次平滑移至焦点，展开子模块与使用示例，再返回全图。总览不显示模拟指针。六个模块展示完毕后进入网站页面。
 2. 网站页面：用 4 张独立卡片组织浏览、阅读、私人研究和管理页面。逐张突出显示，最后回到卡片总览。
 3. 使用演示：在固定界面中连续呈现 3 条流程。按 20、10、8 步呈现。输入、指针、勾选、排序、加载与回执随操作逐步呈现。右侧说明每步操作及界面反馈。
 4. 底层架构：Web、Django、PostgreSQL、Celery/Redis、Meilisearch、模型、OCR 与文件职责。
@@ -53,13 +53,13 @@ node web/architecture-showcase/serve.mjs
 - 导出 SVG：生成内嵌字体与图像的文件，适合浏览器查看。文件使用 `foreignObject`，Office 支持情况可能不同，PPT 宜使用 PNG。
 - 录制演示：选择本展示标签页后，录制自动展示过程。停止后下载 WebM 视频。浏览器须支持 `getDisplayMedia` 和 `MediaRecorder`。
 
-新版产物位于 `output/playwright/architecture-showcase-v5/`：5 幕截图、38 个步骤截图、节点详情、全屏截图、`4k/` 中的 14 张 3840×2160 PNG，以及 `video/STL-architecture-v5-1080p.webm`。视频约 5 分钟，记录公开版从开场到末幕再回到开场的一整轮，无需点击播放。
+新版产物位于 `output/playwright/architecture-showcase-v5-smooth/`：总览详情与动效复核截图、`4k/` 中的 14 张 3840×2160 PNG，以及 `video/STL-architecture-v5-smooth-1080p.webm`。视频约 5 分钟，记录公开版从开场到末幕再回到开场的一整轮，无需点击播放。
 
-同目录的 `STL-architecture-v5-local-20261107.zip` 包含构建成品、独立 Node 静态服务器、源码、14 张 PPT 图片和视频。解压后运行 `start.cmd`，无需安装 npm 依赖。重新打包使用 `python web/architecture-showcase/package.py`。
+同目录的 `STL-architecture-v5-smooth-local-20261107.zip` 包含构建成品、独立 Node 静态服务器、源码、14 张 PPT 图片和视频。解压后运行 `start.cmd`，无需安装 npm 依赖。重新打包使用 `python web/architecture-showcase/package.py`。
 
 ## 备份
 
-本轮修改前的 v4 离线包保留在 `output/playwright/architecture-showcase-v4/STL-architecture-v4-local-20261106.zip`。完整 v3 离线包保留在 `output/playwright/architecture-showcase-v3/STL-architecture-v3-local-20261106.zip`。完整 v2 已保存为 `output/backups/STL-architecture-v2-final-STC-20261106.zip`，保留当时源码、成品、服务器和说明。上一轮 v2 离线包仍在 `output/playwright/architecture-showcase-v2/`。
+本轮修改前的 v5 离线包保留在 `output/playwright/architecture-showcase-v5/STL-architecture-v5-local-20261107.zip`。v4 离线包保留在 `output/playwright/architecture-showcase-v4/STL-architecture-v4-local-20261106.zip`。完整 v3 离线包保留在 `output/playwright/architecture-showcase-v3/STL-architecture-v3-local-20261106.zip`。完整 v2 已保存为 `output/backups/STL-architecture-v2-final-STC-20261106.zip`，保留当时源码、成品、服务器和说明。上一轮 v2 离线包仍在 `output/playwright/architecture-showcase-v2/`。
 
 ### 文案修订后的原版
 
@@ -130,7 +130,7 @@ node web/architecture-showcase/verify-journeys.mjs
 node web/architecture-showcase/verify-auto.mjs
 ```
 
-三个脚本共通过 401 项检查。报告保存在 `output/playwright/architecture-showcase-v5/` 的 `verification.json`、`journey-verification.json` 和 `auto-verification.json`。
+上一轮三个脚本共通过 401 项检查。本轮自动展示定向检查通过 129 项，最新报告保存在 `output/playwright/architecture-showcase-v5-smooth/` 的 `auto-verification.json`。上一轮其他检查记录仍在 `output/playwright/architecture-showcase-v5/`。
 
 检查覆盖：
 
@@ -153,8 +153,8 @@ node web/architecture-showcase/build.mjs --public
 node web/architecture-showcase/serve.mjs 5198 --public
 ```
 
-打开 <http://127.0.0.1:5198/>。本机完整版仍在 5196。公开版包为 `output/playwright/architecture-showcase-v5/STL-architecture-v5-public-20261107.tar.gz`，仅含公开成品、服务器与容器配置。
+打开 <http://127.0.0.1:5198/>。本机完整版仍在 5196。公开版包为 `output/playwright/architecture-showcase-v5-smooth/STL-architecture-v5-smooth-public-20261107.tar.gz`，仅含公开成品、服务器与容器配置。
 
-NAS 已运行独立的 `stl-architecture-showcase` 容器。成品封装在只读镜像中，无业务数据挂载，无宿主机端口。发布目录为 `/volume2/library/stl-previews/architecture-showcase-v5-20261107`。现有书库 edge 与 cloudflared 不变。域名由用户自行接入；本轮未修改或复核公网路由。
+NAS 已运行独立的 `stl-architecture-showcase` 容器。成品封装在只读镜像中，无业务数据挂载，无宿主机端口。发布目录为 `/volume2/library/stl-previews/architecture-showcase-v5-smooth-20261107`。现有书库 edge 与 cloudflared 不变。域名由用户自行接入；本轮未修改或复核公网路由。
 
 Cloudflare 接入步骤与恢复方式见 [域名接入说明](DOMAIN_SETUP.md)。完整本机 ZIP 含内部溯源信息，不作为公开下载包。

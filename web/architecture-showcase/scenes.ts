@@ -4,7 +4,7 @@ export const overviewModules=tour.modules;
 export const overviewTour=[
  {phase:'overview',node:null,label:'全站总览',note:'六个功能领域围绕馆藏与原文协作。',duration:tour.opening},
  ...tour.modules.flatMap(m=>[
-  {phase:'click',node:m.id,label:`进入${m.label}`,note:m.note,duration:tour.click},
+  {phase:'focus',node:m.id,label:`进入${m.label}`,note:m.note,duration:tour.focus},
   {phase:'detail',node:m.id,label:m.label,note:m.note,duration:tour.detail},
   {phase:'return',node:m.id,label:'返回总览',note:`返回全站总览，接续下一部分。`,duration:tour.return}
  ]),

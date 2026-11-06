@@ -4,6 +4,12 @@
 
 # 部署说明
 
+## 2026-11-07 架构总览平滑动画更新
+
+独立源站更新至 /volume2/library/stl-previews/architecture-showcase-v5-smooth-20261107，镜像 stl-architecture-showcase:v5-smooth-20261107。仅重建 stl-architecture-showcase，216 个运行文件哈希一致，健康检查及隧道网络 HTTP 200；仍无业务挂载或宿主端口。现有生产/预览 edge 与 cloudflared 的 ID、镜像、启动时间和重启次数不变。
+
+原 v5 发布目录、镜像和本机成品保留，rollback.json 记录回退入口。域名由用户自行接入，本轮未修改或复核公网。配置仍为 http://stl-architecture-showcase:5196，Host preview.winstonmo.com。详 stl4/ARCHITECTURE_SHOWCASE_V5_20261107.md 顶部。
+
 ## 2026-11-07 架构演示 v5 源站更新
 
 独立容器 stl-architecture-showcase 已更新至 v5-20261107，发布目录 /volume2/library/stl-previews/architecture-showcase-v5-20261107。仍使用只读非 root 镜像，无业务挂载或宿主机端口。216 个运行文件 SHA-256 与本机公开成品一致，容器 healthy，隧道网络携带 Host preview.winstonmo.com 返回 HTTP 200。公开 JSON、首页及 JS 可访问；证据索引、管理路径与服务器源码返回 404。
