@@ -98,9 +98,10 @@ export function AuthSessionDialog() {
   if (noticeRoute === pathname) return <Dialog open onRequestClose={() => setNoticeRoute(null)} className={`${styles.dialog} ${styles.notice}`} aria-labelledby="library-trial-title" initialFocusRef={heading}>
     <button className={styles.close} onClick={() => setNoticeRoute(null)} aria-label="关闭试用说明"><X size={20} /></button>
     <BookOpen className={styles.noticeMark} size={32} strokeWidth={1.4} aria-hidden="true" />
-    <h2 id="library-trial-title" ref={heading} tabIndex={-1}>欢迎试读 STL 书库</h2>
+    <h2 id="library-trial-title" ref={heading} tabIndex={-1}>欢迎试读社会理论书库</h2>
+    <p>由 WinstonMo 开发</p>
     <p>目前的策展均为测试示例，后续正式策展将重新编排。</p>
-    <p>现有 <strong>57 本书</strong>已进入内容策划与观点检索，欢迎尝试。</p>
+    <p>现有 <strong>57 本书</strong>已进入内容策划与观点检索，欢迎试用。</p>
     <button className={styles.noticeContinue} onClick={() => setNoticeRoute(null)}>知道了，开始浏览 <ArrowRight size={18} /></button>
   </Dialog>;
   if (!prompt || prompt.route !== pathname) return null;
