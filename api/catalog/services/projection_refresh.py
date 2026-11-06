@@ -428,6 +428,9 @@ def queue_projection_refresh(
         return job
     if job.status == ProcessingJob.Status.SUCCEEDED and not force:
         return job
+    if job.attempt >= job.max_attempts and (not force or preserve_attempts):
+        # Automatic recovery must not turn an exhausted failure into a fresh wakeup.
+        return job
 
     stats = dict(job.stats or {})
     stats["manual_retry"] = {
@@ -490,10 +493,13 @@ def _claim(job_id: str, task_id: str) -> tuple[ProcessingJob, bool]:
             ProcessingJob.Status.FAILED,
         }:
             return job, False
-        if (
-            job.status == ProcessingJob.Status.FAILED
-            and job.attempt >= job.max_attempts
-        ):
+        if job.attempt >= job.max_attempts:
+            if job.status == ProcessingJob.Status.PENDING:
+                job.status = ProcessingJob.Status.FAILED
+                job.error_code = "max_attempts_exhausted"
+                job.error_message = "后台任务已达到最大重试次数，需要管理员处理。"
+                job.finished_at = timezone.now()
+                job.save(update_fields=["status", "error_code", "error_message", "finished_at", "updated_at"])
             return job, False
         job.status = ProcessingJob.Status.RUNNING
         job.attempt += 1

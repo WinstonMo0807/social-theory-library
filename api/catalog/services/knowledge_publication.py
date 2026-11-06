@@ -18,7 +18,7 @@ import uuid
 
 from django.conf import settings
 from django.db import connection, transaction
-from django.db.models import Max, Q
+from django.db.models import F, Max, Q
 from django.utils import timezone
 
 from catalog.models import (
@@ -1612,6 +1612,11 @@ def process_knowledge_event(event_id) -> KnowledgePublicationEvent | None:
             object_id=event.object_id,
         )
     }
+    from ingestion.models import ProcessingJob
+    exhausted_owners = {str(pk) for pk in ProcessingJob.objects.filter(
+        job_type="projection_refresh", status="failed", attempt__gte=F("max_attempts"),
+        stats__target_type=event.object_type, stats__target_id=str(event.object_id),
+    ).values_list("pk", flat=True)}
     pending = False
     failed = []
     now = timezone.now()
@@ -1625,7 +1630,9 @@ def process_knowledge_event(event_id) -> KnowledgePublicationEvent | None:
             state
             for state in required_states
             if state is not None
-            and state.status == ProjectionState.Status.FAILED
+            and (state.status == ProjectionState.Status.FAILED or (
+                state.task_owner_type == "ProcessingJob" and state.task_owner_key in exhausted_owners
+            ))
             and state.projected_revision < delivery.source_revision
         ]
         complete = bool(not missing) and all(

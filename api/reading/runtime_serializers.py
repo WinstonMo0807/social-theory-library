@@ -51,10 +51,16 @@ class AIRuntimeVersionInput(StrictRuntimeInput):
     expected_version = serializers.RegexField(r'^[a-f0-9]{64}$')
 
 
+class RuntimeEndpointInput(StrictRuntimeInput):
+    profile_key = serializers.RegexField(r'^[a-z][a-z0-9_-]{1,63}$')
+    base_url = serializers.CharField(max_length=2000, write_only=True)
+
+
 class AIRuntimeProfileDocumentSerializer(AIRuntimeVersionInput):
     active = serializers.DictField(child=serializers.CharField(max_length=64))
     profiles = AIRuntimeProfileSerializer(many=True, min_length=1, max_length=48)
     credential = RuntimeCredentialInput(required=False)
+    endpoint = RuntimeEndpointInput(required=False)
 
     def validate_active(self, value):
         if set(value) - set(AICapability.VALUES):

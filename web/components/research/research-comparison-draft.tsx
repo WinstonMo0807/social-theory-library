@@ -20,9 +20,9 @@ export function ResearchComparisonGenerate({ workspace, dimension, onClose }: { 
   const valid = ids.length > 0 && ids.length <= 20 && ids.every(id => readable.some(ref => researchEvidenceKey(ref) === id)) && (record.data.comparison?.dimensions || []).includes(dimension);
   return <Dialog open onRequestClose={() => { if (!pending) onClose(); }} className="stl4-research-dialog stl4-comparison-editor" aria-labelledby="comparison-generate-title">
     <form onSubmit={event => { event.preventDefault(); if (!valid) return; const data = { dimension, reference_ids: ids }; void run(() => generateResearchComparison(record.id, { ...data, expected_revision: record.revision, request_id: requestId(JSON.stringify(data)) }), "比较草稿已加入原研究队列，已有笔记保留。").then(ok => { if (ok) onClose(); }); }}>
-      <h2 id="comparison-generate-title">生成比较草稿</h2><p>维度：{dimension}。只把你明确选择的原文交给本地分析服务，不传入你的研究笔记。</p>
+      <h2 id="comparison-generate-title">生成比较草稿</h2><p>维度：{dimension}。所选原文将发送给书库配置的 API 服务。原有笔记保留。</p>
       <fieldset><legend>本次依据（已选 {ids.length} / 最多20条）</legend>{readable.map(ref => { const key = researchEvidenceKey(ref); return <label className="stl4-comparison-source" key={key}><input type="checkbox" checked={ids.includes(key)} disabled={pending || !ids.includes(key) && ids.length >= 20} onChange={event => setIds(rows => event.target.checked ? [...rows, key] : rows.filter(id => id !== key))}/><span><strong>{ref.title || "原文材料"} · PDF 第 {ref.pdf_page || "—"} 页</strong><span>{ref.quote || ref.text || "打开原文核对"}</span></span></label>; })}{!readable.length ? <p>还没有可用原文。请先加入选材，或重新核对已变化的来源。</p> : null}</fieldset>
-      <p>草稿与本人判断分开保存。生成结束后逐条核对、编辑，再另存为比较笔记。超过原文或模型预算时会保留未完成状态，不截断材料或改用远程服务。</p>
+      <p>生成后请核对原文，再保存为比较笔记。材料过长时会提示减少选材。</p>
       {actionError ? <p role="alert">{actionError}<button type="button" disabled={pending} onClick={workspace.refresh}>读取最新研究状态</button></p> : null}
       <footer><button type="button" disabled={pending} onClick={onClose}>返回</button><button type="submit" disabled={pending || !valid || record.archived}>{pending ? "正在提交……" : "使用所选原文生成"}</button></footer>
     </form>
@@ -53,7 +53,7 @@ export function ResearchComparisonDrafts({ workspace, dimension, onReview }: { w
     </div></header>
     {drafts.length > 1 ? <label>生成记录<select value={current.id} onChange={event => setChosen(event.target.value)}>{drafts.map((turn, index) => <option value={turn.id} key={turn.id}>第 {index + 1} 次 · {states[turn.status || ""] || "已保存"}</option>)}</select></label> : null}
     <p>{draft.notice}</p>
-    {current.status === "failed" ? <p role="alert">本轮未取得完整可用草稿。可核对本地模型服务、所选原文和材料范围后重试，原比较笔记未改动。</p> : null}
+    {current.status === "failed" ? <p role="alert">本轮未取得完整可用草稿。可核对分析服务、所选原文和材料范围后重试，原比较笔记未改动。</p> : null}
     {draft.missing_columns ? <p>本轮还有 {draft.missing_columns} 个文献列未取得有效草稿，已完成部分保留。</p> : null}
     {draft.rows.map(row => { const column = columns.find(item => item.id === row.column_id); const usable = draft.source_status === "available" && row.reference_ids.every(id => available.get(id)?.source_status === "available") && Boolean(column) && (record.data.comparison?.dimensions || []).includes(draft.dimension); return <article key={row.column_id}>
       <h3>{column?.title || "原选材列已移除"} · {row.evidence_state === "insufficient" ? "材料不足，待补证据" : "模型草稿，待本人核对"}</h3>

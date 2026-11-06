@@ -14,6 +14,7 @@ PROFILE_SETTING_KEY = "ai_runtime_profiles"
 
 
 class AICapability:
+    PRIVATE_RESEARCH = "private_research"
     METADATA_EXTRACTION = "metadata_extraction"
     LIBRARY_QA = "library_qa"
     FIELD_ENRICHMENT_OPTIONAL = "field_enrichment_optional"
@@ -29,6 +30,7 @@ class AICapability:
     CURATION_REASONING = "curation_reasoning"
 
     VALUES = (
+        PRIVATE_RESEARCH,
         METADATA_EXTRACTION,
         LIBRARY_QA,
         FIELD_ENRICHMENT_OPTIONAL,
@@ -63,6 +65,11 @@ class CapabilityPolicy:
 
 
 CAPABILITY_POLICIES = {
+    AICapability.PRIVATE_RESEARCH: CapabilityPolicy(
+        capability=AICapability.PRIVATE_RESEARCH, supports_json=True, supports_stream=False,
+        default_temperature=0, default_max_output_tokens=4096, default_timeout_seconds=120,
+        default_answer_behavior="candidate_only",
+    ),
     AICapability.METADATA_EXTRACTION: CapabilityPolicy(
         capability=AICapability.METADATA_EXTRACTION,
         supports_json=True,
@@ -256,8 +263,8 @@ def _disabled_default_profile(
     return AIRuntimeProfile(
         key=DEFAULT_PROFILE_KEYS[capability],
         capability=capability,
-        provider=provider if provider in SUPPORTED_AI_PROVIDERS else "none",
-        model=str(model or "").strip(),
+        provider="openai_compatible" if capability == AICapability.PRIVATE_RESEARCH else provider if provider in SUPPORTED_AI_PROVIDERS else "none",
+        model="" if capability == AICapability.PRIVATE_RESEARCH else str(model or "").strip(),
         enabled=False,
         temperature=policy.default_temperature,
         max_output_tokens=policy.default_max_output_tokens,
@@ -268,6 +275,7 @@ def _disabled_default_profile(
             else getattr(settings, "AI_MAX_INPUT_CHARS", 16000)
         ),
         answer_behavior=policy.default_answer_behavior,
+        reasoning={"json_mode": "json_object"} if capability == AICapability.PRIVATE_RESEARCH else {},
     )
 
 
@@ -385,6 +393,8 @@ def validate_runtime_profile(value: dict) -> AIRuntimeProfile:
         raise AIRuntimeProfileError("不支持的 AI capability。")
     if provider not in SUPPORTED_AI_PROVIDERS:
         raise AIRuntimeProfileError("不支持的 AI provider。")
+    if capability == AICapability.PRIVATE_RESEARCH and provider not in {'none', 'openai_compatible'}:
+        raise AIRuntimeProfileError('私人研究请使用 API 服务；本地模型可在 STL 智能助手中配置。')
     if not ALIAS_RE.fullmatch(endpoint_alias) or not ALIAS_RE.fullmatch(credential_alias):
         raise AIRuntimeProfileError("Endpoint/Credential alias 格式无效。")
     enabled = bool(value.get("enabled", False))
@@ -535,7 +545,8 @@ def resolve_endpoint(alias: str) -> str:
     if alias == "default":
         return str(getattr(settings, "AI_BASE_URL", "") or "").strip().rstrip("/")
     key = "AI_ENDPOINT_" + alias.upper().replace("-", "_")
-    return str(os.getenv(key, "") or "").strip().rstrip("/")
+    from common.ai_endpoints import saved_endpoint
+    return str(os.getenv(key, "") or saved_endpoint(alias)).strip().rstrip("/")
 
 
 def resolve_credential(alias: str) -> str:

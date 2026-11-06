@@ -1,4 +1,4 @@
-"""Private structured analysis through the existing AI client, local hosts only."""
+"""Owner-scoped research through its dedicated API profile; OCR stays local."""
 import ipaddress
 import json
 import socket
@@ -63,14 +63,21 @@ class PrivateLocalTransport(httpx.HTTPTransport):
 
 
 def generate_local(*, capability, task, prompt, payload, schema):
+    # Keep this historical helper name for existing callers; private tasks use their own API profile.
+    if task.startswith('private_'):
+        capability = AICapability.PRIVATE_RESEARCH
     config = current_ai_configuration(capability)
     if not config.enabled:
-        raise AIServiceUnavailable("本地结构化模型未配置。")
+        raise AIServiceUnavailable("分析服务尚未配置。")
     body = json.dumps(payload, ensure_ascii=False)
     if len(body) > config.max_input_chars:
-        raise AIServiceUnavailable("材料超过本地模型上下文预算，已保留未分析状态。")
+        raise AIServiceUnavailable("材料超过本次分析容量，请减少选材；原资料已保留。")
     # A supplied transport disables environment proxies and second hostname lookup.
-    transport = PrivateLocalTransport(config.base_url)
+    if config.provider == 'openai_compatible':
+        from common.ai_endpoints import PublicAITransport
+        transport = PublicAITransport(config.base_url)
+    else:
+        transport = PrivateLocalTransport(config.base_url)
     try:
         result = AIClient(config=config, transport=transport).generate_json(task=task,
             system_prompt=prompt, document_text=body, schema=schema, prompt_version="private-research-v1")
@@ -92,7 +99,7 @@ def analyze_local_relations(statement, candidates):
                    "引用 reference_id，不补写来源或原话。相似不等于支持或反证；材料不足时返回 insufficient_evidence。所有结果是待本人核对候选。",
             payload={"statement": statement, "evidence": candidates}, schema=schema)
     except AIServiceError:
-        return [], {"status": "unavailable", "message": "本地关系分析未完成；原文与规则线索保留待核实。"}
+        return [], {"status": "unavailable", "message": "关系分析未完成，原文与已有线索已保留。"}
     allowed = {row["reference_id"] for row in candidates}
     rows = [row for row in output["candidates"] if row["reference_id"] in allowed]
     return rows, {"status": "candidate", **model}
@@ -114,25 +121,26 @@ def propose_plan_labels(plan_data, memory_reminders):
                 "items": [{"item_id": row["id"], "title": row["title"], "reason": row["reason"]} for row in plan_data["items"][:30]],
                 "memory_reminders": memory_reminders}, schema=schema)
     except AIServiceError:
-        return [], {"status": "unavailable", "message": "本地模型未补充阶段建议；已保存规则生成的材料顺序。"}
+        return [], {"status": "unavailable", "message": "模型未补充阶段建议；已保存现有材料顺序。"}
     allowed = {row["id"] for row in plan_data["items"][:30]}
     return [{key: str(value)[:2000] for key, value in row.items()} for row in output["items"] if row["item_id"] in allowed], {"status": "candidate", **model}
 
 
-def plan_followup(question, history, selected_evidence):
+def plan_followup(question, history, selected_evidence, memories=None):
     schema = {"type": "object", "additionalProperties": False, "required": ["query", "reason"],
         "properties": {"query": {"type": "string"}, "reason": {"type": "string"}}}
     try:
         output, model = generate_local(capability=AICapability.LIBRARY_QA, task="private_followup_query",
             prompt="把当前追问解析为可检索的问题，只使用所给相关历史与当前选材澄清指代。保留否定、对象、时间、地域和条件。"
                    "不得添加历史或材料中没有的书名、人物或结论，不改变搜索范围。只返回 query 与简短 reason。",
-            payload={"question": question, "history": history, "selected_evidence": selected_evidence}, schema=schema)
+            payload={"question": question, "history": history, "selected_evidence": selected_evidence,
+                "authorized_notes": memories or []}, schema=schema)
         query = output["query"].strip()
         if 2 <= len(query) <= 1200:
-            return {"query": query, "method": "local_model", "reason": output["reason"][:1000], "model": model}
+            return {"query": query, "method": "api_model", "reason": output["reason"][:1000], "model": model}
     except AIServiceError:
         pass
     previous = history[-1]["question"] if history else ""
     query = (previous + "\n" + question) if previous and previous != question and len(previous) + len(question) < 1200 else question
     return {"query": query, "method": "explicit_history_fallback",
-        "reason": "本地指代解析未完成，保留原追问与可容纳的上一轮问题；范围不变。"}
+        "reason": "追问解析未完成，保留原追问与上一轮问题；检索范围不变。"}

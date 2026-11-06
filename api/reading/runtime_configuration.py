@@ -96,6 +96,25 @@ def save(actor, values, *, request_id=''):
         updated = validate_profile_document(updates)
     except ValueError as exc:
         raise ValidationError(str(exc)) from exc
+    endpoint = values.get('endpoint')
+    if endpoint:
+        if not owner:
+            raise PermissionDenied('只有馆长可以修改服务器接口地址。')
+        from common.ai_endpoints import save_endpoint, endpoint_alias
+        from catalog.services.field_enrichment.web import WebFetchError
+        key = endpoint['profile_key']
+        target = next((row for row in updated['profiles'] if row['key'] == key), None)
+        if not target or target['provider'] != 'openai_compatible':
+            raise ValidationError('中转接口请选择 OpenAI 兼容服务。')
+        alias = endpoint_alias(key)
+        if os.getenv('AI_ENDPOINT_' + alias.upper().replace('-', '_')):
+            raise ValidationError('该接口由部署环境管理，请维护者先核对环境配置。')
+        if any(row['key'] != key and row['endpoint_alias'] == alias for row in before['profiles'] + updated['profiles']):
+            raise ValidationError('其他配置正在共用该地址，请先解除共用后修改。')
+        try:
+            target['endpoint_alias'] = save_endpoint(actor, key, endpoint['base_url'], request_id=request_id)
+        except (ValueError, WebFetchError) as exc:
+            raise ValidationError('接口地址无效：请使用可解析的公网 HTTPS Base URL，不附带密钥或查询参数。') from exc
     credential = values.get('credential')
     if credential:
         if not owner:

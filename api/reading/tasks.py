@@ -84,8 +84,14 @@ def collect_research_turn(turn_id, generation, task_id):
                         history.insert(0, {"question": unpack(parent)["question"]})
                         parent = parent.parent
                     selected = [resolve_reference(ref, user) for ref in payload.get("selected_refs", [])[:5]]
+                    from .research import plan_memory_rows, search_memories
+                    # Search only notes currently authorized by this owner for this research project.
+                    context = {"kind": "project", "id": str(turn.project_id)}
+                    notes = search_memories(user, search_question, context=context) if plan_memory_rows(user, unpack(turn.project)) else {"results": []}
                     query_plan = plan_followup(search_question, history,
-                        [{"quote": row["quote"], "title": row["title"]} for row in selected if row["source_status"] == "available"])
+                        [{"quote": row["quote"], "title": row["title"]} for row in selected if row["source_status"] == "available"],
+                        memories=[{"id": row["id"], "body": row["data"].get("body", "")}
+                                  for row in notes["results"][:5]])
                 with transaction.atomic():
                     current = ResearchTurn.objects.select_for_update().filter(pk=turn.id, generation=generation, task_id=task_id, status="running").first()
                     if current is None:

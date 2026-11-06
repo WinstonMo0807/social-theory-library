@@ -7034,6 +7034,7 @@ export interface components {
             };
             profiles: components["schemas"]["AIRuntimeProfileRequest"][];
             credential?: components["schemas"]["RuntimeCredentialInputRequest"];
+            endpoint?: components["schemas"]["RuntimeEndpointInputRequest"];
         };
         AIRuntimeProfileOutput: {
             key: string;
@@ -8438,7 +8439,8 @@ export interface components {
             readonly created_at: string;
         };
         /**
-         * @description * `metadata_extraction` - metadata_extraction
+         * @description * `private_research` - private_research
+         *     * `metadata_extraction` - metadata_extraction
          *     * `library_qa` - library_qa
          *     * `field_enrichment_optional` - field_enrichment_optional
          *     * `entity_reasoning` - entity_reasoning
@@ -8453,7 +8455,7 @@ export interface components {
          *     * `curation_reasoning` - curation_reasoning
          * @enum {string}
          */
-        CapabilityEnum: "metadata_extraction" | "library_qa" | "field_enrichment_optional" | "entity_reasoning" | "claim_extraction" | "claim_attribution" | "claim_stance" | "rerank" | "theory_reasoning" | "knowledge_relation_reasoning" | "debate_discovery" | "reading_path_generation" | "curation_reasoning";
+        CapabilityEnum: "private_research" | "metadata_extraction" | "library_qa" | "field_enrichment_optional" | "entity_reasoning" | "claim_extraction" | "claim_attribution" | "claim_stance" | "rerank" | "theory_reasoning" | "knowledge_relation_reasoning" | "debate_discovery" | "reading_path_generation" | "curation_reasoning";
         CapabilityOutput: {
             id: string;
             label: string;
@@ -19666,6 +19668,10 @@ export interface components {
             secret?: string;
             /** @default false */
             confirm_delete: boolean;
+        };
+        RuntimeEndpointInputRequest: {
+            profile_key: string;
+            base_url: string;
         };
         RuntimeEnvironmentOutput: {
             endpoint_configured: boolean;

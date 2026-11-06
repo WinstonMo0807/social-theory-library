@@ -43,6 +43,8 @@ class AdminAIRuntimeProfilesView(AdminPrivateResponseMixin, APIView):
     def put(self, request):
         serializer = AIRuntimeProfileDocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if serializer.validated_data.get('credential', {}).get('action') == 'set' and not request.is_secure():
+            raise ValidationError('请通过 HTTPS 管理页录入密钥；HTTP 预览不接收密钥。也可由维护者通过 SSH 配置服务器环境。')
         actor = configuration.locked_actor(request, serializer.validated_data['expected_version'])
         try:
             result = configuration.save(actor, serializer.validated_data, request_id=str(request.META.get('HTTP_X_REQUEST_ID') or ''))

@@ -62,9 +62,8 @@ def audit_capabilities():
     except (AIServiceError, ValueError):
         pass
     try:
-        config = current_ai_configuration(AICapability.CLAIM_STANCE)
+        config = current_ai_configuration(AICapability.PRIVATE_RESEARCH)
         if config.enabled:
-            require_local_endpoint(config.base_url)
             analysis_available = True
     except (AIServiceError, ValueError):
         pass
@@ -82,7 +81,7 @@ def audit_capabilities():
                 "requires": ["bibliography_identity"], "description": "依赖书目身份，核对可访问原文的文字及印刷页码。"},
             {"id": "scan_ocr", "label": "扫描页识别", "available": ocr_available, "required": False, "description": ocr_reason},
             {"id": "deep_analysis", "label": "深入关系分析", "available": False, "required": False,
-                "description": "上传时不自动执行；报告中明确选择原文后，按本地模型配置单独发起。"}],
+                "description": "上传时不自动分析。选择原文后，可交给书库配置的 API 服务分析。"}],
         "scopes": [
             {"id": "public_library", "label": "馆藏公开资料", "available": True,
                 "description": "只核对当前公开且本人可访问的馆藏版本和原文。"},
@@ -95,7 +94,7 @@ def audit_capabilities():
         "ocr": {"available": ocr_available, "reason": ocr_reason, "service_verified": False,
             "units_per_attempt": UNITS_PER_ATTEMPT, "max_unit_timeout_seconds": 120},
         "analysis": {"available": analysis_available, "service_verified": False,
-            "reason": "已配置允许的本地模型；分析仅为待核对候选。" if analysis_available else "未配置可用的本地关系分析模型。"}}
+            "reason": "已配置分析 API，结果需要本人核对。" if analysis_available else "分析 API 尚未配置。"}}
 
 
 def audit_options(data):

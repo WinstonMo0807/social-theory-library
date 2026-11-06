@@ -71,6 +71,7 @@ class AIConfiguration:
     answer_behavior: str = "structured_candidates"
     fallback_profile_key: str = ""
     reasoning: dict | None = None
+    public_endpoint: bool = False
 
     @property
     def enabled(self) -> bool:
@@ -137,6 +138,10 @@ def current_ai_configuration(
         fallback_profile_key=profile.fallback_profile_key,
         reasoning=profile.reasoning,
     )
+    from common.ai_endpoints import saved_endpoint
+    if saved_endpoint(profile.endpoint_alias) == config.base_url and config.base_url:
+        from dataclasses import replace
+        config = replace(config, allowed_hosts=((urlparse(config.base_url).hostname or '').casefold(),), public_endpoint=True)
     if not config.enabled:
         return config
     if not config.base_url:
@@ -223,6 +228,14 @@ class AIClient:
         self._semaphore = threading.BoundedSemaphore(self.config.max_concurrency)
         self.last_usage: dict = {}
 
+    def _http_client(self, **kwargs):
+        from common.ai_endpoints import PublicAITransport
+        transport = self._transport
+        if transport is None and self.config.public_endpoint:
+            transport = PublicAITransport(self.config.base_url)
+        kwargs.update(transport=transport, trust_env=False, follow_redirects=False)
+        return httpx.Client(**kwargs)
+
     def health_check(self) -> dict:
         if not self.config.enabled:
             return {
@@ -239,13 +252,12 @@ class AIClient:
                 if self.config.provider == "ollama"
                 else f"{self.config.base_url}/v1/models"
             )
-            with httpx.Client(
+            with self._http_client(
                 timeout=min(self.config.timeout, 5),
-                transport=self._transport,
             ) as client:
                 response = client.get(endpoint, headers=self._headers())
                 response.raise_for_status()
-        except (httpx.HTTPError, ValueError) as exc:
+        except (httpx.HTTPError, ValueError, AIServiceUnavailable) as exc:
             return {
                 "configured": True,
                 "available": False,
@@ -254,7 +266,7 @@ class AIClient:
                 "profile_key": self.config.profile_key,
                 "capability": self.config.capability,
                 "model": self.config.model or self.config.metadata_model,
-                "reason": str(exc)[:300],
+                "reason": "接口连接失败，请核对地址、密钥和服务状态。" if self.config.public_endpoint else str(exc)[:300],
             }
         return {
             "configured": True,
@@ -307,9 +319,8 @@ class AIClient:
                         schema=schema,
                         task=task,
                     )
-                    with httpx.Client(
+                    with self._http_client(
                         timeout=self.config.timeout,
-                        transport=self._transport,
                     ) as client:
                         response = client.post(
                             endpoint,
@@ -407,11 +418,10 @@ class AIClient:
         started = time.monotonic()
         try:
             with self._semaphore:
-                with httpx.Client(
+                with self._http_client(
                     timeout=self.config.timeout,
                     follow_redirects=False,
-                    transport=self._transport,
-                ) as client:
+                    ) as client:
                     response = client.post(endpoint, headers=self._headers(), json=payload)
                     response.raise_for_status()
             data = response.json()
@@ -484,11 +494,10 @@ class AIClient:
         emitted = False
         try:
             with self._semaphore:
-                with httpx.Client(
+                with self._http_client(
                     timeout=self.config.timeout,
                     follow_redirects=False,
-                    transport=self._transport,
-                ) as client:
+                    ) as client:
                     with client.stream("POST", endpoint, headers=self._headers(), json=payload) as response:
                         response.raise_for_status()
                         deadline = time.monotonic() + float(self.config.timeout)
@@ -559,12 +568,17 @@ class AIClient:
                 },
                 f"{self.config.base_url}/api/chat",
             )
+        json_mode = (self.config.reasoning or {}).get('json_mode', 'json_schema')
+        if json_mode == 'json_object':
+            messages = [dict(row) for row in messages]
+            messages[0]['content'] += '\n请返回符合以下 JSON Schema 的 JSON 对象，不添加 Markdown：\n' + json.dumps(schema, ensure_ascii=False)
         return (
             {
                 "model": model,
                 "messages": messages,
                 "temperature": self.config.temperature,
-                "response_format": {
+                "max_tokens": self.config.max_output_tokens,
+                "response_format": {"type": "json_object"} if json_mode == 'json_object' else {
                     "type": "json_schema",
                     "json_schema": {
                         "name": task.replace("-", "_")[:64] or "library_candidates",

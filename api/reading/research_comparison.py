@@ -1,4 +1,4 @@
-"""Local-only comparison candidates in the original encrypted ResearchTurn lifecycle."""
+"""Owner-selected comparison candidates in the encrypted ResearchTurn lifecycle."""
 from types import SimpleNamespace
 
 from django.db import transaction
