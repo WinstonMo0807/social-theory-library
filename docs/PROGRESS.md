@@ -1,6 +1,6 @@
 ## 2026-11-07 试用说明文案修订已上线
 
-按用户最终措辞，标题为“欢迎试读社会理论书库”，署名“由 WinstonMo 开发”，正文“欢迎尝试”改“欢迎试用”。仅改AuthSessionDialog文案，已读标记不变，不重新邀请已看过的读者。源码c4928c9f；正式Web4.0.0-20261107-r3（6754dfc05f9e）。独立构建排除另外进行中的4个上传前端文件改动，不覆盖工作区。构建退出0，2074个运行文件读回一致（既有启动注入runtime-config除外），已从内网实际JS资源核对三处文字；本轮未另跑界面/功能测试。仅Web重建、edge平滑reload，其余24个运行容器未重启。NAS回退点/volume2/library/stl-releases/20261107-r1/login-copy-web-r3-recovery保留Web r2与准确配置。日志tmp/stl4-login-copy-r3/，公网及内网仍同一正式服务。
+按用户最终措辞，标题为“欢迎试读社会理论书库”，署名“由 WinstonMo 开发”，正文“欢迎尝试”改“欢迎试用”。仅改AuthSessionDialog文案，已读标记不变，不重新邀请已看过的读者。源码c4928c9f；正式Web4.0.0-20261107-r3（6754dfc05f9e）。独立构建排除另外进行中的4个上传前端文件改动，不覆盖工作区。构建退出0，1842个运行文件读回一致（既有启动注入runtime-config除外），已从内网实际JS资源核对三处文字；本轮未另跑界面/功能测试。仅Web重建、edge平滑reload，其余24个运行容器未重启。NAS回退点/volume2/library/stl-releases/20261107-r1/login-copy-web-r3-recovery保留Web r2与准确配置。日志tmp/stl4-login-copy-r3/，公网及内网仍同一正式服务。
 
 ## 2026-11-07 登录邀请、一次性试用说明与网站图标已上线
 
