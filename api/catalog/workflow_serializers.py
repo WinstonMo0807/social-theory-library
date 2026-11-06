@@ -19,6 +19,15 @@ class WorkflowSectionSerializer(CatalogContractValidationMixin, serializers.Seri
     expected_work_updated_at = serializers.DateTimeField(required=False)
     note = serializers.CharField(required=False, allow_blank=True, max_length=2000, default="")
 
+    def to_internal_value(self, data):
+        # Cleared HTML date inputs mean an unknown date, not an invalid date.
+        if isinstance(data, dict):
+            data = dict(data)
+            for name, field in self.fields.items():
+                if isinstance(field, serializers.DateField) and field.allow_null and data.get(name) == "":
+                    data[name] = None
+        return super().to_internal_value(data)
+
 
 class WorkSectionSerializer(WorkflowSectionSerializer):
     document_type = serializers.ChoiceField(choices=DocumentType.choices, required=False)
