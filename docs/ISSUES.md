@@ -1,5 +1,11 @@
 # 当前问题
 
+## 2026-11-06 首发登录与SMTP配置
+
+- D SMTP-CONFIG-01：settings.py只选Brevo/console，未读SMTP连接环境；填写SMTP参数不会生效。最小修复映射Django原生后端并读连接/TLS/超时参数，API63已同步。4项隔离检查通过，不代表外部认证/送达；O07实际配置仍A。
+- D AUTH-GUEST-COPY-01：实际登录页仍承诺匿名检索/阅读/下载，访客按钮去受限探索页；auth-page-frame/account-activation/auth-session-dialog同步修正文案，整页入口回首页。Web130截图及AX读回确认，权限规则不变。
+- O12变更：用户明确首发只用书库账号；Apple首发排除，Google后补C。移除不可用入口，不再按旧A要求本轮实现OAuth。详细免费服务官方核验见stl4/MAIL_LOGIN_LAUNCH_20261106.md。
+
 ## 2026-11-06 目录校准批注关闭与清查交付
 
 - D OUTLINE-UX-01：PdfCanvas原不透明“跳转位置”覆盖标题；改页外三角并限定校准stage溢出可见。Web128真实PDF119页普通/全屏已看见完整标题。DocumentOutlineWorkspace删除候选/历史/读者预览标签，保留一个校准工作区；数据历史保留。

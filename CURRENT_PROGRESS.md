@@ -1,5 +1,15 @@
 # Social Theory Library 当前进度
 
+## 2026-11-06 首发账号、免费邮件与统一内网收口
+
+当前真实内网Web130（ec47cbfbc947）/API63（1c90f0c67e2e），仍为http://192.168.5.6:18084。用户已选首发只用书库账号，Apple不接、Google后补；O12移为C，不再列首发A。共用AuthForm移除第三方占位按钮。D SMTP-CONFIG-01：原settings不读SMTP环境参数；已接Django标准SMTP，保留Brevo/显式backend。4项无外网模拟SMTP检查退出0，覆盖TLS/SSL/凭据传递、未配置门禁及旧后端；未发邮件。免费服务当前官方比较见MAIL_LOGIN_LAUNCH_20261106.md，仍未选定或配置服务商。
+
+D AUTH-GUEST-COPY-01：Web129实际登录页发现旧匿名检索/阅读/下载承诺和指向/explore的访客入口；改为浏览公开页面、PDF/下载/检索需登录，整页访客入口回首页。登录/注册/恢复/激活/共用弹窗同步原文案，权限与账号逻辑不变。Web130实际浏览已确认只有书库登录、正确访客说明与首页链接，截图output/account-launch-20261106/login-r130.png及login-footer-r130.png，留下真实首页。未登录/提交表单或创建私人资料。
+
+API63与四worker/beat同版，API/四worker/RapidOCR/DOCX健康，Web/beat运行。788个后端源码配置、3008个前端构建静态文件与本机最终文件散列一致；证据tmp/stl4-copy-20261104/launch-inventory-r130.log、launch-file-diff-r130.json。不能据此称全部功能通过。GET /api/auth/login/实际password_login=true、email_delivery_available=false。类型与Web129/130构建退出0；初次npm.cmd缺失后沿既有node直调Vinext完成，原失败日志保留。pytest本地缓存警告未清理旧目录。
+
+恢复点account-mail-api-r63-recovery（前API62及备份，未独立恢复）、account-launch-web-r129-recovery（前Web128）和account-launch-web-r130-recovery（前Web129）。API更新先停beat并等队列/在途归零，没有清空任务；未迁移、重跑OCR/索引或测试全站。部署断言原生产/政策容器、数据挂载及其他服务保持。公网/DNS/隧道未改。仍需邮件真实配置/送达、最终发布环境及一致备份恢复、最新账号私人增量、外围网络与最终批准；私人API待用户配置，原视觉/管理员B保持。继承修改和独立架构展示未覆盖，Git检查点只纳本轮文件与记录，未推送。
+
 ## 2026-11-06 架构演示全部文案复核完成
 
 ARCHITECTURE-SHOWCASE-03 D：5196 展示按 STC 复核 6 幕、14 步、43 节点、8 组服务职责及全部操作文字，连同浏览器标题、帮助、导出提示和启动说明统一修订。源码标识、接口、权限和验证范围保留。展示文案检查退出 0，7 个警告均已作语义复核；独立构建和原有 77 项浏览器检查通过。9 张 4K PNG、111.96 秒 1080p WebM、离线包同步更新。

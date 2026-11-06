@@ -1064,10 +1064,18 @@ THEORY_SYSTEM_ENABLED = env_bool("THEORY_SYSTEM_ENABLED", True)
 EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "console").strip().lower()
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
-    "common.email_backend.BrevoEmailBackend"
-    if EMAIL_PROVIDER == "brevo"
-    else "django.core.mail.backends.console.EmailBackend",
+    {
+        "brevo": "common.email_backend.BrevoEmailBackend",
+        "smtp": "django.core.mail.backends.smtp.EmailBackend",
+    }.get(EMAIL_PROVIDER, "django.core.mail.backends.console.EmailBackend"),
 )
+EMAIL_HOST = os.getenv("EMAIL_HOST", "").strip()
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", not EMAIL_USE_SSL)
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465" if EMAIL_USE_SSL else "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_TIMEOUT = float(os.getenv("EMAIL_TIMEOUT", "30"))
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     os.getenv("EMAIL_FROM_ADDRESS", "noreply@example.invalid"),

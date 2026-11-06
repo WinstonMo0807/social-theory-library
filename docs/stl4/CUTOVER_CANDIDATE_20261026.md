@@ -1,5 +1,15 @@
 # STL 4.0 内网候选与公网切换前门槛
 
+## 2026-11-06 当前候选Web130/API63
+
+实际内网http://192.168.5.6:18084，Web130镜像ec47cbfbc947e8b622d86f1bb5d4181d510a65ca1d3a5a93cca4e77f61da1730；API/四worker/beat为API63镜像1c90f0c67e2e5f7df5c3af403fe44ac276e227b39bd913a5b0fbe8ef7ec0df41。RapidOCR3及DOCX运行；API/四worker/OCR/DOCX健康，Web/beat运行。下方Web122与停止服务内容为历史。788个后端源码/配置、3008个前端构建/静态文件与当前工作区一致，证据tmp/stl4-copy-20261104/launch-inventory-r130.log、launch-file-diff-r130.json；不是全部功能验收。
+
+首发只用书库账号，Apple不接、Google后补（用户已确认），无效登录占位入口已删除；SMTP环境接入已补齐，邮件仍未配置，GET auth/login读回password_login=true/email_delivery_available=false。SendCloud大陆免费正式适用性待确认，阿里/腾讯免费额度为一次性总量；Brevo每日300的官方比较见MAIL_LOGIN_LAUNCH_20261106.md。未发邮件、调用私人API或修改生产配置。
+
+NAS受限恢复点account-mail-api-r63-recovery保留API62、配置、日志和更新前数据库包；新包未独立恢复，不混称旧r80恢复证据。account-launch-web-r129-recovery和account-launch-web-r130-recovery分别保留Web128/129；更新等待原队列结束、没有丢弃任务。原生产与政策容器身份/挂载/启动时间保持。
+
+公网前待办仍是已登记的准备项：确定邮件服务并安全配置与实际验证；准确的最终public组合及HTTPS地址/权限/存储参数；新鲜生产账号与私人资料增量、同一停写时点数据库/文件备份及恢复；路由器/IPv6/独立外网可达性核实；用户批准具体切换包。现有预览末层review/preview覆盖不可直接暴露或当作public配置。私人中转未配置须如实显示，视觉随用户批注、管理员操作验收保持B，不重写已实现功能。生产/DNS/隧道/数据未改。
+
 ## 2026-11-06 候选更新与当前门槛
 
 真实内网已统一Web122/API56，完整版本、源文件核对、当前服务状态与恢复点见UNIFIED_REVIEW_20261106.md。四worker/beat仅同步API56镜像仍停止，OCR/DOCX停止；旧排队17/未确认2不清除、不擅自执行。原18086政策预览已并入同站/policy并停止旧容器。新DB包17,315,703字节未独立恢复；旧r80恢复证明保持原时间边界。
