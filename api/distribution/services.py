@@ -114,23 +114,12 @@ def signed_read_url(
 ) -> str:
     if cloud_object.status != CloudObject.Status.READY:
         raise CloudNotReady("云端阅读副本尚未就绪。")
-    # Public works may explicitly opt in to a cacheable custom domain. This is
-    # the fast path for PDF.js and avoids sending every Range request through
-    # the NAS and Cloudflare Tunnel. Downloads still use a short-lived signed
-    # S3-compatible URL so the browser receives an attachment disposition.
-    if (
-        not attachment
-        and cloud_object.cdn_enabled
-        and cloud_object.provider.public_base_url
-    ):
-        base_url = cloud_object.provider.public_base_url.rstrip("/")
-        object_path = quote(cloud_object.object_key.lstrip("/"), safe="/")
-        return f"{base_url}/{object_path}"
-
+    # Reader access is authenticated; never issue permanent public CDN links.
     params = {
         "Bucket": cloud_object.provider.bucket,
         "Key": cloud_object.object_key,
         "ResponseContentType": "application/pdf",
+        "ResponseCacheControl": "private, no-store",
     }
     if download_filename:
         disposition = "attachment" if attachment else "inline"

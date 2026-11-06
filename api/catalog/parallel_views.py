@@ -1,4 +1,5 @@
-"""Authenticated visibility, without requiring login for public reading."""
+"""Parallel reading follows the signed-in reader boundary."""
+from common.permissions import CanReadLibrary
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -10,7 +11,7 @@ from .services import parallel_reading
 
 
 class ParallelSourceView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)

@@ -1,4 +1,5 @@
 """Private owner-scoped tasks and separately reviewed public contributions."""
+from common.permissions import CanReadLibrary
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
@@ -142,7 +143,7 @@ class AdminParallelCalibrationViewSet(PrivateResponses, viewsets.GenericViewSet)
 
 
 class PublicParallelCalibrationViewSet(viewsets.GenericViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
     serializer_class = ParallelCalibrationOutput
     pagination_class = ParallelPagination
 

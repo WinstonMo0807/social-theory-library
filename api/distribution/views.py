@@ -1,3 +1,4 @@
+from common.permissions import CanReadLibrary
 from pathlib import Path
 from urllib.parse import quote
 
@@ -153,14 +154,8 @@ def _asset_file_headers(response, *, sha256: str, access_status: str):
     response["Accept-Ranges"] = "bytes"
     response["X-Content-Type-Options"] = "nosniff"
     response["ETag"] = f'"{sha256}"'
-    if access_status in {Asset.AccessStatus.PUBLIC, Asset.AccessStatus.INHERIT}:
-        # Local public delivery remains easy to revoke. Long-lived immutable
-        # caching is reserved for explicitly public content-addressed objects.
-        response["Cache-Control"] = "public, max-age=300, must-revalidate, no-transform"
-    else:
-        # Registered and staff-only PDFs must never enter a shared proxy cache.
-        response["Cache-Control"] = "private, no-store, no-transform"
-        patch_vary_headers(response, ("Cookie",))
+    response["Cache-Control"] = "private, no-store, no-transform"
+    patch_vary_headers(response, ("Cookie", "Authorization"))
     return response
 
 
@@ -191,7 +186,7 @@ def _x_accel_response(
 
 
 class AssetAccessView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     @extend_schema(
         responses=ReaderAssetAccessSerializer,
@@ -304,7 +299,7 @@ class AssetAccessView(APIView):
 
 
 class AssetFileView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def _local_file_available(self) -> bool:
         return bool(

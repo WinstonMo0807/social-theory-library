@@ -40,7 +40,7 @@ export async function serverRequest<T>(path: string, options: { forwardSession?:
     redirect: "error",
     headers: {
       accept: "application/json",
-      // Reader alone opts in. Never forward refresh cookies or browser headers.
+      // Reader and exploration opt in. Never forward refresh cookies or browser headers.
       ...(sessionCookie ? { cookie: sessionCookie } : {}),
       // Public deployments keep Django's HTTPS redirect enabled. Server-side
       // requests still travel over the private Docker network, so mark the

@@ -1,3 +1,4 @@
+import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
 import { redirect } from "next/navigation";
@@ -11,6 +12,7 @@ export default async function OpinionSearchPage({ searchParams }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  await requireReaderSession(`/explore/opinions`, params);
   const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] || "" : value || "";
   const query = first(params.q).trim();
   if (query) {

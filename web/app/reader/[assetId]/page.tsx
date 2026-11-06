@@ -1,3 +1,4 @@
+import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import { ReaderShell } from "@/components/reader-shell";
 import { ReaderRouteFailure } from "@/components/reader/reader-route-failure";
@@ -18,6 +19,7 @@ export default async function ReaderPage({
   searchParams: Promise<{ mode?: string; alignment?: string; right_asset?: string; right_revision?: string; page?: string; q?: string; focus?: string; passage?: string; evidence?: string; research_project?: string; research_turn?: string; reference?: string; revision?: string; return_to?: string }>;
 }) {
   const [{ assetId }, query] = await Promise.all([params, searchParams]);
+  await requireReaderSession(`/reader/${encodeURIComponent(assetId)}`, query);
   const [result, { config }] = await Promise.all([loadReaderManifestResult(assetId), loadSiteChromeConfig()]);
   if (query.mode === "parallel") {
     return <ParallelReader assetId={assetId} work={result.ok ? result.manifest.work : undefined} siteConfig={config}

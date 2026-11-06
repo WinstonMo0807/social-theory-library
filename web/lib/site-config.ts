@@ -74,7 +74,7 @@ export const defaultSiteConfig: SiteConfig = {
   about_ingestion_title: "资料如何进入书库",
   about_ingestion_body: "上传的文件会经历文本提取或 OCR、元数据识别、文本清理与结构化处理，并通过关系建议后，由人工进行内容核对与校订，确认无误后发布到书库供检索与阅读。",
   about_access_title: "开放原则与使用边界",
-  about_access_body: "提供检索与公共阅读服务，致力于降低知识获取门槛，支持学习、研究与教学等合理使用。",
+  about_access_body: "访客可以浏览网页。登录或注册后，即可阅读 PDF、下载和使用探索功能。",
   about_rights_title: "版权与资源来源",
   about_rights_body: "作品版权归原始权利人所有。原文访问与下载以所选来源显示的权限为准。若发现来源或授权问题，请通过反馈提供可核对的信息。",
   about_privacy_title: "隐私",

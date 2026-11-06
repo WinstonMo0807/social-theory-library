@@ -1,4 +1,5 @@
 """One public-safe status endpoint; mutation retains existing administrator capabilities."""
+from common.permissions import CanReadLibrary
 from uuid import UUID
 
 from django.utils.cache import patch_vary_headers
@@ -13,7 +14,7 @@ from .reader_ocr_serializers import ReaderOCRCommandInput, ReaderOCRStatusOutput
 
 
 class ReaderOCRStatusView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)

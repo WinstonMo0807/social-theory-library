@@ -1,4 +1,5 @@
 import httpx
+from common.permissions import CanReadLibrary
 from datetime import timedelta
 import mimetypes
 import re
@@ -1774,7 +1775,7 @@ class ScholarDetailView(APIView):
 
 
 class GlobalSearchView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def get_throttles(self):
         self.throttle_scope = "exact_search_user" if self.request.user.is_authenticated else "exact_search_anon"
@@ -2037,7 +2038,7 @@ class GlobalSearchView(APIView):
 
 
 class SemanticSearchView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def finalize_response(self, request, response, *args, **kwargs):
         from catalog.services.api_contract import annotate_response, CANONICAL_SEMANTIC_ENDPOINT
@@ -2165,7 +2166,7 @@ class SemanticSearchView(APIView):
 
 
 class SemanticSearchFeedbackView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def get_throttles(self):
         self.throttle_scope = "semantic_search_user" if self.request.user.is_authenticated else "semantic_search_anon"
@@ -2903,7 +2904,7 @@ def _viewer_asset_access_statuses(request) -> list[str]:
 
 
 class PassageFocusView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     @extend_schema(responses=ReaderFocusSerializer)
     def get(self, request, pk):
@@ -3020,7 +3021,7 @@ class PassageFocusView(APIView):
 
 
 class PublicAssetManifestView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     @extend_schema(responses=PublicReaderManifestSerializer)
     def get(self, request, asset_id):
@@ -3083,7 +3084,7 @@ class PublicAssetManifestView(APIView):
 
 
 class PublicPageContentView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     @extend_schema(responses=ReaderPageContentSerializer)
     def get(self, request, asset_id, page_index):
@@ -3138,7 +3139,7 @@ class PublicPageContentView(APIView):
 
 
 class DocumentSearchView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def get_throttles(self):
         self.throttle_scope = "exact_search_user" if self.request.user.is_authenticated else "exact_search_anon"
@@ -3299,7 +3300,7 @@ class CitationView(APIView):
 
 
 class CleanCopyView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def post(self, request):
         text = request.data.get("text", "")

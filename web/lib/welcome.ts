@@ -1,9 +1,24 @@
+import type { HomeViewData } from "@/components/public/home-public-view";
+
 export type WelcomeBook = { id: string; title: string; author: string; coverImage?: string; available?: boolean };
+
+// Reuse the public homepage projection; the film never runs searches or infers relationships.
+export function welcomeDiscovery(home: Pick<HomeViewData, "scholars" | "topics" | "works" | "issue" | "issues">) {
+  const theories = [...new Map(home.works.flatMap(work => work.theories || []).map(theory => [theory.slug, theory])).values()].slice(0, 3);
+  const issue = home.issues?.[0] || home.issue;
+  return {
+    scholars: home.scholars.slice(0, 3).map(({ name, originalName, years, portrait, slug }) => ({ name, originalName, years, portrait, slug })),
+    theories,
+    topics: home.topics.slice(0, 4).map(({ name, slug }) => ({ name, slug })),
+    issue: issue ? { title: issue.title, introduction: issue.introduction, coverImage: issue.cover_url, href: `/recommendations/${issue.slug}` } : null,
+  };
+}
+export type WelcomeDiscovery = ReturnType<typeof welcomeDiscovery>;
 export const welcomeChapters = [
   { title: "把问题带进文献", text: "用研究问题检索相关论述，从原文节选判断哪些材料值得细读。", href: "/explore/opinions", action: "检索观点" },
   { title: "在上下文中理解观点", text: "打开对应 PDF，把节选放回前后文，读清作者的论证。", href: "/explore/original", action: "查找原文" },
   { title: "引用之前，核对出处", text: "对照原文、版本与页码，为论文和课堂核对引用。", href: "/account/citation-audits", action: "核对引文" },
-  { title: "让阅读成为积累", text: "把原文、笔记与书单留在读者中心，下次从已有材料继续研究。", href: "/account", action: "进入读者中心" },
+  { title: "接着上一次，继续研究", text: "保留问题、原文与笔记，在同一项研究中继续追问，回看每一步找到的材料。", href: "/account/research", action: "继续研究" },
 ];
 export const welcomeCopies = [
   {
@@ -25,7 +40,7 @@ export const welcomeCopies = [
 
 export const welcomeTextDefaults = {
   "history_title": "沿着学科史，读懂社会思想",
-  "history_subjects": "社会学、政治学、人类学",
+  "history_subjects": "社会学、人类学、民族学",
   "history_scholars": "学者",
   "history_theories": "理论流派",
   "history_works": "回到代表作品",
@@ -50,7 +65,7 @@ export const welcomeTextDefaults = {
   "invitation_body": "一本书、一段原文、一个尚未解答的问题。\n从感兴趣的地方开始，慢慢读下去。",
   "faq_title": "你可能想知道",
   "faq_read_title": "需要登录才能阅读吗？",
-  "faq_read_body": "公开馆藏可以直接检索与阅读。登录后，可以在读者中心保存自己的阅读资料。",
+  "faq_read_body": "需要。登录或注册后，即可阅读 PDF、下载和使用探索功能。",
   "faq_cite_title": "怎样核对一段引文？",
   "faq_cite_body": "从原文节选打开对应文件，查看版本、页码与前后文；也可以在读者中心使用引文核对。",
   "faq_private_title": "我的笔记和阅读资料保存在哪里？",
@@ -61,9 +76,9 @@ export const welcomeTextDefaults = {
 export const welcomeTextLabels: Record<keyof typeof welcomeTextDefaults, string> = {
   "history_title": "学科史演示标题",
   "history_subjects": "演示学科（以顿号分隔）",
-  "history_scholars": "演示关系左侧",
-  "history_theories": "演示关系右侧",
-  "history_works": "演示书籍标题",
+  "history_scholars": "学者幕栏目名称",
+  "history_theories": "理论幕栏目名称",
+  "history_works": "原文阅读幕栏目名称",
   "philosophy_title": "原文理念标题",
   "philosophy_body": "原文理念正文",
   "features_title": "功能区标题",

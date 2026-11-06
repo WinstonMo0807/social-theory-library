@@ -1,4 +1,5 @@
 from __future__ import annotations
+from common.permissions import CanReadLibrary
 
 from uuid import UUID
 
@@ -169,7 +170,7 @@ def _public_filters(request) -> dict:
 class ViewpointSearchView(APIView):
     """Public EvidenceSpan-backed viewpoint retrieval with Claim shadowing."""
 
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def get_throttles(self):
         self.throttle_scope = (

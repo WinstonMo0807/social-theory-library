@@ -1,4 +1,5 @@
 """Directory review and navigation; presentation is supplied after design approval."""
+from common.permissions import CanReadLibrary
 from uuid import UUID
 
 from django.db.models import Exists, OuterRef, Subquery
@@ -111,7 +112,7 @@ class AdminDocumentOutlineView(AdminPrivateResponseMixin, APIView):
 
 
 class PublicDocumentOutlineView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, asset_id):

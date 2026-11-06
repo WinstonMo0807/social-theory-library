@@ -1,3 +1,4 @@
+import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -51,6 +52,7 @@ export default async function ExplorePage({
   searchParams: Promise<RawSearchParams>;
 }) {
   const params = await searchParams;
+  await requireReaderSession(`/explore`, params);
   if (!Object.keys(params).length) {
     return <ExploreLanding />;
   }

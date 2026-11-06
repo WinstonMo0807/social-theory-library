@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.http import HttpResponseForbidden
+from django.utils.cache import patch_vary_headers
 
 from accounts.ownership import is_library_owner
 
@@ -25,6 +26,9 @@ class ApiContractMiddleware:
         request_id = supplied if _REQUEST_ID_RE.fullmatch(supplied) else uuid4().hex
         request.stl_request_id = request_id
         response = self.get_response(request)
+        if getattr(request, "stl_reader_access", False):
+            response["Cache-Control"] = "private, no-store, no-transform"
+            patch_vary_headers(response, ("Cookie", "Authorization"))
         if request.path.startswith(self.api_prefix):
             response["X-STL-API-Version"] = str(
                 getattr(settings, "API_CONTRACT_VERSION", self.api_version)

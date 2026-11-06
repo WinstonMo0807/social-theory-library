@@ -1,3 +1,4 @@
+import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import { DiscoverySearchWorkspace } from "@/components/discovery-search-workspace";
 import type { DiscoveryFilters } from "@/lib/api/discovery.types";
@@ -9,6 +10,7 @@ export default async function EvidencePage({ searchParams }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  await requireReaderSession(`/explore/evidence`, params);
   const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] || "" : value || "";
   const query = first(params.q).trim();
   const filters: DiscoveryFilters = {};

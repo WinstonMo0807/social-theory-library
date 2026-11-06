@@ -1,3 +1,4 @@
+import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import ExplorePage from "../page";
 import { CatalogSearchWorkspace } from "@/components/catalog-search-workspace";
@@ -9,6 +10,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function OriginalSearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
+  await requireReaderSession(`/explore/original`, params);
   // Existing category links retain the global result groups; the atlas catalog
   // entry uses one row per Work with its actual published editions.
   if (params.type && params.type !== "catalog") return <ExplorePage searchParams={Promise.resolve({ ...params, mode: "exact" })} />;

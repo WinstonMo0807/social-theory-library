@@ -1,6 +1,17 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, IsAuthenticated
 
 from .capabilities import Capability, capability_snapshot, has_capability
+
+
+class CanReadLibrary(IsAuthenticated):
+    """Reading and exploration require a reader session; catalogue pages stay public."""
+
+    message = "请登录或注册后使用。"
+
+    def has_permission(self, request, view):
+        # The response middleware also covers denials and PDF range responses.
+        request._request.stl_reader_access = True
+        return super().has_permission(request, view)
 
 
 class RequiresCapability(BasePermission):

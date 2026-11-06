@@ -1,3 +1,4 @@
+from common.permissions import CanReadLibrary
 from django.utils.cache import patch_vary_headers
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
@@ -257,7 +258,7 @@ SESSION_TOKEN = OpenApiParameter("X-Discovery-Token", str, OpenApiParameter.HEAD
 
 
 class DiscoveryView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanReadLibrary]
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)

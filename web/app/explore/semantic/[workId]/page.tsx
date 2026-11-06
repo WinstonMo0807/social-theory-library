@@ -1,3 +1,4 @@
+import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Quote } from "lucide-react";
@@ -19,6 +20,7 @@ export default async function SemanticWorkResultsPage({
 }) {
   const { workId } = await params;
   const raw = await searchParams;
+  await requireReaderSession(`/explore/semantic/${encodeURIComponent(workId)}`, raw);
   const queryValue = raw.q;
   const query = (Array.isArray(queryValue) ? queryValue[0] : queryValue ?? "").trim();
   const payload = await loadSemanticSearch(query, {

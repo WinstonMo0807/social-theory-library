@@ -15,7 +15,7 @@ export async function loadScopedSearch(
   if (options.page) parameters.set("page", String(options.page));
   if (options.limit) parameters.set("limit", String(options.limit));
   try {
-    return await serverRequest<ScopedSearchEnvelope>(`/catalog/search/?${parameters.toString()}`);
+    return await serverRequest<ScopedSearchEnvelope>(`/catalog/search/?${parameters.toString()}`, { forwardSession: true });
   } catch (error) {
     if (!allowDemoFallback) throw error;
     return {
@@ -63,7 +63,7 @@ export async function loadSearch(query: string, filters: SearchFilters = {}) {
       (values as string[] | undefined)?.forEach((value) => parameters.append(name as string, value));
     });
     const payload = await serverRequest<SearchPayload>(
-      `/catalog/search/?${parameters.toString()}`,
+      `/catalog/search/?${parameters.toString()}`, { forwardSession: true },
     );
     return {
       source: "api" as const,
@@ -179,7 +179,7 @@ export async function loadSemanticSearch(
   if (filters.rewriteDisabled) parameters.set("rewrite_disabled", "1");
   try {
     return await serverRequest<SemanticSearchPayload>(
-      `/catalog/semantic-search/?${parameters.toString()}`,
+      `/catalog/semantic-search/?${parameters.toString()}`, { forwardSession: true },
     );
   } catch {
     return {
@@ -323,7 +323,7 @@ export async function loadViewpointSearch(
   if (filters.sort) parameters.set("sort", filters.sort);
   try {
     return await serverRequest<ViewpointSearchPayload>(
-      `/catalog/viewpoint-search/?${parameters.toString()}`,
+      `/catalog/viewpoint-search/?${parameters.toString()}`, { forwardSession: true },
     );
   } catch {
     return unavailableViewpointSearch(
