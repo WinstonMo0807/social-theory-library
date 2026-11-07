@@ -120,7 +120,13 @@ def _native_pages(path: str | Path) -> list[ExtractedPage]:
             if page_number > 0 and title:
                 chapter_by_page.setdefault(page_number, sanitize_unicode(title).strip())
         pages: list[ExtractedPage] = []
-        for page_index, page in enumerate(document, start=1):
+        for page_index in range(1, len(document) + 1):
+            if page_index > 1 and (page_index - 1) % 32 == 0:
+                # store_shrink alone does not release document-owned PDF
+                # resources. Bound their lifetime while retaining plain results.
+                document.close()
+                document = fitz.open(str(path))
+            page = document[page_index - 1]
             printed_label, label_source, label_confidence = _page_label(
                 page,
                 explicit_labels=explicit_labels,

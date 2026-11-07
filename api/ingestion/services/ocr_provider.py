@@ -151,7 +151,7 @@ def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None, task_
     if config["mode"] in {"nas_preferred", "nas_only"}:
         providers.append(
             (
-                "rapidocr_nas",
+                "rapidocr_local" if config.get("temporary_test_service") else "rapidocr_nas",
                 config["nas_url"],
                 "",
                 "",
@@ -180,6 +180,9 @@ def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None, task_
             continue
         configured += 1
         try:
+            if provider == "rapidocr_nas":
+                from common.on_demand import ensure_service
+                ensure_service("ocr", url=base_url)
             payload = _request_document_gateway(
                 path,
                 base_url=base_url,
@@ -190,13 +193,15 @@ def _parse_pdf(path: str | Path, *, page_numbers: list[int] | None = None, task_
             )
             return payload, provider
         except (httpx.HTTPError, ValueError) as exc:
-            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {429, 503} and provider == "rapidocr_nas":
+            if provider == "rapidocr_local" and isinstance(exc, httpx.TransportError):
+                raise OCRServiceBusy("本次识别服务暂时断开，已保存页面保留，稍后自动继续。") from exc
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {429, 503} and provider in {"rapidocr_nas", "rapidocr_local"}:
                 try:
                     detail = str(exc.response.json().get("detail", ""))
                 except (ValueError, AttributeError):
                     detail = ""
                 if exc.response.status_code == 429 or "busy" in detail.lower():
-                    raise OCRServiceBusy("NAS OCR正在处理其他页面，本页稍后自动继续。") from exc
+                    raise OCRServiceBusy("OCR正在处理其他页面，本页稍后自动继续。") from exc
             failures.append(f"{provider} 不可用：{exc.__class__.__name__}")
     if configured == 0:
         raise OCRConfigurationError("没有配置可用的 OCR 服务。")

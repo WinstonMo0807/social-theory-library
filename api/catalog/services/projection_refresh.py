@@ -94,13 +94,17 @@ VERIFIED_SEMANTIC_BACKENDS = {"meilisearch", "no-chunks"}
 VERIFIED_FULLTEXT_BACKENDS = {"meilisearch", "no-passages"}
 
 
+class ProjectionTargetMissing(ValueError):
+    pass
+
+
 def _target(target_type: str, target_id: str):
     model = TARGET_MODELS.get(str(target_type or "").strip().casefold())
     if model is None:
         raise ValueError("不支持的投影目标类型。")
     row = model.objects.filter(pk=target_id).first()
     if row is None:
-        raise ValueError("投影目标不存在。")
+        raise ProjectionTargetMissing("投影目标不存在。")
     return row
 
 
@@ -1593,6 +1597,7 @@ def reconcile_projection_runtime(*, limit: int = 50) -> dict[str, int]:
             ],
             source_revision__gt=F("projected_revision"),
         )
+        .exclude(status=ProjectionState.Status.FAILED, last_error_code="projection_target_missing")
         .values_list("object_type", "object_id")
         .distinct()[: max(1, min(int(limit), 100))]
     )
@@ -1608,7 +1613,22 @@ def reconcile_projection_runtime(*, limit: int = 50) -> dict[str, int]:
         )
         if event is None or object_type not in TARGET_MODELS:
             continue
-        job = schedule_domain_change_projections(event.id)
+        try:
+            job = schedule_domain_change_projections(event.id)
+        except ProjectionTargetMissing:
+            # Keep the historical failure without starving unrelated objects.
+            # A new domain change marks this state stale and permits recovery.
+            ProjectionState.objects.filter(
+                object_type=object_type, object_id=object_id,
+                source_revision__lte=event.canonical_revision,
+                source_revision__gt=F("projected_revision"),
+            ).exclude(status=ProjectionState.Status.PROJECTING).update(
+                status=ProjectionState.Status.FAILED,
+                last_error_code="projection_target_missing",
+                last_error_message="投影目标不存在；保留历史记录，等待对象恢复或管理员处理。",
+                updated_at=timezone.now(),
+            )
+            continue
         if (
             job.status
             in {ProcessingJob.Status.FAILED, ProcessingJob.Status.PAUSED}

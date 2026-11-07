@@ -145,7 +145,8 @@ def extract_outline(asset, path, *, progress=None):
     manual_pages = set(asset.pages.filter(is_text_manual=True).values_list("index", flat=True))
     if progress:
         progress("bookmarks", 0, asset.page_count)
-    with fitz.open(str(path)) as document:
+    document = fitz.open(str(path))
+    try:
         if len(document) != asset.page_count:
             raise OutlineConflict("实际 PDF 页数与文件校验记录不一致，请重新校验文件后生成目录。")
         label_rules = document.get_page_labels()
@@ -154,7 +155,12 @@ def extract_outline(asset, path, *, progress=None):
         if len(bookmark_rows) > 20000:
             raise ValueError("原生书签超过 20000 项，请分段校准；未保存截断结果。")
         bookmark_observations = BookmarkObservations(bookmark_rows)
-        for number, pdf_page in enumerate(document, start=1):
+        for number in range(1, len(document) + 1):
+            if number > 1 and (number - 1) % 32 == 0:
+                # Release document-owned resources as in native text extraction.
+                document.close()
+                document = fitz.open(str(path))
+            pdf_page = document[number - 1]
             if progress and (number == 1 or number % 10 == 0 or number == len(document)):
                 progress("native_headings", number, len(document))
             geometry[number] = {"pdf_width": pdf_page.rect.width, "pdf_height": pdf_page.rect.height,
@@ -166,6 +172,7 @@ def extract_outline(asset, path, *, progress=None):
                 native_headings.extend((number, row) for row in styled_headings(blocks))
                 if len(native_headings) > 20000:
                     raise ValueError("字号标题候选超过 20000 项，请分段校准；未保存截断结果。")
+            fitz.TOOLS.store_shrink(100)
         for ordinal, entry in enumerate(bookmark_rows):
             level, title, page = entry[:3]
             title = _title(title)
@@ -184,6 +191,8 @@ def extract_outline(asset, path, *, progress=None):
             nodes.append(node)
             if not valid:
                 diagnostics.append({"code": "invalid_bookmark", "node_id": node["id"], "message": "书签标题或落点需要校准。"})
+    finally:
+        document.close()
     _parents(nodes)
 
     pages = list(asset.pages.filter(index__gte=1, index__lte=asset.page_count).order_by("index").values("index", "printed_label", "label_source", "is_label_manual", "label_segment", "text"))

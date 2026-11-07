@@ -150,6 +150,8 @@ def convert(blob, digest):
     timeout = min(100, max(80, int(getattr(settings, "DOCX_PREVIEW_TIMEOUT_SECONDS", 90))))
     started = time.monotonic()
     try:
+        from common.on_demand import ensure_service
+        ensure_service("docx", unix_socket=socket)
         with httpx.Client(transport=httpx.HTTPTransport(uds=socket), trust_env=False, follow_redirects=False,
                 timeout=httpx.Timeout(timeout, connect=3)) as client:
             with client.stream("POST", "http://docx-preview/convert", content=blob,

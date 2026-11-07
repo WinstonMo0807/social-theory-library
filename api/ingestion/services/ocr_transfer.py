@@ -67,8 +67,14 @@ def resolve_bound_config(binding):
 
 
 @contextmanager
-def bound_ocr_service(binding):
-    token = active_ocr_config.set(resolve_bound_config(binding))
+def bound_ocr_service(binding, *, job_id=None, upload_item_id=None):
+    config = resolve_bound_config(binding)
+    if (not binding and (str(job_id) in settings.OCR_TEST_JOB_IDS
+                        or str(upload_item_id) in settings.OCR_TEST_UPLOAD_IDS)
+            and settings.OCR_TEST_SERVICE_URL):
+        config = {**config, "mode": "nas_only", "nas_url": settings.OCR_TEST_SERVICE_URL,
+                  "temporary_test_service": True}
+    token = active_ocr_config.set(config)
     try:
         yield
     finally:

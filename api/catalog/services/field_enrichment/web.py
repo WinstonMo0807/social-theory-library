@@ -201,6 +201,9 @@ class SearXNGSearchAdapter:
             values = cached.raw_response.get("results") or []
             return [SearchResult(**row) for row in values if isinstance(row, dict)], cached
         host = urlsplit(base_url).hostname or "searxng"
+        if host in {"searxng", "social-science-library-searxng-1"}:
+            from common.on_demand import ensure_service
+            ensure_service("searxng", url=base_url)
         minimum = max(
             0,
             min(int(getattr(settings, "FIELD_ENRICHMENT_SEARCH_MIN_INTERVAL_MS", 200)), 5000),

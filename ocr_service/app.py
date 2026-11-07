@@ -451,7 +451,7 @@ async def parse_pdf(
     primary = PRIMARY_LANGUAGE if PRIMARY_LANGUAGE in requested or not requested else requested[0]
     if any(language not in {"ch", "en", "chinese_cht"} for language in requested):
         raise HTTPException(status_code=400, detail="Supported languages: ch,en,chinese_cht.")
-    with tempfile.NamedTemporaryFile(suffix=".pdf", dir="/tmp/ocr", delete=False) as handle:
+    with tempfile.NamedTemporaryFile(suffix=".pdf", dir=os.getenv("OCR_TEMP_DIR", "/tmp/ocr"), delete=False) as handle:
         fingerprint = hashlib.sha256(f"{languages}:{layout}:{page_numbers}".encode())
         while chunk := await file.read(1024 * 1024):
             handle.write(chunk)

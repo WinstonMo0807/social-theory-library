@@ -544,7 +544,7 @@ def _copy_asset(item: UploadItem, edition: Edition, kind: str, filename: str) ->
             raise ValueError("相同阅读副本已存在，请核对已有文件；原件保留。")
         if staged and not existing.file:
             with item.file.open("rb") as source:
-                existing.file.save(f"{existing.pk}/{filename}", File(source), save=True)
+                existing.file.save(f"{existing.pk}{Path(filename).suffix}", File(source), save=True)
         return existing
     intake_supplement = (item.preflight_summary or {}).get("intake_identity", {}).get("mode") == "use_edition"
     is_replacement = bool(item.replacement_of_asset_id) or intake_supplement
@@ -584,7 +584,9 @@ def _copy_asset(item: UploadItem, edition: Edition, kind: str, filename: str) ->
                 raise ValueError("相同阅读副本已存在，未改绑文件；原件保留。") from error
             raise
     with item.file.open("rb") as source:
-        asset.file.save(f"{asset.pk}/{filename}" if staged else filename, File(source), save=False)
+        # Display names remain in original_filename; storage components must fit
+        # Linux's byte limit even when the source name contains long CJK text.
+        asset.file.save(f"{asset.pk}{Path(filename).suffix}", File(source), save=False)
     asset.save()
     return asset
 

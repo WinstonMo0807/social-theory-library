@@ -388,6 +388,7 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "").strip() or None
 CELERY_TASK_IGNORE_RESULT = True
 CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED = False
 CELERY_TASK_ACKS_LATE = True
+NAS_ON_DEMAND_ENABLED = env_bool("NAS_ON_DEMAND_ENABLED", False)
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_TIME_LIMIT = 60 * 60
@@ -414,6 +415,9 @@ CELERY_TASK_ROUTES = {
     "catalog.tasks.reconcile_discovery_index": {"queue": DISCOVERY_INDEX_TASK_QUEUE},
     "ingestion.tasks.process_upload_item": {"queue": INGESTION_TASK_QUEUE},
     "ingestion.tasks.process_reviewed_upload_item": {"queue": INGESTION_TASK_QUEUE},
+    "ingestion.tasks.process_ocr_job": {"queue": INGESTION_TASK_QUEUE},
+    "ingestion.tasks.process_outline_job": {"queue": INGESTION_TASK_QUEUE},
+    "ingestion.tasks.process_outline_export": {"queue": INGESTION_TASK_QUEUE},
     "ingestion.tasks.process_concept_job": {"queue": INGESTION_TASK_QUEUE},
     "ingestion.tasks.process_query_lexicon_candidate_job": {
         "queue": INGESTION_TASK_QUEUE
@@ -462,6 +466,7 @@ CELERY_BEAT_SCHEDULE = {
     "record-claim-executor-heartbeat": {
         "task": "catalog.tasks.heartbeat_claim_executor",
         "schedule": 30,
+        "options": {"expires": 25},
     },
     "rotate-due-recommendations-hourly": {
         "task": "catalog.tasks.rotate_due_recommendations",
@@ -470,21 +475,26 @@ CELERY_BEAT_SCHEDULE = {
     "recover-ingestion-queue-every-minute": {
         "task": "ingestion.tasks.recover_ingestion_queue",
         "schedule": 60,
+        "options": {"expires": 50},
     },
     "record-ingestion-worker-heartbeat": {
         "task": "ingestion.tasks.record_ingestion_worker_heartbeat",
         "schedule": 30,
+        "options": {"expires": 25},
     },
     "recover-semantic-index-queue": {
         "task": "catalog.tasks.recover_semantic_index_queue",
         "schedule": 120,
+        "options": {"expires": 110},
     },
     "recover-projection-queue": {
         "task": "catalog.tasks.recover_projection_queue",
         "schedule": 60,
+        "options": {"expires": 50},
     },
     "recover-knowledge-publication-events": {
         "task": "catalog.tasks.recover_knowledge_publication_events",
+        "options": {"expires": max(1, int(os.getenv("KNOWLEDGE_EVENT_RECOVERY_INTERVAL_SECONDS", "60")) - 10)},
         "schedule": max(
             1,
             int(os.getenv("KNOWLEDGE_EVENT_RECOVERY_INTERVAL_SECONDS", "60")),
@@ -492,6 +502,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "recover-query-lexicon-events": {
         "task": "catalog.tasks.recover_query_lexicon_events",
+        "options": {"expires": max(1, int(os.getenv("QUERY_LEXICON_RECOVERY_INTERVAL_SECONDS", "60")) - 10)},
         "schedule": max(
             1,
             int(os.getenv("QUERY_LEXICON_RECOVERY_INTERVAL_SECONDS", "60")),
@@ -504,6 +515,7 @@ CELERY_BEAT_SCHEDULE = {
     "run-functional-health-probes-every-minute": {
         "task": "catalog.tasks.run_scheduled_health_probes",
         "schedule": 60,
+        "options": {"expires": 50},
     },
 }
 PROCESS_INGESTION_INLINE = env_bool("PROCESS_INGESTION_INLINE", DEBUG)
@@ -972,6 +984,10 @@ ANONYMOUS_EVENT_RETENTION_DAYS = max(
     min(int(os.getenv("ANONYMOUS_EVENT_RETENTION_DAYS", "90")), 365),
 )
 RAPIDOCR_SERVICE_URL = os.getenv("RAPIDOCR_SERVICE_URL", "")
+# Operator-only, temporary test-batch routing. Unlisted jobs keep normal OCR.
+OCR_TEST_SERVICE_URL = os.getenv("OCR_TEST_SERVICE_URL", "").strip()
+OCR_TEST_JOB_IDS = frozenset(filter(None, os.getenv("OCR_TEST_JOB_IDS", "").split(",")))
+OCR_TEST_UPLOAD_IDS = frozenset(filter(None, os.getenv("OCR_TEST_UPLOAD_IDS", "").split(",")))
 OCR_REMOTE_API_URL = os.getenv("OCR_REMOTE_API_URL", "")
 OCR_REMOTE_API_KEY = os.getenv("OCR_REMOTE_API_KEY", "")
 OCR_REQUEST_TIMEOUT_SECONDS = int(os.getenv("OCR_REQUEST_TIMEOUT_SECONDS", str(60 * 60)))

@@ -765,7 +765,12 @@ def run_due_health_probes(*, limit: int = 12) -> dict[str, Any]:
             if latest is None or latest.started_at <= now - timedelta(seconds=probe.interval_seconds):
                 due.append(probe)
         due.sort(key=lambda row: (row.interval_seconds, row.key))
-        runs = [run_health_probe(row.key) for row in due[:batch_limit]]
+        runs = []
+        started = time.monotonic()
+        for row in due[:batch_limit]:
+            if runs and time.monotonic() - started >= 8:
+                break
+            runs.append(run_health_probe(row.key))
         return {
             "due": len(due),
             "executed": len(runs),

@@ -88,7 +88,7 @@ def test_interactive_ingestion_tasks_have_a_dedicated_queue(settings):
     assert settings.CELERY_TASK_ROUTES["ingestion.tasks.process_reviewed_upload_item"] == {
         "queue": "ingestion",
     }
-    assert "ingestion.tasks.process_ocr_job" not in settings.CELERY_TASK_ROUTES
+    assert settings.CELERY_TASK_ROUTES["ingestion.tasks.process_ocr_job"] == {"queue": "ingestion"}
 
 
 @pytest.mark.django_db

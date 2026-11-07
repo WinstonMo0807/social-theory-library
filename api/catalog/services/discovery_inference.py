@@ -26,6 +26,9 @@ def _call(path: str, payload: dict | None = None, *, timeout_seconds: int | None
     timeout = (timeout_seconds if timeout_seconds is not None else
                min(250, max(5, int(getattr(settings, "DISCOVERY_INFERENCE_TIMEOUT_SECONDS", 130)))))
     try:
+        if transport is None and (path != "/health" or not allow_unready_health):
+            from common.on_demand import ensure_service
+            ensure_service("inference", url=base)
         # Never inherit a machine's outbound proxy for private library text.
         with httpx.Client(trust_env=False, follow_redirects=False, timeout=httpx.Timeout(timeout, connect=3),
                           **({"transport": transport} if transport is not None else {})) as client:

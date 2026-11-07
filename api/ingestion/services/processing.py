@@ -359,6 +359,12 @@ def recover_stalled_processing_jobs(*, limit: int = 100, job_id=None) -> dict[st
         ProcessingJob.JobType.R2_STAGING,
     }
     scope = ProcessingJob.objects.filter(pk=job_id) if job_id is not None else ProcessingJob.objects.all()
+    # A long queue is not a lost delivery. Read once for this recovery batch,
+    # including reserved/ETA tasks in Redis's unacked hash, before taking DB locks.
+    from common.broker_presence import broker_delivery_ids
+    queued_ids = broker_delivery_ids() if scope.filter(
+        status=ProcessingJob.Status.PENDING, updated_at__lte=queue_cutoff,
+    ).exists() else frozenset()
     with transaction.atomic():
         jobs = list(
             scope.select_for_update(skip_locked=True, of=("self",))
@@ -382,6 +388,8 @@ def recover_stalled_processing_jobs(*, limit: int = 100, job_id=None) -> dict[st
                 _mark_job_paused(job)
                 continue
             if job.status == ProcessingJob.Status.PENDING and job.task_id:
+                if queued_ids is None or job.task_id in queued_ids:
+                    continue
                 # Redeliver the same wakeup. A healthy queued task must not lose
                 # its identity just because another document occupies the worker.
                 job.updated_at = now
@@ -1198,7 +1206,7 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
             from .ocr_heartbeat import ocr_request_lease
             identity = sha256(f"{job.pk}:{asset.pk}:{asset.sha256}:{batch_indexes}".encode()).hexdigest()
             from .ocr_transfer import active_ocr_config, bound_ocr_service, target_version
-            with bound_ocr_service(stats.get("ocr_service_binding")), ocr_request_lease(job, identity):
+            with bound_ocr_service(stats.get("ocr_service_binding"), job_id=job.pk, upload_item_id=job.upload_item_id), ocr_request_lease(job, identity):
                 pages, provider = extract_ocr_page_batch(local_path, batch_indexes, **({"task_options": stats["task_options"]} if stats.get("task_options") else {}))
                 used_config = active_ocr_config.get()
             returned_indexes = {page.index for page in pages}

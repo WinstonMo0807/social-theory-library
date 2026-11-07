@@ -1,3 +1,7 @@
+## 2026-11-08 NAS 资源执行模式
+
+现有 Django/前端/PostgreSQL/Redis/Celery/Meilisearch/OCR 架构保留。API 与各任务角色共用单一运行镜像；ingestion 与 discovery_index 由一个单并发 Worker 承担，查询独立按需，普通维护任务独立。NAS root 管理器依赖固定服务白名单、Redis 有期限需求及 queued/unacked 状态启动/温和退出；应用无 Docker 权限。旧预览模型不恢复。本批策展临时经既有 OCR 接口使用电脑，范围由 job/upload 白名单限定，显式绑定优先，结果仍回到同一数据库和存储。网站无本机 OCR 新功能；完成状态来自原数据管道。详 `stl4/NAS_RESOURCE_OPTIMIZATION_20261108.md` 和 `stl4/CURATION_OCR_HANDOFF_20261108.md`。
+
 ## 2026-11-06 入口路由更新
 
 用户指定根路径/为欢迎页，复用/welcome同一实现；原HomePublicView移至/home，站内首页/Logo/面包屑及反馈公开路径/视觉图集入口同步。无新后端业务、表或索引。进入按钮采用普通链接与页面局部CSS跨文档过渡，页头独立，减少动态效果关闭；不更换React/Vinext、不新增动画依赖。此条覆盖下文旧根路径首页说明。内网Web131/API64，公网未变。详stl4/WELCOME_ENTRY_20261106.md。
