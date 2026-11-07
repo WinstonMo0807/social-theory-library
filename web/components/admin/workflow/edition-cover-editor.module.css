@@ -10,7 +10,7 @@
 .choice { border: 1px solid #d8d4ce; padding: 12px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .choice small { line-height: 1.5; }
 .choice button { margin-top: auto; }
-.editor button { min-height: 42px; white-space: normal; overflow-wrap: anywhere; padding: 8px 12px; border: 1px solid var(--ink, #252522); border-radius: 4px; background: #fffdf8; color: var(--ink, #252522); font-size: 14px; line-height: 1.5; cursor: pointer; }
+.editor button { min-height: 42px; white-space: normal; overflow-wrap: anywhere; padding: 8px 12px; border: 1px solid var(--ink, #252522); border-radius: 4px; background: #fffdf8; color: var(--ink, #252522); font-size: max(14px, var(--stl-readable-ui)); line-height: 1.5; cursor: pointer; }
 .editor button:disabled { opacity: 0.5; cursor: default; }
 .editor button:focus-visible { outline: 2px solid var(--ink, #252522); outline-offset: 3px; }
 .editor label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

@@ -20,7 +20,7 @@
 .admin-entity-table > footer {
   padding: 11px 12px;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-entity-table article > p > span:last-child {
@@ -33,7 +33,7 @@
   overflow: hidden;
   max-width: 260px;
   color: var(--muted);
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -54,7 +54,7 @@
   padding-bottom: 2px;
   border-bottom: 1px solid var(--ink);
   cursor: pointer;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .admin-row-actions .admin-inline-file {
@@ -74,7 +74,7 @@
   margin: 0 0 12px;
   border: 1px solid var(--line);
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-resource-state.error {
@@ -84,7 +84,7 @@
 
 .admin-list-toolbar h2 {
   margin: 0;
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-list-toolbar > a {
@@ -95,7 +95,7 @@
   padding: 0 12px;
   background: var(--ink);
   color: var(--surface);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .taxonomy-layout {
@@ -131,13 +131,13 @@
 
 .taxonomy-admin-grid article h2 {
   margin: 10px 0 4px;
-  font-size: calc(15px + var(--font-bump));
+  font-size: max(calc(15px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .taxonomy-admin-grid article p {
   min-height: 34px;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .taxonomy-admin-grid dl {
@@ -152,15 +152,15 @@
   flex-direction: column;
 }
 
-.taxonomy-admin-grid dt { color: var(--muted); font-size: calc(6px + var(--font-bump)); }
-.taxonomy-admin-grid dd { margin: 0; font-size: calc(12px + var(--font-bump)); }
+.taxonomy-admin-grid dt { color: var(--muted); font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-body)); }
+.taxonomy-admin-grid dd { margin: 0; font-size: max(calc(12px + var(--font-bump)), var(--stl-readable-body)); }
 .taxonomy-admin-grid article > a {
   display: flex;
   align-items: center;
   gap: 5px;
   margin-top: 8px;
   cursor: pointer;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .taxonomy-add {
@@ -172,7 +172,7 @@
   gap: 8px;
   border: 1px dashed var(--line-dark);
   cursor: pointer;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-side-editor {
@@ -209,7 +209,7 @@
 .taxonomy-editor-page > header a,
 .scholar-editor.dedicated-editor > header a {
   color: var(--muted);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-side-editor label,
@@ -228,7 +228,7 @@
 .settings-content-form label > span,
 .backup-settings label > span {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -246,7 +246,7 @@
   padding: 7px 8px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .admin-master-detail {
@@ -302,7 +302,7 @@
   background: var(--ink);
   color: white;
   border-radius: 50%;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
   place-items: center;
 }
 
@@ -314,7 +314,7 @@
 
 .user-admin-grid button small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .user-admin-actions {
@@ -336,7 +336,7 @@
 .account-editor > p {
   margin: 0;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .account-counts {
@@ -368,5 +368,5 @@
 
 .direct-reset > p {
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }

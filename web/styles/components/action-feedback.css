@@ -57,7 +57,7 @@ a[data-route-pending="true"] {
   border: var(--stl-border-hairline) solid #cfcac0;
   background: #f5f2eb;
   color: #4e4a43;
-  font-size: .8rem;
+  font-size: max(.8rem, var(--stl-readable-meta));
   line-height: 1.5;
 }
 

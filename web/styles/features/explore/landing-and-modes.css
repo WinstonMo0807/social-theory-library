@@ -48,7 +48,7 @@
 .explore-landing-copy > p:last-child {
   max-width: 620px;
   margin: 0;
-  font-size: calc(15px + var(--font-bump));
+  font-size: max(calc(15px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.8;
 }
 
@@ -100,7 +100,7 @@
   align-items: center;
   justify-content: space-between;
   font-family: var(--mono);
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .explore-entry-card h2 {
@@ -114,7 +114,7 @@
 .explore-entry-card > p {
   margin: 0;
   color: var(--muted);
-  font-size: calc(12px + var(--font-bump));
+  font-size: max(calc(12px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.75;
 }
 
@@ -124,7 +124,7 @@
   align-content: start;
   margin: 26px 0;
   padding-left: 18px;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .explore-entry-card > strong {
@@ -132,7 +132,7 @@
   align-items: center;
   align-self: end;
   gap: 12px;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .search-mode-switch > a {
@@ -168,7 +168,7 @@
 
 .mobile-filter-disclosure > summary span {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .mobile-filter-disclosure > form {
@@ -221,7 +221,7 @@
 .semantic-comparison > header p {
   margin-top: 4px;
   color: var(--muted);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .semantic-more-evidence > summary {
@@ -235,7 +235,7 @@
 
 .semantic-more-evidence > summary strong {
   align-self: center;
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-more-evidence > summary small {
@@ -271,14 +271,14 @@
 }
 
 .semantic-loading-status p {
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 720;
 }
 
 .semantic-loading-status small {
   margin-top: 4px;
   color: var(--muted);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-loading-indicator {
@@ -323,7 +323,7 @@
 
 .semantic-comparison article blockquote {
   font-family: var(--serif);
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.75;
 }
 
@@ -355,5 +355,5 @@
   padding: 4px 7px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }

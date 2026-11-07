@@ -28,7 +28,7 @@
 
 .processing-review-cards header {
   justify-content: space-between;
-  font-size: .78rem;
+  font-size: max(.78rem, var(--stl-readable-meta));
 }
 
 .processing-review-cards h3,
@@ -47,7 +47,7 @@
 }
 
 .processing-review-cards dl div { min-width: 0; }
-.processing-review-cards dt { color: var(--muted); font-size: .72rem; }
+.processing-review-cards dt { color: var(--muted); font-size: max(.72rem, var(--stl-readable-body)); }
 
 .processing-review-cards footer {
   flex-wrap: wrap;

@@ -28,7 +28,7 @@
 .about-hero-copy p {
   max-width: 560px;
   margin: 0;
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.65;
 }
 
@@ -56,7 +56,7 @@
 
 .about-stats dd {
   margin: 4px 0 0;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-body));
   display: inline-flex;
   align-items: center;
   gap: 6px;

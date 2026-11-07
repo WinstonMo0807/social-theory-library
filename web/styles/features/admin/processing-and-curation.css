@@ -107,7 +107,7 @@
 
 .processing-summary span {
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .processing-health {
@@ -118,7 +118,7 @@
   padding: 12px 15px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .processing-health span {
@@ -156,11 +156,11 @@
 .processing-item-heading small,
 .processing-item-detail {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .processing-item-heading b {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .processing-bar {
@@ -212,7 +212,7 @@
 .curation-fieldset > p {
   margin: 0;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .curated-selector {
@@ -221,7 +221,7 @@
 }
 
 .curated-selector > strong {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .curated-selector > div {
@@ -239,7 +239,7 @@
   padding: 9px 10px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-ui));
   text-align: left;
 }
 
@@ -251,12 +251,12 @@
 
 .curated-selector button b {
   overflow-wrap: anywhere;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .curated-selector button small {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
   line-height: 1.45;
 }
 
@@ -268,7 +268,7 @@
   background: var(--paper);
   color: var(--ink);
   font-family: var(--serif);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.65;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
@@ -279,7 +279,7 @@
   margin-bottom: 2px;
   color: var(--muted);
   font-family: var(--sans);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
   font-weight: 700;
 }
 
@@ -309,7 +309,7 @@
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .relation-details-editor {
@@ -329,7 +329,7 @@
 .reading-path-editor > p {
   margin: 0;
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .reading-path-admin-row {
@@ -345,7 +345,7 @@
 }
 
 .relation-details-editor > strong {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .relation-details-editor > div {
@@ -357,7 +357,7 @@
 
 .relation-details-editor > div > span {
   overflow: hidden;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -427,7 +427,7 @@
 
 .knowledge-map-edge small {
   grid-column: 1 / -1;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .knowledge-map-row > p {
@@ -456,7 +456,7 @@
 
 .display-preferences header small {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .display-preferences > div {
@@ -469,7 +469,7 @@
 .display-preferences > div > span {
   min-width: 46px;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .display-preferences button {
@@ -478,7 +478,7 @@
   gap: 5px;
   padding: 6px 9px;
   border: 1px solid var(--line);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .display-preferences button.active {
@@ -512,7 +512,7 @@
   width: fit-content;
   align-items: center;
   gap: 7px;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .longform-panel {
@@ -659,13 +659,13 @@
 .catalog-ocr-progress { display: grid; gap: 8px; margin-block: 12px; }
 .catalog-ocr-progress progress { display: block; width: 100%; height: 16px; accent-color: #3a5546; }
 .ocr-task-monitor > header, .ocr-monitor-jobs article > header { display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap; }
-.ocr-task-monitor > header > span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ocr-task-monitor > header > span { color: var(--muted); font-size: max(12px, var(--stl-readable-meta)); font-variant-numeric: tabular-nums; }
 .ocr-monitor-jobs { display: grid; gap: 14px; margin-block: 16px; }
 .ocr-monitor-jobs article { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 8px; }
 .ocr-monitor-jobs article[data-status="failed"] { border-left: 3px solid var(--ink); }
 .ocr-monitor-jobs h3 { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
-.ocr-monitor-jobs p { margin: 4px 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
-.ocr-monitor-jobs a { font-size: 12px; text-underline-offset: 3px; }
+.ocr-monitor-jobs p { margin: 4px 0; color: var(--muted); font-size: max(13px, var(--stl-readable-body)); line-height: 1.65; }
+.ocr-monitor-jobs a { font-size: max(12px, var(--stl-readable-meta)); text-underline-offset: 3px; }
 .ocr-monitor-jobs .catalog-ocr-progress progress { height: 18px; accent-color: var(--ink); }
 .ocr-monitor-jobs .catalog-ocr-actions .button { display: inline-flex; gap: 7px; align-items: center; }
 .catalog-ocr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

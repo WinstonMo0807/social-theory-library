@@ -17,14 +17,14 @@
 .relation-assignment-editor > header strong,
 .release-impact-panel h2 {
   margin: 0;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .relation-assignment-editor > header span,
 .release-impact-panel > header p {
   margin: 0;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .relation-assignment-editor article {
@@ -38,7 +38,7 @@
 
 .relation-assignment-editor article > strong {
   align-self: center;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .relation-assignment-editor article label {
@@ -47,7 +47,7 @@
 
 .relation-assignment-editor article label > span {
   color: var(--muted);
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .relation-assignment-editor article select,
@@ -57,7 +57,7 @@
   padding: 6px 8px;
   border: 1px solid var(--line-strong);
   background: var(--surface);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .relation-assignment-editor .relation-primary {
@@ -91,7 +91,7 @@
 
 .release-impact-panel > header b {
   white-space: nowrap;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .release-impact-work,
@@ -111,11 +111,11 @@
 .release-impact-panel h3,
 .release-impact-panel section small {
   color: var(--muted);
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .release-impact-work strong {
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.3;
 }
 
@@ -127,7 +127,7 @@
   gap: 4px;
   padding-bottom: 2px;
   border-bottom: 1px solid currentColor;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .release-impact-panel h3 {
@@ -141,7 +141,7 @@
   justify-content: space-between;
   gap: 8px;
   margin: 5px 0;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .release-impact-panel section p.release-impact-empty {
@@ -152,13 +152,13 @@
 .release-impact-panel > footer {
   padding: 11px 12px;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.55;
 }
 
 .candidate-panel article p {
   margin: 5px 0;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .candidate-panel article button {
@@ -189,7 +189,7 @@
 .review-pdf > header nav button {
   padding: 10px 0;
   cursor: pointer;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .review-pdf > header nav button.active {
@@ -250,7 +250,7 @@
 
 .review-pdf-frame > p {
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .review-text-page {
@@ -299,12 +299,12 @@
 
 .review-source-summary dt {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .review-source-summary dd {
   margin: 6px 0 0;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -328,7 +328,7 @@
   display: grid;
   grid-template-columns: minmax(100px, 0.5fr) minmax(120px, 1fr) auto;
   gap: 12px;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .attempt-history time,
@@ -342,12 +342,12 @@
   padding: 8px;
   margin: 8px 0;
   background: var(--soft);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   white-space: pre-wrap;
 }
 
 .attempt-error {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .attempt-empty {

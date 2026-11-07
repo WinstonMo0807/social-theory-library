@@ -24,7 +24,7 @@
   border: 1px solid #c8b98e;
   background: rgba(250, 247, 237, 0.96);
   color: #51482f;
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
   backdrop-filter: blur(8px);
 }
 
@@ -129,19 +129,19 @@
 
 .pdf-margin-note strong,
 .pdf-margin-note time {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .pdf-margin-note time {
   color: #6e695d;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   font-variant-numeric: tabular-nums;
 }
 
 .pdf-margin-note span {
   display: -webkit-box;
   overflow: hidden;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
@@ -152,7 +152,7 @@
   overflow: hidden;
   color: #6e695d;
   font-family: var(--serif);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.4;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -172,7 +172,7 @@
   border-bottom: 1px solid currentColor;
   color: inherit;
   cursor: pointer;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .pdf-margin-note.focused {
@@ -306,7 +306,7 @@
   margin: 0;
   border: 1px solid #d4d4cf;
   background: rgba(255, 255, 255, 0.92);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .pdf-render-error,
@@ -331,14 +331,14 @@
 
 .pdf-render-error strong,
 .reader-unavailable strong {
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .pdf-render-error span,
 .reader-unavailable p {
   max-width: 420px;
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .reader-unavailable {
@@ -352,7 +352,7 @@
 .pdf-render-error a {
   padding-bottom: 2px;
   border-bottom: 1px solid currentColor;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .pdf-page {
@@ -423,7 +423,7 @@
   background: white;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   font-family: var(--sans);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .footnote-card b {
@@ -439,7 +439,7 @@
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .pdf-page > footer {

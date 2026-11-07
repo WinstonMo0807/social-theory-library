@@ -42,12 +42,12 @@
 .scholar-years,
 .scholar-intro > p:nth-of-type(2) {
   margin: 0;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .scholar-intro .biography {
   margin: 24px 0 18px;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.55;
 }
 
@@ -66,13 +66,13 @@
 
 .affiliation-concerns h2 {
   margin: 0 0 8px;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
 .affiliation-concerns p {
   margin: 2px 0;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .scholar-timeline {
@@ -89,7 +89,7 @@
   padding-left: 15px;
   margin: 0;
   border-left: 1px solid var(--ink);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .scholar-timeline > p::before {
@@ -122,7 +122,7 @@
 .scholar-quote cite {
   margin-top: auto;
   font-family: var(--sans);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   font-style: normal;
 }
 
@@ -148,13 +148,13 @@
 .essential-texts > a > span {
   display: flex;
   flex-direction: column;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .essential-texts > a small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .about-scholar {
@@ -164,7 +164,7 @@
 .about-scholar > p {
   min-height: 85px;
   margin: 0;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .scholar-key-grid {
@@ -194,7 +194,7 @@
   height: 24px;
   border: 1px solid var(--line-dark);
   border-radius: 50%;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   place-items: center;
 }
 
@@ -204,12 +204,12 @@
   overflow-wrap: anywhere;
   flex-direction: column;
   margin: 0;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .concept-row small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .school-link-row {
@@ -218,14 +218,14 @@
   align-items: center;
   gap: 8px;
   padding: 4px 0;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .school-link-row .theory-symbol {
   width: 28px;
   height: 28px;
   margin: 0;
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .concept-map {
@@ -251,13 +251,13 @@
   padding: 6px 10px;
   border: 1px solid var(--line-dark);
   background: var(--surface);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   text-align: center;
   overflow-wrap: anywhere;
 }
 
 .bourdieu-map small {
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .bourdieu-map > span::after {
@@ -288,7 +288,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .connection-row .scholar-portrait {
@@ -312,7 +312,7 @@
   min-width: 52px;
   flex-direction: column;
   gap: 5px;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .scholar-citation {
@@ -336,7 +336,7 @@
   flex: 0 0 auto;
   padding: 10px 14px;
   cursor: pointer;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-ui));
   white-space: nowrap;
 }
 
@@ -357,7 +357,7 @@
 .scholar-citation > p,
 .citation-panel blockquote {
   font-family: var(--serif);
-  font-size: calc(12px + var(--font-bump));
+  font-size: max(calc(12px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .topic-hero {
@@ -377,7 +377,7 @@
 .topic-hero > div:first-child > p:not(.breadcrumbs, .eyebrow) {
   max-width: 520px;
   margin: 14px 0;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .topic-hero > div:nth-child(2) .architectural-image {
@@ -385,7 +385,7 @@
 }
 
 .topic-hero > div:nth-child(2) > small {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .topic-hero > aside {
@@ -399,7 +399,7 @@
 
 .topic-hero aside h2 {
   margin: 0 0 8px;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
@@ -409,11 +409,11 @@
   gap: 8px;
   align-items: center;
   margin: 0;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .topic-hero aside p strong {
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .topic-hero aside .button {
@@ -476,7 +476,7 @@
 .recent-topic strong,
 .related-scholars strong,
 .linked-schools strong {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .recent-topic small,
@@ -484,7 +484,7 @@
 .related-scholars span,
 .linked-schools small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .related-scholars > a {
@@ -494,7 +494,7 @@
 .related-scholars .scholar-portrait {
   width: 38px;
   height: 42px;
-  font-size: calc(12px + var(--font-bump));
+  font-size: max(calc(12px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .linked-schools > a {
@@ -505,7 +505,7 @@
   width: 32px;
   height: 32px;
   margin: 0;
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .topic-timeline {
@@ -550,12 +550,12 @@
 
 .topic-timeline time,
 .topic-timeline strong {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .topic-timeline p {
   margin: 6px 0 0;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .excerpt-spotlight blockquote {
@@ -563,7 +563,7 @@
   padding-left: 30px;
   margin: 10px 0;
   font-family: var(--serif);
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.5;
 }
 
@@ -576,7 +576,7 @@
 .excerpt-spotlight cite {
   display: block;
   margin-top: 8px;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
   font-style: normal;
   line-height: 1.5;
 }
@@ -586,7 +586,7 @@
   margin: 8px 0;
   border-left: 2px solid var(--ink);
   background: var(--wash);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.55;
 }
 
@@ -616,13 +616,13 @@
 
 .reading-paths strong {
   overflow-wrap: anywhere;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .reading-paths span,
 .reading-paths small {
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.45;
 }
 
@@ -664,7 +664,7 @@
   gap: 8px;
   padding-bottom: 3px;
   border-bottom: 1px solid var(--ink);
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -672,7 +672,7 @@
   max-width: 650px;
   margin: 25px 0;
   font-family: var(--serif);
-  font-size: calc(15px + var(--font-bump));
+  font-size: max(calc(15px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.7;
 }
 
@@ -696,7 +696,7 @@
 .work-hero dt,
 .work-hero dd {
   margin: 0;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .work-hero dt {
@@ -712,7 +712,7 @@
   display: block;
   margin-top: 5px;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   text-align: center;
 }
 
@@ -730,13 +730,13 @@
 
 .work-body > section > p {
   font-family: var(--serif);
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.7;
 }
 
 .work-body h2 {
   margin-top: 30px;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
@@ -746,7 +746,7 @@
   gap: 10px;
   padding: 9px 0;
   border-bottom: 1px solid var(--line);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .citation-panel blockquote {
@@ -770,7 +770,7 @@
   min-height: 18px;
   margin: 8px 0 0;
   color: var(--muted);
-  font-size: calc(10px + var(--font-bump)) !important;
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body)) !important;
 }
 
 .citation-actions {

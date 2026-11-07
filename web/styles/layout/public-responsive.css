@@ -87,7 +87,7 @@
   }
 
   .site-menu-nav a > strong {
-    font-size: calc(14px + var(--font-bump));
+    font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-meta));
   }
 
   .header-return span { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -198,11 +198,11 @@
   }
 
   .stat-row strong {
-    font-size: calc(var(--stl-type-label) + var(--font-bump));
+    font-size: max(calc(var(--stl-type-label) + var(--font-bump)), var(--stl-readable-meta));
   }
 
   .stat-row span {
-    font-size: calc(8px + var(--font-bump));
+    font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   }
 }
 

@@ -13,7 +13,7 @@
 
 .random-heading h2 {
   margin: 0;
-  font-size: calc(12px + var(--font-bump));
+  font-size: max(calc(12px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
@@ -24,7 +24,7 @@
   padding: 5px 0 5px 8px;
   color: var(--muted);
   cursor: pointer;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .random-heading button:hover:not(:disabled) {

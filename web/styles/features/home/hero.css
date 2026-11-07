@@ -40,7 +40,7 @@
   bottom: 54px;
   left: 4px;
   width: min(340px, 21vw);
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.7;
 }
 
@@ -160,13 +160,13 @@
 }
 
 .stat-row strong {
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1;
 }
 
 .stat-row span {
   margin-top: 3px;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .home-grid {

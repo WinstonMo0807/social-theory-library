@@ -89,7 +89,7 @@ html:has(.ui-drawer[open]) { overflow: hidden; }
   background: var(--surface);
   color: var(--ink);
   font-family: var(--sans);
-  font-size: var(--stl-type-label);
+  font-size: max(var(--stl-type-label), var(--stl-readable-meta));
   font-weight: normal;
   line-height: var(--stl-type-line-body);
   text-align: left;

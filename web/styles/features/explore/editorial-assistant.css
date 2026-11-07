@@ -72,7 +72,7 @@
 .ask-configuration-steps > p:first-of-type {
   margin: 0;
   color: #4f4c46;
-  font-size: 13px;
+  font-size: max(13px, var(--stl-readable-body));
   line-height: 1.75;
 }
 
@@ -96,7 +96,7 @@
 .ask-configuration-steps > p:nth-of-type(2) {
   margin: 24px 0 5px;
   color: var(--ink);
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-body));
   font-weight: 740;
   letter-spacing: .04em;
 }
@@ -148,13 +148,13 @@
 }
 
 .ask-configuration-steps li strong {
-  font-size: 13px;
+  font-size: max(13px, var(--stl-readable-body));
 }
 
 .ask-configuration-steps li span {
   margin-top: 5px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-body));
   line-height: 1.55;
 }
 
@@ -178,7 +178,7 @@
 .ask-configuration-policy span {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-meta));
   line-height: 1.55;
 }
 
@@ -219,7 +219,7 @@
 .ask-configuration-panel > header small {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-meta));
 }
 
 .ask-configuration-status {
@@ -269,7 +269,7 @@
   border-radius: 7px;
   background: #fbfaf8;
   color: #57534c;
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
   overflow-wrap: anywhere;
 }
 
@@ -290,13 +290,13 @@
 }
 
 .ask-configuration-guidance h3 {
-  font-size: 13px;
+  font-size: max(13px, var(--stl-readable-meta));
 }
 
 .ask-configuration-guidance p {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-body));
   line-height: 1.6;
 }
 
@@ -323,7 +323,7 @@
   background: #f7f5f0;
   color: #56524a;
   place-items: center;
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
   text-align: center;
 }
 

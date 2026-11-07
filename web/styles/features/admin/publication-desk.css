@@ -106,4 +106,4 @@
 .publication-preview-actions { display: flex; flex-wrap: wrap; gap: .55rem; }
 .publication-impact-summary > div { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .6rem; margin-top: .9rem; }
 .publication-impact-summary article { display: grid; gap: .3rem; padding: .7rem; background: #f4f1ea; }
-.publication-impact-summary article span { color: var(--muted); font-size: .82rem; }
+.publication-impact-summary article span { color: var(--muted); font-size: max(.82rem, var(--stl-readable-meta)); }

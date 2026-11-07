@@ -24,7 +24,7 @@
 .explore-hero p {
   max-width: 520px;
   margin: 12px 0 0;
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .explore-hero .architectural-image,
@@ -62,7 +62,7 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .result-tabs a.active {
@@ -100,12 +100,12 @@
 }
 
 .search-mode-switch strong {
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .search-mode-switch small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .search-mode-switch > a.active small {
@@ -149,7 +149,7 @@
 
 .semantic-results-header p {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .semantic-results-header h2 {
@@ -159,7 +159,7 @@
 .semantic-results-header > span {
   padding: 5px 8px;
   border: 1px solid var(--line);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-notice {
@@ -167,7 +167,7 @@
   padding: 10px 18px;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.55;
 }
 
@@ -194,17 +194,17 @@
 .semantic-understanding > h2 {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-understanding span,
 .semantic-understanding summary {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-understanding strong {
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-understanding p {
@@ -229,7 +229,7 @@
   padding: 7px 9px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .semantic-rewrite-form button,
@@ -251,7 +251,7 @@
   padding: 3px 7px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   font-style: normal;
 }
 
@@ -284,7 +284,7 @@
 .semantic-work-result-copy > header > p:first-child {
   margin: 0 0 4px;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .semantic-work-result-copy > header h3 {
@@ -307,7 +307,7 @@
   gap: 9px;
   margin: 13px 0;
   font-family: var(--serif);
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.7;
 }
 
@@ -336,7 +336,7 @@
 .semantic-work-more > summary {
   padding: 13px 0;
   cursor: pointer;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -347,7 +347,7 @@
   padding-top: 12px;
   margin-top: 8px;
   border-top: 1px solid var(--line);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -411,11 +411,11 @@
 .semantic-rank span {
   color: var(--muted);
   font-family: var(--mono);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-rank strong {
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.25;
 }
 
@@ -425,7 +425,7 @@
 
 .semantic-result-copy h3 {
   margin: 5px 0;
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-result-meta {
@@ -434,7 +434,7 @@
   gap: 9px;
   margin: 0;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-result-meta span::before {
@@ -448,7 +448,7 @@
   gap: 9px;
   margin: 13px 0;
   font-family: var(--serif);
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.65;
 }
 
@@ -469,7 +469,7 @@
   margin: 10px 0;
   color: var(--muted);
   font-family: inherit;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.65;
 }
 
@@ -501,7 +501,7 @@
 .semantic-result-actions span {
   margin-left: 8px;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ask-library-placeholder {
@@ -535,7 +535,7 @@
 .semantic-reasons li {
   padding: 4px 7px;
   border: 1px solid var(--line);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .semantic-result-card > .button {
@@ -561,6 +561,6 @@
 
 .semantic-search-aside p {
   color: var(--muted);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.65;
 }

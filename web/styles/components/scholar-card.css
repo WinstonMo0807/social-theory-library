@@ -51,13 +51,13 @@
 }
 
 .scholar-card h3 {
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .scholar-card p {
   margin-top: 2px;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.45;
 }
 

@@ -33,7 +33,7 @@
   max-width: 290px;
   margin: 15px 0 0;
   color: #4f4d47;
-  font-size: 13px;
+  font-size: max(13px, var(--stl-readable-body));
   line-height: 1.75;
   text-wrap: pretty;
 }
@@ -77,13 +77,13 @@
   padding: 7px 14px;
   border-radius: 999px;
   background: rgb(255 255 255 / 84%);
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
   font-variant-numeric: tabular-nums;
 }
 
 .result-tabs a small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: max(10px, var(--stl-readable-meta));
 }
 
 .result-tabs a.active small {
@@ -154,7 +154,7 @@
 }
 
 .search-mode-switch strong {
-  font-size: 13px;
+  font-size: max(13px, var(--stl-readable-meta));
   white-space: nowrap;
 }
 
@@ -187,17 +187,17 @@
 .filter-title strong,
 .filter-group legend,
 .collapsible-filter > summary {
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
 }
 
 .filter-group label {
   min-height: 28px;
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
 }
 
 .filter-group label small,
 .filter-empty {
-  font-size: 10px;
+  font-size: max(10px, var(--stl-readable-meta));
   font-variant-numeric: tabular-nums;
 }
 
@@ -247,7 +247,7 @@
 .result-books .explore-result-card .book-actions a,
 .result-books .explore-result-card .book-actions button {
   justify-content: center;
-  font-size: 9px;
+  font-size: max(9px, var(--stl-readable-ui));
   white-space: nowrap;
 }
 
@@ -299,7 +299,7 @@
   border-bottom: 1px solid #dedbd4;
   background: #f6f4ef;
   color: #67635c;
-  font-size: 10px;
+  font-size: max(10px, var(--stl-readable-meta));
   font-weight: 720;
 }
 
@@ -320,13 +320,13 @@
 }
 
 .passage-table-page strong {
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-meta));
 }
 
 .passage-table-page small,
 .passage-table-copy .muted-row {
   color: var(--muted);
-  font-size: 9px;
+  font-size: max(9px, var(--stl-readable-meta));
 }
 
 .passage-table-copy {
@@ -336,7 +336,7 @@
 .passage-table-copy > strong {
   display: block;
   margin-bottom: 2px;
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-meta));
 }
 
 .passage-table-copy blockquote {
@@ -346,7 +346,7 @@
   margin: 5px 0 0;
   padding: 0;
   font-family: var(--serif);
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-meta));
   line-height: 1.55;
 }
 
@@ -361,7 +361,7 @@
   display: grid;
   gap: 7px;
   justify-items: end;
-  font-size: 10px;
+  font-size: max(10px, var(--stl-readable-meta));
 }
 
 .passage-table-actions summary,
@@ -416,7 +416,7 @@
 }
 
 .search-aside h2 {
-  font-size: 13px;
+  font-size: max(13px, var(--stl-readable-meta));
   text-transform: none;
 }
 
@@ -428,13 +428,13 @@
 
 .search-aside section:first-child strong {
   order: 2;
-  font-size: 13px;
+  font-size: max(13px, var(--stl-readable-meta));
   font-variant-numeric: tabular-nums;
 }
 
 .search-aside section:first-child span {
   order: 1;
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
 }
 
 .exact-search-aside section:last-child {
@@ -460,7 +460,7 @@
   border: 1px solid #d6d2ca;
   border-radius: 7px;
   background: #fff;
-  font-size: 11px;
+  font-size: max(11px, var(--stl-readable-ui));
 }
 
 .exact-aside-sort button {

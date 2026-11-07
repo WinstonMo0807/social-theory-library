@@ -21,11 +21,11 @@
 
 .distribution-cards p span {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .distribution-cards article > b {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .cloud-config {
@@ -37,7 +37,7 @@
   align-items: center;
   gap: 5px;
   margin-left: auto;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .cloud-config > .form-grid {
@@ -55,7 +55,7 @@
 
 .switch-row small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .cloud-config > .button {
@@ -78,7 +78,7 @@
   align-items: center;
   gap: 4px;
   margin-left: auto;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .provider-list > button {
@@ -107,17 +107,17 @@
 .provider-list > button small {
   overflow: hidden;
   color: var(--muted);
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-ui));
   text-overflow: ellipsis;
 }
 
 .provider-list > button b {
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .cloud-config label small {
   color: var(--muted);
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .usage-editor {
@@ -139,7 +139,7 @@
   max-width: 780px;
   margin: 0;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.6;
 }
 
@@ -186,7 +186,7 @@
   align-items: center;
   gap: 5px;
   margin-left: auto;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .backup-settings > svg {
@@ -200,7 +200,7 @@
 .semantic-runtime-settings > p,
 .semantic-runtime-settings > small {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ocr-runtime-status {
@@ -219,12 +219,12 @@
 
 .ocr-runtime-status dt {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ocr-runtime-status dd {
   margin: 3px 0 0;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -253,7 +253,7 @@
 
 .semantic-index-runtime dt {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-index-runtime dd {
@@ -282,7 +282,7 @@
   display: block;
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.55;
 }
 
@@ -340,7 +340,7 @@
   display: block;
   margin-top: 3px;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .search-evaluation-workspace {
@@ -374,7 +374,7 @@
 .evaluation-set-list article p,
 .evaluation-empty {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.55;
 }
 
@@ -382,7 +382,7 @@
 .evaluation-index-picker label {
   display: grid;
   gap: 5px;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -396,7 +396,7 @@
   padding: 8px 10px;
   border-left: 3px solid var(--ink);
   background: var(--paper);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.5;
 }
 
@@ -453,7 +453,7 @@
 
 .evaluation-set-list article > div:first-child span {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .evaluation-set-list article > div:last-child {
@@ -477,7 +477,7 @@
 
 .evaluation-run-history > h3 {
   padding: 11px 14px;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .evaluation-run-history table {
@@ -500,7 +500,7 @@
 
 .evaluation-index-uid {
   font-family: var(--mono);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .semantic-job-list {
@@ -555,19 +555,19 @@
 .backup-history article header {
   display: flex;
   justify-content: space-between;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .backup-history article p,
 .backup-history article small {
   display: block;
   overflow-wrap: anywhere;
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .reader-empty-list {
   padding: 12px;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.5;
 }

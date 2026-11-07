@@ -14,7 +14,7 @@
 
 .admin-page-title p {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
   font-weight: var(--stl-type-weight-strong);
   text-transform: uppercase;
 }
@@ -26,7 +26,7 @@
 
 .admin-page-title span {
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-page-title a {
@@ -34,7 +34,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: var(--stl-space-2);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-page-title > strong {

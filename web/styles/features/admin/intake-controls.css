@@ -20,7 +20,7 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .admin-list-toolbar button {
@@ -28,7 +28,7 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .upload-dropzone {
@@ -64,7 +64,7 @@
 }
 
 .ask-reader-connection-form label > span {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -109,7 +109,7 @@
 .ask-reader-connection-settings > p {
   margin: 10px 0;
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .ask-reader-connection-settings .ask-reader-connection-form {
@@ -123,7 +123,7 @@
 .system-status-details summary {
   cursor: pointer;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .system-status-details dl {

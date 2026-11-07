@@ -9,7 +9,7 @@
   background: var(--ink);
   color: var(--stl-ink-inverse);
   cursor: pointer;
-  font-size: calc(var(--stl-type-label) + var(--font-bump));
+  font-size: max(calc(var(--stl-type-label) + var(--font-bump)), var(--stl-readable-ui));
   font-weight: 680;
   transition: background-color var(--stl-motion-control) var(--ease-out), color var(--stl-motion-control) var(--ease-out), transform var(--stl-motion-press) var(--ease-out);
 }

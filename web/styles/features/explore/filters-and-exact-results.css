@@ -13,18 +13,18 @@
   justify-content: space-between;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--line);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
 .filter-title button {
   cursor: pointer;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .filter-title a {
   border-bottom: 1px solid currentColor;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .filter-group {
@@ -36,7 +36,7 @@
 
 .filter-group legend {
   margin-bottom: 9px;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 750;
   text-transform: uppercase;
 }
@@ -47,7 +47,7 @@
   align-items: center;
   gap: 6px;
   padding: 3px 0;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .filter-group input {
@@ -73,7 +73,7 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
   list-style: none;
   text-transform: uppercase;
@@ -94,7 +94,7 @@
 .filter-empty {
   margin: 0;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.45;
 }
 
@@ -117,7 +117,7 @@
   justify-content: space-between;
   padding: 6px 13px;
   border-bottom: 1px solid var(--line);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
@@ -143,7 +143,7 @@
   padding: 7px 10px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .results-toolbar button {
@@ -230,7 +230,7 @@
 .passage-thumb small {
   margin-top: 7px;
   font-family: var(--sans);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .fulltext-result blockquote {
@@ -238,7 +238,7 @@
   margin: 9px 0 0;
   padding-left: 24px;
   font-family: var(--serif);
-  font-size: calc(15px + var(--font-bump));
+  font-size: max(calc(15px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.4;
 }
 
@@ -284,11 +284,11 @@
 }
 
 .article-result h3 {
-  font-size: calc(12px + var(--font-bump));
+  font-size: max(calc(12px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .article-result p {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .article-actions {
@@ -301,7 +301,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .scholar-results > div {
@@ -335,7 +335,7 @@
   min-height: 52px;
   padding: 8px 14px;
   border-top: 1px solid var(--line);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   font-variant-numeric: tabular-nums;
 }
 
@@ -375,7 +375,7 @@
 
 .search-aside h2 {
   margin: 0 0 10px;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
@@ -392,7 +392,7 @@
 
 .search-aside section:first-child span,
 .search-aside a {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .search-aside a {
@@ -416,5 +416,5 @@
 }
 
 .topic-cluster small {
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }

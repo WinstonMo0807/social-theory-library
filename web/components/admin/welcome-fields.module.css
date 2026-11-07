@@ -1,9 +1,9 @@
-.fields { min-width: 0; border: 0; padding: 20px 0; margin: 0; display: grid; gap: 22px; font: 14px/1.65 var(--sans); }
+.fields { min-width: 0; border: 0; padding: 20px 0; margin: 0; display: grid; gap: 22px; font: max(14px, var(--stl-readable-meta))/1.65 var(--sans); }
 .fields label { display: grid; gap: 8px; min-width: 0; }
 .fields input, .fields textarea { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); font: inherit; }
 .fields textarea { resize: vertical; }
 .fields input:focus-visible, .fields textarea:focus-visible { outline: 2px solid var(--night-gold, #a48146); outline-offset: 2px; }
-.fields .note { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.fields .note { margin: 0; color: var(--muted); font-size: max(13px, var(--stl-readable-meta)); line-height: 1.7; }
 .variants { display: flex; flex-wrap: wrap; gap: 8px; }
 .variants button[aria-pressed=true] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 .books { list-style: none; padding: 0; margin: 0; }
@@ -12,7 +12,7 @@
 .books li > svg { flex: none; color: var(--muted); }
 .books li > div:first-of-type { min-width: 0; flex: 1; }
 .books strong { display: block; font: 500 16px/1.6 var(--serif); overflow-wrap: anywhere; }
-.books span { display: block; color: var(--muted); font-size: 12px; }
+.books span { display: block; color: var(--muted); font-size: max(12px, var(--stl-readable-meta)); }
 .bookActions { display: flex; flex-wrap: wrap; gap: 5px; }
 .fields .bookActions button { padding: 7px; min-width: 32px; }
 .sections details, details.sections { border-top: 1px solid var(--line); padding-block: 16px; }

@@ -50,5 +50,5 @@
 .entity-options small,
 .entity-picker-help {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }

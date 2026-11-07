@@ -9,13 +9,13 @@
 .metadata-authority-links { padding: .85rem; border-bottom: 1px solid var(--line); background: #f7f4ec; }
 .metadata-authority-links h3,
 .metadata-authority-links p { margin: 0; }
-.metadata-authority-links p { margin-top: .3rem; color: var(--muted); font-size: .78rem; line-height: 1.5; }
+.metadata-authority-links p { margin-top: .3rem; color: var(--muted); font-size: max(.78rem, var(--stl-readable-meta)); line-height: 1.5; }
 .metadata-authority-links > a { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .55rem; align-items: center; padding: .65rem 0; border-bottom: 1px solid var(--line); }
 .metadata-authority-links > a:last-child { border-bottom: 0; }
 .metadata-authority-links > a span { display: grid; min-width: 0; gap: .15rem; }
 .metadata-authority-links > a small { color: var(--muted); line-height: 1.35; }
-.metadata-authority-links > a b { max-width: 9rem; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; }
-.candidate-source-link { display: inline-flex; align-items: center; gap: .25rem; margin-top: .35rem; border-bottom: 1px solid currentColor; font-size: .74rem; }
+.metadata-authority-links > a b { max-width: 9rem; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: max(.72rem, var(--stl-readable-meta)); }
+.candidate-source-link { display: inline-flex; align-items: center; gap: .25rem; margin-top: .35rem; border-bottom: 1px solid currentColor; font-size: max(.74rem, var(--stl-readable-meta)); }
 
 .candidate-panel > header {
   flex-wrap: wrap;
@@ -57,7 +57,7 @@
 .metadata-file-import p {
   margin-top: 4px;
   color: var(--muted, #6e6b65);
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
   line-height: 1.5;
 }
 
@@ -70,7 +70,7 @@
   padding: 0 12px;
   border: 1px dashed var(--line-strong, #9c9890);
   cursor: pointer;
-  font-size: 12px;
+  font-size: max(12px, var(--stl-readable-meta));
 }
 
 .metadata-file-import label:focus-within {
@@ -120,7 +120,7 @@
 .metadata-candidate-section > header span {
   margin-top: .25rem;
   color: var(--muted);
-  font-size: .74rem;
+  font-size: max(.74rem, var(--stl-readable-meta));
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -187,7 +187,7 @@
 
 .metadata-candidate-score-factors > strong,
 .entity-resolution-evidence strong {
-  font-size: .73rem;
+  font-size: max(.73rem, var(--stl-readable-meta));
 }
 
 .metadata-candidate-score-factors dl,
@@ -214,7 +214,7 @@
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: .7rem;
+  font-size: max(.7rem, var(--stl-readable-meta));
 }
 
 .metadata-candidate-score-factors dd,
@@ -243,7 +243,7 @@
   margin: 0;
   padding-left: .55rem;
   border-left: 2px solid var(--line-dark);
-  font-size: .74rem;
+  font-size: max(.74rem, var(--stl-readable-meta));
   line-height: 1.55;
 }
 
@@ -252,7 +252,7 @@
 .entity-resolution-evidence li,
 .entity-resolution-evidence p {
   color: var(--muted);
-  font-size: .7rem;
+  font-size: max(.7rem, var(--stl-readable-meta));
   line-height: 1.5;
 }
 
@@ -332,8 +332,8 @@
   gap: .65rem;
 }
 
-.inline-metadata-candidates > header strong { font-size: .78rem; }
-.inline-metadata-candidates > header span { color: var(--muted); font-size: .68rem; }
+.inline-metadata-candidates > header strong { font-size: max(.78rem, var(--stl-readable-meta)); }
+.inline-metadata-candidates > header span { color: var(--muted); font-size: max(.68rem, var(--stl-readable-meta)); }
 
 .inline-metadata-candidates > article {
   display: grid;
@@ -355,8 +355,8 @@
   overflow-wrap: anywhere;
 }
 
-.inline-metadata-candidates > article > div:first-child strong { font-size: .78rem; }
-.inline-metadata-candidates > article > div:first-child small { color: var(--muted); font-size: .68rem; }
+.inline-metadata-candidates > article > div:first-child strong { font-size: max(.78rem, var(--stl-readable-meta)); }
+.inline-metadata-candidates > article > div:first-child small { color: var(--muted); font-size: max(.68rem, var(--stl-readable-meta)); }
 
 .inline-metadata-candidates > article > div:last-child {
   display: flex;
@@ -371,7 +371,7 @@
   border: 1px solid var(--ink);
   background: var(--paper);
   color: var(--ink);
-  font-size: .68rem;
+  font-size: max(.68rem, var(--stl-readable-ui));
   cursor: pointer;
 }
 

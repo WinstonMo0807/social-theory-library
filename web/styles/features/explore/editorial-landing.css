@@ -52,10 +52,10 @@
   .stl4-explore-hero-media { order: 0; min-height: 196px; width: 100%; background-image: url("/editorial/generated-20261030/explore.webp"); }
   .stl4-explore-hero-copy { order: 1; padding: 20px 18px 16px; }
   .stl4-explore-hero-copy h1 { margin-bottom: 12px; font-size: clamp(27px,8vw,36px); white-space: normal; }
-  .stl4-explore-hero-copy p { width: 100%; margin-bottom: 20px; font-size: 14px; }
+  .stl4-explore-hero-copy p { width: 100%; margin-bottom: 20px; font-size: max(14px, var(--stl-readable-body)); }
   .stl4-explore-search { width: 100%; max-width: none; min-height: 44px; }
-  .stl4-explore-search button { min-width: 66px; min-height: 44px; padding-inline: 16px; font-size: 14px; }
-  .stl4-explore-search input { font-size: 13px; }
+  .stl4-explore-search button { min-width: 66px; min-height: 44px; padding-inline: 16px; font-size: max(14px, var(--stl-readable-ui)); }
+  .stl4-explore-search input { font-size: max(13px, var(--stl-readable-ui)); }
   .stl4-explore-entries { padding-top: 15px; }
   .stl4-explore-section-heading { margin-bottom: 11px; padding-top: 15px; }
   .stl4-explore-section-heading h2 { font-size: 29px; }
@@ -68,7 +68,7 @@
   .stl4-explore-entry-body { min-height: 0; padding: 10px 35px 13px 12px; }
   .stl4-explore-entry-body > svg { top: 12px; right: 11px; bottom: auto; }
   .stl4-explore-entry-body strong { font-size: 20px; }
-  .stl4-explore-entry-body > span { font-size: 13px; }
+  .stl4-explore-entry-body > span { font-size: max(13px, var(--stl-readable-meta)); }
 }
 
 @media (prefers-reduced-motion: reduce) {

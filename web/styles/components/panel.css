@@ -17,7 +17,7 @@
 
 .section-heading h2 {
   margin: 0 0 var(--stl-space-2);
-  font-size: calc(var(--stl-type-body) + var(--font-bump));
+  font-size: max(calc(var(--stl-type-body) + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 750;
   letter-spacing: -0.02em;
   text-transform: uppercase;

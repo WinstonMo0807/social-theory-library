@@ -15,7 +15,7 @@
 
 .featured-topic > p:not(.muted-row) {
   min-height: 62px;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .theory-strip {
@@ -41,7 +41,7 @@
   margin-bottom: 10px;
   border: 1px solid var(--ink);
   font-family: var(--serif);
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
   place-items: center;
   transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out);
 }
@@ -53,19 +53,19 @@
 
 .theory-mini-grid strong {
   min-height: 39px;
-  font-size: calc(12px + var(--font-bump));
+  font-size: max(calc(12px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.15;
 }
 
 .theory-mini-grid p {
   min-height: 42px;
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .theory-mini-grid small {
   margin-top: auto;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .home-search {

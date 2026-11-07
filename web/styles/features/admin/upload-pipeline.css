@@ -11,7 +11,7 @@
 .upload-policy-panel > header p {
   margin: 3px 0 0;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.5;
 }
 
@@ -39,7 +39,7 @@
 
 .upload-policy-field > span,
 .upload-policy-toggle strong {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -53,7 +53,7 @@
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .upload-policy-field input:focus-visible,
@@ -66,7 +66,7 @@
 .upload-policy-field small,
 .upload-policy-toggle small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.5;
 }
 
@@ -96,7 +96,7 @@
   border-left: 3px solid var(--ink);
   background: var(--wash);
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.55;
 }
 
@@ -108,7 +108,7 @@
 .upload-dropzone p {
   max-width: 500px;
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .upload-dropzone .button {
@@ -123,7 +123,7 @@
 
 .upload-queue > header > span {
   margin-left: auto;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .upload-queue > div {
@@ -156,7 +156,7 @@
 }
 
 .upload-metadata-pairing > div strong {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .upload-metadata-pairing > ul {
@@ -175,7 +175,7 @@
   padding: 5px 7px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .upload-metadata-pairing li > span {
@@ -211,7 +211,7 @@
   display: flex;
   flex-direction: column;
   margin: 0;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .upload-queue .metadata-pair-status {
@@ -231,7 +231,7 @@
 .upload-queue > div span,
 .upload-queue > div small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .upload-file-status {
@@ -295,7 +295,7 @@
 .upload-staging-sessions > header p {
   margin-top: 4px;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .upload-staging-list {
@@ -327,7 +327,7 @@
 .upload-staging-copy small,
 .upload-staging-actions span {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .upload-staging-row > .upload-file-progress {
@@ -381,7 +381,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .upload-queue footer input {
@@ -396,7 +396,7 @@
 
 .upload-result > header span {
   margin-left: auto;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .upload-result > p {
@@ -405,7 +405,7 @@
   padding: 8px 12px;
   margin: 0;
   border-bottom: 1px solid var(--line);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .ingestion-workbench {
@@ -425,7 +425,7 @@
   min-height: 90px;
   margin: 0;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ingestion-card {
@@ -466,13 +466,13 @@
 }
 
 .ingestion-card > header strong {
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ingestion-card > header small,
 .ingestion-card > header b {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 500;
 }
 
@@ -506,7 +506,7 @@
 
 .ingestion-card-progress b {
   min-width: 34px;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   text-align: right;
 }
 
@@ -524,13 +524,13 @@
 .ingestion-card dt {
   margin-bottom: 2px;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .ingestion-card dd {
   overflow-wrap: anywhere;
   margin: 0;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .ingestion-candidate-summary {
@@ -546,7 +546,7 @@
   padding: 3px 6px;
   border: 1px solid var(--line);
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ingestion-candidate-summary span.available {
@@ -565,7 +565,7 @@
   gap: 7px;
   margin: 0;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ingestion-item-error {
@@ -597,7 +597,7 @@
 
 .ingestion-waiting-action {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .pipeline-explainer {
@@ -668,9 +668,9 @@
 
 .pipeline-explainer > div b {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .pipeline-explainer > div span {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }

@@ -9,14 +9,14 @@
 
 .structured-editor > legend {
   padding: 0 .35rem;
-  font-size: .78rem;
+  font-size: max(.78rem, var(--stl-readable-meta));
   font-weight: 700;
 }
 
 .structured-editor-description {
   margin: 0 0 .7rem;
   color: var(--muted);
-  font-size: .78rem;
+  font-size: max(.78rem, var(--stl-readable-body));
   line-height: 1.55;
 }
 
@@ -102,9 +102,9 @@
   gap: .75rem;
 }
 
-.authority-suggestions > header strong { font-size: .82rem; }
+.authority-suggestions > header strong { font-size: max(.82rem, var(--stl-readable-meta)); }
 .authority-suggestions > header span,
-.authority-suggestion-status { color: var(--muted); font-size: .75rem; }
+.authority-suggestion-status { color: var(--muted); font-size: max(.75rem, var(--stl-readable-meta)); }
 .authority-suggestion-status { display: flex; align-items: center; gap: .4rem; margin: 0; }
 
 .authority-suggestion-list > article {
@@ -118,8 +118,8 @@
 
 .authority-suggestion-list article > div { min-width: 0; display: grid; gap: .2rem; }
 .authority-suggestion-list article span,
-.authority-suggestion-list article small { color: var(--muted); font-size: .75rem; }
-.authority-suggestion-list article p { margin: .1rem 0 0; font-size: .78rem; line-height: 1.5; }
+.authority-suggestion-list article small { color: var(--muted); font-size: max(.75rem, var(--stl-readable-meta)); }
+.authority-suggestion-list article p { margin: .1rem 0 0; font-size: max(.78rem, var(--stl-readable-body)); line-height: 1.5; }
 .authority-suggestion-list .authority-match-reason { color: var(--muted); }
 .authority-suggestion-list button {
   min-height: 2.25rem;

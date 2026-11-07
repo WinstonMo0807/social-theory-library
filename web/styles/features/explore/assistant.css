@@ -75,7 +75,7 @@
 .ask-chat-panel > header p {
   margin: 0;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ask-chat-panel {
@@ -91,7 +91,7 @@
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
   background: #f6f1e6;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ask-service-notice span {
@@ -117,7 +117,7 @@
 
 .ask-chat-panel > header h2,
 .ask-source-panel > header h2 {
-  font-size: calc(14px + var(--font-bump));
+  font-size: max(calc(14px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ask-chat-panel > header select {
@@ -176,7 +176,7 @@
   color: var(--surface);
   place-items: center;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: max(9px, var(--stl-readable-meta));
 }
 
 .ask-message.user > span {
@@ -225,7 +225,7 @@
   padding: 9px 16px;
   border-top: 1px solid var(--line);
   color: #8a1f11;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ask-composer {
@@ -236,7 +236,7 @@
 }
 
 .ask-composer > label {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 720;
 }
 
@@ -295,18 +295,18 @@
 }
 
 .ask-source-panel article h3 {
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ask-source-panel article p,
 .ask-source-panel article span {
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .ask-source-panel article blockquote {
   font-family: var(--serif);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.65;
 }
 

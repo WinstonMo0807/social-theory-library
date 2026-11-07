@@ -4,11 +4,11 @@
 .editor h3 { margin: 0; font: 600 20px var(--serif); }
 .row { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 22px; align-items: start; }
 .content { min-width: 0; }
-.editor p { font-size: 13px; line-height: 1.6; color: var(--muted); }
+.editor p { font-size: max(13px, var(--stl-readable-body)); line-height: 1.6; color: var(--muted); }
 .editor .privacy { margin: 6px 0 14px; }
 .editor .hint { margin: 10px 0 0; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.editor button, .dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 8px 14px; font: inherit; font-size: 14px; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease; }
+.editor button, .dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 8px 14px; font: inherit; font-size: max(14px, var(--stl-readable-ui)); cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease; }
 .editor button:disabled, .dialog button:disabled { opacity: .5; cursor: not-allowed; }
 .editor .primary, .dialog .primary { color: var(--surface); background: var(--ink); border-color: var(--ink); }
 .editor .textButton { background: transparent; border-color: transparent; }
@@ -16,7 +16,7 @@
 .avatarButton .avatar, .preview { display: grid; width: 88px; height: 88px; border-radius: 12px; object-fit: cover; background: var(--paper); border: 1px solid var(--line); font-size: 32px; }
 .camera { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid var(--surface); border-radius: 50%; color: var(--surface); background: var(--ink); }
 .more { margin-top: 8px; }
-.more summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 2px 0; color: var(--muted); font-size: 13px; cursor: pointer; list-style: none; }
+.more summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 2px 0; color: var(--muted); font-size: max(13px, var(--stl-readable-meta)); cursor: pointer; list-style: none; }
 .more summary::-webkit-details-marker { display: none; }
 .more[open] summary svg { transform: rotate(180deg); }
 .moreActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
@@ -35,5 +35,5 @@
 .dialog { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; width: min(440px, calc(100vw - 32px)); padding: 24px; }
 .dialog::backdrop { background: rgb(0 0 0 / .4); }
 .dialog h3 { margin-top: 0; font: 600 22px var(--serif); }
-.dialog p { line-height: 1.8; font-size: 14px; }
+.dialog p { line-height: 1.8; font-size: max(14px, var(--stl-readable-body)); }
 .editor button:focus-visible, .more summary:focus-visible, .dialog button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }

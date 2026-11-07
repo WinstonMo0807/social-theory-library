@@ -7,10 +7,10 @@
 .item h3 { margin:0 0 8px; font:600 18px/1.6 var(--serif); }
 .item p { margin:5px 0; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
 .item small { color:var(--muted); line-height:1.8; }
-.cover { aspect-ratio:2/3; display:grid; place-items:center; align-self:start; background:var(--paper); font-size:11px; color:var(--muted); }
+.cover { aspect-ratio:2/3; display:grid; place-items:center; align-self:start; background:var(--paper); font-size:max(11px, var(--stl-readable-meta)); color:var(--muted); }
 .cover img { width:100%; height:100%; object-fit:contain; }
-.item a { font-size:12px; margin-top:12px; }
-.reason { font-size:14px; }
+.item a { font-size:max(12px, var(--stl-readable-meta)); margin-top:12px; }
+.reason { font-size:max(14px, var(--stl-readable-meta)); }
 .select { display:block; border:0; padding:0; background:transparent; font:inherit; text-align:left; color:inherit; cursor:pointer; }
 .select:focus-visible { outline:2px solid var(--annotation); outline-offset:4px; }
 .detail { grid-column:1; }

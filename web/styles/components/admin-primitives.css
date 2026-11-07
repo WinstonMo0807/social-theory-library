@@ -62,7 +62,7 @@
   border: var(--stl-border-hairline) solid var(--line-dark);
   background: var(--surface);
   color: var(--ink);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: var(--stl-type-weight-strong);
   line-height: 1.2;
 }
@@ -127,7 +127,7 @@
 .admin-ui-empty-state p {
   margin-top: 3px;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-body));
   line-height: 1.5;
 }
 
@@ -160,7 +160,7 @@
 
 .admin-ui-form-section h2,
 .admin-ui-candidate-card h3 {
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-ui-form-section header p,
@@ -168,7 +168,7 @@
 .admin-ui-candidate-value small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.5;
 }
 
@@ -199,7 +199,7 @@
 .admin-ui-sticky-action-status {
   min-width: 0;
   color: var(--muted);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-ui-evidence-chip {
@@ -223,7 +223,7 @@
 }
 
 .admin-ui-evidence-chip small { color: var(--muted); }
-.admin-ui-evidence-chip b { font-size: calc(7px + var(--font-bump)); }
+.admin-ui-evidence-chip b { font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta)); }
 .admin-ui-evidence-chip.interactive { cursor: pointer; }
 
 .admin-ui-confidence {
@@ -233,7 +233,7 @@
   gap: var(--admin-space-sm);
   align-items: center;
   padding: 0 var(--admin-space-md) var(--admin-space-md);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-ui-confidence-track {
@@ -268,7 +268,7 @@
   padding: 9px var(--admin-space-md);
   cursor: pointer;
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: var(--stl-type-weight-strong);
 }
 
@@ -291,7 +291,7 @@
 .admin-ui-candidate-conflicts {
   border-top: var(--stl-border-hairline) solid color-mix(in srgb, var(--danger) 35%, var(--line));
   color: var(--danger);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-ui-candidate-card > footer {

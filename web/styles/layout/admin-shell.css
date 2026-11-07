@@ -8,7 +8,7 @@
   display: grid;
   min-height: 100vh;
   color: var(--muted);
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
   place-items: center;
 }
 
@@ -69,7 +69,7 @@
   min-height: 36px;
   padding: 0 var(--stl-space-admin);
   border: var(--stl-border-hairline) solid transparent;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 580;
 }
 
@@ -86,7 +86,7 @@
   border-radius: var(--stl-radius-pill);
   background: var(--wash);
   color: var(--ink);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
   place-items: center;
 }
 
@@ -110,12 +110,12 @@
 
 .system-status small {
   color: var(--muted);
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
 .system-status strong {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-sidebar footer {
@@ -123,7 +123,7 @@
   flex-shrink: 0;
   flex-direction: column;
   padding: 10px;
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-mobile-close,
@@ -149,7 +149,7 @@
 }
 
 .admin-topbar > strong {
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
@@ -165,7 +165,7 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .admin-topbar > button,
@@ -195,7 +195,7 @@
   background: var(--ink);
   color: var(--stl-ink-inverse);
   border-radius: var(--stl-radius-round);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   place-items: center;
 }
 
@@ -203,12 +203,12 @@
   display: flex;
   flex-direction: column;
   margin: 0;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .admin-user small {
   color: var(--muted);
-  font-size: calc(6px + var(--font-bump));
+  font-size: max(calc(6px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .admin-content {

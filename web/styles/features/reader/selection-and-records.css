@@ -18,13 +18,13 @@
   gap: 7px;
   padding: 7px 10px;
   cursor: pointer;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .copy-helper span {
   padding-right: 8px;
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .reader-copy-status {
@@ -38,7 +38,7 @@
   margin: 18px auto 0;
   background: rgb(255 255 255 / 92%);
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   pointer-events: none;
 }
 
@@ -71,7 +71,7 @@
   padding: 0 10px;
   color: inherit;
   cursor: pointer;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-ui));
   white-space: nowrap;
 }
 
@@ -94,7 +94,7 @@
 
 .reader-right h2 {
   margin: 0 0 12px;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
   text-transform: uppercase;
 }
 
@@ -102,7 +102,7 @@
 .reader-right section > p {
   display: block;
   margin: 3px 0;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .side-progress {
@@ -123,7 +123,7 @@
   border: 0;
   border-bottom: 1px solid var(--line);
   background: transparent;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .reader-right section:nth-of-type(2) > p {
@@ -134,7 +134,7 @@
 
 .reader-right .button {
   min-height: 32px;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .reader-right section > a {
@@ -142,7 +142,7 @@
   align-items: center;
   gap: 9px;
   padding: 5px 0;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .tiny-portrait {
@@ -161,7 +161,7 @@
 
 .reader-right section > a small {
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .reader-bottom {
@@ -181,7 +181,7 @@
   align-items: center;
   gap: 7px;
   cursor: pointer;
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .reader-bottom > div {
@@ -205,7 +205,7 @@
   padding: 0 9px;
   border-left: 1px solid var(--line);
   white-space: nowrap;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .login-gate,
@@ -275,7 +275,7 @@ dialog.login-gate::backdrop { background: transparent; }
   border-left: 3px solid var(--annotation);
   background: var(--surface);
   font-family: var(--serif);
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .annotation-composer label {
@@ -285,7 +285,7 @@ dialog.login-gate::backdrop { background: transparent; }
 }
 
 .annotation-composer label span {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   font-weight: 700;
 }
 
@@ -295,7 +295,7 @@ dialog.login-gate::backdrop { background: transparent; }
   padding: 9px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-ui));
 }
 
 .reader-library-entry {
@@ -321,12 +321,12 @@ dialog.login-gate::backdrop { background: transparent; }
 
 .reader-library-open small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .reader-library-open span {
   overflow: hidden;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -358,7 +358,7 @@ dialog.login-gate::backdrop { background: transparent; }
 .login-gate p:not(.eyebrow) {
   margin: 16px 0 22px;
   color: var(--muted);
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .login-gate .button {

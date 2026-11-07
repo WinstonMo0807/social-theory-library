@@ -16,7 +16,7 @@
 .theory-hero p {
   max-width: 340px;
   margin: 12px 0 0;
-  font-size: calc(12px + var(--font-bump));
+  font-size: max(calc(12px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .theory-hero .architectural-image {
@@ -41,7 +41,7 @@
 
 .theory-filters > div > strong {
   flex: 0 0 auto;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .theory-filters > div .tag-list {
@@ -71,7 +71,7 @@
   padding: 5px 10px;
   border: 1px solid var(--line-dark);
   border-radius: 999px;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .theory-theme-tags a.active {
@@ -82,7 +82,7 @@
 
 .theory-theme-tags small {
   color: inherit;
-  font-size: 0.85em;
+  font-size: max(0.85em, var(--stl-readable-meta));
   font-variant-numeric: tabular-nums;
   opacity: 0.65;
 }
@@ -90,7 +90,7 @@
 .theory-clear-filter {
   flex: 0 0 auto;
   border-bottom: 1px solid currentColor;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .theory-filter-panel {
@@ -135,7 +135,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .theory-filter-panel label:has(select) {
@@ -186,7 +186,7 @@
 .theory-symbol.large {
   width: 52px;
   height: 52px;
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .theory-card-grid h2,
@@ -195,14 +195,14 @@
 }
 
 .theory-card-grid h2 {
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
   line-height: 1.15;
 }
 
 .theory-card-grid p {
   margin-top: 7px;
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .theory-card-grid footer {
@@ -211,7 +211,7 @@
   align-items: center;
   gap: 16px;
   margin-top: auto;
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .theory-card-grid footer svg {
@@ -240,7 +240,7 @@
 }
 
 .featured-theory > p {
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .featured-theory .button {
@@ -268,7 +268,7 @@
 .curated-list small,
 .curated-list time,
 .curated-list b {
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .conceptual-neighbors {
@@ -289,7 +289,7 @@
   padding: 6px 10px;
   border: 1px solid var(--line-dark);
   background: var(--surface);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
   place-items: center;
 }
 
@@ -336,7 +336,7 @@
   gap: 6px;
   padding: 9px;
   border: 1px solid var(--line);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .theory-relation-list article a:last-child {
@@ -370,12 +370,12 @@
 
 .scholar-ribbon strong {
   margin-top: 6px;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .scholar-ribbon small {
   color: var(--muted);
-  font-size: calc(7px + var(--font-bump));
+  font-size: max(calc(7px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .scholar-ribbon svg {
@@ -433,11 +433,11 @@
 }
 
 .scholar-directory-grid .scholar-card h3 {
-  font-size: calc(13px + var(--font-bump));
+  font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .scholar-directory-grid .scholar-card p {
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .directory-more {
@@ -468,7 +468,7 @@
   top: 20px;
   right: 20px;
   color: white;
-  font-size: calc(11px + var(--font-bump));
+  font-size: max(calc(11px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .topic-directory-grid h2 {
@@ -479,7 +479,7 @@
 .topic-directory-grid p {
   min-height: 42px;
   color: var(--muted);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .topic-directory-grid footer {
@@ -487,13 +487,13 @@
   justify-content: space-between;
   padding-top: 10px;
   border-top: 1px solid var(--line);
-  font-size: calc(8px + var(--font-bump));
+  font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .breadcrumbs {
   margin: 0 0 18px;
   color: var(--muted);
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .detail-hero-grid {
@@ -544,7 +544,7 @@
 
 .detail-hero-grid aside span {
   align-self: center;
-  font-size: calc(9px + var(--font-bump));
+  font-size: max(calc(9px + var(--font-bump)), var(--stl-readable-meta));
 }
 
 .detail-hero-grid aside .button {
@@ -582,7 +582,7 @@
 .definition-row p {
   margin: 0;
   color: var(--muted);
-  font-size: calc(10px + var(--font-bump));
+  font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
 }
 
 .scholar-stack {

@@ -1,4 +1,4 @@
-/* A's geometry, sizes and spacing are unchanged. Only content font families vary.
+/* Keep the approved A layout and brand; content type follows the readable scale.
    Local comparison: #font=balanced | song | sans | wenkai. */
 @font-face {
   font-family: "STL Reading Kai";
@@ -10,6 +10,36 @@
 html[data-typeset="A"] {
   --content-display: "STL Display Serif", "Noto Serif SC", "Songti SC", SimSun, serif;
   --content-text: "STL Text Sans", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+
+/* One readable scale for existing page styles. The A layout and font choices stay. */
+:root {
+  --stl-readable-step: 0rem;
+  --stl-readable-meta: calc(.875rem + var(--stl-readable-step));
+  --stl-readable-ui: calc(1rem + var(--stl-readable-step));
+  --stl-readable-body: calc(1rem + var(--stl-readable-step));
+  --stl-readable-prose: calc(1.0625rem + var(--stl-readable-step));
+  --stl-readable-muted: #5c6267;
+  --stl-readable-ink: #343b3c;
+}
+html[data-text-size="comfortable"] { --stl-readable-step: .0625rem; }
+html[data-text-size="large"] { --stl-readable-step: .1875rem; }
+html[data-theme="dark"] {
+  --stl-readable-muted: #c2c4bd;
+  --stl-readable-ink: #e8e7e0;
+}
+:root, [data-ui-scope], [data-type-mode] > :not(footer) {
+  --night-muted: var(--stl-readable-muted);
+  --text-secondary: var(--stl-readable-muted);
+  --text-muted: var(--stl-readable-muted);
+  --stl-ink-muted: var(--stl-readable-muted);
+}
+html[data-typeset="A"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], [data-type-mode="admin"]) :is(p, li, dt, dd, label, legend, summary, small, time) {
+  letter-spacing: normal;
+}
+html[data-typeset="A"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], [data-type-mode="admin"]) :is(input, textarea)::placeholder {
+  color: var(--stl-readable-muted);
+  opacity: 1;
 }
 html[data-typeset="A"][data-font-family="serif"],
 html[data-typeset="A"][data-typeface="song"] { --content-text: var(--content-display); }

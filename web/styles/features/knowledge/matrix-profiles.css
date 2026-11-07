@@ -78,7 +78,7 @@
 .theory-fact-strip span,
 .topic-fact-strip span {
   color: var(--muted);
-  font-size: .78rem;
+  font-size: max(.78rem, var(--stl-readable-meta));
 }
 
 .theory-fact-strip strong,
@@ -150,8 +150,8 @@
   box-shadow: 0 0 0 1px var(--ink);
 }
 
-.theory-history-track h3 { margin: 7px 0; font-size: .96rem; }
-.theory-history-track p { margin: 0; color: var(--muted); font-size: .82rem; }
+.theory-history-track h3 { margin: 7px 0; font-size: max(.96rem, var(--stl-readable-meta)); }
+.theory-history-track p { margin: 0; color: var(--muted); font-size: max(.82rem, var(--stl-readable-body)); }
 
 .theory-profile-pairs,
 .topic-relations-row {
@@ -171,7 +171,7 @@
   padding: 7px 11px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  font-size: .8rem;
+  font-size: max(.8rem, var(--stl-readable-meta));
 }
 
 .theory-neighbor-grid {
@@ -235,7 +235,7 @@
 .topic-relations-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .topic-relation-link + .topic-relation-link,
 .topic-scholar-link + .topic-scholar-link { border-top: 0; }
-.topic-relation-link > span { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--ink); font-size: .72rem; }
+.topic-relation-link > span { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--ink); font-size: max(.72rem, var(--stl-readable-meta)); }
 .topic-relation-link > strong { flex: 1; }
 .topic-evidence-spotlight blockquote { margin: 10px 0 15px; font-family: var(--font-serif); font-size: 1.22rem; line-height: 1.65; }
 .topic-evidence-spotlight cite { display: block; margin: 12px 0; color: var(--muted); }
